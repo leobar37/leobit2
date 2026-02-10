@@ -1,14 +1,31 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "stream",
+  "remoteCache": {
+    "enabled": true,
+    "timeout": 30
+  },
+  "globalDependencies": ["package.json", "bun.lock"],
   "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"],
+      "cache": true
+    },
+    "@avileo/app#build": {
+      "dependsOn": ["@avileo/shared#build"],
+      "outputs": ["build/**"]
+    },
+    "@avileo/backend#build": {
+      "dependsOn": ["@avileo/shared#build"],
+      "outputs": ["dist/**"]
+    },
+    "@avileo/shared#build": {
+      "outputs": ["dist/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
     },
     "db:migrate": {
       "cache": false
