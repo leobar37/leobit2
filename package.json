@@ -1,0 +1,19 @@
+{
+  "name": "avileo",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.1.38",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "db:migrate": "turbo run db:migrate",
+    "db:generate": "turbo run db:generate"
+  },
+  "devDependencies": {
+    "turbo": "^2.7.2",
+    "typescript": "^5.3.3"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
