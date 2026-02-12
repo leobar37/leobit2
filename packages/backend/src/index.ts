@@ -10,6 +10,7 @@ import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
 import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
+import { saleRoutes } from "./api/sales";
 
 const app = new Elysia()
   .use(errorPlugin)
@@ -37,6 +38,7 @@ const app = new Elysia()
   .use(paymentRoutes)
   .use(inventoryRoutes)
   .use(distribucionRoutes)
+  .use(saleRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",

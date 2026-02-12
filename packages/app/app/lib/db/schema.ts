@@ -59,6 +59,22 @@ export const saleSchema = z.object({
 
 export type Sale = z.infer<typeof saleSchema>;
 
+export interface CreateSaleInput {
+  clientId?: string;
+  saleType: "contado" | "credito";
+  totalAmount: number;
+  amountPaid?: number;
+  tara?: number;
+  netWeight?: number;
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+}
+
 export const syncOperationSchema = z.object({
   id: z.string(),
   collection: z.enum(["customers", "payments", "sales"]),

@@ -1,0 +1,114 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, Phone, MapPin, CreditCard } from "lucide-react";
+
+const customerSchema = z.object({
+  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  dni: z.string().nullable(),
+  phone: z.string().nullable(),
+  address: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+type CustomerFormData = z.infer<typeof customerSchema>;
+
+interface CustomerFormProps {
+  onSubmit: (data: CustomerFormData) => void;
+  isLoading?: boolean;
+}
+
+export function CustomerForm({ onSubmit, isLoading }: CustomerFormProps) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: "",
+      dni: null,
+      phone: null,
+      address: null,
+      notes: null,
+    },
+  });
+
+  return (
+    <Card className="border-0 shadow-lg rounded-3xl">
+      <CardHeader>
+        <CardTitle className="text-xl">Información del Cliente</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Nombre *
+          </Label>
+          <Input
+            id="name"
+            placeholder="Nombre completo"
+            {...register("name")}
+            className="rounded-xl"
+          />
+          {errors.name && (
+            <p className="text-sm text-red-500">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="dni" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            DNI
+          </Label>
+          <Input
+            id="dni"
+            placeholder="12345678"
+            {...register("dni")}
+            className="rounded-xl"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone" className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Teléfono
+          </Label>
+          <Input
+            id="phone"
+            placeholder="987654321"
+            {...register("phone")}
+            className="rounded-xl"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Dirección
+          </Label>
+          <Input
+            id="address"
+            placeholder="Av. Principal 123"
+            {...register("address")}
+            className="rounded-xl"
+          />
+        </div>
+
+        <Button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isLoading}
+          className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
+        >
+          {isLoading ? "Guardando..." : "Guardar Cliente"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+export type { CustomerFormData };

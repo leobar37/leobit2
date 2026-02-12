@@ -47,7 +47,7 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
 /**
  * RequestContext - Contexto de la petición con información del usuario,
  * negocio actual, rol y permisos.
- * 
+ *
  * Reglas:
  * 1. SIEMPRE va como primer parámetro en repositories y services
  * 2. Se construye una vez por request (cached en el plugin)

@@ -19,7 +19,7 @@ const createBusinessSchema = z.object({
   ruc: z.string().max(20).optional(),
   address: z.string().optional(),
   phone: z.string().max(20).optional(),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  email: z.string().email("Email inválido").or(z.literal("")).optional(),
 });
 
 type CreateBusinessFormData = z.infer<typeof createBusinessSchema>;
