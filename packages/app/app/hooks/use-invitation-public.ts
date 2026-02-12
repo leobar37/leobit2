@@ -1,24 +1,18 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { PublicInvitation } from "@avileo/shared";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { api } from "~/lib/api-client";
 
 async function validateInvitation(token: string): Promise<PublicInvitation> {
-  const response = await fetch(`${API_URL}/public/invitations/${token}`, {
-    credentials: "include",
-  });
+  const { data, error } = await api.public.invitations({ token }).get();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Invitación no válida");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Invitación no válida");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Invitación no válida");
-  }
-
-  return result.data;
+  return data.data as PublicInvitation;
 }
 
 async function acceptInvitation({
@@ -28,21 +22,16 @@ async function acceptInvitation({
   token: string;
   userId: string;
 }): Promise<void> {
-  const response = await fetch(`${API_URL}/public/invitations/accept`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ token, userId }),
+  const { data, error } = await api.public.invitations.accept.post({
+    token,
+    userId,
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Error al aceptar invitación");
+  if (error) {
+    throw new Error(String(error.value));
   }
-
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Error al aceptar invitación");
+  if (!data?.success) {
+    throw new Error("Error al aceptar invitación");
   }
 }
 

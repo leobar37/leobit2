@@ -1,82 +1,28 @@
 import { Elysia, t } from "elysia";
-import { eq, and } from "drizzle-orm";
-import { requireAuth } from "../middleware/auth";
-import { db } from "../lib/db";
-import { businesses, businessUsers } from "../db/schema/businesses";
+import { contextPlugin } from "../plugins/context";
+import { servicesPlugin } from "../plugins/services";
 import { r2Storage } from "../services/r2-storage.service";
+import type { RequestContext } from "../context/request-context";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
-  .use(requireAuth)
-  .get("/me", async (ctx) => {
-    const user = (ctx as any).user;
-    const membership = await db.query.businessUsers.findFirst({
-      where: eq(businessUsers.userId, user.id),
-      with: { business: true },
-    });
-
-    if (!membership) {
-      return { success: false, error: "No business found" };
-    }
-
-    const business = membership.business as any;
-    const logoUrl = business.logoUrl
-      ? await r2Storage.getFileUrl(business.logoUrl)
-      : null;
-
+  .use(servicesPlugin)
+  .use(contextPlugin)
+  .get("/me", async ({ businessService, ctx }) => {
+    const business = await businessService.getBusiness(ctx as RequestContext);
     return {
       success: true,
-      data: {
-        id: business.id,
-        name: business.name,
-        ruc: business.ruc,
-        address: business.address,
-        phone: business.phone,
-        email: business.email,
-        logoUrl,
-        modoOperacion: business.modoOperacion,
-        controlKilos: business.controlKilos,
-        usarDistribucion: business.usarDistribucion,
-        permitirVentaSinStock: business.permitirVentaSinStock,
-        role: membership.role,
-        salesPoint: membership.salesPoint,
-        isActive: business.isActive,
-        createdAt: business.createdAt,
-        updatedAt: business.updatedAt,
-      },
+      data: business,
     };
   })
   .post(
     "/",
-    async (ctx) => {
-      const user = (ctx as any).user;
-      const body = ctx.body as any;
-      
-      const existingMembership = await db.query.businessUsers.findFirst({
-        where: eq(businessUsers.userId, user.id),
-      });
-
-      if (existingMembership) {
-        return {
-          success: false,
-          error: "El usuario ya tiene un negocio asociado",
-        };
-      }
-
-      const [business] = await db
-        .insert(businesses)
-        .values({
-          name: body.name,
-          ruc: body.ruc || null,
-          address: body.address || null,
-          phone: body.phone || null,
-          email: body.email || null,
-        })
-        .returning();
-
-      await db.insert(businessUsers).values({
-        businessId: business.id,
-        userId: user.id,
-        role: "ADMIN_NEGOCIO",
+    async ({ businessService, ctx, body }) => {
+      const business = await businessService.createBusiness(ctx as RequestContext, {
+        name: body.name,
+        ruc: body.ruc,
+        address: body.address,
+        phone: body.phone,
+        email: body.email,
       });
 
       return {
@@ -96,41 +42,18 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
   )
   .put(
     "/:id",
-    async (ctx) => {
-      const user = (ctx as any).user;
-      const params = ctx.params as any;
-      const body = ctx.body as any;
-      
-      const membership = await db.query.businessUsers.findFirst({
-        where: and(
-          eq(businessUsers.userId, user.id),
-          eq(businessUsers.businessId, params.id)
-        ),
+    async ({ businessService, ctx, params, body }) => {
+      const business = await businessService.updateBusiness(ctx as RequestContext, params.id, {
+        name: body.name,
+        ruc: body.ruc,
+        address: body.address,
+        phone: body.phone,
+        email: body.email,
+        modoOperacion: body.modoOperacion,
+        controlKilos: body.controlKilos,
+        usarDistribucion: body.usarDistribucion,
+        permitirVentaSinStock: body.permitirVentaSinStock,
       });
-
-      if (!membership || membership.role !== "ADMIN_NEGOCIO") {
-        return {
-          success: false,
-          error: "No tienes permiso para editar este negocio",
-        };
-      }
-
-      const [business] = await db
-        .update(businesses)
-        .set({
-          name: body.name,
-          ruc: body.ruc,
-          address: body.address,
-          phone: body.phone,
-          email: body.email,
-          modoOperacion: body.modoOperacion,
-          controlKilos: body.controlKilos,
-          usarDistribucion: body.usarDistribucion,
-          permitirVentaSinStock: body.permitirVentaSinStock,
-          updatedAt: new Date(),
-        })
-        .where(eq(businesses.id, params.id))
-        .returning();
 
       return {
         success: true,
@@ -163,25 +86,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
   )
   .post(
     "/:id/logo",
-    async (ctx) => {
-      const user = (ctx as any).user;
-      const params = ctx.params as any;
-      const body = ctx.body as any;
-      
-      const membership = await db.query.businessUsers.findFirst({
-        where: and(
-          eq(businessUsers.userId, user.id),
-          eq(businessUsers.businessId, params.id)
-        ),
-      });
-
-      if (!membership || membership.role !== "ADMIN_NEGOCIO") {
-        return {
-          success: false,
-          error: "No tienes permiso para editar este negocio",
-        };
-      }
-
+    async ({ businessService, ctx, params, body }) => {
       const { file } = body;
 
       if (!file || file.size === 0) {
@@ -207,12 +112,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
       const buffer = await file.arrayBuffer();
       await r2Storage.uploadFile(path, { buffer, type: file.type });
 
-      const [business] = await db
-        .update(businesses)
-        .set({ logoUrl: path, updatedAt: new Date() })
-        .where(eq(businesses.id, params.id))
-        .returning();
-
+      await businessService.updateLogo(ctx as RequestContext, params.id, path);
       const logoUrl = await r2Storage.getFileUrl(path);
 
       return {

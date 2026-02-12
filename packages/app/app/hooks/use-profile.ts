@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "~/lib/api-client";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -19,50 +20,42 @@ export interface UpdateProfileInput {
 }
 
 async function getProfile(): Promise<Profile> {
-  const response = await fetch(`${API_URL}/profile/me`, {
-    credentials: "include",
-  });
+  const { data, error } = await api.profile.me.get();
 
-  if (!response.ok) {
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
     throw new Error("Failed to fetch profile");
   }
 
-  const result = await response.json();
-  return result.data;
+  return data.data as Profile;
 }
 
 async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
-  const response = await fetch(`${API_URL}/profile/me`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
+  const { data, error } = await api.profile.me.put(input);
 
-  if (!response.ok) {
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
     throw new Error("Failed to update profile");
   }
 
-  const result = await response.json();
-  return result.data;
+  return data.data as Profile;
 }
 
 async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
+  const { data, error } = await api.profile.avatar.post({ file });
 
-  const response = await fetch(`${API_URL}/profile/avatar`, {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
-
-  if (!response.ok) {
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
     throw new Error("Failed to upload avatar");
   }
 
-  const result = await response.json();
-  return result.data;
+  return data.data as { avatarUrl: string };
 }
 
 export function useProfile() {

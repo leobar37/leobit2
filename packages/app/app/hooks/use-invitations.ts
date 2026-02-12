@@ -1,61 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Invitation, CreateInvitationInput } from "@avileo/shared";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { api } from "~/lib/api-client";
 
 async function getInvitations(): Promise<Invitation[]> {
-  const response = await fetch(`${API_URL}/invitations`, {
-    credentials: "include",
-  });
+  const { data, error } = await api.invitations.get();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch invitations");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to fetch invitations");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to fetch invitations");
-  }
-
-  return result.data;
+  return data.data as unknown as Invitation[];
 }
 
 async function createInvitation(input: CreateInvitationInput): Promise<Invitation> {
-  const response = await fetch(`${API_URL}/invitations`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
+  const { data, error } = await api.invitations.post(input);
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create invitation");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to create invitation");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create invitation");
-  }
-
-  return result.data;
+  return data.data as unknown as Invitation;
 }
 
 async function cancelInvitation(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/invitations/${id}/cancel`, {
-    method: "POST",
-    credentials: "include",
-  });
+  const { data, error } = await api.invitations({ id }).cancel.post();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to cancel invitation");
+  if (error) {
+    throw new Error(String(error.value));
   }
-
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to cancel invitation");
+  if (!data?.success) {
+    throw new Error("Failed to cancel invitation");
   }
 }
 

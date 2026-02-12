@@ -4,96 +4,64 @@ import type {
   CreateBusinessInput,
   UpdateBusinessInput,
 } from "@avileo/shared";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { api } from "~/lib/api-client";
 
 async function getBusiness(): Promise<Business> {
-  const response = await fetch(`${API_URL}/businesses/me`, {
-    credentials: "include",
-  });
+  const { data, error } = await api.businesses.me.get();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to fetch business");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to fetch business");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to fetch business");
-  }
-
-  return result.data;
+  return data.data as unknown as Business;
 }
 
 async function createBusiness(input: CreateBusinessInput): Promise<Business> {
-  const response = await fetch(`${API_URL}/businesses`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
+  const { data, error } = await api.businesses.post(input);
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create business");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to create business");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to create business");
-  }
-
-  return result.data;
+  return data.data as unknown as Business;
 }
 
 async function updateBusiness(
   id: string,
   input: UpdateBusinessInput
 ): Promise<Business> {
-  const response = await fetch(`${API_URL}/businesses/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
+  const { data, error } = await api.businesses({ id }).put(input);
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update business");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to update business");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to update business");
-  }
-
-  return result.data;
+  return data.data as unknown as Business;
 }
 
 async function uploadBusinessLogo(
   id: string,
   file: File
 ): Promise<{ logoUrl: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
+  const { data, error } = await api.businesses({ id }).logo.post({ file });
 
-  const response = await fetch(`${API_URL}/businesses/${id}/logo`, {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to upload logo");
+  if (error) {
+    throw new Error(String(error.value));
+  }
+  if (!data?.success || !data.data) {
+    throw new Error("Failed to upload logo");
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to upload logo");
-  }
-
-  return result.data;
+  return data.data as { logoUrl: string };
 }
 
 export function useBusiness() {

@@ -1,11 +1,13 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
+import { errorPlugin } from "./plugins/error-handler";
 import { authRoutes } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
 
 const app = new Elysia()
+  .use(errorPlugin)
   .use(
     cors({
       origin: process.env.FRONTEND_URL || "http://localhost:5173",
