@@ -7,8 +7,11 @@ import {
   Settings,
   LogOut,
   User,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useBusiness } from "@/hooks/use-business";
+import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +27,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { InventoryCard } from "~/components/inventory/inventory-card";
 
 const menuItems = [
   { icon: Home, label: "Inicio", href: "/dashboard" },
@@ -35,6 +39,11 @@ const menuItems = [
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { data: business } = useBusiness();
+  const { data: distribucion } = useMiDistribucion();
+
+  const usarDistribucion = business?.usarDistribucion ?? true;
+  const tieneDistribucion = !!distribucion;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
@@ -99,6 +108,30 @@ export default function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+
+          {usarDistribucion && tieneDistribucion && (
+            <Link to="/mi-distribucion">
+              <InventoryCard
+                kilosAsignados={distribucion.kilosAsignados}
+                kilosVendidos={distribucion.kilosVendidos}
+                puntoVenta={distribucion.puntoVenta}
+              />
+            </Link>
+          )}
+
+          {usarDistribucion && !tieneDistribucion && (
+            <Card className="border-0 shadow-md rounded-2xl bg-amber-50 border-amber-200">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Package className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-amber-900">Sin distribución asignada</p>
+                  <p className="text-sm text-amber-700">Contacta a tu administrador</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Link to="/sales">

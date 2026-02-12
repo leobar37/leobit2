@@ -15,5 +15,10 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@electric-sql/react": "^1.0.32",
+    "@tanstack/electric-db-collection": "^0.2.32",
+    "@tanstack/react-db": "^0.1.69"
+  }
 }

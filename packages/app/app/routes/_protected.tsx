@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { SyncProvider } from "~/components/sync/sync-status";
+import { ElectricProvider } from "~/lib/db/electric-client";
 
 export default function ProtectedLayout() {
   const { user, isLoading } = useAuth();
@@ -18,5 +20,11 @@ export default function ProtectedLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <ElectricProvider>
+      <SyncProvider>
+        <Outlet />
+      </SyncProvider>
+    </ElectricProvider>
+  );
 }

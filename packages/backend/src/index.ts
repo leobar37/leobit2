@@ -5,6 +5,11 @@ import { authRoutes } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
+import { customerRoutes } from "./api/customers";
+import { productRoutes } from "./api/products";
+import { paymentRoutes } from "./api/payments";
+import { inventoryRoutes } from "./api/inventory";
+import { distribucionRoutes } from "./api/distribuciones";
 
 const app = new Elysia()
   .use(errorPlugin)
@@ -27,6 +32,11 @@ const app = new Elysia()
   .use(businessRoutes)
   .use(invitationRoutes)
   .use(publicInvitationRoutes)
+  .use(customerRoutes)
+  .use(productRoutes)
+  .use(paymentRoutes)
+  .use(inventoryRoutes)
+  .use(distribucionRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",
