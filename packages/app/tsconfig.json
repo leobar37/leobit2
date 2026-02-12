@@ -16,7 +16,8 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"],
-      "@/*": ["./app/*"]
+      "@/*": ["./app/*"],
+      "@avileo/backend/*": ["../backend/src/*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

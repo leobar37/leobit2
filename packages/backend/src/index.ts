@@ -1,5 +1,9 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
+import { authRoutes } from "./api/auth";
+import { profileRoutes } from "./api/profile";
+import { businessRoutes } from "./api/businesses";
+import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
 
 const app = new Elysia()
   .use(
@@ -16,6 +20,11 @@ const app = new Elysia()
       ],
     })
   )
+  .use(authRoutes)
+  .use(profileRoutes)
+  .use(businessRoutes)
+  .use(invitationRoutes)
+  .use(publicInvitationRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",

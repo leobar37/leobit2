@@ -14,20 +14,91 @@ type Pages = {
   "/": {
     params: {};
   };
+  "/invitations/:token": {
+    params: {
+      "token": string;
+    };
+  };
+  "/business/create": {
+    params: {};
+  };
+  "/business/edit": {
+    params: {};
+  };
+  "/invitations": {
+    params: {};
+  };
+  "/dashboard": {
+    params: {};
+  };
+  "/profile": {
+    params: {};
+  };
+  "/register": {
+    params: {};
+  };
+  "/login": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/";
+    page: "/" | "/invitations/:token" | "/business/create" | "/business/edit" | "/invitations" | "/dashboard" | "/profile" | "/register" | "/login";
+  };
+  "routes/invitations.$token.tsx": {
+    id: "routes/invitations.$token";
+    page: "/invitations/:token";
+  };
+  "routes/_protected.tsx": {
+    id: "routes/_protected";
+    page: "/business/create" | "/business/edit" | "/invitations" | "/dashboard" | "/profile";
+  };
+  "routes/_protected.business.create.tsx": {
+    id: "routes/_protected.business.create";
+    page: "/business/create";
+  };
+  "routes/_protected.business.edit.tsx": {
+    id: "routes/_protected.business.edit";
+    page: "/business/edit";
+  };
+  "routes/_protected.invitations.tsx": {
+    id: "routes/_protected.invitations";
+    page: "/invitations";
+  };
+  "routes/_protected.dashboard.tsx": {
+    id: "routes/_protected.dashboard";
+    page: "/dashboard";
+  };
+  "routes/_protected.profile.tsx": {
+    id: "routes/_protected.profile";
+    page: "/profile";
+  };
+  "routes/register.tsx": {
+    id: "routes/register";
+    page: "/register";
   };
   "routes/_index.tsx": {
     id: "routes/_index";
     page: "/";
   };
+  "routes/login.tsx": {
+    id: "routes/login";
+    page: "/login";
+  };
 };
 
 type RouteModules = {
   "root": typeof import("./app/root.tsx");
+  "routes/invitations.$token": typeof import("./app/routes/invitations.$token.tsx");
+  "routes/_protected": typeof import("./app/routes/_protected.tsx");
+  "routes/_protected.business.create": typeof import("./app/routes/_protected.business.create.tsx");
+  "routes/_protected.business.edit": typeof import("./app/routes/_protected.business.edit.tsx");
+  "routes/_protected.invitations": typeof import("./app/routes/_protected.invitations.tsx");
+  "routes/_protected.dashboard": typeof import("./app/routes/_protected.dashboard.tsx");
+  "routes/_protected.profile": typeof import("./app/routes/_protected.profile.tsx");
+  "routes/register": typeof import("./app/routes/register.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");
+  "routes/login": typeof import("./app/routes/login.tsx");
 };
