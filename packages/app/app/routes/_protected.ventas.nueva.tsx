@@ -2,12 +2,13 @@ import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Calculator, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CustomerSearch } from "~/components/sales/customer-search";
 import { SaleCartItem } from "~/components/sales/sale-cart-item";
+import { ChickenCalculator } from "~/components/calculator/chicken-calculator";
 import { useProducts } from "~/hooks/use-products-live";
 import { useCreateSale } from "~/hooks/use-sales";
 import type { Customer, Product } from "~/lib/db/schema";
@@ -36,7 +37,22 @@ export default function NewSalePage() {
   const [precio, setPrecio] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  const [saleTara, setSaleTara] = useState<string>("");
+  const [saleNetWeight, setSaleNetWeight] = useState<string>("");
+
   const totalAmount = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+  
+  const totalBruto = cartItems.reduce((sum, item) => {
+    const netoMatch = item.productName.match(/Neto:\s*([\d.]+)kg/);
+    if (netoMatch) {
+      const neto = parseFloat(netoMatch[1]);
+      return sum + (neto + 0.5);
+    }
+    return sum + item.quantity;
+  }, 0);
+  
+  const totalNeto = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const calculatedTara = totalBruto - totalNeto;
   const balanceDue = saleType === "credito" 
     ? totalAmount - (parseFloat(amountPaid) || 0)
     : 0;
@@ -97,12 +113,17 @@ export default function NewSalePage() {
   const handleSubmit = async () => {
     if (cartItems.length === 0) return;
 
+    const taraToSave = saleTara ? parseFloat(saleTara) : calculatedTara || undefined;
+    const netWeightToSave = saleNetWeight ? parseFloat(saleNetWeight) : totalNeto || undefined;
+
     try {
       await createSale.mutateAsync({
         clientId: selectedCustomer?.id,
         saleType,
         totalAmount,
         amountPaid: saleType === "credito" ? parseFloat(amountPaid) || 0 : totalAmount,
+        tara: taraToSave,
+        netWeight: netWeightToSave,
         items: cartItems,
       });
       navigate("/dashboard");

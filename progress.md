@@ -93,24 +93,48 @@
 
 ---
 
+## Funcionalidades Implementadas (Feb 12, 2026)
+
+### Módulo 4: Calculadora ✅
+- **Componente ChickenCalculator** - Calculadora reutilizable con cálculo automático (bruto - tara = neto)
+- **Persistencia tara/netWeight** - Ventas ahora guardan tara y peso neto a nivel de venta
+- **Dashboard link** - Preparado para página /calculadora standalone
+
+### Módulo 5: Detalle Cliente + Abonos ✅
+- **Página de detalle** (`/clientes/:id`) - Información completa del cliente
+- **Historial de compras** - Lista de ventas del cliente con filtros
+- **Registro de abonos** - Formulario modal para registrar pagos desde el cliente
+- **Cálculo de deuda** - Deuda automática (ventas crédito - abonos)
+- **Componentes PaymentList/PaymentForm** - Reutilizables para gestión de pagos
+- **Hook useCustomer** - Para obtener cliente específico
+
+### Módulo 6: Cierre del Día ✅ COMPLETO
+- **Schema closings** - Tabla de cierres con campos: fecha, ventas, montos, kilos
+- **Migración aplicada** - drizzle/0001_shallow_the_watchers.sql
+- **ClosingRepository** - CRUD completo con filtros
+- **ClosingService** - Lógica de negocio con validaciones
+- **API /closings** - Endpoints REST: GET, POST, PUT, DELETE, /today-stats
+- **Integración** - Servicios registrados en plugin y rutas en index.ts
+- **Frontend /cierre** - Página completa con resumen y botón "Generar Cierre"
+- **Hooks useClosings** - useClosings, useCreateClosing, useClosingTodayStats
+
+### Módulo 7: Calculadora Standalone ✅
+- **Página /calculadora** - Calculadora de pollo independiente
+- **Componente ChickenCalculator** - Reutilizable con cálculo automático
+
 ## Próximos Pasos (Sugeridos)
-
-### Módulo 5: Detalle Cliente
-- [ ] Página de detalle (`/clientes/:id`)
-- [ ] Historial de compras del cliente
-- [ ] Registrar abono desde cliente
-- [ ] Calcular deuda automáticamente
-
-### Módulo 6: Reportes
-- [ ] Cierre de día
-- [ ] Reporte de ventas
-- [ ] Recaudación por vendedor
 
 ### Mejoras UX
 - [ ] Toast notifications para feedback de acciones
 - [ ] Optimistic updates en el carrito
 - [ ] Swipe actions en listas (eliminar, editar)
 - [ ] Pull-to-refresh en móviles
+
+### Reportes Avanzados
+- [ ] Reporte de ventas por período
+- [ ] Recaudación por vendedor
+- [ ] Ranking de clientes
+- [ ] Exportar a Excel/PDF
 
 ---
 

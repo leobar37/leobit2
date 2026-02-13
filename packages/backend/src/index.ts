@@ -11,6 +11,7 @@ import { paymentRoutes } from "./api/payments";
 import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
+import { closingRoutes } from "./api/closings";
 
 const app = new Elysia()
   .use(errorPlugin)
@@ -39,6 +40,7 @@ const app = new Elysia()
   .use(inventoryRoutes)
   .use(distribucionRoutes)
   .use(saleRoutes)
+  .use(closingRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",

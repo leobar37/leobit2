@@ -31,6 +31,9 @@ type Pages = {
   "/business/edit": {
     params: {};
   };
+  "/calculadora": {
+    params: {};
+  };
   "/invitations": {
     params: {};
   };
@@ -46,7 +49,15 @@ type Pages = {
   "/clientes/nuevo": {
     params: {};
   };
+  "/clientes/:id": {
+    params: {
+      "id": string;
+    };
+  };
   "/profile": {
+    params: {};
+  };
+  "/cierre": {
     params: {};
   };
   "/ventas": {
@@ -71,7 +82,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/business/create" | "/mi-distribucion" | "/distribuciones" | "/business/edit" | "/invitations" | "/dashboard" | "/productos" | "/clientes" | "/clientes/nuevo" | "/profile" | "/ventas" | "/ventas/nueva" | "/ventas/:id" | "/register" | "/login";
+    page: "/" | "/invitations/:token" | "/business/create" | "/mi-distribucion" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/clientes" | "/clientes/nuevo" | "/clientes/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id" | "/register" | "/login";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -79,7 +90,7 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/business/create" | "/mi-distribucion" | "/distribuciones" | "/business/edit" | "/invitations" | "/dashboard" | "/productos" | "/clientes" | "/clientes/nuevo" | "/profile" | "/ventas" | "/ventas/nueva" | "/ventas/:id";
+    page: "/business/create" | "/mi-distribucion" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/clientes" | "/clientes/nuevo" | "/clientes/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id";
   };
   "routes/_protected.business.create.tsx": {
     id: "routes/_protected.business.create";
@@ -97,6 +108,10 @@ type RouteFiles = {
     id: "routes/_protected.business.edit";
     page: "/business/edit";
   };
+  "routes/_protected.calculadora.tsx": {
+    id: "routes/_protected.calculadora";
+    page: "/calculadora";
+  };
   "routes/_protected.invitations.tsx": {
     id: "routes/_protected.invitations";
     page: "/invitations";
@@ -111,15 +126,23 @@ type RouteFiles = {
   };
   "routes/_protected.clientes.tsx": {
     id: "routes/_protected.clientes";
-    page: "/clientes" | "/clientes/nuevo";
+    page: "/clientes" | "/clientes/nuevo" | "/clientes/:id";
   };
   "routes/_protected.clientes.nuevo.tsx": {
     id: "routes/_protected.clientes.nuevo";
     page: "/clientes/nuevo";
   };
+  "routes/_protected.clientes.$id.tsx": {
+    id: "routes/_protected.clientes.$id";
+    page: "/clientes/:id";
+  };
   "routes/_protected.profile.tsx": {
     id: "routes/_protected.profile";
     page: "/profile";
+  };
+  "routes/_protected.cierre.tsx": {
+    id: "routes/_protected.cierre";
+    page: "/cierre";
   };
   "routes/_protected.ventas.tsx": {
     id: "routes/_protected.ventas";
@@ -155,12 +178,15 @@ type RouteModules = {
   "routes/_protected.mi-distribucion": typeof import("./app/routes/_protected.mi-distribucion.tsx");
   "routes/_protected.distribuciones": typeof import("./app/routes/_protected.distribuciones.tsx");
   "routes/_protected.business.edit": typeof import("./app/routes/_protected.business.edit.tsx");
+  "routes/_protected.calculadora": typeof import("./app/routes/_protected.calculadora.tsx");
   "routes/_protected.invitations": typeof import("./app/routes/_protected.invitations.tsx");
   "routes/_protected.dashboard": typeof import("./app/routes/_protected.dashboard.tsx");
   "routes/_protected.productos": typeof import("./app/routes/_protected.productos.tsx");
   "routes/_protected.clientes": typeof import("./app/routes/_protected.clientes.tsx");
   "routes/_protected.clientes.nuevo": typeof import("./app/routes/_protected.clientes.nuevo.tsx");
+  "routes/_protected.clientes.$id": typeof import("./app/routes/_protected.clientes.$id.tsx");
   "routes/_protected.profile": typeof import("./app/routes/_protected.profile.tsx");
+  "routes/_protected.cierre": typeof import("./app/routes/_protected.cierre.tsx");
   "routes/_protected.ventas": typeof import("./app/routes/_protected.ventas.tsx");
   "routes/_protected.ventas.nueva": typeof import("./app/routes/_protected.ventas.nueva.tsx");
   "routes/_protected.ventas.$id": typeof import("./app/routes/_protected.ventas.$id.tsx");

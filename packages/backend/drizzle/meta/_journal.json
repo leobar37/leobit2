@@ -8,6 +8,13 @@
       "when": 1770857630379,
       "tag": "0000_striped_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770938534556,
+      "tag": "0001_shallow_the_watchers",
+      "breakpoints": true
     }
   ]
 }
