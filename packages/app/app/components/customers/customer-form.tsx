@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, MapPin, CreditCard } from "lucide-react";
+import type { Customer } from "~/lib/db/schema";
 
 const customerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -20,22 +21,39 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 interface CustomerFormProps {
   onSubmit: (data: CustomerFormData) => void;
   isLoading?: boolean;
+  customer?: Customer;
 }
 
-export function CustomerForm({ onSubmit, isLoading }: CustomerFormProps) {
+export function CustomerForm({ onSubmit, isLoading, customer }: CustomerFormProps) {
+  const isEditing = !!customer;
+
+  const formConfig = isEditing
+    ? {
+        values: {
+          name: customer.name,
+          dni: customer.dni,
+          phone: customer.phone,
+          address: customer.address,
+          notes: customer.notes,
+        },
+      }
+    : {
+        defaultValues: {
+          name: "",
+          dni: null,
+          phone: null,
+          address: null,
+          notes: null,
+        },
+      };
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
-    defaultValues: {
-      name: "",
-      dni: null,
-      phone: null,
-      address: null,
-      notes: null,
-    },
+    ...formConfig,
   });
 
   return (
@@ -104,7 +122,11 @@ export function CustomerForm({ onSubmit, isLoading }: CustomerFormProps) {
           disabled={isLoading}
           className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
         >
-          {isLoading ? "Guardando..." : "Guardar Cliente"}
+          {isLoading
+            ? "Guardando..."
+            : isEditing
+              ? "Guardar cambios"
+              : "Guardar Cliente"}
         </Button>
       </CardContent>
     </Card>

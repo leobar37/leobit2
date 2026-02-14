@@ -1,5 +1,6 @@
 import { Package, Search } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
@@ -7,6 +8,7 @@ import { ProductCard } from "~/components/products/product-card";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
   const { data: products, isLoading, error } = useProducts();
 
   const filteredProducts = products?.filter((product) =>
@@ -57,7 +59,11 @@ export default function ProductsPage() {
 
           <div className="grid gap-3">
             {filteredProducts?.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => navigate(`/productos/${product.id}`)}
+              />
             ))}
           </div>
         </div>

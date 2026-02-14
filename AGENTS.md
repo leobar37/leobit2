@@ -108,6 +108,10 @@ Use these skills when delegating:
 - Admin sees synced data only (with pending indicator)
 - All skills assume Bun runtime
 
+## Language Rules
+
+- **All code comments must be in English only** — Never add comments in Spanish or any other language
+
 ---
 
 *For detailed information, see linked documentation files.*

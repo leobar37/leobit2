@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Plus } from "lucide-react";
+import { useParams, useNavigate, Link } from "react-router";
+import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Plus, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,6 +61,12 @@ export default function CustomerDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="font-bold text-lg truncate">{customer.name}</h1>
+          <Link
+            to={`/clientes/${id}/edit`}
+            className="p-2 rounded-xl hover:bg-orange-50 ml-auto"
+          >
+            <Pencil className="h-5 w-5" />
+          </Link>
         </div>
       </header>
 

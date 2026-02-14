@@ -1,8 +1,8 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "react-router";
-import { ArrowLeft, Store, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Store, Camera, Loader2, Settings } from "lucide-react";
 import {
   useBusiness,
   useUpdateBusiness,
@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
+import { Switch } from "@/components/ui/switch";
 import { useRef, useState } from "react";
 
 
@@ -232,6 +233,76 @@ export default function EditBusinessPage() {
                   error={form.formState.errors.email?.message}
                   {...form.register("email")}
                 />
+
+                <div className="pt-6 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Settings className="h-5 w-5 text-orange-600" />
+                    <h3 className="font-semibold text-lg">Configuración del Negocio</h3>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <label className="text-sm font-medium">Modo de Operación</label>
+                    <select
+                      {...form.register("modoOperacion")}
+                      className="w-full h-12 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="inventario_propio">Inventario Propio</option>
+                      <option value="sin_inventario">Sin Inventario</option>
+                      <option value="pedidos">Pedidos</option>
+                      <option value="mixto">Mixto</option>
+                    </select>
+                    {form.formState.errors.modoOperacion && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.modoOperacion.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <Controller
+                    name="controlKilos"
+                    control={form.control}
+                    render={({ field }) => (
+                      <div className="mb-4">
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          label="Controlar kilos en inventario"
+                          description="Habilita el seguimiento de inventario por kilogramos"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    name="usarDistribucion"
+                    control={form.control}
+                    render={({ field }) => (
+                      <div className="mb-4">
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          label="Usar sistema de distribución"
+                          description="Asigna kilos a vendedores diariamente"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    name="permitirVentaSinStock"
+                    control={form.control}
+                    render={({ field }) => (
+                      <div className="mb-4">
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          label="Permitir ventas sin stock"
+                          description="Permite registrar ventas aunque no haya stock disponible"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
 
                 {form.formState.errors.root && (
                   <p className="text-sm text-destructive text-center">

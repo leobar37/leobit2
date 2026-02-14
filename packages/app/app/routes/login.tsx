@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
+import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ export default function LoginPage() {
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: isDevelopment() ? DEV_CREDENTIALS.email : "",
+      password: isDevelopment() ? DEV_CREDENTIALS.password : "",
     },
   });
 
@@ -53,6 +54,11 @@ export default function LoginPage() {
             <CardDescription className="text-muted-foreground">
               Ingresa tus credenciales para continuar
             </CardDescription>
+            {isDevelopment() && (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 mt-2">
+                Modo desarrollo
+              </span>
+            )}
           </div>
         </CardHeader>
 

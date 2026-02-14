@@ -15,7 +15,8 @@
     "build": "bun build src/index.ts --outdir ./dist --target bun",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:seed": "bun run src/seed/index.ts"
   },
   "dependencies": {
     "@avileo/shared": "workspace:*",

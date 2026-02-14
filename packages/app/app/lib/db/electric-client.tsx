@@ -11,7 +11,7 @@ const ElectricContext = createContext<ElectricContextType>({
   isSyncing: false,
 });
 
-export function ElectricProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ElectricProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 

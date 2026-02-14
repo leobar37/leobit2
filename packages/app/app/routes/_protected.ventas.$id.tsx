@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSale } from "~/hooks/use-sales";
 import { useCustomers } from "~/hooks/use-customers-live";
 import { useProducts } from "~/hooks/use-products-live";
+import { Package } from "lucide-react";
 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -129,6 +130,49 @@ export default function SaleDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {sale.items && sale.items.length > 0 && (
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Productos Vendidos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-3">
+              {sale.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start justify-between py-3 border-b last:border-0 first:pt-0"
+                >
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Package className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">
+                        {item.productName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {Number(item.quantity).toFixed(2)} x S/{" "}
+                        {Number(item.unitPrice).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-semibold text-foreground ml-4">
+                    S/ {Number(item.subtotal).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-muted-foreground">
+                  {sale.items.length} producto
+                  {sale.items.length > 1 ? "s" : ""}
+                </span>
+                <span className="font-semibold text-lg">
+                  S/ {Number(sale.totalAmount).toFixed(2)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-0 shadow-md">
           <CardHeader className="pb-3">

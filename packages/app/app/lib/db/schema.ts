@@ -41,6 +41,18 @@ export const paymentSchema = z.object({
 
 export type Payment = z.infer<typeof paymentSchema>;
 
+export const saleItemSchema = z.object({
+  id: z.string(),
+  saleId: z.string(),
+  productId: z.string(),
+  productName: z.string(),
+  quantity: z.string(),
+  unitPrice: z.string(),
+  subtotal: z.string(),
+});
+
+export type SaleItem = z.infer<typeof saleItemSchema>;
+
 export const saleSchema = z.object({
   id: z.string(),
   clientId: z.string().nullable(),
@@ -55,6 +67,13 @@ export const saleSchema = z.object({
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   saleDate: z.coerce.date(),
   createdAt: z.coerce.date(),
+  items: z.array(saleItemSchema).optional(),
+  client: z.object({
+    id: z.string(),
+    name: z.string(),
+    dni: z.string().nullable(),
+    phone: z.string().nullable(),
+  }).optional(),
 });
 
 export type Sale = z.infer<typeof saleSchema>;
