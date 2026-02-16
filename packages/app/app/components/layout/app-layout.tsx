@@ -5,6 +5,8 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -61,9 +63,25 @@ export function useLayout() {
 export function useSetLayout(config: LayoutConfig) {
   const { setConfig } = useLayout();
 
+  const stableConfig = useMemo(
+    () => ({
+      title: config.title,
+      showBottomNav: config.showBottomNav,
+      showBackButton: config.showBackButton,
+      backHref: config.backHref,
+    }),
+    [config.title, config.showBottomNav, config.showBackButton, config.backHref]
+  );
+
+  const actionsRef = useRef(config.actions);
+  actionsRef.current = config.actions;
+
   useEffect(() => {
-    setConfig(config);
-  }, [config.title, config.actions, config.showBottomNav, config.showBackButton, config.backHref, setConfig]);
+    setConfig({
+      ...stableConfig,
+      actions: actionsRef.current,
+    });
+  }, [stableConfig, setConfig]);
 }
 
 interface AppLayoutProps {
@@ -104,7 +122,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center gap-3">
               {showBackButton && (
                 <Link to={backHref} className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-5 w-5 pointer-events-none" />
                 </Link>
               )}
 

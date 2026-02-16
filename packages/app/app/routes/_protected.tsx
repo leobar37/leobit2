@@ -5,6 +5,12 @@ import { SyncProvider } from "~/components/sync/sync-status";
 import { ElectricProvider } from "~/lib/db/electric-client";
 import { AppLayout } from "~/components/layout/app-layout";
 
+function OutletWithLog() {
+  const location = useLocation();
+  console.log('[ProtectedLayout] Outlet rendering, path:', location.pathname);
+  return <Outlet />;
+}
+
 export default function ProtectedLayout() {
   const { user, isLoading } = useAuth();
   const location = useLocation();
@@ -25,7 +31,7 @@ export default function ProtectedLayout() {
     <ElectricProvider>
       <SyncProvider>
         <AppLayout>
-          <Outlet />
+          <OutletWithLog />
         </AppLayout>
       </SyncProvider>
     </ElectricProvider>

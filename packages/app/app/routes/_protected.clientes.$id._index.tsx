@@ -1,7 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCustomer } from "~/hooks/use-customer";
 import { useSales } from "~/hooks/use-sales";
@@ -9,6 +8,7 @@ import { usePayments } from "~/hooks/use-payments";
 import { PaymentForm } from "~/components/payments/payment-form";
 import { PaymentList } from "~/components/payments/payment-list";
 import { SaleList } from "~/components/sales/sale-list";
+import { BalanceCard } from "~/components/payments/balance-card";
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
@@ -64,8 +64,9 @@ export default function CustomerDetailPage() {
           <Link
             to={`/clientes/${id}/edit`}
             className="p-2 rounded-xl hover:bg-orange-50 ml-auto"
+            onClick={() => console.log('[CustomerDetailPage] Clicking edit link, navigating to:', `/clientes/${id}/edit`)}
           >
-            <Pencil className="h-5 w-5" />
+            <Pencil className="h-5 w-5 pointer-events-none" />
           </Link>
         </div>
       </header>
@@ -110,35 +111,10 @@ export default function CustomerDetailPage() {
         </Card>
 
         {/* Balance Card */}
-        <Card
-          className={`border-0 shadow-md rounded-2xl ${
-            currentBalance > 0
-              ? "bg-gradient-to-br from-red-500 to-red-600 text-white"
-              : "bg-gradient-to-br from-green-500 to-green-600 text-white"
-          }`}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 opacity-80" />
-                <span className="opacity-90">Saldo Pendiente</span>
-              </div>
-              <span className="text-2xl font-bold">
-                S/ {currentBalance.toFixed(2)}
-              </span>
-            </div>
-
-            {currentBalance > 0 && (
-              <Button
-                onClick={() => setShowPaymentForm(true)}
-                className="w-full mt-4 bg-white text-red-600 hover:bg-white/90 rounded-xl"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Abono
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <BalanceCard
+          balance={currentBalance}
+          onRegisterPayment={() => setShowPaymentForm(true)}
+        />
 
         {/* Payment Form Modal */}
         {showPaymentForm && (

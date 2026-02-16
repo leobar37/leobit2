@@ -53,11 +53,18 @@ export default function CustomersPage() {
 
         <div className="space-y-3">
           {filteredCustomers?.map((customer) => (
-            <CustomerCard
+            <Link
               key={customer.id}
-              customer={customer}
-              onClick={() => navigate(`/clientes/${customer.id}`)}
-            />
+              to={`/clientes/${customer.id}`}
+              className="block"
+              onError={(err) => {
+
+                console.log("err", err)
+              }}
+              onClick={() => console.log('[CustomersPage] Navigating to:', customer.id)}
+            >
+              <CustomerCard customer={customer} />
+            </Link>
           ))}
         </div>
       </div>

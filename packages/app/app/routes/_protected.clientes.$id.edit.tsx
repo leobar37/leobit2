@@ -25,7 +25,10 @@ const editCustomerSchema = z.object({
 
 type EditCustomerFormData = z.infer<typeof editCustomerSchema>;
 
+console.log('[EditCustomerPage] Module loaded');
+
 export default function EditCustomerPage() {
+  console.log('[EditCustomerPage] Component rendering');
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: customer, isLoading } = useCustomer(id!);

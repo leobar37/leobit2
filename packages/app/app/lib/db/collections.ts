@@ -1,12 +1,11 @@
-import { api } from "~/lib/api-client";
+import { api, extractData } from "~/lib/api-client";
 import type { Customer, Product, Payment, Sale } from "./schema";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
 export async function loadCustomers(): Promise<Customer[]> {
-  const { data, error } = await api.customers.get();
-  if (error) throw new Error(String(error.value));
-  return (data as unknown as Customer[]) || [];
+  const response = await api.customers.get();
+  return extractData(response, "Failed to load customers");
 }
 
 export async function loadProducts(): Promise<Product[]> {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { api, extractData } from "~/lib/api-client";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
@@ -22,25 +22,16 @@ export interface CreatePaymentInput {
 }
 
 async function getPayments(clientId?: string): Promise<Payment[]> {
-  const { data, error } = await api.payments.get({
+  const response = await api.payments.get({
     query: clientId ? { clientId } : undefined,
   });
 
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Payment[];
+  return extractData(response, "Failed to load payments");
 }
 
 async function getPayment(id: string): Promise<Payment> {
-  const { data, error } = await api.payments({ id }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Payment;
+  const response = await api.payments({ id }).get();
+  return extractData(response, "Failed to load payment");
 }
 
 async function createPayment(input: CreatePaymentInput): Promise<Payment> {

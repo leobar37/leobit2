@@ -11,7 +11,7 @@ export const api = treaty<App>(API_URL, {
 
 /** Extracts data from Eden response or throws standardized error */
 export function extractData<T>(
-  response: { data?: { success: boolean; data?: T; error?: string }; error?: { value: unknown } },
+  response: { data?: { success: boolean; data?: T; error?: string } | null; error?: { value: unknown } | null },
   defaultError = "Request failed"
 ): T {
   if (response.error) {
