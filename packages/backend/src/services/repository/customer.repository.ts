@@ -1,7 +1,15 @@
 import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { customers, type Customer, type NewCustomer } from "../../db/schema";
+import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+
+export interface AccountsReceivableItem {
+  customer: Customer;
+  totalDebt: number;
+  totalSales: number;
+  totalPayments: number;
+  lastSaleDate: Date | null;
+}
 
 export class CustomerRepository {
   async findMany(
@@ -105,6 +113,118 @@ export class CustomerRepository {
       .where(eq(customers.businessId, ctx.businessId));
 
     return result[0]?.count ?? 0;
+  }
+
+  async getAccountsReceivable(
+    ctx: RequestContext,
+    filters?: {
+      search?: string;
+      minBalance?: number;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<AccountsReceivableItem[]> {
+    const searchFilter = filters?.search
+      ? like(customers.name, `%${filters.search}%`)
+      : undefined;
+    
+    const minBalanceFilter = filters?.minBalance !== undefined && filters.minBalance > 0
+      ? sql`${customers.id} IN (
+        SELECT s.client_id 
+        FROM ${sales} s 
+        WHERE s.business_id = ${ctx.businessId} 
+        GROUP BY s.client_id 
+        HAVING COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+          SELECT SUM(${abonos.amount}) 
+          FROM ${abonos} 
+          WHERE ${abonos.clientId} = s.client_id AND ${abonos.businessId} = ${ctx.businessId}
+        ), 0) >= ${filters.minBalance}
+      )`
+      : undefined;
+
+    const customersWithDebt = await db
+      .select({
+        customer: customers,
+        totalDebt: sql<number>`
+          COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+            SELECT SUM(${abonos.amount}) 
+            FROM ${abonos} 
+            WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+          ), 0)
+        `,
+        totalSales: sql<number>`COALESCE(SUM(${sales.totalAmount}), 0)`,
+        lastSaleDate: sql<Date | null>`MAX(${sales.saleDate})`,
+      })
+      .from(customers)
+      .leftJoin(sales, and(
+        eq(sales.clientId, customers.id),
+        eq(sales.businessId, ctx.businessId)
+      ))
+      .where(and(
+        eq(customers.businessId, ctx.businessId),
+        searchFilter,
+        minBalanceFilter
+      ))
+      .groupBy(customers.id)
+      .having(sql`COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+        SELECT SUM(${abonos.amount}) 
+        FROM ${abonos} 
+        WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+      ), 0) > 0`)
+      .orderBy(desc(sql`COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+        SELECT SUM(${abonos.amount}) 
+        FROM ${abonos} 
+        WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+      ), 0)`))
+      .limit(filters?.limit ?? 100)
+      .offset(filters?.offset ?? 0);
+
+    const result: AccountsReceivableItem[] = [];
+    
+    for (const row of customersWithDebt) {
+      const totalPaymentsResult = await db
+        .select({ total: sql<number>`COALESCE(SUM(${abonos.amount}), 0)` })
+        .from(abonos)
+        .where(and(
+          eq(abonos.clientId, row.customer.id),
+          eq(abonos.businessId, ctx.businessId)
+        ));
+      
+      const totalPayments = totalPaymentsResult[0]?.total ?? 0;
+      
+      result.push({
+        customer: row.customer,
+        totalDebt: Number(row.totalDebt),
+        totalSales: Number(row.totalSales),
+        totalPayments: totalPayments,
+        lastSaleDate: row.lastSaleDate,
+      });
+    }
+
+    return result;
+  }
+
+  async getTotalAccountsReceivable(ctx: RequestContext): Promise<number> {
+    const result = await db
+      .select({
+        totalBalance: sql<number>`SUM(
+          COALESCE((
+            SELECT SUM(${sales.balanceDue}) 
+            FROM ${sales} 
+            WHERE ${sales.clientId} = ${customers.id} 
+            AND ${sales.businessId} = ${ctx.businessId}
+          ), 0) - COALESCE((
+            SELECT SUM(${abonos.amount}) 
+            FROM ${abonos} 
+            WHERE ${abonos.clientId} = ${customers.id} 
+            AND ${abonos.businessId} = ${ctx.businessId}
+          ), 0)
+        )`,
+      })
+      .from(customers)
+      .where(eq(customers.businessId, ctx.businessId));
+
+    return result[0]?.totalBalance ?? 0;
   }
 }
 
