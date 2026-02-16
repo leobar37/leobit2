@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { ElectricProvider } from "~/lib/db/electric-client";
+import { AppLayout } from "~/components/layout/app-layout";
 
 export default function ProtectedLayout() {
   const { user, isLoading } = useAuth();
@@ -23,7 +24,9 @@ export default function ProtectedLayout() {
   return (
     <ElectricProvider>
       <SyncProvider>
-        <Outlet />
+        <AppLayout>
+          <Outlet />
+        </AppLayout>
       </SyncProvider>
     </ElectricProvider>
   );

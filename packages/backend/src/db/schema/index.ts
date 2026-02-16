@@ -3,6 +3,25 @@
  * Exporta todas las tablas, relaciones y tipos
  */
 
+// Better Auth (authentication)
+export {
+  user,
+  session,
+  account,
+  verification,
+  userRelations,
+  sessionRelations,
+  accountRelations,
+  type User,
+  type NewUser,
+  type Session,
+  type NewSession,
+  type Account,
+  type NewAccount,
+  type Verification,
+  type NewVerification,
+} from "./auth";
+
 // Enums
 export {
   userRoleEnum,
@@ -27,6 +46,8 @@ export {
 export {
   businesses,
   businessUsers,
+  businessesRelations,
+  businessUsersRelations,
   type Business,
   type NewBusiness,
   type BusinessUser,
@@ -36,6 +57,7 @@ export {
 // Customers
 export {
   customers,
+  customersRelations,
   type Customer,
   type NewCustomer,
 } from "./customers";
@@ -44,6 +66,8 @@ export {
 export {
   sales,
   saleItems,
+  salesRelations,
+  saleItemsRelations,
   type Sale,
   type NewSale,
   type SaleItem,
@@ -53,6 +77,7 @@ export {
 // Payments (Abonos)
 export {
   abonos,
+  abonosRelations,
   type Abono,
   type NewAbono,
 } from "./payments";
@@ -60,6 +85,7 @@ export {
 // Closings (Cierres del día)
 export {
   closings,
+  closingsRelations,
   type Closing,
   type NewClosing,
 } from "./closings";
@@ -69,6 +95,9 @@ export {
   products,
   inventory,
   distribuciones,
+  productsRelations,
+  inventoryRelations,
+  distribucionesRelations,
   type Product,
   type NewProduct,
   type Inventory,
@@ -87,8 +116,14 @@ export {
 export {
   staffInvitations,
   invitationStatusEnum,
+  staffInvitationsRelations,
   type StaffInvitation,
   type NewStaffInvitation,
 } from "./staff-invitations";
 
-import "./relations";
+export {
+  syncOperations,
+  syncOperationsRelations,
+  type SyncOperation,
+  type NewSyncOperation,
+} from "./sync-operations";

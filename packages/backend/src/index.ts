@@ -1,4 +1,3 @@
-import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { errorPlugin } from "./plugins/error-handler";
 import { authRoutes } from "./api/auth";
@@ -12,24 +11,28 @@ import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
 import { closingRoutes } from "./api/closings";
+import { syncRoutes } from "./api/sync";
+import { getCorsConfig, getCorsOrigin } from "./lib/cors";
+
+const corsConfig = getCorsConfig();
 
 const app = new Elysia()
   .use(errorPlugin)
-  .use(
-    cors({
-      origin: process.env.FRONTEND_URL || "http://localhost:5173",
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "Cache-Control",
-        "Accept",
-        "Accept-Language",
-      ],
-    })
-  )
-  .use(authRoutes)
+  .options("/*", ({ request, set }) => {
+    const requestOrigin = request.headers.get("origin");
+    set.status = 204;
+    set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
+    set.headers["access-control-allow-credentials"] = corsConfig.credentials;
+    set.headers["access-control-allow-methods"] = corsConfig.methods;
+    set.headers["access-control-allow-headers"] = corsConfig.headers;
+    set.headers["access-control-max-age"] = corsConfig.maxAge;
+    return null;
+  })
+  .onAfterHandle(({ request, set }) => {
+    const requestOrigin = request.headers.get("origin");
+    set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
+    set.headers["access-control-allow-credentials"] = corsConfig.credentials;
+  })
   .use(profileRoutes)
   .use(businessRoutes)
   .use(invitationRoutes)
@@ -41,6 +44,8 @@ const app = new Elysia()
   .use(distribucionRoutes)
   .use(saleRoutes)
   .use(closingRoutes)
+  .use(syncRoutes)
+  .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",

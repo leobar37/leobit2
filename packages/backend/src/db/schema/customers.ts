@@ -54,3 +54,14 @@ export const customers = pgTable(
 // Type exports
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
+
+export const customersRelations = relations(customers, ({ one }) => ({
+  business: one(businesses, {
+    fields: [customers.businessId],
+    references: [businesses.id],
+  }),
+  createdByUser: one(businessUsers, {
+    fields: [customers.createdBy],
+    references: [businessUsers.id],
+  }),
+}));

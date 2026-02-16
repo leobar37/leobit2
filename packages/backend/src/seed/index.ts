@@ -11,11 +11,16 @@ import {
   ABONOS,
   DISTRIBUCIONES,
 } from "./data";
+import { inventory, saleItems, sales, abonos, distribuciones, customers, products } from "../db/schema";
+
+const FORCE_MODE = process.argv.includes("--force");
 
 interface SeedResult {
   userId: string;
   businessId: string;
+  businessUserId: string;
   productsCount: number;
+  inventoryCount: number;
   customersCount: number;
   salesCount: number;
   abonosCount: number;
@@ -29,17 +34,25 @@ async function seed(): Promise<SeedResult> {
     throw new Error("Seed cannot run in production environment");
   }
 
+  if (FORCE_MODE) {
+    console.log("⚠️ FORCE MODE: Clearing existing seeded data...\n");
+    await clearExistingData();
+  }
+
   const user = await createTestUser();
   console.log();
 
-  const business = await createBusinessAndLinkUser(user.userId);
+  const { business, businessUserId } = await createBusinessAndLinkUser(user.userId);
   console.log(`✓ Business created: ${business.name} (ID: ${business.id})\n`);
 
-  const ctx = RequestContext.forWorker(business.id);
+  const ctx = RequestContext.forWorker(business.id, businessUserId);
   console.log("Created admin context for seeding\n");
 
   const products = await seedProducts(ctx);
   console.log(`✓ Seeded ${products.length} products\n`);
+
+  const inventoryItems = await seedInventory(ctx, products);
+  console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
 
   const customers = await seedCustomers(ctx);
   console.log(`✓ Seeded ${customers.length} customers\n`);
@@ -50,7 +63,7 @@ async function seed(): Promise<SeedResult> {
   const abonos = await seedAbonos(ctx, customers);
   console.log(`✓ Seeded ${abonos.length} abonos\n`);
 
-  const distribuciones = await seedDistribuciones(ctx, user.userId);
+  const distribuciones = await seedDistribuciones(ctx, businessUserId);
   console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
 
   console.log("✅ Seed completed successfully!\n");
@@ -62,7 +75,9 @@ async function seed(): Promise<SeedResult> {
   return {
     userId: user.userId,
     businessId: business.id,
+    businessUserId,
     productsCount: products.length,
+    inventoryCount: inventoryItems.length,
     customersCount: customers.length,
     salesCount: sales.length,
     abonosCount: abonos.length,
@@ -70,19 +85,22 @@ async function seed(): Promise<SeedResult> {
   };
 }
 
-async function createBusinessAndLinkUser(userId: string) {
+async function createBusinessAndLinkUser(userId: string): Promise<{ business: { id: string; name: string }; businessUserId: string }> {
   const existingMembership = await db.query.businessUsers.findFirst({
     where: (bu, { eq }) => eq(bu.userId, userId),
-    with: { business: true },
   });
 
-  if (existingMembership && existingMembership.business) {
-    const business = existingMembership.business as { id: string; name: string };
-    console.log(`⚠ User already linked to business: ${business.name}`);
-    return business;
+  if (existingMembership) {
+    const business = await db.query.businesses.findFirst({
+      where: (b, { eq }) => eq(b.id, existingMembership.businessId),
+    });
+    if (business) {
+      console.log(`⚠ User already linked to business: ${business.name}`);
+      return { business, businessUserId: existingMembership.id };
+    }
   }
 
-  const tempCtx = RequestContext.forWorker("temp");
+  const tempCtx = RequestContext.forWorker("temp", "temp");
 
   const business = await repositories.business.create(tempCtx, {
     name: TEST_BUSINESS.name,
@@ -92,12 +110,12 @@ async function createBusinessAndLinkUser(userId: string) {
     email: TEST_BUSINESS.email,
   });
 
-  await db.insert(businessUsers).values({
+  const [businessUser] = await db.insert(businessUsers).values({
     businessId: business.id,
     userId: userId,
     role: "ADMIN_NEGOCIO",
     salesPoint: "Oficina Principal",
-  });
+  }).returning();
 
   await repositories.business.update(tempCtx, business.id, {
     modoOperacion: TEST_BUSINESS.modoOperacion,
@@ -106,7 +124,7 @@ async function createBusinessAndLinkUser(userId: string) {
     permitirVentaSinStock: TEST_BUSINESS.permitirVentaSinStock,
   });
 
-  return business;
+  return { business, businessUserId: businessUser.id };
 }
 
 async function seedProducts(ctx: RequestContext) {
@@ -224,7 +242,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   return abonos;
 }
 
-async function seedDistribuciones(ctx: RequestContext, userId: string) {
+async function seedDistribuciones(ctx: RequestContext, businessUserId: string) {
   const existing = await services.distribucion.getDistribuciones(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} distribuciones already exist, skipping`);
@@ -232,18 +250,61 @@ async function seedDistribuciones(ctx: RequestContext, userId: string) {
   }
 
   const distribuciones = [];
-  for (const distData of DISTRIBUCIONES) {
-    const created = await services.distribucion.createDistribucion(ctx, {
-      vendedorId: userId,
-      puntoVenta: distData.puntoVenta,
-      kilosAsignados: distData.kilosAsignados,
-      fecha: distData.fecha,
-    });
+  const seenDates = new Set<string>();
 
-    distribuciones.push(created);
+  for (const distData of DISTRIBUCIONES) {
+    // Skip duplicate dates for the same seller
+    if (seenDates.has(distData.fecha)) {
+      console.log(`⚠ Skipping duplicate distribucion for fecha: ${distData.fecha}`);
+      continue;
+    }
+    seenDates.add(distData.fecha);
+
+    try {
+      const created = await services.distribucion.createDistribucion(ctx, {
+        vendedorId: businessUserId,
+        puntoVenta: distData.puntoVenta,
+        kilosAsignados: distData.kilosAsignados,
+        fecha: distData.fecha,
+      });
+      distribuciones.push(created);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Ya existe una distribución")) {
+        console.log(`⚠ Distribucion already exists for fecha: ${distData.fecha}, skipping`);
+        continue;
+      }
+      throw error;
+    }
   }
 
   return distribuciones;
+}
+
+async function seedInventory(ctx: RequestContext, products: Array<{ id: string }>) {
+  const existing = await services.inventory.getInventory(ctx);
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} inventory items already exist, skipping`);
+    return existing;
+  }
+
+  const inventoryItems = [];
+  for (const product of products) {
+    const created = await services.inventory.updateStock(ctx, product.id, 100);
+    inventoryItems.push(created);
+  }
+
+  return inventoryItems;
+}
+
+async function clearExistingData() {
+  await db.delete(saleItems);
+  await db.delete(sales);
+  await db.delete(abonos);
+  await db.delete(distribuciones);
+  await db.delete(customers);
+  await db.delete(inventory);
+  await db.delete(products);
+  console.log("✓ Cleared existing data\n");
 }
 
 seed()
@@ -252,6 +313,7 @@ seed()
     console.log(`  User ID: ${result.userId}`);
     console.log(`  Business ID: ${result.businessId}`);
     console.log(`  Products: ${result.productsCount}`);
+    console.log(`  Inventory Items: ${result.inventoryCount}`);
     console.log(`  Customers: ${result.customersCount}`);
     console.log(`  Sales: ${result.salesCount}`);
     console.log(`  Abonos: ${result.abonosCount}`);

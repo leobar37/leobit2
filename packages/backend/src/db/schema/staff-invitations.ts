@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
 
 export const invitationStatusEnum = pgEnum("invitation_status", [
@@ -38,3 +39,10 @@ export const staffInvitations = pgTable("staff_invitations", {
 
 export type StaffInvitation = typeof staffInvitations.$inferSelect;
 export type NewStaffInvitation = typeof staffInvitations.$inferInsert;
+
+export const staffInvitationsRelations = relations(staffInvitations, ({ one }) => ({
+  business: one(businesses, {
+    fields: [staffInvitations.businessId],
+    references: [businesses.id],
+  }),
+}));

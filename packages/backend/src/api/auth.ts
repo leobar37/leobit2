@@ -1,10 +1,56 @@
 import { Elysia } from "elysia";
 import { auth } from "../lib/auth";
+import { getCorsConfig, getCorsOrigin } from "../lib/cors";
 
-export const authRoutes = new Elysia({ prefix: "/auth" })
-  .all("/*", async (context) => {
-    const { request } = context;
+const corsConfig = getCorsConfig();
 
-    const response = await auth.handler(request);
-    return response;
+export const authRoutes = new Elysia()
+  .onRequest(({ request, set }) => {
+    if (request.method === "OPTIONS") {
+      const requestOrigin = request.headers.get("origin");
+      set.status = 204;
+      set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
+      set.headers["access-control-allow-credentials"] = corsConfig.credentials;
+      set.headers["access-control-allow-methods"] = corsConfig.methods;
+      set.headers["access-control-allow-headers"] = corsConfig.headers;
+      set.headers["access-control-max-age"] = corsConfig.maxAge;
+    }
+  })
+  .all("/*", async ({ request, set }) => {
+    try {
+      const response = await auth.handler(request);
+
+      set.status = response.status;
+
+      const newHeaders: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        newHeaders[key] = value;
+      });
+      const requestOrigin = request.headers.get("origin");
+      newHeaders["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
+      newHeaders["access-control-allow-credentials"] = corsConfig.credentials;
+
+      set.headers = newHeaders;
+
+      if (!response.body) {
+        return null;
+      }
+
+      const bodyText = await response.text();
+      try {
+        return JSON.parse(bodyText);
+      } catch {
+        return bodyText;
+      }
+    } catch (error) {
+      console.error("[Auth Handler Error]", error);
+      set.status = 500;
+      return {
+        success: false,
+        error: {
+          code: "AUTH_HANDLER_ERROR",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+      };
+    }
   });

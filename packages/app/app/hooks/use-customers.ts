@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { syncClient } from "~/lib/sync/client";
+import { createSyncId, isOnline } from "~/lib/sync/utils";
 
 export interface Customer {
   id: string;
@@ -49,6 +51,31 @@ async function getCustomer(id: string): Promise<Customer> {
 }
 
 async function createCustomer(input: CreateCustomerInput): Promise<Customer> {
+  if (!isOnline()) {
+    const tempId = createSyncId();
+
+    await syncClient.enqueueOperation({
+      entity: "customers",
+      operation: "insert",
+      entityId: tempId,
+      data: {
+        ...input,
+      },
+      lastError: undefined,
+    });
+
+    return {
+      id: tempId,
+      name: input.name,
+      dni: input.dni ?? null,
+      phone: input.phone ?? null,
+      address: input.address ?? null,
+      notes: input.notes ?? null,
+      syncStatus: "pending",
+      createdAt: new Date(),
+    };
+  }
+
   const { data, error } = await api.customers.post(input);
 
   if (error) {
@@ -62,6 +89,29 @@ async function updateCustomer({
   id,
   ...input
 }: UpdateCustomerInput & { id: string }): Promise<Customer> {
+  if (!isOnline()) {
+    await syncClient.enqueueOperation({
+      entity: "customers",
+      operation: "update",
+      entityId: id,
+      data: {
+        ...input,
+      },
+      lastError: undefined,
+    });
+
+    return {
+      id,
+      name: input.name ?? "",
+      dni: input.dni ?? null,
+      phone: input.phone ?? null,
+      address: input.address ?? null,
+      notes: input.notes ?? null,
+      syncStatus: "pending",
+      createdAt: new Date(),
+    };
+  }
+
   const { data, error } = await api.customers({ id }).put(input);
 
   if (error) {
@@ -72,6 +122,17 @@ async function updateCustomer({
 }
 
 async function deleteCustomer(id: string): Promise<void> {
+  if (!isOnline()) {
+    await syncClient.enqueueOperation({
+      entity: "customers",
+      operation: "delete",
+      entityId: id,
+      data: {},
+      lastError: undefined,
+    });
+    return;
+  }
+
   const { error } = await api.customers({ id }).delete();
 
   if (error) {

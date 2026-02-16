@@ -158,13 +158,13 @@ export class RequestContext {
    * Factory: Crear para workers/jobs en background
    * Usa el rol de ADMIN para tener todos los permisos
    */
-  static forWorker(businessId: string): RequestContext {
+  static forWorker(businessId: string, businessUserId?: string): RequestContext {
     return new RequestContext(
       "system",
       "system@avileo.com",
       "System",
       businessId,
-      "system",
+      businessUserId || "system",
       "ADMIN_NEGOCIO",
       null,
       ["*"],

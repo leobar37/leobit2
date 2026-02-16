@@ -50,12 +50,16 @@ export const closings = pgTable(
   ]
 );
 
+export type Closing = typeof closings.$inferSelect;
+export type NewClosing = typeof closings.$inferInsert;
+
 export const closingsRelations = relations(closings, ({ one }) => ({
+  business: one(businesses, {
+    fields: [closings.businessId],
+    references: [businesses.id],
+  }),
   seller: one(businessUsers, {
     fields: [closings.sellerId],
     references: [businessUsers.id],
   }),
 }));
-
-export type Closing = typeof closings.$inferSelect;
-export type NewClosing = typeof closings.$inferInsert;

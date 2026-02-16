@@ -83,9 +83,14 @@ export const businessUsers = pgTable(
   ]
 );
 
-// Relations
+// Type exports
+export type Business = typeof businesses.$inferSelect;
+export type NewBusiness = typeof businesses.$inferInsert;
+export type BusinessUser = typeof businessUsers.$inferSelect;
+export type NewBusinessUser = typeof businessUsers.$inferInsert;
+
 export const businessesRelations = relations(businesses, ({ many }) => ({
-  businessUsers: many(businessUsers),
+  users: many(businessUsers),
 }));
 
 export const businessUsersRelations = relations(businessUsers, ({ one }) => ({
@@ -94,9 +99,3 @@ export const businessUsersRelations = relations(businessUsers, ({ one }) => ({
     references: [businesses.id],
   }),
 }));
-
-// Type exports
-export type Business = typeof businesses.$inferSelect;
-export type NewBusiness = typeof businesses.$inferInsert;
-export type BusinessUser = typeof businessUsers.$inferSelect;
-export type NewBusinessUser = typeof businessUsers.$inferInsert;

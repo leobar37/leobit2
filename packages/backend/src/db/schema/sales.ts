@@ -91,11 +91,21 @@ export const saleItems = pgTable(
   ]
 );
 
-// Relations
+// Type exports
+export type Sale = typeof sales.$inferSelect;
+export type NewSale = typeof sales.$inferInsert;
+export type SaleItem = typeof saleItems.$inferSelect;
+export type NewSaleItem = typeof saleItems.$inferInsert;
+
 export const salesRelations = relations(sales, ({ one, many }) => ({
+  items: many(saleItems),
   client: one(customers, {
     fields: [sales.clientId],
     references: [customers.id],
+  }),
+  business: one(businesses, {
+    fields: [sales.businessId],
+    references: [businesses.id],
   }),
   seller: one(businessUsers, {
     fields: [sales.sellerId],
@@ -105,7 +115,6 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     fields: [sales.distribucionId],
     references: [distribuciones.id],
   }),
-  items: many(saleItems),
 }));
 
 export const saleItemsRelations = relations(saleItems, ({ one }) => ({
@@ -118,9 +127,3 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
     references: [products.id],
   }),
 }));
-
-// Type exports
-export type Sale = typeof sales.$inferSelect;
-export type NewSale = typeof sales.$inferInsert;
-export type SaleItem = typeof saleItems.$inferSelect;
-export type NewSaleItem = typeof saleItems.$inferInsert;

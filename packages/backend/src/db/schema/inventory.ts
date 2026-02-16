@@ -21,6 +21,7 @@ import {
   syncStatusEnum,
 } from "./enums";
 import { businesses, businessUsers } from "./businesses";
+import { sales, saleItems } from "./sales";
 
 // Products table
 export const products = pgTable(
@@ -114,3 +115,27 @@ export type Inventory = typeof inventory.$inferSelect;
 export type NewInventory = typeof inventory.$inferInsert;
 export type Distribucion = typeof distribuciones.$inferSelect;
 export type NewDistribucion = typeof distribuciones.$inferInsert;
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  product: one(products, {
+    fields: [inventory.productId],
+    references: [products.id],
+  }),
+}));
+
+export const productsRelations = relations(products, ({ many }) => ({
+  inventory: many(inventory),
+  saleItems: many(saleItems),
+}));
+
+export const distribucionesRelations = relations(distribuciones, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [distribuciones.businessId],
+    references: [businesses.id],
+  }),
+  vendedor: one(businessUsers, {
+    fields: [distribuciones.vendedorId],
+    references: [businessUsers.id],
+  }),
+  sales: many(sales),
+}));

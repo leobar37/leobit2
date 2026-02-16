@@ -96,8 +96,9 @@ export interface CreateSaleInput {
 
 export const syncOperationSchema = z.object({
   id: z.string(),
-  collection: z.enum(["customers", "payments", "sales"]),
+  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones"]),
   operation: z.enum(["insert", "update", "delete"]),
+  entityId: z.string(),
   data: z.record(z.string(), z.unknown()),
   timestamp: z.number(),
   attempts: z.number().default(0),

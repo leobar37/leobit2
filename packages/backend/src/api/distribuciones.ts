@@ -40,7 +40,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
     async ({ ctx, query, distribucionService }) => {
       const distribucion = await distribucionService.getDistribucionForVendedor(
         ctx,
-        ctx.userId,
+        ctx.businessUserId,
         query.fecha
       );
       return {

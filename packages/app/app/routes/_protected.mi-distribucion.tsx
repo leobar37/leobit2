@@ -160,7 +160,7 @@ export default function MiDistribucionPage() {
         </Card>
 
         {!isCerrado && (
-          <Link to="/sales/new">
+          <Link to="/ventas/nueva">
             <Button className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600">
               <Package className="mr-2 h-5 w-5" />
               Nueva Venta

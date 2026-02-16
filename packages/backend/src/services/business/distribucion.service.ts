@@ -26,7 +26,7 @@ export class DistribucionService {
     }
 
     // Si es vendedor, solo puede ver sus propias distribuciones
-    if (!ctx.isAdmin() && filters?.vendedorId && filters.vendedorId !== ctx.userId) {
+    if (!ctx.isAdmin() && filters?.vendedorId && filters.vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede ver distribuciones de otros vendedores");
     }
 
@@ -34,7 +34,7 @@ export class DistribucionService {
     if (!ctx.isAdmin() && !filters?.vendedorId) {
       return this.repository.findMany(ctx, {
         ...filters,
-        vendedorId: ctx.userId,
+        vendedorId: ctx.businessUserId,
       });
     }
 
@@ -52,7 +52,7 @@ export class DistribucionService {
     }
 
     // Vendedores solo pueden ver sus propias distribuciones
-    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.userId) {
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede ver esta distribución");
     }
 
@@ -172,7 +172,7 @@ export class DistribucionService {
     }
 
     // Admin puede cerrar cualquiera, vendedor solo la suya
-    if (!ctx.isAdmin() && existing.vendedorId !== ctx.userId) {
+    if (!ctx.isAdmin() && existing.vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede cerrar esta distribución");
     }
 
@@ -197,7 +197,7 @@ export class DistribucionService {
     }
 
     // Vendedores solo pueden ver su propia distribución
-    if (!ctx.isAdmin() && vendedorId !== ctx.userId) {
+    if (!ctx.isAdmin() && vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede ver la distribución de otro vendedor");
     }
 

@@ -7,8 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useSales, useTodayStats } from "~/hooks/use-sales";
 import { SaleCard } from "~/components/sales/sale-card";
+import { useSetLayout } from "~/components/layout/app-layout";
 
 export default function SalesPage() {
+  useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
+
   const [search, setSearch] = useState("");
   const { data: sales, isLoading, error } = useSales();
   const { data: todayStats } = useTodayStats();
@@ -28,15 +31,8 @@ export default function SalesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-4">
-          <h1 className="font-bold text-lg">Ventas</h1>
-          <SyncStatus />
-        </div>
-      </header>
-
-      <main className="p-4 pb-24 space-y-4">
+    <>
+      <div className="space-y-4">
         {todayStats && (
           <Card className="border-0 shadow-md bg-gradient-to-r from-orange-500 to-orange-600 text-white">
             <CardContent className="p-4">
@@ -98,7 +94,7 @@ export default function SalesPage() {
             />
           ))}
         </div>
-      </main>
+      </div>
 
       <Link to="/ventas/nueva" className="fixed bottom-20 right-4 z-50">
         <Button
@@ -108,6 +104,6 @@ export default function SalesPage() {
           <Plus className="h-6 w-6" />
         </Button>
       </Link>
-    </div>
+    </>
   );
 }

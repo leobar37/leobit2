@@ -1,11 +1,13 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "./db";
+import { getCorsConfig } from "./cors";
 
-const isProduction = process.env.NODE_ENV === "production";
+const corsConfig = getCorsConfig();
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_BASE_URL || "http://localhost:5201",
+  trustedOrigins: corsConfig.allowedOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
@@ -21,8 +23,8 @@ export const auth = betterAuth({
   plugins: [],
   advanced: {
     defaultCookieAttributes: {
-      sameSite: isProduction ? "none" : "lax",
-      secure: isProduction,
+      sameSite: corsConfig.isProduction ? "none" : "lax",
+      secure: corsConfig.isProduction,
     },
   },
 });

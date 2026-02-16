@@ -56,8 +56,15 @@ export const abonos = pgTable(
   ]
 );
 
-// Relations
+// Type exports
+export type Abono = typeof abonos.$inferSelect;
+export type NewAbono = typeof abonos.$inferInsert;
+
 export const abonosRelations = relations(abonos, ({ one }) => ({
+  business: one(businesses, {
+    fields: [abonos.businessId],
+    references: [businesses.id],
+  }),
   client: one(customers, {
     fields: [abonos.clientId],
     references: [customers.id],
@@ -67,7 +74,3 @@ export const abonosRelations = relations(abonos, ({ one }) => ({
     references: [businessUsers.id],
   }),
 }));
-
-// Type exports
-export type Abono = typeof abonos.$inferSelect;
-export type NewAbono = typeof abonos.$inferInsert;

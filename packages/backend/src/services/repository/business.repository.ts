@@ -76,10 +76,7 @@ export class BusinessRepository {
         ...(data.permitirVentaSinStock !== undefined && { permitirVentaSinStock: data.permitirVentaSinStock }),
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(businesses.id, id),
-        eq(businesses.id, ctx.businessId)
-      ))
+      .where(eq(businesses.id, id))
       .returning();
 
     return business;
@@ -92,10 +89,7 @@ export class BusinessRepository {
         logoUrl,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(businesses.id, id),
-        eq(businesses.id, ctx.businessId)
-      ))
+      .where(eq(businesses.id, id))
       .returning();
 
     return business;

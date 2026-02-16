@@ -4,9 +4,10 @@ import { TEST_USER } from "./data";
 export async function createTestUser(): Promise<{ userId: string; email: string; name: string }> {
   console.log(`Creating test user: ${TEST_USER.email}`);
 
-  const baseUrl = process.env.BETTER_AUTH_BASE_URL || "http://localhost:3000";
+  const port = process.env.PORT || "3000";
+  const baseUrl = `http://localhost:${port}`;
 
-  const signUpResponse = await fetch(`${baseUrl}/auth/sign-up/email`, {
+  const signUpResponse = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -30,7 +31,7 @@ export async function createTestUser(): Promise<{ userId: string; email: string;
   if (errorText.includes("already exists") || errorText.includes("already registered")) {
     console.log(`⚠ Test user already exists, signing in...`);
 
-    const signInResponse = await fetch(`${baseUrl}/auth/sign-in/email`, {
+    const signInResponse = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
