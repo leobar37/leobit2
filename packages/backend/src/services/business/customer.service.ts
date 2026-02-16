@@ -1,4 +1,4 @@
-import type { CustomerRepository } from "../repository/customer.repository";
+import type { CustomerRepository, AccountsReceivableItem } from "../repository/customer.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -130,5 +130,29 @@ export class CustomerService {
     }
 
     return this.repository.count(ctx);
+  }
+
+  async getAccountsReceivable(
+    ctx: RequestContext,
+    filters?: {
+      search?: string;
+      minBalance?: number;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<AccountsReceivableItem[]> {
+    if (!ctx.hasPermission("reports.view")) {
+      throw new ForbiddenError("No tiene permisos para ver reportes");
+    }
+
+    return this.repository.getAccountsReceivable(ctx, filters);
+  }
+
+  async getTotalAccountsReceivable(ctx: RequestContext): Promise<number> {
+    if (!ctx.hasPermission("reports.view")) {
+      throw new ForbiddenError("No tiene permisos para ver reportes");
+    }
+
+    return this.repository.getTotalAccountsReceivable(ctx);
   }
 }

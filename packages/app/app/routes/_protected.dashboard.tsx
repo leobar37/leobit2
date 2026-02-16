@@ -4,6 +4,8 @@ import {
   Users,
   Calculator,
   Package,
+  DollarSign,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -99,14 +101,25 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
+        <Link to="/reportes/cuentas-por-cobrar">
+          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
+          >
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center"
+            >
+              <DollarSign className="h-6 w-6 text-red-600" />
+            </div>
+            <p className="font-semibold text-foreground">Por Cobrar</p>
+          </Card>
+        </Link>
+
         <Link to="/cierre">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center"
             >
-              <Calculator className="h-6 w-6 text-purple-600" />
+              <FileText className="h-6 w-6 text-purple-600" />
             </div>
-            <p className="font-semibold text-foreground">Reportes</p>
+            <p className="font-semibold text-foreground">Cierre</p>
           </Card>
         </Link>
       </div>

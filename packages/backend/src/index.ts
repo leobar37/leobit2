@@ -11,6 +11,7 @@ import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
 import { closingRoutes } from "./api/closings";
+import { reportRoutes } from "./api/reports";
 import { syncRoutes } from "./api/sync";
 import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
@@ -44,6 +45,7 @@ const app = new Elysia()
   .use(distribucionRoutes)
   .use(saleRoutes)
   .use(closingRoutes)
+  .use(reportRoutes)
   .use(syncRoutes)
   .use(authRoutes)
   .get("/", () => ({
