@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Package } from "lucide-react";
+import { formatKilos, formatPercentage } from "~/lib/utils";
 
 interface InventoryCardProps {
   kilosAsignados: number;
@@ -17,7 +18,7 @@ export function InventoryCard({
   className,
 }: InventoryCardProps) {
   const porcentajeVendido = Math.min(
-    Math.round((kilosVendidos / kilosAsignados) * 100),
+    Math.round((kilosVendidos / (kilosAsignados || 1)) * 100),
     100
   );
   const kilosDisponibles = Math.max(kilosAsignados - kilosVendidos, 0);
@@ -50,7 +51,7 @@ export function InventoryCard({
       <CardContent className="space-y-4">
         <div className="text-center">
           <span className="text-4xl font-bold text-foreground">
-            {kilosAsignados.toFixed(1)}
+            {formatKilos(kilosAsignados)}
           </span>
           <span className="text-lg text-muted-foreground ml-1">kg</span>
           <p className="text-sm text-muted-foreground mt-1">asignados</p>
@@ -59,7 +60,7 @@ export function InventoryCard({
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              Vendido: {kilosVendidos.toFixed(1)} kg
+              Vendido: {formatKilos(kilosVendidos)} kg
             </span>
             <span className="font-medium text-orange-600">
               {porcentajeVendido}%
@@ -72,7 +73,7 @@ export function InventoryCard({
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Disponible</span>
             <span className="text-lg font-semibold text-green-600">
-              {kilosDisponibles.toFixed(1)} kg
+              {formatKilos(kilosDisponibles)} kg
             </span>
           </div>
         </div>

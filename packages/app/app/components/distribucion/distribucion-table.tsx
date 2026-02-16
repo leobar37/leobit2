@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, CheckCircle } from "lucide-react";
 import type { Distribucion } from "~/hooks/use-distribuciones";
+import { formatKilos as formatKilosUtil } from "~/lib/utils";
 
 interface DistribucionTableProps {
   distribuciones: Distribucion[];
@@ -42,7 +43,7 @@ export function DistribucionTable({
     );
   };
 
-  const formatKilos = (value: number) => `${value.toFixed(1)} kg`;
+
 
   if (isLoading) {
     return (
@@ -79,10 +80,10 @@ export function DistribucionTable({
               <TableCell className="font-medium">{dist.vendedorName}</TableCell>
               <TableCell>{dist.puntoVenta}</TableCell>
               <TableCell className="text-right">
-                {formatKilos(dist.kilosAsignados)}
+                {formatKilosUtil(dist.kilosAsignados)} kg
               </TableCell>
               <TableCell className="text-right">
-                {formatKilos(dist.kilosVendidos)}
+                {formatKilosUtil(dist.kilosVendidos)} kg
               </TableCell>
               <TableCell>{getStatusBadge(dist.estado)}</TableCell>
               <TableCell className="text-right">

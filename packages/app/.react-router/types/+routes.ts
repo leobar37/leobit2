@@ -19,6 +19,9 @@ type Pages = {
       "token": string;
     };
   };
+  "/reportes/cuentas-por-cobrar": {
+    params: {};
+  };
   "/clientes/:id": {
     params: {
       "id": string;
@@ -95,7 +98,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/clientes/:id" | "/clientes/:id/edit" | "/business/create" | "/clientes" | "/mi-distribucion" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/productos/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id" | "/register" | "/AGENTS" | "/login";
+    page: "/" | "/invitations/:token" | "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/business/create" | "/clientes" | "/mi-distribucion" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/productos/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id" | "/register" | "/AGENTS" | "/login";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -103,7 +106,11 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/clientes/:id" | "/clientes/:id/edit" | "/business/create" | "/clientes" | "/mi-distribucion" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/productos/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id";
+    page: "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/business/create" | "/clientes" | "/mi-distribucion" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/calculadora" | "/invitations" | "/dashboard" | "/productos" | "/productos/:id" | "/profile" | "/cierre" | "/ventas" | "/ventas/nueva" | "/ventas/:id";
+  };
+  "routes/_protected.reportes.cuentas-por-cobrar.tsx": {
+    id: "routes/_protected.reportes.cuentas-por-cobrar";
+    page: "/reportes/cuentas-por-cobrar";
   };
   "routes/_protected.clientes.$id._index.tsx": {
     id: "routes/_protected.clientes.$id._index";
@@ -199,6 +206,7 @@ type RouteModules = {
   "root": typeof import("./app/root.tsx");
   "routes/invitations.$token": typeof import("./app/routes/invitations.$token.tsx");
   "routes/_protected": typeof import("./app/routes/_protected.tsx");
+  "routes/_protected.reportes.cuentas-por-cobrar": typeof import("./app/routes/_protected.reportes.cuentas-por-cobrar.tsx");
   "routes/_protected.clientes.$id._index": typeof import("./app/routes/_protected.clientes.$id._index.tsx");
   "routes/_protected.clientes.$id.edit": typeof import("./app/routes/_protected.clientes.$id.edit.tsx");
   "routes/_protected.business.create": typeof import("./app/routes/_protected.business.create.tsx");

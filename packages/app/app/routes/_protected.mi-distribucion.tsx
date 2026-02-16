@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
+import { formatKilos, formatCurrency } from "~/lib/utils";
 
 export default function MiDistribucionPage() {
   const { data: distribucion, isLoading, error } = useMiDistribucion();
@@ -136,13 +137,13 @@ export default function MiDistribucionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-orange-50 rounded-xl">
                 <span className="text-2xl font-bold text-orange-600">
-                  {distribucion.kilosAsignados.toFixed(1)}
+                  {formatKilos(distribucion.kilosAsignados)}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">Kg Asignados</p>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-xl">
                 <span className="text-2xl font-bold text-green-600">
-                  {kilosDisponibles.toFixed(1)}
+                  {formatKilos(kilosDisponibles)}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">Kg Disponibles</p>
               </div>
@@ -152,7 +153,7 @@ export default function MiDistribucionPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Monto Recaudado</span>
                 <span className="text-lg font-semibold">
-                  S/ {distribucion.montoRecaudado.toFixed(2)}
+                  S/ {formatCurrency(distribucion.montoRecaudado)}
                 </span>
               </div>
             </div>
