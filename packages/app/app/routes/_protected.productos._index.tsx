@@ -1,14 +1,14 @@
-import { Package, Search } from "lucide-react";
+import { Package, Search, Plus } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
 import { ProductCard } from "~/components/products/product-card";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
-  const navigate = useNavigate();
   const { data: products, isLoading, error } = useProducts();
 
   const filteredProducts = products?.filter((product) =>
@@ -21,7 +21,15 @@ export default function ProductsPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center justify-between h-16 px-4">
           <h1 className="font-bold text-lg">Catálogo</h1>
-          <SyncStatus />
+          <div className="flex items-center gap-2">
+            <Link to="/productos/nuevo">
+              <Button className="bg-orange-500 hover:bg-orange-600 rounded-xl">
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo
+              </Button>
+            </Link>
+            <SyncStatus />
+          </div>
         </div>
       </header>
 
@@ -59,11 +67,13 @@ export default function ProductsPage() {
 
           <div className="grid gap-3">
             {filteredProducts?.map((product) => (
-              <ProductCard
+              <Link
                 key={product.id}
-                product={product}
-                onClick={() => navigate(`/productos/${product.id}`)}
-              />
+                to={`/productos/${product.id}`}
+                className="block"
+              >
+                <ProductCard product={product} />
+              </Link>
             ))}
           </div>
         </div>

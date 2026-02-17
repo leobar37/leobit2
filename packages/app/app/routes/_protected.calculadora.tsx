@@ -8,7 +8,7 @@ export default function CalculatorPage() {
     title: "Calculadora",
     showBackButton: true,
     backHref: "/dashboard",
-    showBottomNav: false,
+    showBottomNav: true,
   });
 
   return (

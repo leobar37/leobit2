@@ -57,6 +57,24 @@ import type { ApiResponse } from "@avileo/shared";
 - **FK Pattern**: Operational FKs point to `business_users.id`
 - **Sync Status**: Tables `customers`, `sales`, `abonos` have `sync_status` + `sync_attempts`
 
+## React Router v7 Routing
+
+File-based routing in `packages/app/app/routes/` using flatRoutes convention:
+
+| Filename Pattern | URL Path | Layout |
+|------------------|----------|--------|
+| `_index.tsx` | `/` | root |
+| `login.tsx` | `/login` | root |
+| `_protected.tsx` | (layout) | - |
+| `_protected.dashboard.tsx` | `/dashboard` | protected |
+| `_protected.clientes._index.tsx` | `/clientes` | protected |
+| `_protected.clientes.$id._index.tsx` | `/clientes/:id` | protected |
+
+**Critical Rules:**
+- Use `._index.tsx` suffix for routes with children (e.g., `clientes._index.tsx` when you have `clientes.$id.tsx`)
+- `_protected.*` routes are wrapped with auth guard + AppLayout
+- Public routes have no underscore prefix (login, register)
+
 ## Documentation Map
 
 | Topic | Location |

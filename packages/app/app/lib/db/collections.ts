@@ -11,7 +11,8 @@ export async function loadCustomers(): Promise<Customer[]> {
 export async function loadProducts(): Promise<Product[]> {
   const { data, error } = await api.products.get();
   if (error) throw new Error(String(error.value));
-  return (data as unknown as Product[]) || [];
+  const response = data as unknown as { success: boolean; data: Product[] };
+  return response?.data || [];
 }
 
 export async function loadPayments(): Promise<Payment[]> {

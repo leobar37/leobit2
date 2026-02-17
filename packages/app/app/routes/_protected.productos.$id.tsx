@@ -2,7 +2,8 @@ import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Package, DollarSign, Tag, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useProduct, useUpdateProduct } from "~/hooks/use-products";
+import { useUpdateProduct } from "~/hooks/use-products";
+import { useProduct } from "~/hooks/use-products-live";
 import { ProductForm, type ProductFormData } from "~/components/products/product-form";
 
 const typeLabels = {
@@ -75,7 +76,7 @@ export default function ProductDetailPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center gap-3 h-16 px-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/productos")}
             className="p-2 -ml-2 rounded-xl hover:bg-orange-50 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -147,7 +148,7 @@ export default function ProductDetailPage() {
         <ProductForm
           product={product}
           onSubmit={handleSubmit}
-          onCancel={() => navigate(-1)}
+          onCancel={() => navigate("/productos")}
           isLoading={updateProduct.isPending}
         />
       </main>

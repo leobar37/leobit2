@@ -36,15 +36,10 @@ export default function DashboardPage() {
             Bienvenido de vuelta a tu sistema de ventas
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-orange-100">
-            Usa el menu inferior para navegar entre las diferentes funciones del sistema.
-          </p>
-        </CardContent>
       </Card>
 
       {usarDistribucion && tieneDistribucion && (
-        <Link to="/mi-distribucion">
+        <Link to="/mi-distribucion" className="block">
           <InventoryCard
             kilosAsignados={distribucion.kilosAsignados}
             kilosVendidos={distribucion.kilosVendidos}
@@ -68,7 +63,7 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Link to="/ventas">
+        <Link to="/ventas" className="block">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center"
@@ -79,7 +74,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link to="/clientes">
+        <Link to="/clientes" className="block">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center"
@@ -90,7 +85,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link to="/calculadora">
+        <Link to="/calculadora" className="block">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center"
@@ -101,7 +96,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link to="/reportes/cuentas-por-cobrar">
+        <Link to="/reportes/cuentas-por-cobrar" className="block">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center"
@@ -112,7 +107,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link to="/cierre">
+        <Link to="/cierre" className="block">
           <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
           >
             <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center"

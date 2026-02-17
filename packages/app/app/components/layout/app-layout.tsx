@@ -34,7 +34,7 @@ const menuItems = [
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Calculator, label: "Calculadora", href: "/calculadora" },
-  { icon: Settings, label: "Config", href: "/profile" },
+  { icon: Settings, label: "Config", href: "/config" },
 ];
 
 interface LayoutConfig {

@@ -17,11 +17,13 @@ export function InventoryCard({
   puntoVenta,
   className,
 }: InventoryCardProps) {
-  const porcentajeVendido = Math.min(
-    Math.round((kilosVendidos / (kilosAsignados || 1)) * 100),
-    100
-  );
-  const kilosDisponibles = Math.max(kilosAsignados - kilosVendidos, 0);
+  const asignados = Number(kilosAsignados) || 0;
+  const vendidos = Number(kilosVendidos) || 0;
+
+  const porcentajeVendido =
+    asignados > 0 ? Math.min(Math.round((vendidos / asignados) * 100), 100) : 0;
+
+  const kilosDisponibles = Math.max(asignados - vendidos, 0);
 
   return (
     <Card
@@ -51,7 +53,7 @@ export function InventoryCard({
       <CardContent className="space-y-4">
         <div className="text-center">
           <span className="text-4xl font-bold text-foreground">
-            {formatKilos(kilosAsignados)}
+            {formatKilos(asignados)}
           </span>
           <span className="text-lg text-muted-foreground ml-1">kg</span>
           <p className="text-sm text-muted-foreground mt-1">asignados</p>
