@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { syncClient } from "~/lib/sync/client";
+import { createSyncId, isOnline } from "~/lib/sync/utils";
 
 export interface Distribucion {
   id: string;
@@ -11,6 +13,7 @@ export interface Distribucion {
   montoRecaudado: number;
   estado: "activo" | "en_ruta" | "cerrado";
   fecha: Date;
+  syncStatus: "pending" | "synced" | "error";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,6 +96,36 @@ async function getStockDisponible(
 async function createDistribucion(
   input: CreateDistribucionInput
 ): Promise<Distribucion> {
+  if (!isOnline()) {
+    const tempId = createSyncId();
+
+    await syncClient.enqueueOperation({
+      entity: "distribuciones",
+      operation: "insert",
+      entityId: tempId,
+      data: {
+        ...input,
+      },
+      lastError: undefined,
+    });
+
+    const now = new Date();
+    return {
+      id: tempId,
+      vendedorId: input.vendedorId,
+      vendedorName: "",
+      puntoVenta: input.puntoVenta,
+      kilosAsignados: input.kilosAsignados,
+      kilosVendidos: 0,
+      montoRecaudado: 0,
+      estado: "activo",
+      fecha: input.fecha ? new Date(input.fecha) : new Date(),
+      syncStatus: "pending",
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const { data, error } = await api.distribuciones.post(input);
 
   if (error) {
@@ -106,6 +139,34 @@ async function updateDistribucion({
   id,
   ...input
 }: UpdateDistribucionInput & { id: string }): Promise<Distribucion> {
+  if (!isOnline()) {
+    await syncClient.enqueueOperation({
+      entity: "distribuciones",
+      operation: "update",
+      entityId: id,
+      data: {
+        ...input,
+      },
+      lastError: undefined,
+    });
+
+    const now = new Date();
+    return {
+      id,
+      vendedorId: "",
+      vendedorName: "",
+      puntoVenta: input.puntoVenta ?? "",
+      kilosAsignados: input.kilosAsignados ?? 0,
+      kilosVendidos: 0,
+      montoRecaudado: 0,
+      estado: input.estado ?? "activo",
+      fecha: new Date(),
+      syncStatus: "pending",
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const { data, error } = await api.distribuciones({ id }).put(input);
 
   if (error) {
@@ -116,6 +177,34 @@ async function updateDistribucion({
 }
 
 async function closeDistribucion(id: string): Promise<Distribucion> {
+  if (!isOnline()) {
+    await syncClient.enqueueOperation({
+      entity: "distribuciones",
+      operation: "update",
+      entityId: id,
+      data: {
+        estado: "cerrado",
+      },
+      lastError: undefined,
+    });
+
+    const now = new Date();
+    return {
+      id,
+      vendedorId: "",
+      vendedorName: "",
+      puntoVenta: "",
+      kilosAsignados: 0,
+      kilosVendidos: 0,
+      montoRecaudado: 0,
+      estado: "cerrado",
+      fecha: new Date(),
+      syncStatus: "pending",
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const { data, error } = await api.distribuciones({ id }).close.patch();
 
   if (error) {
@@ -126,6 +215,17 @@ async function closeDistribucion(id: string): Promise<Distribucion> {
 }
 
 async function deleteDistribucion(id: string): Promise<void> {
+  if (!isOnline()) {
+    await syncClient.enqueueOperation({
+      entity: "distribuciones",
+      operation: "delete",
+      entityId: id,
+      data: {},
+      lastError: undefined,
+    });
+    return;
+  }
+
   const { error } = await api.distribuciones({ id }).delete();
 
   if (error) {
