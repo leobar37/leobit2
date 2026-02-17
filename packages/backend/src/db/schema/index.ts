@@ -33,6 +33,8 @@ export {
   productUnitEnum,
   distribucionStatusEnum,
   modoOperacionEnum,
+  supplierTypeEnum,
+  purchaseStatusEnum,
 } from "./enums";
 
 // User Profiles (extiende Better Auth)
@@ -152,3 +154,21 @@ export {
   type SyncOperation,
   type NewSyncOperation,
 } from "./sync-operations";
+
+export {
+  suppliers,
+  suppliersRelations,
+  type Supplier,
+  type NewSupplier,
+} from "./suppliers";
+
+export {
+  purchases,
+  purchaseItems,
+  purchasesRelations,
+  purchaseItemsRelations,
+  type Purchase,
+  type NewPurchase,
+  type PurchaseItem,
+  type NewPurchaseItem,
+} from "./purchases";

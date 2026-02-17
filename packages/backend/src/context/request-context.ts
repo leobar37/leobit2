@@ -25,10 +25,13 @@ export type Permission =
   | "business.settings"
   | "business.users"
   | "business.analytics"
-  // Reportes
   | "reports.view"
   | "reports.export"
-  | "*"; // Todos los permisos
+  | "suppliers.read"
+  | "suppliers.write"
+  | "purchases.read"
+  | "purchases.write"
+  | "*";
 
 /**
  * Matriz de permisos por rol
