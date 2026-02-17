@@ -71,4 +71,73 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
         id: t.String(),
       }),
     }
+  )
+  .post(
+    "/:id/proof",
+    async ({ paymentService, fileService, ctx, params, body }) => {
+      const { file } = body;
+
+      if (!file || file.size === 0) {
+        return { success: false, error: "No file provided" };
+      }
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        return {
+          success: false,
+          error: "Invalid file type. Only JPEG, PNG and WebP allowed",
+        };
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return { success: false, error: "File too large. Max 5MB" };
+      }
+
+      // Upload file using FileService
+      const fileRecord = await fileService.upload(ctx as RequestContext, file);
+
+      // Update payment with file ID
+      const updatedPayment = await paymentService.updatePaymentProof(
+        ctx as RequestContext,
+        params.id,
+        { proofImageId: fileRecord.id }
+      );
+
+      return {
+        success: true,
+        data: { ...updatedPayment, proofImageId: fileRecord.id },
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        file: t.File(),
+      }),
+    }
+  )
+  .put(
+    "/:id/reference",
+    async ({ paymentService, ctx, params, body }) => {
+      const updatedPayment = await paymentService.updatePaymentProof(
+        ctx as RequestContext,
+        params.id,
+        { referenceNumber: body.referenceNumber }
+      );
+
+      return {
+        success: true,
+        data: updatedPayment,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        referenceNumber: t.String({ maxLength: 50 }),
+      }),
+    }
   );

@@ -8,6 +8,7 @@ export interface Product {
   unit: "kg" | "unidad";
   basePrice: string;
   isActive: boolean;
+  imageId: string | null;
   createdAt: Date;
 }
 
@@ -17,6 +18,7 @@ export interface CreateProductInput {
   unit: "kg" | "unidad";
   basePrice: string;
   isActive?: boolean;
+  imageId?: string;
 }
 
 export interface UpdateProductInput {
@@ -25,6 +27,7 @@ export interface UpdateProductInput {
   unit?: "kg" | "unidad";
   basePrice?: string;
   isActive?: boolean;
+  imageId?: string;
 }
 
 async function getProducts(): Promise<Product[]> {

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign } from "lucide-react";
+import { AssetPicker } from "@/components/assets/asset-picker";
 import type { Product } from "~/lib/db/schema";
 
 const productSchema = z.object({
@@ -14,6 +15,7 @@ const productSchema = z.object({
   unit: z.enum(["kg", "unidad"]),
   basePrice: z.string().min(1, "El precio es requerido"),
   isActive: z.boolean(),
+  imageId: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -31,6 +33,8 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -41,6 +45,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
           unit: product.unit,
           basePrice: product.basePrice,
           isActive: product.isActive,
+          imageId: product.imageId ?? undefined,
         }
       : undefined,
     defaultValues: {
@@ -49,6 +54,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
       unit: "kg",
       basePrice: "",
       isActive: true,
+      imageId: undefined,
     },
   });
 
@@ -72,6 +78,15 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
           {errors.name && (
             <p className="text-sm text-red-500">{errors.name.message}</p>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Imagen del producto</Label>
+          <AssetPicker
+            value={watch("imageId")}
+            onChange={(id) => setValue("imageId", id)}
+            placeholder="Seleccionar imagen"
+          />
         </div>
 
         <div className="space-y-2">

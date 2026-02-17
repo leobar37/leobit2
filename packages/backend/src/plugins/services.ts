@@ -16,6 +16,10 @@ import { SaleService } from "../services/business/sale.service";
 import { ClosingRepository } from "../services/repository/closing.repository";
 import { ClosingService } from "../services/business/closing.service";
 import { SyncService } from "../services/sync/sync.service";
+import { AssetRepository } from "../services/repository/asset.repository";
+import { AssetService } from "../services/business/asset.service";
+import { FileRepository } from "../services/repository/file.repository";
+import { FileService } from "../services/business/file.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -42,6 +46,10 @@ export const servicesPlugin = new Elysia({ name: "services" })
       paymentRepo,
       distribucionRepo,
     });
+    const assetRepo = new AssetRepository();
+    const assetService = new AssetService(assetRepo);
+    const fileRepo = new FileRepository();
+    const fileService = new FileService(fileRepo);
 
     return {
       businessRepo,
@@ -61,5 +69,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
       closingRepo,
       closingService,
       syncService,
+      assetRepo,
+      assetService,
+      fileRepo,
+      fileService,
     };
   });

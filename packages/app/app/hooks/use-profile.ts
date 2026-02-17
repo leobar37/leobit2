@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { useUploadFile } from "./use-files";
 
 export interface Profile {
   id: string;
@@ -10,13 +9,14 @@ export interface Profile {
   dni: string | null;
   phone: string | null;
   birthDate: string | null;
-  avatarUrl: string | null;
+  avatarId: string | null;
 }
 
 export interface UpdateProfileInput {
   dni?: string;
   phone?: string;
   birthDate?: string;
+  avatarId?: string;
 }
 
 async function getProfile(): Promise<Profile> {
@@ -45,19 +45,6 @@ async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
   return data.data as Profile;
 }
 
-async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
-  const { data, error } = await api.profile.avatar.post({ file });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to upload avatar");
-  }
-
-  return data.data as { avatarUrl: string };
-}
-
 export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
@@ -78,9 +65,14 @@ export function useUpdateProfile() {
 
 export function useUploadAvatar() {
   const queryClient = useQueryClient();
+  const uploadFile = useUploadFile();
 
   return useMutation({
-    mutationFn: uploadAvatar,
+    mutationFn: async (file: File) => {
+      const result = await uploadFile.mutateAsync(file);
+      await updateProfile({ avatarId: result.id });
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },

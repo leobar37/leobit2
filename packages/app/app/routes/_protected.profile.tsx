@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Link } from "react-router";
 import { ArrowLeft, Camera, Loader2, User } from "lucide-react";
 import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/use-profile";
+import { useFile } from "~/hooks/use-files";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,11 +25,13 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: avatarFile } = useFile(profile?.avatarId ?? "");
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const isLoading = profileLoading;
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -104,9 +107,9 @@ export default function ProfilePage() {
                 >
                   {isUploading ? (
                     <Loader2 className="h-8 w-8 text-white animate-spin" />
-                  ) : profile?.avatarUrl ? (
+                  ) : avatarFile?.url ? (
                     <img
-                      src={profile.avatarUrl}
+                      src={avatarFile.url}
                       alt="Avatar"
                       className="w-full h-full object-cover"
                     />

@@ -38,9 +38,26 @@ export {
 // User Profiles (extiende Better Auth)
 export {
   userProfiles,
+  userProfilesRelations,
   type UserProfile,
   type NewUserProfile,
 } from "./user-profiles";
+
+// Assets (galería compartida)
+export {
+  assets,
+  assetsRelations,
+  type Asset,
+  type NewAsset,
+} from "./assets";
+
+// Files (archivos privados)
+export {
+  files,
+  filesRelations,
+  type FileRecord,
+  type NewFileRecord,
+} from "./files";
 
 // Businesses
 export {

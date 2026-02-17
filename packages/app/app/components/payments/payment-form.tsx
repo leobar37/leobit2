@@ -1,10 +1,30 @@
-import { useState } from "react";
-import { X, Wallet, Banknote, Smartphone, Building2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState, useRef } from "react";
+import { X, Wallet, Banknote, Smartphone, Building2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormInput } from "@/components/forms/form-input";
+import { FormNumberInput } from "@/components/forms/form-number-input";
 import { useCreatePayment } from "~/hooks/use-payments";
+import { useUploadFile, validateFile } from "~/hooks/use-files";
+
+const paymentFormSchema = z.object({
+  amount: z.string().refine(
+    (val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    },
+    { message: "El monto debe ser mayor a 0" }
+  ),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia"]),
+  notes: z.string().optional(),
+  referenceNumber: z.string().max(50, "Máximo 50 caracteres").optional(),
+});
+
+type PaymentFormData = z.infer<typeof paymentFormSchema>;
 
 interface PaymentFormProps {
   clientId: string;
@@ -13,39 +33,94 @@ interface PaymentFormProps {
 }
 
 const paymentMethods = [
-  { value: "efectivo", label: "Efectivo", icon: Banknote },
-  { value: "yape", label: "Yape", icon: Smartphone },
-  { value: "plin", label: "Plin", icon: Smartphone },
-  { value: "transferencia", label: "Transferencia", icon: Building2 },
+  { value: "efectivo" as const, label: "Efectivo", icon: Banknote },
+  { value: "yape" as const, label: "Yape", icon: Smartphone },
+  { value: "plin" as const, label: "Plin", icon: Smartphone },
+  { value: "transferencia" as const, label: "Transferencia", icon: Building2 },
 ];
 
 export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) {
-  const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("efectivo");
-  const [notes, setNotes] = useState("");
+  const [proofImage, setProofImage] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const createPayment = useCreatePayment();
+  const uploadFile = useUploadFile();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors },
+  } = useForm<PaymentFormData>({
+    resolver: zodResolver(
+      maxAmount
+        ? paymentFormSchema.refine(
+            (data) => {
+              const amount = parseFloat(data.amount);
+              return amount <= maxAmount;
+            },
+            {
+              message: `El monto no puede exceder S/ ${maxAmount?.toFixed(2)}`,
+              path: ["amount"],
+            }
+          )
+        : paymentFormSchema
+    ),
+    defaultValues: {
+      amount: "",
+      paymentMethod: "efectivo",
+      notes: "",
+      referenceNumber: "",
+    },
+  });
 
-    const amountNum = parseFloat(amount);
-    if (!amountNum || amountNum <= 0) return;
-    if (maxAmount && amountNum > maxAmount) {
-      alert(`El monto no puede exceder S/ ${maxAmount.toFixed(2)}`);
+  const paymentMethod = watch("paymentMethod");
+  const showDigitalFields = ["yape", "plin", "transferencia"].includes(paymentMethod);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setError("root", { message: validationError });
       return;
     }
 
+    setProofImage(file);
+    setProofPreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setProofImage(null);
+    setProofPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const onSubmit = async (data: PaymentFormData) => {
     try {
+      let proofImageId: string | undefined;
+
+      if (proofImage) {
+        const uploadedFile = await uploadFile.mutateAsync(proofImage);
+        proofImageId = uploadedFile.id;
+      }
+
       await createPayment.mutateAsync({
         clientId,
-        amount: amountNum.toFixed(2),
-        paymentMethod: paymentMethod as "efectivo" | "yape" | "plin" | "transferencia",
-        notes: notes || undefined,
+        amount: parseFloat(data.amount).toFixed(2),
+        paymentMethod: data.paymentMethod,
+        notes: data.notes,
+        referenceNumber: data.referenceNumber,
+        proofImageId,
       });
       onClose();
     } catch (error) {
       console.error("Error creating payment:", error);
-      alert("Error al registrar el abono");
+      setError("root", { message: "Error al registrar el abono" });
     }
   };
 
@@ -63,40 +138,41 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Monto (S/)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="rounded-xl text-lg"
-                autoFocus
-              />
-              {maxAmount && (
-                <p className="text-xs text-muted-foreground">
-                  Máximo: S/ {maxAmount.toFixed(2)}
-                </p>
-              )}
-            </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {errors.root && (
+              <p className="text-sm text-red-500 text-center">{errors.root.message}</p>
+            )}
+
+            <FormNumberInput
+              label="Monto (S/)"
+              placeholder="0.00"
+              autoFocus
+              maxAmount={maxAmount}
+              error={errors.amount?.message}
+              {...register("amount")}
+            />
 
             <div className="space-y-2">
               <Label>Método de Pago</Label>
               <div className="grid grid-cols-2 gap-2">
                 {paymentMethods.map((method) => {
                   const Icon = method.icon;
+                  const isSelected = paymentMethod === method.value;
                   return (
                     <Button
                       key={method.value}
                       type="button"
-                      variant={paymentMethod === method.value ? "default" : "outline"}
-                      onClick={() => setPaymentMethod(method.value)}
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => {
+                        const input = document.querySelector(
+                          `input[value="${method.value}"]`
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.click();
+                        }
+                      }}
                       className={`rounded-xl ${
-                        paymentMethod === method.value
-                          ? "bg-orange-500 hover:bg-orange-600"
-                          : ""
+                        isSelected ? "bg-orange-500 hover:bg-orange-600" : ""
                       }`}
                     >
                       <Icon className="h-4 w-4 mr-2" />
@@ -105,22 +181,70 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
                   );
                 })}
               </div>
+              <input type="hidden" {...register("paymentMethod")} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Notas (opcional)</Label>
-              <Input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Observaciones..."
-                className="rounded-xl"
+            {showDigitalFields && (
+              <FormInput
+                label="N° de Operación (opcional)"
+                placeholder="Ej: 12345678"
+                maxLength={50}
+                error={errors.referenceNumber?.message}
+                helperText="Número de transacción Yape/Plin o referencia de transferencia"
+                {...register("referenceNumber")}
               />
-            </div>
+            )}
+
+            {showDigitalFields && (
+              <div className="space-y-2">
+                <Label>Comprobante de Pago (opcional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                {proofPreview ? (
+                  <div className="relative">
+                    <img
+                      src={proofPreview}
+                      alt="Comprobante"
+                      className="w-full h-32 object-cover rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 rounded-full"
+                      onClick={clearImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full rounded-xl h-20 border-dashed"
+                  >
+                    <Camera className="h-5 w-5 mr-2" />
+                    Adjuntar captura de pantalla
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <FormInput
+              label="Notas (opcional)"
+              placeholder="Observaciones..."
+              {...register("notes")}
+            />
 
             <Button
               type="submit"
-              disabled={createPayment.isPending || !amount}
+              disabled={createPayment.isPending}
               className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
             >
               {createPayment.isPending ? "Guardando..." : "Registrar Abono"}
@@ -131,3 +255,5 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
     </div>
   );
 }
+
+export type { PaymentFormData };

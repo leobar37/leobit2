@@ -1,6 +1,9 @@
-import { Wallet, Calendar } from "lucide-react";
+import { useState } from "react";
+import { Wallet, Calendar, Receipt, ImageIcon, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { Payment } from "~/hooks/use-payments";
+import { useFile } from "~/hooks/use-files";
 
 interface PaymentListProps {
   payments: Payment[];
@@ -13,6 +16,60 @@ const paymentMethodLabels: Record<string, string> = {
   plin: "Plin",
   transferencia: "Transferencia",
 };
+
+function PaymentProofImage({ proofImageId }: { proofImageId: string }) {
+  const [showModal, setShowModal] = useState(false);
+  const { data: file, isLoading } = useFile(proofImageId);
+
+  if (isLoading) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <ImageIcon className="h-3 w-3" />
+        Cargando...
+      </span>
+    );
+  }
+
+  if (!file?.url) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+      >
+        <ImageIcon className="h-3 w-3" />
+        Ver comprobante
+      </button>
+
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div className="relative max-w-md w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-10 right-0 text-white hover:bg-white/20 rounded-full"
+              onClick={() => setShowModal(false)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <img
+              src={file.url}
+              alt="Comprobante de pago"
+              className="w-full rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export function PaymentList({ payments, emptyMessage = "No hay abonos" }: PaymentListProps) {
   if (payments.length === 0) {
@@ -58,9 +115,23 @@ export function PaymentList({ payments, emptyMessage = "No hay abonos" }: Paymen
                       minute: "2-digit",
                     })}
                   </span>
-                </div>                
+                </div>
               </div>
             </div>
+
+            {(payment.referenceNumber || payment.proofImageId) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {payment.referenceNumber && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">
+                    <Receipt className="h-3 w-3" />
+                    Op: {payment.referenceNumber}
+                  </span>
+                )}
+                {payment.proofImageId && (
+                  <PaymentProofImage proofImageId={payment.proofImageId} />
+                )}
+              </div>
+            )}
 
             {payment.notes && (
               <p className="mt-2 text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg">

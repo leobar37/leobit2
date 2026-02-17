@@ -22,6 +22,7 @@ import {
 } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { sales, saleItems } from "./sales";
+import { assets } from "./assets";
 
 // Products table
 export const products = pgTable(
@@ -36,12 +37,16 @@ export const products = pgTable(
     basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
     isActive: boolean("is_active").notNull().default(true),
 
+    // Asset reference (shared gallery image)
+    imageId: uuid("image_id").references(() => assets.id),
+
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_products_type").on(table.type),
     index("idx_products_is_active").on(table.isActive),
+    index("idx_products_image_id").on(table.imageId),
   ]
 );
 
@@ -123,9 +128,13 @@ export const inventoryRelations = relations(inventory, ({ one }) => ({
   }),
 }));
 
-export const productsRelations = relations(products, ({ many }) => ({
+export const productsRelations = relations(products, ({ many, one }) => ({
   inventory: many(inventory),
   saleItems: many(saleItems),
+  image: one(assets, {
+    fields: [products.imageId],
+    references: [assets.id],
+  }),
 }));
 
 export const distribucionesRelations = relations(distribuciones, ({ one, many }) => ({

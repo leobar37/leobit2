@@ -83,4 +83,24 @@ export class PaymentService {
 
     return this.repository.getTotalByClient(ctx, clientId);
   }
+
+  async updatePaymentProof(
+    ctx: RequestContext,
+    id: string,
+    data: {
+      proofImageId?: string;
+      referenceNumber?: string;
+    }
+  ): Promise<Abono> {
+    if (!ctx.hasPermission("customers.write")) {
+      throw new ForbiddenError("No tiene permisos para actualizar abonos");
+    }
+
+    const existing = await this.repository.findById(ctx, id);
+    if (!existing) {
+      throw new NotFoundError("Abono");
+    }
+
+    return this.repository.update(ctx, id, data);
+  }
 }

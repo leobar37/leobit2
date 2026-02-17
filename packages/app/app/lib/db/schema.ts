@@ -22,6 +22,7 @@ export const productSchema = z.object({
   unit: z.enum(["kg", "unidad"]),
   basePrice: z.string(),
   isActive: z.boolean().default(true),
+  imageId: z.string().nullable(),
   createdAt: z.coerce.date(),
 });
 

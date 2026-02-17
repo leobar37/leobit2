@@ -80,4 +80,21 @@ export class PaymentRepository {
 
     return result[0]?.total ?? 0;
   }
+
+  async update(
+    ctx: RequestContext,
+    id: string,
+    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber">>
+  ): Promise<Abono> {
+    const [abono] = await db
+      .update(abonos)
+      .set(data)
+      .where(and(
+        eq(abonos.id, id),
+        eq(abonos.businessId, ctx.businessId)
+      ))
+      .returning();
+
+    return abono;
+  }
 }

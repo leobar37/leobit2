@@ -13,6 +13,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { files } from "./files";
 
 // Table definition - solo datos personales del usuario
 export const userProfiles = pgTable(
@@ -27,7 +28,7 @@ export const userProfiles = pgTable(
     dni: varchar("dni", { length: 20 }),
     phone: varchar("phone", { length: 50 }),
     birthDate: date("birth_date"),
-    avatarUrl: varchar("avatar_url", { length: 255 }),
+    avatarId: uuid("avatar_id").references(() => files.id),
 
     // Account status
     isActive: boolean("is_active").notNull().default(true),
@@ -39,8 +40,17 @@ export const userProfiles = pgTable(
   (table) => [
     index("idx_user_profiles_user_id").on(table.userId),
     index("idx_user_profiles_is_active").on(table.isActive),
+    index("idx_user_profiles_avatar_id").on(table.avatarId),
   ]
 );
+
+// Relations
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  avatar: one(files, {
+    fields: [userProfiles.avatarId],
+    references: [files.id],
+  }),
+}));
 
 // Type exports
 export type UserProfile = typeof userProfiles.$inferSelect;

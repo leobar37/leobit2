@@ -10,6 +10,8 @@ export interface Payment {
   amount: string;
   paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
   notes: string | null;
+  proofImageId: string | null;
+  referenceNumber: string | null;
   syncStatus: "pending" | "synced" | "error";
   createdAt: Date;
 }
@@ -19,6 +21,8 @@ export interface CreatePaymentInput {
   amount: string;
   paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
   notes?: string;
+  referenceNumber?: string;
+  proofImageId?: string;
 }
 
 async function getPayments(clientId?: string): Promise<Payment[]> {
@@ -55,6 +59,8 @@ async function createPayment(input: CreatePaymentInput): Promise<Payment> {
       amount: input.amount,
       paymentMethod: input.paymentMethod,
       notes: input.notes ?? null,
+      proofImageId: input.proofImageId ?? null,
+      referenceNumber: input.referenceNumber ?? null,
       syncStatus: "pending",
       createdAt: new Date(),
     };
@@ -121,6 +127,73 @@ export function useDeletePayment() {
   return useMutation({
     mutationFn: deletePayment,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+  });
+}
+
+async function uploadPaymentProof({
+  id,
+  file,
+}: {
+  id: string;
+  file: File;
+}): Promise<Payment> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`/api/payments/${id}/proof`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to upload proof");
+  }
+
+  const result = await response.json();
+  return result.data as Payment;
+}
+
+async function updatePaymentReference({
+  id,
+  referenceNumber,
+}: {
+  id: string;
+  referenceNumber: string;
+}): Promise<Payment> {
+  const { data, error } = await api.payments({ id }).reference.put({
+    referenceNumber,
+  });
+
+  if (error) {
+    throw new Error(String(error.value));
+  }
+
+  return data as unknown as Payment;
+}
+
+export function useUploadPaymentProof() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: uploadPaymentProof,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["payments", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+  });
+}
+
+export function useUpdatePaymentReference() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updatePaymentReference,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["payments", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
   });
