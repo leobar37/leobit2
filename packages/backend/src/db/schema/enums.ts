@@ -42,10 +42,21 @@ export const distribucionStatusEnum = pgEnum("distribucion_status", [
   "en_ruta",
 ]);
 
-// System config
 export const modoOperacionEnum = pgEnum("modo_operacion", [
   "inventario_propio",
   "sin_inventario",
   "pedidos",
   "mixto",
+]);
+
+export const supplierTypeEnum = pgEnum("supplier_type", [
+  "generic",
+  "regular",
+  "internal",
+]);
+
+export const purchaseStatusEnum = pgEnum("purchase_status", [
+  "pending",
+  "received",
+  "cancelled",
 ]);

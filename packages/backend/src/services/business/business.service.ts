@@ -1,5 +1,7 @@
 import { BusinessRepository } from "../repository/business.repository";
+import { SupplierRepository } from "../repository/supplier.repository";
 import type { RequestContext } from "../../context/request-context";
+import { RequestContext as RequestContextClass } from "../../context/request-context";
 import {
   NotFoundError,
   ForbiddenError,
@@ -10,7 +12,10 @@ import { eq } from "drizzle-orm";
 import { db, businessUsers } from "../../lib/db";
 
 export class BusinessService {
-  constructor(private repository: BusinessRepository) {}
+  constructor(
+    private repository: BusinessRepository,
+    private supplierRepo: SupplierRepository
+  ) {}
 
   async getBusiness(ctx: RequestContext) {
     const membership = await this.repository.findByUserId(ctx);
@@ -71,6 +76,18 @@ export class BusinessService {
       businessId: business.id,
       userId: ctx.userId,
       role: "ADMIN_NEGOCIO",
+    });
+
+    const workerCtx = RequestContextClass.forWorker(business.id);
+    await this.supplierRepo.create(workerCtx, {
+      name: "Proveedor Varios",
+      type: "generic",
+      ruc: null,
+      address: null,
+      phone: null,
+      email: null,
+      notes: "Proveedor genérico para compras sin identificación",
+      isActive: true,
     });
 
     return business;

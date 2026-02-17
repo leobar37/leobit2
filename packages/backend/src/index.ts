@@ -16,6 +16,8 @@ import { syncRoutes } from "./api/sync";
 import { assetRoutes } from "./api/assets";
 import { fileRoutes } from "./api/files";
 import { variantRoutes } from "./api/products";
+import { supplierRoutes } from "./api/suppliers";
+import { purchaseRoutes } from "./api/purchases";
 import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -53,6 +55,8 @@ const app = new Elysia()
   .use(assetRoutes)
   .use(fileRoutes)
   .use(variantRoutes)
+  .use(supplierRoutes)
+  .use(purchaseRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
