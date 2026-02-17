@@ -5,6 +5,7 @@ import { requireAuth } from "../middleware/auth";
 import { db } from "../lib/db";
 import { staffInvitations } from "../db/schema/staff-invitations";
 import { businessUsers } from "../db/schema/businesses";
+import { user } from "../db/schema/auth";
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -31,15 +32,21 @@ export const invitationRoutes = new Elysia({ prefix: "/invitations" })
         };
       }
 
-      const existingUser = await db.query.businessUsers.findFirst({
-        where: eq(businessUsers.userId, user.id),
+      const existingAccount = await db.query.user.findFirst({
+        where: eq(user.email, body.email),
       });
 
-      if (existingUser) {
-        return {
-          success: false,
-          error: "Este usuario ya pertenece a un negocio",
-        };
+      if (existingAccount) {
+        const existingMembership = await db.query.businessUsers.findFirst({
+          where: eq(businessUsers.userId, existingAccount.id),
+        });
+
+        if (existingMembership) {
+          return {
+            success: false,
+            error: "Este email ya pertenece a un negocio",
+          };
+        }
       }
 
       const token = generateInvitationCode();

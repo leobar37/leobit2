@@ -1,8 +1,12 @@
 import { Elysia, t } from "elysia";
+import { eq } from "drizzle-orm";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import { r2Storage } from "../services/r2-storage.service";
 import type { RequestContext } from "../context/request-context";
+import { db } from "../lib/db";
+import { businessUsers } from "../db/schema/businesses";
+import { user } from "../db/schema/auth";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
   .use(servicesPlugin)
@@ -126,6 +130,133 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
       }),
       body: t.Object({
         file: t.File(),
+      }),
+    }
+  )
+  .get("/me/members", async ({ ctx }) => {
+    const typedCtx = ctx as RequestContext;
+
+    if (!typedCtx.isAdmin()) {
+      return {
+        success: false,
+        error: "No tienes permiso para ver los miembros",
+      };
+    }
+
+    const members = await db.query.businessUsers.findMany({
+      where: eq(businessUsers.businessId, typedCtx.businessId),
+      with: {
+        business: true,
+      },
+    });
+
+    const membersWithUserData = await Promise.all(
+      members.map(async (member) => {
+        const userData = await db.query.user.findFirst({
+          where: eq(user.id, member.userId),
+        });
+        return {
+          id: member.id,
+          userId: member.userId,
+          name: userData?.name || "",
+          email: userData?.email || "",
+          role: member.role,
+          salesPoint: member.salesPoint,
+          isActive: member.isActive,
+          joinedAt: member.joinedAt,
+        };
+      })
+    );
+
+    return {
+      success: true,
+      data: membersWithUserData,
+    };
+  })
+  .put(
+    "/me/members/:id",
+    async ({ ctx, params, body }) => {
+      const typedCtx = ctx as RequestContext;
+
+      if (!typedCtx.isAdmin()) {
+        return {
+          success: false,
+          error: "No tienes permiso para editar miembros",
+        };
+      }
+
+      const member = await db.query.businessUsers.findFirst({
+        where: eq(businessUsers.id, params.id),
+      });
+
+      if (!member || member.businessId !== typedCtx.businessId) {
+        return {
+          success: false,
+          error: "Miembro no encontrado",
+        };
+      }
+
+      await db
+        .update(businessUsers)
+        .set({
+          role: body.role,
+          salesPoint: body.salesPoint,
+          updatedAt: new Date(),
+        })
+        .where(eq(businessUsers.id, params.id));
+
+      return {
+        success: true,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        role: t.Optional(t.Union([t.Literal("ADMIN_NEGOCIO"), t.Literal("VENDEDOR")])),
+        salesPoint: t.Optional(t.String()),
+      }),
+    }
+  )
+  .delete(
+    "/me/members/:id",
+    async ({ ctx, params }) => {
+      const typedCtx = ctx as RequestContext;
+
+      if (!typedCtx.isAdmin()) {
+        return {
+          success: false,
+          error: "No tienes permiso para eliminar miembros",
+        };
+      }
+
+      const member = await db.query.businessUsers.findFirst({
+        where: eq(businessUsers.id, params.id),
+      });
+
+      if (!member || member.businessId !== typedCtx.businessId) {
+        return {
+          success: false,
+          error: "Miembro no encontrado",
+        };
+      }
+
+      await db
+        .update(businessUsers)
+        .set({
+          isActive: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(businessUsers.id, params.id));
+
+      return {
+        success: true,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
       }),
     }
   );

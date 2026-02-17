@@ -183,3 +183,19 @@ export const VARIANTS_CONSTRAINTS = {
 } as const;
 
 export const VERSION = "0.0.1";
+
+export interface TeamMember {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: "ADMIN_NEGOCIO" | "VENDEDOR";
+  salesPoint: string | null;
+  isActive: boolean;
+  joinedAt: string;
+}
+
+export interface UpdateTeamMemberInput {
+  role?: "ADMIN_NEGOCIO" | "VENDEDOR";
+  salesPoint?: string;
+}
