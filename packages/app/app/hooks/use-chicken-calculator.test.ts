@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import {
 	useChickenCalculator,
@@ -6,6 +6,12 @@ import {
 } from "./use-chicken-calculator";
 
 describe("useChickenCalculator", () => {
+	beforeEach(() => {
+		if (typeof localStorage !== "undefined") {
+			localStorage.clear();
+		}
+	});
+
 	const renderCalculator = (options: UseChickenCalculatorOptions = {}) => {
 		return renderHook(() => useChickenCalculator(options));
 	};
@@ -233,7 +239,7 @@ describe("useChickenCalculator", () => {
 		});
 	});
 
-	describe("filledCount and isReady", () => {
+		describe("filledCount and isReady", () => {
 		it("should count filled fields among main fields", () => {
 			const { result } = renderCalculator();
 
@@ -256,7 +262,7 @@ describe("useChickenCalculator", () => {
 				result.current.handleChange("pricePerKg", "10");
 			});
 
-			expect(result.current.filledCount).toBe(2);
+			expect(result.current.filledCount).toBe(3);
 			expect(result.current.isReady).toBe(true);
 		});
 
@@ -359,6 +365,98 @@ describe("useChickenCalculator", () => {
 			await waitFor(() => {
 				expect(result.current.values.pricePerKg).toBe("15.00");
 			});
+		});
+	});
+
+		describe("persistence", () => {
+		it("should load persisted price when productPrice is not provided", () => {
+			if (typeof localStorage === "undefined") return;
+
+			localStorage.setItem(
+				"avileo-calculator-last",
+				JSON.stringify({
+					lastProductId: "p-1",
+					lastVariantId: "v-1",
+					lastPricePerKg: "18.50",
+					timestamp: Date.now(),
+				}),
+			);
+
+			const { result } = renderCalculator();
+			expect(result.current.values.pricePerKg).toBe("18.50");
+		});
+
+		it("should persist selection manually", () => {
+			if (typeof localStorage === "undefined") return;
+
+			const { result } = renderCalculator();
+
+			act(() => {
+				result.current.persistSelection("p-2", "v-2", "19.90");
+			});
+
+			const saved = localStorage.getItem("avileo-calculator-last");
+			expect(saved).toBeTruthy();
+
+			const parsed = JSON.parse(saved as string) as {
+				lastProductId?: string;
+				lastVariantId?: string;
+				lastPricePerKg?: string;
+			};
+
+			expect(parsed.lastProductId).toBe("p-2");
+			expect(parsed.lastVariantId).toBe("v-2");
+			expect(parsed.lastPricePerKg).toBe("19.90");
+		});
+
+		it("should persist current variant and price automatically", async () => {
+			if (typeof localStorage === "undefined") return;
+
+			const { result } = renderCalculator({
+				productId: "p-3",
+				variantId: "v-3",
+				productPrice: "21.00",
+			});
+
+			await waitFor(() => {
+				const saved = localStorage.getItem("avileo-calculator-last");
+				expect(saved).toBeTruthy();
+			});
+
+			const parsed = JSON.parse(
+				localStorage.getItem("avileo-calculator-last") as string,
+			) as {
+				lastProductId?: string;
+				lastVariantId?: string;
+				lastPricePerKg?: string;
+			};
+
+			expect(parsed.lastProductId).toBe("p-3");
+			expect(parsed.lastVariantId).toBe("v-3");
+			expect(parsed.lastPricePerKg).toBe("21.00");
+			expect(result.current.values.pricePerKg).toBe("21.00");
+		});
+
+		it("should prefer persisted price for the same product and variant", () => {
+			if (typeof localStorage === "undefined") return;
+
+			localStorage.setItem(
+				"avileo-calculator-last",
+				JSON.stringify({
+					lastProductId: "p-10",
+					lastVariantId: "v-10",
+					lastPricePerKg: "22.70",
+					timestamp: Date.now(),
+				}),
+			);
+
+			const { result } = renderCalculator({
+				productId: "p-10",
+				variantId: "v-10",
+				productPrice: "19.00",
+			});
+
+			expect(result.current.values.pricePerKg).toBe("22.70");
 		});
 	});
 });

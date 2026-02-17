@@ -129,4 +129,57 @@ export interface PublicInvitation {
   salesPoint: string | null;
 }
 
+// Product Variants
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  name: string;
+  sku: string | null;
+  unitQuantity: string;
+  price: string;
+  sortOrder: number;
+  isActive: boolean;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VariantInventory {
+  id: string;
+  variantId: string;
+  quantity: string;
+  updatedAt: string;
+}
+
+export interface CreateVariantInput {
+  name: string;
+  sku?: string;
+  unitQuantity: number;
+  price: number;
+  isActive?: boolean;
+}
+
+export interface UpdateVariantInput {
+  name?: string;
+  sku?: string;
+  unitQuantity?: number;
+  price?: number;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface ReorderVariantInput {
+  variantIds: string[];
+}
+
+export const VARIANTS_CONSTRAINTS = {
+  maxPerProduct: 10,
+  maxNameLength: 50,
+  maxSkuLength: 50,
+  maxPrice: 9999.99,
+  minUnitQuantity: 0.001,
+  maxUnitQuantity: 9999.999,
+} as const;
+
 export const VERSION = "0.0.1";

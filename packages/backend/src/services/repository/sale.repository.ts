@@ -14,6 +14,8 @@ export interface CreateSaleInput {
   items: Array<{
     productId: string;
     productName: string;
+    variantId: string;
+    variantName: string;
     quantity: string;
     unitPrice: string;
     subtotal: string;

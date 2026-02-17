@@ -61,9 +61,6 @@ type Pages = {
       "id": string;
     };
   };
-  "/calculadora": {
-    params: {};
-  };
   "/invitations": {
     params: {};
   };
@@ -91,6 +88,9 @@ type Pages = {
   "/ventas/nueva": {
     params: {};
   };
+  "/ventas/nueva/test": {
+    params: {};
+  };
   "/ventas/:id": {
     params: {
       "id": string;
@@ -107,7 +107,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/productos/:id" | "/calculadora" | "/invitations" | "/dashboard" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/inventory" | "/ventas" | "/ventas/nueva" | "/ventas/:id" | "/register" | "/login";
+    page: "/" | "/invitations/:token" | "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/productos/:id" | "/invitations" | "/dashboard" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/inventory" | "/ventas" | "/ventas/nueva" | "/ventas/nueva/test" | "/ventas/:id" | "/register" | "/login";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -115,7 +115,7 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/productos/:id" | "/calculadora" | "/invitations" | "/dashboard" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/inventory" | "/ventas" | "/ventas/nueva" | "/ventas/:id";
+    page: "/reportes/cuentas-por-cobrar" | "/clientes/:id" | "/clientes/:id/edit" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/business/edit" | "/productos/:id" | "/invitations" | "/dashboard" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/inventory" | "/ventas" | "/ventas/nueva" | "/ventas/nueva/test" | "/ventas/:id";
   };
   "routes/_protected.reportes.cuentas-por-cobrar.tsx": {
     id: "routes/_protected.reportes.cuentas-por-cobrar";
@@ -165,10 +165,6 @@ type RouteFiles = {
     id: "routes/_protected.productos.$id";
     page: "/productos/:id";
   };
-  "routes/_protected.calculadora.tsx": {
-    id: "routes/_protected.calculadora";
-    page: "/calculadora";
-  };
   "routes/_protected.invitations.tsx": {
     id: "routes/_protected.invitations";
     page: "/invitations";
@@ -199,11 +195,15 @@ type RouteFiles = {
   };
   "routes/_protected.ventas.tsx": {
     id: "routes/_protected.ventas";
-    page: "/ventas" | "/ventas/nueva" | "/ventas/:id";
+    page: "/ventas" | "/ventas/nueva" | "/ventas/nueva/test" | "/ventas/:id";
   };
   "routes/_protected.ventas.nueva.tsx": {
     id: "routes/_protected.ventas.nueva";
-    page: "/ventas/nueva";
+    page: "/ventas/nueva" | "/ventas/nueva/test";
+  };
+  "routes/_protected.ventas.nueva.test.tsx": {
+    id: "routes/_protected.ventas.nueva.test";
+    page: "/ventas/nueva/test";
   };
   "routes/_protected.ventas.$id.tsx": {
     id: "routes/_protected.ventas.$id";
@@ -239,7 +239,6 @@ type RouteModules = {
   "routes/_protected.distribuciones": typeof import("./app/routes/_protected.distribuciones.tsx");
   "routes/_protected.business.edit": typeof import("./app/routes/_protected.business.edit.tsx");
   "routes/_protected.productos.$id": typeof import("./app/routes/_protected.productos.$id.tsx");
-  "routes/_protected.calculadora": typeof import("./app/routes/_protected.calculadora.tsx");
   "routes/_protected.invitations": typeof import("./app/routes/_protected.invitations.tsx");
   "routes/_protected.dashboard": typeof import("./app/routes/_protected.dashboard.tsx");
   "routes/_protected.profile": typeof import("./app/routes/_protected.profile.tsx");
@@ -249,6 +248,7 @@ type RouteModules = {
   "routes/_protected.config.inventory": typeof import("./app/routes/_protected.config.inventory.tsx");
   "routes/_protected.ventas": typeof import("./app/routes/_protected.ventas.tsx");
   "routes/_protected.ventas.nueva": typeof import("./app/routes/_protected.ventas.nueva.tsx");
+  "routes/_protected.ventas.nueva.test": typeof import("./app/routes/_protected.ventas.nueva.test.tsx");
   "routes/_protected.ventas.$id": typeof import("./app/routes/_protected.ventas.$id.tsx");
   "routes/register": typeof import("./app/routes/register.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");

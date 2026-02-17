@@ -20,6 +20,8 @@ import { AssetRepository } from "../services/repository/asset.repository";
 import { AssetService } from "../services/business/asset.service";
 import { FileRepository } from "../services/repository/file.repository";
 import { FileService } from "../services/business/file.service";
+import { ProductVariantRepository } from "../services/repository/product-variant.repository";
+import { ProductVariantService } from "../services/business/product-variant.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -50,6 +52,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const assetService = new AssetService(assetRepo);
     const fileRepo = new FileRepository();
     const fileService = new FileService(fileRepo);
+    const productVariantRepo = new ProductVariantRepository();
+    const productVariantService = new ProductVariantService(productVariantRepo);
 
     return {
       businessRepo,
@@ -73,5 +77,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       assetService,
       fileRepo,
       fileService,
+      productVariantRepo,
+      productVariantService,
     };
   });

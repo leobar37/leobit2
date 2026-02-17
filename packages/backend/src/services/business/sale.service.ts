@@ -39,6 +39,8 @@ export class SaleService {
       items: Array<{
         productId: string;
         productName: string;
+        variantId: string;
+        variantName: string;
         quantity: number;
         unitPrice: number;
         subtotal: number;
@@ -47,6 +49,13 @@ export class SaleService {
   ): Promise<Sale> {
     if (!data.items || data.items.length === 0) {
       throw new ValidationError("La venta debe tener al menos un producto");
+    }
+
+    // Validate that all items have variant
+    for (const item of data.items) {
+      if (!item.variantId) {
+        throw new ValidationError("Todos los productos deben tener una variante seleccionada");
+      }
     }
 
     if (data.totalAmount <= 0) {
@@ -77,6 +86,8 @@ export class SaleService {
       items: data.items.map((item) => ({
         productId: item.productId,
         productName: item.productName,
+        variantId: item.variantId,
+        variantName: item.variantName,
         quantity: item.quantity.toString(),
         unitPrice: item.unitPrice.toString(),
         subtotal: item.subtotal.toString(),

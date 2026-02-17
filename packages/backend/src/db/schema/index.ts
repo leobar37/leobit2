@@ -107,20 +107,28 @@ export {
   type NewClosing,
 } from "./closings";
 
-// Inventory (Products, Inventory, Distribuciones)
+// Inventory (Products, Inventory, Distribuciones, Variants)
 export {
   products,
   inventory,
   distribuciones,
+  productVariants,
+  variantInventory,
   productsRelations,
   inventoryRelations,
   distribucionesRelations,
+  productVariantsRelations,
+  variantInventoryRelations,
   type Product,
   type NewProduct,
   type Inventory,
   type NewInventory,
   type Distribucion,
   type NewDistribucion,
+  type ProductVariant,
+  type NewProductVariant,
+  type VariantInventory,
+  type NewVariantInventory,
 } from "./inventory";
 
 // System Config

@@ -74,6 +74,8 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
           t.Object({
             productId: t.String(),
             productName: t.String(),
+            variantId: t.String(),
+            variantName: t.String(),
             quantity: t.Number(),
             unitPrice: t.Number(),
             subtotal: t.Number(),

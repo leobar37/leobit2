@@ -93,4 +93,172 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         id: t.String(),
       }),
     }
+  )
+  // Product Variants routes
+  .get(
+    "/:id/variants",
+    async ({ productVariantService, ctx, params, query }) => {
+      const variants = await productVariantService.getVariantsByProduct(
+        ctx as RequestContext,
+        params.id,
+        {
+          isActive: query.isActive === "true" ? true :
+                    query.isActive === "false" ? false : undefined,
+          includeInactive: query.includeInactive === "true",
+        }
+      );
+      return { success: true, data: variants };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      query: t.Object({
+        isActive: t.Optional(t.String()),
+        includeInactive: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/:id/variants",
+    async ({ productVariantService, ctx, params, body, set }) => {
+      set.status = 201;
+      const variant = await productVariantService.createVariant(
+        ctx as RequestContext,
+        {
+          productId: params.id,
+          name: body.name,
+          sku: body.sku,
+          unitQuantity: body.unitQuantity,
+          price: body.price,
+          isActive: body.isActive,
+        }
+      );
+      return { success: true, data: variant };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        name: t.String({ minLength: 1, maxLength: 50 }),
+        sku: t.Optional(t.String({ maxLength: 50 })),
+        unitQuantity: t.Number({ minimum: 0.001, maximum: 9999.999 }),
+        price: t.Number({ minimum: 0, maximum: 9999.99 }),
+        isActive: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .post(
+    "/:id/variants/reorder",
+    async ({ productVariantService, ctx, params, body }) => {
+      await productVariantService.reorderVariants(
+        ctx as RequestContext,
+        params.id,
+        body.variantIds
+      );
+      return { success: true };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        variantIds: t.Array(t.String(), { minItems: 1 }),
+      }),
+    }
+  );
+
+export const variantRoutes = new Elysia({ prefix: "/variants" })
+  .use(contextPlugin)
+  .use(servicesPlugin)
+  .get(
+    "/:id",
+    async ({ productVariantService, ctx, params }) => {
+      const variant = await productVariantService.getVariant(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: variant };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .put(
+    "/:id",
+    async ({ productVariantService, ctx, params, body }) => {
+      const variant = await productVariantService.updateVariant(
+        ctx as RequestContext,
+        params.id,
+        {
+          name: body.name,
+          sku: body.sku,
+          unitQuantity: body.unitQuantity,
+          price: body.price,
+          isActive: body.isActive,
+        }
+      );
+      return { success: true, data: variant };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        name: t.Optional(t.String({ minLength: 1, maxLength: 50 })),
+        sku: t.Optional(t.String({ maxLength: 50 })),
+        unitQuantity: t.Optional(t.Number({ minimum: 0.001, maximum: 9999.999 })),
+        price: t.Optional(t.Number({ minimum: 0, maximum: 9999.99 })),
+        isActive: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .delete(
+    "/:id",
+    async ({ productVariantService, ctx, params, set }) => {
+      await productVariantService.deactivateVariant(ctx as RequestContext, params.id);
+      set.status = 204;
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .get(
+    "/:id/inventory",
+    async ({ productVariantService, ctx, params }) => {
+      const inventory = await productVariantService.getVariantInventory(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: inventory };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .put(
+    "/:id/inventory",
+    async ({ productVariantService, ctx, params, body }) => {
+      const inventory = await productVariantService.updateVariantInventory(
+        ctx as RequestContext,
+        params.id,
+        body.quantity
+      );
+      return { success: true, data: inventory };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        quantity: t.Number({ minimum: 0 }),
+      }),
+    }
   );

@@ -46,7 +46,9 @@ export const saleItemSchema = z.object({
   id: z.string(),
   saleId: z.string(),
   productId: z.string(),
+  variantId: z.string(),
   productName: z.string(),
+  variantName: z.string(),
   quantity: z.string(),
   unitPrice: z.string(),
   subtotal: z.string(),
@@ -88,7 +90,9 @@ export interface CreateSaleInput {
   netWeight?: number;
   items: Array<{
     productId: string;
+    variantId: string;
     productName: string;
+    variantName: string;
     quantity: number;
     unitPrice: number;
     subtotal: number;

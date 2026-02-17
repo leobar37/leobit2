@@ -58,7 +58,9 @@ type ParsedSaleInsert = {
   netWeight?: string;
   items: Array<{
     productId: string;
+    variantId: string;
     productName: string;
+    variantName: string;
     quantity: string;
     unitPrice: string;
     subtotal: string;
@@ -428,7 +430,9 @@ export class SyncService {
       const safe = item as Record<string, unknown>;
       return {
         productId: this.requiredString(safe.productId, "productId"),
+        variantId: this.requiredString(safe.variantId, "variantId"),
         productName: this.requiredString(safe.productName, "productName"),
+        variantName: this.requiredString(safe.variantName, "variantName"),
         quantity: this.requiredNumericString(safe.quantity, "quantity"),
         unitPrice: this.requiredNumericString(safe.unitPrice, "unitPrice"),
         subtotal: this.requiredNumericString(safe.subtotal, "subtotal"),

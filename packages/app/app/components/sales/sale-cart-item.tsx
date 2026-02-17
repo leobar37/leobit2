@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 interface SaleCartItemProps {
   productName: string;
+  variantName?: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -12,6 +13,7 @@ interface SaleCartItemProps {
 
 export function SaleCartItem({
   productName,
+  variantName,
   quantity,
   unitPrice,
   subtotal,
@@ -27,6 +29,9 @@ export function SaleCartItem({
             </div>
             <div>
               <p className="font-medium">{productName}</p>
+              {variantName && (
+                <p className="text-xs text-orange-600">{variantName}</p>
+              )}
               <p className="text-sm text-muted-foreground">
                 {quantity.toFixed(3)} kg × S/ {unitPrice.toFixed(2)}
               </p>

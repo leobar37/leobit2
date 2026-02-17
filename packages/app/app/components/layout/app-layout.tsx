@@ -13,7 +13,6 @@ import {
   Home,
   ShoppingCart,
   Users,
-  Calculator,
   Settings,
   LogOut,
   User,
@@ -33,7 +32,6 @@ const menuItems = [
   { icon: Home, label: "Inicio", href: "/dashboard" },
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Users, label: "Clientes", href: "/clientes" },
-  { icon: Calculator, label: "Calculadora", href: "/calculadora" },
   { icon: Settings, label: "Config", href: "/config" },
 ];
 

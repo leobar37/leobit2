@@ -1,21 +1,39 @@
 import { Link, useNavigate } from "react-router";
-import { ArrowLeft, Calculator, Plus, ShoppingCart } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Box,
+  Package,
+  Plus,
+  RotateCcw,
+  ArrowRight,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CustomerSearch } from "~/components/sales/customer-search";
 import { SaleCartItem } from "~/components/sales/sale-cart-item";
-import { ChickenCalculator } from "~/components/calculator/chicken-calculator";
-import { useProducts } from "~/hooks/use-products-live";
+import { VariantSelector } from "~/components/sales/variant-selector";
+import {
+  getPersistedCalculatorSelection,
+  useChickenCalculator,
+  type CalculatorPersistence,
+} from "~/hooks/use-chicken-calculator";
 import { useCreateSale } from "~/hooks/use-sales";
 import type { Customer, Product } from "~/lib/db/schema";
+import type { ProductVariant } from "~/hooks/use-product-variants";
+import { useProducts } from "~/hooks/use-products-live";
+import { useVariantsByProduct } from "~/hooks/use-product-variants";
 
 interface CartItem {
   productId: string;
+  variantId: string;
   productName: string;
+  variantName: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -23,98 +41,130 @@ interface CartItem {
 
 export default function NewSalePage() {
   const navigate = useNavigate();
-  const { data: products } = useProducts();
   const createSale = useCreateSale();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [saleType, setSaleType] = useState<"contado" | "credito">("contado");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [amountPaid, setAmountPaid] = useState<string>("");
-
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [bruto, setBruto] = useState<string>("");
-  const [tara, setTara] = useState<string>("");
-  const [precio, setPrecio] = useState<string>("");
+  const [showVariantSelector, setShowVariantSelector] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [persistedSelection, setPersistedSelection] =
+    useState<CalculatorPersistence | null>(null);
 
-  const [saleTara, setSaleTara] = useState<string>("");
-  const [saleNetWeight, setSaleNetWeight] = useState<string>("");
+  const { data: products } = useProducts();
+  const restoreProductId = selectedProduct?.id || persistedSelection?.lastProductId || "";
+  const { data: restoreVariants } = useVariantsByProduct(restoreProductId, {
+    isActive: true,
+  });
+
+  useEffect(() => {
+    setPersistedSelection(getPersistedCalculatorSelection());
+  }, []);
+
+  useEffect(() => {
+    if (selectedProduct || !persistedSelection?.lastProductId || !products?.length) {
+      return;
+    }
+
+    const persistedProduct = products.find(
+      (product) => product.id === persistedSelection.lastProductId && product.isActive,
+    );
+
+    if (persistedProduct) {
+      setSelectedProduct(persistedProduct);
+    }
+  }, [products, persistedSelection, selectedProduct]);
+
+  useEffect(() => {
+    if (!selectedProduct || selectedVariant || !restoreVariants?.length) {
+      return;
+    }
+
+    const activeVariants = restoreVariants.filter((variant) => variant.isActive);
+    if (activeVariants.length === 0) {
+      return;
+    }
+
+    const preferredVariant =
+      activeVariants.find(
+        (variant) => variant.id === persistedSelection?.lastVariantId,
+      ) || activeVariants[0];
+
+    setSelectedVariant(preferredVariant);
+  }, [persistedSelection?.lastVariantId, restoreVariants, selectedProduct, selectedVariant]);
+
+  const {
+    values,
+    kgNeto,
+    handleReset,
+    handleChange,
+    persistSelection,
+  } = useChickenCalculator({
+    productPrice: selectedVariant?.price,
+    productId: selectedProduct?.id,
+    variantId: selectedVariant?.id,
+    persist: true,
+  });
 
   const totalAmount = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
-  
-  const totalBruto = cartItems.reduce((sum, item) => {
-    const netoMatch = item.productName.match(/Neto:\s*([\d.]+)kg/);
-    if (netoMatch) {
-      const neto = parseFloat(netoMatch[1]);
-      return sum + (neto + 0.5);
-    }
-    return sum + item.quantity;
-  }, 0);
-  
   const totalNeto = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const calculatedTara = totalBruto - totalNeto;
-  const balanceDue = saleType === "credito" 
-    ? totalAmount - (parseFloat(amountPaid) || 0)
-    : 0;
+  const balanceDue =
+    saleType === "credito" ? totalAmount - (parseFloat(amountPaid) || 0) : 0;
 
-  const handleAddToCart = (product: Product) => {
-    const existingIndex = cartItems.findIndex((item) => item.productId === product.id);
-    
+  const handleVariantSelect = (product: Product, variant: ProductVariant) => {
+    setSelectedProduct(product);
+    setSelectedVariant(variant);
+    persistSelection(product.id, variant.id, variant.price);
+    setShowVariantSelector(false);
+    handleReset();
+  };
+
+  const handleAddFromCalculator = () => {
+    if (!selectedProduct || !selectedVariant) return;
+
+    const unitPrice = parseFloat(values.pricePerKg || selectedVariant.price || "0");
+    if (kgNeto <= 0 || unitPrice <= 0) return;
+
+    const subtotal = parseFloat(values.totalAmount || (kgNeto * unitPrice).toFixed(2));
+    const existingIndex = cartItems.findIndex(
+      (item) =>
+        item.productId === selectedProduct.id && item.variantId === selectedVariant.id,
+    );
+
     if (existingIndex >= 0) {
       const updated = [...cartItems];
-      updated[existingIndex].quantity += 1;
-      updated[existingIndex].subtotal = updated[existingIndex].quantity * updated[existingIndex].unitPrice;
+      updated[existingIndex].quantity += kgNeto;
+      updated[existingIndex].unitPrice = unitPrice;
+      updated[existingIndex].subtotal =
+        updated[existingIndex].quantity * updated[existingIndex].unitPrice;
       setCartItems(updated);
     } else {
       setCartItems([
         ...cartItems,
         {
-          productId: product.id,
-          productName: product.name,
-          quantity: 1,
-          unitPrice: parseFloat(product.basePrice),
-          subtotal: parseFloat(product.basePrice),
+          productId: selectedProduct.id,
+          variantId: selectedVariant.id,
+          productName: selectedProduct.name,
+          variantName: selectedVariant.name,
+          quantity: kgNeto,
+          unitPrice,
+          subtotal,
         },
       ]);
     }
+
+    persistSelection(selectedProduct.id, selectedVariant.id, values.pricePerKg);
+    handleReset();
   };
 
   const handleRemoveFromCart = (index: number) => {
     setCartItems(cartItems.filter((_, i) => i !== index));
   };
 
-  const handleCalculatorAdd = () => {
-    if (!selectedProduct || !bruto || !tara || !precio) return;
-
-    const brutoNum = parseFloat(bruto);
-    const taraNum = parseFloat(tara);
-    const precioNum = parseFloat(precio);
-    const neto = brutoNum - taraNum;
-    const subtotal = neto * precioNum;
-
-    setCartItems([
-      ...cartItems,
-      {
-        productId: selectedProduct.id,
-        productName: `${selectedProduct.name} (Neto: ${neto.toFixed(3)}kg)`,
-        quantity: neto,
-        unitPrice: precioNum,
-        subtotal,
-      },
-    ]);
-
-    setShowCalculator(false);
-    setBruto("");
-    setTara("");
-    setPrecio("");
-    setSelectedProduct(null);
-  };
-
   const handleSubmit = async () => {
     if (cartItems.length === 0) return;
-
-    const taraToSave = saleTara ? parseFloat(saleTara) : calculatedTara || undefined;
-    const netWeightToSave = saleNetWeight ? parseFloat(saleNetWeight) : totalNeto || undefined;
 
     try {
       await createSale.mutateAsync({
@@ -122,8 +172,7 @@ export default function NewSalePage() {
         saleType,
         totalAmount,
         amountPaid: saleType === "credito" ? parseFloat(amountPaid) || 0 : totalAmount,
-        tara: taraToSave,
-        netWeight: netWeightToSave,
+        netWeight: totalNeto || undefined,
         items: cartItems,
       });
       navigate("/dashboard");
@@ -160,7 +209,7 @@ export default function NewSalePage() {
               onClick={() => setSaleType("contado")}
               className={cn(
                 "flex-1 rounded-xl",
-                saleType === "contado" && "bg-orange-500 hover:bg-orange-600"
+                saleType === "contado" && "bg-orange-500 hover:bg-orange-600",
               )}
             >
               Contado
@@ -170,108 +219,167 @@ export default function NewSalePage() {
               onClick={() => setSaleType("credito")}
               className={cn(
                 "flex-1 rounded-xl",
-                saleType === "credito" && "bg-orange-500 hover:bg-orange-600"
+                saleType === "credito" && "bg-orange-500 hover:bg-orange-600",
               )}
             >
-              Crédito
+              Credito
             </Button>
           </div>
         </section>
 
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Productos</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCalculator(!showCalculator)}
-              className="rounded-xl"
-            >
-              <Calculator className="h-4 w-4 mr-2" />
-              Calculadora
-            </Button>
+        <section id="calculator-section" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">Calcular Producto</h2>
+            {selectedVariant && (
+              <Badge variant="secondary" className="text-xs">
+                {selectedProduct?.name} - {selectedVariant.name}
+              </Badge>
+            )}
           </div>
 
-          {showCalculator && (
-            <Card className="border-0 shadow-md rounded-2xl mb-4">
-              <CardContent className="p-4 space-y-3">
-                <select
-                  className="w-full p-2 rounded-xl border"
-                  value={selectedProduct?.id || ""}
-                  onChange={(e) => {
-                    const product = products?.find((p) => p.id === e.target.value);
-                    setSelectedProduct(product || null);
-                    if (product) setPrecio(product.basePrice);
-                  }}
+          {!selectedVariant ? (
+            <Card className="border-0 shadow-md rounded-2xl bg-muted/50">
+              <CardContent className="p-6 text-center">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Selecciona un producto para comenzar
+                </p>
+                <Button
+                  onClick={() => setShowVariantSelector(true)}
+                  className="bg-orange-500 hover:bg-orange-600"
                 >
-                  <option value="">Seleccionar producto...</option>
-                  {products?.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Seleccionar Producto
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                      <Package className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{selectedProduct?.name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedVariant.name}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowVariantSelector(true)}
+                  >
+                    Cambiar
+                  </Button>
+                </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label className="text-xs">Bruto (kg)</Label>
                     <Input
-                      type="number"
-                      step="0.001"
-                      value={bruto}
-                      onChange={(e) => setBruto(e.target.value)}
-                      className="rounded-xl"
+                      type="text"
+                      inputMode="decimal"
+                      value={values.kilos}
+                      onChange={(e) => handleChange("kilos", e.target.value)}
+                      placeholder="0.000"
+                      className="rounded-xl text-lg"
+                      autoFocus
                     />
                   </div>
                   <div>
                     <Label className="text-xs">Tara (kg)</Label>
                     <Input
-                      type="number"
-                      step="0.001"
-                      value={tara}
-                      onChange={(e) => setTara(e.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      value={values.tara}
+                      onChange={(e) => handleChange("tara", e.target.value)}
+                      placeholder="0"
                       className="rounded-xl"
                     />
                   </div>
                   <div>
                     <Label className="text-xs">Precio/kg</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      value={precio}
-                      onChange={(e) => setPrecio(e.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      value={values.pricePerKg}
+                      onChange={(e) => handleChange("pricePerKg", e.target.value)}
+                      placeholder="0.00"
                       className="rounded-xl"
                     />
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleCalculatorAdd}
-                  disabled={!selectedProduct || !bruto || !tara}
-                  className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar
-                </Button>
+                {!!values.kilos && (
+                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-200">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 uppercase">Neto</p>
+                        <p className="text-lg font-bold text-orange-600">
+                          {kgNeto.toFixed(3)} kg
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 uppercase">Total</p>
+                        <p className="text-lg font-bold text-green-600">
+                          S/ {values.totalAmount || "0.00"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleAddFromCalculator}
+                    disabled={!values.kilos || !values.pricePerKg || kgNeto <= 0}
+                    className="w-full bg-orange-500 hover:bg-orange-600 h-12"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar al Carrito
+                  </Button>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="flex-1 rounded-xl"
+                      size="sm"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Limpiar Peso
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowVariantSelector(true)}
+                      className="flex-1 rounded-xl"
+                      size="sm"
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Otro Producto
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
+        </section>
 
-          <div className="grid grid-cols-2 gap-2">
-            {products?.map((product) => (
-              <Button
-                key={product.id}
-                variant="outline"
-                onClick={() => handleAddToCart(product)}
-                className="h-auto py-3 rounded-xl justify-start"
-              >
-                <div className="text-left">
-                  <p className="font-medium text-sm">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    S/ {product.basePrice}
-                  </p>
-                </div>
-              </Button>
-            ))}
-          </div>
+        <section>
+          <Button
+            variant="outline"
+            onClick={() => setShowVariantSelector(true)}
+            className="w-full h-auto py-4 rounded-xl justify-start"
+          >
+            <Box className="h-5 w-5 mr-3 text-orange-500" />
+            <div className="text-left">
+              <p className="font-medium">Seleccionar Producto y Variante</p>
+              <p className="text-xs text-muted-foreground">
+                La primera variante activa se selecciona automaticamente
+              </p>
+            </div>
+          </Button>
         </section>
 
         {cartItems.length > 0 && (
@@ -282,8 +390,9 @@ export default function NewSalePage() {
             <div className="space-y-2">
               {cartItems.map((item, index) => (
                 <SaleCartItem
-                  key={`${item.productId}-${index}`}
+                  key={`${item.productId}-${item.variantId}-${index}`}
                   productName={item.productName}
+                  variantName={item.variantName}
                   quantity={item.quantity}
                   unitPrice={item.unitPrice}
                   subtotal={item.subtotal}
@@ -341,6 +450,12 @@ export default function NewSalePage() {
           </Button>
         </div>
       )}
+
+      <VariantSelector
+        open={showVariantSelector}
+        onOpenChange={setShowVariantSelector}
+        onSelect={handleVariantSelect}
+      />
     </div>
   );
 }

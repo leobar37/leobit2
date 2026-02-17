@@ -2,7 +2,6 @@ import { Link } from "react-router";
 import {
   ShoppingCart,
   Users,
-  Calculator,
   Package,
   DollarSign,
   FileText,
@@ -82,17 +81,6 @@ export default function DashboardPage() {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <p className="font-semibold text-foreground">Clientes</p>
-          </Card>
-        </Link>
-
-        <Link to="/calculadora" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
-          >
-            <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center"
-            >
-              <Calculator className="h-6 w-6 text-green-600" />
-            </div>
-            <p className="font-semibold text-foreground">Calculadora</p>
           </Card>
         </Link>
 

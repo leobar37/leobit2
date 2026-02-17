@@ -15,7 +15,7 @@ import { relations } from "drizzle-orm";
 import { saleTypeEnum, syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
-import { distribuciones, products } from "./inventory";
+import { distribuciones, products, productVariants } from "./inventory";
 
 // Sales table
 export const sales = pgTable(
@@ -78,16 +78,21 @@ export const saleItems = pgTable(
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id),
 
     // Item details - productName denormalizado para offline
     productName: varchar("product_name", { length: 255 }).notNull(),
+    variantName: varchar("variant_name", { length: 50 }).notNull(), // snapshot legible
     quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
-    unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+    unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(), // snapshot final vendido
     subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
   },
   (table) => [
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
+    index("idx_sale_items_variant_id").on(table.variantId),
   ]
 );
 
@@ -125,5 +130,9 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
   product: one(products, {
     fields: [saleItems.productId],
     references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [saleItems.variantId],
+    references: [productVariants.id],
   }),
 }));

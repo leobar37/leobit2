@@ -9,6 +9,16 @@ export interface CalculatorState {
 
 export interface UseChickenCalculatorOptions {
 	productPrice?: string;
+	productId?: string;
+	variantId?: string;
+	persist?: boolean;
+}
+
+export interface CalculatorPersistence {
+	lastProductId?: string;
+	lastVariantId?: string;
+	lastPricePerKg?: string;
+	timestamp: number;
 }
 
 export interface UseChickenCalculatorReturn {
@@ -20,6 +30,83 @@ export interface UseChickenCalculatorReturn {
 	isReady: boolean;
 	handleReset: () => void;
 	handleChange: (field: keyof CalculatorState, value: string) => void;
+	persistSelection: (
+		selectedProductId: string,
+		selectedVariantId: string,
+		pricePerKg?: string,
+	) => void;
+}
+
+const STORAGE_KEY = "avileo-calculator-last";
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function loadPersistedState(): CalculatorPersistence | null {
+	if (typeof window === "undefined") {
+		return null;
+	}
+
+	try {
+		const saved = localStorage.getItem(STORAGE_KEY);
+		if (!saved) {
+			return null;
+		}
+
+		const parsed = JSON.parse(saved) as CalculatorPersistence;
+		const age = Date.now() - parsed.timestamp;
+
+		if (age > MAX_AGE_MS) {
+			localStorage.removeItem(STORAGE_KEY);
+			return null;
+		}
+
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+export function getPersistedCalculatorSelection(): CalculatorPersistence | null {
+	return loadPersistedState();
+}
+
+function resolveInitialPrice(
+	productPrice: string | undefined,
+	productId: string | undefined,
+	variantId: string | undefined,
+	persist: boolean,
+): string {
+	if (!persist) {
+		return productPrice || "";
+	}
+
+	const persisted = loadPersistedState();
+	if (!persisted) {
+		return productPrice || "";
+	}
+
+	if (
+		productId &&
+		variantId &&
+		persisted.lastProductId === productId &&
+		persisted.lastVariantId === variantId &&
+		persisted.lastPricePerKg
+	) {
+		return persisted.lastPricePerKg;
+	}
+
+	return productPrice || persisted.lastPricePerKg || "";
+}
+
+function savePersistedState(state: CalculatorPersistence): void {
+	if (typeof window === "undefined") {
+		return;
+	}
+
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+	} catch {
+		return;
+	}
 }
 
 const INITIAL_STATE: Omit<CalculatorState, "pricePerKg"> = {
@@ -36,20 +123,57 @@ const INITIAL_STATE: Omit<CalculatorState, "pricePerKg"> = {
 export function useChickenCalculator(
 	options: UseChickenCalculatorOptions = {},
 ): UseChickenCalculatorReturn {
-	const { productPrice } = options;
+	const {
+		productPrice,
+		productId,
+		variantId,
+		persist = true,
+	} = options;
 
 	const [values, setValues] = useState<CalculatorState>({
 		...INITIAL_STATE,
-		pricePerKg: productPrice || "",
+		pricePerKg: resolveInitialPrice(productPrice, productId, variantId, persist),
 	});
 
 	const [activeField, setActiveField] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (productPrice !== undefined) {
-			setValues((prev) => ({ ...prev, pricePerKg: productPrice }));
+			setValues((prev) => ({
+				...prev,
+				pricePerKg: resolveInitialPrice(productPrice, productId, variantId, persist),
+			}));
 		}
-	}, [productPrice]);
+	}, [persist, productId, productPrice, variantId]);
+
+	const persistSelection = useCallback(
+		(selectedProductId: string, selectedVariantId: string, pricePerKg?: string) => {
+			if (!persist) {
+				return;
+			}
+
+			savePersistedState({
+				lastProductId: selectedProductId,
+				lastVariantId: selectedVariantId,
+				lastPricePerKg: pricePerKg ?? values.pricePerKg,
+				timestamp: Date.now(),
+			});
+		},
+		[persist, values.pricePerKg],
+	);
+
+	useEffect(() => {
+		if (!persist || !productId || !variantId || !values.pricePerKg) {
+			return;
+		}
+
+		savePersistedState({
+			lastProductId: productId,
+			lastVariantId: variantId,
+			lastPricePerKg: values.pricePerKg,
+			timestamp: Date.now(),
+		});
+	}, [persist, productId, variantId, values.pricePerKg]);
 
 	const kgNeto = useMemo(() => {
 		return Math.max(
@@ -71,6 +195,17 @@ export function useChickenCalculator(
 	useEffect(() => {
 		const { totalAmount, pricePerKg, kilos, tara } = values;
 		const taraNum = parseFloat(tara) || 0;
+		const price = parseFloat(pricePerKg) || 0;
+		const kg = parseFloat(kilos) || 0;
+		const kgNetoValue = Math.max(0, kg - taraNum);
+
+		if (activeField === "tara" && price > 0 && kg > 0) {
+			setValues((prev) => ({
+				...prev,
+				totalAmount: (price * kgNetoValue).toFixed(2),
+			}));
+			return;
+		}
 
 		const filledFields = [
 			totalAmount && "totalAmount",
@@ -80,9 +215,6 @@ export function useChickenCalculator(
 
 		if (filledFields.length === 2) {
 			const total = parseFloat(totalAmount) || 0;
-			const price = parseFloat(pricePerKg) || 0;
-			const kg = parseFloat(kilos) || 0;
-			const kgNetoValue = Math.max(0, kg - taraNum);
 
 			if (!totalAmount && price > 0 && kgNetoValue > 0) {
 				setValues((prev) => ({
@@ -99,15 +231,15 @@ export function useChickenCalculator(
 				setValues((prev) => ({ ...prev, kilos: kgBruto.toFixed(3) }));
 			}
 		}
-	}, [values.totalAmount, values.pricePerKg, values.kilos, values.tara]);
+	}, [activeField, values.totalAmount, values.pricePerKg, values.kilos, values.tara]);
 
 	const handleReset = useCallback(() => {
 		setValues({
 			...INITIAL_STATE,
-			pricePerKg: productPrice || "",
+			pricePerKg: resolveInitialPrice(productPrice, productId, variantId, persist),
 		});
 		setActiveField(null);
-	}, [productPrice]);
+	}, [persist, productId, productPrice, variantId]);
 
 	const handleChange = useCallback(
 		(field: keyof CalculatorState, value: string) => {
@@ -128,5 +260,6 @@ export function useChickenCalculator(
 		isReady,
 		handleReset,
 		handleChange,
+		persistSelection,
 	};
 }

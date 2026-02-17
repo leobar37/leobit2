@@ -12,6 +12,7 @@ import {
   date,
   index,
   integer,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import {
@@ -113,6 +114,58 @@ export const distribuciones = pgTable(
   ]
 );
 
+// Product Variants table
+export const productVariants = pgTable(
+  "product_variants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+
+    // Variant info
+    name: varchar("name", { length: 50 }).notNull(),
+    sku: varchar("sku", { length: 50 }),
+    unitQuantity: decimal("unit_quantity", { precision: 10, scale: 3 }).notNull(),
+    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+
+    // Display & status
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+
+    // Sync
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_variants_product_id").on(table.productId),
+    index("idx_variants_is_active").on(table.isActive),
+    index("idx_variants_sync_status").on(table.syncStatus),
+    uniqueIndex("idx_variants_product_name").on(table.productId, table.name),
+  ]
+);
+
+// Variant Inventory table
+export const variantInventory = pgTable(
+  "variant_inventory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id, { onDelete: "cascade" }),
+    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_variant_inventory_variant_id").on(table.variantId),
+    uniqueIndex("idx_variant_inventory_unique").on(table.variantId),
+  ]
+);
+
 // Type exports
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -120,6 +173,10 @@ export type Inventory = typeof inventory.$inferSelect;
 export type NewInventory = typeof inventory.$inferInsert;
 export type Distribucion = typeof distribuciones.$inferSelect;
 export type NewDistribucion = typeof distribuciones.$inferInsert;
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type NewProductVariant = typeof productVariants.$inferInsert;
+export type VariantInventory = typeof variantInventory.$inferSelect;
+export type NewVariantInventory = typeof variantInventory.$inferInsert;
 
 export const inventoryRelations = relations(inventory, ({ one }) => ({
   product: one(products, {
@@ -135,6 +192,7 @@ export const productsRelations = relations(products, ({ many, one }) => ({
     fields: [products.imageId],
     references: [assets.id],
   }),
+  variants: many(productVariants),
 }));
 
 export const distribucionesRelations = relations(distribuciones, ({ one, many }) => ({
@@ -147,4 +205,23 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
     references: [businessUsers.id],
   }),
   sales: many(sales),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productVariants.productId],
+    references: [products.id],
+  }),
+  inventory: one(variantInventory, {
+    fields: [productVariants.id],
+    references: [variantInventory.variantId],
+  }),
+  saleItems: many(saleItems),
+}));
+
+export const variantInventoryRelations = relations(variantInventory, ({ one }) => ({
+  variant: one(productVariants, {
+    fields: [variantInventory.variantId],
+    references: [productVariants.id],
+  }),
 }));

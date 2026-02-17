@@ -1,10 +1,28 @@
 import { useParams, useNavigate } from "react-router";
+import { useState } from "react";
 import { ArrowLeft, Package, DollarSign, Tag, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useUpdateProduct } from "~/hooks/use-products";
 import { useProduct } from "~/hooks/use-products-live";
 import { ProductForm, type ProductFormData } from "~/components/products/product-form";
+import { VariantList } from "~/components/products/variant-list";
+import { VariantForm, type VariantFormData } from "~/components/products/variant-form";
+import {
+  useVariantsByProduct,
+  useCreateVariant,
+  useUpdateVariant,
+  useDeactivateVariant,
+  useReorderVariants,
+  type ProductVariant,
+} from "~/hooks/use-product-variants";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const typeLabels = {
   pollo: "Pollo",
@@ -30,6 +48,19 @@ export default function ProductDetailPage() {
   const { data: product, isLoading: isProductLoading } = useProduct(id!);
   const updateProduct = useUpdateProduct();
 
+  const {
+    data: variants,
+    isLoading: isVariantsLoading,
+    refetch: refetchVariants,
+  } = useVariantsByProduct(id || "", { includeInactive: true });
+  const createVariant = useCreateVariant();
+  const updateVariant = useUpdateVariant();
+  const deactivateVariant = useDeactivateVariant();
+  const reorderVariants = useReorderVariants();
+
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+
   const handleSubmit = async (data: ProductFormData) => {
     if (!id) return;
 
@@ -39,6 +70,61 @@ export default function ProductDetailPage() {
     });
 
     navigate(`/productos/${id}`);
+  };
+
+  const handleVariantSubmit = async (data: VariantFormData) => {
+    if (!id) return;
+
+    if (editingVariant) {
+      await updateVariant.mutateAsync({
+        id: editingVariant.id,
+        input: {
+          name: data.name,
+          sku: data.sku,
+          unitQuantity: data.unitQuantity,
+          price: data.price,
+          isActive: data.isActive,
+        },
+      });
+    } else {
+      await createVariant.mutateAsync({
+        productId: id,
+        input: {
+          name: data.name,
+          sku: data.sku,
+          unitQuantity: data.unitQuantity,
+          price: data.price,
+          isActive: data.isActive,
+        },
+      });
+    }
+
+    setIsVariantDialogOpen(false);
+    setEditingVariant(null);
+    refetchVariants();
+  };
+
+  const handleVariantEdit = (variant: ProductVariant) => {
+    setEditingVariant(variant);
+    setIsVariantDialogOpen(true);
+  };
+
+  const handleVariantAdd = () => {
+    setEditingVariant(null);
+    setIsVariantDialogOpen(true);
+  };
+
+  const handleVariantDelete = async (variantId: string) => {
+    if (confirm("¿Estás seguro de desactivar esta variante?")) {
+      await deactivateVariant.mutateAsync(variantId);
+      refetchVariants();
+    }
+  };
+
+  const handleVariantReorder = async (variantIds: string[]) => {
+    if (!id) return;
+    await reorderVariants.mutateAsync({ productId: id, variantIds });
+    refetchVariants();
   };
 
   if (isProductLoading) {
@@ -151,6 +237,34 @@ export default function ProductDetailPage() {
           onCancel={() => navigate("/productos")}
           isLoading={updateProduct.isPending}
         />
+
+        <VariantList
+          variants={variants || []}
+          isLoading={isVariantsLoading}
+          onAdd={handleVariantAdd}
+          onEdit={handleVariantEdit}
+          onDelete={handleVariantDelete}
+          onReorder={handleVariantReorder}
+        />
+
+        <Dialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingVariant ? "Editar Variante" : "Nueva Variante"}
+              </DialogTitle>
+            </DialogHeader>
+            <VariantForm
+              variant={editingVariant || undefined}
+              onSubmit={handleVariantSubmit}
+              onCancel={() => {
+                setIsVariantDialogOpen(false);
+                setEditingVariant(null);
+              }}
+              isLoading={createVariant.isPending || updateVariant.isPending}
+            />
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
