@@ -17,6 +17,17 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
   });
 
   const formattedAmount = Number(sale.totalAmount).toFixed(2);
+  const paidAmount = Number(sale.amountPaid);
+  const dueAmount = Number(sale.balanceDue);
+  const isCredit = sale.saleType === "credito";
+
+  const saleStatus = !isCredit
+    ? "Pago total"
+    : paidAmount <= 0
+      ? "Debe todo"
+      : dueAmount > 0
+        ? "A cuenta"
+        : "Sin deuda";
 
   return (
     <Card
@@ -36,15 +47,23 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                   Venta #{sale.id.slice(-6)}
                 </h3>
                 <Badge
-                  variant={sale.saleType === "contado" ? "default" : "secondary"}
+                  variant={isCredit ? "secondary" : "default"}
                   className={
-                    sale.saleType === "contado"
-                      ? "bg-green-100 text-green-700 hover:bg-green-100"
-                      : "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                    isCredit
+                      ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                      : "bg-green-100 text-green-700 hover:bg-green-100"
                   }
                 >
-                  {sale.saleType === "contado" ? "Contado" : "Crédito"}
+                  {saleStatus}
                 </Badge>
+                {isCredit && (
+                  <Badge
+                    variant="outline"
+                    className="bg-orange-50 text-orange-700 border-orange-200"
+                  >
+                    Credito
+                  </Badge>
+                )}
               </div>
 
               <div className="mt-2 space-y-1">
@@ -62,13 +81,19 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                   <DollarSign className="h-3.5 w-3.5 text-orange-600" />
                   <span className="text-orange-600">S/ {formattedAmount}</span>
                 </div>
+
+                {isCredit && (
+                  <div className="text-xs text-muted-foreground">
+                    Abono inicial: S/ {paidAmount.toFixed(2)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {sale.saleType === "credito" && Number(sale.balanceDue) > 0 && (
+          {isCredit && dueAmount > 0 && (
             <Badge variant="destructive" className="shrink-0">
-              Debe S/ {Number(sale.balanceDue).toFixed(2)}
+              Pendiente S/ {dueAmount.toFixed(2)}
             </Badge>
           )}
         </div>

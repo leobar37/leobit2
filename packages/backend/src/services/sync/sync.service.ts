@@ -309,7 +309,31 @@ export class SyncService {
 
     if (operation.action === "insert") {
       const sale = this.parseSaleInsert(payload);
-      await this.deps.saleRepo.create(ctx, sale);
+      await db.transaction(async (tx) => {
+        const createdSale = await this.deps.saleRepo.create(ctx, sale, tx);
+
+        if (sale.saleType === "credito" && sale.clientId && Number(sale.amountPaid) > 0) {
+          const initialPaymentReference = `init-sale:${createdSale.id}`;
+          const existingInitialPayment = await this.deps.paymentRepo.findByReferenceNumber(
+            ctx,
+            initialPaymentReference
+          );
+
+          if (!existingInitialPayment) {
+            await this.deps.paymentRepo.create(
+              ctx,
+              {
+                clientId: sale.clientId,
+                amount: Number(sale.amountPaid).toFixed(2),
+                paymentMethod: "efectivo",
+                notes: "Abono inicial registrado en la venta",
+                referenceNumber: initialPaymentReference,
+              },
+              tx
+            );
+          }
+        }
+      });
       return;
     }
 
@@ -408,13 +432,30 @@ export class SyncService {
 
   private parseSaleInsert(payload: Record<string, unknown>): ParsedSaleInsert {
     const saleType = this.requiredSaleType(payload.saleType);
-    const totalAmount = this.requiredNumericString(payload.totalAmount, "totalAmount");
-    const amountPaid = this.optionalNumericString(payload.amountPaid) ?? "0";
-    const total = Number(totalAmount);
-    const paid = Number(amountPaid);
+    const total = this.normalizedAmount(
+      Number(this.requiredNumericString(payload.totalAmount, "totalAmount")),
+      "totalAmount"
+    );
+    const amountPaidRaw = this.optionalNumericString(payload.amountPaid);
+    const paid = this.normalizedAmount(
+      Number(amountPaidRaw ?? (saleType === "contado" ? total.toFixed(2) : "0")),
+      "amountPaid"
+    );
+    const clientId = this.optionalString(payload.clientId);
 
-    const balanceDue =
-      saleType === "credito" ? Math.max(total - paid, 0).toString() : "0";
+    if (saleType === "credito" && !clientId) {
+      throw new ValidationError("La venta a crédito requiere cliente");
+    }
+
+    if (saleType === "contado" && Math.abs(paid - total) > 0.01) {
+      throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
+    }
+
+    if (saleType === "credito" && paid > total) {
+      throw new ValidationError("El monto pagado no puede ser mayor al total");
+    }
+
+    const balanceDue = saleType === "credito" ? Math.max(total - paid, 0).toFixed(2) : "0.00";
 
     const rawItems = Array.isArray(payload.items) ? payload.items : [];
 
@@ -440,15 +481,23 @@ export class SyncService {
     });
 
     return {
-      clientId: this.optionalString(payload.clientId),
+      clientId,
       saleType,
-      totalAmount,
-      amountPaid,
+      totalAmount: total.toFixed(2),
+      amountPaid: paid.toFixed(2),
       balanceDue,
       tara: this.optionalNumericString(payload.tara),
       netWeight: this.optionalNumericString(payload.netWeight),
       items,
     };
+  }
+
+  private normalizedAmount(value: number, field: string): number {
+    if (!Number.isFinite(value)) {
+      throw new ValidationError(`${field} inválido`);
+    }
+
+    return Math.max(0, Number(value.toFixed(2)));
   }
 
   private parseDistribucionInsert(

@@ -124,6 +124,8 @@ export class CustomerRepository {
       offset?: number;
     }
   ): Promise<AccountsReceivableItem[]> {
+    const creditSalesExpression = sql`CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END`;
+
     const searchFilter = filters?.search
       ? like(customers.name, `%${filters.search}%`)
       : undefined;
@@ -134,7 +136,7 @@ export class CustomerRepository {
         FROM ${sales} s 
         WHERE s.business_id = ${ctx.businessId} 
         GROUP BY s.client_id 
-        HAVING COALESCE(SUM(s.balance_due), 0) - COALESCE((
+        HAVING COALESCE(SUM(CASE WHEN s.sale_type = 'credito' THEN s.total_amount ELSE 0 END), 0) - COALESCE((
           SELECT SUM(a.amount) 
           FROM abonos a
           WHERE a.client_id = s.client_id AND a.business_id = ${ctx.businessId}
@@ -146,7 +148,7 @@ export class CustomerRepository {
       .select({
         customer: customers,
         totalDebt: sql<number>`
-          COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+          COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
             SELECT SUM(${abonos.amount}) 
             FROM ${abonos} 
             WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
@@ -166,12 +168,12 @@ export class CustomerRepository {
         minBalanceFilter
       ))
       .groupBy(customers.id)
-      .having(sql`COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+      .having(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
         SELECT SUM(${abonos.amount}) 
         FROM ${abonos} 
         WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
       ), 0) > 0`)
-      .orderBy(desc(sql`COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
+      .orderBy(desc(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
         SELECT SUM(${abonos.amount}) 
         FROM ${abonos} 
         WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
@@ -209,7 +211,7 @@ export class CustomerRepository {
       .select({
         totalBalance: sql<number>`SUM(
           COALESCE((
-            SELECT SUM(${sales.balanceDue}) 
+            SELECT SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END) 
             FROM ${sales} 
             WHERE ${sales.clientId} = ${customers.id} 
             AND ${sales.businessId} = ${ctx.businessId}
@@ -227,4 +229,3 @@ export class CustomerRepository {
     return result[0]?.totalBalance ?? 0;
   }
 }
-

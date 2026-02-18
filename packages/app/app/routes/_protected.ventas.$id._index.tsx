@@ -25,6 +25,17 @@ export default function SaleDetailPage() {
   const { data: products } = useProducts();
 
   const customer = customers?.find((c) => c.id === sale?.clientId);
+  const paidAmount = Number(sale?.amountPaid ?? 0);
+  const dueAmount = Number(sale?.balanceDue ?? 0);
+  const saleStatus = sale
+    ? sale.saleType === "contado"
+      ? "Pago total"
+      : paidAmount <= 0
+        ? "Debe todo"
+        : dueAmount > 0
+          ? "A cuenta"
+          : "Sin deuda"
+    : "";
   const formattedDate = sale
     ? new Date(sale.saleDate).toLocaleDateString("es-PE", {
         day: "2-digit",
@@ -87,8 +98,13 @@ export default function SaleDetailPage() {
                         : "bg-blue-100 text-blue-700"
                     }
                   >
-                    {sale.saleType === "contado" ? "Contado" : "Crédito"}
+                    {saleStatus}
                   </Badge>
+                  {sale.saleType === "credito" && (
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                      Credito
+                    </Badge>
+                  )}
                   <Badge
                     variant={sale.syncStatus === "synced" ? "default" : "outline"}
                   >
@@ -187,23 +203,23 @@ export default function SaleDetailPage() {
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Pagado</span>
-              <span>S/ {Number(sale.amountPaid).toFixed(2)}</span>
+              <span className="text-muted-foreground">Abono inicial</span>
+              <span>S/ {paidAmount.toFixed(2)}</span>
             </div>
 
-            {Number(sale.balanceDue) > 0 && (
+            {dueAmount > 0 && (
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-red-600 font-medium">Pendiente</span>
                 <span className="text-red-600 font-semibold">
-                  S/ {Number(sale.balanceDue).toFixed(2)}
+                  S/ {dueAmount.toFixed(2)}
                 </span>
               </div>
             )}
 
-            {Number(sale.balanceDue) === 0 && (
+            {dueAmount === 0 && (
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-green-600 font-medium">Estado</span>
-                <Badge className="bg-green-100 text-green-700">Pagado</Badge>
+                <Badge className="bg-green-100 text-green-700">Sin deuda</Badge>
               </div>
             )}
           </CardContent>

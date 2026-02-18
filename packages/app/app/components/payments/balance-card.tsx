@@ -23,7 +23,7 @@ function getBalanceConfig(balance: number): BalanceConfig {
     return {
       status: "positive",
       gradient: "bg-gradient-to-br from-red-500 to-red-600",
-      label: "Saldo Pendiente",
+      label: "Deuda total",
       amountText: `S/ ${balance.toFixed(2)}`,
       showPaymentButton: true,
     };
@@ -33,7 +33,7 @@ function getBalanceConfig(balance: number): BalanceConfig {
     return {
       status: "negative",
       gradient: "bg-gradient-to-br from-blue-500 to-blue-600",
-      label: "En deuda",
+      label: "Saldo a favor",
       amountText: `S/ ${Math.abs(balance).toFixed(2)}`,
       showPaymentButton: false,
     };
@@ -42,7 +42,7 @@ function getBalanceConfig(balance: number): BalanceConfig {
   return {
     status: "zero",
     gradient: "bg-gradient-to-br from-green-500 to-green-600",
-    label: "Saldo Pendiente",
+    label: "Sin deuda",
     amountText: "S/ 0.00",
     showPaymentButton: false,
   };
@@ -89,7 +89,7 @@ const BalanceCard = React.forwardRef<HTMLDivElement, BalanceCardProps>(
                 <path d="M5 12h14" />
                 <path d="M12 5v14" />
               </svg>
-              Registrar Abono
+              Registrar pago
             </button>
           )}
         </div>

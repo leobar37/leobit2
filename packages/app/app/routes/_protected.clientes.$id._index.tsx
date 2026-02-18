@@ -25,7 +25,7 @@ export default function CustomerDetailPage() {
 
   const totalDebt = customerSales
     .filter((sale) => sale.saleType === "credito")
-    .reduce((sum, sale) => sum + parseFloat(sale.balanceDue || "0"), 0);
+    .reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0);
 
   const totalPaid = customerPayments.reduce(
     (sum, payment) => sum + parseFloat(payment.amount),

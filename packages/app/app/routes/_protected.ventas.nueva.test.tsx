@@ -81,8 +81,34 @@ vi.mock("~/hooks/use-product-variants", () => ({
 }));
 
 vi.mock("~/components/sales/customer-search", () => ({
-  CustomerSearch: () => <div data-testid="customer-search" />,
+  CustomerSearch: ({ onSelectCustomer }: { onSelectCustomer: (customer: { id: string; name: string }) => void }) => (
+    <div data-testid="customer-search">
+      <button
+        type="button"
+        onClick={() => onSelectCustomer({ id: "c-1", name: "Cliente Test" })}
+      >
+        Seleccionar cliente
+      </button>
+    </div>
+  ),
 }));
+
+async function addCartItem() {
+  fireEvent.click(screen.getByRole("button", { name: /^seleccionar producto$/i }));
+  fireEvent.click(screen.getByText("Pollo Entero"));
+
+  const dialog = await screen.findByRole("dialog");
+  const addVariantButton = await within(dialog).findByRole("button", {
+    name: /agregar al carrito/i,
+  });
+  fireEvent.click(addVariantButton);
+
+  fireEvent.change(screen.getByPlaceholderText("0.000"), {
+    target: { value: "2" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: /^agregar al carrito$/i }));
+}
 
 describe("NewSalePage", () => {
   beforeEach(() => {
@@ -99,22 +125,9 @@ describe("NewSalePage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /^seleccionar producto$/i }));
-    fireEvent.click(screen.getByText("Pollo Entero"));
-
-    const dialog = await screen.findByRole("dialog");
-    const addVariantButton = await within(dialog).findByRole("button", {
-      name: /agregar al carrito/i,
-    });
-    fireEvent.click(addVariantButton);
+    await addCartItem();
 
     expect(screen.getByText(/Pollo Entero - Entero/i)).toBeTruthy();
-
-    fireEvent.change(screen.getByPlaceholderText("0.000"), {
-      target: { value: "2" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /^agregar al carrito$/i }));
 
     expect(screen.getByText(/Carrito \(1 items\)/i)).toBeTruthy();
 
@@ -125,11 +138,101 @@ describe("NewSalePage", () => {
     });
 
     const payload = mutateAsyncMock.mock.calls[0][0] as {
+      saleType: "contado" | "credito";
+      amountPaid: number;
+      totalAmount: number;
       items: Array<{ variantId: string; productId: string; quantity: number }>;
     };
 
     expect(payload.items[0].productId).toBe("p-1");
     expect(payload.items[0].variantId).toBe("v-1");
     expect(payload.items[0].quantity).toBeGreaterThan(0);
+    expect(payload.saleType).toBe("contado");
+    expect(payload.amountPaid).toBe(payload.totalAmount);
+  });
+
+  it("blocks credito sale without customer", async () => {
+    render(
+      <MemoryRouter>
+        <NewSalePage />
+      </MemoryRouter>,
+    );
+
+    await addCartItem();
+
+    fireEvent.click(screen.getByRole("button", { name: /^a cuenta$/i }));
+    fireEvent.change(screen.getByLabelText(/abono inicial/i), {
+      target: { value: "10" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /completar venta/i }));
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).not.toHaveBeenCalled();
+    });
+
+    expect(screen.getByText(/selecciona un cliente para registrar venta a credito/i)).toBeTruthy();
+  });
+
+  it("submits credito a cuenta with selected customer", async () => {
+    render(
+      <MemoryRouter>
+        <NewSalePage />
+      </MemoryRouter>,
+    );
+
+    await addCartItem();
+
+    fireEvent.click(screen.getByRole("button", { name: /seleccionar cliente/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^a cuenta$/i }));
+    fireEvent.change(screen.getByLabelText(/abono inicial/i), {
+      target: { value: "10" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /completar venta/i }));
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mutateAsyncMock.mock.calls[0][0] as {
+      clientId?: string;
+      saleType: "contado" | "credito";
+      amountPaid: number;
+      totalAmount: number;
+    };
+
+    expect(payload.clientId).toBe("c-1");
+    expect(payload.saleType).toBe("credito");
+    expect(payload.amountPaid).toBe(10);
+    expect(payload.totalAmount).toBeGreaterThan(payload.amountPaid);
+  });
+
+  it("submits credito sin pago when mode is debe", async () => {
+    render(
+      <MemoryRouter>
+        <NewSalePage />
+      </MemoryRouter>,
+    );
+
+    await addCartItem();
+
+    fireEvent.click(screen.getByRole("button", { name: /seleccionar cliente/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^debe$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /completar venta/i }));
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mutateAsyncMock.mock.calls[0][0] as {
+      clientId?: string;
+      saleType: "contado" | "credito";
+      amountPaid: number;
+    };
+
+    expect(payload.clientId).toBe("c-1");
+    expect(payload.saleType).toBe("credito");
+    expect(payload.amountPaid).toBe(0);
   });
 });

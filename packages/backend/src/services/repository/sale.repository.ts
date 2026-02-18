@@ -3,6 +3,8 @@ import { db } from "../../lib/db";
 import { sales, saleItems, type Sale, type NewSale, type SaleItem, type NewSaleItem } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export interface CreateSaleInput {
   clientId?: string;
   saleType: "contado" | "credito";
@@ -64,10 +66,12 @@ export class SaleRepository {
     });
   }
 
-  async create(ctx: RequestContext, data: CreateSaleInput): Promise<Sale> {
+  async create(ctx: RequestContext, data: CreateSaleInput, tx?: DbTransaction): Promise<Sale> {
     const { items, ...saleData } = data;
-    
-    const [sale] = await db
+
+    const executor = tx ?? db;
+
+    const [sale] = await executor
       .insert(sales)
       .values({
         ...saleData,
@@ -77,7 +81,7 @@ export class SaleRepository {
       .returning();
 
     if (items && items.length > 0) {
-      await db.insert(saleItems).values(
+      await executor.insert(saleItems).values(
         items.map((item) => ({
           ...item,
           saleId: sale.id,

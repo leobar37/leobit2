@@ -3,6 +3,8 @@ import { db } from "../../lib/db";
 import { abonos, type Abono, type NewAbono } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export class PaymentRepository {
   async findMany(
     ctx: RequestContext,
@@ -34,9 +36,12 @@ export class PaymentRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewAbono, "businessId" | "sellerId" | "id" | "createdAt">
+    data: Omit<NewAbono, "businessId" | "sellerId" | "id" | "createdAt">,
+    tx?: DbTransaction
   ): Promise<Abono> {
-    const [abono] = await db
+    const executor = tx ?? db;
+
+    const [abono] = await executor
       .insert(abonos)
       .values({
         ...data,
@@ -46,6 +51,15 @@ export class PaymentRepository {
       .returning();
 
     return abono;
+  }
+
+  async findByReferenceNumber(ctx: RequestContext, referenceNumber: string): Promise<Abono | undefined> {
+    return db.query.abonos.findFirst({
+      where: and(
+        eq(abonos.businessId, ctx.businessId),
+        eq(abonos.referenceNumber, referenceNumber)
+      ),
+    });
   }
 
   async delete(ctx: RequestContext, id: string): Promise<void> {

@@ -39,14 +39,17 @@ interface CartItem {
   subtotal: number;
 }
 
+type PaymentMode = "pago_total" | "a_cuenta" | "debe_todo";
+
 export default function NewSalePage() {
   const navigate = useNavigate();
   const createSale = useCreateSale();
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [saleType, setSaleType] = useState<"contado" | "credito">("contado");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("pago_total");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [amountPaid, setAmountPaid] = useState<string>("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showVariantSelector, setShowVariantSelector] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -110,8 +113,24 @@ export default function NewSalePage() {
 
   const totalAmount = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
   const totalNeto = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const saleType: "contado" | "credito" =
+    paymentMode === "pago_total" ? "contado" : "credito";
+  const parsedAmountPaid = parseFloat(amountPaid) || 0;
+  const amountPaidValue =
+    paymentMode === "pago_total"
+      ? totalAmount
+      : paymentMode === "debe_todo"
+        ? 0
+        : Math.max(parsedAmountPaid, 0);
   const balanceDue =
-    saleType === "credito" ? totalAmount - (parseFloat(amountPaid) || 0) : 0;
+    saleType === "credito" ? Math.max(totalAmount - amountPaidValue, 0) : 0;
+  const requiresCustomer = saleType === "credito";
+  const hasValidPartialAmount =
+    paymentMode !== "a_cuenta" || (amountPaidValue > 0 && amountPaidValue <= totalAmount);
+  const canSubmit =
+    cartItems.length > 0 &&
+    (!requiresCustomer || !!selectedCustomer) &&
+    hasValidPartialAmount;
 
   const handleVariantSelect = (product: Product, variant: ProductVariant) => {
     setSelectedProduct(product);
@@ -166,12 +185,24 @@ export default function NewSalePage() {
   const handleSubmit = async () => {
     if (cartItems.length === 0) return;
 
+    if (requiresCustomer && !selectedCustomer) {
+      setSubmitError("Para registrar credito necesitas seleccionar un cliente.");
+      return;
+    }
+
+    if (paymentMode === "a_cuenta" && !hasValidPartialAmount) {
+      setSubmitError("El monto a cuenta debe ser mayor a 0 y no superar el total.");
+      return;
+    }
+
+    setSubmitError(null);
+
     try {
       await createSale.mutateAsync({
         clientId: selectedCustomer?.id,
         saleType,
         totalAmount,
-        amountPaid: saleType === "credito" ? parseFloat(amountPaid) || 0 : totalAmount,
+        amountPaid: amountPaidValue,
         netWeight: totalNeto || undefined,
         items: cartItems,
       });
@@ -202,29 +233,61 @@ export default function NewSalePage() {
         </section>
 
         <section>
-          <h2 className="text-sm font-medium text-muted-foreground mb-2">Tipo de Venta</h2>
+          <h2 className="text-sm font-medium text-muted-foreground mb-2">Tipo de Cobro</h2>
           <div className="flex gap-2">
             <Button
-              variant={saleType === "contado" ? "default" : "outline"}
-              onClick={() => setSaleType("contado")}
+              variant={paymentMode === "pago_total" ? "default" : "outline"}
+              onClick={() => {
+                setPaymentMode("pago_total");
+                setSubmitError(null);
+              }}
               className={cn(
                 "flex-1 rounded-xl",
-                saleType === "contado" && "bg-orange-500 hover:bg-orange-600",
+                paymentMode === "pago_total" && "bg-orange-500 hover:bg-orange-600",
               )}
             >
-              Contado
+              Pago total
             </Button>
             <Button
-              variant={saleType === "credito" ? "default" : "outline"}
-              onClick={() => setSaleType("credito")}
+              variant={paymentMode === "a_cuenta" ? "default" : "outline"}
+              onClick={() => {
+                setPaymentMode("a_cuenta");
+                setSubmitError(null);
+              }}
               className={cn(
                 "flex-1 rounded-xl",
-                saleType === "credito" && "bg-orange-500 hover:bg-orange-600",
+                paymentMode === "a_cuenta" && "bg-orange-500 hover:bg-orange-600",
               )}
             >
-              Credito
+              A cuenta
+            </Button>
+            <Button
+              variant={paymentMode === "debe_todo" ? "default" : "outline"}
+              onClick={() => {
+                setPaymentMode("debe_todo");
+                setAmountPaid("0");
+                setSubmitError(null);
+              }}
+              className={cn(
+                "flex-1 rounded-xl",
+                paymentMode === "debe_todo" && "bg-orange-500 hover:bg-orange-600",
+              )}
+            >
+              Debe
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {paymentMode === "pago_total" && "Pago completo hoy, no aumenta deuda."}
+            {paymentMode === "a_cuenta" &&
+              "Venta a credito con abono inicial para reducir la deuda."}
+            {paymentMode === "debe_todo" &&
+              "Venta a credito sin abono inicial, toda la venta queda como deuda."}
+          </p>
+          {requiresCustomer && !selectedCustomer && (
+            <p className="text-xs text-red-600 mt-1">
+              Selecciona un cliente para registrar venta a credito.
+            </p>
+          )}
         </section>
 
         <section id="calculator-section" className="space-y-3">
@@ -422,11 +485,14 @@ export default function NewSalePage() {
                 <span className="text-2xl font-bold">S/ {totalAmount.toFixed(2)}</span>
               </div>
 
-              {saleType === "credito" && (
+              {paymentMode === "a_cuenta" && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-orange-100">Monto pagado</Label>
+                    <Label htmlFor="initial-payment-input" className="text-orange-100">
+                      Abono inicial
+                    </Label>
                     <Input
+                      id="initial-payment-input"
                       type="number"
                       step="0.01"
                       value={amountPaid}
@@ -435,14 +501,20 @@ export default function NewSalePage() {
                       placeholder="0.00"
                     />
                   </div>
-
-                  {balanceDue > 0 && (
-                    <div className="flex items-center justify-between text-orange-100">
-                      <span>Saldo pendiente</span>
-                      <span>S/ {balanceDue.toFixed(2)}</span>
-                    </div>
-                  )}
                 </>
+              )}
+
+              {saleType === "credito" && (
+                <div className="flex items-center justify-between text-orange-100">
+                  <span>Saldo pendiente</span>
+                  <span>S/ {balanceDue.toFixed(2)}</span>
+                </div>
+              )}
+
+              {submitError && (
+                <p className="text-sm text-red-100 bg-red-500/20 rounded-lg px-3 py-2">
+                  {submitError}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -453,7 +525,7 @@ export default function NewSalePage() {
         <div className="fixed bottom-0 left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100">
           <Button
             onClick={handleSubmit}
-            disabled={createSale.isPending}
+            disabled={createSale.isPending || !canSubmit}
             className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold"
           >
             <ShoppingCart className="h-5 w-5 mr-2" />

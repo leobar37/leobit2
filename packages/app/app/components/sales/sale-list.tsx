@@ -21,7 +21,19 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
 
   return (
     <div className="space-y-3">
-      {sortedSales.map((sale) => (
+      {sortedSales.map((sale) => {
+        const paidAmount = parseFloat(sale.amountPaid);
+        const dueAmount = parseFloat(sale.balanceDue);
+        const isCredit = sale.saleType === "credito";
+        const statusLabel = !isCredit
+          ? "Pago total"
+          : paidAmount <= 0
+            ? "Debe todo"
+            : dueAmount > 0
+              ? "A cuenta"
+              : "Sin deuda";
+
+        return (
         <Card key={sale.id} className="border-0 shadow-md rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -36,15 +48,23 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
                       S/ {parseFloat(sale.totalAmount).toFixed(2)}
                     </p>
                     <Badge
-                      variant={sale.saleType === "contado" ? "default" : "secondary"}
+                      variant={isCredit ? "secondary" : "default"}
                       className={`text-xs ${
-                        sale.saleType === "contado"
-                          ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                        isCredit
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          : "bg-green-100 text-green-700 hover:bg-green-100"
                       }`}
                     >
-                      {sale.saleType === "contado" ? "Contado" : "Crédito"}
+                      {statusLabel}
                     </Badge>
+                    {isCredit && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                      >
+                        Credito
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -58,27 +78,34 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
                       })}
                     </span>
                   </div>
+
+                  {isCredit && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Abono inicial: S/ {paidAmount.toFixed(2)}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="text-right">
-                {sale.saleType === "credito" && parseFloat(sale.balanceDue) > 0 && (
+                {isCredit && dueAmount > 0 && (
                   <div className="flex items-center gap-1 text-sm text-red-600">
                     <CreditCard className="h-3 w-3" />
-                    <span>Debe: S/ {parseFloat(sale.balanceDue).toFixed(2)}</span>
+                    <span>Pendiente: S/ {dueAmount.toFixed(2)}</span>
                   </div>
                 )}
 
-                {sale.saleType === "credito" && parseFloat(sale.balanceDue) === 0 && (
+                {isCredit && dueAmount === 0 && (
                   <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                    Pagado
+                    Sin deuda
                   </Badge>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

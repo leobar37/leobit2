@@ -20,7 +20,11 @@ export const invitationRoutes = new Elysia({ prefix: "/invitations" })
     async (ctx) => {
       const user = (ctx as any).user;
       const body = ctx.body as any;
-      
+
+      if (!user?.id) {
+        return { success: false, error: "Sesión inválida" };
+      }
+
       const membership = await db.query.businessUsers.findFirst({
         where: eq(businessUsers.userId, user.id),
       });
@@ -85,7 +89,11 @@ export const invitationRoutes = new Elysia({ prefix: "/invitations" })
   )
   .get("/", async (ctx) => {
     const user = (ctx as any).user;
-    
+
+    if (!user?.id) {
+      return { success: false, error: "Sesión inválida" };
+    }
+
     const membership = await db.query.businessUsers.findFirst({
       where: eq(businessUsers.userId, user.id),
     });

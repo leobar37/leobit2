@@ -59,7 +59,7 @@ export default function NuevoCobroPage() {
   const customerId = searchParams.get("clienteId");
 
   useSetLayout({
-    title: "Registrar Abono",
+    title: "Registrar pago",
     showBackButton: true,
     backHref: customerId ? `/clientes/${customerId}` : "/cobros",
   });
@@ -67,6 +67,7 @@ export default function NuevoCobroPage() {
   const { data: customer } = useCustomer(customerId || "");
   const { data: accounts } = useAccountsReceivable();
   const createPayment = useCreatePayment();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const currentDebt = useMemo(() => {
     if (!customerId || !accounts) return 0;
@@ -106,6 +107,7 @@ export default function NuevoCobroPage() {
     if (!customerId) return;
 
     try {
+      setSubmitError(null);
       await createPayment.mutateAsync({
         clientId: customerId,
         amount: data.amount,
@@ -115,8 +117,8 @@ export default function NuevoCobroPage() {
       });
 
       navigate(customerId ? `/clientes/${customerId}` : "/cobros");
-    } catch (error) {
-      alert("Error al registrar el abono");
+    } catch {
+      setSubmitError("No se pudo registrar el pago. Intenta nuevamente.");
     }
   };
 
@@ -199,7 +201,7 @@ export default function NuevoCobroPage() {
               onClick={() => setValue("amount", currentDebt.toFixed(2))}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
-              Todo
+              Todo (liquidar)
             </Button>
             {[50, 100, 200].map((amt) => (
               <QuickAmountButton
@@ -231,6 +233,12 @@ export default function NuevoCobroPage() {
           )}
         </CardContent>
       </Card>
+
+      {submitError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          {submitError}
+        </p>
+      )}
 
       <Card className="border-0 shadow-md rounded-2xl">
         <CardContent className="p-4 space-y-4">
@@ -292,7 +300,7 @@ export default function NuevoCobroPage() {
         ) : (
           <>
             <Check className="mr-2 h-5 w-5" />
-            Confirmar Abono
+            Confirmar pago
           </>
         )}
       </Button>

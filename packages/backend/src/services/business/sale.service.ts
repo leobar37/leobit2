@@ -1,10 +1,15 @@
 import type { SaleRepository, CreateSaleInput } from "../repository/sale.repository";
+import type { PaymentRepository } from "../repository/payment.repository";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError } from "../../errors";
 import type { Sale } from "../../db/schema";
+import { db } from "../../lib/db";
 
 export class SaleService {
-  constructor(private repository: SaleRepository) {}
+  constructor(
+    private repository: SaleRepository,
+    private paymentRepository: PaymentRepository
+  ) {}
 
   async getSales(
     ctx: RequestContext,
@@ -62,25 +67,30 @@ export class SaleService {
       throw new ValidationError("El monto total debe ser mayor a 0");
     }
 
-    const amountPaid = data.amountPaid ?? 0;
-    const balanceDue = data.saleType === "credito" 
-      ? data.totalAmount - amountPaid 
-      : 0;
+    const totalAmount = this.normalizeAmount(data.totalAmount, "totalAmount");
+    const amountPaidInput =
+      data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
+    const amountPaid = this.normalizeAmount(amountPaidInput, "amountPaid");
+    const balanceDue = data.saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
 
-    if (data.saleType === "contado" && amountPaid < data.totalAmount) {
+    if (data.saleType === "credito" && !data.clientId) {
+      throw new ValidationError("La venta a crédito requiere cliente");
+    }
+
+    if (data.saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
       throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
     }
 
-    if (data.saleType === "credito" && amountPaid > data.totalAmount) {
+    if (data.saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
-    return this.repository.create(ctx, {
+    const salePayload: CreateSaleInput = {
       clientId: data.clientId,
       saleType: data.saleType,
-      totalAmount: data.totalAmount.toString(),
-      amountPaid: amountPaid.toString(),
-      balanceDue: balanceDue.toString(),
+      totalAmount: totalAmount.toFixed(2),
+      amountPaid: amountPaid.toFixed(2),
+      balanceDue: balanceDue.toFixed(2),
       tara: data.tara?.toString(),
       netWeight: data.netWeight?.toString(),
       items: data.items.map((item) => ({
@@ -92,6 +102,34 @@ export class SaleService {
         unitPrice: item.unitPrice.toString(),
         subtotal: item.subtotal.toString(),
       })),
+    };
+
+    return db.transaction(async (tx) => {
+      const sale = await this.repository.create(ctx, salePayload, tx);
+
+      if (data.saleType === "credito" && data.clientId && amountPaid > 0) {
+        const initialPaymentReference = `init-sale:${sale.id}`;
+        const existingInitialPayment = await this.paymentRepository.findByReferenceNumber(
+          ctx,
+          initialPaymentReference
+        );
+
+        if (!existingInitialPayment) {
+          await this.paymentRepository.create(
+            ctx,
+            {
+              clientId: data.clientId,
+              amount: amountPaid.toFixed(2),
+              paymentMethod: "efectivo",
+              notes: "Abono inicial registrado en la venta",
+              referenceNumber: initialPaymentReference,
+            },
+            tx
+          );
+        }
+      }
+
+      return sale;
     });
   }
 
@@ -110,5 +148,13 @@ export class SaleService {
 
   async getTodayStats(ctx: RequestContext): Promise<{ count: number; total: string }> {
     return this.repository.getTotalSalesToday(ctx);
+  }
+
+  private normalizeAmount(value: number, field: string): number {
+    if (!Number.isFinite(value)) {
+      throw new ValidationError(`${field} inválido`);
+    }
+
+    return Math.max(0, Number(value.toFixed(2)));
   }
 }
