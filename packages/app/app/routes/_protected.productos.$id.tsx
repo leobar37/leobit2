@@ -1,5 +1,4 @@
 import { useParams, useNavigate } from "react-router";
-import { useState } from "react";
 import { ArrowLeft, Package, DollarSign, Tag, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,12 +16,7 @@ import {
   useReorderVariants,
   type ProductVariant,
 } from "~/hooks/use-product-variants";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { VariantModal, useVariantModal } from "~/components/products/variant-modal";
 
 const typeLabels = {
   pollo: "Pollo",
@@ -58,8 +52,7 @@ export default function ProductDetailPage() {
   const deactivateVariant = useDeactivateVariant();
   const reorderVariants = useReorderVariants();
 
-  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
-  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const variantModal = useVariantModal();
 
   const handleSubmit = async (data: ProductFormData) => {
     if (!id) return;
@@ -75,9 +68,12 @@ export default function ProductDetailPage() {
   const handleVariantSubmit = async (data: VariantFormData) => {
     if (!id) return;
 
-    if (editingVariant) {
+    const isEditing = variantModal.data?.isEditing;
+    const editingVariantId = variantModal.data?.variant?.id;
+
+    if (isEditing && editingVariantId) {
       await updateVariant.mutateAsync({
-        id: editingVariant.id,
+        id: editingVariantId,
         input: {
           name: data.name,
           sku: data.sku,
@@ -99,19 +95,24 @@ export default function ProductDetailPage() {
       });
     }
 
-    setIsVariantDialogOpen(false);
-    setEditingVariant(null);
     refetchVariants();
   };
 
   const handleVariantEdit = (variant: ProductVariant) => {
-    setEditingVariant(variant);
-    setIsVariantDialogOpen(true);
+    variantModal.open({
+      variant,
+      onSubmit: handleVariantSubmit,
+      isLoading: createVariant.isPending || updateVariant.isPending,
+      isEditing: true,
+    });
   };
 
   const handleVariantAdd = () => {
-    setEditingVariant(null);
-    setIsVariantDialogOpen(true);
+    variantModal.open({
+      onSubmit: handleVariantSubmit,
+      isLoading: createVariant.isPending || updateVariant.isPending,
+      isEditing: false,
+    });
   };
 
   const handleVariantDelete = async (variantId: string) => {
@@ -160,7 +161,7 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-4">
+        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <button
             onClick={() => navigate("/productos")}
             className="p-2 -ml-2 rounded-xl hover:bg-orange-50 transition-colors"
@@ -171,7 +172,7 @@ export default function ProductDetailPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-8 space-y-4">
+      <main className="px-3 py-4 sm:px-4 pb-8 space-y-4">
         <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-4">
             <div className="flex items-start gap-4">
@@ -247,24 +248,7 @@ export default function ProductDetailPage() {
           onReorder={handleVariantReorder}
         />
 
-        <Dialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingVariant ? "Editar Variante" : "Nueva Variante"}
-              </DialogTitle>
-            </DialogHeader>
-            <VariantForm
-              variant={editingVariant || undefined}
-              onSubmit={handleVariantSubmit}
-              onCancel={() => {
-                setIsVariantDialogOpen(false);
-                setEditingVariant(null);
-              }}
-              isLoading={createVariant.isPending || updateVariant.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        <VariantModal />
       </main>
     </div>
   );

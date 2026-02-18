@@ -187,7 +187,7 @@ export default function TeamPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center h-16 px-4">
-          <Link to="/dashboard">
+          <Link to="/config">
             <Button variant="ghost" size="icon" className="rounded-xl mr-3">
               <ArrowLeft className="h-5 w-5" />
             </Button>

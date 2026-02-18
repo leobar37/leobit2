@@ -118,7 +118,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <LayoutContext.Provider value={{ config, setConfig }}>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-          <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center justify-between h-16 px-3 sm:px-4">
             <div className="flex items-center gap-3">
               {showBackButton && (
                 <Link to={backHref} className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
@@ -179,12 +179,12 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        <main className={`p-4 ${showBottomNav ? "pb-24" : "pb-8"}`}>
+        <main className={`px-3 py-4 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}>
           {children}
         </main>
 
         {showBottomNav && (
-          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-orange-100 px-4 py-2">
+          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-orange-100 px-3 sm:px-4 py-2">
             <div className="flex items-center justify-around max-w-md mx-auto">
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.href;

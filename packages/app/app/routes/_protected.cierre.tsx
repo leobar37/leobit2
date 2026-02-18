@@ -61,7 +61,7 @@ export default function CierreDiaPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-4">
+        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <Link to="/dashboard" className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -69,7 +69,7 @@ export default function CierreDiaPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-32 space-y-4">
+      <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
         {showSuccess && (
           <div className="bg-green-500 text-white p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
             <CheckCircle className="h-5 w-5" />
@@ -204,7 +204,7 @@ export default function CierreDiaPage() {
         </Card>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-orange-100">
+      <div className="fixed bottom-0 left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100">
         <Button
           onClick={handleGenerarCierre}
           disabled={createClosing.isPending || !todayStats || todaySales.length === 0}

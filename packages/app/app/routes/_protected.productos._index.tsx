@@ -19,7 +19,7 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-4">
+        <div className="flex items-center justify-between h-16 px-3 sm:px-4">
           <h1 className="font-bold text-lg">Catálogo</h1>
           <div className="flex items-center gap-2">
             <Link to="/productos/nuevo">
@@ -33,7 +33,7 @@ export default function ProductsPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-24">
+      <main className="px-3 py-4 sm:px-4 pb-24">
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

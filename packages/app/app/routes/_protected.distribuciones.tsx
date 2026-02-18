@@ -83,7 +83,7 @@ export default function DistribucionesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-4">
+        <div className="flex items-center justify-between h-16 px-3 sm:px-4">
           <div className="flex items-center">
             <Link to="/dashboard">
               <Button variant="ghost" size="icon" className="mr-2">
@@ -110,7 +110,7 @@ export default function DistribucionesPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-24 space-y-4">
+      <main className="px-3 py-4 sm:px-4 pb-24 space-y-4">
         <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/5">
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-2">

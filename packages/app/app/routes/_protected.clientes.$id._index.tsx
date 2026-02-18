@@ -53,7 +53,7 @@ export default function CustomerDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-4">
+        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 rounded-xl hover:bg-orange-50"
@@ -71,7 +71,7 @@ export default function CustomerDetailPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-32 space-y-4">
+      <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
         {/* Customer Info Card */}
         <Card className="border-0 shadow-md rounded-2xl">
           <CardContent className="p-4">
