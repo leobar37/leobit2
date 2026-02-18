@@ -97,6 +97,10 @@ export const distribuciones = pgTable(
     fecha: date("fecha").notNull(),
     estado: distribucionStatusEnum("estado").notNull().default("activo"),
 
+    modo: varchar("modo", { length: 20 }).notNull().default("estricto"),
+    confiarEnVendedor: boolean("confiar_en_vendedor").notNull().default(false),
+    pesoConfirmado: boolean("peso_confirmado").notNull().default(true),
+
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
@@ -109,8 +113,39 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_vendedor_id").on(table.vendedorId),
     index("idx_distribuciones_fecha").on(table.fecha),
     index("idx_distribuciones_estado").on(table.estado),
+    index("idx_distribuciones_modo").on(table.modo),
     index("idx_distribuciones_sync_status").on(table.syncStatus),
     index("idx_distribuciones_vendedor_fecha").on(table.vendedorId, table.fecha),
+  ]
+);
+
+export const distribucionItems = pgTable(
+  "distribucion_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    distribucionId: uuid("distribucion_id")
+      .notNull()
+      .references(() => distribuciones.id, { onDelete: "cascade" }),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id),
+
+    cantidadAsignada: decimal("cantidad_asignada", { precision: 10, scale: 3 }).notNull(),
+    cantidadVendida: decimal("cantidad_vendida", { precision: 10, scale: 3 }).notNull().default("0"),
+
+    unidad: varchar("unidad", { length: 20 }).notNull().default("kg"),
+
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_distribucion_items_distribucion_id").on(table.distribucionId),
+    index("idx_distribucion_items_variant_id").on(table.variantId),
+    index("idx_distribucion_items_sync_status").on(table.syncStatus),
+    uniqueIndex("idx_distribucion_items_unique").on(table.distribucionId, table.variantId),
   ]
 );
 
@@ -173,6 +208,8 @@ export type Inventory = typeof inventory.$inferSelect;
 export type NewInventory = typeof inventory.$inferInsert;
 export type Distribucion = typeof distribuciones.$inferSelect;
 export type NewDistribucion = typeof distribuciones.$inferInsert;
+export type DistribucionItem = typeof distribucionItems.$inferSelect;
+export type NewDistribucionItem = typeof distribucionItems.$inferInsert;
 export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
 export type VariantInventory = typeof variantInventory.$inferSelect;
@@ -204,7 +241,19 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
     fields: [distribuciones.vendedorId],
     references: [businessUsers.id],
   }),
+  items: many(distribucionItems),
   sales: many(sales),
+}));
+
+export const distribucionItemsRelations = relations(distribucionItems, ({ one }) => ({
+  distribucion: one(distribuciones, {
+    fields: [distribucionItems.distribucionId],
+    references: [distribuciones.id],
+  }),
+  variant: one(productVariants, {
+    fields: [distribucionItems.variantId],
+    references: [productVariants.id],
+  }),
 }));
 
 export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({

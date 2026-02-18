@@ -62,7 +62,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
   .get(
     "/:id",
     async ({ ctx, params, distribucionService }) => {
-      const distribucion = await distribucionService.getDistribucion(ctx, params.id);
+      const distribucion = await distribucionService.getDistribucionWithItems(ctx, params.id);
       return {
         success: true,
         data: distribucion,
@@ -74,7 +74,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       }),
       detail: {
         summary: "Obtener distribución",
-        description: "Obtiene una distribución específica por ID",
+        description: "Obtiene una distribución específica por ID con sus items",
         tags: ["Distribuciones"],
       },
     }
@@ -105,8 +105,10 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       const distribucion = await distribucionService.createDistribucion(ctx, {
         vendedorId: body.vendedorId,
         puntoVenta: body.puntoVenta,
-        kilosAsignados: body.kilosAsignados,
         fecha: body.fecha,
+        modo: body.modo,
+        confiarEnVendedor: body.confiarEnVendedor,
+        items: body.items,
       });
       return {
         success: true,
@@ -117,12 +119,20 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       body: t.Object({
         vendedorId: t.String(),
         puntoVenta: t.String({ minLength: 2 }),
-        kilosAsignados: t.Number({ minimum: 0.001 }),
         fecha: t.Optional(t.String()),
+        modo: t.Optional(t.Union([t.Literal("estricto"), t.Literal("acumulativo"), t.Literal("libre")])),
+        confiarEnVendedor: t.Optional(t.Boolean()),
+        items: t.Array(
+          t.Object({
+            variantId: t.String(),
+            cantidadAsignada: t.Number({ minimum: 0.001 }),
+            unidad: t.String(),
+          })
+        ),
       }),
       detail: {
         summary: "Crear distribución",
-        description: "Crea una nueva asignación de kilos a un vendedor (solo admin)",
+        description: "Crea una nueva asignación con items a un vendedor (solo admin)",
         tags: ["Distribuciones"],
       },
     }
@@ -172,6 +182,26 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       detail: {
         summary: "Cerrar distribución",
         description: "Cierra una distribución (cambia estado a 'cerrado')",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
+  .get(
+    "/:id/items",
+    async ({ ctx, params, distribucionService }) => {
+      const items = await distribucionService.getDistribucionItems(ctx, params.id);
+      return {
+        success: true,
+        data: items,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: "Listar items de distribución",
+        description: "Obtiene todos los items de una distribución",
         tags: ["Distribuciones"],
       },
     }

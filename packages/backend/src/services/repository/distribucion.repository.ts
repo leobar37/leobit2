@@ -2,8 +2,10 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import {
   distribuciones,
+  distribucionItems,
   type Distribucion,
   type NewDistribucion,
+  type DistribucionItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
@@ -82,6 +84,30 @@ export class DistribucionRepository {
         },
       },
     });
+  }
+
+  async findByIdWithItems(
+    ctx: RequestContext,
+    id: string
+  ): Promise<(Distribucion & { items: DistribucionItem[] }) | undefined> {
+    return db.query.distribuciones.findFirst({
+      where: and(
+        eq(distribuciones.id, id),
+        eq(distribuciones.businessId, ctx.businessId)
+      ),
+      with: {
+        items: {
+          with: {
+            variant: true,
+          },
+        },
+        vendedor: {
+          with: {
+            business: true,
+          },
+        },
+      },
+    }) as Promise<(Distribucion & { items: DistribucionItem[] }) | undefined>;
   }
 
   async create(

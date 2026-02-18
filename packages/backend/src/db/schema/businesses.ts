@@ -35,6 +35,7 @@ export const businesses = pgTable(
     modoOperacion: varchar("modo_operacion", { length: 50 }).default("inventario_propio"),
     controlKilos: boolean("control_kilos").default(true),
     usarDistribucion: boolean("usar_distribucion").default(true),
+    modoDistribucion: varchar("modo_distribucion", { length: 20 }).default("estricto"),
     permitirVentaSinStock: boolean("permitir_venta_sin_stock").default(false),
 
     isActive: boolean("is_active").notNull().default(true),

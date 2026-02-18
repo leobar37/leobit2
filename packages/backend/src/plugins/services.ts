@@ -10,6 +10,7 @@ import { PaymentService } from "../services/business/payment.service";
 import { InventoryRepository } from "../services/repository/inventory.repository";
 import { InventoryService } from "../services/business/inventory.service";
 import { DistribucionRepository } from "../services/repository/distribucion.repository";
+import { DistribucionItemRepository } from "../services/repository/distribucion-item.repository";
 import { DistribucionService } from "../services/business/distribucion.service";
 import { SaleRepository } from "../services/repository/sale.repository";
 import { SaleService } from "../services/business/sale.service";
@@ -36,6 +37,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const paymentRepo = new PaymentRepository();
     const inventoryRepo = new InventoryRepository();
     const distribucionRepo = new DistribucionRepository();
+    const distribucionItemRepo = new DistribucionItemRepository();
     const saleRepo = new SaleRepository();
     const closingRepo = new ClosingRepository();
     const assetRepo = new AssetRepository();
@@ -49,8 +51,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const productService = new ProductService(productRepo);
     const paymentService = new PaymentService(paymentRepo);
     const inventoryService = new InventoryService(inventoryRepo);
-    const distribucionService = new DistribucionService(distribucionRepo);
-    const saleService = new SaleService(saleRepo, paymentRepo);
+    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo);
+    const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo);
     const closingService = new ClosingService(closingRepo);
     const syncService = new SyncService({
       customerRepo,
@@ -62,7 +64,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const fileService = new FileService(fileRepo);
     const productVariantService = new ProductVariantService(productVariantRepo);
     const supplierService = new SupplierService(supplierRepo);
-    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo);
+    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo);
 
     return {
       businessRepo,
@@ -76,6 +78,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       inventoryRepo,
       inventoryService,
       distribucionRepo,
+      distribucionItemRepo,
       distribucionService,
       saleRepo,
       saleService,

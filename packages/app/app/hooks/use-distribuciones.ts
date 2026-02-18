@@ -3,6 +3,25 @@ import { api } from "~/lib/api-client";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
+export interface DistribucionItem {
+  id: string;
+  distribucionId: string;
+  variantId: string;
+  cantidadAsignada: number;
+  cantidadVendida: number;
+  unidad: string;
+  syncStatus: "pending" | "synced" | "error";
+  createdAt: Date;
+  variant?: {
+    id: string;
+    name: string;
+    product?: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
 export interface Distribucion {
   id: string;
   vendedorId: string;
@@ -12,10 +31,14 @@ export interface Distribucion {
   kilosVendidos: number;
   montoRecaudado: number;
   estado: "activo" | "en_ruta" | "cerrado";
+  modo: "estricto" | "acumulativo" | "libre";
+  confiarEnVendedor: boolean;
+  pesoConfirmado: boolean;
   fecha: Date;
   syncStatus: "pending" | "synced" | "error";
   createdAt: Date;
   updatedAt: Date;
+  items?: DistribucionItem[];
 }
 
 export interface DistribucionFilters {
@@ -29,8 +52,14 @@ export interface DistribucionFilters {
 export interface CreateDistribucionInput {
   vendedorId: string;
   puntoVenta: string;
-  kilosAsignados: number;
   fecha?: string;
+  modo?: "estricto" | "acumulativo" | "libre";
+  confiarEnVendedor?: boolean;
+  items: Array<{
+    variantId: string;
+    cantidadAsignada: number;
+    unidad: string;
+  }>;
 }
 
 export interface UpdateDistribucionInput {
@@ -110,15 +139,19 @@ async function createDistribucion(
     });
 
     const now = new Date();
+    const totalKilos = input.items.reduce((sum, item) => sum + item.cantidadAsignada, 0);
     return {
       id: tempId,
       vendedorId: input.vendedorId,
       vendedorName: "",
       puntoVenta: input.puntoVenta,
-      kilosAsignados: input.kilosAsignados,
+      kilosAsignados: totalKilos,
       kilosVendidos: 0,
       montoRecaudado: 0,
       estado: "activo",
+      modo: input.modo || "estricto",
+      confiarEnVendedor: input.confiarEnVendedor || false,
+      pesoConfirmado: !input.confiarEnVendedor,
       fecha: input.fecha ? new Date(input.fecha) : new Date(),
       syncStatus: "pending",
       createdAt: now,
@@ -160,6 +193,9 @@ async function updateDistribucion({
       kilosVendidos: 0,
       montoRecaudado: 0,
       estado: input.estado ?? "activo",
+      modo: "estricto",
+      confiarEnVendedor: false,
+      pesoConfirmado: true,
       fecha: new Date(),
       syncStatus: "pending",
       createdAt: now,
@@ -198,6 +234,9 @@ async function closeDistribucion(id: string): Promise<Distribucion> {
       kilosVendidos: 0,
       montoRecaudado: 0,
       estado: "cerrado",
+      modo: "estricto",
+      confiarEnVendedor: false,
+      pesoConfirmado: true,
       fecha: new Date(),
       syncStatus: "pending",
       createdAt: now,
@@ -308,5 +347,23 @@ export function useDeleteDistribucion() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distribuciones"] });
     },
+  });
+}
+
+async function getDistribucionItems(distribucionId: string): Promise<DistribucionItem[]> {
+  const { data, error } = await api.distribuciones({ id: distribucionId }).items.get();
+
+  if (error) {
+    throw new Error(String(error.value));
+  }
+
+  return data as unknown as DistribucionItem[];
+}
+
+export function useDistribucionItems(distribucionId: string) {
+  return useQuery({
+    queryKey: ["distribuciones", distribucionId, "items"],
+    queryFn: () => getDistribucionItems(distribucionId),
+    enabled: !!distribucionId,
   });
 }

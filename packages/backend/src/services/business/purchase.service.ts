@@ -1,6 +1,7 @@
 import type { PurchaseRepository, PurchaseWithItems } from "../repository/purchase.repository";
 import type { InventoryRepository } from "../repository/inventory.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -28,7 +29,8 @@ export class PurchaseService {
   constructor(
     private repository: PurchaseRepository,
     private inventoryRepo: InventoryRepository,
-    private supplierRepo: SupplierRepository
+    private supplierRepo: SupplierRepository,
+    private variantRepo: ProductVariantRepository
   ) {}
 
   async getPurchases(
@@ -135,6 +137,10 @@ export class PurchaseService {
           quantity: item.quantity.toString(),
         });
       }
+
+      if (item.variantId) {
+        await this.updateVariantInventory(ctx, item.variantId, item.quantity);
+      }
     }
 
     return purchase;
@@ -211,5 +217,21 @@ export class PurchaseService {
     }
 
     return this.repository.count(ctx);
+  }
+
+  private async updateVariantInventory(
+    ctx: RequestContext,
+    variantId: string,
+    quantity: number
+  ): Promise<void> {
+    const existingInventory = await this.variantRepo.getInventory(ctx, variantId);
+
+    if (existingInventory) {
+      const currentQty = parseFloat(existingInventory.quantity);
+      const newQty = currentQty + quantity;
+      await this.variantRepo.updateInventory(ctx, variantId, newQty.toString());
+    } else {
+      await this.variantRepo.createInventory(ctx, { variantId, quantity: quantity.toString() });
+    }
   }
 }

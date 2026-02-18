@@ -1,4 +1,6 @@
 import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -6,10 +8,18 @@ import {
   ForbiddenError,
   ConflictError,
 } from "../../errors";
-import type { Distribucion } from "../../db/schema";
+import type { Distribucion, DistribucionItem } from "../../db/schema";
+
+interface DistribucionWithItems extends Distribucion {
+  items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
+}
 
 export class DistribucionService {
-  constructor(private repository: DistribucionRepository) {}
+  constructor(
+    private repository: DistribucionRepository,
+    private itemRepository: DistribucionItemRepository,
+    private variantRepository: ProductVariantRepository
+  ) {}
 
   async getDistribuciones(
     ctx: RequestContext,
@@ -64,15 +74,20 @@ export class DistribucionService {
     data: {
       vendedorId: string;
       puntoVenta: string;
-      kilosAsignados: number;
       fecha?: string;
+      modo?: "estricto" | "acumulativo" | "libre";
+      confiarEnVendedor?: boolean;
+      items: Array<{
+        variantId: string;
+        cantidadAsignada: number;
+        unidad: string;
+      }>;
     }
-  ): Promise<Distribucion> {
+  ): Promise<DistribucionWithItems> {
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para crear distribuciones");
     }
 
-    // Validaciones
     if (!data.vendedorId) {
       throw new ValidationError("El vendedor es requerido");
     }
@@ -81,11 +96,27 @@ export class DistribucionService {
       throw new ValidationError("El punto de venta debe tener al menos 2 caracteres");
     }
 
-    if (data.kilosAsignados <= 0) {
-      throw new ValidationError("Los kilos asignados deben ser mayores a 0");
+    if (!data.items || data.items.length === 0) {
+      throw new ValidationError("La distribución debe tener al menos un item");
     }
 
-    // Verificar que no exista ya una distribución para este vendedor en esta fecha
+    for (const item of data.items) {
+      if (item.cantidadAsignada <= 0) {
+        throw new ValidationError("La cantidad asignada debe ser mayor a 0");
+      }
+
+      const variant = await this.variantRepository.findById(ctx, item.variantId);
+      if (!variant) {
+        throw new NotFoundError(`Variante ${item.variantId}`);
+      }
+
+      if (variant.inventory && parseFloat(variant.inventory.quantity) < item.cantidadAsignada) {
+        throw new ValidationError(
+          `Stock insuficiente para ${variant.name}. Disponible: ${variant.inventory.quantity}, Requerido: ${item.cantidadAsignada}`
+        );
+      }
+    }
+
     const fecha = data.fecha || new Date().toISOString().split("T")[0];
     const exists = await this.repository.existsForVendedorAndFecha(
       ctx,
@@ -99,19 +130,41 @@ export class DistribucionService {
       );
     }
 
+    const totalKilos = data.items.reduce((sum, item) => sum + item.cantidadAsignada, 0);
+
     const distribucion = await this.repository.create(ctx, {
       vendedorId: data.vendedorId,
       puntoVenta: data.puntoVenta,
-      kilosAsignados: data.kilosAsignados.toString(),
+      kilosAsignados: totalKilos.toString(),
       kilosVendidos: "0",
       montoRecaudado: "0",
       fecha,
       estado: "activo",
+      modo: data.modo || "estricto",
+      confiarEnVendedor: data.confiarEnVendedor || false,
+      pesoConfirmado: !data.confiarEnVendedor,
       syncStatus: "pending",
       syncAttempts: 0,
     });
 
-    return distribucion;
+    for (const item of data.items) {
+      await this.itemRepository.create(ctx, {
+        distribucionId: distribucion.id,
+        variantId: item.variantId,
+        cantidadAsignada: item.cantidadAsignada.toString(),
+        cantidadVendida: "0",
+        unidad: item.unidad,
+        syncStatus: "synced",
+        syncAttempts: 0,
+      });
+    }
+
+    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id);
+    if (!distribucionWithItems) {
+      throw new NotFoundError("Distribución");
+    }
+
+    return distribucionWithItems;
   }
 
   async updateDistribucion(
@@ -166,7 +219,7 @@ export class DistribucionService {
       throw new ForbiddenError("No tiene permisos para cerrar distribuciones");
     }
 
-    const existing = await this.repository.findById(ctx, id);
+    const existing = await this.repository.findByIdWithItems(ctx, id);
     if (!existing) {
       throw new NotFoundError("Distribución");
     }
@@ -174,6 +227,16 @@ export class DistribucionService {
     // Admin puede cerrar cualquiera, vendedor solo la suya
     if (!ctx.isAdmin() && existing.vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede cerrar esta distribución");
+    }
+
+    for (const item of existing.items) {
+      const asignada = parseFloat(item.cantidadAsignada);
+      const vendida = parseFloat(item.cantidadVendida);
+      const sobrante = asignada - vendida;
+
+      if (sobrante > 0) {
+        await this.variantRepository.adjustInventory(ctx, item.variantId, sobrante);
+      }
     }
 
     const updated = await this.repository.update(ctx, id, {
@@ -191,7 +254,7 @@ export class DistribucionService {
     ctx: RequestContext,
     vendedorId: string,
     fecha?: string
-  ): Promise<Distribucion | null> {
+  ): Promise<DistribucionWithItems | null> {
     if (!ctx.hasPermission("inventory.read")) {
       throw new ForbiddenError("No tiene permisos para ver distribuciones");
     }
@@ -208,7 +271,51 @@ export class DistribucionService {
       fechaStr
     );
 
-    return distribucion || null;
+    if (!distribucion) return null;
+
+    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id);
+    if (!distribucionWithItems) return null;
+    return distribucionWithItems;
+  }
+
+  async getDistribucionWithItems(
+    ctx: RequestContext,
+    id: string
+  ): Promise<DistribucionWithItems> {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver distribuciones");
+    }
+
+    const distribucion = await this.repository.findByIdWithItems(ctx, id);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede ver esta distribución");
+    }
+
+    return distribucion;
+  }
+
+  async getDistribucionItems(
+    ctx: RequestContext,
+    distribucionId: string
+  ): Promise<DistribucionItem[]> {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede ver los items de esta distribución");
+    }
+
+    return this.itemRepository.findByDistribucionId(ctx, distribucionId);
   }
 
   async getStockDisponible(

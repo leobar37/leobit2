@@ -1,5 +1,8 @@
 import type { SaleRepository, CreateSaleInput } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
+import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
+import type { BusinessRepository } from "../repository/business.repository";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError } from "../../errors";
 import type { Sale } from "../../db/schema";
@@ -8,7 +11,10 @@ import { db } from "../../lib/db";
 export class SaleService {
   constructor(
     private repository: SaleRepository,
-    private paymentRepository: PaymentRepository
+    private paymentRepository: PaymentRepository,
+    private distribucionRepository: DistribucionRepository,
+    private distribucionItemRepository: DistribucionItemRepository,
+    private businessRepository: BusinessRepository
   ) {}
 
   async getSales(
@@ -85,6 +91,24 @@ export class SaleService {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
+    const today = new Date().toISOString().split("T")[0];
+    const distribucion = await this.distribucionRepository.findByVendedorAndFecha(
+      ctx,
+      ctx.businessUserId,
+      today
+    );
+
+    if (distribucion) {
+      if (distribucion.modo === "estricto") {
+        await this.validarStockEstricto(ctx, distribucion.id, data.items);
+      }
+    } else {
+      const business = await this.businessRepository.findById(ctx, ctx.businessId);
+      if (!ctx.isAdmin() && business?.modoDistribucion !== "libre") {
+        throw new ValidationError("No tiene distribución asignada para hoy");
+      }
+    }
+
     const salePayload: CreateSaleInput = {
       clientId: data.clientId,
       saleType: data.saleType,
@@ -106,6 +130,29 @@ export class SaleService {
 
     return db.transaction(async (tx) => {
       const sale = await this.repository.create(ctx, salePayload, tx);
+
+      if (distribucion && distribucion.modo !== "libre") {
+        const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+          ctx,
+          distribucion.id
+        );
+
+        for (const saleItem of data.items) {
+          const distItem = distribucionItems.find(
+            (di) => di.variantId === saleItem.variantId
+          );
+
+          if (distItem) {
+            const currentVendida = parseFloat(distItem.cantidadVendida);
+            const newVendida = currentVendida + saleItem.quantity;
+            await this.distribucionItemRepository.updateVendido(
+              ctx,
+              distItem.id,
+              newVendida.toString()
+            );
+          }
+        }
+      }
 
       if (data.saleType === "credito" && data.clientId && amountPaid > 0) {
         const initialPaymentReference = `init-sale:${sale.id}`;
@@ -156,5 +203,42 @@ export class SaleService {
     }
 
     return Math.max(0, Number(value.toFixed(2)));
+  }
+
+  private async validarStockEstricto(
+    ctx: RequestContext,
+    distribucionId: string,
+    items: Array<{
+      variantId: string;
+      variantName: string;
+      quantity: number;
+    }>
+  ): Promise<void> {
+    const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+      ctx,
+      distribucionId
+    );
+
+    for (const saleItem of items) {
+      const distItem = distribucionItems.find(
+        (di) => di.variantId === saleItem.variantId
+      );
+
+      if (!distItem) {
+        throw new ValidationError(
+          `${saleItem.variantName} no está en su distribución`
+        );
+      }
+
+      const asignada = parseFloat(distItem.cantidadAsignada);
+      const vendida = parseFloat(distItem.cantidadVendida);
+      const disponible = asignada - vendida;
+
+      if (saleItem.quantity > disponible) {
+        throw new ValidationError(
+          `Stock insuficiente para ${saleItem.variantName}. Disponible: ${disponible}, Venta: ${saleItem.quantity}`
+        );
+      }
+    }
   }
 }
