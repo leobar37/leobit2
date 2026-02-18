@@ -6,25 +6,37 @@ import { repositories } from "./services";
 import {
   TEST_BUSINESS,
   PRODUCTS,
+  PRODUCT_VARIANTS,
   CUSTOMERS,
   SALES,
   ABONOS,
   DISTRIBUCIONES,
+  SUPPLIERS,
+  PURCHASES,
 } from "./data";
-import { inventory, saleItems, sales, abonos, distribuciones, customers, products } from "../db/schema";
+import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants } from "../db/schema";
 
 const FORCE_MODE = process.argv.includes("--force");
+
+interface SeedProduct {
+  id: string;
+  name: string;
+  variants: Array<{ id: string; name: string }>;
+}
 
 interface SeedResult {
   userId: string;
   businessId: string;
   businessUserId: string;
   productsCount: number;
+  variantsCount: number;
   inventoryCount: number;
   customersCount: number;
   salesCount: number;
   abonosCount: number;
   distribucionesCount: number;
+  suppliersCount: number;
+  purchasesCount: number;
 }
 
 async function seed(): Promise<SeedResult> {
@@ -49,7 +61,13 @@ async function seed(): Promise<SeedResult> {
   console.log("Created admin context for seeding\n");
 
   const products = await seedProducts(ctx);
-  console.log(`✓ Seeded ${products.length} products\n`);
+  console.log(`✓ Seeded ${products.length} products with variants\n`);
+
+  const suppliers = await seedSuppliers(ctx);
+  console.log(`✓ Seeded ${suppliers.length} suppliers\n`);
+
+  const purchases = await seedPurchases(ctx, suppliers, products);
+  console.log(`✓ Seeded ${purchases.length} purchases\n`);
 
   const inventoryItems = await seedInventory(ctx, products);
   console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
@@ -77,11 +95,14 @@ async function seed(): Promise<SeedResult> {
     businessId: business.id,
     businessUserId,
     productsCount: products.length,
+    variantsCount: products.reduce((acc, p) => acc + p.variants.length, 0),
     inventoryCount: inventoryItems.length,
     customersCount: customers.length,
     salesCount: sales.length,
     abonosCount: abonos.length,
     distribucionesCount: distribuciones.length,
+    suppliersCount: suppliers.length,
+    purchasesCount: purchases.length,
   };
 }
 
@@ -127,26 +148,155 @@ async function createBusinessAndLinkUser(userId: string): Promise<{ business: { 
   return { business, businessUserId: businessUser.id };
 }
 
-async function seedProducts(ctx: RequestContext) {
+async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
-    console.log(`⚠ ${existing.length} products already exist, skipping`);
-    return existing;
+    console.log(`⚠ ${existing.length} products already exist, loading with variants`);
+    const seedProducts: SeedProduct[] = [];
+    for (const product of existing) {
+      const variants = await services.productVariant.getVariantsByProduct(ctx, product.id);
+      seedProducts.push({
+        id: product.id,
+        name: product.name,
+        variants: variants.map(v => ({ id: v.id, name: v.name })),
+      });
+    }
+    return seedProducts;
   }
 
-  const products = [];
-  for (const product of PRODUCTS) {
-    const created = await services.product.createProduct(ctx, {
-      name: product.name,
-      type: product.type,
-      unit: product.unit,
-      basePrice: parseFloat(product.basePrice),
-      isActive: product.isActive,
+  const seedProducts: SeedProduct[] = [];
+
+  for (let i = 0; i < PRODUCTS.length; i++) {
+    const productDef = PRODUCTS[i];
+    const variantsDef = PRODUCT_VARIANTS[i];
+
+    const product = await services.product.createProduct(ctx, {
+      name: productDef.name,
+      type: productDef.type,
+      unit: productDef.unit,
+      basePrice: parseFloat(productDef.basePrice),
+      isActive: productDef.isActive,
     });
-    products.push(created);
+
+    console.log(`   ✓ Product: ${product.name}`);
+
+    const seedProduct: SeedProduct = {
+      id: product.id,
+      name: product.name,
+      variants: [],
+    };
+
+    for (const variantDef of variantsDef) {
+      const variant = await services.productVariant.createVariant(ctx, {
+        productId: product.id,
+        name: variantDef.name,
+        sku: variantDef.sku,
+        unitQuantity: variantDef.unitQuantity,
+        price: variantDef.price,
+        isActive: true,
+      });
+
+      console.log(`     ↳ Variant: ${variant.name}`);
+
+      seedProduct.variants.push({
+        id: variant.id,
+        name: variant.name,
+      });
+    }
+
+    seedProducts.push(seedProduct);
   }
 
-  return products;
+  return seedProducts;
+}
+
+async function seedSuppliers(ctx: RequestContext): Promise<Array<{ id: string; name: string }>> {
+  const existing = await services.supplier.getSuppliers(ctx);
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} suppliers already exist, loading`);
+    return existing.map((s) => ({ id: s.id, name: s.name }));
+  }
+
+  const seedSuppliers: Array<{ id: string; name: string }> = [];
+
+  try {
+    const generic = await services.supplier.createGenericSupplier(ctx);
+    console.log(`   ✓ Generic Supplier: ${generic.name}`);
+    seedSuppliers.push({ id: generic.id, name: generic.name });
+  } catch {
+    console.log(`   ℹ Generic supplier already exists`);
+  }
+
+  for (const supplierDef of SUPPLIERS) {
+    const supplier = await services.supplier.createSupplier(ctx, {
+      name: supplierDef.name,
+      type: supplierDef.type,
+      ruc: supplierDef.ruc,
+      address: supplierDef.address,
+      phone: supplierDef.phone,
+      email: supplierDef.email,
+      notes: supplierDef.notes,
+    });
+
+    console.log(`   ✓ Supplier: ${supplier.name}`);
+    seedSuppliers.push({ id: supplier.id, name: supplier.name });
+  }
+
+  return seedSuppliers;
+}
+
+async function seedPurchases(
+  ctx: RequestContext,
+  suppliers: Array<{ id: string }>,
+  products: SeedProduct[]
+): Promise<Array<{ id: string }>> {
+  const existing = await services.purchase.getPurchases(ctx);
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} purchases already exist, skipping`);
+    return existing.map((p) => ({ id: p.id }));
+  }
+
+  const seedPurchases: Array<{ id: string }> = [];
+
+  for (const purchaseDef of PURCHASES) {
+    const supplier = suppliers[purchaseDef.supplierIndex];
+    if (!supplier) {
+      console.warn(`   ⚠ Supplier not found at index ${purchaseDef.supplierIndex}, skipping purchase`);
+      continue;
+    }
+
+    const purchaseItems = purchaseDef.items.map((item) => {
+      const product = products[item.productIndex];
+      if (!product) {
+        throw new Error(`Product not found at index ${item.productIndex}`);
+      }
+
+      const variant = product.variants[item.variantIndex];
+      if (!variant) {
+        throw new Error(`Variant not found at index ${item.variantIndex} for product ${product.name}`);
+      }
+
+      return {
+        productId: product.id,
+        variantId: variant.id,
+        quantity: item.quantity,
+        unitCost: item.unitCost,
+      };
+    });
+
+    const purchase = await services.purchase.createPurchase(ctx, {
+      supplierId: supplier.id,
+      purchaseDate: purchaseDef.purchaseDate,
+      invoiceNumber: purchaseDef.invoiceNumber,
+      notes: purchaseDef.notes,
+      items: purchaseItems,
+    });
+
+    console.log(`   ✓ Purchase: ${purchase.invoiceNumber || "N/A"} - S/ ${purchase.totalAmount}`);
+    seedPurchases.push({ id: purchase.id });
+  }
+
+  return seedPurchases;
 }
 
 async function seedCustomers(ctx: RequestContext) {
@@ -174,7 +324,7 @@ async function seedCustomers(ctx: RequestContext) {
 async function seedSales(
   ctx: RequestContext,
   customers: Array<{ id: string }>,
-  products: Array<{ id: string; name: string }>
+  products: SeedProduct[]
 ) {
   const existing = await services.sale.getSales(ctx);
   if (existing.length > 0) {
@@ -192,9 +342,12 @@ async function seedSales(
 
     const items = saleData.items.map((item) => {
       const product = products[item.productIndex];
+      const variant = product.variants[0];
       return {
         productId: product.id,
         productName: product.name,
+        variantId: variant.id,
+        variantName: variant.name,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         subtotal: item.quantity * item.unitPrice,
@@ -302,7 +455,11 @@ async function clearExistingData() {
   await db.delete(abonos);
   await db.delete(distribuciones);
   await db.delete(customers);
+  await db.delete(purchaseItems);
+  await db.delete(purchases);
+  await db.delete(suppliersSchema);
   await db.delete(inventory);
+  await db.delete(productVariants);
   await db.delete(products);
   console.log("✓ Cleared existing data\n");
 }
@@ -312,7 +469,9 @@ seed()
     console.log("\n📊 Seed Summary:");
     console.log(`  User ID: ${result.userId}`);
     console.log(`  Business ID: ${result.businessId}`);
-    console.log(`  Products: ${result.productsCount}`);
+    console.log(`  Products: ${result.productsCount} (${result.variantsCount} variants)`);
+    console.log(`  Suppliers: ${result.suppliersCount}`);
+    console.log(`  Purchases: ${result.purchasesCount}`);
     console.log(`  Inventory Items: ${result.inventoryCount}`);
     console.log(`  Customers: ${result.customersCount}`);
     console.log(`  Sales: ${result.salesCount}`);

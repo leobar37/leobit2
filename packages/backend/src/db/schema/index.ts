@@ -172,3 +172,11 @@ export {
   type PurchaseItem,
   type NewPurchaseItem,
 } from "./purchases";
+
+export {
+  businessPaymentSettings,
+  businessPaymentSettingsRelations,
+  type BusinessPaymentSettings,
+  type NewBusinessPaymentSettings,
+  type PaymentMethodConfig,
+} from "./business-payment-settings";

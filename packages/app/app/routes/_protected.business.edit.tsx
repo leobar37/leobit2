@@ -27,13 +27,6 @@ const updateBusinessSchema = z.object({
   address: z.string().optional(),
   phone: z.string().max(20).optional(),
   email: z.string().email().optional().or(z.literal("")),
-  modoOperacion: z.enum([
-    "inventario_propio",
-    "sin_inventario",
-    "pedidos",
-    "mixto",
-  ]),
-  controlKilos: z.boolean(),
   usarDistribucion: z.boolean(),
   permitirVentaSinStock: z.boolean(),
 });
@@ -55,8 +48,6 @@ export default function EditBusinessPage() {
       address: "",
       phone: "",
       email: "",
-      modoOperacion: "inventario_propio",
-      controlKilos: true,
       usarDistribucion: true,
       permitirVentaSinStock: false,
     },
@@ -67,8 +58,6 @@ export default function EditBusinessPage() {
           address: business.address || "",
           phone: business.phone || "",
           email: business.email || "",
-          modoOperacion: (business.modoOperacion as "inventario_propio" | "sin_inventario" | "pedidos" | "mixto") || "inventario_propio",
-          controlKilos: business.controlKilos,
           usarDistribucion: business.usarDistribucion,
           permitirVentaSinStock: business.permitirVentaSinStock,
         }
@@ -87,8 +76,6 @@ export default function EditBusinessPage() {
           address: data.address || undefined,
           phone: data.phone || undefined,
           email: data.email || undefined,
-          modoOperacion: data.modoOperacion,
-          controlKilos: data.controlKilos,
           usarDistribucion: data.usarDistribucion,
           permitirVentaSinStock: data.permitirVentaSinStock,
         },
@@ -150,7 +137,7 @@ export default function EditBusinessPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center h-16 px-4">
-          <Link to="/dashboard">
+          <Link to="/config">
             <Button variant="ghost" size="icon" className="rounded-xl mr-3">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -239,39 +226,6 @@ export default function EditBusinessPage() {
                     <Settings className="h-5 w-5 text-orange-600" />
                     <h3 className="font-semibold text-lg">Configuración del Negocio</h3>
                   </div>
-
-                  <div className="space-y-2 mb-4">
-                    <label className="text-sm font-medium">Modo de Operación</label>
-                    <select
-                      {...form.register("modoOperacion")}
-                      className="w-full h-12 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="inventario_propio">Inventario Propio</option>
-                      <option value="sin_inventario">Sin Inventario</option>
-                      <option value="pedidos">Pedidos</option>
-                      <option value="mixto">Mixto</option>
-                    </select>
-                    {form.formState.errors.modoOperacion && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.modoOperacion.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <Controller
-                    name="controlKilos"
-                    control={form.control}
-                    render={({ field }) => (
-                      <div className="mb-4">
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          label="Controlar kilos en inventario"
-                          description="Habilita el seguimiento de inventario por kilogramos"
-                        />
-                      </div>
-                    )}
-                  />
 
                   <Controller
                     name="usarDistribucion"

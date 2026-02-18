@@ -134,10 +134,10 @@ export class CustomerRepository {
         FROM ${sales} s 
         WHERE s.business_id = ${ctx.businessId} 
         GROUP BY s.client_id 
-        HAVING COALESCE(SUM(${sales.balanceDue}), 0) - COALESCE((
-          SELECT SUM(${abonos.amount}) 
-          FROM ${abonos} 
-          WHERE ${abonos.clientId} = s.client_id AND ${abonos.businessId} = ${ctx.businessId}
+        HAVING COALESCE(SUM(s.balance_due), 0) - COALESCE((
+          SELECT SUM(a.amount) 
+          FROM abonos a
+          WHERE a.client_id = s.client_id AND a.business_id = ${ctx.businessId}
         ), 0) >= ${filters.minBalance}
       )`
       : undefined;

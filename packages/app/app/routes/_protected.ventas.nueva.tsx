@@ -274,7 +274,30 @@ export default function NewSalePage() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Total (S/)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={values.totalAmount}
+                      onChange={(e) => handleChange("totalAmount", e.target.value)}
+                      placeholder="0.00"
+                      className="rounded-xl text-lg"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Precio/kg (S/)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={values.pricePerKg}
+                      onChange={(e) => handleChange("pricePerKg", e.target.value)}
+                      placeholder="0.00"
+                      className="rounded-xl"
+                    />
+                  </div>
                   <div>
                     <Label className="text-xs">Bruto (kg)</Label>
                     <Input
@@ -283,8 +306,7 @@ export default function NewSalePage() {
                       value={values.kilos}
                       onChange={(e) => handleChange("kilos", e.target.value)}
                       placeholder="0.000"
-                      className="rounded-xl text-lg"
-                      autoFocus
+                      className="rounded-xl"
                     />
                   </div>
                   <div>
@@ -298,20 +320,9 @@ export default function NewSalePage() {
                       className="rounded-xl"
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs">Precio/kg</Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={values.pricePerKg}
-                      onChange={(e) => handleChange("pricePerKg", e.target.value)}
-                      placeholder="0.00"
-                      className="rounded-xl"
-                    />
-                  </div>
                 </div>
 
-                {!!values.kilos && (
+                {(!!values.kilos || !!values.totalAmount) && (
                   <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-200">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="text-center">
@@ -333,7 +344,7 @@ export default function NewSalePage() {
                 <div className="space-y-2">
                   <Button
                     onClick={handleAddFromCalculator}
-                    disabled={!values.kilos || !values.pricePerKg || kgNeto <= 0}
+                    disabled={kgNeto <= 0 || !values.pricePerKg || (!values.kilos && !values.totalAmount)}
                     className="w-full bg-orange-500 hover:bg-orange-600 h-12"
                   >
                     <Plus className="h-4 w-4 mr-2" />

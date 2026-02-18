@@ -29,6 +29,27 @@
       "when": 1771268995496,
       "tag": "0003_even_lady_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771432800000,
+      "tag": "0007_complete_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771432900000,
+      "tag": "0008_fix_proof_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771440000000,
+      "tag": "0009_add_payment_method_settings",
+      "breakpoints": true
     }
   ]
 }

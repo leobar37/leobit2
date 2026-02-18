@@ -67,7 +67,6 @@ export interface Business {
   email: string | null;
   logoUrl: string | null;
   modoOperacion: string | null;
-  controlKilos: boolean;
   usarDistribucion: boolean;
   permitirVentaSinStock: boolean;
   role: string;
@@ -91,8 +90,6 @@ export interface UpdateBusinessInput {
   address?: string;
   phone?: string;
   email?: string;
-  modoOperacion?: "inventario_propio" | "sin_inventario" | "pedidos" | "mixto";
-  controlKilos?: boolean;
   usarDistribucion?: boolean;
   permitirVentaSinStock?: boolean;
 }

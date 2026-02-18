@@ -53,8 +53,6 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         address: body.address,
         phone: body.phone,
         email: body.email,
-        modoOperacion: body.modoOperacion,
-        controlKilos: body.controlKilos,
         usarDistribucion: body.usarDistribucion,
         permitirVentaSinStock: body.permitirVentaSinStock,
       });
@@ -74,15 +72,6 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         address: t.Optional(t.String()),
         phone: t.Optional(t.String({ maxLength: 20 })),
         email: t.Optional(t.String({ format: "email" })),
-        modoOperacion: t.Optional(
-          t.Union([
-            t.Literal("inventario_propio"),
-            t.Literal("sin_inventario"),
-            t.Literal("pedidos"),
-            t.Literal("mixto"),
-          ])
-        ),
-        controlKilos: t.Optional(t.Boolean()),
         usarDistribucion: t.Optional(t.Boolean()),
         permitirVentaSinStock: t.Optional(t.Boolean()),
       }),

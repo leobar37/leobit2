@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { authClient, useSession } from "../lib/auth-client";
+import { authClient, useSession, changePassword } from "../lib/auth-client";
 
 export function useAuth() {
   const navigate = useNavigate();
@@ -41,6 +41,23 @@ export function useAuth() {
     navigate("/login");
   };
 
+  const changeUserPassword = async (data: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
+    const result = await changePassword({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+      revokeOtherSessions: true,
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data;
+  };
+
   return {
     user: session?.user ?? null,
     isAuthenticated: !!session?.user,
@@ -48,5 +65,6 @@ export function useAuth() {
     login,
     register,
     logout,
+    changePassword: changeUserPassword,
   };
 }

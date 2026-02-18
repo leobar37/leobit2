@@ -57,7 +57,6 @@ export class BusinessRepository {
       phone?: string | null;
       email?: string | null;
       modoOperacion?: string;
-      controlKilos?: boolean;
       usarDistribucion?: boolean;
       permitirVentaSinStock?: boolean;
     }
@@ -71,7 +70,6 @@ export class BusinessRepository {
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.email !== undefined && { email: data.email }),
         ...(data.modoOperacion !== undefined && { modoOperacion: data.modoOperacion }),
-        ...(data.controlKilos !== undefined && { controlKilos: data.controlKilos }),
         ...(data.usarDistribucion !== undefined && { usarDistribucion: data.usarDistribucion }),
         ...(data.permitirVentaSinStock !== undefined && { permitirVentaSinStock: data.permitirVentaSinStock }),
         updatedAt: new Date(),

@@ -33,7 +33,6 @@ export class BusinessService {
       email: membership.business.email,
       logoUrl: membership.business.logoUrl,
       modoOperacion: membership.business.modoOperacion,
-      controlKilos: membership.business.controlKilos,
       usarDistribucion: membership.business.usarDistribucion,
       permitirVentaSinStock: membership.business.permitirVentaSinStock,
       role: membership.role,
@@ -102,8 +101,6 @@ export class BusinessService {
       address?: string;
       phone?: string;
       email?: string;
-      modoOperacion?: string;
-      controlKilos?: boolean;
       usarDistribucion?: boolean;
       permitirVentaSinStock?: boolean;
     }
@@ -127,8 +124,6 @@ export class BusinessService {
       address: data.address,
       phone: data.phone,
       email: data.email,
-      modoOperacion: data.modoOperacion,
-      controlKilos: data.controlKilos,
       usarDistribucion: data.usarDistribucion,
       permitirVentaSinStock: data.permitirVentaSinStock,
     });

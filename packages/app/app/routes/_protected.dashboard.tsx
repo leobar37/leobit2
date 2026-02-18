@@ -5,7 +5,9 @@ import {
   Package,
   DollarSign,
   FileText,
+  Wallet,
 } from "lucide-react";
+import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
@@ -22,9 +24,13 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const { data: distribucion } = useMiDistribucion();
+  const { data: accounts } = useAccountsReceivable();
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion;
+
+  const debtors = accounts?.filter((a) => a.totalDebt > 0) || [];
+  const totalDebt = debtors.reduce((sum, d) => sum + d.totalDebt, 0);
 
   return (
     <div className="space-y-4">
@@ -84,14 +90,17 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link to="/reportes/cuentas-por-cobrar" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
-          >
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center"
-            >
-              <DollarSign className="h-6 w-6 text-red-600" />
+        <Link to="/cobros" className="block">
+          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
+              <Wallet className="h-6 w-6 text-red-600" />
             </div>
-            <p className="font-semibold text-foreground">Por Cobrar</p>
+            <p className="font-semibold text-foreground">Cobros</p>
+            {debtors.length > 0 && (
+              <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                {debtors.length}
+              </div>
+            )}
           </Card>
         </Link>
 

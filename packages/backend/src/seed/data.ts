@@ -18,75 +18,57 @@ export const TEST_BUSINESS = {
 
 export const PRODUCTS = [
   {
-    name: "Pollo Vivo Entero",
+    name: "Pollo Entero",
     type: "pollo" as const,
     unit: "kg" as const,
     basePrice: "18.50",
     isActive: true,
   },
   {
-    name: "Pollo Pelado",
+    name: "Pollo Premium",
     type: "pollo" as const,
     unit: "kg" as const,
     basePrice: "22.00",
     isActive: true,
   },
   {
-    name: "Pollo en Piezas (pechuga)",
-    type: "pollo" as const,
-    unit: "kg" as const,
-    basePrice: "24.50",
-    isActive: true,
-  },
-  {
-    name: "Pollo en Piezas (pierna)",
-    type: "pollo" as const,
-    unit: "kg" as const,
-    basePrice: "23.00",
-    isActive: true,
-  },
-  {
-    name: "Pollo en Piezas (ala)",
-    type: "pollo" as const,
-    unit: "kg" as const,
-    basePrice: "19.00",
-    isActive: true,
-  },
-  {
-    name: "Huevo Blanco",
+    name: "Huevos",
     type: "huevo" as const,
     unit: "unidad" as const,
     basePrice: "0.80",
     isActive: true,
   },
   {
-    name: "Huevo Rojo",
-    type: "huevo" as const,
-    unit: "unidad" as const,
-    basePrice: "0.85",
-    isActive: true,
-  },
-  {
-    name: "Bandeja de Huevos (30un)",
-    type: "huevo" as const,
-    unit: "unidad" as const,
-    basePrice: "22.00",
-    isActive: true,
-  },
-  {
-    name: "Mollejas",
+    name: "Menudencias",
     type: "otro" as const,
     unit: "kg" as const,
-    basePrice: "28.00",
+    basePrice: "15.00",
     isActive: true,
   },
-  {
-    name: "Patitas de Pollo",
-    type: "otro" as const,
-    unit: "kg" as const,
-    basePrice: "12.00",
-    isActive: true,
-  },
+];
+
+export const PRODUCT_VARIANTS = [
+  [
+    { name: "Entero", sku: "POL-ENT", unitQuantity: 2.5, price: 46.25 },
+    { name: "Medio", sku: "POL-MED", unitQuantity: 1.25, price: 23.13 },
+    { name: "Cuarto", sku: "POL-CUA", unitQuantity: 0.625, price: 11.56 },
+    { name: "Pechuga", sku: "POL-PEC", unitQuantity: 0.8, price: 18.0 },
+    { name: "Pierna", sku: "POL-PIE", unitQuantity: 0.6, price: 13.5 },
+  ],
+  [
+    { name: "Entero Premium", sku: "POL-ENT-P", unitQuantity: 2.5, price: 55.0 },
+    { name: "Medio Premium", sku: "POL-MED-P", unitQuantity: 1.25, price: 27.5 },
+  ],
+  [
+    { name: "Unidad", sku: "HUE-UNI", unitQuantity: 1, price: 0.8 },
+    { name: "Maple (30un)", sku: "HUE-MAP", unitQuantity: 30, price: 21.0 },
+    { name: "Cubeta (180un)", sku: "HUE-CUB", unitQuantity: 180, price: 120.0 },
+  ],
+  [
+    { name: "Mollejas", sku: "MEN-MOL", unitQuantity: 0.5, price: 14.0 },
+    { name: "Patitas", sku: "MEN-PAT", unitQuantity: 1, price: 12.0 },
+    { name: "Alas", sku: "MEN-ALA", unitQuantity: 1, price: 19.0 },
+  ],
 ];
 
 export const CUSTOMERS = [
@@ -148,7 +130,7 @@ export const SALES: SaleData[] = [
     saleType: "contado",
     totalAmount: 48.50,
     amountPaid: 48.50,
-    items: [{ productIndex: 5, quantity: 50, unitPrice: 0.80 }],
+    items: [{ productIndex: 2, quantity: 50, unitPrice: 0.80 }],
     daysAgo: 1,
   },
   {
@@ -158,7 +140,7 @@ export const SALES: SaleData[] = [
     amountPaid: 245.00,
     tara: 0.3,
     netWeight: 10,
-    items: [{ productIndex: 2, quantity: 10, unitPrice: 24.50 }],
+    items: [{ productIndex: 0, quantity: 10, unitPrice: 24.50 }],
     daysAgo: 1,
   },
   {
@@ -168,7 +150,7 @@ export const SALES: SaleData[] = [
     amountPaid: 50.00,
     items: [
       { productIndex: 0, quantity: 5, unitPrice: 18.50 },
-      { productIndex: 5, quantity: 30, unitPrice: 0.80 },
+      { productIndex: 2, quantity: 30, unitPrice: 0.80 },
     ],
     daysAgo: 1,
   },
@@ -179,7 +161,7 @@ export const SALES: SaleData[] = [
     amountPaid: 92.00,
     tara: 0.2,
     netWeight: 5,
-    items: [{ productIndex: 3, quantity: 4, unitPrice: 23.00 }],
+    items: [{ productIndex: 0, quantity: 4, unitPrice: 23.00 }],
     daysAgo: 2,
   },
   {
@@ -198,8 +180,8 @@ export const SALES: SaleData[] = [
     totalAmount: 95.00,
     amountPaid: 0,
     items: [
-      { productIndex: 5, quantity: 60, unitPrice: 0.80 },
-      { productIndex: 9, quantity: 3, unitPrice: 12.00 },
+      { productIndex: 2, quantity: 60, unitPrice: 0.80 },
+      { productIndex: 3, quantity: 3, unitPrice: 12.00 },
     ],
     daysAgo: 3,
   },
@@ -208,7 +190,7 @@ export const SALES: SaleData[] = [
     saleType: "contado",
     totalAmount: 22.00,
     amountPaid: 22.00,
-    items: [{ productIndex: 7, quantity: 1, unitPrice: 22.00 }],
+    items: [{ productIndex: 2, quantity: 1, unitPrice: 22.00 }],
     daysAgo: 3,
   },
   {
@@ -229,8 +211,8 @@ export const SALES: SaleData[] = [
     tara: 0,
     netWeight: 6.5,
     items: [
-      { productIndex: 2, quantity: 4, unitPrice: 24.50 },
-      { productIndex: 4, quantity: 2, unitPrice: 19.00 },
+      { productIndex: 0, quantity: 4, unitPrice: 24.50 },
+      { productIndex: 0, quantity: 2, unitPrice: 19.00 },
     ],
     daysAgo: 4,
   },
@@ -240,9 +222,9 @@ export const SALES: SaleData[] = [
     totalAmount: 42.50,
     amountPaid: 42.50,
     items: [
-      { productIndex: 5, quantity: 30, unitPrice: 0.80 },
-      { productIndex: 9, quantity: 2, unitPrice: 12.00 },
-      { productIndex: 8, quantity: 0.5, unitPrice: 28.00 },
+      { productIndex: 2, quantity: 30, unitPrice: 0.80 },
+      { productIndex: 3, quantity: 2, unitPrice: 12.00 },
+      { productIndex: 3, quantity: 0.5, unitPrice: 28.00 },
     ],
     daysAgo: 5,
   },
@@ -279,7 +261,7 @@ export const SALES: SaleData[] = [
     saleType: "contado",
     totalAmount: 51.00,
     amountPaid: 51.00,
-    items: [{ productIndex: 6, quantity: 60, unitPrice: 0.85 }],
+    items: [{ productIndex: 2, quantity: 60, unitPrice: 0.85 }],
     daysAgo: 7,
   },
   {
@@ -299,7 +281,7 @@ export const SALES: SaleData[] = [
     amountPaid: 117.00,
     items: [
       { productIndex: 0, quantity: 4, unitPrice: 18.50 },
-      { productIndex: 5, quantity: 50, unitPrice: 0.80 },
+      { productIndex: 2, quantity: 50, unitPrice: 0.80 },
     ],
     daysAgo: 8,
   },
@@ -319,8 +301,8 @@ export const SALES: SaleData[] = [
     totalAmount: 17.00,
     amountPaid: 17.00,
     items: [
-      { productIndex: 5, quantity: 10, unitPrice: 0.80 },
-      { productIndex: 9, quantity: 0.5, unitPrice: 12.00 },
+      { productIndex: 2, quantity: 10, unitPrice: 0.80 },
+      { productIndex: 3, quantity: 0.5, unitPrice: 12.00 },
     ],
     daysAgo: 9,
   },
@@ -330,8 +312,8 @@ export const SALES: SaleData[] = [
     totalAmount: 187.50,
     amountPaid: 87.50,
     items: [
-      { productIndex: 2, quantity: 5, unitPrice: 24.50 },
-      { productIndex: 6, quantity: 50, unitPrice: 0.85 },
+      { productIndex: 0, quantity: 5, unitPrice: 24.50 },
+      { productIndex: 2, quantity: 50, unitPrice: 0.85 },
     ],
     daysAgo: 9,
   },
@@ -352,7 +334,7 @@ export const SALES: SaleData[] = [
     amountPaid: 74.00,
     items: [
       { productIndex: 1, quantity: 2, unitPrice: 22.00 },
-      { productIndex: 7, quantity: 1, unitPrice: 22.00 },
+      { productIndex: 2, quantity: 1, unitPrice: 22.00 },
     ],
     daysAgo: 10,
   },
@@ -362,8 +344,8 @@ export const SALES: SaleData[] = [
     totalAmount: 342.00,
     amountPaid: 200.00,
     items: [
-      { productIndex: 2, quantity: 8, unitPrice: 24.50 },
-      { productIndex: 4, quantity: 6, unitPrice: 19.00 },
+      { productIndex: 0, quantity: 8, unitPrice: 24.50 },
+      { productIndex: 0, quantity: 6, unitPrice: 19.00 },
     ],
     daysAgo: 11,
   },
@@ -372,7 +354,7 @@ export const SALES: SaleData[] = [
     saleType: "contado",
     totalAmount: 23.00,
     amountPaid: 23.00,
-    items: [{ productIndex: 4, quantity: 1, unitPrice: 23.00 }],
+    items: [{ productIndex: 0, quantity: 1, unitPrice: 23.00 }],
     daysAgo: 11,
   },
 ];
@@ -405,6 +387,84 @@ export interface DistribucionData {
   fecha: string; // YYYY-MM-DD
   estado: "activo" | "cerrado" | "en_ruta";
 }
+
+export const SUPPLIERS = [
+  {
+    name: "Avícola El Buen Sabor",
+    type: "regular" as const,
+    ruc: "20123456789",
+    address: "Av. Principal 123, Lima",
+    phone: "987654321",
+    email: "ventas@avicola.com",
+    notes: "Proveedor principal de pollo. Entrega diaria.",
+  },
+  {
+    name: "Granja Los Huevitos",
+    type: "regular" as const,
+    ruc: "20987654321",
+    address: "Calle Secundaria 456, Callao",
+    phone: "912345678",
+    email: "contacto@huevitos.com",
+    notes: "Proveedor de huevos frescos. Calidad garantizada.",
+  },
+  {
+    name: "Distribuidora Avícola del Norte",
+    type: "regular" as const,
+    ruc: "20567890123",
+    address: "Jr. Comercial 789, Trujillo",
+    phone: "956789012",
+    email: "ventas@avicolanorte.com",
+    notes: "Especialistas en pollos premium y menudencias.",
+  },
+];
+
+export interface PurchaseData {
+  supplierIndex: number;
+  purchaseDate: string;
+  invoiceNumber: string;
+  notes: string;
+  items: Array<{
+    productIndex: number;
+    variantIndex: number;
+    quantity: number;
+    unitCost: number;
+  }>;
+}
+
+export const PURCHASES: PurchaseData[] = [
+  {
+    supplierIndex: 0,
+    purchaseDate: new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0],
+    invoiceNumber: "F001-000123",
+    notes: "Compra semanal de pollo",
+    items: [
+      { productIndex: 0, variantIndex: 0, quantity: 20, unitCost: 37.0 },
+      { productIndex: 0, variantIndex: 1, quantity: 30, unitCost: 18.5 },
+      { productIndex: 0, variantIndex: 2, quantity: 40, unitCost: 9.25 },
+    ],
+  },
+  {
+    supplierIndex: 1,
+    purchaseDate: new Date(Date.now() - 5 * 86400000).toISOString().split("T")[0],
+    invoiceNumber: "F001-000456",
+    notes: "Compra de huevos",
+    items: [
+      { productIndex: 0, variantIndex: 0, quantity: 100, unitCost: 0.6 },
+      { productIndex: 0, variantIndex: 1, quantity: 50, unitCost: 18.0 },
+    ],
+  },
+  {
+    supplierIndex: 2,
+    purchaseDate: new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0],
+    invoiceNumber: "F001-000789",
+    notes: "Compra especial premium y menudencias",
+    items: [
+      { productIndex: 1, variantIndex: 0, quantity: 15, unitCost: 20.0 },
+      { productIndex: 0, variantIndex: 0, quantity: 20, unitCost: 22.0 },
+      { productIndex: 0, variantIndex: 2, quantity: 25, unitCost: 10.0 },
+    ],
+  },
+];
 
 export const DISTRIBUCIONES: DistribucionData[] = [
   {

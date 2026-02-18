@@ -54,6 +54,10 @@ async function getVariantsByProduct(
     throw new Error(String(error.value));
   }
 
+  if (data && typeof data === "object" && "data" in data) {
+    return (data as unknown as { data: ProductVariant[] }).data;
+  }
+
   return data as unknown as ProductVariant[];
 }
 

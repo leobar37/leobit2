@@ -17,6 +17,7 @@ import {
   LogOut,
   User,
   ArrowLeft,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
 const menuItems = [
   { icon: Home, label: "Inicio", href: "/dashboard" },
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
+  { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Settings, label: "Config", href: "/config" },
 ];
