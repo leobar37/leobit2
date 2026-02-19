@@ -13,7 +13,7 @@ import {
   Home,
   ShoppingCart,
   Users,
-  Settings,
+  Menu,
   LogOut,
   User,
   ArrowLeft,
@@ -34,7 +34,7 @@ const menuItems = [
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
-  { icon: Settings, label: "Config", href: "/config" },
+  { icon: Menu, label: "Más", href: "/config" },
 ];
 
 interface LayoutConfig {

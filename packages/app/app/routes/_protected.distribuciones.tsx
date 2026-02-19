@@ -35,7 +35,7 @@ export default function DistribucionesPage() {
     null
   );
 
-  const { data: distribuciones = [], isLoading } = useDistribuciones({
+  const { data: distribucionesData, isLoading } = useDistribuciones({
     fecha: selectedDate,
   });
   const { data: inventory } = useInventory();
@@ -45,18 +45,20 @@ export default function DistribucionesPage() {
   const closeMutation = useCloseDistribucion();
   const deleteMutation = useDeleteDistribucion();
 
+  const distribuciones = Array.isArray(distribucionesData) ? distribucionesData : [];
   const totalAsignado = distribuciones.reduce(
-    (sum, d) => sum + d.kilosAsignados,
+    (sum, d) => sum + (d.kilosAsignados || 0),
     0
   );
   const totalVendido = distribuciones.reduce(
-    (sum, d) => sum + d.kilosVendidos,
+    (sum, d) => sum + (d.kilosVendidos || 0),
     0
   );
-  const totalInventario = inventory?.reduce(
-    (sum, item) => sum + item.quantity,
+  const inventoryItems = Array.isArray(inventory) ? inventory : [];
+  const totalInventario = inventoryItems.reduce(
+    (sum, item) => sum + (item.quantity || 0),
     0
-  ) ?? 0;
+  );
 
   const handleCreate = async (data: CreateDistribucionInput) => {
     await createMutation.mutateAsync(data);

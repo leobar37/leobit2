@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from "react-router";
-import { ArrowLeft, Wallet, User, AlertCircle, Check, Receipt, ImageIcon } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Wallet, User, AlertCircle, Check, Receipt, Camera, X } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,6 +12,7 @@ import { useSetLayout } from "~/components/layout/app-layout";
 import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
+import { useUploadFile, validateFile } from "~/hooks/use-files";
 import { formatCurrency } from "~/lib/formatting";
 
 const paymentSchema = z.object({
@@ -67,7 +68,12 @@ export default function NuevoCobroPage() {
   const { data: customer } = useCustomer(customerId || "");
   const { data: accounts } = useAccountsReceivable();
   const createPayment = useCreatePayment();
+  const uploadFile = useUploadFile();
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [proofImage, setProofImage] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentDebt = useMemo(() => {
     if (!customerId || !accounts) return 0;
@@ -103,17 +109,48 @@ export default function NuevoCobroPage() {
     }
   }, [customerId, currentDebt, setValue]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    setProofImage(file);
+    setProofPreview(URL.createObjectURL(file));
+    setSubmitError(null);
+  };
+
+  const clearImage = () => {
+    setProofImage(null);
+    setProofPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const onSubmit = async (data: PaymentFormData) => {
     if (!customerId) return;
 
     try {
       setSubmitError(null);
+
+      let proofImageId: string | undefined;
+      if (proofImage) {
+        const uploadedFile = await uploadFile.mutateAsync(proofImage);
+        proofImageId = uploadedFile.id;
+      }
+
       await createPayment.mutateAsync({
         clientId: customerId,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         referenceNumber: data.referenceNumber || undefined,
         notes: data.notes || undefined,
+        proofImageId,
       });
 
       navigate(customerId ? `/clientes/${customerId}` : "/cobros");
@@ -274,6 +311,49 @@ export default function NuevoCobroPage() {
                 placeholder="Ej: 123456"
                 {...register("referenceNumber")}
               />
+            </div>
+          )}
+
+          {(paymentMethod === "yape" ||
+            paymentMethod === "plin" ||
+            paymentMethod === "transferencia") && (
+            <div className="space-y-2">
+              <Label>Comprobante de pago (opcional)</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {proofPreview ? (
+                <div className="relative">
+                  <img
+                    src={proofPreview}
+                    alt="Comprobante"
+                    className="w-full h-32 object-cover rounded-xl"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 rounded-full"
+                    onClick={clearImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-xl h-20 border-dashed"
+                >
+                  <Camera className="h-5 w-5 mr-2" />
+                  Adjuntar captura de pantalla
+                </Button>
+              )}
             </div>
           )}
 

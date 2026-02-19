@@ -14,7 +14,7 @@ import {
   SUPPLIERS,
   PURCHASES,
 } from "./data";
-import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants } from "../db/schema";
+import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants, businessPaymentSettings } from "../db/schema";
 
 const FORCE_MODE = process.argv.includes("--force");
 
@@ -37,6 +37,7 @@ interface SeedResult {
   distribucionesCount: number;
   suppliersCount: number;
   purchasesCount: number;
+  paymentMethodsConfigured: boolean;
 }
 
 async function seed(): Promise<SeedResult> {
@@ -60,6 +61,9 @@ async function seed(): Promise<SeedResult> {
   const ctx = RequestContext.forWorker(business.id, businessUserId);
   console.log("Created admin context for seeding\n");
 
+  const paymentMethods = await seedPaymentMethods(ctx);
+  console.log(`✓ Payment methods configured\n`);
+
   const products = await seedProducts(ctx);
   console.log(`✓ Seeded ${products.length} products with variants\n`);
 
@@ -81,7 +85,7 @@ async function seed(): Promise<SeedResult> {
   const abonos = await seedAbonos(ctx, customers);
   console.log(`✓ Seeded ${abonos.length} abonos\n`);
 
-  const distribuciones = await seedDistribuciones(ctx, businessUserId);
+  const distribuciones = await seedDistribuciones(ctx, businessUserId, products);
   console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
 
   console.log("✅ Seed completed successfully!\n");
@@ -103,6 +107,7 @@ async function seed(): Promise<SeedResult> {
     distribucionesCount: distribuciones.length,
     suppliersCount: suppliers.length,
     purchasesCount: purchases.length,
+    paymentMethodsConfigured: !!paymentMethods,
   };
 }
 
@@ -395,7 +400,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   return abonos;
 }
 
-async function seedDistribuciones(ctx: RequestContext, businessUserId: string) {
+async function seedDistribuciones(ctx: RequestContext, businessUserId: string, products: SeedProduct[]) {
   const existing = await services.distribucion.getDistribuciones(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} distribuciones already exist, skipping`);
@@ -417,10 +422,18 @@ async function seedDistribuciones(ctx: RequestContext, businessUserId: string) {
       const created = await services.distribucion.createDistribucion(ctx, {
         vendedorId: businessUserId,
         puntoVenta: distData.puntoVenta,
-        kilosAsignados: distData.kilosAsignados,
         fecha: distData.fecha,
+        modo: "libre",
+        items: [
+          {
+            variantId: products[0].variants[0].id,
+            cantidadAsignada: 5,
+            unidad: "kg",
+          }
+        ],
       });
       distribuciones.push(created);
+      console.log(`   ✓ Distribución: ${distData.puntoVenta} - 5kg`);
     } catch (error) {
       if (error instanceof Error && error.message.includes("Ya existe una distribución")) {
         console.log(`⚠ Distribucion already exists for fecha: ${distData.fecha}, skipping`);
@@ -449,6 +462,17 @@ async function seedInventory(ctx: RequestContext, products: Array<{ id: string }
   return inventoryItems;
 }
 
+async function seedPaymentMethods(ctx: RequestContext) {
+  const config = await services.paymentMethodConfig.getConfig(ctx);
+  const isNewlyCreated = config.createdAt.getTime() === config.updatedAt.getTime();
+  if (isNewlyCreated) {
+    console.log(`✓ Payment methods configured (default)`);
+  } else {
+    console.log(`⚠ Payment methods already configured, skipping`);
+  }
+  return config;
+}
+
 async function clearExistingData() {
   await db.delete(saleItems);
   await db.delete(sales);
@@ -461,6 +485,7 @@ async function clearExistingData() {
   await db.delete(inventory);
   await db.delete(productVariants);
   await db.delete(products);
+  await db.delete(businessPaymentSettings);
   console.log("✓ Cleared existing data\n");
 }
 
@@ -477,6 +502,7 @@ seed()
     console.log(`  Sales: ${result.salesCount}`);
     console.log(`  Abonos: ${result.abonosCount}`);
     console.log(`  Distribuciones: ${result.distribucionesCount}`);
+    console.log(`  Payment Methods: ${result.paymentMethodsConfigured ? "✓ Configured" : "✗ Not Configured"}`);
     process.exit(0);
   })
   .catch((error) => {

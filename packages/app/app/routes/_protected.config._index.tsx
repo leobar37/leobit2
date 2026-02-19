@@ -9,6 +9,8 @@ import {
   Shield,
   Bell,
   Moon,
+  Truck,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Card,
@@ -97,6 +99,24 @@ const teamConfigItem: ConfigItem = {
   iconBg: "bg-teal-100",
 };
 
+const distribucionesConfigItem: ConfigItem = {
+  icon: Truck,
+  title: "Distribuciones",
+  description: "Asigna inventario a vendedores",
+  href: "/distribuciones",
+  color: "text-amber-600",
+  iconBg: "bg-amber-100",
+};
+
+const comprasConfigItem: ConfigItem = {
+  icon: ShoppingCart,
+  title: "Compras",
+  description: "Gestiona compras y proveedores",
+  href: "/compras",
+  color: "text-cyan-600",
+  iconBg: "bg-cyan-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -104,16 +124,23 @@ export default function ConfigIndexPage() {
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
 
   const configItems = isAdmin
-    ? [baseConfigItems[0], baseConfigItems[1], teamConfigItem, ...baseConfigItems.slice(2)]
+    ? [
+        baseConfigItems[0],
+        baseConfigItems[1],
+        teamConfigItem,
+        distribucionesConfigItem,
+        comprasConfigItem,
+        ...baseConfigItems.slice(2),
+      ]
     : baseConfigItems;
 
   return (
     <div className="space-y-4">
       <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
         <CardHeader>
-          <CardTitle className="text-2xl">Configuración</CardTitle>
+          <CardTitle className="text-2xl">Menú</CardTitle>
           <CardDescription className="text-orange-100">
-            Personaliza tu experiencia y gestiona tu cuenta
+            Todas las opciones de la aplicación
           </CardDescription>
         </CardHeader>
       </Card>
