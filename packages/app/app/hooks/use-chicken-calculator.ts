@@ -165,7 +165,7 @@ export function useChickenCalculator(
 	useEffect(() => {
 		if (!persist || !productId || !variantId || !values.pricePerKg) {
 			return;
-		}
+    }
 
 		savePersistedState({
 			lastProductId: productId,

@@ -36,6 +36,18 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
       }),
     }
   )
+  .get(
+    "/:id/balance",
+    async ({ customerService, ctx, params }) => {
+      const balance = await customerService.getBalance(ctx as RequestContext, params.id);
+      return { success: true, data: balance };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
   .post(
     "/",
     async ({ customerService, ctx, body, set }) => {

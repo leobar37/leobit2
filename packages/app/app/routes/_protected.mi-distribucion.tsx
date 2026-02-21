@@ -1,7 +1,8 @@
 import { Link } from "react-router";
-import { ArrowLeft, Package, TrendingUp, AlertCircle } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, AlertCircle, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
@@ -125,6 +126,52 @@ export default function MiDistribucionPage() {
           kilosVendidos={distribucion.kilosVendidos}
           puntoVenta={distribucion.puntoVenta}
         />
+
+        {distribucion.items && distribucion.items.length > 0 && (
+          <Card className="border-0 shadow-md rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Productos Asignados
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {distribucion.items.map((item) => {
+                const cantidadDisponible = item.cantidadAsignada - item.cantidadVendida;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 bg-orange-50 rounded-xl"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {item.variant?.product?.name || "Producto"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.variant?.name || "Variante"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-orange-600">
+                          {formatKilos(cantidadDisponible)} {item.unidad}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          de {formatKilos(item.cantidadAsignada)} {item.unidad}
+                        </p>
+                      </div>
+                      {item.cantidadVendida > 0 && (
+                        <Badge variant="secondary" className="bg-white text-xs">
+                          {Math.round((item.cantidadVendida / item.cantidadAsignada) * 100)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-0 shadow-md rounded-2xl">
           <CardHeader>

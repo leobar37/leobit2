@@ -16,7 +16,7 @@ export class ProductRepository {
   ): Promise<Product[]> {
     return db.query.products.findMany({
       where: and(
-        filters?.type ? eq(products.type, filters.type as any) : undefined,
+        filters?.type ? eq(products.type, filters.type) : undefined,
         filters?.isActive !== undefined ? eq(products.isActive, filters.isActive) : undefined,
         filters?.search ? like(products.name, `%${filters.search}%`) : undefined
       ),

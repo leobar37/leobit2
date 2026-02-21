@@ -9,10 +9,13 @@ import { FormInput } from "@/components/forms/form-input";
 import { useCreatePurchase } from "~/hooks/use-purchases";
 import { useSuppliers } from "~/hooks/use-suppliers";
 import { useProducts } from "~/hooks/use-products";
+import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSetLayout } from "~/components/layout/app-layout";
+import type { UseFormReturn } from "react-hook-form";
 
 const purchaseItemSchema = z.object({
   productId: z.string().min(1, "Selecciona un producto"),
+  variantId: z.string().optional(),
   quantity: z.number().positive("La cantidad debe ser mayor a 0"),
   unitCost: z.number().min(0, "El costo no puede ser negativo"),
 });
@@ -63,7 +66,7 @@ export default function NuevaCompraPage() {
   });
 
   const addItem = () => {
-    append({ productId: "", quantity: 0, unitCost: 0 });
+    append({ productId: "", variantId: undefined, quantity: 0, unitCost: 0 });
   };
 
   const items = form.watch("items");
@@ -138,25 +141,11 @@ export default function NuevaCompraPage() {
               {fields.map((field, index) => (
                 <Card key={field.id} className="border-0 shadow-md rounded-2xl">
                   <CardContent className="p-4 space-y-3">
-                    <div className="space-y-2">
-                      <label className="text-xs">Producto</label>
-                      <select
-                        {...form.register(`items.${index}.productId`)}
-                        className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-                      >
-                        <option value="">Seleccionar producto...</option>
-                        {products?.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name}
-                          </option>
-                        ))}
-                      </select>
-                      {form.formState.errors.items?.[index]?.productId && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.items[index]?.productId?.message}
-                        </p>
-                      )}
-                    </div>
+                    <ItemProductSelector
+                      index={index}
+                      products={products}
+                      form={form}
+                    />
 
                     <div className="grid grid-cols-2 gap-3">
                       <FormInput
@@ -243,5 +232,78 @@ export default function NuevaCompraPage() {
         </div>
       </form>
     </FormProvider>
+  );
+}
+
+interface Product {
+  id: string;
+  name: string;
+}
+
+interface ProductVariant {
+  id: string;
+  productId: string;
+  name: string;
+}
+
+function ItemProductSelector({
+  index,
+  products,
+  form,
+}: {
+  index: number;
+  products?: Product[];
+  form: UseFormReturn<PurchaseFormData>;
+}) {
+  const selectedProductId = form.watch(`items.${index}.productId`);
+  const { data: variants } = useVariantsByProduct(selectedProductId || "", {
+    isActive: true,
+  });
+
+  const hasVariants = variants && variants.length > 0;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <label className="text-xs">Producto</label>
+        <select
+          {...form.register(`items.${index}.productId`)}
+          onChange={(e) => {
+            form.setValue(`items.${index}.productId`, e.target.value);
+            form.setValue(`items.${index}.variantId`, undefined);
+          }}
+          className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+        >
+          <option value="">Seleccionar producto...</option>
+          {products?.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+        {form.formState.errors.items?.[index]?.productId && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.items[index]?.productId?.message}
+          </p>
+        )}
+      </div>
+
+      {hasVariants && (
+        <div className="space-y-2">
+          <label className="text-xs">Variante</label>
+          <select
+            {...form.register(`items.${index}.variantId`)}
+            className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+          >
+            <option value="">Seleccionar variante...</option>
+            {variants?.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </>
   );
 }

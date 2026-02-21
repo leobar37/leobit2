@@ -155,4 +155,17 @@ export class CustomerService {
 
     return this.repository.getTotalAccountsReceivable(ctx);
   }
+
+  async getBalance(ctx: RequestContext, customerId: string): Promise<{ totalSales: number; totalPayments: number; balanceDue: number }> {
+    if (!ctx.hasPermission("customers.read")) {
+      throw new ForbiddenError("No tiene permisos para ver clientes");
+    }
+
+    const customer = await this.repository.findById(ctx, customerId);
+    if (!customer) {
+      throw new NotFoundError("Cliente");
+    }
+
+    return this.repository.getBalance(ctx, customerId);
+  }
 }

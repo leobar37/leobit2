@@ -4,7 +4,7 @@ import type { DistribucionRepository } from "../repository/distribucion.reposito
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { BusinessRepository } from "../repository/business.repository";
 import type { RequestContext } from "../../context/request-context";
-import { ValidationError, ForbiddenError } from "../../errors";
+import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale } from "../../db/schema";
 import { db } from "../../lib/db";
 
@@ -33,7 +33,7 @@ export class SaleService {
   async getSale(ctx: RequestContext, id: string): Promise<Sale> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
-      throw new ValidationError("Venta no encontrada");
+      throw new NotFoundError("Sale");
     }
     return sale;
   }
@@ -148,7 +148,8 @@ export class SaleService {
             await this.distribucionItemRepository.updateVendido(
               ctx,
               distItem.id,
-              newVendida.toString()
+              newVendida.toString(),
+              tx
             );
           }
         }
@@ -183,7 +184,7 @@ export class SaleService {
   async deleteSale(ctx: RequestContext, id: string): Promise<void> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
-      throw new ValidationError("Venta no encontrada");
+      throw new NotFoundError("Sale");
     }
 
     if (!ctx.isAdmin()) {

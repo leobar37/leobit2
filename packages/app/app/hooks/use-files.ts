@@ -74,10 +74,12 @@ export function useUploadFile() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`/api/files/upload`, {
+      const token = localStorage.getItem("bearer_token");
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+      const response = await fetch(`${apiUrl}/files/upload`, {
         method: "POST",
         body: formData,
-        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       if (!response.ok) {

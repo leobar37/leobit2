@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { bearer } from "better-auth/plugins";
 import { db } from "./db";
 import { getCorsConfig } from "./cors";
 
@@ -18,13 +19,18 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,
+    },
   },
   socialProviders: {},
-  plugins: [],
+  plugins: [
+    bearer(),
+  ],
   advanced: {
-    defaultCookieAttributes: {
-      sameSite: corsConfig.isProduction ? "none" : "lax",
-      secure: corsConfig.isProduction,
+    crossSubDomainCookies: {
+      enabled: false,
     },
   },
 });

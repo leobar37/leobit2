@@ -17,6 +17,7 @@ import {
   type ProductVariant,
 } from "~/hooks/use-product-variants";
 import { VariantModal, useVariantModal } from "~/components/products/variant-modal";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 const typeLabels = {
   pollo: "Pollo",
@@ -52,6 +53,7 @@ export default function ProductDetailPage() {
   const deactivateVariant = useDeactivateVariant();
   const reorderVariants = useReorderVariants();
 
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const variantModal = useVariantModal();
 
   const handleSubmit = async (data: ProductFormData) => {
@@ -116,7 +118,14 @@ export default function ProductDetailPage() {
   };
 
   const handleVariantDelete = async (variantId: string) => {
-    if (confirm("¿Estás seguro de desactivar esta variante?")) {
+    const confirmed = await confirm({
+      title: "Desactivar variante",
+      description: "¿Estás seguro de desactivar esta variante? Se mantendrá en el historial pero no estará disponible para nuevas ventas.",
+      confirmText: "Desactivar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+    if (confirmed) {
       await deactivateVariant.mutateAsync(variantId);
       refetchVariants();
     }
@@ -249,6 +258,7 @@ export default function ProductDetailPage() {
         />
 
         <VariantModal />
+        <ConfirmDialog />
       </main>
     </div>
   );

@@ -116,7 +116,7 @@ export class SaleRepository {
 
   async getTotalSalesToday(ctx: RequestContext): Promise<{ count: number; total: string }> {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
     
     const countResult = await db
       .select({ count: sql<number>`count(*)` })

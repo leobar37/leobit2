@@ -181,6 +181,16 @@ export const VARIANTS_CONSTRAINTS = {
 
 export const VERSION = "0.0.1";
 
+// Finance utilities
+export function calculateBalanceDue(
+  saleType: "contado" | "credito",
+  totalAmount: number,
+  amountPaid: number
+): number {
+  if (saleType === "contado") return 0;
+  return Math.max(totalAmount - amountPaid, 0);
+}
+
 export interface TeamMember {
   id: string;
   userId: string;

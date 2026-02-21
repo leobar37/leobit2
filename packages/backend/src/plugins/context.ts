@@ -12,7 +12,7 @@ export const contextPlugin = new Elysia({ name: "context" })
     }
 
     const ctx = await RequestContext.fromAuth(session);
-    
+
     if (!ctx.isActive) {
       set.status = 403;
       throw new Error("Usuario inactivo en este negocio");

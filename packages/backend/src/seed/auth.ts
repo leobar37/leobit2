@@ -1,4 +1,3 @@
-import { auth } from "../lib/auth";
 import { TEST_USER } from "./data";
 
 export async function createTestUser(): Promise<{ userId: string; email: string; name: string }> {

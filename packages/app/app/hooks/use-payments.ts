@@ -142,10 +142,12 @@ async function uploadPaymentProof({
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`/api/payments/${id}/proof`, {
+  const token = localStorage.getItem("bearer_token");
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+  const response = await fetch(`${apiUrl}/payments/${id}/proof`, {
     method: "POST",
     body: formData,
-    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
   if (!response.ok) {

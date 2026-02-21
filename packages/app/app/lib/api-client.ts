@@ -1,11 +1,21 @@
 import { treaty } from "@elysiajs/eden";
 import type { App } from "@avileo/backend";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
+
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("bearer_token");
+}
 
 export const api = treaty<App>(API_URL, {
   fetch: {
-    credentials: "include",
+    credentials: "omit",
+  },
+  headers: (path) => {
+    const token = getAuthToken();
+    if (!token) return undefined;
+    return { Authorization: `Bearer ${token}` };
   },
 });
 

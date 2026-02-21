@@ -228,4 +228,31 @@ export class CustomerRepository {
 
     return result[0]?.totalBalance ?? 0;
   }
+
+  async getBalance(ctx: RequestContext, customerId: string): Promise<{ totalSales: number; totalPayments: number; balanceDue: number }> {
+    const salesResult = await db
+      .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END), '0')` })
+      .from(sales)
+      .where(and(
+        eq(sales.businessId, ctx.businessId),
+        eq(sales.clientId, customerId)
+      ));
+
+    const paymentsResult = await db
+      .select({ total: sql<string>`COALESCE(SUM(${abonos.amount}), '0')` })
+      .from(abonos)
+      .where(and(
+        eq(abonos.businessId, ctx.businessId),
+        eq(abonos.clientId, customerId)
+      ));
+
+    const totalSales = Number(salesResult[0]?.total ?? 0);
+    const totalPayments = Number(paymentsResult[0]?.total ?? 0);
+
+    return {
+      totalSales,
+      totalPayments,
+      balanceDue: Math.max(totalSales - totalPayments, 0),
+    };
+  }
 }

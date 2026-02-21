@@ -216,6 +216,8 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
       }),
     }
   )
+  // NOTE: This performs a soft-delete (deactivation). The variant remains in the database
+  // with isActive=false for historical reference in sales and inventory records.
   .delete(
     "/:id",
     async ({ productVariantService, ctx, params, set }) => {

@@ -15,14 +15,17 @@ export interface CorsConfig {
 }
 
 function getAllowedOrigins(): string[] {
+  // Allow Tailscale IPs (100.x.x.x) for cross-device development
+  const tailscaleFrontend = process.env.FRONTEND_URL;
+  
   if (isProduction) {
-    return [baseURL, frontendURL].filter(
-      (origin, index, self) => self.indexOf(origin) === index
-    );
+    return [baseURL, frontendURL, tailscaleFrontend].filter(
+      (origin, index, self) => origin && self.indexOf(origin) === index
+    ) as string[];
   }
-  return [baseURL, frontendURL, ...DEV_ORIGINS].filter(
-    (origin, index, self) => self.indexOf(origin) === index
-  );
+  return [baseURL, frontendURL, tailscaleFrontend, ...DEV_ORIGINS].filter(
+    (origin, index, self) => origin && self.indexOf(origin) === index
+  ) as string[];
 }
 
 export function getCorsConfig(): CorsConfig {
@@ -49,7 +52,18 @@ export function getCorsOrigin(requestOrigin: string | null): string {
     return allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
   }
 
+  // Allow localhost
   if (requestOrigin.startsWith("http://localhost:") || requestOrigin.startsWith("https://localhost:")) {
+    return requestOrigin;
+  }
+
+  // Allow Tailscale IPs (100.x.x.x) for cross-device development
+  if (requestOrigin.match(/^https?:\/\/100\./)) {
+    return requestOrigin;
+  }
+
+  // Allow Tailscale DNS names (*.ts.net) with HTTPS
+  if (requestOrigin.match(/^https:\/\/[^\/]+\.tail[0-9a-z]+\.ts\.net/)) {
     return requestOrigin;
   }
 

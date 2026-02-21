@@ -6,6 +6,7 @@ import {
   type NewDistribucionItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export class DistribucionItemRepository {
   async findByDistribucionId(
@@ -46,9 +47,11 @@ export class DistribucionItemRepository {
   async updateVendido(
     ctx: RequestContext,
     id: string,
-    cantidad: string
+    cantidad: string,
+    tx?: DbTransaction
   ): Promise<DistribucionItem | undefined> {
-    const [item] = await db
+    const executor = tx ?? db;
+    const [item] = await executor
       .update(distribucionItems)
       .set({ cantidadVendida: cantidad })
       .where(eq(distribucionItems.id, id))
