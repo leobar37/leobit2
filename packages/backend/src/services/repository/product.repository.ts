@@ -16,6 +16,7 @@ export class ProductRepository {
   ): Promise<Product[]> {
     return db.query.products.findMany({
       where: and(
+        eq(products.businessId, ctx.businessId),
         filters?.type ? eq(products.type, filters.type) : undefined,
         filters?.isActive !== undefined ? eq(products.isActive, filters.isActive) : undefined,
         filters?.search ? like(products.name, `%${filters.search}%`) : undefined
@@ -28,17 +29,23 @@ export class ProductRepository {
 
   async findById(ctx: RequestContext, id: string): Promise<Product | undefined> {
     return db.query.products.findFirst({
-      where: eq(products.id, id),
+      where: and(
+        eq(products.id, id),
+        eq(products.businessId, ctx.businessId)
+      ),
     });
   }
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewProduct, "id" | "createdAt">
+    data: Omit<NewProduct, "id" | "createdAt" | "businessId">
   ): Promise<Product> {
     const [product] = await db
       .insert(products)
-      .values(data)
+      .values({
+        ...data,
+        businessId: ctx.businessId,
+      })
       .returning();
 
     return product;
@@ -47,7 +54,7 @@ export class ProductRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewProduct, "id" | "createdAt">>
+    data: Partial<Omit<NewProduct, "id" | "createdAt" | "businessId">>
   ): Promise<Product | undefined> {
     const [product] = await db
       .update(products)
@@ -58,7 +65,10 @@ export class ProductRepository {
         ...(data.basePrice !== undefined && { basePrice: data.basePrice }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       })
-      .where(eq(products.id, id))
+      .where(and(
+        eq(products.id, id),
+        eq(products.businessId, ctx.businessId)
+      ))
       .returning();
 
     return product;
@@ -67,11 +77,16 @@ export class ProductRepository {
   async delete(ctx: RequestContext, id: string): Promise<void> {
     await db
       .delete(products)
-      .where(eq(products.id, id));
+      .where(and(
+        eq(products.id, id),
+        eq(products.businessId, ctx.businessId)
+      ));
   }
 
   async count(ctx: RequestContext, filters?: { type?: "pollo" | "huevo" | "otro"; isActive?: boolean }): Promise<number> {
     const conditions = [
+      eq(products.businessId, ctx.businessId),
+      filters?.type ? eq(products.type, filters.type) : undefined,
       filters?.isActive !== undefined ? eq(products.isActive, filters.isActive) : undefined,
     ];
 

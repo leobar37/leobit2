@@ -1,6 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
 import {
-  ArrowLeft,
   ShoppingCart,
   Calendar,
   Receipt,
@@ -8,7 +7,6 @@ import {
   Trash2,
   RotateCcw,
   CheckCircle2,
-  Building2,
   Package,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

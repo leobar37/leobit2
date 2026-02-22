@@ -31,6 +31,11 @@ export const products = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
+
     // Product info
     name: varchar("name", { length: 255 }).notNull(),
     type: productTypeEnum("type").notNull().default("pollo"),
@@ -45,6 +50,7 @@ export const products = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
     index("idx_products_is_active").on(table.isActive),
     index("idx_products_image_id").on(table.imageId),
