@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, MapPin, CreditCard } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, FileText } from "lucide-react";
 import type { Customer } from "~/lib/db/schema";
 
 const customerSchema = z.object({
@@ -114,6 +114,19 @@ export function CustomerForm({ onSubmit, isLoading, customer }: CustomerFormProp
             placeholder="Av. Principal 123"
             {...register("address")}
             className="rounded-xl"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="notes" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Notas
+          </Label>
+          <textarea
+            id="notes"
+            placeholder="Notas adicionales sobre el cliente..."
+            {...register("notes")}
+            className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
           />
         </div>
 

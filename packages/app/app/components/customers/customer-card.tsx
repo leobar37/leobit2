@@ -1,4 +1,4 @@
-import { User, Phone, MapPin, CreditCard } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, CloudOff } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import type { Customer } from "~/lib/db/schema";
 
@@ -8,6 +8,8 @@ interface CustomerCardProps {
 }
 
 export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) {
+  const isPending = customer.syncStatus === "pending";
+
   return (
     <div className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow bg-card">
       <CardContent className="p-4">
@@ -17,9 +19,17 @@ export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) 
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">
-              {customer.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground truncate">
+                {customer.name}
+              </h3>
+              {isPending && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full flex-shrink-0">
+                  <CloudOff className="h-3 w-3" />
+                  Sin sincronizar
+                </span>
+              )}
+            </div>
 
             <div className="mt-2 space-y-1">
               {customer.dni && (

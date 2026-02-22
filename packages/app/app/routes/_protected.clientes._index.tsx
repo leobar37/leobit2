@@ -57,11 +57,6 @@ export default function CustomersPage() {
               key={customer.id}
               to={`/clientes/${customer.id}`}
               className="block"
-              onError={(err) => {
-
-                console.log("err", err)
-              }}
-              onClick={() => console.log('[CustomersPage] Navigating to:', customer.id)}
             >
               <CustomerCard customer={customer} />
             </Link>

@@ -1,10 +1,12 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil } from "lucide-react";
+import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCustomer } from "~/hooks/use-customer";
 import { useSales } from "~/hooks/use-sales";
 import { usePayments } from "~/hooks/use-payments";
+import { useDeleteCustomer } from "~/hooks/use-customers-live";
+import { useAuth } from "~/hooks/use-auth";
 import { PaymentForm } from "~/components/payments/payment-form";
 import { PaymentList } from "~/components/payments/payment-list";
 import { SaleList } from "~/components/sales/sale-list";
@@ -15,10 +17,13 @@ export default function CustomerDetailPage() {
   const navigate = useNavigate();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: customer, isLoading: customerLoading } = useCustomer(id!);
   const { data: sales, isLoading: salesLoading } = useSales();
   const { data: payments, isLoading: paymentsLoading } = usePayments(id);
+  const { user } = useAuth();
+  const deleteCustomer = useDeleteCustomer();
 
   const customerSales = sales?.filter((sale) => sale.clientId === id) || [];
   const customerPayments = payments || [];
@@ -61,13 +66,23 @@ export default function CustomerDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="font-bold text-lg truncate">{customer.name}</h1>
-          <Link
-            to={`/clientes/${id}/edit`}
-            className="p-2 rounded-xl hover:bg-orange-50 ml-auto"
-            onClick={() => console.log('[CustomerDetailPage] Clicking edit link, navigating to:', `/clientes/${id}/edit`)}
-          >
-            <Pencil className="h-5 w-5 pointer-events-none" />
-          </Link>
+          <div className="flex items-center gap-1 ml-auto">
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded-xl hover:bg-red-50 text-red-600"
+                title="Eliminar cliente"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
+            <Link
+              to={`/clientes/${id}/edit`}
+              className="p-2 rounded-xl hover:bg-orange-50"
+            >
+              <Pencil className="h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -123,6 +138,41 @@ export default function CustomerDetailPage() {
             onClose={() => setShowPaymentForm(false)}
             maxAmount={currentBalance}
           />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+              <h3 className="text-lg font-semibold mb-2">¿Eliminar cliente?</h3>
+              <p className="text-muted-foreground mb-6">
+                Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar a {customer.name}?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2 px-4 rounded-xl border border-gray-200 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteCustomer.mutateAsync(id!);
+                      navigate('/clientes');
+                    } catch (error) {
+                      console.error('Error deleting customer:', error);
+                      alert('Error al eliminar el cliente');
+                    }
+                  }}
+                  disabled={deleteCustomer.isPending}
+                  className="flex-1 py-2 px-4 rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  {deleteCustomer.isPending ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
