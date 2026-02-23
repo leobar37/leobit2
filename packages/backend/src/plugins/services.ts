@@ -27,6 +27,8 @@ import { SupplierRepository } from "../services/repository/supplier.repository";
 import { SupplierService } from "../services/business/supplier.service";
 import { PurchaseRepository } from "../services/repository/purchase.repository";
 import { PurchaseService } from "../services/business/purchase.service";
+import { StaffInvitationRepository } from "../services/repository/staff-invitation.repository";
+import { StaffInvitationService } from "../services/business/staff-invitation.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -45,6 +47,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const productVariantRepo = new ProductVariantRepository();
     const supplierRepo = new SupplierRepository();
     const purchaseRepo = new PurchaseRepository();
+    const staffInvitationRepo = new StaffInvitationRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo);
     const customerService = new CustomerService(customerRepo);
@@ -65,6 +68,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const productVariantService = new ProductVariantService(productVariantRepo);
     const supplierService = new SupplierService(supplierRepo);
     const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo);
+    const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
 
     return {
       businessRepo,
@@ -95,5 +99,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       supplierService,
       purchaseRepo,
       purchaseService,
+      staffInvitationRepo,
+      staffInvitationService,
     };
   });

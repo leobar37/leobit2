@@ -102,6 +102,25 @@ export class RequestContext {
   }
 
   /**
+   * Creates a new context with a different user ID (for checking other users)
+   */
+  withUserId(userId: string): RequestContext {
+    return new RequestContext(
+      userId,
+      this.email,
+      this.name,
+      this.businessId,
+      this.businessUserId,
+      this.role,
+      this.salesPoint,
+      this.permissions,
+      this.isAuthenticated,
+      this.isActive,
+      this.sessionId
+    );
+  }
+
+  /**
    * Factory: Crear desde sesión de Better Auth
    * Consulta business_users para obtener el contexto del negocio
    */

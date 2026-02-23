@@ -1,0 +1,51 @@
+services:
+  backend:
+    image: ghcr.io/${GHCR_NAMESPACE}/avileo-backend:${BACKEND_IMAGE_TAG:-latest}
+    container_name: avileo-backend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+      NODE_ENV: production
+      PORT: 3000
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.avileo-backend.rule=Host(`api.avileo.app`)'
+      - 'traefik.http.routers.avileo-backend.entrypoints=websecure'
+      - 'traefik.http.routers.avileo-backend.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.avileo-backend.loadbalancer.server.port=3000'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - avileo-network
+
+  app:
+    image: ghcr.io/${GHCR_NAMESPACE}/avileo-app:${APP_IMAGE_TAG:-latest}
+    container_name: avileo-app
+    restart: unless-stopped
+    ports:
+      - '3001:3000'
+    environment:
+      DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+      NODE_ENV: production
+      PORT: 3000
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.avileo-app.rule=Host(`avileo.app`) || Host(`www.avileo.app`)'
+      - 'traefik.http.routers.avileo-app.entrypoints=websecure'
+      - 'traefik.http.routers.avileo-app.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.avileo-app.loadbalancer.server.port=3000'
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - avileo-network
+
+networks:
+  avileo-network:
+    name: avileo-network

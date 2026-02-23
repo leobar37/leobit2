@@ -1,0 +1,260 @@
+name: Deploy to Dokploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+
+env:
+  NODE_VERSION: "20"
+  BUN_VERSION: "1.1.38"
+  REGISTRY: ghcr.io
+  # Build-time environment variables
+  VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build shared package
+        run: cd packages/shared && bun run build
+
+      - name: Build backend
+        run: cd packages/backend && bun run build
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get SHA
+        id: sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./packages/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:sha-${{ steps.sha.outputs.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push App
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./packages/app/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_BUILD_ID=${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:sha-${{ steps.sha.outputs.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Required Environment Variables
+        run: |
+          echo "=========================================="
+          echo "  Verifying Required Variables"
+          echo "=========================================="
+          ERRORS=0
+
+          if [ -z "${{ secrets.DOKPLOY_API_KEY }}" ]; then
+            echo "❌ ERROR: secrets.DOKPLOY_API_KEY is not set!"
+            ((ERRORS++))
+          else
+            echo "✅ secrets.DOKPLOY_API_KEY is set"
+          fi
+
+          if [ -z "${{ secrets.DOKPLOY_COMPOSE_ID }}" ]; then
+            echo "❌ ERROR: secrets.DOKPLOY_COMPOSE_ID is not set!"
+            ((ERRORS++))
+          else
+            echo "✅ secrets.DOKPLOY_COMPOSE_ID is set"
+          fi
+
+          if [ -z "${{ secrets.DOKPLOY_HOST }}" ]; then
+            echo "❌ ERROR: secrets.DOKPLOY_HOST is not set!"
+            ((ERRORS++))
+          else
+            echo "✅ secrets.DOKPLOY_HOST is set"
+          fi
+
+          if [ -z "${{ secrets.DOPPLER_TOKEN }}" ]; then
+            echo "❌ ERROR: secrets.DOPPLER_TOKEN is not set!"
+            ((ERRORS++))
+          else
+            echo "✅ secrets.DOPPLER_TOKEN is set"
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "Failed: $ERRORS required variables are missing"
+            exit 1
+          fi
+          echo "✅ All required variables verified"
+
+      - name: Fetch Existing Dokploy Environment
+        id: fetch-env
+        run: |
+          COMPOSE_ID="${{ secrets.DOKPLOY_COMPOSE_ID }}"
+          DOKPLOY_HOST="${{ secrets.DOKPLOY_HOST }}"
+
+          echo "Fetching existing environment variables for compose: $COMPOSE_ID"
+          EXISTING_ENV=$(curl -s -X GET "${DOKPLOY_HOST}/api/compose.one?composeId=${COMPOSE_ID}" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" | jq -r '.env // empty')
+
+          if [ -n "$EXISTING_ENV" ]; then
+            echo "✅ Found existing environment variables"
+            echo "$EXISTING_ENV" > /tmp/existing_env.txt
+          else
+            echo "⚠️ No existing environment variables found, starting fresh"
+            touch /tmp/existing_env.txt
+          fi
+
+      - name: Merge and Update Dokploy Environment
+        run: |
+          SHA="${{ steps.sha.outputs.sha }}"
+          COMPOSE_ID="${{ secrets.DOKPLOY_COMPOSE_ID }}"
+          DOKPLOY_HOST="${{ secrets.DOKPLOY_HOST }}"
+
+          echo "Compose ID: $COMPOSE_ID"
+          echo "Dokploy Host: $DOKPLOY_HOST"
+
+          # New variables to set (these will override existing ones if they exist)
+          GHCR_NAMESPACE="${{ github.repository_owner }}"
+          BACKEND_IMAGE_TAG="sha-$SHA"
+          APP_IMAGE_TAG="sha-$SHA"
+          DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN }}"
+
+          # Read existing env vars and merge with new ones
+          # New vars take precedence over existing ones
+          MERGED_ENV=""
+
+          # First, add all existing vars that are NOT in the new vars
+          if [ -s /tmp/existing_env.txt ]; then
+            while IFS= read -r line || [ -n "$line" ]; do
+              # Skip empty lines and comments
+              [ -z "$line" ] && continue
+              [[ "$line" =~ ^# ]] && continue
+
+              # Extract key (everything before first =)
+              key=$(echo "$line" | cut -d'=' -f1)
+
+              # Skip if this key is in our new vars
+              if [ "$key" != "GHCR_NAMESPACE" ] && \
+                 [ "$key" != "BACKEND_IMAGE_TAG" ] && \
+                 [ "$key" != "APP_IMAGE_TAG" ] && \
+                 [ "$key" != "DOPPLER_TOKEN" ]; then
+                MERGED_ENV="${MERGED_ENV}${line}\n"
+              fi
+            done < /tmp/existing_env.txt
+          fi
+
+          # Then add all new vars
+          MERGED_ENV="${MERGED_ENV}GHCR_NAMESPACE=${GHCR_NAMESPACE}\n"
+          MERGED_ENV="${MERGED_ENV}BACKEND_IMAGE_TAG=${BACKEND_IMAGE_TAG}\n"
+          MERGED_ENV="${MERGED_ENV}APP_IMAGE_TAG=${APP_IMAGE_TAG}\n"
+          MERGED_ENV="${MERGED_ENV}DOPPLER_TOKEN=${DOPPLER_TOKEN}\n"
+
+          # Remove trailing newline
+          MERGED_ENV=$(echo -e "$MERGED_ENV" | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba')
+
+          echo "Merged environment variables:"
+          echo "$MERGED_ENV"
+          echo ""
+
+          # Build payload with merged env
+          PAYLOAD=$(jq -n --arg composeId "$COMPOSE_ID" --arg env "$MERGED_ENV" '{composeId: $composeId, env: $env}')
+
+          echo "Updating compose environment variables..."
+          UPDATE_RESPONSE=$(curl -s -X POST "${DOKPLOY_HOST}/api/compose.update" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -d "$PAYLOAD")
+
+          echo "Update response: $UPDATE_RESPONSE"
+
+          if echo "$UPDATE_RESPONSE" | grep -q '"status":"success"'; then
+            echo "✅ Environment variables updated successfully"
+          else
+            echo "⚠️  Environment update response: $UPDATE_RESPONSE"
+          fi
+
+      - name: Trigger Dokploy Redeploy
+        run: |
+          COMPOSE_ID="${{ secrets.DOKPLOY_COMPOSE_ID }}"
+          DOKPLOY_HOST="${{ secrets.DOKPLOY_HOST }}"
+
+          echo "Triggering redeploy for compose: $COMPOSE_ID"
+          REDEPLOY_RESPONSE=$(curl -s -X POST "${DOKPLOY_HOST}/api/compose.redeploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"composeId\":\"${COMPOSE_ID}\"}")
+
+          echo "Redeploy response: $REDPLOY_RESPONSE"
+          echo "✅ Deployment triggered successfully!"
+
+      - name: Print Environment Variables Summary
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "  DEPLOYMENT SUMMARY"
+          echo "=========================================="
+          echo ""
+          echo "Image Tags:"
+          echo "  Backend: sha-${{ steps.sha.outputs.sha }}"
+          echo "  App: sha-${{ steps.sha.outputs.sha }}"
+          echo ""
+          echo "Registry:"
+          echo "  ${{ env.REGISTRY }}/${{ github.repository_owner }}"
+          echo ""
+          echo "Dokploy:"
+          echo "  Compose ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}"
+          echo "  Host: ${{ secrets.DOKPLOY_HOST }}"
+          echo ""
+          echo "=========================================="
+          echo "  🚀 Deployment Complete!"
+          echo "=========================================="

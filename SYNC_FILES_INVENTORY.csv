@@ -1,8 +1,0 @@
-File Path,Category,Sub-Category,Lines of Code,Entities Used,Tests Included?,Description
-packages/app/app/lib/sync/queue.ts,Frontend,Queue,257,customers|sales|sale_items|abonos|distribuciones,Yes,IndexedDB queue for sync operations with exponential backoff retry logic
-packages/app/app/lib/sync/client.ts,Frontend,Client,252,customers|sales|abonos|distribuciones,No,Sync engine that manages batch operations and network status monitoring
-packages/app/app/lib/sync/storage.ts,Frontend,Storage,42,N/A,No,localStorage wrapper for sync cursor and last sync timestamp
-packages/app/app/lib/sync/utils.ts,Frontend,Utilities,15,N/A,No,Helper functions for sync ID generation and online status detection
-packages/app/app/components/sync/sync-status.tsx,Frontend,Component,109,N/A,No,React component that displays sync status and network connectivity indicator
-packages/app/app/lib/sync/__tests__/queue.test.ts,Frontend,Tests,217,customers|sales|sale_items|abonos|distribuciones,Yes,Comprehensive unit tests for sync queue (10 test cases)
-packages/backend/src/services/sync/sync.service.ts,Backend,Service,608,customers|sales|sale_items|abonos|distribuciones,No,Sync service handler for processing batch operations from clients
