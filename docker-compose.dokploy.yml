@@ -4,7 +4,7 @@ services:
     container_name: avileo-backend
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '3003:3000'
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}
       NODE_ENV: production
@@ -29,7 +29,7 @@ services:
     container_name: avileo-app
     restart: unless-stopped
     ports:
-      - '3001:3000'
+      - '3004:3000'
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}
       NODE_ENV: production
