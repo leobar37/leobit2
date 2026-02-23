@@ -20,8 +20,7 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5,
+      enabled: false,
     },
   },
   socialProviders: {},
@@ -29,8 +28,10 @@ export const auth = betterAuth({
     bearer(),
   ],
   advanced: {
-    crossSubDomainCookies: {
-      enabled: false,
+    defaultCookieAttributes: {
+      secure: false,
+      httpOnly: false,
+      sameSite: "none",
     },
   },
 });
