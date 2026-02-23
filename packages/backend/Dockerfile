@@ -6,7 +6,7 @@ FROM oven/bun:1.1.38-slim AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
@@ -23,7 +23,7 @@ COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modu
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copy source code
-COPY package.json bun.lockb turbo.json ./
+COPY package.json bun.lock turbo.json ./
 COPY packages/backend ./packages/backend
 COPY packages/shared ./packages/shared
 
@@ -41,7 +41,7 @@ FROM oven/bun:1.1.38-slim AS runner
 WORKDIR /app
 
 # Install production dependencies only
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
