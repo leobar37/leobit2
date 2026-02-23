@@ -168,6 +168,7 @@ jobs:
           BACKEND_IMAGE_TAG="sha-$SHA"
           APP_IMAGE_TAG="sha-$SHA"
           DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN }}"
+          VITE_API_URL="${{ secrets.VITE_API_URL }}"
 
           # Read existing env vars and merge with new ones
           # New vars take precedence over existing ones
@@ -187,7 +188,8 @@ jobs:
               if [ "$key" != "GHCR_NAMESPACE" ] && \
                  [ "$key" != "BACKEND_IMAGE_TAG" ] && \
                  [ "$key" != "APP_IMAGE_TAG" ] && \
-                 [ "$key" != "DOPPLER_TOKEN" ]; then
+                 [ "$key" != "DOPPLER_TOKEN" ] && \
+                 [ "$key" != "VITE_API_URL" ]; then
                 MERGED_ENV="${MERGED_ENV}${line}\n"
               fi
             done < /tmp/existing_env.txt
@@ -198,6 +200,7 @@ jobs:
           MERGED_ENV="${MERGED_ENV}BACKEND_IMAGE_TAG=${BACKEND_IMAGE_TAG}\n"
           MERGED_ENV="${MERGED_ENV}APP_IMAGE_TAG=${APP_IMAGE_TAG}\n"
           MERGED_ENV="${MERGED_ENV}DOPPLER_TOKEN=${DOPPLER_TOKEN}\n"
+          MERGED_ENV="${MERGED_ENV}VITE_API_URL=${VITE_API_URL}\n"
 
           # Remove trailing newline
           MERGED_ENV=$(echo -e "$MERGED_ENV" | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba')
