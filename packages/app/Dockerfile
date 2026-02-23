@@ -47,6 +47,7 @@ WORKDIR /app
 
 # Copy built application from builder
 COPY --from=builder /app/packages/app/build ./packages/app/build
+COPY --from=builder /app/packages/app/server.js ./packages/app/server.js
 
 # Install production dependencies only
 COPY package.json bun.lock ./
