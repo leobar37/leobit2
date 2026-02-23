@@ -44,6 +44,9 @@ RUN cd packages/app && bun run build
 FROM oven/bun:1.1.38-slim AS runner
 WORKDIR /app
 
+# Copy built application from builder
+COPY --from=builder /app/packages/app/build ./packages/app/build
+
 # Install production dependencies only
 COPY package.json bun.lock ./
 COPY packages/app/package.json ./packages/app/
@@ -70,4 +73,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --spider -q http://localhost:3000/health || exit 1
 
 # Start the application with Doppler secret injection
-CMD ["doppler", "run", "--", "bun", "run", "packages/app/node_modules/.bin/react-router-serve", "./packages/app/build/server/index.js"]
+CMD ["doppler", "run", "--", "bun", "run", "--cwd", "packages/app", "start"]
