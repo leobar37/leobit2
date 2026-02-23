@@ -184,13 +184,18 @@ jobs:
               # Extract key (everything before first =)
               key=$(echo "$line" | cut -d'=' -f1)
 
-              # Skip if this key is in our new vars
+              # Skip if this key is in our new vars or if line has no proper format
               if [ "$key" != "GHCR_NAMESPACE" ] && \
                  [ "$key" != "BACKEND_IMAGE_TAG" ] && \
                  [ "$key" != "APP_IMAGE_TAG" ] && \
                  [ "$key" != "DOPPLER_TOKEN" ] && \
-                 [ "$key" != "VITE_API_URL" ]; then
-                MERGED_ENV="${MERGED_ENV}${line}\n"
+                 [ "$key" != "VITE_API_URL" ] && \
+                 [ "$key" != "FRONTEND_URL" ] && \
+                 [ "$key" != "BETTER_AUTH_BASE_URL" ]; then
+                # Only add if key is not empty and line contains exactly one '='
+                if [ -n "$key" ] && [ "$key" != "$line" ]; then
+                  MERGED_ENV="${MERGED_ENV}${line}\n"
+                fi
               fi
             done < /tmp/existing_env.txt
           fi
