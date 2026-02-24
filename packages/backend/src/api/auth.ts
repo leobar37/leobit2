@@ -8,6 +8,26 @@ import { auth } from "../lib/auth";
 export const authRoutes = new Elysia()
   .all("/api/auth/*", async ({ request }) => {
     try {
+      // Debug: check if body stream is readable
+      console.log("[Auth] Method:", request.method, "URL:", request.url);
+      console.log("[Auth] Body locked?", request.body?.locked);
+      console.log("[Auth] bodyUsed?", request.bodyUsed);
+
+      // Read the body ourselves first to verify the stream is intact
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        const bodyText = await request.text();
+        console.log("[Auth] Body read OK, length:", bodyText.length, "content:", bodyText.substring(0, 200));
+
+        // Create a new Request with the body text (not a stream)
+        const newRequest = new Request(request.url, {
+          method: request.method,
+          headers: request.headers,
+          body: bodyText,
+        });
+        const response = await auth.handler(newRequest);
+        return response;
+      }
+
       return await auth.handler(request);
     } catch (error) {
       console.error("[Auth Handler Error]", error);
