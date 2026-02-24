@@ -1,5 +1,5 @@
-# Dockerfile for Avileo App (React Router v7 + Bun)
-# Multi-stage build for production optimization
+# Dockerfile for Avileo App (React Router v7)
+# Multi-stage build: Bun for deps, Node.js for build, Bun for runtime
 
 # Stage 1: Dependencies
 FROM oven/bun:1.1.38-slim AS deps
@@ -8,14 +8,14 @@ WORKDIR /app
 # Copy all files (respecting .dockerignore)
 COPY . .
 
-# Install dependencies
+# Install dependencies (creates proper workspace symlinks)
 RUN bun install --frozen-lockfile
 
-# Stage 2: Builder
-FROM oven/bun:1.1.38-slim AS builder
+# Stage 2: Builder (Node.js for React Router compatibility)
+FROM node:20-slim AS builder
 WORKDIR /app
 
-# Copy everything from deps (includes installed node_modules with correct symlinks)
+# Copy all files including installed node_modules
 COPY --from=deps /app ./
 
 # Build arguments for environment variables
@@ -27,13 +27,13 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 ENV NODE_ENV=production
 
-# Build shared package first
-RUN cd packages/shared && bun run build
+# Build shared package first (tsup works with Node.js)
+RUN cd packages/shared && npm run build
 
-# Build the application
-RUN cd packages/app && bun run build
+# Build the application with Node.js (avoids Bun's renderToPipeableStream issue)
+RUN cd packages/app && npm run build
 
-# Stage 3: Production
+# Stage 3: Production (Bun for runtime)
 FROM oven/bun:1.1.38-slim AS runner
 WORKDIR /app
 
