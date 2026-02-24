@@ -8,12 +8,6 @@ services:
       DOPPLER_CONFIG: dev
       NODE_ENV: production
       PORT: 3000
-    labels:
-      - 'traefik.enable=true'
-      - 'traefik.http.routers.avileo-backend.rule=Host(`avileoapi.theelena.me`)'
-      - 'traefik.http.routers.avileo-backend.entrypoints=websecure'
-      - 'traefik.http.routers.avileo-backend.tls.certresolver=letsencrypt'
-      - 'traefik.http.services.avileo-backend.loadbalancer.server.port=3000'
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/health']
       interval: 30s
@@ -22,6 +16,7 @@ services:
       start_period: 10s
     networks:
       - avileo-network
+      - dokploy-network
 
   app:
     image: ghcr.io/${GHCR_NAMESPACE}/avileo-app:${APP_IMAGE_TAG:-latest}
@@ -32,18 +27,15 @@ services:
       DOPPLER_CONFIG: dev
       NODE_ENV: production
       PORT: 3000
-    labels:
-      - 'traefik.enable=true'
-      - 'traefik.http.routers.avileo-app.rule=Host(`avileo.theelena.me`)'
-      - 'traefik.http.routers.avileo-app.entrypoints=websecure'
-      - 'traefik.http.routers.avileo-app.tls.certresolver=letsencrypt'
-      - 'traefik.http.services.avileo-app.loadbalancer.server.port=3000'
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - avileo-network
+      - dokploy-network
 
 networks:
   avileo-network:
     name: avileo-network
+  dokploy-network:
+    external: true
