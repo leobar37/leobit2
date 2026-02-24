@@ -39,12 +39,13 @@ RUN cd packages/backend && bunx drizzle-kit generate
 FROM oven/bun:1.3.6-slim AS runner
 WORKDIR /app
 
-# Install production dependencies only
-COPY bunfig.toml package.json bun.lock ./
+# Copy package files for workspace resolution
+COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN bun install --production --no-save
+# Copy node_modules from deps stage (avoids frozen lockfile issues in monorepo)
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
