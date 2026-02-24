@@ -5,10 +5,9 @@ services:
     restart: unless-stopped
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+      DOPPLER_CONFIG: dev
       NODE_ENV: production
       PORT: 3000
-      FRONTEND_URL: https://avileo.theelena.me
-      BETTER_AUTH_BASE_URL: https://avileoapi.theelena.me
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.avileo-backend.rule=Host(`avileoapi.theelena.me`)'
@@ -30,6 +29,7 @@ services:
     restart: unless-stopped
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+      DOPPLER_CONFIG: dev
       NODE_ENV: production
       PORT: 3000
     labels:
