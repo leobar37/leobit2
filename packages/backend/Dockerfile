@@ -44,7 +44,7 @@ COPY bunfig.toml package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN bun install --production
+RUN bun install --production --no-save
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
