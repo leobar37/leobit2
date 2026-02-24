@@ -72,26 +72,46 @@ const app = new Elysia()
     status: "healthy",
     timestamp: new Date().toISOString(),
   }))
-  .get("/health/db", async () => {
+  .get("/health/db", async ({ set }) => {
     const start = Date.now();
     try {
-      // Test raw DB connectivity
-      const pingResult = await db.execute(sql`SELECT 1 as ping`);
+      const dbUrl = process.env.DATABASE_URL;
+      console.log("[health/db] DATABASE_URL exists:", !!dbUrl, "length:", dbUrl?.length ?? 0);
+
+      if (!dbUrl) {
+        set.status = 500;
+        return {
+          status: "error",
+          error: "DATABASE_URL is not set",
+          env_keys: Object.keys(process.env).filter(k => k.includes("DATABASE") || k.includes("DOPPLER") || k.includes("BETTER_AUTH")),
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      // Test raw DB connectivity with timeout
+      const pingResult = await Promise.race([
+        db.execute(sql`SELECT 1 as ping`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("DB ping timed out after 10s")), 10000)),
+      ]);
       const pingMs = Date.now() - start;
 
       // Count users to verify schema access
-      const userCount = await db.execute(sql`SELECT count(*) as count FROM "user"`);
+      const userCount = await Promise.race([
+        db.execute(sql`SELECT count(*) as count FROM "user"`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("User count query timed out after 10s")), 10000)),
+      ]);
       const totalMs = Date.now() - start;
 
       return {
         status: "connected",
-        ping: pingResult.rows?.[0] ?? null,
-        userCount: userCount.rows?.[0] ?? null,
+        ping: (pingResult as any).rows?.[0] ?? null,
+        userCount: (userCount as any).rows?.[0] ?? null,
         latency: { pingMs, totalMs },
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const ms = Date.now() - start;
+      set.status = 500;
       return {
         status: "error",
         error: error instanceof Error ? error.message : String(error),
@@ -142,5 +162,9 @@ const app = new Elysia()
 console.log(
   `🦊 Avileo backend running at http://${app.server?.hostname}:${app.server?.port}`
 );
+
+// Startup diagnostics
+console.log("[Startup] DATABASE_URL set:", !!process.env.DATABASE_URL, "length:", process.env.DATABASE_URL?.length ?? 0);
+console.log("[Startup] BETTER_AUTH_BASE_URL:", process.env.BETTER_AUTH_BASE_URL ?? "NOT SET");
 
 export type App = typeof app;
