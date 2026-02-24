@@ -2,7 +2,6 @@
 
 import { atom, useAtom } from "jotai";
 import { useCallback } from "react";
-import { Dialog, DialogContent } from "~/components/ui/dialog";
 import { Drawer, DrawerContent } from "~/components/ui/drawer";
 import { Sheet, SheetContent } from "~/components/ui/sheet";
 import { useIsMobile } from "~/hooks/use-mobile";
@@ -116,13 +115,13 @@ export function createModal<TProps extends object>(
         </Sheet>
       );
     }
-
+    // Default to drawer for mobile-first approach
     return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
-        <DialogContent className="flex flex-col max-h-[90vh] p-0 sm:px-6">
+      <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
+        <DrawerContent className="flex flex-col max-h-[85vh]">
           {content}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     );
   }
 

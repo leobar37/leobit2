@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { DistribucionTable } from "~/components/distribucion/distribucion-table";
 import {
@@ -109,20 +109,20 @@ export default function DistribucionesPage() {
             </Link>
             <h1 className="text-lg font-semibold">Distribuciones</h1>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
+          <Drawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DrawerTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600">
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Nueva Distribución</DialogTitle>
-              </DialogHeader>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Nueva Distribución</DrawerTitle>
+              </DrawerHeader>
               <CreateDistribucionForm onSubmit={handleCreate} />
-            </DialogContent>
-          </Dialog>
+            </DrawerContent>
+          </Drawer>
         </div>
       </header>
 
@@ -173,22 +173,22 @@ export default function DistribucionesPage() {
         />
       </main>
 
-      <Dialog
+      <Drawer
         open={!!editingDistribucion}
         onOpenChange={() => setEditingDistribucion(null)}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Distribución</DialogTitle>
-          </DialogHeader>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Editar Distribución</DrawerTitle>
+          </DrawerHeader>
           {editingDistribucion && (
             <EditDistribucionForm
               distribucion={editingDistribucion}
               onSubmit={handleEdit}
             />
           )}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
       <ConfirmDialog />
     </div>

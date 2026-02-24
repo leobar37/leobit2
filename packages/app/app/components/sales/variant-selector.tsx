@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Package, ChevronRight, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProducts } from "~/hooks/use-products-live";
@@ -69,10 +69,10 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
   }, [step, activeVariants, selectedVariant]);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Drawer open={open} onOpenChange={handleClose}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle className="flex items-center gap-2">
             {step === "products" ? (
               <>
                 <Package className="h-5 w-5 text-orange-500" />
@@ -95,8 +95,8 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                 )}
               </>
             )}
-          </DialogTitle>
-        </DialogHeader>
+          </DrawerTitle>
+        </DrawerHeader>
 
         <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2">
           {step === "products" ? (
@@ -198,7 +198,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
             </Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

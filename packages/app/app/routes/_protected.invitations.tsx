@@ -12,13 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { FormInput } from "@/components/forms/form-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -202,20 +202,20 @@ export default function InvitationsPage() {
           <span className="font-bold text-lg text-foreground flex-1">
             Invitaciones
           </span>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
+          <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DrawerTrigger asChild>
               <Button size="sm" className="rounded-xl">
                 <Plus className="h-4 w-4 mr-1" />
                 Invitar
               </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-3xl">
-              <DialogHeader>
-                <DialogTitle>Invitar vendedor</DialogTitle>
-                <DialogDescription>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Invitar vendedor</DrawerTitle>
+                <DrawerDescription>
                   Crea una invitación para unir un vendedor a tu negocio
-                </DialogDescription>
-              </DialogHeader>
+                </DrawerDescription>
+              </DrawerHeader>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormInput
                   label="Nombre del vendedor"
@@ -256,8 +256,8 @@ export default function InvitationsPage() {
                   )}
                 </Button>
               </form>
-            </DialogContent>
-          </Dialog>
+            </DrawerContent>
+          </Drawer>
         </div>
       </header>
 

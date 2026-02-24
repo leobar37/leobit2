@@ -2,12 +2,12 @@ import { useState } from "react";
 import { X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { AssetGallery } from "./asset-gallery";
 import type { Asset } from "~/hooks/use-assets";
 
@@ -55,8 +55,8 @@ export function AssetPicker({
           </Button>
         </div>
       ) : (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
             <Button
               variant="outline"
               className="w-32 h-32 rounded-xl border-dashed flex flex-col gap-2"
@@ -64,19 +64,19 @@ export function AssetPicker({
               <ImageIcon className="h-8 w-8 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{placeholder}</span>
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Galería de imágenes</DialogTitle>
-            </DialogHeader>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Galería de imágenes</DrawerTitle>
+            </DrawerHeader>
             <AssetGallery
               onSelect={handleSelect}
               selectedId={value}
               allowUpload={true}
               allowDelete={true}
             />
-          </DialogContent>
-        </Dialog>
+          </DrawerContent>
+        </Drawer>
       )}
     </div>
   );

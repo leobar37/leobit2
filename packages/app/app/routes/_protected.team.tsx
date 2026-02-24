@@ -12,12 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { useForm } from "react-hook-form";
@@ -248,14 +248,14 @@ export default function TeamPage() {
         </div>
       </main>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>Editar miembro</DialogTitle>
-            <DialogDescription>
+      <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Editar miembro</DrawerTitle>
+            <DrawerDescription>
               Actualiza el rol o punto de venta de {editingMember?.name}
-            </DialogDescription>
-          </DialogHeader>
+            </DrawerDescription>
+          </DrawerHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Rol</label>
@@ -299,8 +299,8 @@ export default function TeamPage() {
               )}
             </Button>
           </form>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
       <ConfirmDialog />
     </div>

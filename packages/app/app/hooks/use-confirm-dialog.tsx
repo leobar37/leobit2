@@ -1,12 +1,12 @@
 import { useState, useCallback } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
 interface ConfirmOptions {
@@ -61,15 +61,15 @@ export function useConfirmDialog() {
 
   const ConfirmDialog = useCallback(() => {
     return (
-      <Dialog open={state.isOpen} onOpenChange={(open) => !open && handleCancel()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{state.title}</DialogTitle>
+      <Drawer open={state.isOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{state.title}</DrawerTitle>
             {state.description && (
-              <DialogDescription>{state.description}</DialogDescription>
+              <DrawerDescription>{state.description}</DrawerDescription>
             )}
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          </DrawerHeader>
+          <DrawerFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleCancel}>
               {state.cancelText}
             </Button>
@@ -84,9 +84,9 @@ export function useConfirmDialog() {
             >
               {state.confirmText}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     );
   }, [state, handleConfirm, handleCancel]);
 
