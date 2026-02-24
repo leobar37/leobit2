@@ -18,11 +18,11 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:1.1.38-slim AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy all dependencies (including workspace symlinks) from deps stage
+COPY --from=deps /app ./
 
 # Copy source code
-COPY package.json bun.lock turbo.json ./
+COPY turbo.json ./
 COPY packages/app ./packages/app
 COPY packages/shared ./packages/shared
 
