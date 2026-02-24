@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { errorPlugin } from "./plugins/error-handler";
-import { authHandler } from "./api/auth";
+import { authRoutes } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
@@ -59,7 +59,7 @@ const app = new Elysia()
   .use(supplierRoutes)
   .use(purchaseRoutes)
   .use(paymentMethodConfigRoutes)
-  .mount(authHandler)
+  .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",
