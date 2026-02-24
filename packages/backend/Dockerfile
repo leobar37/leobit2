@@ -2,7 +2,7 @@
 # Multi-stage build for production optimization
 
 # Stage 1: Dependencies
-FROM oven/bun:1.2-slim AS deps
+FROM oven/bun:1.3.6-slim AS deps
 WORKDIR /app
 
 # Copy package files
@@ -11,10 +11,10 @@ COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies
-RUN bun install --no-frozen-lockfile
+RUN bun install --frozen-lockfile
 
 # Stage 2: Builder
-FROM oven/bun:1.2-slim AS builder
+FROM oven/bun:1.3.6-slim AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
@@ -35,7 +35,7 @@ RUN cd packages/backend && bun run build
 RUN cd packages/backend && bunx drizzle-kit generate
 
 # Stage 3: Production
-FROM oven/bun:1.2-slim AS runner
+FROM oven/bun:1.3.6-slim AS runner
 WORKDIR /app
 
 # Install production dependencies only
@@ -43,7 +43,7 @@ COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN bun install --production --no-frozen-lockfile
+RUN bun install --frozen-lockfile --production
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
