@@ -18,6 +18,16 @@ export const authRoutes = new Elysia()
   })
   .all("/*", async ({ request, set }) => {
     console.log(`[AUTH] Starting handler for ${request.method} ${request.url}`);
+    
+    // Log all headers for debugging
+    console.log(`[AUTH] Headers:`);
+    request.headers.forEach((value, key) => {
+      console.log(`  ${key}: ${value}`);
+    });
+    
+    // Check for request body issues
+    console.log(`[AUTH] Request bodyUsed: ${(request as any).bodyUsed}`);
+    
     try {
       console.log(`[AUTH] Calling auth.handler...`);
       const startTime = Date.now();
