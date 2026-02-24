@@ -1,5 +1,8 @@
 import { Elysia } from "elysia";
+import { sql } from "drizzle-orm";
 import { errorPlugin } from "./plugins/error-handler";
+import { db } from "./lib/db";
+import { auth } from "./lib/auth";
 import { authRoutes } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
@@ -69,6 +72,68 @@ const app = new Elysia()
     status: "healthy",
     timestamp: new Date().toISOString(),
   }))
+  .get("/health/db", async () => {
+    const start = Date.now();
+    try {
+      // Test raw DB connectivity
+      const pingResult = await db.execute(sql`SELECT 1 as ping`);
+      const pingMs = Date.now() - start;
+
+      // Count users to verify schema access
+      const userCount = await db.execute(sql`SELECT count(*) as count FROM "user"`);
+      const totalMs = Date.now() - start;
+
+      return {
+        status: "connected",
+        ping: pingResult.rows?.[0] ?? null,
+        userCount: userCount.rows?.[0] ?? null,
+        latency: { pingMs, totalMs },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      const ms = Date.now() - start;
+      return {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+        latencyMs: ms,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  })
+  .get("/debug/auth-direct", async ({ set }) => {
+    try {
+      console.log("[Debug] Calling auth.api.signInEmail directly...");
+      const start = Date.now();
+
+      const result = await Promise.race([
+        auth.api.signInEmail({
+          body: {
+            email: "demo@avileo.com",
+            password: "demo123456",
+          },
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("auth.api.signInEmail timed out after 15s")), 15000)
+        ),
+      ]);
+
+      const ms = Date.now() - start;
+      console.log("[Debug] auth.api.signInEmail returned in", ms, "ms", result);
+
+      return {
+        status: "success",
+        latencyMs: ms,
+        result,
+      };
+    } catch (error) {
+      console.error("[Debug] auth.api.signInEmail error:", error);
+      set.status = 500;
+      return {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
   .listen({
     port: Number(process.env.PORT) || 3000,
     hostname: "0.0.0.0",
