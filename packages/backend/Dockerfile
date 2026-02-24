@@ -5,7 +5,8 @@
 FROM oven/bun:1.3.6-slim AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy package files and bunfig.toml (disables frozen lockfile in CI)
+COPY bunfig.toml ./
 COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
@@ -39,7 +40,7 @@ FROM oven/bun:1.3.6-slim AS runner
 WORKDIR /app
 
 # Install production dependencies only
-COPY package.json bun.lock ./
+COPY bunfig.toml package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
