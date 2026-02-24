@@ -24,6 +24,13 @@ import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 const corsConfig = getCorsConfig();
 
 const app = new Elysia()
+  .onRequest(({ request }) => {
+    console.log(`[${new Date().toISOString()}] ${request.method} ${request.url}`);
+  })
+  .onError(({ code, error, request }) => {
+    console.error(`[ERROR ${code}] ${request.method} ${request.url}:`, error);
+    return { code, message: error.message };
+  })
   .use(errorPlugin)
   .options("/*", ({ request, set }) => {
     const requestOrigin = request.headers.get("origin");
