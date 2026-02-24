@@ -4,13 +4,7 @@ import { bearer } from "better-auth/plugins";
 import { db } from "./db";
 import { getCorsConfig } from "./cors";
 
-console.log("[AUTH INIT] Starting Better Auth initialization...");
-
 const corsConfig = getCorsConfig();
-console.log("[AUTH INIT] CORS config:", { allowedOrigins: corsConfig.allowedOrigins });
-
-console.log("[AUTH INIT] Database URL present:", !!process.env.DATABASE_URL);
-console.log("[AUTH INIT] Base URL:", process.env.BETTER_AUTH_BASE_URL);
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_BASE_URL || "http://localhost:5201",
@@ -41,7 +35,5 @@ export const auth = betterAuth({
     },
   },
 });
-
-console.log("[AUTH INIT] Better Auth initialized successfully");
 
 export type Auth = typeof auth;
