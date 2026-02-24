@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -120,6 +121,7 @@ export default function TeamPage() {
   const { data: team, isLoading } = useTeam();
   const updateMember = useUpdateTeamMember();
   const deactivateMember = useDeactivateTeamMember();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -141,7 +143,15 @@ export default function TeamPage() {
   };
 
   const handleDeactivate = async (id: string) => {
-    if (confirm("¿Estás seguro de desactivar este miembro?")) {
+    const confirmed = await confirm({
+      title: "Desactivar miembro",
+      description: "¿Estás seguro de desactivar este miembro? Esta acción no se puede deshacer.",
+      confirmText: "Desactivar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       try {
         await deactivateMember.mutateAsync(id);
       } catch (error) {
@@ -291,6 +301,8 @@ export default function TeamPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog />
     </div>
   );
 }

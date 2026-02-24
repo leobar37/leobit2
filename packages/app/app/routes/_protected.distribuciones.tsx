@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { DistribucionTable } from "~/components/distribucion/distribucion-table";
 import {
   useDistribuciones,
@@ -46,6 +47,7 @@ export default function DistribucionesPage() {
   const updateMutation = useUpdateDistribucion();
   const closeMutation = useCloseDistribucion();
   const deleteMutation = useDeleteDistribucion();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const distribuciones = Array.isArray(distribucionesData) ? distribucionesData : [];
   const totalAsignado = distribuciones.reduce(
@@ -68,13 +70,29 @@ export default function DistribucionesPage() {
   };
 
   const handleClose = async (id: string) => {
-    if (confirm("¿Estás seguro de cerrar esta distribución?")) {
+    const confirmed = await confirm({
+      title: "Cerrar distribución",
+      description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer.",
+      confirmText: "Cerrar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       await closeMutation.mutateAsync(id);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de eliminar esta distribución?")) {
+    const confirmed = await confirm({
+      title: "Eliminar distribución",
+      description: "¿Estás seguro de eliminar esta distribución? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       await deleteMutation.mutateAsync(id);
     }
   };
@@ -171,6 +189,8 @@ export default function DistribucionesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog />
     </div>
   );
 }

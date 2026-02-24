@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCustomer } from "~/hooks/use-customer";
 import { useSales } from "~/hooks/use-sales";
@@ -67,7 +68,7 @@ export default function CustomerDetailPage() {
           </button>
           <h1 className="font-bold text-lg truncate">{customer.name}</h1>
           <div className="flex items-center gap-1 ml-auto">
-            {user?.role === 'admin' && (
+            {user && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="p-2 rounded-xl hover:bg-red-50 text-red-600"
@@ -87,7 +88,6 @@ export default function CustomerDetailPage() {
       </header>
 
       <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
-        {/* Customer Info Card */}
         <Card className="border-0 shadow-md rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -125,13 +125,11 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Balance Card */}
         <BalanceCard
           balance={currentBalance}
           onRegisterPayment={() => setShowPaymentForm(true)}
         />
 
-        {/* Payment Form Modal */}
         {showPaymentForm && (
           <PaymentForm
             clientId={id!}
@@ -140,7 +138,6 @@ export default function CustomerDetailPage() {
           />
         )}
 
-        {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
@@ -162,7 +159,7 @@ export default function CustomerDetailPage() {
                       navigate('/clientes');
                     } catch (error) {
                       console.error('Error deleting customer:', error);
-                      alert('Error al eliminar el cliente');
+                      toast.error('Error al eliminar el cliente');
                     }
                   }}
                   disabled={deleteCustomer.isPending}

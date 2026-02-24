@@ -13,6 +13,7 @@ import type { Route } from "./+types/root";
 import { Loader2 } from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { Toaster } from "sonner";
 
 export function HydrateFallback() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <Toaster position="top-center" />
     </QueryClientProvider>
   );
 }

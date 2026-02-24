@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Calculator,
@@ -45,8 +46,8 @@ export default function CierreDiaPage() {
       await createClosing.mutateAsync({
         closingDate: new Date().toISOString().split("T")[0],
         totalSales: todayStats.count,
-        totalAmount: todayStats.total,
-        cashAmount: todayStats.total,
+        totalAmount: parseFloat(todayStats.total),
+        cashAmount: parseFloat(todayStats.total),
         creditAmount: 0,
         totalKilos: totalKilos,
       });
@@ -54,7 +55,7 @@ export default function CierreDiaPage() {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error creating closing:", error);
-      alert("Error al generar el cierre");
+      toast.error("Error al generar el cierre");
     }
   };
 
