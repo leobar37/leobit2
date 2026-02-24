@@ -8,38 +8,60 @@ import { auth } from "../lib/auth";
 export const authRoutes = new Elysia()
   .all("/api/auth/*", async ({ request, set }) => {
     try {
-      // Debug: check if body stream is readable
       console.log("[Auth] Method:", request.method, "URL:", request.url);
+      console.log("[Auth] bodyUsed:", request.bodyUsed, "body locked:", request.body?.locked);
 
-      let authRequest = request;
-
-      // For POST/PUT/PATCH: read body and create new Request
-      // to avoid body stream issues with Bun
       if (request.method !== "GET" && request.method !== "HEAD") {
+        // Read body and create a fresh Request with string body
+        // to avoid any body stream issues
         const bodyText = await request.text();
-        console.log("[Auth] Body read OK, length:", bodyText.length);
-        authRequest = new Request(request.url, {
-          method: request.method,
-          headers: request.headers,
+        console.log("[Auth] Body:", bodyText);
+        const url = new URL(request.url);
+        console.log("[Auth] Path:", url.pathname);
+
+        // Test: can we create a Request and read its body in Bun?
+        const testReq = new Request("http://localhost:3000/test", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
           body: bodyText,
         });
+        console.log("[Auth] Test req bodyUsed:", testReq.bodyUsed);
+        const testBody = await testReq.json();
+        console.log("[Auth] Test body read OK:", JSON.stringify(testBody));
+
+        // Now create the REAL request for Better Auth
+        const authReq = new Request(request.url, {
+          method: request.method,
+          headers: new Headers(request.headers),
+          body: bodyText,
+        });
+        console.log("[Auth] Created auth request, calling auth.handler...");
+
+        // Add a timeout race to detect if auth.handler hangs
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("auth.handler timed out after 10s")), 10000)
+        );
+        const response = await Promise.race([
+          auth.handler(authReq),
+          timeoutPromise,
+        ]);
+        console.log("[Auth] auth.handler returned, status:", response.status);
+
+        const responseBody = await response.text();
+        set.status = response.status;
+        response.headers.forEach((value, key) => {
+          set.headers[key] = value;
+        });
+        return responseBody;
       }
 
-      console.log("[Auth] Calling auth.handler...");
-      const response = await auth.handler(authRequest);
-      console.log("[Auth] auth.handler returned, status:", response.status);
-
-      // Extract response data and set via Elysia's set mechanism
-      // instead of returning raw Response (which Elysia may not handle correctly in .all())
+      // GET requests
+      const response = await auth.handler(request);
       const responseBody = await response.text();
-      console.log("[Auth] Response body length:", responseBody.length);
-
       set.status = response.status;
-      // Copy response headers
       response.headers.forEach((value, key) => {
         set.headers[key] = value;
       });
-
       return responseBody;
     } catch (error) {
       console.error("[Auth Handler Error]", error);
