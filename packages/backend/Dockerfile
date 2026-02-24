@@ -11,7 +11,7 @@ COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies
-RUN CI= bun install
+RUN bun install --no-frozen-lockfile
 
 # Stage 2: Builder
 FROM oven/bun:1.2-slim AS builder
@@ -43,7 +43,7 @@ COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN CI= bun install --production
+RUN bun install --production --no-frozen-lockfile
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
