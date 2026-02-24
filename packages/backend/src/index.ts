@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { errorPlugin } from "./plugins/error-handler";
-import { authRoutes } from "./api/auth";
+import { authHandler } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
@@ -24,7 +24,6 @@ import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 const corsConfig = getCorsConfig();
 
 const app = new Elysia()
-  .use(errorPlugin)
   .use(errorPlugin)
   .options("/*", ({ request, set }) => {
     const requestOrigin = request.headers.get("origin");
@@ -60,7 +59,7 @@ const app = new Elysia()
   .use(supplierRoutes)
   .use(purchaseRoutes)
   .use(paymentMethodConfigRoutes)
-  .use(authRoutes)
+  .mount(authHandler)
   .get("/", () => ({
     message: "Avileo Backend API",
     version: "1.0.0",

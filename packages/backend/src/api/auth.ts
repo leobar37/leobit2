@@ -1,59 +1,59 @@
-import { Elysia } from "elysia";
 import { auth } from "../lib/auth";
 import { getCorsConfig, getCorsOrigin } from "../lib/cors";
 
 const corsConfig = getCorsConfig();
 
-export const authRoutes = new Elysia()
-  .onRequest(({ request, set }) => {
-    if (request.method === "OPTIONS") {
-      const requestOrigin = request.headers.get("origin");
-      set.status = 204;
-      set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
-      set.headers["access-control-allow-credentials"] = corsConfig.credentials;
-      set.headers["access-control-allow-methods"] = corsConfig.methods;
-      set.headers["access-control-allow-headers"] = corsConfig.headers;
-      set.headers["access-control-max-age"] = corsConfig.maxAge;
-    }
-  })
-  .all("/*", async ({ request, set }) => {
-    try {
-      const response = await auth.handler(request);
+// Wrap auth.handler to add CORS headers to responses.
+// .mount() bypasses Elysia's lifecycle, so onAfterHandle CORS won't apply.
+  export const authHandler = async (request: Request): Promise<Response> => {
+  const requestOrigin = request.headers.get("origin");
+  const corsOrigin = getCorsOrigin(requestOrigin);
 
-      set.status = response.status;
+  // Handle OPTIONS preflight
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": corsOrigin,
+        "access-control-allow-credentials": corsConfig.credentials,
+        "access-control-allow-methods": corsConfig.methods,
+        "access-control-allow-headers": corsConfig.headers,
+        "access-control-max-age": corsConfig.maxAge,
+      },
+    });
+  }
 
-      const newHeaders: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        newHeaders[key] = value;
-      });
-      const requestOrigin = request.headers.get("origin");
-      newHeaders["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
-      newHeaders["access-control-allow-credentials"] = corsConfig.credentials;
+  try {
+    const response = await auth.handler(request);
 
-      set.headers = newHeaders;
+    // Clone headers and add CORS
+    const headers = new Headers(response.headers);
+    headers.set("access-control-allow-origin", corsOrigin);
+    headers.set("access-control-allow-credentials", corsConfig.credentials);
 
-      if (!response.body) {
-        return null;
-      }
-
-      const bodyText = await response.text();
-      try {
-        return JSON.parse(bodyText);
-      } catch {
-        return bodyText;
-      }
-    } catch (error) {
-      console.error("[Auth Handler Error]", error);
-      set.status = 500;
-      return {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error("[Auth Handler Error]", error);
+    return new Response(
+      JSON.stringify({
         success: false,
         error: {
           code: "AUTH_HANDLER_ERROR",
           message: error instanceof Error ? error.message : "Unknown error",
         },
-      };
-    }
-  }, {
-    body: undefined,
-    parse: false,
-  });
+      }),
+      {
+        status: 500,
+        headers: {
+          "content-type": "application/json",
+          "access-control-allow-origin": corsOrigin,
+          "access-control-allow-credentials": corsConfig.credentials,
+        },
+      }
+    );
+  }
+  };
