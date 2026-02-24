@@ -17,8 +17,15 @@ export const authRoutes = new Elysia()
     }
   })
   .all("/*", async ({ request, set }) => {
+    console.log(`[AUTH] Starting handler for ${request.method} ${request.url}`);
     try {
+      console.log(`[AUTH] Calling auth.handler...`);
+      const startTime = Date.now();
+      
       const response = await auth.handler(request);
+      
+      const duration = Date.now() - startTime;
+      console.log(`[AUTH] auth.handler completed in ${duration}ms, status: ${response.status}`);
 
       set.status = response.status;
 
@@ -33,17 +40,21 @@ export const authRoutes = new Elysia()
       set.headers = newHeaders;
 
       if (!response.body) {
+        console.log(`[AUTH] No response body`);
         return null;
       }
 
+      console.log(`[AUTH] Reading response body...`);
       const bodyText = await response.text();
+      console.log(`[AUTH] Response body: ${bodyText.substring(0, 200)}...`);
+      
       try {
         return JSON.parse(bodyText);
       } catch {
         return bodyText;
       }
     } catch (error) {
-      console.error("[Auth Handler Error]", error);
+      console.error(`[AUTH ERROR]`, error);
       set.status = 500;
       return {
         success: false,
