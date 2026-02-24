@@ -5,11 +5,8 @@
 FROM oven/bun:1.1.38-slim AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lock ./
-COPY packages/app/package.json ./packages/app/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/backend/package.json ./packages/backend/
+# Copy all files (respecting .dockerignore)
+COPY . .
 
 # Install dependencies
 RUN bun install --frozen-lockfile
@@ -18,22 +15,8 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:1.1.38-slim AS builder
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lock ./
-COPY packages/app/package.json ./packages/app/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/backend/package.json ./packages/backend/
-COPY turbo.json ./
-
-# Install dependencies (recreates workspace symlinks correctly)
-RUN bun install --frozen-lockfile
-
-# Copy source code
-COPY packages/app ./packages/app
-COPY packages/shared ./packages/shared
-
-# Build shared package first
-RUN cd packages/shared && bun run build
+# Copy everything from deps (includes installed node_modules with correct symlinks)
+COPY --from=deps /app ./
 
 # Build arguments for environment variables
 ARG VITE_API_URL
@@ -43,6 +26,9 @@ ARG VITE_BUILD_ID
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 ENV NODE_ENV=production
+
+# Build shared package first
+RUN cd packages/shared && bun run build
 
 # Build the application
 RUN cd packages/app && bun run build

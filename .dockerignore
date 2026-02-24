@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+*/node_modules
+packages/*/node_modules
+
+# Build outputs
+build
+dist
+*.tsbuildinfo
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Testing
+coverage
+.nyc_output
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
