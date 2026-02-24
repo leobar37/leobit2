@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Plus, ArrowLeft, Calendar, Trash2 } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, Trash2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "~/lib/utils";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { DistribucionTable } from "~/components/distribucion/distribucion-table";
 import {
@@ -35,6 +39,7 @@ function getTodayDate() {
 export default function DistribucionesPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [editingDistribucion, setEditingDistribucion] = useState<Distribucion | null>(
     null
   );
@@ -102,7 +107,7 @@ export default function DistribucionesPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center justify-between h-16 px-3 sm:px-4">
           <div className="flex items-center">
-            <Link to="/dashboard">
+            <Link to="/config">
               <Button variant="ghost" size="icon" className="mr-2">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -133,12 +138,53 @@ export default function DistribucionesPage() {
               <Calendar className="h-5 w-5 text-orange-600" />
               <span className="font-medium">{selectedDate}</span>
             </div>
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-xl"
-            />
+            <Button
+              variant="outline"
+              onClick={() => setIsDatePickerOpen(true)}
+              className={cn(
+                "w-full justify-start text-left font-normal rounded-xl",
+                !selectedDate && "text-muted-foreground"
+              )}
+            >
+              <Calendar className="mr-2 h-4 w-4 text-orange-600" />
+              {selectedDate ? (
+                format(new Date(selectedDate), "PPP", { locale: es })
+              ) : (
+                <span>Seleccionar fecha</span>
+              )}
+              <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+            </Button>
+
+            <Drawer open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+              <DrawerContent className="max-w-md mx-auto">
+                <DrawerHeader className="border-b border-orange-100">
+                  <DrawerTitle className="text-center text-lg">Seleccionar Fecha</DrawerTitle>
+                </DrawerHeader>
+                <div className="p-6 flex justify-center">
+                  <CalendarComponent
+                    mode="single"
+                    selected={new Date(selectedDate)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(format(date, "yyyy-MM-dd"));
+                        setIsDatePickerOpen(false);
+                      }
+                    }}
+                    className="[&_.rdp-caption]:text-orange-600 [&_.rdp-caption]:font-semibold [&_.rdp-caption]:text-lg [&_.rdp-head_cell]:text-orange-600 [&_.rdp-head_cell]:font-medium [&_.rdp-cell]:text-base [&_.rdp-button]:w-10 [&_.rdp-button]:h-10 [&_.rdp-day_today]:bg-orange-100 [&_.rdp-day_today]:text-orange-700 [&_.rdp-day_selected]:bg-orange-500 [&_.rdp-day_selected]:text-white"
+                    initialFocus
+                  />
+                </div>
+                <div className="p-4 border-t border-orange-100">
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl"
+                    onClick={() => setIsDatePickerOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </DrawerContent>
+            </Drawer>
           </CardContent>
         </Card>
 
