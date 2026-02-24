@@ -5,11 +5,8 @@
 FROM oven/bun:1.3.6-slim AS deps
 WORKDIR /app
 
-# Copy package files and bunfig.toml (disables frozen lockfile in CI)
-COPY bunfig.toml ./
-COPY package.json bun.lock ./
-COPY packages/backend/package.json ./packages/backend/
-COPY packages/shared/package.json ./packages/shared/
+# Copy all files (respecting .dockerignore)
+COPY . .
 
 # Install dependencies
 RUN bun install
@@ -18,13 +15,8 @@ RUN bun install
 FROM oven/bun:1.3.6-slim AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy source code
-COPY package.json bun.lock turbo.json ./
-COPY packages/backend ./packages/backend
-COPY packages/shared ./packages/shared
+# Copy everything from deps (includes installed node_modules with correct symlinks)
+COPY --from=deps /app ./
 
 # Build shared package first (required by backend)
 RUN cd packages/shared && bun run build
@@ -46,6 +38,8 @@ COPY packages/shared/package.json ./packages/shared/
 
 # Copy node_modules from deps stage (avoids frozen lockfile issues in monorepo)
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
