@@ -206,3 +206,86 @@ export interface UpdateTeamMemberInput {
   role?: "ADMIN_NEGOCIO" | "VENDEDOR";
   salesPoint?: string;
 }
+
+
+// Order Status
+export const OrderStatus = {
+  DRAFT: "draft",
+  CONFIRMED: "confirmed",
+  CANCELLED: "cancelled",
+  DELIVERED: "delivered",
+} as const;
+
+export type OrderStatusType = "draft" | "confirmed" | "cancelled" | "delivered";
+
+// Orders
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  variantId: string;
+  productName: string;
+  variantName: string;
+  orderedQuantity: string;
+  deliveredQuantity: string | null;
+  unitPriceQuoted: string;
+  unitPriceFinal: string | null;
+  isModified: boolean;
+  originalQuantity: string | null;
+}
+
+export interface Order {
+  id: string;
+  businessId: string;
+  clientId: string;
+  sellerId: string;
+  deliveryDate: string;
+  orderDate: string;
+  status: OrderStatusType;
+  paymentIntent: "contado" | "credito";
+  totalAmount: string;
+  confirmedSnapshot: Record<string, unknown> | null;
+  deliveredSnapshot: Record<string, unknown> | null;
+  version: number;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+  items?: OrderItem[];
+  client?: {
+    id: string;
+    name: string;
+    dni: string | null;
+    phone: string | null;
+  };
+}
+
+export interface CreateOrderInput {
+  clientId: string;
+  deliveryDate: string;
+  paymentIntent: "contado" | "credito";
+  totalAmount: number;
+  items: Array<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    orderedQuantity: number;
+    unitPriceQuoted: number;
+  }>;
+}
+
+export interface UpdateOrderInput {
+  baseVersion: number;
+  deliveryDate?: string;
+  paymentIntent?: "contado" | "credito";
+  totalAmount?: number;
+  items?: Array<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    orderedQuantity: number;
+    unitPriceQuoted: number;
+  }>;
+}

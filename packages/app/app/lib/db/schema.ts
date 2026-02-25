@@ -101,7 +101,7 @@ export interface CreateSaleInput {
 
 export const syncOperationSchema = z.object({
   id: z.string(),
-  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones"]),
+  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items"]),
   operation: z.enum(["insert", "update", "delete"]),
   entityId: z.string(),
   data: z.record(z.string(), z.unknown()),
@@ -111,3 +111,74 @@ export const syncOperationSchema = z.object({
 });
 
 export type SyncOperation = z.infer<typeof syncOperationSchema>;
+
+
+// Order schemas
+export const orderItemSchema = z.object({
+  id: z.string(),
+  orderId: z.string(),
+  productId: z.string(),
+  variantId: z.string(),
+  productName: z.string(),
+  variantName: z.string(),
+  orderedQuantity: z.string(),
+  deliveredQuantity: z.string().nullable(),
+  unitPriceQuoted: z.string(),
+  unitPriceFinal: z.string().nullable(),
+  isModified: z.boolean().default(false),
+  originalQuantity: z.string().nullable(),
+});
+
+export type OrderItem = z.infer<typeof orderItemSchema>;
+
+export const orderSchema = z.object({
+  id: z.string(),
+  businessId: z.string(),
+  clientId: z.string(),
+  sellerId: z.string(),
+  deliveryDate: z.string(),
+  orderDate: z.string(),
+  status: z.enum(["draft", "confirmed", "cancelled", "delivered"]),
+  paymentIntent: z.enum(["contado", "credito"]),
+  totalAmount: z.string(),
+  confirmedSnapshot: z.record(z.string(), z.unknown()).nullable(),
+  deliveredSnapshot: z.record(z.string(), z.unknown()).nullable(),
+  version: z.number().default(1),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  syncAttempts: z.number().default(0),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  items: z.array(orderItemSchema).optional(),
+  client: z.object({
+    id: z.string(),
+    name: z.string(),
+    dni: z.string().nullable(),
+    phone: z.string().nullable(),
+  }).optional(),
+});
+
+export type Order = z.infer<typeof orderSchema>;
+
+export interface CreateOrderInput {
+  clientId: string;
+  deliveryDate: string;
+  paymentIntent: "contado" | "credito";
+  totalAmount: number;
+  items: Array<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    orderedQuantity: number;
+    unitPriceQuoted: number;
+  }>;
+}
+
+export interface CreateOrderItemInput {
+  productId: string;
+  variantId: string;
+  productName: string;
+  variantName: string;
+  orderedQuantity: number;
+  unitPriceQuoted: number;
+}

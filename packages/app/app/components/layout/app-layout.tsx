@@ -12,6 +12,7 @@ import {
 import {
   Home,
   ShoppingCart,
+  ClipboardList,
   Users,
   Menu,
   LogOut,
@@ -32,6 +33,7 @@ import {
 const menuItems = [
   { icon: Home, label: "Inicio", href: "/dashboard" },
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
+  { icon: ClipboardList, label: "Pedidos", href: "/pedidos" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Menu, label: "Más", href: "/config" },
