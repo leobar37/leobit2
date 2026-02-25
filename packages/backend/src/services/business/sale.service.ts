@@ -8,6 +8,8 @@ import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale } from "../../db/schema";
 import { db } from "../../lib/db";
 import { toISODateString, now } from "../../lib/date-utils";
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
   constructor(
     private repository: SaleRepository,
@@ -196,6 +198,45 @@ export class SaleService {
 
   async getTodayStats(ctx: RequestContext): Promise<{ count: number; total: string }> {
     return this.repository.getTotalSalesToday(ctx);
+  }
+
+  async createFromOrder(
+    ctx: RequestContext,
+    data: {
+      orderId: string;
+      clientId: string;
+      saleType: "contado" | "credito";
+      totalAmount: string;
+      amountPaid: string;
+      balanceDue: string;
+      items: Array<{
+        productId: string;
+        productName: string;
+        variantId: string;
+        variantName: string;
+        quantity: string;
+        unitPrice: string;
+        subtotal: string;
+      }>;
+    },
+    tx?: DbTransaction
+  ): Promise<Sale> {
+    const existing = await this.repository.findByOrderId(ctx, data.orderId);
+    if (existing) {
+      return existing;
+    }
+
+    const payload: CreateSaleInput = {
+      clientId: data.clientId,
+      orderId: data.orderId,
+      saleType: data.saleType,
+      totalAmount: data.totalAmount,
+      amountPaid: data.amountPaid,
+      balanceDue: data.balanceDue,
+      items: data.items,
+    };
+
+    return this.repository.create(ctx, payload, tx);
   }
 
   private normalizeAmount(value: number, field: string): number {

@@ -24,6 +24,8 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
               t.Literal("customers"),
               t.Literal("sales"),
               t.Literal("sale_items"),
+              t.Literal("orders"),
+              t.Literal("order_items"),
               t.Literal("abonos"),
               t.Literal("distribuciones"),
             ]),

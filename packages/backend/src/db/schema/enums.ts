@@ -22,6 +22,12 @@ export const syncStatusEnum = pgEnum("sync_status", [
 
 // Sales
 export const saleTypeEnum = pgEnum("sale_type", ["contado", "credito"]);
+export const orderStatusEnum = pgEnum("order_status", [
+  "draft",
+  "confirmed",
+  "cancelled",
+  "delivered",
+]);
 
 // Payments
 export const paymentMethodEnum = pgEnum("payment_method", [

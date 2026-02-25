@@ -67,7 +67,7 @@
 | `packages/app/app/hooks/use-sales.ts` | Reference for frontend hooks | existing | useCreateSale:33-91 |
 | `packages/app/app/routes/_protected.ventas.nueva.tsx` | Reference for sales form UI | existing | NewSalePage:44-545 |
 | `packages/app/app/routes/_protected.ventas._index.tsx` | Reference for list UI | existing | SalesPage:12-110 |
-| `packages/backend/src/services/sync/sync.service.ts` | Sync engine integration | existing | handleUpsert:310-330 |
+| `packages/backend/src/services/sync/sync.service.ts` | Sync engine integration | existing | applyOperation + entity-specific handlers |
 
 ### Architecture Context
 - **Pattern to follow**: Repository pattern with RequestContext as first parameter, Service layer with business logic, Elysia routes for API
@@ -104,7 +104,8 @@
 - **Action**: Create new schema file for orders and order_items tables
 - **Files**: `packages/backend/src/db/schema/orders.ts` (new)
 - **Details**:
-  - Create orders table with fields: id, businessId, clientId, sellerId, deliveryDate, orderDate, status, paymentIntent, totalAmount, convertedToSaleId, confirmedSnapshot, deliveredSnapshot, version, syncStatus, syncAttempts, createdAt, updatedAt
+  - Create orders table with fields: id, businessId, clientId, sellerId, deliveryDate, orderDate, status, paymentIntent, totalAmount, confirmedSnapshot, deliveredSnapshot, version, syncStatus, syncAttempts, createdAt, updatedAt
+  - Use `sales.orderId` as the canonical conversion link (unique FK). Avoid duplicating link state in `orders` with `convertedToSaleId`.
   - Create order_items table with fields: id, orderId, productId, variantId, productName, variantName, orderedQuantity, deliveredQuantity, unitPriceQuoted, unitPriceFinal, isModified, originalQuantity
   - Add proper indexes: businessId+deliveryDate+status, businessId+clientId, businessId+syncStatus
   - Add relations definitions
@@ -288,8 +289,8 @@
 - **Files**: `packages/backend/src/services/sync/sync.service.ts`
 - **Details**:
   - Add "orders" and "order_items" to SyncEntity type
-  - Add case handling for orders in handleUpsert method
-  - Add case handling for order_items (nested under orders, similar to sale_items)
+  - Add `applyOrdersOperation()` and wire it in `applyOperation()` switch-case
+  - Keep `order_items` nested under `orders` (same strategy used for `sale_items`: no direct sync operation for item rows)
 - **Acceptance Criteria**:
   - [ ] Orders included in sync entities
   - [ ] Sync operations handle orders
@@ -321,7 +322,8 @@
 - **Files**: `packages/app/app/lib/db/schema.ts`
 - **Details**:
   - Add orderSchema and orderItemSchema
-  - Add to SyncEntity enum: 'orders', 'order_items'
+  - Update `syncOperationSchema` entity `z.enum([...])` to include `'orders'` and `'order_items'`
+  - Keep frontend entity enum values aligned with backend `SyncEntity` union
 - **Acceptance Criteria**:
   - [ ] Schemas match backend types
   - [ ] Sync entities updated
@@ -481,7 +483,7 @@
 - **Details**:
   - Add "Pedidos" tab to bottom nav
   - Use ClipboardList icon from lucide-react
-  - Position between Ventas and Clientes
+  - Update `menuItems` array explicitly: insert `Pedidos` immediately after `Ventas` (before `Cobros`)
 - **Acceptance Criteria**:
   - [ ] Tab visible in navigation
   - [ ] Active state works
