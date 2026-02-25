@@ -41,7 +41,7 @@ async function getSuppliers(): Promise<Supplier[]> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Supplier[];
+  return (data as { success: boolean; data: Supplier[] }).data;
 }
 
 async function getSupplier(id: string): Promise<Supplier> {

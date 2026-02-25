@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   CreditCard,
@@ -91,7 +92,13 @@ export default function PaymentMethodsConfigPage() {
   };
 
   const handleSave = async () => {
-    await updateMutation.mutateAsync(methods as any);
+    try {
+      await updateMutation.mutateAsync(methods as any);
+      toast.success("Métodos de pago guardados correctamente");
+    } catch (error) {
+      toast.error("Error al guardar los métodos de pago");
+      console.error(error);
+    }
   };
 
   if (isLoading) {

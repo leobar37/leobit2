@@ -37,7 +37,7 @@ async function getProducts(): Promise<Product[]> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Product[];
+  return (data as { success: boolean; data: Product[] }).data;
 }
 
 async function getProduct(id: string): Promise<Product> {

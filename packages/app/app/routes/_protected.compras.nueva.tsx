@@ -149,18 +149,20 @@ export default function NuevaCompraPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <FormInput
-                        name={`items.${index}.quantity`}
                         label="Cantidad"
                         type="number"
                         min="0.001"
                         step="0.001"
+                        error={form.formState.errors.items?.[index]?.quantity?.message}
+                        {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
                       />
                       <FormInput
-                        name={`items.${index}.unitCost`}
                         label="Costo unitario (S/)"
                         type="number"
                         min="0"
                         step="0.01"
+                        error={form.formState.errors.items?.[index]?.unitCost?.message}
+                        {...form.register(`items.${index}.unitCost`, { valueAsNumber: true })}
                       />
                     </div>
 

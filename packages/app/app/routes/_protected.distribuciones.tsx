@@ -31,6 +31,7 @@ import { useProducts, type Product } from "~/hooks/use-products";
 import { useVariantsByProduct, type ProductVariant } from "~/hooks/use-product-variants";
 import { useTeam } from "~/hooks/use-team";
 import { Badge } from "@/components/ui/badge";
+import { useBusiness } from "@/hooks/use-business";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
@@ -43,6 +44,8 @@ export default function DistribucionesPage() {
   const [editingDistribucion, setEditingDistribucion] = useState<Distribucion | null>(
     null
   );
+  const { data: business } = useBusiness();
+  const isAdmin = business?.role === "ADMIN_NEGOCIO";
 
   const { data: distribucionesData, isLoading } = useDistribuciones({
     fecha: selectedDate,
@@ -114,20 +117,22 @@ export default function DistribucionesPage() {
             </Link>
             <h1 className="text-lg font-semibold">Distribuciones</h1>
           </div>
-          <Drawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DrawerTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>Nueva Distribución</DrawerTitle>
-              </DrawerHeader>
-              <CreateDistribucionForm onSubmit={handleCreate} />
-            </DrawerContent>
-          </Drawer>
+          {isAdmin && (
+            <Drawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DrawerTrigger asChild>
+                <Button className="bg-orange-500 hover:bg-orange-600">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>Nueva Distribución</DrawerTitle>
+                </DrawerHeader>
+                <CreateDistribucionForm onSubmit={handleCreate} />
+              </DrawerContent>
+            </Drawer>
+          )}
         </div>
       </header>
 

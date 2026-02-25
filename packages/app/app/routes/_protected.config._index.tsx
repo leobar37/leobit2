@@ -64,14 +64,14 @@ const baseConfigItems: ConfigItem[] = [
     color: "text-purple-600",
     iconBg: "bg-purple-100",
   },
-  {
-    icon: Bell,
-    title: "Notificaciones",
-    description: "Alertas y recordatorios",
-    href: "/config/notifications",
-    color: "text-yellow-600",
-    iconBg: "bg-yellow-100",
-  },
+  // {
+  //   icon: Bell,
+  //   title: "Notificaciones",
+  //   description: "Alertas y recordatorios",
+  //   href: "/config/notifications",
+  //   color: "text-yellow-600",
+  //   iconBg: "bg-yellow-100",
+  // },
   {
     icon: Moon,
     title: "Apariencia",

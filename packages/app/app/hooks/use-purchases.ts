@@ -61,7 +61,7 @@ async function getPurchases(): Promise<Purchase[]> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Purchase[];
+  return (data as any).data as Purchase[];
 }
 
 async function getPurchase(id: string): Promise<Purchase> {
@@ -71,7 +71,7 @@ async function getPurchase(id: string): Promise<Purchase> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Purchase;
+  return (data as any).data as Purchase;
 }
 
 async function createPurchase(input: CreatePurchaseInput): Promise<Purchase> {

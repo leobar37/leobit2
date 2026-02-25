@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { ArrowLeft, Camera, Loader2, User } from "lucide-react";
 import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/use-profile";
 import { useFile } from "~/hooks/use-files";
@@ -52,7 +53,9 @@ export default function ProfilePage() {
   const onSubmit = async (data: ProfileFormData) => {
     try {
       await updateProfile.mutateAsync(data);
+      toast.success("Perfil actualizado correctamente");
     } catch (error) {
+      toast.error("Error al actualizar el perfil");
       console.error("Error updating profile:", error);
     }
   };
