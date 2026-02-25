@@ -99,15 +99,22 @@ async function getDistribucion(id: string): Promise<Distribucion> {
 }
 
 async function getMiDistribucion(fecha?: string): Promise<Distribucion | null> {
-  const { data, error } = await api.distribuciones.mine.get({
+  const response = await api.distribuciones.mine.get({
     query: fecha ? { fecha } : {},
   });
 
-  if (error) {
-    throw new Error(String(error.value));
+  if (response.error) {
+    throw new Error(String(response.error.value));
   }
 
-  return data as unknown as Distribucion | null;
+  // Eden Treaty returns { data: { success: boolean; data: T | null } }
+  // We need to access response.data.data to get the actual value
+  const apiResponse = response.data;
+  if (!apiResponse?.success) {
+    throw new Error(apiResponse?.error || "Failed to fetch distribucion");
+  }
+
+  return apiResponse.data as Distribucion | null;
 }
 
 async function getStockDisponible(
@@ -291,6 +298,9 @@ export function useMiDistribucion(fecha?: string) {
   return useQuery({
     queryKey: ["distribuciones", "mine", fecha],
     queryFn: () => getMiDistribucion(fecha),
+    staleTime: 0,  // Siempre refetch
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 

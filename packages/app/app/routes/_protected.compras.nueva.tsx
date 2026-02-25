@@ -12,6 +12,7 @@ import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSetLayout } from "~/components/layout/app-layout";
 import type { UseFormReturn } from "react-hook-form";
+import { getToday } from "~/lib/date-utils";
 
 const purchaseItemSchema = z.object({
   productId: z.string().min(1, "Selecciona un producto"),
@@ -46,7 +47,7 @@ export default function NuevaCompraPage() {
     mode: "onChange",
     defaultValues: {
       supplierId: "",
-      purchaseDate: new Date().toISOString().split("T")[0],
+      purchaseDate: getToday(),
       notes: "",
       items: [],
     },

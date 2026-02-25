@@ -18,6 +18,7 @@ import { es } from "date-fns/locale";
 import { cn } from "~/lib/utils";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { DistribucionTable } from "~/components/distribucion/distribucion-table";
+import { getToday } from "~/lib/date-utils";
 import {
   useDistribuciones,
   useCreateDistribucion,
@@ -34,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { useBusiness } from "@/hooks/use-business";
 
 function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
+  return getToday();
 }
 
 export default function DistribucionesPage() {

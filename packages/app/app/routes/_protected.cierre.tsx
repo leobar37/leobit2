@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTodayStats } from "~/hooks/use-sales";
 import { useCreateClosing, useClosingTodayStats } from "~/hooks/use-closings";
 import { useSales } from "~/hooks/use-sales";
+import { getToday, toISODateString, now, formatShortDate, parseISODate } from "~/lib/date-utils";
 
 export default function CierreDiaPage() {
   const { data: todayStats, isLoading: statsLoading } = useTodayStats();
@@ -25,8 +26,8 @@ export default function CierreDiaPage() {
 
   const todaySales =
     sales?.filter((sale) => {
-      const saleDate = new Date(sale.saleDate);
-      const today = new Date();
+      const saleDate = parseISODate(sale.saleDate);
+      const today = now();
       return (
         saleDate.getDate() === today.getDate() &&
         saleDate.getMonth() === today.getMonth() &&
@@ -44,7 +45,7 @@ export default function CierreDiaPage() {
 
     try {
       await createClosing.mutateAsync({
-        closingDate: new Date().toISOString().split("T")[0],
+        closingDate: getToday(),
         totalSales: todayStats.count,
         totalAmount: parseFloat(todayStats.total),
         cashAmount: parseFloat(todayStats.total),

@@ -4,6 +4,12 @@ export const TEST_USER = {
   name: "Usuario Demo",
 };
 
+// Helper function to get local date in YYYY-MM-DD format
+function getLocalDate(daysAgo = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+}
 export const TEST_BUSINESS = {
   name: "Pollos El Dorado",
   ruc: "12345678901",
@@ -434,7 +440,7 @@ export interface PurchaseData {
 export const PURCHASES: PurchaseData[] = [
   {
     supplierIndex: 0,
-    purchaseDate: new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0],
+    purchaseDate: getLocalDate(7),
     invoiceNumber: "F001-000123",
     notes: "Compra semanal de pollo",
     items: [
@@ -445,7 +451,7 @@ export const PURCHASES: PurchaseData[] = [
   },
   {
     supplierIndex: 1,
-    purchaseDate: new Date(Date.now() - 5 * 86400000).toISOString().split("T")[0],
+    purchaseDate: getLocalDate(5),
     invoiceNumber: "F001-000456",
     notes: "Compra de huevos",
     items: [
@@ -455,7 +461,7 @@ export const PURCHASES: PurchaseData[] = [
   },
   {
     supplierIndex: 2,
-    purchaseDate: new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0],
+    purchaseDate: getLocalDate(3),
     invoiceNumber: "F001-000789",
     notes: "Compra especial premium y menudencias",
     items: [
@@ -472,7 +478,7 @@ export const DISTRIBUCIONES: DistribucionData[] = [
     kilosAsignados: 50,
     kilosVendidos: 45.5,
     montoRecaudado: 841.75,
-    fecha: new Date(Date.now() - 0 * 86400000).toISOString().split("T")[0],
+    fecha: getLocalDate(0),
     estado: "activo",
   },
   {
@@ -480,7 +486,7 @@ export const DISTRIBUCIONES: DistribucionData[] = [
     kilosAsignados: 30,
     kilosVendidos: 28,
     montoRecaudado: 616.00,
-    fecha: new Date(Date.now() - 0 * 86400000).toISOString().split("T")[0],
+    fecha: getLocalDate(0),
     estado: "activo",
   },
   {
@@ -488,7 +494,7 @@ export const DISTRIBUCIONES: DistribucionData[] = [
     kilosAsignados: 45,
     kilosVendidos: 42,
     montoRecaudado: 777.00,
-    fecha: new Date(Date.now() - 1 * 86400000).toISOString().split("T")[0],
+    fecha: getLocalDate(1),
     estado: "cerrado",
   },
   {
@@ -496,7 +502,7 @@ export const DISTRIBUCIONES: DistribucionData[] = [
     kilosAsignados: 40,
     kilosVendidos: 38.5,
     montoRecaudado: 847.00,
-    fecha: new Date(Date.now() - 1 * 86400000).toISOString().split("T")[0],
+    fecha: getLocalDate(1),
     estado: "cerrado",
   },
   {
@@ -504,7 +510,7 @@ export const DISTRIBUCIONES: DistribucionData[] = [
     kilosAsignados: 55,
     kilosVendidos: 52,
     montoRecaudado: 962.00,
-    fecha: new Date(Date.now() - 2 * 86400000).toISOString().split("T")[0],
+    fecha: getLocalDate(2),
     estado: "cerrado",
   },
 ];
