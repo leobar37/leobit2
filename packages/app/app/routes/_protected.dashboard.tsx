@@ -23,11 +23,11 @@ import { InventoryCard } from "~/components/inventory/inventory-card";
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
-  const { data: distribucion } = useMiDistribucion();
+  const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
   const { data: accounts } = useAccountsReceivable();
 
   const usarDistribucion = business?.usarDistribucion ?? true;
-  const tieneDistribucion = !!distribucion;
+  const tieneDistribucion = !!distribucion && distribucion.kilosAsignados != null && distribucion.kilosAsignados > 0;
 
   const debtors = accounts?.filter((a) => a.totalDebt > 0) || [];
   const totalDebt = debtors.reduce((sum, d) => sum + d.totalDebt, 0);
@@ -43,7 +43,7 @@ export default function DashboardPage() {
         </CardHeader>
       </Card>
 
-      {usarDistribucion && tieneDistribucion && (
+      {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
         <Link to="/mi-distribucion" className="block">
           <InventoryCard
             kilosAsignados={distribucion.kilosAsignados}
@@ -53,7 +53,7 @@ export default function DashboardPage() {
         </Link>
       )}
 
-      {usarDistribucion && !tieneDistribucion && (
+      {usarDistribucion && !isLoadingDistribucion && !tieneDistribucion && (
         <Card className="border-0 shadow-md rounded-2xl bg-amber-50 border-amber-200">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">

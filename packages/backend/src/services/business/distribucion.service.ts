@@ -266,7 +266,7 @@ export class DistribucionService {
     }
 
     const fechaStr = fecha || getToday();
-    const distribucion = await this.repository.findByVendedorAndFechaActive(
+    const distribucion = await this.repository.findByVendedorAndFecha(
       ctx,
       vendedorId,
       fechaStr

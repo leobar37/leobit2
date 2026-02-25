@@ -175,7 +175,7 @@ export default function NewSalePage() {
     }
 
     persistSelection(selectedProduct.id, selectedVariant.id, values.pricePerKg);
-    handleReset();
+
   };
 
   const handleRemoveFromCart = (index: number) => {
@@ -444,7 +444,7 @@ export default function NewSalePage() {
           <Button
             variant="outline"
             onClick={() => setShowVariantSelector(true)}
-            className="w-full h-auto py-4 rounded-xl justify-start"
+            className="w-full h-auto py-4 rounded-xl justify-start items-start text-wrap"
           >
             <Box className="h-5 w-5 mr-3 text-orange-500" />
             <div className="text-left">
@@ -522,7 +522,7 @@ export default function NewSalePage() {
       </main>
 
       {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100">
+        <div className="fixed bottom-[72px] left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100 z-40">
           <Button
             onClick={handleSubmit}
             disabled={createSale.isPending || !canSubmit}
