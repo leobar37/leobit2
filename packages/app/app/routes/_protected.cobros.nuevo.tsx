@@ -86,9 +86,10 @@ export default function NuevoCobroPage() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
+    mode: "onChange",
     defaultValues: {
       amount: "",
       paymentMethod: "efectivo",
@@ -373,7 +374,7 @@ export default function NuevoCobroPage() {
       <Button
         type="submit"
         className="w-full h-14 text-lg font-semibold bg-orange-500 hover:bg-orange-600"
-        disabled={isSubmitting || !parsedAmount || parsedAmount <= 0}
+        disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0}
       >
         {isSubmitting ? (
           "Registrando..."

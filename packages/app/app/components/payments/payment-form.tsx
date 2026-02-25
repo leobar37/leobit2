@@ -51,7 +51,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
     handleSubmit,
     watch,
     setError,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<PaymentFormData>({
     resolver: zodResolver(
       maxAmount
@@ -67,6 +67,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
           )
         : paymentFormSchema
     ),
+    mode: "onChange",
     defaultValues: {
       amount: "",
       paymentMethod: "efectivo",
@@ -244,7 +245,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
 
             <Button
               type="submit"
-              disabled={createPayment.isPending}
+              disabled={createPayment.isPending || !isValid}
               className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
             >
               {createPayment.isPending ? "Guardando..." : "Registrar Abono"}

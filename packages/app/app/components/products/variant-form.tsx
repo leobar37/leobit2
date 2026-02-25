@@ -39,9 +39,10 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<VariantFormData>({
     resolver: zodResolver(variantSchema),
+    mode: "onChange",
     values: isEditing
       ? {
           name: variant.name,
@@ -151,7 +152,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
           <Button
             type="button"
             onClick={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading || !isValid}
             className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
           >
             {isLoading

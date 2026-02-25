@@ -23,6 +23,7 @@ export default function LoginPage() {
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
     defaultValues: {
       email: isDevelopment() ? DEV_CREDENTIALS.email : "",
       password: isDevelopment() ? DEV_CREDENTIALS.password : "",
@@ -90,7 +91,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-              disabled={form.formState.isSubmitting}
+              disabled={form.formState.isSubmitting || !form.formState.isValid}
             >
               {form.formState.isSubmitting ? (
                 <>

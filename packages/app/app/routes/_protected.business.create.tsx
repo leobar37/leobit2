@@ -30,6 +30,7 @@ export default function CreateBusinessPage() {
 
   const form = useForm<CreateBusinessFormData>({
     resolver: zodResolver(createBusinessSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       ruc: "",
@@ -122,7 +123,7 @@ export default function CreateBusinessPage() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-              disabled={createBusiness.isPending}
+              disabled={createBusiness.isPending || !form.formState.isValid}
             >
               {createBusiness.isPending ? (
                 <>

@@ -50,9 +50,10 @@ export function CustomerForm({ onSubmit, isLoading, customer }: CustomerFormProp
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
+    mode: "onChange",
     ...formConfig,
   });
 
@@ -132,7 +133,7 @@ export function CustomerForm({ onSubmit, isLoading, customer }: CustomerFormProp
 
         <Button
           onClick={handleSubmit(onSubmit)}
-          disabled={isLoading}
+          disabled={isLoading || !isValid}
           className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
         >
           {isLoading

@@ -165,7 +165,7 @@ export default function ProfilePage() {
                 <Button
                   type="submit"
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateProfile.isPending}
+                  disabled={updateProfile.isPending || !form.formState.isValid}
                 >
                   {updateProfile.isPending ? (
                     <>

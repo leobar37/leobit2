@@ -25,6 +25,7 @@ export default function SecurityPage() {
 
   const form = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
+    mode: "onChange",
     defaultValues: {
       currentPassword: "",
       newPassword: "",
@@ -126,7 +127,7 @@ export default function SecurityPage() {
                 <Button
                   type="submit"
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || !form.formState.isValid}
                 >
                   {form.formState.isSubmitting ? (
                     <>

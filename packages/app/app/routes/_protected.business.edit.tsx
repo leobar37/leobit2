@@ -42,6 +42,7 @@ export default function EditBusinessPage() {
 
   const form = useForm<UpdateBusinessFormData>({
     resolver: zodResolver(updateBusinessSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       ruc: "",
@@ -267,7 +268,7 @@ export default function EditBusinessPage() {
                 <Button
                   type="submit"
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateBusiness.isPending}
+                  disabled={updateBusiness.isPending || !form.formState.isValid}
                 >
                   {updateBusiness.isPending ? (
                     <>

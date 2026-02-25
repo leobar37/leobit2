@@ -143,6 +143,7 @@ export default function InvitationsPage() {
 
   const form = useForm<CreateInvitationFormData>({
     resolver: zodResolver(createInvitationSchema),
+    mode: "onChange",
     defaultValues: {
       email: "",
       name: "",
@@ -244,7 +245,7 @@ export default function InvitationsPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createInvitation.isPending}
+                  disabled={createInvitation.isPending || !form.formState.isValid}
                 >
                   {createInvitation.isPending ? (
                     <>

@@ -287,7 +287,7 @@ export default function TeamPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={updateMember.isPending}
+              disabled={updateMember.isPending || !form.formState.isValid}
             >
               {updateMember.isPending ? (
                 <>

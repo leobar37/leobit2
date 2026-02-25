@@ -35,9 +35,10 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
+    mode: "onChange",
     values: isEditing
       ? {
           name: product.name,
@@ -159,7 +160,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
 
         <Button
           onClick={handleSubmit(onSubmit)}
-          disabled={isLoading}
+          disabled={isLoading || !isValid}
           className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
         >
           {isLoading

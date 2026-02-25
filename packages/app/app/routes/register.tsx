@@ -31,6 +31,7 @@ export default function RegisterPage() {
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       email: "",
       password: "",
@@ -166,7 +167,7 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-              disabled={form.formState.isSubmitting || acceptInvitation.isPending}
+              disabled={form.formState.isSubmitting || !form.formState.isValid || acceptInvitation.isPending}
             >
               {form.formState.isSubmitting || acceptInvitation.isPending ? (
                 <>
