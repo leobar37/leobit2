@@ -85,6 +85,27 @@ export class DistribucionRepository {
       },
     });
   }
+  async findByVendedorAndFechaActive(
+    ctx: RequestContext,
+    vendedorId: string,
+    fecha: string
+  ): Promise<Distribucion | undefined> {
+    return db.query.distribuciones.findFirst({
+      where: and(
+        eq(distribuciones.businessId, ctx.businessId),
+        eq(distribuciones.vendedorId, vendedorId),
+        eq(distribuciones.fecha, fecha),
+        eq(distribuciones.estado, "activo")
+      ),
+      with: {
+        vendedor: {
+          with: {
+            business: true,
+          },
+        },
+      },
+    });
+  }
 
   async findByIdWithItems(
     ctx: RequestContext,

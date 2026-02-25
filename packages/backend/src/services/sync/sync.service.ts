@@ -6,6 +6,7 @@ import type { CustomerRepository } from "../repository/customer.repository";
 import type { SaleRepository } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
+import { toISODate, now, getToday } from "../../lib/date-utils";
 
 export type SyncEntity =
   | "customers"
@@ -90,7 +91,7 @@ export class SyncService {
 
     for (const operation of operations) {
       this.validateOperation(operation);
-      const nowIso = new Date().toISOString();
+      const nowIso = toISODate(now());
 
       const existing = await db.query.syncOperations.findFirst({
         where: and(
@@ -123,7 +124,7 @@ export class SyncService {
 
       try {
         await this.applyOperation(ctx, operation);
-        const processedAt = new Date();
+        const processedAt = now();
 
         await db
           .update(syncOperations)
@@ -142,7 +143,7 @@ export class SyncService {
         results.push({
           operationId: operation.operationId,
           success: true,
-          serverTimestamp: processedAt.toISOString(),
+            serverTimestamp: toISODate(processedAt),
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";

@@ -8,6 +8,7 @@ import {
   ForbiddenError,
   ConflictError,
 } from "../../errors";
+import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem } from "../../db/schema";
 
 interface DistribucionWithItems extends Distribucion {
@@ -117,7 +118,7 @@ export class DistribucionService {
       }
     }
 
-    const fecha = data.fecha || new Date().toISOString().split("T")[0];
+    const fecha = data.fecha || getToday();
     const exists = await this.repository.existsForVendedorAndFecha(
       ctx,
       data.vendedorId,
@@ -264,8 +265,8 @@ export class DistribucionService {
       throw new ForbiddenError("No puede ver la distribución de otro vendedor");
     }
 
-    const fechaStr = fecha || new Date().toISOString().split("T")[0];
-    const distribucion = await this.repository.findByVendedorAndFecha(
+    const fechaStr = fecha || getToday();
+    const distribucion = await this.repository.findByVendedorAndFechaActive(
       ctx,
       vendedorId,
       fechaStr

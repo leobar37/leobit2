@@ -7,7 +7,7 @@ import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale } from "../../db/schema";
 import { db } from "../../lib/db";
-
+import { toISODateString, now } from "../../lib/date-utils";
 export class SaleService {
   constructor(
     private repository: SaleRepository,
@@ -91,7 +91,7 @@ export class SaleService {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = toISODateString(now());
     const distribucion = await this.distribucionRepository.findByVendedorAndFecha(
       ctx,
       ctx.businessUserId,
