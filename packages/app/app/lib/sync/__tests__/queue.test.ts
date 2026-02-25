@@ -9,7 +9,7 @@ import {
   clear,
   type QueueOperation,
 } from "../queue";
-import type { SyncOperation } from "~/lib/db/schema";
+import type { SyncOperation } from "../../db/schema";
 import "fake-indexeddb/auto";
 
 describe("Sync Queue", () => {
@@ -34,7 +34,7 @@ describe("Sync Queue", () => {
       expect(queued.status).toBe("pending");
       expect(queued.retryCount).toBe(0);
       expect(queued.id).toBe("op-1");
-    });
+      });
 
     it("should increment retryCount on failure", async () => {
       const operation: SyncOperation = {
@@ -51,6 +51,8 @@ describe("Sync Queue", () => {
       await markFailed("op-fail", "Network error", true);
       const failed = await getOperationById("op-fail");
       expect(failed?.retryCount).toBe(1);
+
+    });
 
     it("should store lastError message", async () => {
       const operation: SyncOperation = {
@@ -69,6 +71,7 @@ describe("Sync Queue", () => {
 
       const op = await getOperationById("op-err");
       expect(op?.lastError).toBe(errorMsg);
+    });
 
     it("should mark as failed after MAX_RETRIES", async () => {
       const operation: SyncOperation = {

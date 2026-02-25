@@ -1,6 +1,21 @@
 import { db } from "../../lib/db";
 import type { RequestContext } from "../../context/request-context";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors";
+import {
+  normalizeAmount,
+  normalizeQuantity,
+} from "../../lib/number-utils";
+import type {
+  CreateOrderInput,
+  OrderRepository,
+  OrderStatus,
+  UpdateOrderInput,
+} from "../repository/order.repository";
+import type { OrderEventsRepository } from "../repository/order-events.repository";
+import type { SaleService } from "./sale.service";
+
+import type { RequestContext } from "../../context/request-context";
+import { ConflictError, NotFoundError, ValidationError } from "../../errors";
 import type {
   CreateOrderInput,
   OrderRepository,
@@ -76,7 +91,16 @@ export class OrderService {
       orderDate,
       status: "draft",
       paymentIntent: data.paymentIntent,
-      totalAmount: this.normalizeAmount(data.totalAmount).toFixed(2),
+      totalAmount: normalizeAmount(data.totalAmount, 2, "totalAmount"),
+      version: 1,
+      items: data.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        variantName: item.variantName,
+        orderedQuantity: normalizeQuantity(item.orderedQuantity, "orderedQuantity"),
+        unitPriceQuoted: normalizeAmount(item.unitPriceQuoted, 2, "unitPriceQuoted"),
+      })),
       version: 1,
       items: data.items.map((item) => ({
         productId: item.productId,
@@ -149,7 +173,7 @@ export class OrderService {
         ...(data.deliveryDate !== undefined && { deliveryDate: data.deliveryDate }),
         ...(data.paymentIntent !== undefined && { paymentIntent: data.paymentIntent }),
         ...(data.totalAmount !== undefined && {
-          totalAmount: this.normalizeAmount(data.totalAmount).toFixed(2),
+          totalAmount: normalizeAmount(data.totalAmount, 2, "totalAmount"),
         }),
       };
 
@@ -173,8 +197,8 @@ export class OrderService {
             variantId: item.variantId,
             productName: item.productName,
             variantName: item.variantName,
-            orderedQuantity: this.normalizeQuantity(item.orderedQuantity).toString(),
-            unitPriceQuoted: this.normalizeAmount(item.unitPriceQuoted).toFixed(2),
+            orderedQuantity: normalizeQuantity(item.orderedQuantity, "orderedQuantity"),
+            unitPriceQuoted: normalizeAmount(item.unitPriceQuoted, 2, "unitPriceQuoted"),
           })),
           tx
         );
@@ -313,7 +337,7 @@ export class OrderService {
       throw new NotFoundError("OrderItem");
     }
 
-    const normalizedQuantity = this.normalizeQuantity(newQuantity).toString();
+    const normalizedQuantityValue = normalizeQuantity(newQuantity, "newQuantity");
 
     return db.transaction(async (tx) => {
       const item = await this.repository.updateItem(
@@ -321,7 +345,7 @@ export class OrderService {
         orderId,
         itemId,
         {
-          orderedQuantity: normalizedQuantity,
+          orderedQuantity: normalizedQuantityValue,
           isModified: true,
           originalQuantity: currentItem.originalQuantity ?? currentItem.orderedQuantity,
         },
@@ -397,7 +421,10 @@ export class OrderService {
           orderId,
           delivered.itemId,
           {
-            deliveredQuantity: this.normalizeQuantity(delivered.deliveredQuantity).toString(),
+            deliveredQuantity: normalizeQuantity(delivered.deliveredQuantity, "deliveredQuantity"),
+            ...(delivered.unitPriceFinal !== undefined && {
+              unitPriceFinal: normalizeAmount(delivered.unitPriceFinal, 2, "unitPriceFinal"),
+            }),
             ...(delivered.unitPriceFinal !== undefined && {
               unitPriceFinal: this.normalizeAmount(delivered.unitPriceFinal).toFixed(2),
             }),
@@ -517,21 +544,6 @@ export class OrderService {
     }
   }
 
-  private normalizeAmount(value: number): number {
-    if (!Number.isFinite(value)) {
-      throw new ValidationError("Monto inválido");
-    }
-
-    return Math.max(0, Number(value.toFixed(2)));
-  }
-
-  private normalizeQuantity(value: number): number {
-    if (!Number.isFinite(value)) {
-      throw new ValidationError("Cantidad inválida");
-    }
-
-    return Math.max(0, Number(value.toFixed(3)));
-  }
 
   private buildSnapshot(order: {
     id: string;

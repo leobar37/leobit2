@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/drawer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "~/lib/utils";
 import { useProducts } from "~/hooks/use-products-live";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import type { Product } from "~/lib/db/schema";
@@ -69,7 +70,17 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
   }, [step, activeVariants, selectedVariant]);
 
   return (
-    <Drawer open={open} onOpenChange={handleClose}>
+    <Drawer
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          handleClose();
+          return;
+        }
+
+        onOpenChange(true);
+      }}
+    >
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle className="flex items-center gap-2">
@@ -111,24 +122,27 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                 </div>
               ) : (
                 filteredProducts.map((product) => (
-                  <Card
+                  <button
                     key={product.id}
-                    className="p-3 cursor-pointer hover:shadow-md transition-shadow"
+                    type="button"
                     onClick={() => handleProductSelect(product)}
+                    className="w-full text-left"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Package className="h-5 w-5 text-orange-600" />
+                    <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            S/ {product.basePrice} / {product.unit}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          S/ {product.basePrice} / {product.unit}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </Card>
+                    </Card>
+                  </button>
                 ))
               )}
             </div>
@@ -146,39 +160,45 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                 <>
                   <div className="space-y-2">
                     {activeVariants.map((variant) => (
-                      <Card
+                      <button
                         key={variant.id}
-                        className={`p-3 cursor-pointer transition-all ${
-                          selectedVariant?.id === variant.id
-                            ? "ring-2 ring-orange-500 bg-orange-50"
-                            : "hover:shadow-md"
-                        }`}
+                        type="button"
                         onClick={() => setSelectedVariant(variant)}
+                        className="w-full text-left"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-medium">{variant.name}</h3>
-                            {variant.sku && (
-                              <p className="text-xs text-muted-foreground">SKU: {variant.sku}</p>
-                            )}
-                            <p className="text-sm text-orange-600 font-semibold">
-                              S/ {variant.price}
-                            </p>
-                          </div>
-                          {variant.inventory && (
-                            <Badge
-                              variant={
-                                parseFloat(variant.inventory.quantity) > 0
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {variant.inventory.quantity} {selectedProduct?.unit}
-                            </Badge>
+                        <Card
+                          className={cn(
+                            "p-3 cursor-pointer transition-all",
+                            selectedVariant?.id === variant.id
+                              ? "ring-2 ring-orange-500 bg-orange-50"
+                              : "hover:shadow-md",
                           )}
-                        </div>
-                      </Card>
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-medium">{variant.name}</h3>
+                              {variant.sku && (
+                                <p className="text-xs text-muted-foreground">SKU: {variant.sku}</p>
+                              )}
+                              <p className="text-sm text-orange-600 font-semibold">
+                                S/ {variant.price}
+                              </p>
+                            </div>
+                            {variant.inventory && (
+                              <Badge
+                                variant={
+                                  parseFloat(variant.inventory.quantity) > 0
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {variant.inventory.quantity} {selectedProduct?.unit}
+                              </Badge>
+                            )}
+                          </div>
+                        </Card>
+                      </button>
                     ))}
                   </div>
 

@@ -8,6 +8,7 @@ import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale } from "../../db/schema";
 import { db } from "../../lib/db";
 import { toISODateString, now } from "../../lib/date-utils";
+import { normalizeAmount } from "../../lib/number-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
@@ -75,10 +76,11 @@ export class SaleService {
       throw new ValidationError("El monto total debe ser mayor a 0");
     }
 
-    const totalAmount = this.normalizeAmount(data.totalAmount, "totalAmount");
+    const totalAmount = parseFloat(normalizeAmount(data.totalAmount, 2, "totalAmount"));
     const amountPaidInput =
       data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
-    const amountPaid = this.normalizeAmount(amountPaidInput, "amountPaid");
+    const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));
+
     const balanceDue = data.saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
 
     if (data.saleType === "credito" && !data.clientId) {
@@ -239,13 +241,7 @@ export class SaleService {
     return this.repository.create(ctx, payload, tx);
   }
 
-  private normalizeAmount(value: number, field: string): number {
-    if (!Number.isFinite(value)) {
-      throw new ValidationError(`${field} inválido`);
-    }
 
-    return Math.max(0, Number(value.toFixed(2)));
-  }
 
   private async validarStockEstricto(
     ctx: RequestContext,

@@ -1,4 +1,4 @@
-import type { SyncOperation } from "~/lib/db/schema";
+import type { SyncOperation } from "../db/schema";
 
 const DB_NAME = "avileo-sync";
 const DB_VERSION = 1;

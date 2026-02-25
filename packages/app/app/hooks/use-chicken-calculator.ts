@@ -11,6 +11,7 @@ export interface UseChickenCalculatorOptions {
 	productPrice?: string;
 	productId?: string;
 	variantId?: string;
+	unitType?: "kg" | "unidad";
 	persist?: boolean;
 }
 
@@ -127,6 +128,7 @@ export function useChickenCalculator(
 		productPrice,
 		productId,
 		variantId,
+		unitType = "kg",
 		persist = true,
 	} = options;
 
@@ -165,7 +167,7 @@ export function useChickenCalculator(
 	useEffect(() => {
 		if (!persist || !productId || !variantId || !values.pricePerKg) {
 			return;
-    }
+		}
 
 		savePersistedState({
 			lastProductId: productId,
@@ -193,6 +195,11 @@ export function useChickenCalculator(
 	const isReady = filledCount >= 2;
 
 	useEffect(() => {
+		// Disable auto-calculation for unit-based products (unidad)
+		if (unitType === "unidad") {
+			return;
+		}
+
 		const { totalAmount, pricePerKg, kilos, tara } = values;
 		const taraNum = parseFloat(tara) || 0;
 		const price = parseFloat(pricePerKg) || 0;
@@ -231,7 +238,7 @@ export function useChickenCalculator(
 				setValues((prev) => ({ ...prev, kilos: kgBruto.toFixed(3) }));
 			}
 		}
-	}, [activeField, values.totalAmount, values.pricePerKg, values.kilos, values.tara]);
+	}, [activeField, values.totalAmount, values.pricePerKg, values.kilos, values.tara, unitType]);
 
 	const handleReset = useCallback(() => {
 		setValues({

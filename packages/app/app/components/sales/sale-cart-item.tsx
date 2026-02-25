@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 interface SaleCartItemProps {
   productName: string;
   variantName?: string;
+  unit?: "kg" | "unidad";
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -14,11 +15,17 @@ interface SaleCartItemProps {
 export function SaleCartItem({
   productName,
   variantName,
+  unit = "kg",
   quantity,
   unitPrice,
   subtotal,
   onRemove,
 }: SaleCartItemProps) {
+  const quantityLabel =
+    unit === "kg"
+      ? `${quantity.toFixed(3)} kg`
+      : `${Number.isInteger(quantity) ? quantity : quantity.toFixed(3)} un`;
+
   return (
     <Card className="border-0 shadow-sm rounded-xl">
       <CardContent className="p-3">
@@ -33,7 +40,7 @@ export function SaleCartItem({
                 <p className="text-xs text-orange-600">{variantName}</p>
               )}
               <p className="text-sm text-muted-foreground">
-                {quantity.toFixed(3)} kg × S/ {unitPrice.toFixed(2)}
+                {quantityLabel} × S/ {unitPrice.toFixed(2)}
               </p>
             </div>
           </div>

@@ -8,5 +8,12 @@ export default defineConfig({
 		environment: "happy-dom",
 		globals: true,
 		setupFiles: ["./vitest.setup.ts"],
+		exclude: [
+			"**/.react-router/**",
+			"**/node_modules/**",
+			"**/dist/**",
+			"**/build/**",
+			"**/coverage/**",
+		],
 	},
 });
