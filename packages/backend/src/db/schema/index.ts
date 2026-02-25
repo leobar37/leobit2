@@ -28,6 +28,7 @@ export {
   businessUserRoleEnum,
   syncStatusEnum,
   saleTypeEnum,
+  orderStatusEnum,
   paymentMethodEnum,
   productTypeEnum,
   productUnitEnum,
@@ -92,6 +93,25 @@ export {
   type SaleItem,
   type NewSaleItem,
 } from "./sales";
+
+export {
+  orders,
+  orderItems,
+  ordersRelations,
+  orderItemsRelations,
+  type Order,
+  type NewOrder,
+  type OrderItem,
+  type NewOrderItem,
+} from "./orders";
+
+export {
+  orderEvents,
+  orderEventTypeEnum,
+  orderEventsRelations,
+  type OrderEvent,
+  type NewOrderEvent,
+} from "./order-events";
 
 // Payments (Abonos)
 export {

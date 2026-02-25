@@ -7,6 +7,7 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface CreateSaleInput {
   clientId?: string;
+  orderId?: string;
   saleType: "contado" | "credito";
   totalAmount: string;
   amountPaid: string;
@@ -59,6 +60,16 @@ export class SaleRepository {
         eq(sales.id, id),
         eq(sales.businessId, ctx.businessId)
       ),
+      with: {
+        items: true,
+        client: true,
+      },
+    });
+  }
+
+  async findByOrderId(ctx: RequestContext, orderId: string): Promise<Sale | undefined> {
+    return db.query.sales.findFirst({
+      where: and(eq(sales.orderId, orderId), eq(sales.businessId, ctx.businessId)),
       with: {
         items: true,
         client: true,

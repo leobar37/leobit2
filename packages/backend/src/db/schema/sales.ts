@@ -16,6 +16,7 @@ import { saleTypeEnum, syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
+import { orders } from "./orders";
 
 // Sales table
 export const sales = pgTable(
@@ -32,6 +33,9 @@ export const sales = pgTable(
     sellerId: uuid("seller_id")
       .notNull()
       .references(() => businessUsers.id),
+    orderId: uuid("order_id")
+      .references(() => orders.id)
+      .unique(),
     distribucionId: uuid("distribucion_id").references(
       () => distribuciones.id
     ),
@@ -58,6 +62,7 @@ export const sales = pgTable(
     index("idx_sales_business_id").on(table.businessId),
     index("idx_sales_client_id").on(table.clientId),
     index("idx_sales_seller_id").on(table.sellerId),
+    index("idx_sales_order_id").on(table.orderId),
     index("idx_sales_distribucion_id").on(table.distribucionId),
     index("idx_sales_sale_type").on(table.saleType),
     index("idx_sales_sync_status").on(table.syncStatus),
@@ -115,6 +120,10 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
   seller: one(businessUsers, {
     fields: [sales.sellerId],
     references: [businessUsers.id],
+  }),
+  order: one(orders, {
+    fields: [sales.orderId],
+    references: [orders.id],
   }),
   distribucion: one(distribuciones, {
     fields: [sales.distribucionId],

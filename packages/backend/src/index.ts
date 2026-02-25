@@ -10,6 +10,7 @@ import { paymentRoutes } from "./api/payments";
 import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
+import { orderRoutes } from "./api/orders";
 import { closingRoutes } from "./api/closings";
 import { reportRoutes } from "./api/reports";
 import { syncRoutes } from "./api/sync";
@@ -50,6 +51,7 @@ const app = new Elysia()
   .use(inventoryRoutes)
   .use(distribucionRoutes)
   .use(saleRoutes)
+  .use(orderRoutes)
   .use(closingRoutes)
   .use(reportRoutes)
   .use(syncRoutes)

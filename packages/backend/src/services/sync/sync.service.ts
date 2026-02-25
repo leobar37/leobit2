@@ -6,11 +6,14 @@ import type { CustomerRepository } from "../repository/customer.repository";
 import type { SaleRepository } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { OrderRepository } from "../repository/order.repository";
 
 export type SyncEntity =
   | "customers"
   | "sales"
   | "sale_items"
+  | "orders"
+  | "order_items"
   | "abonos"
   | "distribuciones";
 
@@ -46,6 +49,7 @@ interface SyncServiceDeps {
   saleRepo: SaleRepository;
   paymentRepo: PaymentRepository;
   distribucionRepo: DistribucionRepository;
+  orderRepo: OrderRepository;
 }
 
 type ParsedSaleInsert = {
@@ -77,6 +81,30 @@ type ParsedDistribucionInsert = {
   estado: "activo" | "cerrado" | "en_ruta";
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+};
+
+type ParsedOrderInsert = {
+  clientId: string;
+  deliveryDate: string;
+  orderDate: string;
+  status: "draft" | "confirmed" | "cancelled" | "delivered";
+  paymentIntent: "contado" | "credito";
+  totalAmount: string;
+  confirmedSnapshot?: Record<string, unknown>;
+  deliveredSnapshot?: Record<string, unknown>;
+  version: number;
+  items: Array<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    orderedQuantity: string;
+    deliveredQuantity?: string;
+    unitPriceQuoted: string;
+    unitPriceFinal?: string;
+    isModified?: boolean;
+    originalQuantity?: string;
+  }>;
 };
 
 export class SyncService {
@@ -246,11 +274,16 @@ export class SyncService {
       case "abonos":
         await this.applyAbonosOperation(ctx, operation);
         return;
+      case "orders":
+        await this.applyOrdersOperation(ctx, operation);
+        return;
       case "distribuciones":
         await this.applyDistribucionOperation(ctx, operation);
         return;
       case "sale_items":
         throw new ValidationError("sale_items no soporta sync directo en v1");
+      case "order_items":
+        throw new ValidationError("order_items no soporta sync directo en v1");
       default:
         throw new ValidationError(`Entidad no soportada: ${operation.entity}`);
     }
@@ -430,6 +463,48 @@ export class SyncService {
     await this.deps.distribucionRepo.delete(ctx, operation.entityId);
   }
 
+  private async applyOrdersOperation(ctx: RequestContext, operation: SyncOperationInput) {
+    const payload = operation.payload;
+
+    if (operation.action === "insert") {
+      const order = this.parseOrderInsert(payload);
+      await this.deps.orderRepo.create(ctx, order);
+      return;
+    }
+
+    if (operation.action === "update") {
+      const existing = await this.deps.orderRepo.findById(ctx, operation.entityId);
+      if (!existing) {
+        throw new ValidationError("Pedido no encontrado");
+      }
+
+      await this.deps.orderRepo.update(ctx, operation.entityId, {
+        ...(payload.deliveryDate !== undefined && {
+          deliveryDate: this.requiredString(payload.deliveryDate, "deliveryDate"),
+        }),
+        ...(payload.status !== undefined && {
+          status: this.requiredOrderStatus(payload.status),
+        }),
+        ...(payload.paymentIntent !== undefined && {
+          paymentIntent: this.requiredSaleType(payload.paymentIntent),
+        }),
+        ...(payload.totalAmount !== undefined && {
+          totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount"),
+        }),
+      });
+      return;
+    }
+
+    const existing = await this.deps.orderRepo.findById(ctx, operation.entityId);
+    if (!existing) {
+      return;
+    }
+
+    await this.deps.orderRepo.update(ctx, operation.entityId, {
+      status: "cancelled",
+    });
+  }
+
   private parseSaleInsert(payload: Record<string, unknown>): ParsedSaleInsert {
     const saleType = this.requiredSaleType(payload.saleType);
     const total = this.normalizedAmount(
@@ -517,11 +592,76 @@ export class SyncService {
     };
   }
 
+  private parseOrderInsert(payload: Record<string, unknown>): ParsedOrderInsert {
+    const rawItems = Array.isArray(payload.items) ? payload.items : [];
+    if (rawItems.length === 0) {
+      throw new ValidationError("El pedido requiere items");
+    }
+
+    const status =
+      payload.status !== undefined ? this.requiredOrderStatus(payload.status) : "draft";
+
+    const items = rawItems.map((item, index) => {
+      if (!item || typeof item !== "object") {
+        throw new ValidationError(`Item inválido en posición ${index}`);
+      }
+
+      const safe = item as Record<string, unknown>;
+      return {
+        productId: this.requiredString(safe.productId, "productId"),
+        variantId: this.requiredString(safe.variantId, "variantId"),
+        productName: this.requiredString(safe.productName, "productName"),
+        variantName: this.requiredString(safe.variantName, "variantName"),
+        orderedQuantity: this.requiredNumericString(safe.orderedQuantity, "orderedQuantity"),
+        deliveredQuantity: this.optionalNumericString(safe.deliveredQuantity),
+        unitPriceQuoted: this.requiredNumericString(safe.unitPriceQuoted, "unitPriceQuoted"),
+        unitPriceFinal: this.optionalNumericString(safe.unitPriceFinal),
+        isModified: safe.isModified === true,
+        originalQuantity: this.optionalNumericString(safe.originalQuantity),
+      };
+    });
+
+    return {
+      clientId: this.requiredString(payload.clientId, "clientId"),
+      deliveryDate: this.requiredString(payload.deliveryDate, "deliveryDate"),
+      orderDate:
+        this.optionalString(payload.orderDate) ?? new Date().toISOString().slice(0, 10),
+      status,
+      paymentIntent: this.requiredSaleType(payload.paymentIntent),
+      totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount"),
+      confirmedSnapshot:
+        payload.confirmedSnapshot && typeof payload.confirmedSnapshot === "object"
+          ? (payload.confirmedSnapshot as Record<string, unknown>)
+          : undefined,
+      deliveredSnapshot:
+        payload.deliveredSnapshot && typeof payload.deliveredSnapshot === "object"
+          ? (payload.deliveredSnapshot as Record<string, unknown>)
+          : undefined,
+      version: payload.version ? Number(this.requiredNumericString(payload.version, "version")) : 1,
+      items,
+    };
+  }
+
   private requiredSaleType(value: unknown): "contado" | "credito" {
     if (value === "contado" || value === "credito") {
       return value;
     }
     throw new ValidationError("saleType inválido");
+  }
+
+  private requiredOrderStatus(
+    value: unknown
+  ): "draft" | "confirmed" | "cancelled" | "delivered" {
+    if (
+      value === "draft" ||
+      value === "confirmed" ||
+      value === "cancelled" ||
+      value === "delivered"
+    ) {
+      return value;
+    }
+
+    throw new ValidationError("status inválido");
   }
 
   private requiredPaymentMethod(
