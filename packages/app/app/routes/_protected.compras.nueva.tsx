@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useState } from "react";
 import { useForm, FormProvider, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { useCreatePurchase } from "~/hooks/use-purchases";
-import { useSuppliers } from "~/hooks/use-suppliers";
 import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { SupplierSelector } from "~/components/purchases/supplier-selector";
+import { SupplierQuickForm } from "~/components/purchases/supplier-quick-form";
 import type { UseFormReturn } from "react-hook-form";
+import type { Supplier } from "~/hooks/use-suppliers";
 import { getToday } from "~/lib/date-utils";
 
 const purchaseItemSchema = z.object({
@@ -22,7 +25,6 @@ const purchaseItemSchema = z.object({
 });
 
 const purchaseSchema = z.object({
-  supplierId: z.string().min(1, "Selecciona un proveedor"),
   purchaseDate: z.string().min(1, "La fecha es requerida"),
   notes: z.string().optional(),
   items: z.array(purchaseItemSchema).min(1, "Agrega al menos un producto"),
@@ -33,8 +35,9 @@ type PurchaseFormData = z.infer<typeof purchaseSchema>;
 export default function NuevaCompraPage() {
   const navigate = useNavigate();
   const { mutate: createPurchase, isPending } = useCreatePurchase();
-  const { data: suppliers } = useSuppliers();
   const { data: products } = useProducts();
+  const [isQuickFormOpen, setIsQuickFormOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   useSetLayout({
     title: "Nueva Compra",
@@ -46,7 +49,6 @@ export default function NuevaCompraPage() {
     resolver: zodResolver(purchaseSchema),
     mode: "onChange",
     defaultValues: {
-      supplierId: "",
       purchaseDate: getToday(),
       notes: "",
       items: [],
@@ -59,11 +61,16 @@ export default function NuevaCompraPage() {
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    createPurchase(data, {
-      onSuccess: () => {
-        navigate("/compras");
-      },
-    });
+    if (!selectedSupplier) return;
+
+    createPurchase(
+      { ...data, supplierId: selectedSupplier.id },
+      {
+        onSuccess: () => {
+          navigate("/compras");
+        },
+      }
+    );
   });
 
   const addItem = () => {
@@ -76,8 +83,15 @@ export default function NuevaCompraPage() {
     0
   );
 
-  const isFormValid = form.formState.isValid;
-  const supplierId = form.watch("supplierId");
+  const isFormValid = form.formState.isValid && selectedSupplier !== null && fields.length > 0;
+
+  const handleSupplierSelect = (supplier: Supplier | null) => {
+    setSelectedSupplier(supplier);
+  };
+
+  const handleQuickFormSuccess = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+  };
 
   return (
     <FormProvider {...form}>
@@ -98,22 +112,11 @@ export default function NuevaCompraPage() {
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Proveedor *
             </label>
-            <select
-              {...form.register("supplierId")}
-              className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-            >
-              <option value="">Seleccionar proveedor...</option>
-              {suppliers?.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-            {form.formState.errors.supplierId && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.supplierId.message}
-              </p>
-            )}
+            <SupplierSelector
+              selectedSupplier={selectedSupplier}
+              onSelectSupplier={handleSupplierSelect}
+              onCreateNew={() => setIsQuickFormOpen(true)}
+            />
           </div>
 
           <FormInput
@@ -218,7 +221,7 @@ export default function NuevaCompraPage() {
           <Button
             type="submit"
             className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
-            disabled={isPending || !isFormValid || !supplierId || fields.length === 0}
+            disabled={isPending || !isFormValid}
           >
             {isPending ? (
               <>
@@ -233,6 +236,12 @@ export default function NuevaCompraPage() {
             )}
           </Button>
         </div>
+
+        <SupplierQuickForm
+          open={isQuickFormOpen}
+          onOpenChange={setIsQuickFormOpen}
+          onSuccess={handleQuickFormSuccess}
+        />
       </form>
     </FormProvider>
   );
