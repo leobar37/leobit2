@@ -157,6 +157,14 @@ export {
   type NewVariantInventory,
 } from "./inventory";
 
+// Product Units
+export {
+  productUnits,
+  productUnitsRelations,
+  type ProductUnit,
+  type NewProductUnit,
+} from "./product-units";
+
 // System Config
 export {
   systemConfig,

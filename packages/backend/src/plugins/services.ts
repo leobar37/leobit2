@@ -23,6 +23,8 @@ import { FileRepository } from "../services/repository/file.repository";
 import { FileService } from "../services/business/file.service";
 import { ProductVariantRepository } from "../services/repository/product-variant.repository";
 import { ProductVariantService } from "../services/business/product-variant.service";
+import { ProductUnitRepository } from "../services/repository/product-unit.repository";
+import { ProductUnitService } from "../services/business/product-unit.service";
 import { SupplierRepository } from "../services/repository/supplier.repository";
 import { SupplierService } from "../services/business/supplier.service";
 import { PurchaseRepository } from "../services/repository/purchase.repository";
@@ -48,6 +50,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const assetRepo = new AssetRepository();
     const fileRepo = new FileRepository();
     const productVariantRepo = new ProductVariantRepository();
+    const productUnitRepo = new ProductUnitRepository();
     const supplierRepo = new SupplierRepository();
     const purchaseRepo = new PurchaseRepository();
     const staffInvitationRepo = new StaffInvitationRepository();
@@ -72,8 +75,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
     const productVariantService = new ProductVariantService(productVariantRepo);
+    const productUnitService = new ProductUnitService(productUnitRepo);
     const supplierService = new SupplierService(supplierRepo);
-    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo);
+    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService);
 
@@ -102,6 +106,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       fileService,
       productVariantRepo,
       productVariantService,
+      productUnitRepo,
+      productUnitService,
       supplierRepo,
       supplierService,
       purchaseRepo,

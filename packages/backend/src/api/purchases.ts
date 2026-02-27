@@ -65,6 +65,8 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
           t.Object({
             productId: t.String(),
             variantId: t.Optional(t.String()),
+            unitId: t.Optional(t.String()),
+            packs: t.Optional(t.Number()),
             quantity: t.Number({ minimum: 0.001 }),
             unitCost: t.Number({ minimum: 0 }),
           })

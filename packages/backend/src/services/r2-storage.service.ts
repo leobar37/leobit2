@@ -8,10 +8,13 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
+  getMissingR2EnvVars,
   getR2Client,
   getR2Bucket,
   getR2PublicUrl,
+  isR2Configured,
 } from "../lib/r2-client";
+import { ServiceUnavailableError } from "../errors";
 
 export class R2StorageService {
   private bucketEnsured = false;
@@ -46,6 +49,8 @@ export class R2StorageService {
    * Ensure bucket exists, create if not
    */
   private async ensureBucketExists(): Promise<void> {
+    this.assertConfigured();
+
     // Only check once per service instance
 
     if (this.bucketEnsured) return;
@@ -78,6 +83,17 @@ export class R2StorageService {
     }
   }
 
+  private assertConfigured(): void {
+    if (isR2Configured()) {
+      return;
+    }
+
+    const missingVars = getMissingR2EnvVars();
+    throw new ServiceUnavailableError(
+      `Storage no configurado (faltan variables R2: ${missingVars.join(", ")})`
+    );
+  }
+
   /**
    * Upload file to R2
    * Path: {userId}/avatars/{uuid}.{ext} or {businessId}/logos/{uuid}.{ext}
@@ -107,6 +123,8 @@ export class R2StorageService {
     path: string,
     expiresInSeconds = 60 * 60 * 24 * 7
   ): Promise<string> {
+    this.assertConfigured();
+
     // If public URL is configured, use it directly
     if (this.publicUrl) {
       return `${this.publicUrl}/${path}`;
@@ -127,6 +145,8 @@ export class R2StorageService {
    * Delete file
    */
   async deleteFile(path: string): Promise<void> {
+    this.assertConfigured();
+
     await this.s3Client.send(
       new DeleteObjectCommand({
         Bucket: this.BUCKET,
@@ -139,6 +159,8 @@ export class R2StorageService {
    * Check if file exists
    */
   async fileExists(path: string): Promise<boolean> {
+    this.assertConfigured();
+
     try {
       await this.s3Client.send(
         new GetObjectCommand({

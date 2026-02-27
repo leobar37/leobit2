@@ -1,8 +1,9 @@
 import { Elysia } from "elysia";
 import { auth } from "../lib/auth";
+import { UnauthorizedError } from "../errors";
 
 export const authMiddleware = new Elysia()
-  .derive({ as: "scoped" }, async (context) => {
+  .resolve({ as: "scoped" }, async (context) => {
     const { request } = context;
     const session = await auth.api.getSession({ headers: request.headers });
 
@@ -26,6 +27,6 @@ export const requireAuth = new Elysia()
   .onBeforeHandle(({ isAuthenticated, set }: any) => {
     if (!isAuthenticated) {
       set.status = 401;
-      return { error: "Unauthorized" };
+      throw new UnauthorizedError();
     }
   });

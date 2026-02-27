@@ -2,6 +2,7 @@ import type { PurchaseRepository, PurchaseWithItems } from "../repository/purcha
 import type { InventoryRepository } from "../repository/inventory.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
+import type { ProductUnitRepository } from "../repository/product-unit.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -13,6 +14,8 @@ import type { Purchase, NewPurchaseItem } from "../../db/schema";
 export interface CreatePurchaseItemInput {
   productId: string;
   variantId?: string;
+  unitId?: string;
+  packs?: number;
   quantity: number;
   unitCost: number;
 }
@@ -30,7 +33,8 @@ export class PurchaseService {
     private repository: PurchaseRepository,
     private inventoryRepo: InventoryRepository,
     private supplierRepo: SupplierRepository,
-    private variantRepo: ProductVariantRepository
+    private variantRepo: ProductVariantRepository,
+    private unitRepo: ProductUnitRepository
   ) {}
 
   async getPurchases(
@@ -85,21 +89,42 @@ export class PurchaseService {
     const validatedItems: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt">[] = [];
 
     for (const item of data.items) {
-      if (item.quantity <= 0) {
+      let finalQuantity: number;
+      let finalVariantId: string | null = item.variantId || null;
+      let finalUnitCost = item.unitCost;
+
+      // If unit is configured, perform conversion
+      if (item.unitId) {
+        const unit = await this.unitRepo.findById(ctx, item.unitId);
+        if (!unit) {
+          throw new NotFoundError("Unidad configurada");
+        }
+
+        // Calculate final quantity: packs × baseUnitQuantity
+        finalQuantity = (item.packs || 1) * parseFloat(unit.baseUnitQuantity);
+        finalVariantId = unit.variantId; // Use unit's variant
+        // Cost per unit in baseUnit
+        finalUnitCost = item.unitCost / parseFloat(unit.baseUnitQuantity);
+      } else {
+        // Legacy mode: use quantity directly
+        finalQuantity = item.quantity;
+      }
+
+      if (finalQuantity <= 0) {
         throw new ValidationError("La cantidad debe ser mayor a 0");
       }
-      if (item.unitCost < 0) {
+      if (finalUnitCost < 0) {
         throw new ValidationError("El costo unitario no puede ser negativo");
       }
 
-      const totalCost = item.quantity * item.unitCost;
+      const totalCost = finalQuantity * finalUnitCost;
       totalAmount += totalCost;
 
       validatedItems.push({
         productId: item.productId,
-        variantId: item.variantId || null,
-        quantity: item.quantity.toString(),
-        unitCost: item.unitCost.toString(),
+        variantId: finalVariantId,
+        quantity: finalQuantity.toString(),
+        unitCost: finalUnitCost.toString(),
         totalCost: totalCost.toString(),
       });
     }

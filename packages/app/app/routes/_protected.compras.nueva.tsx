@@ -10,6 +10,8 @@ import { FormInput } from "@/components/forms/form-input";
 import { useCreatePurchase } from "~/hooks/use-purchases";
 import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
+import { useUnitsByProduct } from "~/hooks/use-product-units";
+import type { ProductUnit } from "~/hooks/use-product-units";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { SupplierSelector } from "~/components/purchases/supplier-selector";
 import { SupplierQuickForm } from "~/components/purchases/supplier-quick-form";
@@ -20,6 +22,8 @@ import { getToday } from "~/lib/date-utils";
 const purchaseItemSchema = z.object({
   productId: z.string().min(1, "Selecciona un producto"),
   variantId: z.string().optional(),
+  unitId: z.string().optional(),
+  packs: z.number().optional(),
   quantity: z.number().positive("La cantidad debe ser mayor a 0"),
   unitCost: z.number().min(0, "El costo no puede ser negativo"),
 });
@@ -74,7 +78,7 @@ export default function NuevaCompraPage() {
   });
 
   const addItem = () => {
-    append({ productId: "", variantId: undefined, quantity: 0, unitCost: 0 });
+    append({ productId: "", variantId: undefined, unitId: undefined, packs: undefined, quantity: 0, unitCost: 0 });
   };
 
   const items = form.watch("items");
@@ -151,24 +155,9 @@ export default function NuevaCompraPage() {
                       form={form}
                     />
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormInput
-                        label="Cantidad"
-                        type="number"
-                        min="0.001"
-                        step="0.001"
-                        error={form.formState.errors.items?.[index]?.quantity?.message}
-                        {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                      />
-                      <FormInput
-                        label="Costo unitario (S/)"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        error={form.formState.errors.items?.[index]?.unitCost?.message}
-                        {...form.register(`items.${index}.unitCost`, { valueAsNumber: true })}
-                      />
-                    </div>
+                    <UnitSelectorField index={index} form={form} />
+
+                    <PurchaseQuantityInputs index={index} form={form} />
 
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
@@ -283,6 +272,9 @@ function ItemProductSelector({
           onChange={(e) => {
             form.setValue(`items.${index}.productId`, e.target.value);
             form.setValue(`items.${index}.variantId`, undefined);
+            form.setValue(`items.${index}.unitId`, undefined);
+            form.setValue(`items.${index}.packs`, undefined);
+            form.setValue(`items.${index}.quantity`, 0);
           }}
           className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
         >
@@ -317,5 +309,113 @@ function ItemProductSelector({
         </div>
       )}
     </>
+  );
+}
+
+function UnitSelectorField({
+  index,
+  form,
+}: {
+  index: number;
+  form: UseFormReturn<PurchaseFormData>;
+}) {
+  const selectedProductId = form.watch(`items.${index}.productId`);
+  const { data: units } = useUnitsByProduct(selectedProductId || "", { isActive: true });
+
+  const hasUnits = units && units.length > 0;
+
+  if (!hasUnits) return null;
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs">Unidad de medida</label>
+      <select
+        {...form.register(`items.${index}.unitId`)}
+        onChange={(e) => {
+          form.setValue(`items.${index}.unitId`, e.target.value);
+          form.setValue(`items.${index}.packs`, undefined);
+          form.setValue(`items.${index}.quantity`, 0);
+        }}
+        className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+      >
+        <option value="">Sin unidad configurada (cantidad directa)</option>
+        {units?.map((unit) => (
+          <option key={unit.id} value={unit.id}>
+            {unit.displayName}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function PurchaseQuantityInputs({
+  index,
+  form,
+}: {
+  index: number;
+  form: UseFormReturn<PurchaseFormData>;
+}) {
+  const selectedProductId = form.watch(`items.${index}.productId`);
+  const selectedUnitId = form.watch(`items.${index}.unitId`);
+  const selectedPacks = form.watch(`items.${index}.packs`);
+  const { data: units } = useUnitsByProduct(selectedProductId || "", { isActive: true });
+
+  const selectedUnit = units?.find((u) => u.id === selectedUnitId);
+  const calculatedQuantity = selectedUnit && selectedPacks ? selectedPacks * parseFloat(selectedUnit.baseUnitQuantity) : 0;
+
+  // Auto-update quantity when packs change
+  const handlePacksChange = (value: number) => {
+    if (selectedUnit && value > 0) {
+      const finalQuantity = value * parseFloat(selectedUnit.baseUnitQuantity);
+      form.setValue(`items.${index}.quantity`, finalQuantity);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <label className="text-xs">
+          {selectedUnitId ? "Cantidad de packs" : "Cantidad"}
+        </label>
+        {selectedUnitId ? (
+          <>
+            <FormInput
+              type="number"
+              min="0.001"
+              step="0.001"
+              error={form.formState.errors.items?.[index]?.packs?.message}
+              {...form.register(`items.${index}.packs`, { 
+                valueAsNumber: true,
+                onChange: (e) => handlePacksChange(e.target.valueAsNumber),
+              })}
+              placeholder="Ingresa cantidad de packs"
+            />
+            {selectedUnit && selectedPacks && calculatedQuantity > 0 ? (
+              <p className="text-xs text-orange-600 font-semibold">
+                {selectedPacks} × {selectedUnit.baseUnitQuantity} = {calculatedQuantity} unidades
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <FormInput
+            type="number"
+            min="0.001"
+            step="0.001"
+            error={form.formState.errors.items?.[index]?.quantity?.message}
+            {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+            placeholder="Ingresa cantidad"
+          />
+        )}
+      </div>
+      <FormInput
+        label="Costo unitario (S/)"
+        type="number"
+        min="0"
+        step="0.01"
+        error={form.formState.errors.items?.[index]?.unitCost?.message}
+        {...form.register(`items.${index}.unitCost`, { valueAsNumber: true })}
+      />
+    </div>
   );
 }

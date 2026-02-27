@@ -85,6 +85,13 @@
       "when": 1771490000000,
       "tag": "0014_add_orders_system",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1772086559327,
+      "tag": "0012_perfect_chimera",
+      "breakpoints": true
     }
   ]
 }

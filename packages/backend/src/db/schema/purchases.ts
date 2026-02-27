@@ -13,6 +13,7 @@ import { purchaseStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 import { suppliers } from "./suppliers";
 import { products, productVariants } from "./inventory";
+import { productUnits } from "./product-units";
 
 export const purchases = pgTable(
   "purchases",
@@ -62,6 +63,8 @@ export const purchaseItems = pgTable(
       .references(() => products.id),
 
     variantId: uuid("variant_id").references(() => productVariants.id),
+
+    unitId: uuid("unit_id").references(() => productUnits.id),
 
     quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
 

@@ -3,15 +3,16 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
 import { db } from "../lib/db";
 import { userProfiles } from "../db/schema/user-profiles";
-import { FileRepository } from "../services/repository/file.repository";
-import { FileService } from "../services/business/file.service";
-import { r2Storage } from "../services/r2-storage.service";
-import type { RequestContext } from "../context/request-context";
+import { UnauthorizedError } from "../errors";
 
 export const profileRoutes = new Elysia({ prefix: "/profile" })
   .use(requireAuth)
   .get("/me", async (ctx) => {
     const user = (ctx as any).user;
+    if (!user?.id) {
+      throw new UnauthorizedError();
+    }
+
     const profile = await db.query.userProfiles.findFirst({
       where: eq(userProfiles.userId, user.id),
     });
@@ -34,7 +35,10 @@ export const profileRoutes = new Elysia({ prefix: "/profile" })
     async (ctx) => {
       const user = (ctx as any).user;
       const body = ctx.body as any;
-      
+      if (!user?.id) {
+        throw new UnauthorizedError();
+      }
+
       const existingProfile = await db.query.userProfiles.findFirst({
         where: eq(userProfiles.userId, user.id),
       });
