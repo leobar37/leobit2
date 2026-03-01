@@ -4,8 +4,13 @@ import {
   NotFoundError,
   ValidationError,
   ForbiddenError,
+  ConflictError,
 } from "../../errors";
 import type { Closing } from "../../db/schema";
+import { getToday, parseDateString } from "../../lib/date-utils";
+import { normalizeAmount, normalizeQuantity, validateNonNegative } from "../../lib/number-utils";
+
+const MAX_BACKDATE_DAYS = 7;
 
 export class ClosingService {
   constructor(private repository: ClosingRepository) {}
@@ -47,38 +52,82 @@ export class ClosingService {
       cashAmount: number;
       creditAmount: number;
       totalKilos?: number;
+      backdateReason?: string;
     }
   ): Promise<Closing> {
     if (!ctx.hasPermission("sales.write")) {
       throw new ForbiddenError("No tiene permisos para crear cierres");
     }
 
-    if (data.totalSales < 0) {
+    if (!Number.isInteger(data.totalSales) || data.totalSales < 0) {
       throw new ValidationError("El número de ventas no puede ser negativo");
     }
 
-    if (data.totalAmount < 0) {
-      throw new ValidationError("El monto total no puede ser negativo");
+    validateNonNegative(data.totalAmount, "El monto total");
+    validateNonNegative(data.cashAmount, "El monto al contado");
+    validateNonNegative(data.creditAmount, "El monto a crédito");
+    if (data.totalKilos !== undefined) {
+      validateNonNegative(data.totalKilos, "Los kilos totales");
+    }
+
+    const normalizedDate = this.normalizeClosingDate(data.closingDate);
+    const today = parseDateString(getToday());
+    const closingDate = parseDateString(normalizedDate);
+
+    if (closingDate.getTime() > today.getTime()) {
+      throw new ValidationError("No se puede generar cierre para fechas futuras");
+    }
+
+    const diffInDays = Math.floor((today.getTime() - closingDate.getTime()) / 86400000);
+    const isBackdated = diffInDays > 0;
+    const backdateReason = data.backdateReason?.trim();
+
+    if (isBackdated) {
+      if (!ctx.isAdmin()) {
+        throw new ForbiddenError("Solo administradores pueden registrar cierres en fechas pasadas");
+      }
+
+      if (diffInDays > MAX_BACKDATE_DAYS) {
+        throw new ValidationError(
+          `Solo se permite registrar cierres hasta ${MAX_BACKDATE_DAYS} días hacia atrás`
+        );
+      }
+
+      if (!backdateReason || backdateReason.length < 10) {
+        throw new ValidationError("Debe indicar un motivo de al menos 10 caracteres para cierres retroactivos");
+      }
     }
 
     const existing = await this.repository.findByDate(
       ctx,
       ctx.businessUserId,
-      new Date(data.closingDate)
+      normalizedDate
     );
 
     if (existing) {
       throw new ValidationError("Ya existe un cierre para esta fecha");
     }
 
-    return this.repository.create(ctx, {
-      closingDate: data.closingDate,
-      totalSales: data.totalSales,
-      totalAmount: data.totalAmount.toString(),
-      cashAmount: data.cashAmount.toString(),
-      creditAmount: data.creditAmount.toString(),
-      totalKilos: data.totalKilos?.toString(),
-    });
+    try {
+      return await this.repository.create(ctx, {
+        closingDate: normalizedDate,
+        totalSales: data.totalSales,
+        totalAmount: normalizeAmount(data.totalAmount, 2, "El monto total"),
+        cashAmount: normalizeAmount(data.cashAmount, 2, "El monto al contado"),
+        creditAmount: normalizeAmount(data.creditAmount, 2, "El monto a crédito"),
+        totalKilos:
+          data.totalKilos !== undefined
+            ? normalizeQuantity(data.totalKilos, "Los kilos totales")
+            : undefined,
+        backdateReason: isBackdated ? backdateReason : undefined,
+      });
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        throw new ConflictError("Ya existe un cierre para esta fecha");
+      }
+
+      throw error;
+    }
   }
 
   async updateClosing(
@@ -151,5 +200,36 @@ export class ClosingService {
     }
 
     return this.repository.getTodayStats(ctx, ctx.businessUserId);
+  }
+
+  private normalizeClosingDate(closingDate: string): string {
+    const match = closingDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      throw new ValidationError("Formato de fecha inválido. Use YYYY-MM-DD");
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const parsed = new Date(year, month - 1, day);
+
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      throw new ValidationError("Fecha inválida");
+    }
+
+    return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    return "code" in error && (error as { code?: string }).code === "23505";
   }
 }

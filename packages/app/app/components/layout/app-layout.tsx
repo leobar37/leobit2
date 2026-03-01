@@ -19,6 +19,7 @@ import {
   User,
   ArrowLeft,
   Wallet,
+  Image,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const menuItems = [
   { icon: ClipboardList, label: "Pedidos", href: "/pedidos" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
+  { icon: Image, label: "Activos", href: "/activos" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
 
@@ -50,6 +52,7 @@ interface LayoutConfig {
 interface LayoutContextValue {
   config: LayoutConfig;
   setConfig: (config: LayoutConfig) => void;
+  toolbarPortalHost: HTMLDivElement | null;
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
@@ -93,13 +96,13 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [toolbarPortalHost, setToolbarPortalHost] = useState<HTMLDivElement | null>(null);
   const [config, setConfig] = useState<LayoutConfig>({
     title: "Avileo",
     showBottomNav: true,
     showBackButton: false,
   });
 
-  // Reset layout config on route change
   useEffect(() => {
     setConfig({
       title: "Avileo",
@@ -117,7 +120,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   } = config;
 
   return (
-    <LayoutContext.Provider value={{ config, setConfig }}>
+    <LayoutContext.Provider value={{ config, setConfig, toolbarPortalHost }}>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
           <div className="flex items-center justify-between h-16 px-3 sm:px-4">
@@ -184,6 +187,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className={`px-3 py-4 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}>
           {children}
         </main>
+
+        {showBottomNav && (
+          <div
+            ref={setToolbarPortalHost}
+            className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] px-3 sm:px-4 py-4 z-50 pointer-events-none"
+          />
+        )}
 
         {showBottomNav && (
           <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-orange-100 px-3 sm:px-4 py-2">

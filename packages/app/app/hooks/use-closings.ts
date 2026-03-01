@@ -11,6 +11,7 @@ export interface Closing {
   cashAmount: string;
   creditAmount: string;
   totalKilos: string | null;
+  backdateReason: string | null;
   syncStatus: "pending" | "synced" | "error";
   createdAt: Date;
 }
@@ -22,6 +23,7 @@ export interface CreateClosingInput {
   cashAmount: number;
   creditAmount: number;
   totalKilos?: number;
+  backdateReason?: string;
 }
 
 async function getClosings(): Promise<Closing[]> {
@@ -58,6 +60,7 @@ async function createClosing(input: CreateClosingInput): Promise<Closing> {
     cashAmount: input.cashAmount.toString(),
     creditAmount: input.creditAmount.toString(),
     totalKilos: input.totalKilos?.toString(),
+    backdateReason: input.backdateReason,
   });
   if (error) {
     throw new Error(String(error.value));

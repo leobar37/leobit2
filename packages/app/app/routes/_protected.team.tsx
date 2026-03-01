@@ -249,7 +249,7 @@ export default function TeamPage() {
       </main>
 
       <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DrawerContent>
+        <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
             <DrawerTitle>Editar miembro</DrawerTitle>
             <DrawerDescription>

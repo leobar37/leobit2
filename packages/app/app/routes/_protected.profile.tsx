@@ -52,13 +52,20 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      await updateProfile.mutateAsync(data);
+      // Filter out empty strings - backend rejects empty strings for date format
+      const payload = {
+        ...(data.dni && { dni: data.dni }),
+        ...(data.phone && { phone: data.phone }),
+        ...(data.birthDate && { birthDate: data.birthDate }),
+      };
+      await updateProfile.mutateAsync(payload);
       toast.success("Perfil actualizado correctamente");
     } catch (error) {
       toast.error("Error al actualizar el perfil");
       console.error("Error updating profile:", error);
     }
   };
+
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();

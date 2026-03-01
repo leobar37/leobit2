@@ -1,15 +1,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useRef } from "react";
-import { X, Wallet, Banknote, Smartphone, Building2, Camera } from "lucide-react";
+import { useState } from "react";
+import { Wallet, Banknote, Smartphone, Building2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FormInput } from "@/components/forms/form-input";
 import { FormNumberInput } from "@/components/forms/form-number-input";
+import { FileUploader } from "@/components/ui/file-uploader";
 import { useCreatePayment } from "~/hooks/use-payments";
-import { useUploadFile, validateFile } from "~/hooks/use-files";
+import { useFileUpload } from "~/hooks/use-file-upload";
 
 const paymentFormSchema = z.object({
   amount: z.string().refine(
@@ -40,11 +41,10 @@ const paymentMethods = [
 ];
 
 export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) {
-  const [proofImage, setProofImage] = useState<File | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const createPayment = useCreatePayment();
-  const uploadFile = useUploadFile();
+  const fileUpload = useFileUpload();
 
   const {
     register,
@@ -79,35 +79,26 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
   const paymentMethod = watch("paymentMethod");
   const showDigitalFields = ["yape", "plin", "transferencia"].includes(paymentMethod);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError("root", { message: validationError });
-      return;
-    }
-
-    setProofImage(file);
+  const handleFileSelect = (file: File) => {
+    setProofFile(file);
     setProofPreview(URL.createObjectURL(file));
   };
 
-  const clearImage = () => {
-    setProofImage(null);
-    setProofPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleClearFile = () => {
+    if (proofPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(proofPreview);
     }
+    setProofFile(null);
+    setProofPreview(null);
   };
 
   const onSubmit = async (data: PaymentFormData) => {
     try {
       let proofImageId: string | undefined;
 
-      if (proofImage) {
-        const uploadedFile = await uploadFile.mutateAsync(proofImage);
-        proofImageId = uploadedFile.id;
+      if (proofFile) {
+        const result = await fileUpload.upload(proofFile);
+        proofImageId = result.id;
       }
 
       await createPayment.mutateAsync({
@@ -197,44 +188,22 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
             )}
 
             {showDigitalFields && (
-              <div className="space-y-2">
-                <Label>Comprobante de Pago (opcional)</Label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                {proofPreview ? (
-                  <div className="relative">
-                    <img
-                      src={proofPreview}
-                      alt="Comprobante"
-                      className="w-full h-32 object-cover rounded-xl"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2 rounded-full"
-                      onClick={clearImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full rounded-xl h-20 border-dashed"
-                  >
-                    <Camera className="h-5 w-5 mr-2" />
-                    Adjuntar captura de pantalla
-                  </Button>
-                )}
-              </div>
+              <FileUploader
+                file={proofFile}
+                previewUrl={proofPreview}
+                status={
+                  fileUpload.isUploading
+                    ? "uploading"
+                    : fileUpload.isPending
+                    ? "pending"
+                    : "idle"
+                }
+                error={fileUpload.isError ? "Error al subir imagen" : null}
+                label="Comprobante de Pago (opcional)"
+                helperText="Toma una foto o selecciona de la galería"
+                onFileSelect={handleFileSelect}
+                onClear={handleClearFile}
+              />
             )}
 
             <FormInput
@@ -245,7 +214,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
 
             <Button
               type="submit"
-              disabled={createPayment.isPending || !isValid}
+              disabled={createPayment.isPending || fileUpload.isUploading || !isValid}
               className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
             >
               {createPayment.isPending ? "Guardando..." : "Registrar Abono"}

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../../lib/db";
 import {
   businessPaymentSettings,
@@ -42,11 +42,16 @@ export class PaymentMethodConfigRepository {
         ...data,
         updatedAt: new Date(),
       })
-      .where(eq(businessPaymentSettings.id, id))
+      .where(and(
+        eq(businessPaymentSettings.id, id),
+        eq(businessPaymentSettings.businessId, ctx.businessId)
+      ))
       .returning();
 
     return result;
-  }
+}
+
+
 
   async getOrCreate(
     ctx: RequestContext

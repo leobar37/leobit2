@@ -76,7 +76,19 @@ export class SaleService {
       throw new ValidationError("El monto total debe ser mayor a 0");
     }
 
-    const totalAmount = parseFloat(normalizeAmount(data.totalAmount, 2, "totalAmount"));
+    // Calculate total from items - this is the authoritative value
+    const calculatedTotal = data.items.reduce((sum, item) => sum + item.subtotal, 0);
+    const submittedTotal = data.totalAmount;
+
+    // Validate that submitted total matches calculated total
+    if (Math.abs(calculatedTotal - submittedTotal) > 0.01) {
+      throw new ValidationError(
+        `El total no coincide con la suma de productos. Calculado: S/ ${calculatedTotal.toFixed(2)}, Enviado: S/ ${submittedTotal.toFixed(2)}`
+      );
+    }
+
+    // Use calculated total (not submitted) - ensures data integrity
+    const totalAmount = parseFloat(normalizeAmount(calculatedTotal, 2, "totalAmount"));
     const amountPaidInput =
       data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
     const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));

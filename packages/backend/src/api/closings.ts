@@ -54,6 +54,7 @@ export const closingRoutes = new Elysia({ prefix: "/closings" })
         cashAmount: parseFloat(body.cashAmount),
         creditAmount: parseFloat(body.creditAmount),
         totalKilos: body.totalKilos ? parseFloat(body.totalKilos) : undefined,
+        backdateReason: body.backdateReason,
       });
       return { success: true, data: closing };
     },
@@ -65,6 +66,7 @@ export const closingRoutes = new Elysia({ prefix: "/closings" })
         cashAmount: t.String(),
         creditAmount: t.String(),
         totalKilos: t.Optional(t.String()),
+        backdateReason: t.Optional(t.String()),
       }),
     }
   )

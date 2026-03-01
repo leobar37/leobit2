@@ -6,6 +6,8 @@ import {
   timestamp,
   index,
   date,
+  text,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { syncStatusEnum } from "./enums";
@@ -36,6 +38,7 @@ export const closings = pgTable(
       .notNull()
       .default("0"),
     totalKilos: decimal("total_kilos", { precision: 10, scale: 3 }),
+    backdateReason: text("backdate_reason"),
 
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
@@ -47,6 +50,11 @@ export const closings = pgTable(
     index("idx_closings_seller_id").on(table.sellerId),
     index("idx_closings_date").on(table.closingDate),
     index("idx_closings_sync_status").on(table.syncStatus),
+    uniqueIndex("uq_closings_business_seller_date").on(
+      table.businessId,
+      table.sellerId,
+      table.closingDate
+    ),
   ]
 );
 

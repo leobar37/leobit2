@@ -46,7 +46,9 @@ function createKgCartItem(
     return null;
   }
 
-  const subtotal = parseNumber(totalAmount) || parseFloat((kgNeto * unitPrice).toFixed(2));
+  // Calculate subtotal from quantity * unitPrice, rounded to 2 decimals
+  const subtotal = parseFloat((kgNeto * unitPrice).toFixed(2));
+  
   if (subtotal <= 0) {
     return null;
   }
@@ -71,7 +73,7 @@ function createUnidadCartItem(
   packsInput: string,
   unitsInput: string,
 ): CartItem | null {
-  const unitQuantity = parseVariantUnitQuantity(selectedVariant);
+  const unitQuantity = parseVariantUnitQuantity(selectedProduct);
   const variantPrice = parseNumber(selectedVariant.price || "0");
 
   const packs = parseNumber(packsInput);
@@ -83,16 +85,24 @@ function createUnidadCartItem(
   }
 
   const totalFromInput = parseNumber(values.totalAmount);
-  const subtotal =
-    totalFromInput > 0
-      ? totalFromInput
-      : packs > 0
-        ? packs * variantPrice
-        : quantityUnits * (unitQuantity > 0 ? variantPrice / unitQuantity : 0);
+  
+  // Calculate initial subtotal from input or from quantity * price
+  const initialSubtotal = totalFromInput > 0
+    ? totalFromInput
+    : packs > 0
+      ? packs * variantPrice
+      : quantityUnits * (unitQuantity > 0 ? variantPrice / unitQuantity : 0);
 
-  const unitPrice = quantityUnits > 0 ? subtotal / quantityUnits : 0;
+  // When user enters custom total, recalculate unit price from subtotal
+  // Round to 2 decimal places to match backend behavior
+  const recalculatedUnitPrice = quantityUnits > 0 
+    ? parseFloat((initialSubtotal / quantityUnits).toFixed(2)) 
+    : 0;
 
-  if (subtotal <= 0 || unitPrice <= 0) {
+  // Ensure subtotal is exactly quantity * unitPrice (to match backend calculation)
+  const finalSubtotal = parseFloat((quantityUnits * recalculatedUnitPrice).toFixed(2));
+
+  if (finalSubtotal <= 0 || recalculatedUnitPrice <= 0) {
     return null;
   }
 
@@ -104,8 +114,8 @@ function createUnidadCartItem(
     unit: "unidad",
     variantUnitQuantity: unitQuantity,
     quantity: quantityUnits,
-    unitPrice,
-    subtotal: parseFloat(subtotal.toFixed(2)),
+    unitPrice: recalculatedUnitPrice,
+    subtotal: finalSubtotal,
   };
 }
 

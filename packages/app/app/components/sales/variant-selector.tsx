@@ -81,7 +81,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
         onOpenChange(true);
       }}
     >
-      <DrawerContent>
+      <DrawerContent className="flex flex-col max-h-[85vh]">
         <DrawerHeader>
           <DrawerTitle className="flex items-center gap-2">
             {step === "products" ? (

@@ -210,7 +210,7 @@ export default function InvitationsPage() {
                 Invitar
               </Button>
             </DrawerTrigger>
-            <DrawerContent>
+            <DrawerContent className="max-h-[85vh]">
               <DrawerHeader>
                 <DrawerTitle>Invitar vendedor</DrawerTitle>
                 <DrawerDescription>

@@ -96,7 +96,8 @@ export default function PaymentMethodsConfigPage() {
       await updateMutation.mutateAsync(methods as any);
       toast.success("Métodos de pago guardados correctamente");
     } catch (error) {
-      toast.error("Error al guardar los métodos de pago");
+      const message = error instanceof Error ? error.message : "Error desconocido";
+      toast.error(message || "Error al guardar los métodos de pago");
       console.error(error);
     }
   };

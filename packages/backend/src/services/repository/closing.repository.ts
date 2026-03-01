@@ -2,6 +2,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { closings, type Closing, type NewClosing } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import { getToday } from "../../lib/date-utils";
 
 export class ClosingRepository {
   async findMany(
@@ -37,14 +38,13 @@ export class ClosingRepository {
   async findByDate(
     ctx: RequestContext,
     sellerId: string,
-    date: Date
+    closingDate: string
   ): Promise<Closing | undefined> {
-    const dateStr = date.toISOString().split('T')[0];
     return db.query.closings.findFirst({
       where: and(
         eq(closings.businessId, ctx.businessId),
         eq(closings.sellerId, sellerId),
-        eq(closings.closingDate, dateStr)
+        eq(closings.closingDate, closingDate)
       ),
     });
   }
@@ -109,7 +109,7 @@ export class ClosingRepository {
     cashAmount: number;
     creditAmount: number;
   }> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getToday();
 
     const result = await db
       .select({

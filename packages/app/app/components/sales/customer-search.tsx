@@ -132,7 +132,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
           }
         }}
       >
-        <DrawerContent className="max-h-[85vh]">
+        <DrawerContent className="flex flex-col max-h-[85vh]">
           <DrawerHeader className="border-b pb-4">
             <DrawerTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-orange-500" />
@@ -157,6 +157,10 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
             </div>
 
             <div
+              className="space-y-2 flex-1 overflow-y-auto"
+              onScroll={handleListScroll}
+              aria-live="polite"
+            >
               className="space-y-2 max-h-[50vh] overflow-y-auto"
               onScroll={handleListScroll}
               aria-live="polite"

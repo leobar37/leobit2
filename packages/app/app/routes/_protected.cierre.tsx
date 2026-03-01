@@ -13,46 +13,68 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTodayStats } from "~/hooks/use-sales";
-import { useCreateClosing, useClosingTodayStats } from "~/hooks/use-closings";
+import { Input } from "@/components/ui/input";
+import { ToolbarActions } from "~/components/layout/toolbar-actions";
+import { useCreateClosing } from "~/hooks/use-closings";
 import { useSales } from "~/hooks/use-sales";
-import { getToday, toISODateString, now, formatShortDate, parseISODate } from "~/lib/date-utils";
+import { useBusiness } from "~/hooks/use-business";
+import { getToday, parseISODate, subDays, toDateString } from "~/lib/date-utils";
 
 export default function CierreDiaPage() {
-  const { data: todayStats, isLoading: statsLoading } = useTodayStats();
   const { data: sales } = useSales();
+  const { data: business } = useBusiness();
   const createClosing = useCreateClosing();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(getToday());
+  const [backdateReason, setBackdateReason] = useState("");
 
-  const todaySales =
+  const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  const todayDate = getToday();
+  const minBackdateDate = toDateString(subDays(todayDate, 7));
+  const isBackdated = selectedDate !== todayDate;
+  const isBackdateReasonInvalid = isBackdated && backdateReason.trim().length < 10;
+
+  const selectedSales =
     sales?.filter((sale) => {
-      const saleDate = parseISODate(sale.saleDate);
-      const today = now();
-      return (
-        saleDate.getDate() === today.getDate() &&
-        saleDate.getMonth() === today.getMonth() &&
-        saleDate.getFullYear() === today.getFullYear()
-      );
+      const saleDate = toDateString(parseISODate(sale.saleDate));
+      return saleDate === selectedDate;
     }) || [];
 
-  const totalKilos = todaySales.reduce((sum, sale) => {
+  const selectedStats = {
+    count: selectedSales.length,
+    total: selectedSales
+      .reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0)
+      .toFixed(2),
+  };
+
+  const totalKilos = selectedSales.reduce((sum, sale) => {
     const neto = parseFloat(sale.netWeight || "0");
     return sum + neto;
   }, 0);
 
   const handleGenerarCierre = async () => {
-    if (!todayStats) return;
+    if (selectedSales.length === 0) {
+      toast.error("No hay ventas para la fecha seleccionada");
+      return;
+    }
+
+    if (isBackdateReasonInvalid) {
+      toast.error("Debe indicar un motivo de al menos 10 caracteres");
+      return;
+    }
 
     try {
       await createClosing.mutateAsync({
-        closingDate: getToday(),
-        totalSales: todayStats.count,
-        totalAmount: parseFloat(todayStats.total),
-        cashAmount: parseFloat(todayStats.total),
+        closingDate: selectedDate,
+        totalSales: selectedStats.count,
+        totalAmount: parseFloat(selectedStats.total),
+        cashAmount: parseFloat(selectedStats.total),
         creditAmount: 0,
         totalKilos: totalKilos,
+        backdateReason: isBackdated ? backdateReason.trim() : undefined,
       });
       setShowSuccess(true);
+      setBackdateReason("");
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error creating closing:", error);
@@ -72,6 +94,35 @@ export default function CierreDiaPage() {
       </header>
 
       <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
+        {isAdmin && (
+          <Card className="border-0 shadow-md rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Fecha del Cierre</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                type="date"
+                value={selectedDate}
+                min={minBackdateDate}
+                max={todayDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se permite retroceder hasta 7 días. Si el cierre es retroactivo, debe incluir motivo.
+              </p>
+              {isBackdated && (
+                <Input
+                  value={backdateReason}
+                  onChange={(event) => setBackdateReason(event.target.value)}
+                  placeholder="Motivo del cierre retroactivo (mínimo 10 caracteres)"
+                  className="rounded-xl"
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {showSuccess && (
           <div className="bg-green-500 text-white p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
             <CheckCircle className="h-5 w-5" />
@@ -88,7 +139,7 @@ export default function CierreDiaPage() {
               <div>
                 <p className="text-orange-100 text-sm">Total del Día</p>
                 <p className="text-3xl font-bold">
-                  S/ {todayStats ? parseFloat(todayStats.total).toFixed(2) : "0.00"}
+                  S/ {selectedStats.total}
                 </p>
               </div>
             </div>
@@ -96,7 +147,7 @@ export default function CierreDiaPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-orange-100 text-xs">Ventas</p>
-                <p className="text-xl font-semibold">{todayStats?.count || 0}</p>
+                <p className="text-xl font-semibold">{selectedStats.count}</p>
               </div>
               <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-orange-100 text-xs">Kilos</p>
@@ -122,14 +173,14 @@ export default function CierreDiaPage() {
                 <div>
                   <p className="font-medium">Ventas al Contado</p>
                   <p className="text-sm text-muted-foreground">
-                    {todaySales.filter((s) => s.saleType === "contado").length}{" "}
+                    {selectedSales.filter((s) => s.saleType === "contado").length}{" "}
                     ventas
                   </p>
                 </div>
               </div>
               <p className="font-bold text-lg">
                 S/{" "}
-                {todaySales
+                {selectedSales
                   .filter((s) => s.saleType === "contado")
                   .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0)
                   .toFixed(2)}
@@ -144,14 +195,14 @@ export default function CierreDiaPage() {
                 <div>
                   <p className="font-medium">Ventas a Crédito</p>
                   <p className="text-sm text-muted-foreground">
-                    {todaySales.filter((s) => s.saleType === "credito").length}{" "}
+                    {selectedSales.filter((s) => s.saleType === "credito").length}{" "}
                     ventas
                   </p>
                 </div>
               </div>
               <p className="font-bold text-lg">
                 S/{" "}
-                {todaySales
+                {selectedSales
                   .filter((s) => s.saleType === "credito")
                   .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0)
                   .toFixed(2)}
@@ -168,13 +219,13 @@ export default function CierreDiaPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todaySales.length === 0 ? (
+            {selectedSales.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
-                No hay ventas hoy
+                No hay ventas para la fecha seleccionada
               </p>
             ) : (
               <div className="space-y-2">
-                {todaySales.slice(0, 5).map((sale) => (
+                {selectedSales.slice(0, 5).map((sale) => (
                   <div
                     key={sale.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
@@ -195,9 +246,9 @@ export default function CierreDiaPage() {
                     </p>
                   </div>
                 ))}
-                {todaySales.length > 5 && (
+                {selectedSales.length > 5 && (
                   <p className="text-center text-sm text-muted-foreground">
-                    Y {todaySales.length - 5} ventas más...
+                    Y {selectedSales.length - 5} ventas más...
                   </p>
                 )}
               </div>
@@ -206,16 +257,16 @@ export default function CierreDiaPage() {
         </Card>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100">
+      <ToolbarActions>
         <Button
           onClick={handleGenerarCierre}
-          disabled={createClosing.isPending || !todayStats || todaySales.length === 0}
-          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold"
+          disabled={createClosing.isPending || selectedSales.length === 0 || isBackdateReasonInvalid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           <Save className="h-5 w-5 mr-2" />
           {createClosing.isPending ? "Guardando..." : "Generar Cierre del Día"}
         </Button>
-      </div>
+      </ToolbarActions>
     </div>
   );
 }

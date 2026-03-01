@@ -2,6 +2,7 @@ import { ClipboardList, Calendar, User, CheckCircle, XCircle, Truck } from "luci
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "~/lib/db/schema";
+import { formatDisplayDate, isToday } from "~/lib/date-utils";
 
 interface OrderCardProps {
   order: Order;
@@ -35,24 +36,6 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
   const status = statusConfig[order.status];
   const StatusIcon = status.icon;
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-PE", {
-      day: "numeric",
-      month: "short",
-    });
-  };
-
-  const isToday = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  };
-
   const canDeliver =
     order.status === "confirmed" && isToday(order.deliveryDate);
 
@@ -81,7 +64,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
                     <span>
                       {isToday(order.deliveryDate)
                         ? "Hoy"
-                        : formatDate(order.deliveryDate)}
+                        : formatDisplayDate(order.deliveryDate)}
                     </span>
                   </div>
                   {order.items && (

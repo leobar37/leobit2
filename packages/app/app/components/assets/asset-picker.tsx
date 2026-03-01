@@ -65,7 +65,7 @@ export function AssetPicker({
               <span className="text-xs text-muted-foreground">{placeholder}</span>
             </Button>
           </DrawerTrigger>
-          <DrawerContent>
+          <DrawerContent className="max-h-[85vh]">
             <DrawerHeader>
               <DrawerTitle>Galería de imágenes</DrawerTitle>
             </DrawerHeader>

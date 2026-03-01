@@ -34,7 +34,7 @@ const drawerVariants = cva(
   {
     variants: {
       side: {
-        bottom: "inset-x-0 bottom-0 border-t rounded-t-[20px] max-h-[85vh] overflow-y-auto",
+        bottom: "inset-x-0 bottom-0 border-t rounded-t-[20px] max-h-[85vh]",
       },
     },
     defaultVariants: {

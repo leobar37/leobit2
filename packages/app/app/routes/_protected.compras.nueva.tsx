@@ -1,421 +1,183 @@
-import { useNavigate } from "react-router";
 import { useState } from "react";
-import { useForm, FormProvider, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { ShoppingCart, Plus, Trash2, Loader2, Save } from "lucide-react";
+import { ShoppingCart, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
-import { useCreatePurchase } from "~/hooks/use-purchases";
-import { useProducts } from "~/hooks/use-products";
-import { useVariantsByProduct } from "~/hooks/use-product-variants";
-import { useUnitsByProduct } from "~/hooks/use-product-units";
-import type { ProductUnit } from "~/hooks/use-product-units";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { SupplierSelector } from "~/components/purchases/supplier-selector";
 import { SupplierQuickForm } from "~/components/purchases/supplier-quick-form";
-import type { UseFormReturn } from "react-hook-form";
+import { PurchaseFormProvider, usePurchaseForm } from "~/components/purchases/purchase-form-context";
+import { PurchaseItemCard } from "~/components/purchases/purchase-item-card";
 import type { Supplier } from "~/hooks/use-suppliers";
-import { getToday } from "~/lib/date-utils";
 
-const purchaseItemSchema = z.object({
-  productId: z.string().min(1, "Selecciona un producto"),
-  variantId: z.string().optional(),
-  unitId: z.string().optional(),
-  packs: z.number().optional(),
-  quantity: z.number().positive("La cantidad debe ser mayor a 0"),
-  unitCost: z.number().min(0, "El costo no puede ser negativo"),
+useSetLayout({
+  title: "Nueva Compra",
+  showBackButton: true,
+  backHref: "/compras",
 });
 
-const purchaseSchema = z.object({
-  purchaseDate: z.string().min(1, "La fecha es requerida"),
-  notes: z.string().optional(),
-  items: z.array(purchaseItemSchema).min(1, "Agrega al menos un producto"),
-});
-
-type PurchaseFormData = z.infer<typeof purchaseSchema>;
-
-export default function NuevaCompraPage() {
-  const navigate = useNavigate();
-  const { mutate: createPurchase, isPending } = useCreatePurchase();
-  const { data: products } = useProducts();
+function PurchaseFormInner() {
+  const { 
+    fields, 
+    append, 
+    supplier, 
+    setSupplier, 
+    onSubmit, 
+    isPending, 
+    isFormValid, 
+    totalAmount,
+    form 
+  } = usePurchaseForm();
+  
   const [isQuickFormOpen, setIsQuickFormOpen] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-
-  useSetLayout({
-    title: "Nueva Compra",
-    showBackButton: true,
-    backHref: "/compras",
-  });
-
-  const form = useForm<PurchaseFormData>({
-    resolver: zodResolver(purchaseSchema),
-    mode: "onChange",
-    defaultValues: {
-      purchaseDate: getToday(),
-      notes: "",
-      items: [],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
-  const onSubmit = form.handleSubmit((data) => {
-    if (!selectedSupplier) return;
-
-    createPurchase(
-      { ...data, supplierId: selectedSupplier.id },
-      {
-        onSuccess: () => {
-          navigate("/compras");
-        },
-      }
-    );
-  });
-
-  const addItem = () => {
-    append({ productId: "", variantId: undefined, unitId: undefined, packs: undefined, quantity: 0, unitCost: 0 });
+  
+  const handleSupplierSelect = (newSupplier: Supplier | null) => {
+    setSupplier(newSupplier);
   };
-
-  const items = form.watch("items");
-  const totalAmount = items.reduce(
-    (sum, item) => sum + (item.quantity || 0) * (item.unitCost || 0),
-    0
-  );
-
-  const isFormValid = form.formState.isValid && selectedSupplier !== null && fields.length > 0;
-
-  const handleSupplierSelect = (supplier: Supplier | null) => {
-    setSelectedSupplier(supplier);
+  
+  const handleQuickFormSuccess = (newSupplier: Supplier) => {
+    setSupplier(newSupplier);
   };
-
-  const handleQuickFormSuccess = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
-  };
-
+  
+  const hasError = !!form.formState.errors.root;
+  const errorMessage = form.formState.errors.root?.message;
+  
   return (
-    <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center">
-            <ShoppingCart className="h-8 w-8 text-orange-600" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Registra una nueva compra de productos
-            </p>
-          </div>
+    <form onSubmit={onSubmit} className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center">
+          <ShoppingCart className="h-8 w-8 text-orange-600" />
         </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Proveedor *
-            </label>
-            <SupplierSelector
-              selectedSupplier={selectedSupplier}
-              onSelectSupplier={handleSupplierSelect}
-              onCreateNew={() => setIsQuickFormOpen(true)}
-            />
-          </div>
-
-          <FormInput
-            name="purchaseDate"
-            label="Fecha de compra"
-            type="date"
-            required
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Registra una nueva compra de productos
+          </p>
+        </div>
+      </div>
+      
+      {/* Supplier */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Proveedor *
+          </label>
+          <SupplierSelector
+            selectedSupplier={supplier}
+            onSelectSupplier={handleSupplierSelect}
+            onCreateNew={() => setIsQuickFormOpen(true)}
           />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Productos *</label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addItem}
-                className="rounded-xl"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Agregar
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {fields.map((field, index) => (
-                <Card key={field.id} className="border-0 shadow-md rounded-2xl">
-                  <CardContent className="p-4 space-y-3">
-                    <ItemProductSelector
-                      index={index}
-                      products={products}
-                      form={form}
-                    />
-
-                    <UnitSelectorField index={index} form={form} />
-
-                    <PurchaseQuantityInputs index={index} form={form} />
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        Subtotal: S/ {" "}
-                        {(
-                          (form.watch(`items.${index}.quantity`) || 0) *
-                          (form.watch(`items.${index}.unitCost`) || 0)
-                        ).toFixed(2)}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {form.formState.errors.items?.root && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.items.root.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Notas
-            </label>
-            <textarea
-              {...form.register("notes")}
-              rows={3}
-              placeholder="Información adicional sobre la compra"
-              className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-            />
-          </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl">
-            <span className="font-medium">Total:</span>
-            <span className="text-xl font-bold">S/ {totalAmount.toFixed(2)}</span>
-          </div>
-
+        
+        <FormInput
+          name="purchaseDate"
+          label="Fecha de compra"
+          type="date"
+          required
+        />
+      </div>
+      
+      {/* Products */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Productos *</label>
           <Button
-            type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
-            disabled={isPending || !isFormValid}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append({ 
+              productId: "", 
+              variantId: undefined, 
+              unitId: undefined, 
+              packs: undefined, 
+              quantity: 0, 
+              unitCost: 0 
+            })}
+            className="rounded-xl"
           >
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar Compra
-              </>
-            )}
+            <Plus className="h-4 w-4 mr-1" />
+            Agregar
           </Button>
         </div>
-
-        <SupplierQuickForm
-          open={isQuickFormOpen}
-          onOpenChange={setIsQuickFormOpen}
-          onSuccess={handleQuickFormSuccess}
-        />
-      </form>
-    </FormProvider>
-  );
-}
-
-interface Product {
-  id: string;
-  name: string;
-}
-
-interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-}
-
-function ItemProductSelector({
-  index,
-  products,
-  form,
-}: {
-  index: number;
-  products?: Product[];
-  form: UseFormReturn<PurchaseFormData>;
-}) {
-  const selectedProductId = form.watch(`items.${index}.productId`);
-  const { data: variants } = useVariantsByProduct(selectedProductId || "", {
-    isActive: true,
-  });
-
-  const hasVariants = variants && variants.length > 0;
-
-  return (
-    <>
-      <div className="space-y-2">
-        <label className="text-xs">Producto</label>
-        <select
-          {...form.register(`items.${index}.productId`)}
-          onChange={(e) => {
-            form.setValue(`items.${index}.productId`, e.target.value);
-            form.setValue(`items.${index}.variantId`, undefined);
-            form.setValue(`items.${index}.unitId`, undefined);
-            form.setValue(`items.${index}.packs`, undefined);
-            form.setValue(`items.${index}.quantity`, 0);
-          }}
-          className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="">Seleccionar producto...</option>
-          {products?.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name}
-            </option>
+        
+        <div className="space-y-3">
+          {fields.map((field, index) => (
+            <PurchaseItemCard key={field.id} index={index} />
           ))}
-        </select>
-        {form.formState.errors.items?.[index]?.productId && (
+        </div>
+        
+        {fields.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Agrega al menos un producto
+          </p>
+        )}
+        
+        {form.formState.errors.items?.root && (
           <p className="text-sm text-destructive">
-            {form.formState.errors.items[index]?.productId?.message}
+            {form.formState.errors.items.root.message}
           </p>
         )}
       </div>
-
-      {hasVariants && (
-        <div className="space-y-2">
-          <label className="text-xs">Variante</label>
-          <select
-            {...form.register(`items.${index}.variantId`)}
-            className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-          >
-            <option value="">Seleccionar variante...</option>
-            {variants?.map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {variant.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-    </>
-  );
-}
-
-function UnitSelectorField({
-  index,
-  form,
-}: {
-  index: number;
-  form: UseFormReturn<PurchaseFormData>;
-}) {
-  const selectedProductId = form.watch(`items.${index}.productId`);
-  const { data: units } = useUnitsByProduct(selectedProductId || "", { isActive: true });
-
-  const hasUnits = units && units.length > 0;
-
-  if (!hasUnits) return null;
-
-  return (
-    <div className="space-y-2">
-      <label className="text-xs">Unidad de medida</label>
-      <select
-        {...form.register(`items.${index}.unitId`)}
-        onChange={(e) => {
-          form.setValue(`items.${index}.unitId`, e.target.value);
-          form.setValue(`items.${index}.packs`, undefined);
-          form.setValue(`items.${index}.quantity`, 0);
-        }}
-        className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-      >
-        <option value="">Sin unidad configurada (cantidad directa)</option>
-        {units?.map((unit) => (
-          <option key={unit.id} value={unit.id}>
-            {unit.displayName}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function PurchaseQuantityInputs({
-  index,
-  form,
-}: {
-  index: number;
-  form: UseFormReturn<PurchaseFormData>;
-}) {
-  const selectedProductId = form.watch(`items.${index}.productId`);
-  const selectedUnitId = form.watch(`items.${index}.unitId`);
-  const selectedPacks = form.watch(`items.${index}.packs`);
-  const { data: units } = useUnitsByProduct(selectedProductId || "", { isActive: true });
-
-  const selectedUnit = units?.find((u) => u.id === selectedUnitId);
-  const calculatedQuantity = selectedUnit && selectedPacks ? selectedPacks * parseFloat(selectedUnit.baseUnitQuantity) : 0;
-
-  // Auto-update quantity when packs change
-  const handlePacksChange = (value: number) => {
-    if (selectedUnit && value > 0) {
-      const finalQuantity = value * parseFloat(selectedUnit.baseUnitQuantity);
-      form.setValue(`items.${index}.quantity`, finalQuantity);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
+      
+      {/* Notes */}
       <div className="space-y-2">
-        <label className="text-xs">
-          {selectedUnitId ? "Cantidad de packs" : "Cantidad"}
+        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Notas
         </label>
-        {selectedUnitId ? (
-          <>
-            <FormInput
-              type="number"
-              min="0.001"
-              step="0.001"
-              error={form.formState.errors.items?.[index]?.packs?.message}
-              {...form.register(`items.${index}.packs`, { 
-                valueAsNumber: true,
-                onChange: (e) => handlePacksChange(e.target.valueAsNumber),
-              })}
-              placeholder="Ingresa cantidad de packs"
-            />
-            {selectedUnit && selectedPacks && calculatedQuantity > 0 ? (
-              <p className="text-xs text-orange-600 font-semibold">
-                {selectedPacks} × {selectedUnit.baseUnitQuantity} = {calculatedQuantity} unidades
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <FormInput
-            type="number"
-            min="0.001"
-            step="0.001"
-            error={form.formState.errors.items?.[index]?.quantity?.message}
-            {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
-            placeholder="Ingresa cantidad"
-          />
-        )}
+        <textarea
+          {...form.register("notes")}
+          rows={3}
+          placeholder="Información adicional sobre la compra"
+          className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+        />
       </div>
-      <FormInput
-        label="Costo unitario (S/)"
-        type="number"
-        min="0"
-        step="0.01"
-        error={form.formState.errors.items?.[index]?.unitCost?.message}
-        {...form.register(`items.${index}.unitCost`, { valueAsNumber: true })}
+      
+      {/* Total & Submit */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl">
+          <span className="font-medium">Total:</span>
+          <span className="text-xl font-bold">S/ {totalAmount.toFixed(2)}</span>
+        </div>
+        
+        {/* Error Message */}
+        {hasError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-sm text-red-600 text-center">{errorMessage}</p>
+          </div>
+        )}
+        
+        <Button
+          type="submit"
+          className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
+          disabled={isPending}
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Guardar Compra
+            </>
+          )}
+        </Button>
+      </div>
+      
+      {/* Quick Create Supplier Modal */}
+      <SupplierQuickForm
+        open={isQuickFormOpen}
+        onOpenChange={setIsQuickFormOpen}
+        onSuccess={handleQuickFormSuccess}
       />
-    </div>
+    </form>
+  );
+}
+
+export default function NuevaCompraPage() {
+  return (
+    <PurchaseFormProvider>
+      <PurchaseFormInner />
+    </PurchaseFormProvider>
   );
 }

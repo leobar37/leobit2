@@ -37,9 +37,13 @@ export interface Purchase {
 export interface CreatePurchaseItemInput {
   productId: string;
   variantId?: string;
+  unitId?: string;
+  packs?: number;
   quantity: number;
   unitCost: number;
 }
+
+
 
 export interface CreatePurchaseInput {
   supplierId: string;
