@@ -1,0 +1,267 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-03-02",
+  "categories": [
+    {
+      "id": "primeros-pasos",
+      "title": "Primeros Pasos",
+      "icon": "BookOpen",
+      "order": 1,
+      "description": "Aprende lo básico para comenzar a usar Avileo",
+      "tutorials": [
+        {
+          "slug": "bienvenida",
+          "title": "Bienvenida a Avileo",
+          "description": "Conoce el sistema y sus beneficios principales",
+          "file": "01-primeros-pasos/01-bienvenida.md",
+          "tags": ["intro", "basico"],
+          "roles": ["admin", "vendedor"],
+          "estimatedReadTime": 3
+        },
+        {
+          "slug": "login",
+          "title": "Iniciar sesión y registro",
+          "description": "Cómo acceder al sistema y crear tu cuenta",
+          "file": "01-primeros-pasos/02-login.md",
+          "tags": ["intro", "auth"],
+          "roles": ["admin", "vendedor"],
+          "estimatedReadTime": 5
+        },
+        {
+          "slug": "navegacion",
+          "title": "Navegación del sistema",
+          "description": "Aprende a moverte por las diferentes secciones",
+          "file": "01-primeros-pasos/03-navegacion.md",
+          "tags": ["intro", "ui"],
+          "roles": ["admin", "vendedor"],
+          "estimatedReadTime": 4
+        }
+      ]
+    },
+    {
+      "id": "ventas",
+      "title": "Ventas",
+      "icon": "ShoppingCart",
+      "order": 2,
+      "description": "Todo sobre el proceso de venta de productos",
+      "tutorials": [
+        {
+          "slug": "introduccion",
+          "title": "Introducción a las ventas",
+          "description": "Conceptos básicos del módulo de ventas",
+          "file": "02-ventas/01-introduccion.md",
+          "tags": ["ventas", "basico"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 4
+        },
+        {
+          "slug": "nueva-venta",
+          "title": "Cómo hacer una venta",
+          "description": "Guía completa del proceso de venta paso a paso",
+          "file": "02-ventas/02-nueva-venta.md",
+          "tags": ["ventas", "core", "offline"],
+          "roles": ["vendedor"],
+          "estimatedReadTime": 8
+        },
+        {
+          "slug": "calculadora",
+          "title": "Uso de la calculadora",
+          "description": "Cómo calcular peso neto y precios con la calculadora de pollo",
+          "file": "02-ventas/03-calculadora.md",
+          "tags": ["ventas", "herramienta"],
+          "roles": ["vendedor"],
+          "estimatedReadTime": 5
+        },
+        {
+          "slug": "credito-vs-contado",
+          "title": "Venta al crédito vs contado",
+          "description": "Diferencias y cuándo usar cada modalidad de pago",
+          "file": "02-ventas/04-credito-vs-contado.md",
+          "tags": ["ventas", "credito", "pagos"],
+          "roles": ["vendedor"],
+          "estimatedReadTime": 6
+        }
+      ]
+    },
+    {
+      "id": "clientes",
+      "title": "Clientes",
+      "icon": "Users",
+      "order": 3,
+      "description": "Gestión de tu base de datos de clientes",
+      "tutorials": [
+        {
+          "slug": "gestion-clientes",
+          "title": "Gestionar clientes",
+          "description": "Crear, editar y buscar clientes en el sistema",
+          "file": "03-clientes/01-gestion-clientes.md",
+          "tags": ["clientes", "crud", "offline"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 6
+        },
+        {
+          "slug": "historial",
+          "title": "Ver historial de compras",
+          "description": "Consulta el historial de compras de un cliente",
+          "file": "03-clientes/02-historial.md",
+          "tags": ["clientes", "historial"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 4
+        }
+      ]
+    },
+    {
+      "id": "cobros",
+      "title": "Cobros y Abonos",
+      "icon": "Banknote",
+      "order": 4,
+      "description": "Registro de pagos y gestión de deudas",
+      "tutorials": [
+        {
+          "slug": "registrar-abonos",
+          "title": "Registrar un abono",
+          "description": "Cómo registrar pagos que hacen los clientes para reducir su deuda",
+          "file": "04-cobros/01-registrar-abonos.md",
+          "tags": ["cobros", "abonos", "pagos"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 5
+        },
+        {
+          "slug": "ver-deudores",
+          "title": "Ver deudores",
+          "description": "Consulta quién debe y cuánto",
+          "file": "04-cobros/02-ver-deudores.md",
+          "tags": ["cobros", "reportes"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 4
+        }
+      ]
+    },
+    {
+      "id": "pedidos",
+      "title": "Pedidos",
+      "icon": "Package",
+      "order": 5,
+      "description": "Gestión de pedidos para entrega futura",
+      "tutorials": [
+        {
+          "slug": "crear-pedido",
+          "title": "Crear un pedido",
+          "description": "Registra pedidos con fecha de entrega futura",
+          "file": "05-pedidos/01-crear-pedido.md",
+          "tags": ["pedidos", "preventa"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 6
+        },
+        {
+          "slug": "entregar-pedido",
+          "title": "Entregar un pedido",
+          "description": "Convierte un pedido en venta al momento de la entrega",
+          "file": "05-pedidos/02-entregar-pedido.md",
+          "tags": ["pedidos", "ventas"],
+          "roles": ["vendedor"],
+          "estimatedReadTime": 5
+        }
+      ]
+    },
+    {
+      "id": "productos",
+      "title": "Productos",
+      "icon": "PackageSearch",
+      "order": 6,
+      "description": "Catálogo y gestión de inventario",
+      "tutorials": [
+        {
+          "slug": "catalogo",
+          "title": "Catálogo de productos",
+          "description": "Gestiona los productos y sus variantes",
+          "file": "06-productos/01-catalogo.md",
+          "tags": ["productos", "admin", "inventario"],
+          "roles": ["admin"],
+          "estimatedReadTime": 7
+        }
+      ]
+    },
+    {
+      "id": "distribuciones",
+      "title": "Distribuciones",
+      "icon": "Truck",
+      "order": 7,
+      "description": "Asignación de productos a vendedores",
+      "tutorials": [
+        {
+          "slug": "mi-distribucion",
+          "title": "Mi distribución",
+          "description": "Consulta qué productos te han sido asignados",
+          "file": "07-distribuciones/01-mi-distribucion.md",
+          "tags": ["distribucion", "vendedor"],
+          "roles": ["vendedor"],
+          "estimatedReadTime": 4
+        },
+        {
+          "slug": "admin-distribucion",
+          "title": "Asignar productos a vendedores",
+          "description": "Cómo distribuir stock entre los vendedores",
+          "file": "07-distribuciones/02-admin-distribucion.md",
+          "tags": ["distribucion", "admin", "inventario"],
+          "roles": ["admin"],
+          "estimatedReadTime": 6
+        }
+      ]
+    },
+    {
+      "id": "cierre",
+      "title": "Cierre del Día",
+      "icon": "CalendarCheck",
+      "order": 8,
+      "description": "Resumen y cierre de ventas diarias",
+      "tutorials": [
+        {
+          "slug": "cierre-diario",
+          "title": "Realizar el cierre diario",
+          "description": "Genera el resumen de tus ventas del día",
+          "file": "08-cierre/01-cierre-diario.md",
+          "tags": ["cierre", "reportes"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 5
+        }
+      ]
+    },
+    {
+      "id": "configuracion",
+      "title": "Configuración",
+      "icon": "Settings",
+      "order": 9,
+      "description": "Ajustes del negocio y del sistema",
+      "tutorials": [
+        {
+          "slug": "ajustes",
+          "title": "Ajustes del negocio",
+          "description": "Configura datos del negocio y métodos de pago",
+          "file": "09-configuracion/01-ajustes.md",
+          "tags": ["configuracion", "admin"],
+          "roles": ["admin"],
+          "estimatedReadTime": 6
+        }
+      ]
+    },
+    {
+      "id": "offline",
+      "title": "Trabajo Offline",
+      "icon": "WifiOff",
+      "order": 10,
+      "description": "Cómo usar el sistema sin conexión a internet",
+      "tutorials": [
+        {
+          "slug": "trabajar-sin-internet",
+          "title": "Trabajar sin internet",
+          "description": "Guía completa del modo offline y sincronización",
+          "file": "10-offline/01-trabajar-sin-internet.md",
+          "tags": ["offline", "sincronizacion"],
+          "roles": ["vendedor", "admin"],
+          "estimatedReadTime": 8
+        }
+      ]
+    }
+  ]
+}

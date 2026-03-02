@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { ElectricProvider } from "~/lib/db/electric-client";
 import { AppLayout } from "~/components/layout/app-layout";
+import { HelpButton } from "~/components/help";
 
 function OutletWithLog() {
   const location = useLocation();
@@ -32,6 +33,7 @@ export default function ProtectedLayout() {
       <SyncProvider>
         <AppLayout>
           <OutletWithLog />
+          <HelpButton />
         </AppLayout>
       </SyncProvider>
     </ElectricProvider>

@@ -157,11 +157,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
             </div>
 
             <div
-              className="space-y-2 flex-1 overflow-y-auto"
-              onScroll={handleListScroll}
-              aria-live="polite"
-            >
-              className="space-y-2 max-h-[50vh] overflow-y-auto"
+              className="space-y-2 flex-1 overflow-y-auto max-h-[50vh]"
               onScroll={handleListScroll}
               aria-live="polite"
             >
