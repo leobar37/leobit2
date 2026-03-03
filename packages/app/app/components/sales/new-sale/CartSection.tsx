@@ -1,33 +1,32 @@
-import { useAtom, useAtomValue } from "jotai";
 import { SaleCartItem } from "~/components/sales/sale-cart-item";
-import { cartItemsAtom } from "~/atoms/new-sale";
-import { removeFromCart } from "~/lib/sales/cart-utils";
+import { useSaleStore } from "~/stores/sale.store";
 
 export function CartSection() {
-  const cartItems = useAtomValue(cartItemsAtom);
-  const [_, setCartItems] = useAtom(cartItemsAtom);
+  const cartItems = useSaleStore((state) => state.cartItems);
+  const removeFromCart = useSaleStore((state) => state.removeFromCart);
 
   if (cartItems.length === 0) {
     return null;
   }
 
   return (
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground mb-2">
+    <section data-testid="cart-section">
+      <h2 className="text-sm font-medium text-muted-foreground mb-2" data-testid="cart-title">
         Carrito ({cartItems.length} items)
       </h2>
-      <div className="space-y-2">
+      <div className="space-y-2" data-testid="cart-items-container">
         {cartItems.map((item, index) => (
-          <SaleCartItem
-            key={`${item.productId}-${item.variantId}-${index}`}
-            productName={item.productName}
-            variantName={item.variantName}
-            unit={item.unit}
-            quantity={item.quantity}
-            unitPrice={item.unitPrice}
-            subtotal={item.subtotal}
-            onRemove={() => setCartItems((current) => removeFromCart(current, index))}
-          />
+          <div key={`${item.productId}-${item.variantId}-${index}`} data-testid={`cart-item-${index}`}>
+            <SaleCartItem
+              productName={item.productName}
+              variantName={item.variantName}
+              unit={item.unit}
+              quantity={item.quantity}
+              unitPrice={item.unitPrice}
+              subtotal={item.subtotal}
+              onRemove={() => removeFromCart(index)}
+            />
+          </div>
         ))}
       </div>
     </section>

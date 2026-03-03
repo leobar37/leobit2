@@ -1,8 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link } from "react-router";
-import { ArrowLeft, Store, Camera, Loader2, Settings } from "lucide-react";
+import { Store, Camera, Loader2, Settings } from "lucide-react";
 import {
   useBusiness,
   useUpdateBusiness,
@@ -19,7 +18,7 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { Switch } from "@/components/ui/switch";
 import { useRef, useState } from "react";
-
+import { FormPage } from "~/components/layout/form-page";
 
 const updateBusinessSchema = z.object({
   name: z.string().min(2).max(100),
@@ -125,9 +124,7 @@ export default function EditBusinessPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/business/create">
-              <Button className="w-full">Crear negocio</Button>
-            </Link>
+            <Button className="w-full">Crear negocio</Button>
           </CardContent>
         </Card>
       </div>
@@ -135,155 +132,146 @@ export default function EditBusinessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Mi Negocio</span>
-        </div>
-      </header>
+    <FormPage
+      title="Mi Negocio"
+      backHref="/config"
+      toolbar={
+        <Button
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={updateBusiness.isPending || !form.formState.isValid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {updateBusiness.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            "Guardar cambios"
+          )}
+        </Button>
+      }
+    >
+      <div className="max-w-md mx-auto space-y-4">
+        <Card className="border-0 shadow-lg rounded-3xl">
+          <CardHeader className="text-center">
+            <div className="relative inline-block">
+              <div
+                className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
+                onClick={handleLogoClick}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
+                ) : business.logoUrl ? (
+                  <img
+                    src={business.logoUrl}
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Store className="h-10 w-10 text-white" />
+                )}
+              </div>
+              <button
+                className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
+                onClick={handleLogoClick}
+                type="button"
+              >
+                <Camera className="h-4 w-4 text-orange-600" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            <CardTitle className="mt-4">{business.name}</CardTitle>
+            <CardDescription>
+              {business.role === "ADMIN_NEGOCIO" ? "Administrador" : "Vendedor"}
+            </CardDescription>
+          </CardHeader>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
-            <CardHeader className="text-center">
-              <div className="relative inline-block">
-                <div
-                  className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
-                  onClick={handleLogoClick}
-                >
-                  {isUploading ? (
-                    <Loader2 className="h-8 w-8 text-white animate-spin" />
-                  ) : business.logoUrl ? (
-                    <img
-                      src={business.logoUrl}
-                      alt="Logo"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Store className="h-10 w-10 text-white" />
-                  )}
+          <CardContent>
+            <form className="space-y-4">
+              <FormInput
+                label="Nombre del negocio"
+                error={form.formState.errors.name?.message}
+                {...form.register("name")}
+              />
+
+              <FormInput
+                label="RUC"
+                error={form.formState.errors.ruc?.message}
+                {...form.register("ruc")}
+              />
+
+              <FormInput
+                label="Dirección"
+                error={form.formState.errors.address?.message}
+                {...form.register("address")}
+              />
+
+              <FormInput
+                label="Teléfono"
+                error={form.formState.errors.phone?.message}
+                {...form.register("phone")}
+              />
+
+              <FormInput
+                label="Email"
+                type="email"
+                error={form.formState.errors.email?.message}
+                {...form.register("email")}
+              />
+
+              <div className="pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <Settings className="h-5 w-5 text-orange-600" />
+                  <h3 className="font-semibold text-lg">Configuración del Negocio</h3>
                 </div>
-                <button
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
-                  onClick={handleLogoClick}
-                  type="button"
-                >
-                  <Camera className="h-4 w-4 text-orange-600" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleFileChange}
+
+                <Controller
+                  name="usarDistribucion"
+                  control={form.control}
+                  render={({ field }) => (
+                    <div className="mb-4">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        label="Usar sistema de distribución"
+                        description="Asigna kilos a vendedores diariamente"
+                      />
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  name="permitirVentaSinStock"
+                  control={form.control}
+                  render={({ field }) => (
+                    <div className="mb-4">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        label="Permitir ventas sin stock"
+                        description="Permite registrar ventas aunque no haya stock disponible"
+                      />
+                    </div>
+                  )}
                 />
               </div>
-              <CardTitle className="mt-4">{business.name}</CardTitle>
-              <CardDescription>
-                {business.role === "ADMIN_NEGOCIO" ? "Administrador" : "Vendedor"}
-              </CardDescription>
-            </CardHeader>
 
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormInput
-                  label="Nombre del negocio"
-                  error={form.formState.errors.name?.message}
-                  {...form.register("name")}
-                />
-
-                <FormInput
-                  label="RUC"
-                  error={form.formState.errors.ruc?.message}
-                  {...form.register("ruc")}
-                />
-
-                <FormInput
-                  label="Dirección"
-                  error={form.formState.errors.address?.message}
-                  {...form.register("address")}
-                />
-
-                <FormInput
-                  label="Teléfono"
-                  error={form.formState.errors.phone?.message}
-                  {...form.register("phone")}
-                />
-
-                <FormInput
-                  label="Email"
-                  type="email"
-                  error={form.formState.errors.email?.message}
-                  {...form.register("email")}
-                />
-
-                <div className="pt-6 border-t border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Settings className="h-5 w-5 text-orange-600" />
-                    <h3 className="font-semibold text-lg">Configuración del Negocio</h3>
-                  </div>
-
-                  <Controller
-                    name="usarDistribucion"
-                    control={form.control}
-                    render={({ field }) => (
-                      <div className="mb-4">
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          label="Usar sistema de distribución"
-                          description="Asigna kilos a vendedores diariamente"
-                        />
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    name="permitirVentaSinStock"
-                    control={form.control}
-                    render={({ field }) => (
-                      <div className="mb-4">
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          label="Permitir ventas sin stock"
-                          description="Permite registrar ventas aunque no haya stock disponible"
-                        />
-                      </div>
-                    )}
-                  />
-                </div>
-
-                {form.formState.errors.root && (
-                  <p className="text-sm text-destructive text-center">
-                    {form.formState.errors.root.message}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateBusiness.isPending || !form.formState.isValid}
-                >
-                  {updateBusiness.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar cambios"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive text-center">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </FormPage>
   );
 }

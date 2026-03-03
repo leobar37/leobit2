@@ -74,7 +74,7 @@ export function UnitSelector({
       }}
     >
       <DrawerContent className="flex flex-col max-h-[85vh]">
-        <DrawerHeader>
+        <DrawerHeader className="px-4 pb-3 pt-2">
           <DrawerTitle className="flex items-center gap-2">
             <Box className="h-5 w-5 text-orange-500" />
             Seleccionar Unidad
@@ -98,21 +98,20 @@ export function UnitSelector({
               </div>
             ) : (
               activeUnits.map((unit) => (
-                <button
+                <div
                   key={unit.id}
-                  type="button"
                   onClick={() => handleSelectUnit(unit)}
-                  className="w-full text-left"
+                  className="cursor-pointer"
                 >
                   <Card
                     className={cn(
-                      "p-3 cursor-pointer transition-all",
+                      "transition-all",
                       selectedUnit?.id === unit.id
                         ? "ring-2 ring-orange-500 bg-orange-50"
                         : "hover:shadow-md"
                     )}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-3">
                       <div className="flex-1">
                         <h3 className="font-medium">{unit.name}</h3>
                         <p className="text-sm text-muted-foreground">
@@ -127,7 +126,7 @@ export function UnitSelector({
                       )}
                     </div>
                   </Card>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -137,7 +136,7 @@ export function UnitSelector({
           <div className="border-t pt-4 mt-2">
             <Button
               onClick={handleConfirm}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+              className="w-full"
             >
               Confirmar Unidad
             </Button>

@@ -1,7 +1,11 @@
 import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { products, type Product, type NewProduct } from "../../db/schema";
+import { products, productVariants, type Product, type NewProduct } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+
+export interface ProductWithVariants extends Product {
+  hasVariants: boolean;
+}
 
 export class ProductRepository {
   async findMany(
@@ -13,27 +17,71 @@ export class ProductRepository {
       limit?: number;
       offset?: number;
     }
-  ): Promise<Product[]> {
-    return db.query.products.findMany({
-      where: and(
+  ): Promise<ProductWithVariants[]> {
+    const limit = filters?.limit ?? 100;
+    const offset = filters?.offset ?? 0;
+
+    const productsWithVariants = await db
+      .select({
+        id: products.id,
+        businessId: products.businessId,
+        name: products.name,
+        type: products.type,
+        unit: products.unit,
+        basePrice: products.basePrice,
+        isActive: products.isActive,
+        imageId: products.imageId,
+        createdAt: products.createdAt,
+        variantCount: sql<number>`count(${productVariants.id})`,
+      })
+      .from(products)
+      .leftJoin(productVariants, eq(products.id, productVariants.productId))
+      .where(and(
         eq(products.businessId, ctx.businessId),
         filters?.type ? eq(products.type, filters.type) : undefined,
         filters?.isActive !== undefined ? eq(products.isActive, filters.isActive) : undefined,
         filters?.search ? like(products.name, `%${filters.search}%`) : undefined
-      ),
-      orderBy: desc(products.createdAt),
-      limit: filters?.limit,
-      offset: filters?.offset,
-    });
+      ))
+      .groupBy(products.id)
+      .orderBy(desc(products.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return productsWithVariants.map(p => ({
+      ...p,
+      hasVariants: (p.variantCount ?? 0) > 0,
+    }));
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<Product | undefined> {
-    return db.query.products.findFirst({
-      where: and(
+  async findById(ctx: RequestContext, id: string): Promise<ProductWithVariants | undefined> {
+    const [product] = await db
+      .select({
+        id: products.id,
+        businessId: products.businessId,
+        name: products.name,
+        type: products.type,
+        unit: products.unit,
+        basePrice: products.basePrice,
+        isActive: products.isActive,
+        imageId: products.imageId,
+        createdAt: products.createdAt,
+        variantCount: sql<number>`count(${productVariants.id})`,
+      })
+      .from(products)
+      .leftJoin(productVariants, eq(products.id, productVariants.productId))
+      .where(and(
         eq(products.id, id),
         eq(products.businessId, ctx.businessId)
-      ),
-    });
+      ))
+      .groupBy(products.id)
+      .limit(1);
+
+    if (!product) return undefined;
+
+    return {
+      ...product,
+      hasVariants: (product.variantCount ?? 0) > 0,
+    };
   }
 
   async create(
@@ -64,6 +112,7 @@ export class ProductRepository {
         ...(data.unit !== undefined && { unit: data.unit }),
         ...(data.basePrice !== undefined && { basePrice: data.basePrice }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.imageId !== undefined && { imageId: data.imageId }),
       })
       .where(and(
         eq(products.id, id),

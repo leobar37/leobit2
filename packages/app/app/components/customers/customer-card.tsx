@@ -1,6 +1,7 @@
 import { User, Phone, MapPin, CreditCard, CloudOff } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import type { Customer } from "~/lib/db/schema";
+import { isOnline } from "~/lib/sync/utils";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -8,7 +9,7 @@ interface CustomerCardProps {
 }
 
 export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) {
-  const isPending = customer.syncStatus === "pending";
+  const isPending = customer.syncStatus === "pending" && !isOnline();
 
   return (
     <div className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow bg-card">

@@ -211,7 +211,7 @@ export default function InvitationsPage() {
               </Button>
             </DrawerTrigger>
             <DrawerContent className="max-h-[85vh]">
-              <DrawerHeader>
+              <DrawerHeader className="px-4 pb-3 pt-2">
                 <DrawerTitle>Invitar vendedor</DrawerTitle>
                 <DrawerDescription>
                   Crea una invitación para unir un vendedor a tu negocio

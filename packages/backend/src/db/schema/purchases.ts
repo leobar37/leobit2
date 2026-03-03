@@ -14,6 +14,7 @@ import { businesses } from "./businesses";
 import { suppliers } from "./suppliers";
 import { products, productVariants } from "./inventory";
 import { productUnits } from "./product-units";
+import { files } from "./files";
 
 export const purchases = pgTable(
   "purchases",
@@ -36,6 +37,8 @@ export const purchases = pgTable(
 
     invoiceNumber: varchar("invoice_number", { length: 50 }),
 
+    receiptImageId: uuid("receipt_image_id").references(() => files.id),
+
     notes: text("notes"),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -46,6 +49,7 @@ export const purchases = pgTable(
     index("idx_purchases_supplier_id").on(table.supplierId),
     index("idx_purchases_purchase_date").on(table.purchaseDate),
     index("idx_purchases_status").on(table.status),
+    index("idx_purchases_receipt_image_id").on(table.receiptImageId),
   ]
 );
 
@@ -94,6 +98,10 @@ export const purchasesRelations = relations(purchases, ({ one, many }) => ({
   supplier: one(suppliers, {
     fields: [purchases.supplierId],
     references: [suppliers.id],
+  }),
+  receiptImage: one(files, {
+    fields: [purchases.receiptImageId],
+    references: [files.id],
   }),
   items: many(purchaseItems),
 }));

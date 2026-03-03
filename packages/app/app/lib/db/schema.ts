@@ -24,6 +24,7 @@ export const productSchema = z.object({
   isActive: z.boolean().default(true),
   imageId: z.string().nullable(),
   createdAt: z.coerce.date(),
+  hasVariants: z.boolean().optional(),
 });
 
 export type Product = z.infer<typeof productSchema>;

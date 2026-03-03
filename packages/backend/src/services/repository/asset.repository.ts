@@ -1,6 +1,7 @@
 import { eq, and, desc, isNull, inArray, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { assets, type Asset, type NewAsset } from "../../db/schema/assets";
+import { products } from "../../db/schema/inventory";
 import type { RequestContext } from "../../context/request-context";
 
 export class AssetRepository {
@@ -80,6 +81,18 @@ export class AssetRepository {
       .where(and(
         eq(assets.businessId, ctx.businessId),
         isNull(assets.deletedAt)
+      ));
+
+    return result[0]?.count ?? 0;
+  }
+
+  async getUsageCount(ctx: RequestContext, assetId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .where(and(
+        eq(products.imageId, assetId),
+        eq(products.businessId, ctx.businessId)
       ));
 
     return result[0]?.count ?? 0;

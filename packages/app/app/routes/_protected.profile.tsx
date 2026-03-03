@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "react-router";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
+import { FormDate } from "@/components/forms/form-date";
 import { useRef, useState } from "react";
 
 const profileSchema = z.object({
@@ -147,43 +148,43 @@ export default function ProfilePage() {
             </CardHeader>
 
             <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormInput
-                  label="DNI"
-                  placeholder="Ingresa tu DNI"
-                  error={form.formState.errors.dni?.message}
-                  {...form.register("dni")}
-                />
+              <FormProvider {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormInput
+                    label="DNI"
+                    placeholder="Ingresa tu DNI"
+                    error={form.formState.errors.dni?.message}
+                    {...form.register("dni")}
+                  />
 
-                <FormInput
-                  label="Teléfono"
-                  placeholder="Ingresa tu teléfono"
-                  error={form.formState.errors.phone?.message}
-                  {...form.register("phone")}
-                />
+                  <FormInput
+                    label="Teléfono"
+                    placeholder="Ingresa tu teléfono"
+                    error={form.formState.errors.phone?.message}
+                    {...form.register("phone")}
+                  />
 
-                <FormInput
-                  label="Fecha de nacimiento"
-                  type="date"
-                  error={form.formState.errors.birthDate?.message}
-                  {...form.register("birthDate")}
-                />
+                  <FormDate
+                    name="birthDate"
+                    label="Fecha de nacimiento"
+                  />
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateProfile.isPending || !form.formState.isValid}
-                >
-                  {updateProfile.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar cambios"
-                  )}
-                </Button>
-              </form>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
+                    disabled={updateProfile.isPending || !form.formState.isValid}
+                  >
+                    {updateProfile.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Guardar cambios"
+                    )}
+                  </Button>
+                </form>
+              </FormProvider>
             </CardContent>
           </Card>
         </div>

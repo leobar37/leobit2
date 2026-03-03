@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useParams, useNavigate } from "react-router";
-import { ArrowLeft, User, Loader2 } from "lucide-react";
+import { User, Loader2 } from "lucide-react";
 import { useCustomer } from "~/hooks/use-customer";
 import { useUpdateCustomer } from "~/hooks/use-customers-live";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
+import { FormPage } from "~/components/layout/form-page";
 
 const editCustomerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -25,10 +26,7 @@ const editCustomerSchema = z.object({
 
 type EditCustomerFormData = z.infer<typeof editCustomerSchema>;
 
-console.log('[EditCustomerPage] Module loaded');
-
 export default function EditCustomerPage() {
-  console.log('[EditCustomerPage] Component rendering');
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: customer, isLoading } = useCustomer(id!);
@@ -107,99 +105,90 @@ export default function EditCustomerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to={`/clientes/${id}`}>
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Editar Cliente</span>
-        </div>
-      </header>
-
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
-            <CardHeader className="text-center">
-              <div className="relative inline-block">
-                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg">
-                  <User className="h-10 w-10 text-white" />
-                </div>
+    <FormPage
+      title="Editar Cliente"
+      backHref={`/clientes/${id}`}
+      toolbar={
+        <>
+          <Button
+            onClick={() => navigate(`/clientes/${id}`)}
+            variant="outline"
+            className="w-full h-14 rounded-xl mb-3"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={updateCustomer.isPending || !form.formState.isValid}
+            className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+          >
+            {updateCustomer.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              "Guardar cambios"
+            )}
+          </Button>
+        </>
+      }
+    >
+      <div className="max-w-md mx-auto space-y-4">
+        <Card className="border-0 shadow-lg rounded-3xl">
+          <CardHeader className="text-center">
+            <div className="relative inline-block">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg">
+                <User className="h-10 w-10 text-white" />
               </div>
-              <CardTitle className="mt-4">{customer.name}</CardTitle>
-              <CardDescription>
-                Actualiza la información del cliente
-              </CardDescription>
-            </CardHeader>
+            </div>
+            <CardTitle className="mt-4">{customer.name}</CardTitle>
+            <CardDescription>
+              Actualiza la información del cliente
+            </CardDescription>
+          </CardHeader>
 
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormInput
-                  label="Nombre"
-                  error={form.formState.errors.name?.message}
-                  {...form.register("name")}
-                />
+          <CardContent>
+            <form className="space-y-4">
+              <FormInput
+                label="Nombre"
+                error={form.formState.errors.name?.message}
+                {...form.register("name")}
+              />
 
-                <FormInput
-                  label="DNI"
-                  error={form.formState.errors.dni?.message}
-                  {...form.register("dni")}
-                />
+              <FormInput
+                label="DNI"
+                error={form.formState.errors.dni?.message}
+                {...form.register("dni")}
+              />
 
-                <FormInput
-                  label="Teléfono"
-                  error={form.formState.errors.phone?.message}
-                  {...form.register("phone")}
-                />
+              <FormInput
+                label="Teléfono"
+                error={form.formState.errors.phone?.message}
+                {...form.register("phone")}
+              />
 
-                <FormInput
-                  label="Dirección"
-                  error={form.formState.errors.address?.message}
-                  {...form.register("address")}
-                />
+              <FormInput
+                label="Dirección"
+                error={form.formState.errors.address?.message}
+                {...form.register("address")}
+              />
 
-                <FormInput
-                  label="Notas"
-                  error={form.formState.errors.notes?.message}
-                  {...form.register("notes")}
-                />
+              <FormInput
+                label="Notas"
+                error={form.formState.errors.notes?.message}
+                {...form.register("notes")}
+              />
 
-                {form.formState.errors.root && (
-                  <p className="text-sm text-destructive text-center">
-                    {form.formState.errors.root.message}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateCustomer.isPending || !form.formState.isValid}
-                >
-                  {updateCustomer.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar cambios"
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-12 rounded-xl"
-                  onClick={() => navigate(`/clientes/${id}`)}
-                >
-                  Cancelar
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive text-center">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </FormPage>
   );
 }

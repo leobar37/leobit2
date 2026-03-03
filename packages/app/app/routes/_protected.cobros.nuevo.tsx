@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from "react-router";
-import { ArrowLeft, Wallet, User, AlertCircle, Check, Receipt, Camera, X } from "lucide-react";
+import { Wallet, User, AlertCircle, Check, Receipt, Camera, X } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,12 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSetLayout } from "~/components/layout/app-layout";
 import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useUploadFile, validateFile } from "~/hooks/use-files";
 import { formatCurrency } from "~/lib/formatting";
+import { FormPage } from "~/components/layout/form-page";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
@@ -58,12 +58,6 @@ export default function NuevoCobroPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const customerId = searchParams.get("clienteId");
-
-  useSetLayout({
-    title: "Registrar pago",
-    showBackButton: true,
-    backHref: customerId ? `/clientes/${customerId}` : "/cobros",
-  });
 
   const { data: customer } = useCustomer(customerId || "");
   const { data: accounts } = useAccountsReceivable();
@@ -181,210 +175,217 @@ export default function NuevoCobroPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Card className="border-0 shadow-md rounded-2xl">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <User className="h-6 w-6 text-orange-600" />
+    <FormPage
+      title="Registrar pago"
+      backHref={customerId ? `/clientes/${customerId}` : "/cobros"}
+      useLayout
+      toolbar={
+        <Button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0}
+          className="w-full h-14 text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {isSubmitting ? (
+            "Registrando..."
+          ) : (
+            <>
+              <Check className="mr-2 h-5 w-5" />
+              Confirmar pago
+            </>
+          )}
+        </Button>
+      }
+    >
+      <form className="space-y-4">
+        <Card className="border-0 shadow-md rounded-2xl">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <User className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{customer.name}</h3>
+                {customer.phone && (
+                  <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                )}
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold">{customer.name}</h3>
-              {customer.phone && (
-                <p className="text-sm text-muted-foreground">{customer.phone}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md rounded-2xl">
+          <CardContent className="p-4">
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground mb-1">Deuda actual</p>
+              <p className="text-4xl font-bold text-red-600">
+                {formatCurrency(currentDebt)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md rounded-2xl">
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Monto a pagar</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">
+                  S/
+                </span>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={currentDebt}
+                  className="pl-10 text-lg font-semibold"
+                  {...register("amount")}
+                />
+              </div>
+              {errors.amount && (
+                <p className="text-sm text-red-500">{errors.amount.message}</p>
               )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="border-0 shadow-md rounded-2xl">
-        <CardContent className="p-4">
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-1">Deuda actual</p>
-            <p className="text-4xl font-bold text-red-600">
-              {formatCurrency(currentDebt)}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-md rounded-2xl">
-        <CardContent className="p-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Monto a pagar</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">
-                S/
-              </span>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={currentDebt}
-                className="pl-10 text-lg font-semibold"
-                {...register("amount")}
-              />
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setValue("amount", currentDebt.toFixed(2))}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                Todo (liquidar)
+              </Button>
+              {[50, 100, 200].map((amt) => (
+                <QuickAmountButton
+                  key={amt}
+                  amount={amt}
+                  disabled={amt > currentDebt}
+                  onClick={() => setValue("amount", Math.min(amt, currentDebt).toFixed(2))}
+                />
+              ))}
             </div>
-            {errors.amount && (
-              <p className="text-sm text-red-500">{errors.amount.message}</p>
+
+            {parsedAmount > 0 && (
+              <div className="p-3 bg-gray-50 rounded-lg space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Deuda:</span>
+                  <span className="font-medium">{formatCurrency(currentDebt)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Abono:</span>
+                  <span className="font-medium text-green-600">-{formatCurrency(parsedAmount)}</span>
+                </div>
+                <div className="border-t pt-1 flex justify-between font-semibold">
+                  <span>Queda:</span>
+                  <span className={remainingDebt > 0 ? "text-red-600" : "text-green-600"}>
+                    {formatCurrency(remainingDebt)}
+                  </span>
+                </div>
+              </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setValue("amount", currentDebt.toFixed(2))}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              Todo (liquidar)
-            </Button>
-            {[50, 100, 200].map((amt) => (
-              <QuickAmountButton
-                key={amt}
-                amount={amt}
-                disabled={amt > currentDebt}
-                onClick={() => setValue("amount", Math.min(amt, currentDebt).toFixed(2))}
-              />
-            ))}
-          </div>
+        {submitError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            {submitError}
+          </p>
+        )}
 
-          {parsedAmount > 0 && (
-            <div className="p-3 bg-gray-50 rounded-lg space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Deuda:</span>
-                <span className="font-medium">{formatCurrency(currentDebt)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Abono:</span>
-                <span className="font-medium text-green-600">-{formatCurrency(parsedAmount)}</span>
-              </div>
-              <div className="border-t pt-1 flex justify-between font-semibold">
-                <span>Queda:</span>
-                <span className={remainingDebt > 0 ? "text-red-600" : "text-green-600"}>
-                  {formatCurrency(remainingDebt)}
-                </span>
-              </div>
+        <Card className="border-0 shadow-md rounded-2xl">
+          <CardContent className="p-4 space-y-4">
+            <Label>Método de pago</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {paymentMethods.map((method) => {
+                const Icon = method.icon;
+                const isSelected = paymentMethod === method.id;
+                return (
+                  <Button
+                    key={method.id}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    onClick={() => setValue("paymentMethod", method.id)}
+                    className={`h-auto py-3 flex flex-col items-center gap-1 ${
+                      isSelected ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="text-sm">{method.label}</span>
+                  </Button>
+                );
+              })}
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {submitError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-          {submitError}
-        </p>
-      )}
+            {(paymentMethod === "yape" ||
+              paymentMethod === "plin" ||
+              paymentMethod === "transferencia") && (
+              <div className="space-y-2">
+                <Label htmlFor="reference">Número de operación</Label>
+                <Input
+                  id="reference"
+                  placeholder="Ej: 123456"
+                  {...register("referenceNumber")}
+                />
+              </div>
+            )}
 
-      <Card className="border-0 shadow-md rounded-2xl">
-        <CardContent className="p-4 space-y-4">
-          <Label>Método de pago</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {paymentMethods.map((method) => {
-              const Icon = method.icon;
-              const isSelected = paymentMethod === method.id;
-              return (
-                <Button
-                  key={method.id}
-                  type="button"
-                  variant={isSelected ? "default" : "outline"}
-                  onClick={() => setValue("paymentMethod", method.id)}
-                  className={`h-auto py-3 flex flex-col items-center gap-1 ${
-                    isSelected ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-sm">{method.label}</span>
-                </Button>
-              );
-            })}
-          </div>
-
-          {(paymentMethod === "yape" ||
-            paymentMethod === "plin" ||
-            paymentMethod === "transferencia") && (
-            <div className="space-y-2">
-              <Label htmlFor="reference">Número de operación</Label>
-              <Input
-                id="reference"
-                placeholder="Ej: 123456"
-                {...register("referenceNumber")}
-              />
-            </div>
-          )}
-
-          {(paymentMethod === "yape" ||
-            paymentMethod === "plin" ||
-            paymentMethod === "transferencia") && (
-            <div className="space-y-2">
-              <Label>Comprobante de pago (opcional)</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {proofPreview ? (
-                <div className="relative">
-                  <img
-                    src={proofPreview}
-                    alt="Comprobante"
-                    className="w-full h-32 object-cover rounded-xl"
-                  />
+            {(paymentMethod === "yape" ||
+              paymentMethod === "plin" ||
+              paymentMethod === "transferencia") && (
+              <div className="space-y-2">
+                <Label>Comprobante de pago (opcional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                {proofPreview ? (
+                  <div className="relative">
+                    <img
+                      src={proofPreview}
+                      alt="Comprobante"
+                      className="w-full h-32 object-cover rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 rounded-full"
+                      onClick={clearImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 rounded-full"
-                    onClick={clearImage}
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full rounded-xl h-20 border-dashed"
                   >
-                    <X className="h-4 w-4" />
+                    <Camera className="h-5 w-5 mr-2" />
+                    Adjuntar captura de pantalla
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full rounded-xl h-20 border-dashed"
-                >
-                  <Camera className="h-5 w-5 mr-2" />
-                  Adjuntar captura de pantalla
-                </Button>
-              )}
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notas (opcional)</Label>
+              <textarea
+                id="notes"
+                placeholder="Observaciones del pago..."
+                rows={2}
+                className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                {...register("notes")}
+              />
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas (opcional)</Label>
-            <textarea
-              id="notes"
-              placeholder="Observaciones del pago..."
-              rows={2}
-              className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              {...register("notes")}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Button
-        type="submit"
-        className="w-full h-14 text-lg font-semibold bg-orange-500 hover:bg-orange-600"
-        disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0}
-      >
-        {isSubmitting ? (
-          "Registrando..."
-        ) : (
-          <>
-            <Check className="mr-2 h-5 w-5" />
-            Confirmar pago
-          </>
-        )}
-      </Button>
-    </form>
+          </CardContent>
+        </Card>
+      </form>
+    </FormPage>
   );
 }

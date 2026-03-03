@@ -1,11 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useOrderForm } from "~/hooks/use-order-form";
+import { OrderFormProvider } from "./order-form-context";
 import { OrderCustomerField } from "./order-customer-field";
 import { OrderDeliveryDate } from "./order-delivery-date";
 import { OrderPaymentSelector } from "./order-payment-selector";
 import { OrderItemsManager } from "./order-items-manager";
 import { VariantSelector } from "@/components/sales/variant-selector";
+import { useOrderFormContext } from "./order-form-context";
+import { ToolbarActions } from "~/components/layout/toolbar-actions";
 
 interface OrderFormProps {
   onSubmit: (data: {
@@ -26,49 +28,29 @@ interface OrderFormProps {
   isSubmitting?: boolean;
 }
 
-export function OrderForm({ onSubmit, onCancel, isSubmitting }: OrderFormProps) {
-  const orderForm = useOrderForm({
-    onSubmit,
-  });
+function OrderFormContent() {
+  const orderForm = useOrderFormContext();
 
   return (
-    <div className="space-y-6">
-      {/* Customer Selection */}
+    <>
       <OrderCustomerField
         selectedCustomer={orderForm.selectedCustomer}
         onSelectCustomer={orderForm.setSelectedCustomer}
       />
 
-      {/* Delivery Date */}
       <OrderDeliveryDate
         value={orderForm.deliveryDate}
         onChange={orderForm.setDeliveryDate}
         minDate={orderForm.minDeliveryDate}
       />
 
-      {/* Payment Intent */}
       <OrderPaymentSelector
         value={orderForm.paymentIntent}
         onChange={orderForm.setPaymentIntent}
       />
 
-      {/* Items Section */}
-      <OrderItemsManager
-        items={orderForm.items}
-        showItemForm={orderForm.showItemForm}
-        showVariantSelector={orderForm.showVariantSelector}
-        selectedProduct={orderForm.selectedProduct}
-        selectedVariant={orderForm.selectedVariant}
-        calculator={orderForm.calculator}
-        isKgProduct={orderForm.isKgProduct}
-        onOpenVariantSelector={() => orderForm.setShowVariantSelector(true)}
-        onCloseItemForm={() => orderForm.setShowItemForm(false)}
-        onAddItem={orderForm.handleAddItem}
-        onRemoveItem={orderForm.handleRemoveItem}
-        onChangeProduct={orderForm.handleVariantSelect}
-      />
+      <OrderItemsManager />
 
-      {/* Total */}
       <Card className="border-0 shadow-md bg-gradient-to-r from-orange-500 to-orange-600 text-white">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -78,13 +60,26 @@ export function OrderForm({ onSubmit, onCancel, isSubmitting }: OrderFormProps) 
         </CardContent>
       </Card>
 
-      {/* Actions */}
+      <VariantSelector
+        open={orderForm.showVariantSelector}
+        onOpenChange={orderForm.setShowVariantSelector}
+        onSelect={orderForm.handleVariantSelect}
+      />
+    </>
+  );
+}
+
+function OrderFormToolbar({ onCancel, isSubmitting }: { onCancel: () => void; isSubmitting?: boolean }) {
+  const orderForm = useOrderFormContext();
+
+  return (
+    <ToolbarActions>
       <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
-          className="flex-1 rounded-xl h-12"
+          className="flex-1 rounded-xl h-14"
           disabled={isSubmitting}
         >
           Cancelar
@@ -93,18 +88,22 @@ export function OrderForm({ onSubmit, onCancel, isSubmitting }: OrderFormProps) 
           type="button"
           onClick={orderForm.handleSubmit}
           disabled={!orderForm.isValid || isSubmitting}
-          className="flex-1 rounded-xl h-12"
+          className="flex-1 rounded-xl h-14 bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isSubmitting ? "Guardando..." : "Crear pedido"}
         </Button>
       </div>
+    </ToolbarActions>
+  );
+}
 
-      {/* Variant Selector Drawer */}
-      <VariantSelector
-        open={orderForm.showVariantSelector}
-        onOpenChange={orderForm.setShowVariantSelector}
-        onSelect={orderForm.handleVariantSelect}
-      />
-    </div>
+export function OrderForm({ onSubmit, onCancel, isSubmitting }: OrderFormProps) {
+  return (
+    <OrderFormProvider onSubmit={onSubmit}>
+      <div className="space-y-6 pb-4">
+        <OrderFormContent />
+      </div>
+      <OrderFormToolbar onCancel={onCancel} isSubmitting={isSubmitting} />
+    </OrderFormProvider>
   );
 }

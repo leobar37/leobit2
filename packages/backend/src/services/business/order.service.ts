@@ -14,17 +14,6 @@ import type {
 import type { OrderEventsRepository } from "../repository/order-events.repository";
 import type { SaleService } from "./sale.service";
 
-import type { RequestContext } from "../../context/request-context";
-import { ConflictError, NotFoundError, ValidationError } from "../../errors";
-import type {
-  CreateOrderInput,
-  OrderRepository,
-  OrderStatus,
-  UpdateOrderInput,
-} from "../repository/order.repository";
-import type { OrderEventsRepository } from "../repository/order-events.repository";
-import type { SaleService } from "./sale.service";
-
 export class OrderService {
   constructor(
     private repository: OrderRepository,
@@ -100,15 +89,6 @@ export class OrderService {
         variantName: item.variantName,
         orderedQuantity: normalizeQuantity(item.orderedQuantity, "orderedQuantity"),
         unitPriceQuoted: normalizeAmount(item.unitPriceQuoted, 2, "unitPriceQuoted"),
-      })),
-      version: 1,
-      items: data.items.map((item) => ({
-        productId: item.productId,
-        variantId: item.variantId,
-        productName: item.productName,
-        variantName: item.variantName,
-        orderedQuantity: this.normalizeQuantity(item.orderedQuantity).toString(),
-        unitPriceQuoted: this.normalizeAmount(item.unitPriceQuoted).toFixed(2),
       })),
     };
 
@@ -374,7 +354,7 @@ export class OrderService {
           eventType: "item_updated",
           payload: {
             itemId,
-            newQuantity: normalizedQuantity,
+            newQuantity: normalizedQuantityValue,
           },
           clientEventId,
         },
@@ -424,9 +404,6 @@ export class OrderService {
             deliveredQuantity: normalizeQuantity(delivered.deliveredQuantity, "deliveredQuantity"),
             ...(delivered.unitPriceFinal !== undefined && {
               unitPriceFinal: normalizeAmount(delivered.unitPriceFinal, 2, "unitPriceFinal"),
-            }),
-            ...(delivered.unitPriceFinal !== undefined && {
-              unitPriceFinal: this.normalizeAmount(delivered.unitPriceFinal).toFixed(2),
             }),
           },
           tx
@@ -508,14 +485,17 @@ export class OrderService {
   }
 
   private validateDeliveryDate(deliveryDate: string) {
-    const parsed = new Date(`${deliveryDate}T00:00:00.000Z`);
+    const [year, month, day] = deliveryDate.split("-").map(Number);
+    const parsed = new Date(year, month - 1, day);
+    parsed.setHours(0, 0, 0, 0);
+
     if (Number.isNaN(parsed.getTime())) {
       throw new ValidationError("Fecha de entrega inválida");
     }
 
     const tomorrow = new Date();
-    tomorrow.setUTCHours(0, 0, 0, 0);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     if (parsed.getTime() < tomorrow.getTime()) {
       throw new ValidationError("La fecha de entrega debe ser desde mañana");

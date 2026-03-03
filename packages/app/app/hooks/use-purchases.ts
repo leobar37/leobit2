@@ -25,11 +25,17 @@ export interface Purchase {
   totalAmount: string;
   status: "pending" | "received" | "cancelled";
   invoiceNumber: string | null;
+  receiptImageId: string | null;
   notes: string | null;
   supplier?: {
     id: string;
     name: string;
   };
+  receiptImage?: {
+    id: string;
+    filename: string;
+    url?: string;
+  } | null;
   items: PurchaseItem[];
   createdAt: Date;
 }
@@ -49,6 +55,7 @@ export interface CreatePurchaseInput {
   supplierId: string;
   purchaseDate: string;
   invoiceNumber?: string;
+  receiptImageId?: string;
   notes?: string;
   items: CreatePurchaseItemInput[];
 }

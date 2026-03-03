@@ -2,7 +2,7 @@ import type { AssetRepository } from "../repository/asset.repository";
 import type { RequestContext } from "../../context/request-context";
 import { r2Storage } from "../r2-storage.service";
 import type { Asset } from "../../db/schema/assets";
-import { ValidationError, NotFoundError } from "../../errors";
+import { ValidationError, NotFoundError, ConflictError } from "../../errors";
 
 export class AssetService {
   constructor(private repository: AssetRepository) {}
@@ -80,6 +80,13 @@ export class AssetService {
     const asset = await this.repository.findById(ctx, id);
     if (!asset) {
       throw new NotFoundError("Asset");
+    }
+
+    const usageCount = await this.repository.getUsageCount(ctx, id);
+    if (usageCount > 0) {
+      throw new ConflictError(
+        `No se puede eliminar: el asset está siendo usado por ${usageCount} producto(s). Desvincúlalo primero.`
+      );
     }
 
     await this.repository.softDelete(ctx, id);

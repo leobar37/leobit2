@@ -1,12 +1,32 @@
-import { Link, useNavigate } from "react-router";
-import { ArrowLeft, Package } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Package, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProductForm, type ProductFormData } from "~/components/products/product-form";
 import { useCreateProduct } from "~/hooks/use-products";
+import { FormPage } from "~/components/layout/form-page";
+import {
+  ProductFormContent,
+  productSchema,
+  type ProductFormData,
+} from "~/components/products/product-form-content";
 
 export default function NuevoProductoPage() {
   const navigate = useNavigate();
   const createProduct = useCreateProduct();
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      type: "pollo",
+      unit: "kg",
+      basePrice: "",
+      isActive: true,
+      imageId: undefined,
+    },
+  });
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
@@ -23,31 +43,36 @@ export default function NuevoProductoPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/productos">
-            <Button variant="ghost" size="icon" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-orange-600" />
-            <h1 className="font-bold text-lg">Nuevo Producto</h1>
-          </div>
-        </div>
-      </header>
+  const { isValid } = form.formState;
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto">
-          <ProductForm
-            onSubmit={handleSubmit}
-            onCancel={() => navigate("/productos")}
-            isLoading={createProduct.isPending}
-          />
-        </div>
-      </main>
-    </div>
+  return (
+    <FormPage
+      title="Nuevo Producto"
+      backHref="/productos"
+      icon={Package}
+      toolbar={
+        <Button
+          onClick={form.handleSubmit(handleSubmit)}
+          disabled={createProduct.isPending || !isValid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {createProduct.isPending ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5 mr-2" />
+              Guardar Producto
+            </>
+          )}
+        </Button>
+      }
+    >
+      <FormProvider {...form}>
+        <ProductFormContent form={form} />
+      </FormProvider>
+    </FormPage>
   );
 }

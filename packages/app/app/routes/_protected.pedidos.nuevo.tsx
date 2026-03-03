@@ -1,18 +1,12 @@
 import { useNavigate } from "react-router";
 import { OrderForm } from "~/components/orders/order-form";
 import { useCreateOrder } from "~/hooks/use-orders";
-import { useSetLayout } from "~/components/layout/app-layout";
+import { FormPage } from "~/components/layout/form-page";
 import type { CreateOrderInput } from "~/lib/db/schema";
 
 export default function NewOrderPage() {
   const navigate = useNavigate();
   const createOrder = useCreateOrder();
-
-  useSetLayout({
-    title: "Nuevo pedido",
-    showBackButton: true,
-    backHref: "/pedidos",
-  });
 
   const handleSubmit = async (data: CreateOrderInput) => {
     try {
@@ -20,17 +14,20 @@ export default function NewOrderPage() {
       navigate("/pedidos");
     } catch (error) {
       console.error("Error creating order:", error);
-      // Error handling is managed by the mutation
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <FormPage
+      title="Nuevo pedido"
+      backHref="/pedidos"
+      maxWidth="lg"
+    >
       <OrderForm
         onSubmit={handleSubmit}
         onCancel={() => navigate("/pedidos")}
         isSubmitting={createOrder.isPending}
       />
-    </div>
+    </FormPage>
   );
 }

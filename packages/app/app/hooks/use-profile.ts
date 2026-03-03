@@ -33,64 +33,12 @@ async function getProfile(): Promise<Profile> {
   return data.data as Profile;
 }
 
-PR
 async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
   const { data, error } = await api.profile.me.put(input);
 
   if (error) {
     const err = error.value as { message?: string; code?: string } | undefined;
     throw new Error(err?.message || err?.code || "Request failed");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to update profile");
-  }
-
-  return data.data as Profile;
-}
-  const { data, error } = await api.profile.me.get();
-
-  if (error) {
-    const err = error.value as { message?: string; code?: string } | undefined;
-    throw new Error(err?.message || err?.code || "Request failed");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to fetch profile");
-  }
-
-  return data.data as Profile;
-}
-WV
-PR
-async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
-  const { data, error } = await api.profile.me.put(input);
-
-  if (error) {
-    const err = error.value as { message?: string; code?: string } | undefined;
-    throw new Error(err?.message || err?.code || "Request failed");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to update profile");
-  }
-
-  return data.data as Profile;
-}
-  const { data, error } = await api.profile.me.get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to fetch profile");
-  }
-
-  return data.data as Profile;
-}
-
-async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
-  const { data, error } = await api.profile.me.put(input);
-
-  if (error) {
-    throw new Error(String(error.value));
   }
   if (!data?.success || !data.data) {
     throw new Error("Failed to update profile");

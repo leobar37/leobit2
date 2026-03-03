@@ -6,7 +6,7 @@ import { Building2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { useCreateSupplier } from "~/hooks/use-suppliers";
-import { useSetLayout } from "~/components/layout/app-layout";
+import { FormPage } from "~/components/layout/form-page";
 
 const supplierSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -23,12 +23,6 @@ type SupplierFormData = z.infer<typeof supplierSchema>;
 export default function NuevoProveedorPage() {
   const navigate = useNavigate();
   const { mutate: createSupplier, isPending } = useCreateSupplier();
-
-  useSetLayout({
-    title: "Nuevo Proveedor",
-    showBackButton: true,
-    backHref: "/proveedores",
-  });
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -55,20 +49,32 @@ export default function NuevoProveedorPage() {
   const isFormValid = form.formState.isValid;
 
   return (
-    <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
+    <FormPage
+      title="Nuevo Proveedor"
+      backHref="/proveedores"
+      icon={Building2}
+      toolbar={
+        <Button
+          onClick={onSubmit}
+          disabled={isPending || !isFormValid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5 mr-2" />
+              Guardar Proveedor
+            </>
+          )}
+        </Button>
+      }
+    >
+      <FormProvider {...form}>
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Registra un nuevo proveedor para tus compras
-              </p>
-            </div>
-          </div>
-
           <FormInput
             name="name"
             label="Nombre del proveedor"
@@ -77,7 +83,7 @@ export default function NuevoProveedorPage() {
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <label className="text-sm font-medium">
               Tipo de proveedor
             </label>
             <select
@@ -115,9 +121,7 @@ export default function NuevoProveedorPage() {
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Notas
-            </label>
+            <label className="text-sm font-medium">Notas</label>
             <textarea
               {...form.register("notes")}
               rows={3}
@@ -126,25 +130,7 @@ export default function NuevoProveedorPage() {
             />
           </div>
         </div>
-
-        <Button
-          type="submit"
-          className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
-          disabled={isPending || !isFormValid}
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Guardar Proveedor
-            </>
-          )}
-        </Button>
-      </form>
-    </FormProvider>
+      </FormProvider>
+    </FormPage>
   );
 }

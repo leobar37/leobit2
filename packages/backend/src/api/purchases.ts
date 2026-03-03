@@ -50,6 +50,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         supplierId: body.supplierId,
         purchaseDate: body.purchaseDate,
         invoiceNumber: body.invoiceNumber,
+        receiptImageId: body.receiptImageId,
         notes: body.notes,
         items: body.items,
       });
@@ -60,6 +61,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         supplierId: t.String(),
         purchaseDate: t.String(),
         invoiceNumber: t.Optional(t.String()),
+        receiptImageId: t.Optional(t.String()),
         notes: t.Optional(t.String()),
         items: t.Array(
           t.Object({

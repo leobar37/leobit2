@@ -16,18 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useOrder, useConfirmOrder, useCancelOrder, useDeliverOrder } from "~/hooks/use-orders";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { OrderItemModal } from "~/components/orders/order-item-modal";
 import type { OrderItem } from "~/lib/db/schema";
+import { isOnline } from "~/lib/sync/utils";
 
 const statusConfig = {
   draft: {
@@ -59,10 +53,8 @@ export default function OrderDetailPage() {
   const confirmOrder = useConfirmOrder();
   const cancelOrder = useCancelOrder();
   const deliverOrder = useDeliverOrder();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showDeliverDialog, setShowDeliverDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
 
   useSetLayout({
@@ -110,29 +102,46 @@ export default function OrderDetailPage() {
   const canDeliver = order.status === "confirmed" && isToday(order.deliveryDate);
 
   const handleConfirm = async () => {
-    await confirmOrder.mutateAsync({ id: order.id, baseVersion: order.version });
-    setShowConfirmDialog(false);
+    const confirmed = await confirm({
+      title: "Confirmar pedido",
+      description: "¿Estás seguro de confirmar este pedido? Una vez confirmado, los precios se bloquearán.",
+    });
+    if (confirmed) {
+      await confirmOrder.mutateAsync({ id: order.id, baseVersion: order.version });
+    }
   };
 
   const handleCancel = async () => {
-    await cancelOrder.mutateAsync({ id: order.id, baseVersion: order.version });
-    setShowCancelDialog(false);
+    const confirmed = await confirm({
+      title: "Cancelar pedido",
+      description: "¿Estás seguro de cancelar este pedido? Esta acción no se puede deshacer.",
+      confirmText: "Sí, cancelar",
+      variant: "destructive",
+    });
+    if (confirmed) {
+      await cancelOrder.mutateAsync({ id: order.id, baseVersion: order.version });
+    }
   };
 
   const handleDeliver = async () => {
-    // Deliver all items with ordered quantity
-    const deliveredItems =
-      order.items?.map((item) => ({
-        itemId: item.id,
-        deliveredQuantity: Number(item.orderedQuantity),
-      })) || [];
-
-    await deliverOrder.mutateAsync({
-      id: order.id,
-      baseVersion: order.version,
-      deliveredItems,
+    const confirmed = await confirm({
+      title: "Entregar pedido",
+      description: "¿Estás seguro de entregar este pedido? Se convertirá en una venta.",
+      confirmText: "Entregar y crear venta",
     });
-    setShowDeliverDialog(false);
+    if (confirmed) {
+      const deliveredItems =
+        order.items?.map((item) => ({
+          itemId: item.id,
+          deliveredQuantity: Number(item.orderedQuantity),
+        })) || [];
+
+      await deliverOrder.mutateAsync({
+        id: order.id,
+        baseVersion: order.version,
+        deliveredItems,
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -264,30 +273,30 @@ export default function OrderDetailPage() {
             <div className="grid grid-cols-2 gap-3">
               {canConfirm && (
                 <Button
-                  onClick={() => setShowConfirmDialog(true)}
-                  className="rounded-xl bg-blue-500 hover:bg-blue-600"
+                  onClick={handleConfirm}
+                  disabled={confirmOrder.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirmar
+                  {confirmOrder.isPending ? "Confirmando..." : "Confirmar"}
                 </Button>
               )}
               {canDeliver && (
                 <Button
-                  onClick={() => setShowDeliverDialog(true)}
-                  className="rounded-xl bg-green-500 hover:bg-green-600"
+                  onClick={handleDeliver}
+                  disabled={deliverOrder.isPending}
                 >
                   <Truck className="h-4 w-4 mr-2" />
-                  Entregar
+                  {deliverOrder.isPending ? "Procesando..." : "Entregar"}
                 </Button>
               )}
               {canCancel && (
                 <Button
-                  variant="outline"
-                  onClick={() => setShowCancelDialog(true)}
-                  className="rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={cancelOrder.isPending}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  Cancelar
+                  {cancelOrder.isPending ? "Cancelando..." : "Cancelar"}
                 </Button>
               )}
             </div>
@@ -296,73 +305,15 @@ export default function OrderDetailPage() {
       )}
 
       {/* Sync Status */}
-      {order.syncStatus === "pending" && (
+      {order.syncStatus === "pending" && !isOnline() && (
         <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-xl">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
           Este pedido está pendiente de sincronización
         </div>
       )}
 
-      {/* Confirm Dialog */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar pedido</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de confirmar este pedido? Una vez confirmado, los precios se
-              bloquearán.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirm} disabled={confirmOrder.isPending}>
-              {confirmOrder.isPending ? "Confirmando..." : "Confirmar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Dialog */}
-      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancelar pedido</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de cancelar este pedido? Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-              No, mantener
-            </Button>
-            <Button variant="destructive" onClick={handleCancel} disabled={cancelOrder.isPending}>
-              {cancelOrder.isPending ? "Cancelando..." : "Sí, cancelar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Deliver Dialog */}
-      <Dialog open={showDeliverDialog} onOpenChange={setShowDeliverDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Entregar pedido</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de entregar este pedido? Se convertirá en una venta.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeliverDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleDeliver} disabled={deliverOrder.isPending}>
-              {deliverOrder.isPending ? "Procesando..." : "Entregar y crear venta"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Confirmation Dialog */}
+      <ConfirmDialog />
 
       {/* Edit Item Modal */}
       <OrderItemModal

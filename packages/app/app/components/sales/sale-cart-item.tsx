@@ -27,7 +27,7 @@ export function SaleCartItem({
       : `${Number.isInteger(quantity) ? quantity : quantity.toFixed(3)} un`;
 
   return (
-    <Card className="border-0 shadow-sm rounded-xl">
+    <Card className="border-0 shadow-sm rounded-xl" data-testid="sale-cart-item">
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -35,22 +35,23 @@ export function SaleCartItem({
               <Package className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <p className="font-medium">{productName}</p>
+              <p className="font-medium" data-testid="cart-item-name">{productName}</p>
               {variantName && (
-                <p className="text-xs text-orange-600">{variantName}</p>
+                <p className="text-xs text-orange-600" data-testid="cart-item-variant">{variantName}</p>
               )}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground" data-testid="cart-item-quantity">
                 {quantityLabel} × S/ {unitPrice.toFixed(2)}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <span className="font-semibold">S/ {subtotal.toFixed(2)}</span>
+            <span className="font-semibold" data-testid="cart-item-subtotal">S/ {subtotal.toFixed(2)}</span>
             <Button
               variant="ghost"
               size="icon"
               onClick={onRemove}
+              data-testid="cart-item-remove"
               className="h-8 w-8 text-red-500 hover:text-red-600"
             >
               <Trash2 className="h-4 w-4" />

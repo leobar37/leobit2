@@ -1,6 +1,7 @@
-import { Package, DollarSign } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProductImage } from "./product-image";
 import type { Product } from "~/lib/db/schema";
 
 interface ProductCardProps {
@@ -22,9 +23,12 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${product.isActive ? "bg-gradient-to-br from-orange-100 to-orange-200" : "bg-gray-100"}`}>
-            <Package className={`h-6 w-6 ${product.isActive ? "text-orange-600" : "text-gray-400"}`} />
-          </div>
+          <ProductImage
+            imageId={product.imageId}
+            alt={product.name}
+            size="lg"
+            fallbackClassName={product.isActive ? "" : "opacity-60"}
+          />
           
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">

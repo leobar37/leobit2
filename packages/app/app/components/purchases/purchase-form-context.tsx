@@ -1,64 +1,61 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
-import { useForm, FormProvider, useFieldArray, UseFormReturn } from "react-hook-form";
+import React, { createContext, useContext, useMemo, useCallback, useState } from "react";
+import { useForm, FormProvider, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
 import { useCreatePurchase } from "~/hooks/use-purchases";
-import { useProducts } from "~/hooks/use-products";
+import { useFileUpload } from "~/hooks/use-file-upload";
 import { getToday } from "~/lib/date-utils";
+import { usePurchaseStore, type PurchaseCartItem } from "~/stores/purchase.store";
 import type { Supplier } from "~/hooks/use-suppliers";
 
 // ============================================================================
 // SCHEMAS
 // ============================================================================
 
-const purchaseItemSchema = z.object({
-  productId: z.string().min(1, "Selecciona un producto"),
-  variantId: z.string().optional(),
-  unitId: z.string().optional(),
-  packs: z.number().optional(),
-  quantity: z.number().positive("La cantidad debe ser mayor a 0"),
-  unitCost: z.number().min(0, "El costo no puede ser negativo"),
-});
-
-const purchaseSchema = z.object({
+const purchaseFormSchema = z.object({
   purchaseDate: z.string().min(1, "La fecha es requerida"),
+  invoiceNumber: z.string().optional(),
   notes: z.string().optional(),
-  items: z.array(purchaseItemSchema).min(1, "Agrega al menos un producto"),
 });
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type PurchaseFormData = z.infer<typeof purchaseSchema>;
+export type PurchaseFormData = z.infer<typeof purchaseFormSchema>;
 
 export interface PurchaseFormContextValue {
   // Form
   form: UseFormReturn<PurchaseFormData>;
-  
-  // Field Array
-  fields: { id: string }[];
-  append: (item: PurchaseFormData["items"][0]) => void;
-  remove: (index: number) => void;
-  
+
   // Supplier
   supplier: Supplier | null;
   setSupplier: (supplier: Supplier | null) => void;
-  
+
+  // Receipt Image
+  receiptFile: File | null;
+  receiptPreview: string | null;
+  handleReceiptSelect: (file: File) => void;
+  handleReceiptClear: () => void;
+  fileUploadStatus: ReturnType<typeof useFileUpload>;
+
+  // Cart Items (from Zustand store)
+  cartItems: PurchaseCartItem[];
+  addToCart: (item: PurchaseCartItem) => void;
+  removeFromCart: (index: number) => void;
+  clearCart: () => void;
+
   // Submit
   onSubmit: () => void;
   isPending: boolean;
-  isFormValid: boolean;
-  
+
   // Computed
   totalAmount: number;
-  
-  // Data
-  products?: { id: string; name: string }[];
-  isProductsLoading: boolean;
+  cartItemsCount: number;
+  isFormValid: boolean;
 }
 
 // ============================================================================
@@ -92,86 +89,136 @@ export function PurchaseFormProvider({
 }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
   const { mutate: createPurchase, isPending } = useCreatePurchase();
-  const { data: products, isLoading: isProductsLoading } = useProducts();
-  
-  const [supplier, setSupplier] = React.useState<Supplier | null>(initialSupplier);
-  
+  const fileUpload = useFileUpload();
+
+  // Zustand store for cart items
+  const cartItems = usePurchaseStore((state) => state.cartItems);
+  const addToCart = usePurchaseStore((state) => state.addToCart);
+  const removeFromCart = usePurchaseStore((state) => state.removeFromCart);
+  const clearCart = usePurchaseStore((state) => state.clearCart);
+
+  const [supplier, setSupplier] = useState<Supplier | null>(initialSupplier);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+
   const form = useForm<PurchaseFormData>({
-    resolver: zodResolver(purchaseSchema),
+    resolver: zodResolver(purchaseFormSchema),
     mode: "onBlur",
     defaultValues: {
       purchaseDate: getToday(),
+      invoiceNumber: "",
       notes: "",
-      items: [],
     },
   });
-  
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-  
-  const items = form.watch("items");
-  
+
   const totalAmount = useMemo(() => {
-    return items.reduce(
-      (sum, item) => sum + (item.quantity || 0) * (item.unitCost || 0),
-      0
-    );
-  }, [items]);
-  
-  const isFormValid = form.formState.isValid && supplier !== null && fields.length > 0;
-  
-  const handleSubmit = form.handleSubmit((data) => {
+    return cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+  }, [cartItems]);
+
+  const cartItemsCount = cartItems.length;
+  const isFormValid = supplier !== null && cartItemsCount > 0;
+
+  const handleReceiptSelect = useCallback((file: File) => {
+    setReceiptFile(file);
+    setReceiptPreview(URL.createObjectURL(file));
+  }, []);
+
+  const handleReceiptClear = useCallback(() => {
+    if (receiptPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(receiptPreview);
+    }
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  }, [receiptPreview]);
+
+  const handleSubmit = useCallback(form.handleSubmit(async (data) => {
     if (!supplier) {
-      form.setError("root", { 
-        message: "Debes seleccionar un proveedor" 
+      form.setError("root", {
+        message: "Debes seleccionar un proveedor"
       });
       return;
     }
-    
+
+    if (cartItems.length === 0) {
+      form.setError("root", {
+        message: "Agrega al menos un producto"
+      });
+      return;
+    }
+
+    let receiptImageId: string | undefined;
+
+    if (receiptFile) {
+      try {
+        const result = await fileUpload.upload(receiptFile);
+        receiptImageId = result.id;
+      } catch {
+        form.setError("root", {
+          message: "Error al subir la imagen del comprobante"
+        });
+        return;
+      }
+    }
+
+    // Transform cart items to purchase items
+    const items = cartItems.map((item) => ({
+      productId: item.productId,
+      variantId: item.variantId,
+      unitId: item.unitId,
+      packs: item.packs,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+    }));
+
     createPurchase(
-      { ...data, supplierId: supplier.id },
+      {
+        purchaseDate: data.purchaseDate,
+        invoiceNumber: data.invoiceNumber,
+        notes: data.notes,
+        supplierId: supplier.id,
+        receiptImageId,
+        items,
+      },
       {
         onSuccess: () => {
+          clearCart();
           onSuccess?.();
           navigate("/compras");
         },
         onError: (error) => {
-          form.setError("root", { 
-            message: error instanceof Error ? error.message : "Error al guardar la compra" 
+          form.setError("root", {
+            message: error instanceof Error ? error.message : "Error al guardar la compra"
           });
         },
       }
     );
-  });
-  
-  const addItem = () => {
-    append({ 
-      productId: "", 
-      variantId: undefined, 
-      unitId: undefined, 
-      packs: undefined, 
-      quantity: 0, 
-      unitCost: 0 
-    });
-  };
-  
-  const value: PurchaseFormContextValue = {
+  }), [supplier, createPurchase, form, onSuccess, navigate, receiptFile, fileUpload, cartItems, clearCart]);
+
+  const value = useMemo(() => ({
     form,
-    fields,
-    append: addItem,
-    remove,
     supplier,
     setSupplier,
+    receiptFile,
+    receiptPreview,
+    handleReceiptSelect,
+    handleReceiptClear,
+    fileUploadStatus: fileUpload,
+    cartItems,
+    addToCart,
+    removeFromCart,
+    clearCart,
     onSubmit: handleSubmit,
     isPending,
     isFormValid,
     totalAmount,
-    products: products?.map(p => ({ id: p.id, name: p.name })),
-    isProductsLoading,
-  };
-  
+    cartItemsCount,
+  }), [
+    form, supplier, setSupplier,
+    receiptFile, receiptPreview, handleReceiptSelect, handleReceiptClear, fileUpload,
+    cartItems, addToCart, removeFromCart, clearCart,
+    handleSubmit, isPending, isFormValid, totalAmount, cartItemsCount
+  ]);
+
   return (
     <PurchaseFormContext.Provider value={value}>
       <FormProvider {...form}>

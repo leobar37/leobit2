@@ -3,10 +3,10 @@ import { ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCreateSale } from "~/hooks/use-sales";
+import { useSaleStore } from "~/stores/sale.store";
 import {
   amountPaidValueAtom,
   canSubmitAtom,
-  cartItemsAtom,
   hasValidPartialAmountAtom,
   paymentModeAtom,
   requiresCustomerAtom,
@@ -21,7 +21,8 @@ export function SubmitSaleButton() {
   const navigate = useNavigate();
   const createSale = useCreateSale();
 
-  const cartItems = useAtomValue(cartItemsAtom);
+  const cartItems = useSaleStore((state) => state.cartItems);
+  const clearCart = useSaleStore((state) => state.clearCart);
   const selectedCustomer = useAtomValue(selectedCustomerAtom);
   const paymentMode = useAtomValue(paymentModeAtom);
   const saleType = useAtomValue(saleTypeAtom);
@@ -64,6 +65,7 @@ export function SubmitSaleButton() {
         netWeight: totalNetoKg || undefined,
         items,
       });
+      clearCart();
       navigate("/dashboard");
     } catch (error) {
       console.error("Error creating sale:", error);
@@ -71,10 +73,11 @@ export function SubmitSaleButton() {
   };
 
   return (
-    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100 z-40">
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 px-3 sm:px-4 py-4 bg-white border-t border-orange-100 z-40" data-testid="submit-sale-container">
       <Button
         onClick={handleSubmit}
-        disabled={createSale.isPending || !canSubmit}
+        disabled={createSale.isPending}
+        data-testid="submit-sale-button"
         className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold"
       >
         <ShoppingCart className="h-5 w-5 mr-2" />

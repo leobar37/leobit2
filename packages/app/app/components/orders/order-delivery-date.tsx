@@ -23,6 +23,7 @@ export function OrderDeliveryDate({
         minDate={computedMinDate}
         label="Fecha de entrega"
         placeholder="Seleccionar fecha de entrega"
+        quickActionLabels={["Mañana", "Pasado mañana"]}
       />
       <p className="text-xs text-muted-foreground px-1">
         La fecha de entrega debe ser desde mañana

@@ -76,7 +76,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
   return (
     <>
       {selectedCustomer ? (
-      <Card className="border-0 shadow-md rounded-2xl bg-orange-50">
+      <Card className="border-0 shadow-md rounded-2xl bg-orange-50" data-testid="customer-selected-card">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -84,9 +84,9 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
                 <User className="h-5 w-5 text-orange-600" />
               </div>
               <div>
-                <p className="font-semibold">{selectedCustomer.name}</p>
+                <p className="font-semibold" data-testid="customer-selected-name">{selectedCustomer.name}</p>
                 {selectedCustomer.phone && (
-                  <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                  <p className="text-sm text-muted-foreground" data-testid="customer-selected-phone">{selectedCustomer.phone}</p>
                 )}
               </div>
             </div>
@@ -95,6 +95,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
               variant="ghost"
               size="sm"
               onClick={openDrawer}
+              data-testid="customer-change-button"
               className="rounded-xl text-orange-600 hover:text-orange-700 hover:bg-orange-100"
             >
               Cambiar
@@ -105,6 +106,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
               size="icon"
               onClick={() => onSelectCustomer(null)}
               aria-label="Limpiar cliente seleccionado"
+              data-testid="customer-clear-button"
               className="rounded-xl"
             >
               <X className="h-4 w-4" />
@@ -116,6 +118,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
       <button
         type="button"
         onClick={openDrawer}
+        data-testid="customer-select-button"
         className="w-full h-20 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/50 hover:bg-orange-50 hover:border-orange-300 transition-colors flex flex-col items-center justify-center gap-2"
       >
         <User className="h-6 w-6 text-orange-400" />
@@ -131,9 +134,10 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
             closeDrawer();
           }
         }}
+        data-testid="customer-drawer"
       >
-        <DrawerContent className="flex flex-col max-h-[85vh]">
-          <DrawerHeader className="border-b pb-4">
+        <DrawerContent className="flex flex-col max-h-[85vh] p-0">
+          <DrawerHeader className="border-b px-4 pb-4 pt-2">
             <DrawerTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-orange-500" />
               Seleccionar Cliente
@@ -152,6 +156,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 rounded-xl"
                 aria-label="Buscar clientes"
+                data-testid="customer-search-input"
                 autoFocus
               />
             </div>
@@ -160,11 +165,12 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
               className="space-y-2 flex-1 overflow-y-auto max-h-[50vh]"
               onScroll={handleListScroll}
               aria-live="polite"
+              data-testid="customer-list"
             >
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Cargando clientes...</div>
               ) : filteredCustomers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground" data-testid="customer-empty-state">
                   {search ? "No se encontraron clientes" : "No hay clientes registrados"}
                 </div>
               ) : (
@@ -173,6 +179,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
                     key={customer.id}
                     type="button"
                     onClick={() => handleSelectCustomer(customer)}
+                    data-testid={`customer-option-${customer.id}`}
                     className="w-full text-left"
                   >
                     <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow hover:bg-orange-50/50">
@@ -182,7 +189,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{customer.name}</h3>
+                          <h3 className="font-medium truncate" data-testid="customer-option-name">{customer.name}</h3>
                           <div className="space-y-0.5 mt-1">
                             {customer.dni && (
                               <p className="text-xs text-muted-foreground">DNI: {customer.dni}</p>
@@ -203,6 +210,7 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
                   type="button"
                   variant="outline"
                   onClick={() => setVisibleCount((current) => current + 50)}
+                  data-testid="customer-load-more"
                   className="w-full rounded-xl"
                 >
                   Ver más clientes

@@ -8,7 +8,9 @@ import {
   RotateCcw,
   CheckCircle2,
   Package,
+  ImageIcon,
 } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,7 @@ const statusIcons = {
 export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [showImageModal, setShowImageModal] = useState(false);
 
   useSetLayout({
     title: "Detalle de Compra",
@@ -188,6 +191,31 @@ export default function PurchaseDetailPage() {
                 <p className="text-sm">{purchase.notes}</p>
               </div>
             )}
+
+            {/* Receipt Image */}
+            {purchase.receiptImage && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ImageIcon className="h-4 w-4" />
+                  <span>Comprobante</span>
+                </div>
+                <div
+                  className="relative cursor-pointer group"
+                  onClick={() => setShowImageModal(true)}
+                >
+                  <img
+                    src={purchase.receiptImage.url}
+                    alt="Comprobante de compra"
+                    className="w-full h-32 object-cover rounded-xl"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-xl flex items-center justify-center">
+                    <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium drop-shadow-lg">
+                      Ver completo
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -271,6 +299,30 @@ export default function PurchaseDetailPage() {
           )}
         </div>
       </main>
+
+      {/* Image Modal */}
+      {showImageModal && purchase?.receiptImage?.url && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl w-full">
+            <img
+              src={purchase.receiptImage.url}
+              alt="Comprobante de compra"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <button
+              className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2"
+              onClick={() => setShowImageModal(false)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog />
     </div>

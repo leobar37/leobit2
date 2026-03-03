@@ -57,6 +57,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         unit: t.Union([t.Literal("kg"), t.Literal("unidad")]),
         basePrice: t.String(),
         isActive: t.Optional(t.Boolean()),
+        imageId: t.Optional(t.String()),
       }),
     }
   )
@@ -79,6 +80,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         unit: t.Optional(t.Union([t.Literal("kg"), t.Literal("unidad")])),
         basePrice: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
+        imageId: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )

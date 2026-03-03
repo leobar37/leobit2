@@ -63,7 +63,7 @@ export function useConfirmDialog() {
     return (
       <Drawer open={state.isOpen} onOpenChange={(open) => !open && handleCancel()}>
         <DrawerContent>
-          <DrawerHeader>
+          <DrawerHeader className="px-4 pb-3 pt-2">
             <DrawerTitle>{state.title}</DrawerTitle>
             {state.description && (
               <DrawerDescription>{state.description}</DrawerDescription>

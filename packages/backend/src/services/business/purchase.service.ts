@@ -3,6 +3,7 @@ import type { InventoryRepository } from "../repository/inventory.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { ProductUnitRepository } from "../repository/product-unit.repository";
+import type { FileRepository } from "../repository/file.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -24,6 +25,7 @@ export interface CreatePurchaseInput {
   supplierId: string;
   purchaseDate: string;
   invoiceNumber?: string;
+  receiptImageId?: string;
   notes?: string;
   items: CreatePurchaseItemInput[];
 }
@@ -34,7 +36,8 @@ export class PurchaseService {
     private inventoryRepo: InventoryRepository,
     private supplierRepo: SupplierRepository,
     private variantRepo: ProductVariantRepository,
-    private unitRepo: ProductUnitRepository
+    private unitRepo: ProductUnitRepository,
+    private fileRepo: FileRepository
   ) {}
 
   async getPurchases(
@@ -83,6 +86,14 @@ export class PurchaseService {
     const supplier = await this.supplierRepo.findById(ctx, data.supplierId);
     if (!supplier) {
       throw new NotFoundError("Proveedor");
+    }
+
+    // Validate receipt image if provided
+    if (data.receiptImageId) {
+      const file = await this.fileRepo.findById(ctx, data.receiptImageId);
+      if (!file) {
+        throw new NotFoundError("Imagen de comprobante");
+      }
     }
 
     let totalAmount = 0;
@@ -137,6 +148,7 @@ export class PurchaseService {
         totalAmount: totalAmount.toString(),
         status: "received",
         invoiceNumber: data.invoiceNumber || null,
+        receiptImageId: data.receiptImageId || null,
         notes: data.notes || null,
       },
       validatedItems

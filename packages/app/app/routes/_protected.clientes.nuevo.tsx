@@ -1,11 +1,31 @@
-import { Link, useNavigate } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { CustomerForm, type CustomerFormData } from "~/components/customers/customer-form";
+import { useNavigate } from "react-router";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { User, Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useCreateCustomer } from "~/hooks/use-customers-live";
+import { FormPage } from "~/components/layout/form-page";
+import {
+  CustomerFormContent,
+  customerSchema,
+  type CustomerFormData,
+} from "~/components/customers/customer-form-content";
 
 export default function NewCustomerPage() {
   const navigate = useNavigate();
   const createCustomer = useCreateCustomer();
+
+  const form = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      dni: null,
+      phone: null,
+      address: null,
+      notes: null,
+    },
+  });
 
   const handleSubmit = async (data: CustomerFormData) => {
     try {
@@ -16,23 +36,36 @@ export default function NewCustomerPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-4">
-          <Link to="/clientes" className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="font-bold text-lg">Nuevo Cliente</h1>
-        </div>
-      </header>
+  const { isValid } = form.formState;
 
-      <main className="p-4 pb-24">
-        <CustomerForm
-          onSubmit={handleSubmit}
-          isLoading={createCustomer.isPending}
-        />
-      </main>
-    </div>
+  return (
+    <FormPage
+      title="Nuevo Cliente"
+      backHref="/clientes"
+      icon={User}
+      toolbar={
+        <Button
+          onClick={form.handleSubmit(handleSubmit)}
+          disabled={createCustomer.isPending || !isValid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {createCustomer.isPending ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5 mr-2" />
+              Guardar Cliente
+            </>
+          )}
+        </Button>
+      }
+    >
+      <FormProvider {...form}>
+        <CustomerFormContent form={form} />
+      </FormProvider>
+    </FormPage>
   );
 }

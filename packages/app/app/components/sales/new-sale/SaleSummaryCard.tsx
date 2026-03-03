@@ -2,10 +2,10 @@ import { useAtom, useAtomValue } from "jotai";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSaleStore } from "~/stores/sale.store";
 import {
   amountPaidAtom,
   balanceDueAtom,
-  cartItemsAtom,
   paymentModeAtom,
   saleTypeAtom,
   submitErrorAtom,
@@ -13,7 +13,7 @@ import {
 } from "~/atoms/new-sale";
 
 export function SaleSummaryCard() {
-  const cartItems = useAtomValue(cartItemsAtom);
+  const cartItems = useSaleStore((state) => state.cartItems);
   const totalAmount = useAtomValue(totalAmountAtom);
   const saleType = useAtomValue(saleTypeAtom);
   const paymentMode = useAtomValue(paymentModeAtom);
@@ -26,11 +26,11 @@ export function SaleSummaryCard() {
   }
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+    <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white" data-testid="sale-summary-card">
       <CardContent className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-orange-100">Total</span>
-          <span className="text-2xl font-bold">S/ {totalAmount.toFixed(2)}</span>
+          <span className="text-2xl font-bold" data-testid="sale-total-amount">S/ {totalAmount.toFixed(2)}</span>
         </div>
 
         {paymentMode === "a_cuenta" && (
@@ -44,6 +44,7 @@ export function SaleSummaryCard() {
               step="0.01"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
+              data-testid="initial-payment-input"
               className="rounded-xl bg-white/20 border-white/30 text-white placeholder:text-white/50"
               placeholder="0.00"
             />
@@ -53,12 +54,12 @@ export function SaleSummaryCard() {
         {saleType === "credito" && (
           <div className="flex items-center justify-between text-orange-100">
             <span>Saldo pendiente</span>
-            <span>S/ {balanceDue.toFixed(2)}</span>
+            <span data-testid="sale-balance-due">S/ {balanceDue.toFixed(2)}</span>
           </div>
         )}
 
         {submitError && (
-          <p className="text-sm text-red-100 bg-red-500/20 rounded-lg px-3 py-2">{submitError}</p>
+          <p className="text-sm text-red-100 bg-red-500/20 rounded-lg px-3 py-2" data-testid="submit-error-message">{submitError}</p>
         )}
       </CardContent>
     </Card>

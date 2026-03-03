@@ -17,7 +17,7 @@ export function PaymentModeSection() {
   const selectedCustomer = useAtomValue(selectedCustomerAtom);
 
   return (
-    <section>
+    <section data-testid="payment-mode-section">
       <h2 className="text-sm font-medium text-muted-foreground mb-2">Tipo de Cobro</h2>
       <div className="flex gap-2">
         <Button
@@ -28,6 +28,7 @@ export function PaymentModeSection() {
               setSubmitError(null);
             }
           }}
+          data-testid="payment-mode-pago_total"
           className={cn(
             "flex-1 rounded-xl",
             paymentMode === "pago_total" && "bg-orange-500 hover:bg-orange-600",
@@ -43,6 +44,7 @@ export function PaymentModeSection() {
               setSubmitError(null);
             }
           }}
+          data-testid="payment-mode-a_cuenta"
           className={cn(
             "flex-1 rounded-xl",
             paymentMode === "a_cuenta" && "bg-orange-500 hover:bg-orange-600",
@@ -59,6 +61,7 @@ export function PaymentModeSection() {
               setSubmitError(null);
             }
           }}
+          data-testid="payment-mode-debe_todo"
           className={cn(
             "flex-1 rounded-xl",
             paymentMode === "debe_todo" && "bg-orange-500 hover:bg-orange-600",
@@ -67,7 +70,7 @@ export function PaymentModeSection() {
           Debe
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground mt-2" data-testid="payment-mode-description">
         {paymentMode === "pago_total" && "Pago completo hoy, no aumenta deuda."}
         {paymentMode === "a_cuenta" &&
           "Venta a credito con abono inicial para reducir la deuda."}
@@ -75,7 +78,7 @@ export function PaymentModeSection() {
           "Venta a credito sin abono inicial, toda la venta queda como deuda."}
       </p>
       {requiresCustomer && !selectedCustomer && (
-        <p className="text-xs text-red-600 mt-1">
+        <p className="text-xs text-red-600 mt-1" data-testid="customer-required-error">
           Selecciona un cliente para registrar venta a credito.
         </p>
       )}

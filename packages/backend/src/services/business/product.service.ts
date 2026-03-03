@@ -56,6 +56,7 @@ export class ProductService {
       unit: "kg" | "unidad";
       basePrice: number;
       isActive?: boolean;
+      imageId?: string;
     }
   ): Promise<Product> {
     if (!ctx.hasPermission("products.manage")) {
@@ -76,6 +77,7 @@ export class ProductService {
       unit: data.unit,
       basePrice: data.basePrice.toString(),
       isActive: data.isActive ?? true,
+      imageId: data.imageId,
     });
   }
 
@@ -88,6 +90,7 @@ export class ProductService {
       unit?: "kg" | "unidad";
       basePrice?: number;
       isActive?: boolean;
+      imageId?: string | null;
     }
   ): Promise<Product> {
     if (!ctx.hasPermission("products.manage")) {
@@ -108,8 +111,12 @@ export class ProductService {
     }
 
     const updated = await this.repository.update(ctx, id, {
-      ...data,
+      name: data.name,
+      type: data.type,
+      unit: data.unit,
       basePrice: data.basePrice?.toString(),
+      isActive: data.isActive,
+      imageId: data.imageId,
     });
 
     if (!updated) {

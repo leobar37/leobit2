@@ -31,16 +31,33 @@ import {
   CreateDistribucionForm,
   EditDistribucionForm,
 } from "~/components/distribucion";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormDate } from "@/components/forms/form-date";
+
+const distribucionFilterSchema = z.object({
+  fecha: z.string(),
+});
+
+type DistribucionFilterData = z.infer<typeof distribucionFilterSchema>;
 
 export default function DistribucionesPage() {
-  const [selectedDate, setSelectedDate] = useState(getToday());
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [editingDistribucion, setEditingDistribucion] = useState<Distribucion | null>(
     null
   );
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+
+  const filterForm = useForm<DistribucionFilterData>({
+    resolver: zodResolver(distribucionFilterSchema),
+    defaultValues: {
+      fecha: getToday(),
+    },
+  });
+
+  const selectedDate = filterForm.watch("fecha") || getToday();
 
   const { data: distribucionesData, isLoading } = useDistribuciones({
     fecha: selectedDate,
@@ -100,13 +117,6 @@ export default function DistribucionesPage() {
     }
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(format(date, "yyyy-MM-dd"));
-      setIsDatePickerOpen(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
@@ -128,7 +138,7 @@ export default function DistribucionesPage() {
                 </Button>
               </DrawerTrigger>
               <DrawerContent className="max-h-[85vh]">
-                <DrawerHeader>
+                <DrawerHeader className="px-4 pb-3 pt-2">
                   <DrawerTitle>Nueva Distribución</DrawerTitle>
                 </DrawerHeader>
                 <CreateDistribucionForm onSubmit={handleCreate} />
@@ -145,48 +155,13 @@ export default function DistribucionesPage() {
               <Calendar className="h-5 w-5 text-orange-600" />
               <span className="font-medium">{selectedDate}</span>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsDatePickerOpen(true)}
-              className={cn(
-                "w-full justify-start text-left font-normal rounded-xl",
-                !selectedDate && "text-muted-foreground"
-              )}
-            >
-              <Calendar className="mr-2 h-4 w-4 text-orange-600" />
-              {selectedDate ? (
-                format(new Date(selectedDate), "PPP", { locale: es })
-              ) : (
-                <span>Seleccionar fecha</span>
-              )}
-              <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-            </Button>
-
-            <Drawer open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-              <DrawerContent className="max-w-md mx-auto">
-                <DrawerHeader className="border-b border-orange-100">
-                  <DrawerTitle className="text-center text-lg">Seleccionar Fecha</DrawerTitle>
-                </DrawerHeader>
-                <div className="p-6 flex justify-center">
-                  <CalendarComponent
-                    mode="single"
-                    selected={parseDateString(selectedDate)}
-                    onSelect={handleDateSelect}
-                    className="[\&_.rdp-caption]:text-orange-600 [\&_.rdp-caption]:font-semibold [\&_.rdp-caption]:text-lg [\&_.rdp-head_cell]:text-orange-600 [\&_.rdp-head_cell]:font-medium [\&_.rdp-cell]:text-base [\&_.rdp-button]:w-10 [\&_.rdp-button]:h-10 [\&_.rdp-day_today]:bg-orange-100 [\&_.rdp-day_today]:text-orange-700 [\&_.rdp-day_selected]:bg-orange-500 [\&_.rdp-day_selected]:text-white"
-                    initialFocus
-                  />
-                </div>
-                <div className="p-4 border-t border-orange-100">
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-xl"
-                    onClick={() => setIsDatePickerOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </DrawerContent>
-            </Drawer>
+            <FormProvider {...filterForm}>
+              <FormDate
+                name="fecha"
+                label="Seleccionar fecha"
+                quickActionLabels={["Hoy", "Mañana"]}
+              />
+            </FormProvider>
           </CardContent>
         </Card>
 
@@ -226,9 +201,9 @@ export default function DistribucionesPage() {
         onOpenChange={() => setEditingDistribucion(null)}
       >
         <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle>Editar Distribución</DrawerTitle>
-          </DrawerHeader>
+<DrawerHeader className="px-4 pb-3 pt-2">
+                  <DrawerTitle>Editar Distribución</DrawerTitle>
+                </DrawerHeader>
           {editingDistribucion && (
             <EditDistribucionForm
               distribucion={editingDistribucion}

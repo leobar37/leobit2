@@ -17,6 +17,7 @@ interface DatePickerProps {
   maxDate?: string;
   disabled?: boolean;
   className?: string;
+  quickActionLabels?: [string, string];
 }
 
 export function DatePicker({
@@ -28,35 +29,44 @@ export function DatePicker({
   maxDate,
   disabled = false,
   className,
+  quickActionLabels = ["Hoy", "Mañana"],
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
-  
+
   const selectedDate = value ? parseDateString(value) : undefined;
   const min = minDate ? parseDateString(minDate) : undefined;
   const max = maxDate ? parseDateString(maxDate) : undefined;
-  
+
   const handleSelect = (date: Date | undefined) => {
     if (date && onChange) {
       onChange(toDateString(date));
       setOpen(false);
     }
   };
-  
+
   const isDateDisabled = (date: Date) => {
     if (min && date < min) return true;
     if (max && date > max) return true;
     return false;
   };
-  
+
   const displayValue = value ? formatDisplayDate(value) : "";
-  
-  // Check if quick actions are available
+
+  // Calculate quick action dates based on minDate
+  // Use start of day to avoid timezone issues
   const today = new Date();
-  const tomorrow = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  const canSelectToday = !isDateDisabled(today);
-  const canSelectTomorrow = !isDateDisabled(tomorrow);
+
+  // If minDate is set and is after today, use minDate as first quick action
+  // Otherwise use today
+  const firstQuickDate = min && min > today ? min : today;
+  const secondQuickDate = new Date(firstQuickDate);
+  secondQuickDate.setDate(secondQuickDate.getDate() + 1);
+
+  const canSelectFirst = !isDateDisabled(firstQuickDate);
+  const canSelectSecond = !isDateDisabled(secondQuickDate);
   
   return (
     <div className={cn("space-y-2", className)}>
@@ -81,9 +91,9 @@ export function DatePicker({
       </Button>
       
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent className="max-w-md mx-auto rounded-t-[24px]">
+        <DrawerContent className="w-full rounded-t-[24px]">
           {/* Header */}
-          <DrawerHeader className="border-b border-gray-100 pb-4">
+          <DrawerHeader className="border-b border-gray-100 px-4 pb-3 pt-2">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-lg font-semibold text-gray-900">
                 {label || "Seleccionar fecha"}
@@ -100,7 +110,7 @@ export function DatePicker({
           </DrawerHeader>
           
           {/* Calendar */}
-          <div className="p-4 flex justify-center bg-white">
+          <div className="p-4 bg-white">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -108,8 +118,8 @@ export function DatePicker({
               disabled={isDateDisabled}
               initialFocus
               className={cn(
-                // Base styles
-                "border-0",
+                // Base styles - full width
+                "border-0 w-full",
                 // Header/caption
                 "[&_.rdp-caption]:text-gray-900",
                 "[&_.rdp-caption]:font-semibold",
@@ -118,17 +128,19 @@ export function DatePicker({
                 "[&_.rdp-nav_button]:h-9",
                 "[&_.rdp-nav_button]:rounded-full",
                 "[&_.rdp-nav_button]:hover:bg-orange-50",
-                // Weekday headers
+                // Weekday headers - responsive sizing
                 "[&_.rdp-head_cell]:text-gray-500",
                 "[&_.rdp-head_cell]:font-medium",
                 "[&_.rdp-head_cell]:text-sm",
-                "[&_.rdp-head_cell]:w-11",
-                "[&_.rdp-head_cell]:h-11",
-                // Day cells
-                "[&_.rdp-cell]:w-11",
-                "[&_.rdp-cell]:h-11",
-                "[&_.rdp-button]:w-10",
-                "[&_.rdp-button]:h-10",
+                "[&_.rdp-head_cell]:w-full",
+                "[&_.rdp-head_cell]:h-10",
+                // Day cells - responsive full width
+                "[&_.rdp-cell]:w-full",
+                "[&_.rdp-cell]:h-auto",
+                "[&_.rdp-cell]:aspect-square",
+                "[&_.rdp-button]:w-full",
+                "[&_.rdp-button]:h-full",
+                "[&_.rdp-button]:min-h-[44px]",
                 "[&_.rdp-button]:rounded-full",
                 "[&_.rdp-button]:text-base",
                 "[&_.rdp-button]:font-normal",
@@ -150,7 +162,9 @@ export function DatePicker({
                 "[&_.rdp-disabled]:opacity-30",
                 "[&_.rdp-disabled]:cursor-not-allowed",
                 // Outside days
-                "[&_.rdp-day_outside]:text-gray-300"
+                "[&_.rdp-day_outside]:text-gray-300",
+                // Table full width
+                "[&_.rdp-table]:w-full"
               )}
             />
           </div>
@@ -160,31 +174,31 @@ export function DatePicker({
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
-                onClick={() => handleSelect(today)}
-                disabled={!canSelectToday}
+                onClick={() => handleSelect(firstQuickDate)}
+                disabled={!canSelectFirst}
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",
                   "text-gray-700 font-medium",
-                  !canSelectToday && "opacity-50 cursor-not-allowed"
+                  !canSelectFirst && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <span className="text-orange-500 mr-2">●</span>
-                Hoy
+                {quickActionLabels[0]}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => handleSelect(tomorrow)}
-                disabled={!canSelectTomorrow}
+                onClick={() => handleSelect(secondQuickDate)}
+                disabled={!canSelectSecond}
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",
                   "text-gray-700 font-medium",
-                  !canSelectTomorrow && "opacity-50 cursor-not-allowed"
+                  !canSelectSecond && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <span className="text-orange-400 mr-2">●</span>
-                Mañana
+                {quickActionLabels[1]}
               </Button>
             </div>
           </div>

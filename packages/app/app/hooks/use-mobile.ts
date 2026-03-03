@@ -23,6 +23,10 @@ export function useMobile() {
   return isMobile;
 }
 
+export function useIsMobile() {
+  return useMobile();
+}
+
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
 

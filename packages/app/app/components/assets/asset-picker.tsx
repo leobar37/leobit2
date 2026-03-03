@@ -66,7 +66,7 @@ export function AssetPicker({
             </Button>
           </DrawerTrigger>
           <DrawerContent className="max-h-[85vh]">
-            <DrawerHeader>
+            <DrawerHeader className="px-4 pb-3 pt-2">
               <DrawerTitle>Galería de imágenes</DrawerTitle>
             </DrawerHeader>
             <AssetGallery

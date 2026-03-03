@@ -159,7 +159,7 @@ export function SupplierSelector({
         }}
       >
         <DrawerContent className="flex flex-col max-h-[85vh]">
-          <DrawerHeader className="border-b pb-4">
+          <DrawerHeader className="border-b px-4 pb-3 pt-2">
             <DrawerTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-orange-500" />
               Seleccionar Proveedor

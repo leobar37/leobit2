@@ -1,43 +1,46 @@
 import { atom } from "jotai";
-import type { Customer, Product } from "~/lib/db/schema";
-import type { ProductVariant } from "~/hooks/use-product-variants";
-import type { CalculatorPersistence } from "~/hooks/use-chicken-calculator";
-import type { CartItem, PaymentMode } from "~/lib/sales/types";
+import type { Customer } from "~/lib/db/schema";
+import type { PaymentMode } from "~/lib/sales/types";
 import { getPaymentSummary } from "~/lib/sales/payment-utils";
+import { useSaleStore } from "~/stores/sale.store";
 
+// UI State - Jotai
 export const selectedCustomerAtom = atom<Customer | null>(null);
 export const paymentModeAtom = atom<PaymentMode>("pago_total");
-export const cartItemsAtom = atom<CartItem[]>([]);
 export const amountPaidAtom = atom("");
 export const submitErrorAtom = atom<string | null>(null);
-
 export const showVariantSelectorAtom = atom(false);
-export const selectedProductAtom = atom<Product | null>(null);
-export const selectedVariantAtom = atom<ProductVariant | null>(null);
-export const persistedSelectionAtom = atom<CalculatorPersistence | null>(null);
 
-export const unitsInputAtom = atom("");
-export const packsInputAtom = atom("");
+// Derived atoms that read from Zustand store
+// Note: These use a workaround to read from Zustand in Jotai atoms
+const getCartItemsFromStore = () => useSaleStore.getState().cartItems;
 
-export const totalAmountAtom = atom((get) =>
-  get(cartItemsAtom).reduce((sum, item) => sum + item.subtotal, 0),
-);
+export const totalAmountAtom = atom((get) => {
+  const cartItems = getCartItemsFromStore();
+  return cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+});
 
-export const totalNetoKgAtom = atom((get) =>
-  get(cartItemsAtom)
+export const totalNetoKgAtom = atom((get) => {
+  const cartItems = getCartItemsFromStore();
+  return cartItems
     .filter((item) => item.unit === "kg")
-    .reduce((sum, item) => sum + item.quantity, 0),
-);
+    .reduce((sum, item) => sum + item.quantity, 0);
+});
 
-export const paymentSummaryAtom = atom((get) =>
-  getPaymentSummary(
+export const cartItemsCountAtom = atom((get) => {
+  return getCartItemsFromStore().length;
+});
+
+export const paymentSummaryAtom = atom((get) => {
+  const cartItems = getCartItemsFromStore();
+  return getPaymentSummary(
     get(paymentModeAtom),
     get(totalAmountAtom),
     get(amountPaidAtom),
     get(selectedCustomerAtom),
-    get(cartItemsAtom).length,
-  ),
-);
+    cartItems.length,
+  );
+});
 
 export const saleTypeAtom = atom((get) => get(paymentSummaryAtom).saleType);
 export const amountPaidValueAtom = atom((get) => get(paymentSummaryAtom).amountPaidValue);

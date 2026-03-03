@@ -7,7 +7,16 @@
     "dev": "react-router dev",
     "start": "bun run server.js",
     "typecheck": "react-router typegen && tsc",
-    "test": "vitest"
+    "test": "vitest",
+    "test:integration": "vitest --config=vitest.integration.config.ts",
+    "test:e2e": "playwright test --config=playwright.config.ts",
+    "test:e2e:headed": "HEADED=1 playwright test --config=playwright.config.ts",
+    "test:e2e:ui": "playwright test --ui --config=playwright.config.ts",
+    "test:e2e:debug": "playwright test --debug --config=playwright.config.ts",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:with-server": "WEB_SERVER=1 playwright test --config=playwright.config.ts",
+    "test:e2e:msw": "playwright test --config=playwright.msw.config.ts",
+    "test:e2e:msw:headed": "HEADED=1 playwright test --config=playwright.msw.config.ts"
   },
   "dependencies": {
     "@avileo/shared": "workspace:*",
@@ -41,10 +50,12 @@
     "vaul": "^1.1.2",
     "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@avileo/backend": "workspace:*",
+    "@playwright/test": "^1.58.2",
     "@react-router/dev": "^7.9.2",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.1",

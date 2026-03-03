@@ -19,14 +19,35 @@ import { useCreateClosing } from "~/hooks/use-closings";
 import { useSales } from "~/hooks/use-sales";
 import { useBusiness } from "~/hooks/use-business";
 import { getToday, parseISODate, subDays, toDateString } from "~/lib/date-utils";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormDate } from "@/components/forms/form-date";
+import { FormInput } from "@/components/forms/form-input";
+
+const cierreSchema = z.object({
+  closingDate: z.string().min(1, "La fecha es requerida"),
+  backdateReason: z.string().optional(),
+});
+
+type CierreFormData = z.infer<typeof cierreSchema>;
 
 export default function CierreDiaPage() {
   const { data: sales } = useSales();
   const { data: business } = useBusiness();
   const createClosing = useCreateClosing();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(getToday());
-  const [backdateReason, setBackdateReason] = useState("");
+
+  const form = useForm<CierreFormData>({
+    resolver: zodResolver(cierreSchema),
+    defaultValues: {
+      closingDate: getToday(),
+      backdateReason: "",
+    },
+  });
+
+  const selectedDate = form.watch("closingDate") || getToday();
+  const backdateReason = form.watch("backdateReason") || "";
 
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
   const todayDate = getToday();
@@ -52,35 +73,35 @@ export default function CierreDiaPage() {
     return sum + neto;
   }, 0);
 
-  const handleGenerarCierre = async () => {
+  const onSubmit = form.handleSubmit(async (data) => {
     if (selectedSales.length === 0) {
       toast.error("No hay ventas para la fecha seleccionada");
       return;
     }
 
-    if (isBackdateReasonInvalid) {
+    if (isBackdated && data.backdateReason && data.backdateReason.trim().length < 10) {
       toast.error("Debe indicar un motivo de al menos 10 caracteres");
       return;
     }
 
     try {
       await createClosing.mutateAsync({
-        closingDate: selectedDate,
+        closingDate: data.closingDate,
         totalSales: selectedStats.count,
         totalAmount: parseFloat(selectedStats.total),
         cashAmount: parseFloat(selectedStats.total),
         creditAmount: 0,
         totalKilos: totalKilos,
-        backdateReason: isBackdated ? backdateReason.trim() : undefined,
+        backdateReason: isBackdated ? data.backdateReason?.trim() : undefined,
       });
       setShowSuccess(true);
-      setBackdateReason("");
+      form.reset({ closingDate: getToday(), backdateReason: "" });
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error creating closing:", error);
       toast.error("Error al generar el cierre");
     }
-  };
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
@@ -100,25 +121,25 @@ export default function CierreDiaPage() {
               <CardTitle className="text-base">Fecha del Cierre</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Input
-                type="date"
-                value={selectedDate}
-                min={minBackdateDate}
-                max={todayDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-                className="rounded-xl"
-              />
-              <p className="text-xs text-muted-foreground">
-                Se permite retroceder hasta 7 días. Si el cierre es retroactivo, debe incluir motivo.
-              </p>
-              {isBackdated && (
-                <Input
-                  value={backdateReason}
-                  onChange={(event) => setBackdateReason(event.target.value)}
-                  placeholder="Motivo del cierre retroactivo (mínimo 10 caracteres)"
-                  className="rounded-xl"
+              <FormProvider {...form}>
+                <FormDate
+                  name="closingDate"
+                  label="Fecha del Cierre"
+                  minDate={minBackdateDate}
+                  maxDate={todayDate}
                 />
-              )}
+                <p className="text-xs text-muted-foreground">
+                  Se permite retroceder hasta 7 días. Si el cierre es retroactivo, debe incluir motivo.
+                </p>
+                {isBackdated && (
+                  <FormInput
+                    name="backdateReason"
+                    label="Motivo del cierre retroactivo"
+                    placeholder="Mínimo 10 caracteres"
+                    error={form.formState.errors.backdateReason?.message as string}
+                  />
+                )}
+              </FormProvider>
             </CardContent>
           </Card>
         )}
@@ -259,7 +280,7 @@ export default function CierreDiaPage() {
 
       <ToolbarActions>
         <Button
-          onClick={handleGenerarCierre}
+          onClick={onSubmit}
           disabled={createClosing.isPending || selectedSales.length === 0 || isBackdateReasonInvalid}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >

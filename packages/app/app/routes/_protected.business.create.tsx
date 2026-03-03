@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
+import { FormPage } from "~/components/layout/form-page";
 
 const createBusinessSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
@@ -60,8 +61,28 @@ export default function CreateBusinessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+    <FormPage
+      title="Crear tu negocio"
+      backHref="/"
+      maxWidth="sm"
+      toolbar={
+        <Button
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={createBusiness.isPending || !form.formState.isValid}
+          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+        >
+          {createBusiness.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Creando negocio...
+            </>
+          ) : (
+            "Crear negocio"
+          )}
+        </Button>
+      }
+    >
+      <Card className="border-0 shadow-lg rounded-3xl">
         <CardHeader className="space-y-4 text-center pb-8">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Store className="w-8 h-8 text-white" />
@@ -76,7 +97,7 @@ export default function CreateBusinessPage() {
           </div>
         </CardHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form>
           <CardContent className="space-y-4">
             <FormInput
               label="Nombre del negocio"
@@ -119,24 +140,9 @@ export default function CreateBusinessPage() {
                 {form.formState.errors.root.message}
               </p>
             )}
-
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-              disabled={createBusiness.isPending || !form.formState.isValid}
-            >
-              {createBusiness.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creando negocio...
-                </>
-              ) : (
-                "Crear negocio"
-              )}
-            </Button>
           </CardContent>
         </form>
       </Card>
-    </div>
+    </FormPage>
   );
 }

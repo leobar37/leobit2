@@ -68,6 +68,7 @@ export class PurchaseRepository {
       ),
       with: {
         supplier: true,
+        receiptImage: true,
         items: {
           with: {
             product: true,

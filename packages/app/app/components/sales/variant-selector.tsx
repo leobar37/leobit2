@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
 import { useProducts } from "~/hooks/use-products-live";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
+import { ProductImage } from "@/components/products/product-image";
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 
@@ -60,7 +61,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
     setSelectedVariant(null);
   };
 
-  const filteredProducts = products?.filter((p) => p.isActive) || [];
+  const filteredProducts = products?.filter((p) => p.isActive && p.hasVariants) || [];
   const activeVariants = variants?.filter((v) => v.isActive) || [];
 
   useEffect(() => {
@@ -80,9 +81,10 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
 
         onOpenChange(true);
       }}
+      data-testid="variant-selector-modal"
     >
       <DrawerContent className="flex flex-col max-h-[85vh]">
-        <DrawerHeader>
+        <DrawerHeader className="px-4 pb-3 pt-2">
           <DrawerTitle className="flex items-center gap-2">
             {step === "products" ? (
               <>
@@ -126,15 +128,18 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                     key={product.id}
                     type="button"
                     onClick={() => handleProductSelect(product)}
+                    data-testid={`product-option-${product.id}`}
                     className="w-full text-left"
                   >
                     <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Package className="h-5 w-5 text-orange-600" />
-                        </div>
+                        <ProductImage
+                          imageId={product.imageId}
+                          alt={product.name}
+                          size="md"
+                        />
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{product.name}</h3>
+                          <h3 className="font-medium truncate" data-testid="product-option-name">{product.name}</h3>
                           <p className="text-sm text-muted-foreground">
                             S/ {product.basePrice} / {product.unit}
                           </p>
@@ -164,6 +169,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                         key={variant.id}
                         type="button"
                         onClick={() => setSelectedVariant(variant)}
+                        data-testid={`variant-option-${variant.id}`}
                         className="w-full text-left"
                       >
                         <Card
@@ -176,7 +182,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <h3 className="font-medium">{variant.name}</h3>
+                              <h3 className="font-medium" data-testid="variant-option-name">{variant.name}</h3>
                               {variant.sku && (
                                 <p className="text-xs text-muted-foreground">SKU: {variant.sku}</p>
                               )}
@@ -212,6 +218,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
           <div className="border-t pt-4 mt-2">
             <Button
               onClick={handleConfirm}
+              data-testid="variant-selector-confirm"
               className="w-full bg-orange-500 hover:bg-orange-600"
             >
               Agregar al carrito

@@ -77,7 +77,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const productVariantService = new ProductVariantService(productVariantRepo);
     const productUnitService = new ProductUnitService(productUnitRepo);
     const supplierService = new SupplierService(supplierRepo);
-    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo);
+    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService);
 

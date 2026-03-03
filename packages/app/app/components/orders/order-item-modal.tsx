@@ -29,6 +29,7 @@ export function OrderItemModal({
   const [quantity, setQuantity] = useState(0);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (item) {
       setQuantity(Number(item.orderedQuantity));
     } else {
