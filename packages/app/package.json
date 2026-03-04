@@ -57,6 +57,7 @@
     "@avileo/backend": "workspace:*",
     "@playwright/test": "^1.58.2",
     "@react-router/dev": "^7.9.2",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
@@ -70,9 +71,11 @@
     "msw": "^2.12.10",
     "postcss": "^8.5.6",
     "react-grab": "^0.1.14",
+    "sharp": "^0.34.5",
     "tailwindcss": "3",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.2",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.0.2"
   },
   "msw": {

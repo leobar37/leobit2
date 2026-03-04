@@ -37,6 +37,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
         />
+        <meta name="theme-color" content="#f97316" />
+        <meta name="description" content="Sistema de ventas de pollo - Offline first" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <Meta />
         <Links />
       </head>
