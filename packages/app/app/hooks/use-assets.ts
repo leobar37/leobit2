@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { api, uploadFile } from "~/lib/api-client";
 
 export interface Asset {
   id: string;
@@ -65,20 +65,7 @@ export function useUploadAsset() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("bearer_token");
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-      const response = await fetch(`${apiUrl}/assets/upload`, {
-        method: "POST",
-        body: formData,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to upload asset");
-      }
-
-      return (await response.json()) as AssetUploadResponse;
+      return uploadFile<AssetUploadResponse>("/assets/upload", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.all });

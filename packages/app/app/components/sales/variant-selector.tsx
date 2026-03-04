@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import { Package, ChevronRight, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { AppDrawer } from "@/components/ui/app-drawer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
@@ -71,161 +66,153 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
   }, [step, activeVariants, selectedVariant]);
 
   return (
-    <Drawer
+    <AppDrawer
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
+      onOpenChange={(isOpen: boolean) => {
+        if (!isOpen) {
           handleClose();
           return;
         }
-
         onOpenChange(true);
       }}
       data-testid="variant-selector-modal"
     >
-      <DrawerContent className="flex flex-col max-h-[85vh]">
-        <DrawerHeader className="px-4 pb-3 pt-2">
-          <DrawerTitle className="flex items-center gap-2">
-            {step === "products" ? (
-              <>
-                <Package className="h-5 w-5 text-orange-500" />
-                Seleccionar Producto
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={handleBack}
-                  className="p-1 -ml-1 rounded-lg hover:bg-orange-50"
-                >
-                  <ChevronRight className="h-5 w-5 rotate-180" />
-                </button>
-                <Box className="h-5 w-5 text-orange-500" />
-                {selectedProduct?.name}
-                {activeVariants.length > 1 && (
-                  <Badge variant="secondary" className="text-xs ml-1">
-                    {activeVariants.length} variantes
-                  </Badge>
-                )}
-              </>
-            )}
-          </DrawerTitle>
-        </DrawerHeader>
+      <AppDrawer.Header
+        title={
+          step === "products" ? (
+            "Seleccionar Producto"
+          ) : (
+            <span className="flex items-center gap-2">
+              <button
+                onClick={handleBack}
+                className="p-1 -ml-1 rounded-lg hover:bg-orange-50"
+              >
+                <ChevronRight className="h-5 w-5 rotate-180" />
+              </button>
+              {selectedProduct?.name}
+              {activeVariants.length > 1 && (
+                <Badge variant="secondary" className="text-xs ml-1">
+                  {activeVariants.length} variantes
+                </Badge>
+              )}
+            </span>
+          )
+        }
+        icon={step === "products" ? <Package className="h-5 w-5" /> : <Box className="h-5 w-5" />}
+        onClose={handleClose}
+      />
 
-        <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2">
-          {step === "products" ? (
-            <div className="space-y-2">
-              {productsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Cargando productos...
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No hay productos activos
-                </div>
-              ) : (
-                filteredProducts.map((product) => (
+      <AppDrawer.Body>
+        {step === "products" ? (
+          <div className="space-y-2">
+            {productsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Cargando productos...
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay productos activos
+              </div>
+            ) : (
+              filteredProducts.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => handleProductSelect(product)}
+                  data-testid={`product-option-${product.id}`}
+                  className="w-full text-left"
+                >
+                  <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3">
+                      <ProductImage
+                        imageId={product.imageId}
+                        alt={product.name}
+                        size="md"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate" data-testid="product-option-name">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          S/ {product.basePrice} / {product.unit}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </button>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {variantsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Cargando variantes...
+              </div>
+            ) : activeVariants.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay variantes activas para este producto
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeVariants.map((variant) => (
                   <button
-                    key={product.id}
+                    key={variant.id}
                     type="button"
-                    onClick={() => handleProductSelect(product)}
-                    data-testid={`product-option-${product.id}`}
+                    onClick={() => setSelectedVariant(variant)}
+                    data-testid={`variant-option-${variant.id}`}
                     className="w-full text-left"
                   >
-                    <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-3">
-                        <ProductImage
-                          imageId={product.imageId}
-                          alt={product.name}
-                          size="md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate" data-testid="product-option-name">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            S/ {product.basePrice} / {product.unit}
+                    <Card
+                      className={cn(
+                        "p-3 cursor-pointer transition-all",
+                        selectedVariant?.id === variant.id
+                          ? "ring-2 ring-orange-500 bg-orange-50"
+                          : "hover:shadow-md",
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium" data-testid="variant-option-name">{variant.name}</h3>
+                          {variant.sku && (
+                            <p className="text-xs text-muted-foreground">SKU: {variant.sku}</p>
+                          )}
+                          <p className="text-sm text-orange-600 font-semibold">
+                            S/ {variant.price}
                           </p>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        {variant.inventory && (
+                          <Badge
+                            variant={
+                              parseFloat(variant.inventory.quantity) > 0
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {variant.inventory.quantity} {selectedProduct?.unit}
+                          </Badge>
+                        )}
                       </div>
                     </Card>
                   </button>
-                ))
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {variantsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Cargando variantes...
-                </div>
-              ) : activeVariants.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No hay variantes activas para este producto
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    {activeVariants.map((variant) => (
-                      <button
-                        key={variant.id}
-                        type="button"
-                        onClick={() => setSelectedVariant(variant)}
-                        data-testid={`variant-option-${variant.id}`}
-                        className="w-full text-left"
-                      >
-                        <Card
-                          className={cn(
-                            "p-3 cursor-pointer transition-all",
-                            selectedVariant?.id === variant.id
-                              ? "ring-2 ring-orange-500 bg-orange-50"
-                              : "hover:shadow-md",
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-medium" data-testid="variant-option-name">{variant.name}</h3>
-                              {variant.sku && (
-                                <p className="text-xs text-muted-foreground">SKU: {variant.sku}</p>
-                              )}
-                              <p className="text-sm text-orange-600 font-semibold">
-                                S/ {variant.price}
-                              </p>
-                            </div>
-                            {variant.inventory && (
-                              <Badge
-                                variant={
-                                  parseFloat(variant.inventory.quantity) > 0
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {variant.inventory.quantity} {selectedProduct?.unit}
-                              </Badge>
-                            )}
-                          </div>
-                        </Card>
-                      </button>
-                    ))}
-                  </div>
-
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {step === "variants" && selectedVariant && (
-          <div className="border-t pt-4 mt-2">
-            <Button
-              onClick={handleConfirm}
-              data-testid="variant-selector-confirm"
-              className="w-full bg-orange-500 hover:bg-orange-600"
-            >
-              Agregar al carrito
-            </Button>
+                ))}
+              </div>
+            )}
           </div>
         )}
-      </DrawerContent>
-    </Drawer>
+      </AppDrawer.Body>
+
+      {step === "variants" && selectedVariant && (
+        <AppDrawer.Footer>
+          <Button
+            onClick={handleConfirm}
+            data-testid="variant-selector-confirm"
+            className="w-full bg-orange-500 hover:bg-orange-600"
+          >
+            Agregar al carrito
+          </Button>
+        </AppDrawer.Footer>
+      )}
+    </AppDrawer>
   );
 }

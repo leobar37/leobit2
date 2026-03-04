@@ -169,6 +169,31 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         variantIds: t.Array(t.String(), { minItems: 1 }),
       }),
     }
+  )
+  // Product Units routes
+  .get(
+    "/:id/units",
+    async ({ productUnitService, ctx, params, query }) => {
+      const units = await productUnitService.getUnitsByProduct(
+        ctx as RequestContext,
+        params.id,
+        {
+          isActive: query.isActive === "true" ? true :
+                    query.isActive === "false" ? false : undefined,
+          includeInactive: query.includeInactive === "true",
+        }
+      );
+      return { success: true, data: units };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      query: t.Object({
+        isActive: t.Optional(t.String()),
+        includeInactive: t.Optional(t.String()),
+      }),
+    }
   );
 
 export const variantRoutes = new Elysia({ prefix: "/variants" })

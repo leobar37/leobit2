@@ -1,5 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "../../lib/db";
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 import {
   businessPaymentSettings,
   type BusinessPaymentSettings,
@@ -9,18 +11,22 @@ import type { RequestContext } from "../../context/request-context";
 
 export class PaymentMethodConfigRepository {
   async findByBusinessId(
-    ctx: RequestContext
+    ctx: RequestContext,
+    tx?: DbTransaction
   ): Promise<BusinessPaymentSettings | undefined> {
-    return db.query.businessPaymentSettings.findFirst({
+    const dbOrTx = tx || db;
+    return dbOrTx.query.businessPaymentSettings.findFirst({
       where: eq(businessPaymentSettings.businessId, ctx.businessId),
     });
   }
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewBusinessPaymentSettings, "businessId">
+    data: Omit<NewBusinessPaymentSettings, "businessId">,
+    tx?: DbTransaction
   ): Promise<BusinessPaymentSettings> {
-    const [result] = await db
+    const dbOrTx = tx || db;
+    const [result] = await dbOrTx
       .insert(businessPaymentSettings)
       .values({
         ...data,
@@ -34,9 +40,11 @@ export class PaymentMethodConfigRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<NewBusinessPaymentSettings>
+    data: Partial<NewBusinessPaymentSettings>,
+    tx?: DbTransaction
   ): Promise<BusinessPaymentSettings> {
-    const [result] = await db
+    const dbOrTx = tx || db;
+    const [result] = await dbOrTx
       .update(businessPaymentSettings)
       .set({
         ...data,
@@ -49,14 +57,13 @@ export class PaymentMethodConfigRepository {
       .returning();
 
     return result;
-}
-
-
+  }
 
   async getOrCreate(
-    ctx: RequestContext
+    ctx: RequestContext,
+    tx?: DbTransaction
   ): Promise<BusinessPaymentSettings> {
-    const existing = await this.findByBusinessId(ctx);
+    const existing = await this.findByBusinessId(ctx, tx);
     
     if (existing) {
       return existing;
@@ -70,6 +77,6 @@ export class PaymentMethodConfigRepository {
         transferencia: { enabled: false },
         tarjeta: { enabled: false },
       },
-    });
+    }, tx);
   }
 }

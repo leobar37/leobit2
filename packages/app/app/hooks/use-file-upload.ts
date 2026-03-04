@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
+import { uploadFile } from "~/lib/api-client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
 export type UploadStatus = "idle" | "uploading" | "pending" | "synced" | "error";
@@ -53,21 +54,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("bearer_token");
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-      
-      const response = await fetch(`${apiUrl}${endpoint}`, {
-        method: "POST",
-        body: formData,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(errorData.error || "Error al subir archivo");
-      }
-
-      return response.json();
+      return uploadFile<FileUploadResponse>(endpoint, formData);
     },
     onSuccess: (data) => {
       setUploadStatus("synced");

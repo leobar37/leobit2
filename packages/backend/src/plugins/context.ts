@@ -11,7 +11,10 @@ export const contextPlugin = new Elysia({ name: "context" })
       throw new Error("No autorizado");
     }
 
-    const ctx = await RequestContext.fromAuth(session);
+    // Extract target business from header for multi-business support
+    const targetBusinessId = request.headers.get("x-business-id");
+
+    const ctx = await RequestContext.fromAuth(session, targetBusinessId);
 
     if (!ctx.isActive) {
       set.status = 403;

@@ -16,7 +16,14 @@ async function getBusiness(): Promise<Business> {
     throw new Error("Failed to fetch business");
   }
 
-  return data.data as unknown as Business;
+  const business = data.data as unknown as Business;
+  
+  // Store business ID for multi-business support in API requests
+  if (typeof window !== "undefined" && business.id) {
+    localStorage.setItem("current_business_id", business.id);
+  }
+  
+  return business;
 }
 
 async function createBusiness(input: CreateBusinessInput): Promise<Business> {

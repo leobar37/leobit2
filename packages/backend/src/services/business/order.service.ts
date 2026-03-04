@@ -12,13 +12,17 @@ import type {
   UpdateOrderInput,
 } from "../repository/order.repository";
 import type { OrderEventsRepository } from "../repository/order-events.repository";
+import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { SaleService } from "./sale.service";
 
 export class OrderService {
   constructor(
     private repository: OrderRepository,
     private eventsRepository: OrderEventsRepository,
-    private saleService: SaleService
+    private saleService: SaleService,
+    private distribucionRepository: DistribucionRepository,
+    private distribucionItemRepository: DistribucionItemRepository
   ) {}
 
   async getOrders(
@@ -415,21 +419,29 @@ export class OrderService {
         throw new NotFoundError("Order");
       }
 
+      // Validate stock if there's an active distribution in strict mode
+      await this.validateStockForDelivery(ctx, refreshedOrder.items);
+
+      // Calculate sale total based on delivered quantities and final prices
+      const calculatedTotal = refreshedOrder.items.reduce((sum, item) => {
+        const qty = Number(item.deliveredQuantity ?? item.orderedQuantity);
+        const price = Number(item.unitPriceFinal ?? item.unitPriceQuoted);
+        return sum + (qty * price);
+      }, 0);
+
+      const saleTotalAmount = calculatedTotal.toFixed(2);
+      const saleAmountPaid = refreshedOrder.paymentIntent === "contado" ? saleTotalAmount : "0.00";
+      const saleBalanceDue = refreshedOrder.paymentIntent === "credito" ? saleTotalAmount : "0.00";
+
       const sale = await this.saleService.createFromOrder(
         ctx,
         {
           orderId: refreshedOrder.id,
           clientId: refreshedOrder.clientId,
           saleType: refreshedOrder.paymentIntent,
-          totalAmount: refreshedOrder.totalAmount,
-          amountPaid:
-            refreshedOrder.paymentIntent === "contado"
-              ? refreshedOrder.totalAmount
-              : "0.00",
-          balanceDue:
-            refreshedOrder.paymentIntent === "credito"
-              ? refreshedOrder.totalAmount
-              : "0.00",
+          totalAmount: saleTotalAmount,
+          amountPaid: saleAmountPaid,
+          balanceDue: saleBalanceDue,
           items: refreshedOrder.items.map((item) => {
             const qty = item.deliveredQuantity ?? item.orderedQuantity;
             const unitPrice = item.unitPriceFinal ?? item.unitPriceQuoted;
@@ -555,5 +567,57 @@ export class OrderService {
         unitPriceFinal: item.unitPriceFinal,
       })),
     };
+  }
+
+  private async validateStockForDelivery(
+    ctx: RequestContext,
+    items: Array<{
+      variantId: string;
+      productName: string;
+      variantName: string;
+      deliveredQuantity: string | null;
+      orderedQuantity: string;
+    }>
+  ): Promise<void> {
+    const today = new Date().toISOString().slice(0, 10);
+    const distribucion = await this.distribucionRepository.findByVendedorAndFecha(
+      ctx,
+      ctx.businessUserId,
+      today
+    );
+
+    if (!distribucion || distribucion.modo !== "estricto") {
+      return; // No validation needed for non-strict modes
+    }
+
+    const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+      ctx,
+      distribucion.id
+    );
+
+    for (const item of items) {
+      const deliveredQty = Number(item.deliveredQuantity ?? item.orderedQuantity);
+      if (deliveredQty <= 0) continue;
+
+      const distItem = distribucionItems.find(
+        (di) => di.variantId === item.variantId
+      );
+
+      if (!distItem) {
+        throw new ValidationError(
+          `${item.variantName} no está en su distribución`
+        );
+      }
+
+      const asignada = parseFloat(distItem.cantidadAsignada);
+      const vendida = parseFloat(distItem.cantidadVendida);
+      const disponible = asignada - vendida;
+
+      if (deliveredQty > disponible) {
+        throw new ValidationError(
+          `Stock insuficiente para ${item.variantName}. Disponible: ${disponible.toFixed(3)}, Venta: ${deliveredQty}`
+        );
+      }
+    }
   }
 }

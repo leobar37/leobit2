@@ -43,7 +43,7 @@ function PurchaseFormInner() {
 
   return (
     <>
-      <form className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Supplier */}
         <div className="space-y-4">
           <div className="space-y-2">

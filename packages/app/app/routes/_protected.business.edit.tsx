@@ -194,7 +194,7 @@ export default function EditBusinessPage() {
           </CardHeader>
 
           <CardContent>
-            <form className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormInput
                 label="Nombre del negocio"
                 error={form.formState.errors.name?.message}

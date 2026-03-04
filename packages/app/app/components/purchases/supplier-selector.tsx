@@ -4,13 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "@/components/ui/drawer";
+import { AppDrawer } from "@/components/ui/app-drawer";
 import { useSuppliers } from "~/hooks/use-suppliers";
 import type { Supplier } from "~/hooks/use-suppliers";
 
@@ -152,111 +146,106 @@ export function SupplierSelector({
         </span>
       </button>
 
-      <Drawer
+      <AppDrawer
         open={isOpen}
-        onOpenChange={(open) => {
-          if (!open) handleClose();
+        onOpenChange={(isOpen: boolean) => {
+          if (!isOpen) handleClose();
         }}
       >
-        <DrawerContent className="flex flex-col max-h-[85vh]">
-          <DrawerHeader className="border-b px-4 pb-3 pt-2">
-            <DrawerTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-orange-500" />
-              Seleccionar Proveedor
-            </DrawerTitle>
-          </DrawerHeader>
+        <AppDrawer.Header
+          title="Seleccionar Proveedor"
+          icon={<Building2 className="h-5 w-5" />}
+          onClose={handleClose}
+        />
 
-          <div className="px-4 py-4">
-            {/* Search input */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, RUC o teléfono..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 rounded-xl"
-                autoFocus
-              />
-            </div>
-
-            {/* Suppliers list */}
-            <div className="space-y-2 flex-1 overflow-y-auto">
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Cargando proveedores...
-                </div>
-              ) : filteredSuppliers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {search
-                    ? "No se encontraron proveedores"
-                    : "No hay proveedores registrados"}
-                </div>
-              ) : (
-                filteredSuppliers.map((supplier) => (
-                  <button
-                    key={supplier.id}
-                    type="button"
-                    onClick={() => handleSelect(supplier)}
-                    className="w-full text-left"
-                  >
-                    <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow hover:bg-orange-50/50">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium truncate">
-                              {supplier.name}
-                            </h3>
-                            <Badge
-                              variant="secondary"
-                              className={`text-xs ${supplierTypeColors[supplier.type] || "bg-gray-100"}`}
-                            >
-                              {supplierTypeLabels[supplier.type] || supplier.type}
-                            </Badge>
-                          </div>
-                          <div className="space-y-0.5 mt-1">
-                            {supplier.ruc && (
-                              <p className="text-xs text-muted-foreground">
-                                RUC: {supplier.ruc}
-                              </p>
-                            )}
-                            {supplier.phone && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {supplier.phone}
-                              </p>
-                            )}
-                            {supplier.address && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {supplier.address}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </button>
-                ))
-              )}
-            </div>
+        <AppDrawer.Body>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre, RUC o teléfono..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 rounded-xl"
+              autoFocus
+            />
           </div>
 
-          <DrawerFooter className="border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCreateNew}
-              className="w-full rounded-xl border-orange-200 hover:bg-orange-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo proveedor
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          <div className="space-y-2">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Cargando proveedores...
+              </div>
+            ) : filteredSuppliers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {search
+                  ? "No se encontraron proveedores"
+                  : "No hay proveedores registrados"}
+              </div>
+            ) : (
+              filteredSuppliers.map((supplier) => (
+                <button
+                  key={supplier.id}
+                  type="button"
+                  onClick={() => handleSelect(supplier)}
+                  className="w-full text-left"
+                >
+                  <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow hover:bg-orange-50/50">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium truncate">
+                            {supplier.name}
+                          </h3>
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${supplierTypeColors[supplier.type] || "bg-gray-100"}`}
+                          >
+                            {supplierTypeLabels[supplier.type] || supplier.type}
+                          </Badge>
+                        </div>
+                        <div className="space-y-0.5 mt-1">
+                          {supplier.ruc && (
+                            <p className="text-xs text-muted-foreground">
+                              RUC: {supplier.ruc}
+                            </p>
+                          )}
+                          {supplier.phone && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {supplier.phone}
+                            </p>
+                          )}
+                          {supplier.address && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {supplier.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
+              ))
+            )}
+          </div>
+        </AppDrawer.Body>
+
+        <AppDrawer.Footer>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCreateNew}
+            className="w-full rounded-xl border-orange-200 hover:bg-orange-50"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo proveedor
+          </Button>
+        </AppDrawer.Footer>
+      </AppDrawer>
     </>
   );
 }

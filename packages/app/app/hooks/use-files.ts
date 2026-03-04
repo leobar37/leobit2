@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { api, uploadFile } from "~/lib/api-client";
 
 export interface FileRecord {
   id: string;
@@ -74,20 +74,7 @@ export function useUploadFile() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("bearer_token");
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-      const response = await fetch(`${apiUrl}/files/upload`, {
-        method: "POST",
-        body: formData,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al subir archivo");
-      }
-
-      return (await response.json()) as FileUploadResponse;
+      return uploadFile<FileUploadResponse>("/files/upload", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: fileKeys.all });

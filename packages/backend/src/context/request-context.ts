@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { businessUsers, businessUserRoleEnum } from "../db/schema";
+import { ForbiddenError } from "../errors";
 
 type BusinessUserRole = typeof businessUserRoleEnum.enumValues[number];
 
@@ -123,21 +124,44 @@ export class RequestContext {
   /**
    * Factory: Crear desde sesión de Better Auth
    * Consulta business_users para obtener el contexto del negocio
+   *
+   * @param session - Better Auth session
+   * @param targetBusinessId - Optional specific business ID to use (for multi-business users)
    */
-  static async fromAuth(session: {
-    user: { id: string; email: string; name?: string };
-    session: { id: string };
-  }): Promise<RequestContext> {
+  static async fromAuth(
+    session: {
+      user: { id: string; email: string; name?: string };
+      session: { id: string };
+    },
+    targetBusinessId?: string | null
+  ): Promise<RequestContext> {
     const { user, session: sess } = session;
 
-    // Buscar la membresía del usuario en un negocio
-    const membership = await db.query.businessUsers.findFirst({
-      where: eq(businessUsers.userId, user.id),
-      with: { business: true },
-    });
+    let membership;
 
-    if (!membership) {
-      throw new Error("Usuario no pertenece a ningún negocio");
+    if (targetBusinessId) {
+      // Look for specific business membership
+      membership = await db.query.businessUsers.findFirst({
+        where: and(
+          eq(businessUsers.userId, user.id),
+          eq(businessUsers.businessId, targetBusinessId)
+        ),
+        with: { business: true },
+      });
+
+      if (!membership) {
+        throw new ForbiddenError("No perteneces a este negocio");
+      }
+    } else {
+      // Fall back to first membership (backward compatibility)
+      membership = await db.query.businessUsers.findFirst({
+        where: eq(businessUsers.userId, user.id),
+        with: { business: true },
+      });
+
+      if (!membership) {
+        throw new Error("Usuario no pertenece a ningún negocio");
+      }
     }
 
     // Calcular permisos según el rol

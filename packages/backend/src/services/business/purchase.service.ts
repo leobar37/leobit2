@@ -154,7 +154,16 @@ export class PurchaseService {
       validatedItems
     );
 
-    for (const item of data.items) {
+    // Update inventory using processed data from validation loop
+    for (let i = 0; i < data.items.length; i++) {
+      const item = data.items[i];
+      const validatedItem = validatedItems[i];
+
+      // Get final quantity and variant from validated items (already converted)
+      const finalQuantity = parseFloat(validatedItem.quantity);
+      const finalVariantId = validatedItem.variantId;
+
+      // Update general inventory
       const existingInventory = await this.inventoryRepo.findByProductId(
         ctx,
         item.productId
@@ -162,7 +171,7 @@ export class PurchaseService {
 
       if (existingInventory) {
         const currentQty = parseFloat(existingInventory.quantity);
-        const newQty = currentQty + item.quantity;
+        const newQty = currentQty + finalQuantity;
         await this.inventoryRepo.updateQuantity(
           ctx,
           item.productId,
@@ -171,12 +180,13 @@ export class PurchaseService {
       } else {
         await this.inventoryRepo.create(ctx, {
           productId: item.productId,
-          quantity: item.quantity.toString(),
+          quantity: finalQuantity.toString(),
         });
       }
 
-      if (item.variantId) {
-        await this.updateVariantInventory(ctx, item.variantId, item.quantity);
+      // Update variant inventory if applicable
+      if (finalVariantId) {
+        await this.updateVariantInventory(ctx, finalVariantId, finalQuantity);
       }
     }
 
@@ -217,6 +227,24 @@ export class PurchaseService {
             item.productId,
             newQty.toString()
           );
+        }
+
+        // Revert variant inventory if applicable
+        if (item.variantId) {
+          const existingVariantInventory = await this.variantRepo.getInventory(
+            ctx,
+            item.variantId
+          );
+          if (existingVariantInventory) {
+            const currentQty = parseFloat(existingVariantInventory.quantity);
+            const itemQty = parseFloat(item.quantity);
+            const newQty = Math.max(0, currentQty - itemQty);
+            await this.variantRepo.updateInventory(
+              ctx,
+              item.variantId,
+              newQty.toString()
+            );
+          }
         }
       }
     }

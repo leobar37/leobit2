@@ -149,7 +149,7 @@ export default function EditCustomerPage() {
           </CardHeader>
 
           <CardContent>
-            <form className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormInput
                 label="Nombre"
                 error={form.formState.errors.name?.message}

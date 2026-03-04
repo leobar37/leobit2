@@ -1,12 +1,20 @@
+import { useState } from "react";
 import { Package, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { VariantSelector } from "~/components/sales/variant-selector";
 import { usePurchaseCalculator } from "~/hooks/use-purchase-calculator";
+import { usePurchaseStore } from "~/stores/purchase.store";
+import type { Product } from "~/lib/db/schema";
+import type { ProductVariant } from "~/hooks/use-product-variants";
 
 export function PurchaseCalculatorSection() {
+  const [showVariantSelector, setShowVariantSelector] = useState(false);
+  const { setSelection, clearSelection } = usePurchaseStore();
+
   const {
     form,
     formValues,
@@ -33,6 +41,22 @@ export function PurchaseCalculatorSection() {
 
   const hasSelection = !!selectedProductId;
 
+  const handleVariantSelect = (product: Product, variant: ProductVariant) => {
+    setSelection(product.id, variant.id);
+    setFieldValue("productId", product.id);
+    setFieldValue("variantId", variant.id);
+    setShowVariantSelector(false);
+  };
+
+  const handleChangeProduct = () => {
+    setShowVariantSelector(true);
+  };
+
+  const handleClearSelection = () => {
+    handleClear();
+    clearSelection();
+  };
+
   return (
     <section id="calculator-section" className="space-y-3">
       <div className="flex items-center justify-between">
@@ -54,23 +78,14 @@ export function PurchaseCalculatorSection() {
               Selecciona un producto para comenzar
             </p>
 
-            {/* Product Selector */}
-            <select
-              value={selectedProductId}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setFieldValue("productId", e.target.value);
-                }
-              }}
-              className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+            <Button
+              type="button"
+              onClick={() => setShowVariantSelector(true)}
+              className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
             >
-              <option value="">Seleccionar producto...</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name}
-                </option>
-              ))}
-            </select>
+              <Plus className="h-4 w-4 mr-2" />
+              Seleccionar Producto
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -94,7 +109,7 @@ export function PurchaseCalculatorSection() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleClear}
+                onClick={handleChangeProduct}
               >
                 Cambiar
               </Button>
@@ -204,7 +219,8 @@ export function PurchaseCalculatorSection() {
                 inputMode="decimal"
                 placeholder="0.00"
                 className="rounded-xl text-lg"
-                {...form.register("totalAmount")}
+                value={formValues.totalAmount || ""}
+                onChange={(e) => setFieldValue("totalAmount", e.target.value)}
               />
             </div>
 
@@ -224,7 +240,7 @@ export function PurchaseCalculatorSection() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleClear}
+                onClick={handleClearSelection}
                 className="flex-1 rounded-xl"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
@@ -243,6 +259,12 @@ export function PurchaseCalculatorSection() {
           </CardContent>
         </Card>
       )}
+
+      <VariantSelector
+        open={showVariantSelector}
+        onOpenChange={setShowVariantSelector}
+        onSelect={handleVariantSelect}
+      />
     </section>
   );
 }

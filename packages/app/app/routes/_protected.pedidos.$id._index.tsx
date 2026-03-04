@@ -20,8 +20,10 @@ import { useOrder, useConfirmOrder, useCancelOrder, useDeliverOrder } from "~/ho
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { OrderItemModal } from "~/components/orders/order-item-modal";
+import { OrderDeliveryModal } from "~/components/orders/order-delivery-modal";
 import type { OrderItem } from "~/lib/db/schema";
 import { isOnline } from "~/lib/sync/utils";
+import { useToast } from "~/hooks/use-toast";
 
 const statusConfig = {
   draft: {
@@ -56,6 +58,8 @@ export default function OrderDetailPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const { toast } = useToast();
 
   useSetLayout({
     title: "Detalle del pedido",
@@ -123,23 +127,38 @@ export default function OrderDetailPage() {
     }
   };
 
-  const handleDeliver = async () => {
-    const confirmed = await confirm({
-      title: "Entregar pedido",
-      description: "¿Estás seguro de entregar este pedido? Se convertirá en una venta.",
-      confirmText: "Entregar y crear venta",
-    });
-    if (confirmed) {
-      const deliveredItems =
-        order.items?.map((item) => ({
-          itemId: item.id,
-          deliveredQuantity: Number(item.orderedQuantity),
-        })) || [];
+  const handleDeliverClick = () => {
+    setIsDeliveryModalOpen(true);
+  };
 
-      await deliverOrder.mutateAsync({
+  const handleDeliverConfirm = async (deliveredItems: Array<{ itemId: string; deliveredQuantity: number; unitPriceFinal?: number }>) => {
+    try {
+      const result = await deliverOrder.mutateAsync({
         id: order.id,
         baseVersion: order.version,
         deliveredItems,
+      });
+
+      setIsDeliveryModalOpen(false);
+
+      toast({
+        title: "Pedido entregado",
+        description: `Se creó la venta #${result?.sale?.id?.slice(-8) || ""}`,
+        action: result?.sale?.id ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/ventas/${result.sale.id}`)}
+          >
+            Ver venta
+          </Button>
+        ) : undefined,
+      });
+    } catch (error) {
+      toast({
+        title: "Error al entregar",
+        description: error instanceof Error ? error.message : "No se pudo procesar la entrega",
+        variant: "destructive",
       });
     }
   };
@@ -282,7 +301,7 @@ export default function OrderDetailPage() {
               )}
               {canDeliver && (
                 <Button
-                  onClick={handleDeliver}
+                  onClick={handleDeliverClick}
                   disabled={deliverOrder.isPending}
                 >
                   <Truck className="h-4 w-4 mr-2" />
@@ -324,6 +343,15 @@ export default function OrderDetailPage() {
           // Handle item modification
           setEditingItem(null);
         }}
+      />
+
+      {/* Delivery Modal */}
+      <OrderDeliveryModal
+        order={order}
+        isOpen={isDeliveryModalOpen}
+        onClose={() => setIsDeliveryModalOpen(false)}
+        onConfirm={handleDeliverConfirm}
+        isSubmitting={deliverOrder.isPending}
       />
     </div>
   );

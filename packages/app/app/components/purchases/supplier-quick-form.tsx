@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { Building2, Loader2, Save, X } from "lucide-react";
+import { Building2, Loader2, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "@/components/ui/drawer";
+import { AppDrawer } from "@/components/ui/app-drawer";
 import { useCreateSupplier } from "~/hooks/use-suppliers";
 import type { Supplier } from "~/hooks/use-suppliers";
 
@@ -79,32 +73,21 @@ export function SupplierQuickForm({
   const isFormValid = form.formState.isValid;
 
   return (
-    <Drawer
+    <AppDrawer
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) handleClose();
+      onOpenChange={(isOpen: boolean) => {
+        if (!isOpen) handleClose();
       }}
+      size="large"
     >
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader className="border-b px-4 pb-3 pt-2">
-          <div className="flex items-center justify-between">
-            <DrawerTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-orange-500" />
-              Nuevo Proveedor
-            </DrawerTitle>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleCancel}
-              className="rounded-xl"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DrawerHeader>
+      <AppDrawer.Header
+        title="Nuevo Proveedor"
+        icon={<Building2 className="h-5 w-5" />}
+        onClose={handleCancel}
+      />
 
-        <form onSubmit={onSubmit} className="px-4 py-4 space-y-4">
+      <form onSubmit={onSubmit}>
+        <AppDrawer.Body className="space-y-4">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
               {error}
@@ -167,39 +150,39 @@ export function SupplierQuickForm({
               <option value="generic">Genérico</option>
             </select>
           </div>
+        </AppDrawer.Body>
 
-          <DrawerFooter className="px-0 pt-4">
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                className="flex-1 rounded-xl"
-                disabled={isPending}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"
-                disabled={isPending || !isFormValid}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar
-                  </>
-                )}
-              </Button>
-            </div>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+        <AppDrawer.Footer>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              className="flex-1 rounded-xl"
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"
+              disabled={isPending || !isFormValid}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Guardar
+                </>
+              )}
+            </Button>
+          </div>
+        </AppDrawer.Footer>
+      </form>
+    </AppDrawer>
   );
 }

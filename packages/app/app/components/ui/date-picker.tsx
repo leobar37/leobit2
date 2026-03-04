@@ -71,6 +71,7 @@ export function DatePicker({
   return (
     <div className={cn("space-y-2", className)}>
       <Button
+        type="button"
         variant="outline"
         onClick={() => setOpen(true)}
         disabled={disabled}
@@ -99,6 +100,7 @@ export function DatePicker({
                 {label || "Seleccionar fecha"}
               </DrawerTitle>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
@@ -173,6 +175,7 @@ export function DatePicker({
           <div className="px-4 pb-2">
             <div className="grid grid-cols-2 gap-3">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleSelect(firstQuickDate)}
                 disabled={!canSelectFirst}
@@ -187,6 +190,7 @@ export function DatePicker({
                 {quickActionLabels[0]}
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleSelect(secondQuickDate)}
                 disabled={!canSelectSecond}
@@ -206,6 +210,7 @@ export function DatePicker({
           {/* Footer */}
           <DrawerFooter className="pt-2 pb-6">
             <Button
+              type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               className="w-full rounded-xl h-12 border-gray-200 text-gray-600 hover:bg-gray-50"

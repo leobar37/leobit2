@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
+import { api, extractData, uploadFile } from "~/lib/api-client";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
@@ -142,21 +142,8 @@ async function uploadPaymentProof({
   const formData = new FormData();
   formData.append("file", file);
 
-  const token = localStorage.getItem("bearer_token");
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-  const response = await fetch(`${apiUrl}/payments/${id}/proof`, {
-    method: "POST",
-    body: formData,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to upload proof");
-  }
-
-  const result = await response.json();
-  return result.data as Payment;
+  const result = await uploadFile<{ data: Payment }>(`/payments/${id}/proof`, formData);
+  return result.data;
 }
 
 async function updatePaymentReference({

@@ -196,7 +196,7 @@ export default function NuevoCobroPage() {
         </Button>
       }
     >
-      <form className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Card className="border-0 shadow-md rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

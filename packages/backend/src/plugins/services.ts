@@ -34,6 +34,8 @@ import { StaffInvitationService } from "../services/business/staff-invitation.se
 import { OrderRepository } from "../services/repository/order.repository";
 import { OrderEventsRepository } from "../services/repository/order-events.repository";
 import { OrderService } from "../services/business/order.service";
+import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
+import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -56,6 +58,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const staffInvitationRepo = new StaffInvitationRepository();
     const orderRepo = new OrderRepository();
     const orderEventsRepo = new OrderEventsRepository();
+    const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo);
     const customerService = new CustomerService(customerRepo);
@@ -79,7 +82,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const supplierService = new SupplierService(supplierRepo);
     const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
-    const orderService = new OrderService(orderRepo, orderEventsRepo, saleService);
+    const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo);
+    const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
 
     return {
       businessRepo,
@@ -117,5 +121,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       orderRepo,
       orderEventsRepo,
       orderService,
+      paymentMethodConfigRepo,
+      paymentMethodConfigService,
     };
   });

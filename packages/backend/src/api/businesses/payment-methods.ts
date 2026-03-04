@@ -1,7 +1,6 @@
 import { Elysia, t } from "elysia";
 import { contextPlugin } from "../../plugins/context";
-import { PaymentMethodConfigService } from "../../services/business/payment-method-config.service";
-import { PaymentMethodConfigRepository } from "../../services/repository/payment-method-config.repository";
+import { servicesPlugin } from "../../plugins/services";
 import type { RequestContext } from "../../context/request-context";
 
 const paymentMethodSchema = t.Object({
@@ -17,16 +16,11 @@ export const paymentMethodConfigRoutes = new Elysia({
   prefix: "/businesses/payment-methods",
 })
   .use(contextPlugin)
-  .decorate(() => ({
-    paymentMethodConfigRepo: new PaymentMethodConfigRepository(),
-    paymentMethodConfigService: (repo: PaymentMethodConfigRepository) =>
-      new PaymentMethodConfigService(repo),
-  }))
+  .use(servicesPlugin)
   .get(
     "/",
-    async ({ paymentMethodConfigService, paymentMethodConfigRepo, ctx }) => {
-      const service = paymentMethodConfigService(paymentMethodConfigRepo);
-      const config = await service.getConfig(ctx as RequestContext);
+    async ({ paymentMethodConfigService, ctx }) => {
+      const config = await paymentMethodConfigService.getConfig(ctx as RequestContext);
       return { success: true, data: config };
     },
     {
@@ -40,12 +34,10 @@ export const paymentMethodConfigRoutes = new Elysia({
     "/",
     async ({
       paymentMethodConfigService,
-      paymentMethodConfigRepo,
       ctx,
       body,
     }) => {
-      const service = paymentMethodConfigService(paymentMethodConfigRepo);
-      const config = await service.updateConfig(ctx as RequestContext, body);
+      const config = await paymentMethodConfigService.updateConfig(ctx as RequestContext, body);
       return { success: true, data: config };
     },
     {

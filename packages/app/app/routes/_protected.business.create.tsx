@@ -97,7 +97,7 @@ export default function CreateBusinessPage() {
           </div>
         </CardHeader>
 
-        <form>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <FormInput
               label="Nombre del negocio"
