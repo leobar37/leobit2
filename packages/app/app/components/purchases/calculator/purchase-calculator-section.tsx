@@ -190,9 +190,10 @@ export function PurchaseCalculatorSection() {
                     step="0.001"
                     placeholder="Cantidad"
                     className="rounded-xl"
-                    {...form.register("quantity", {
-                      valueAsNumber: true,
-                    })}
+                    value={formValues.quantity || ""}
+                    onChange={(e) =>
+                      setFieldValue("quantity", parseFloat(e.target.value) || 0)
+                    }
                   />
                 )}
               </div>
@@ -205,9 +206,10 @@ export function PurchaseCalculatorSection() {
                   step="0.01"
                   placeholder="0.00"
                   className="rounded-xl"
-                  {...form.register("unitCost", {
-                    valueAsNumber: true,
-                  })}
+                  value={formValues.unitCost || ""}
+                  onChange={(e) =>
+                    setFieldValue("unitCost", parseFloat(e.target.value) || 0)
+                  }
                 />
               </div>
             </div>

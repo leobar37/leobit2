@@ -207,6 +207,27 @@ export interface UpdateTeamMemberInput {
   salesPoint?: string;
 }
 
+// Calculator Settings
+export interface CalculatorConfig {
+  hideTara: boolean;
+  autoFillPrice: boolean;
+}
+
+export interface BusinessCalculatorSettings {
+  calculators: {
+    sales: CalculatorConfig;
+    orders: CalculatorConfig;
+    purchases: CalculatorConfig;
+  };
+}
+
+export const defaultCalculatorSettings: BusinessCalculatorSettings = {
+  calculators: {
+    sales: { hideTara: true, autoFillPrice: false },
+    orders: { hideTara: true, autoFillPrice: false },
+    purchases: { hideTara: true, autoFillPrice: false },
+  },
+};
 
 // Order Status
 export const OrderStatus = {

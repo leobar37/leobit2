@@ -6,11 +6,19 @@ import type { KgCalculatorFormData } from "~/lib/sales/calculator-schema";
 interface KgCalculatorFormProps {
 	kgNeto: number;
 	variantPrice: string;
+	hideTara?: boolean;
+	setFieldValue?: (field: string, value: string) => void;
 }
 
-export function KgCalculatorForm({ kgNeto, variantPrice }: KgCalculatorFormProps) {
+export function KgCalculatorForm({ kgNeto, variantPrice, hideTara = false, setFieldValue }: KgCalculatorFormProps) {
 	const { control, watch } = useFormContext<KgCalculatorFormData>();
 	const currentPrice = watch("pricePerKg");
+
+	const handleChange = (field: string, value: string) => {
+		if (setFieldValue) {
+			setFieldValue(field, value);
+		}
+	};
 
 	return (
 		<>
@@ -33,7 +41,8 @@ export function KgCalculatorForm({ kgNeto, variantPrice }: KgCalculatorFormProps
 							placeholder={variantPrice || "0.00"}
 							className="rounded-xl"
 							data-testid="calculator-price-per-kg"
-							{...field}
+							value={field.value}
+							onChange={(e) => handleChange("pricePerKg", e.target.value)}
 						/>
 					)}
 				/>
@@ -50,28 +59,32 @@ export function KgCalculatorForm({ kgNeto, variantPrice }: KgCalculatorFormProps
 							placeholder="0.000"
 							className="rounded-xl"
 							data-testid="calculator-kilos"
-							{...field}
+							value={field.value}
+							onChange={(e) => handleChange("kilos", e.target.value)}
 						/>
 					)}
 				/>
 			</div>
-			<div>
-				<Label className="text-xs">Tara (kg)</Label>
-				<Controller
-					name="tara"
-					control={control}
-					render={({ field }) => (
-						<Input
-							type="text"
-							inputMode="decimal"
-							placeholder="0"
-							className="rounded-xl"
-							data-testid="calculator-tara"
-							{...field}
-						/>
-					)}
-				/>
-			</div>
+			{!hideTara && (
+				<div>
+					<Label className="text-xs">Tara (kg)</Label>
+					<Controller
+						name="tara"
+						control={control}
+						render={({ field }) => (
+							<Input
+								type="text"
+								inputMode="decimal"
+								placeholder="0"
+								className="rounded-xl"
+								data-testid="calculator-tara"
+								value={field.value}
+								onChange={(e) => handleChange("tara", e.target.value)}
+							/>
+						)}
+					/>
+				</div>
+			)}
 
 			{kgNeto > 0 && (
 				<div

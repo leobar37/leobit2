@@ -11,6 +11,7 @@ import {
   Moon,
   Truck,
   ShoppingCart,
+  Flag,
 } from "lucide-react";
 import {
   Card,
@@ -117,6 +118,15 @@ const comprasConfigItem: ConfigItem = {
   iconBg: "bg-cyan-100",
 };
 
+const flagsConfigItem: ConfigItem = {
+  icon: Flag,
+  title: "Flags",
+  description: "Configuración de calculadoras y features",
+  href: "/config/flags",
+  color: "text-pink-600",
+  iconBg: "bg-pink-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -130,6 +140,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        flagsConfigItem,
         ...baseConfigItems.slice(2),
       ]
     : baseConfigItems;

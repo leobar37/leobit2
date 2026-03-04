@@ -13,9 +13,23 @@ import {
   timestamp,
   date,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businessUserRoleEnum } from "./enums";
+
+import type { BusinessCalculatorSettings } from "@avileo/shared";
+
+/**
+ * Default calculator settings
+ */
+export const defaultCalculatorSettings: BusinessCalculatorSettings = {
+  calculators: {
+    sales: { hideTara: true, autoFillPrice: false },
+    orders: { hideTara: true, autoFillPrice: false },
+    purchases: { hideTara: true, autoFillPrice: false },
+  },
+};
 
 // Businesses table - datos del negocio
 export const businesses = pgTable(
@@ -37,6 +51,9 @@ export const businesses = pgTable(
     usarDistribucion: boolean("usar_distribucion").default(true),
     modoDistribucion: varchar("modo_distribucion", { length: 20 }).default("estricto"),
     permitirVentaSinStock: boolean("permitir_venta_sin_stock").default(false),
+
+    // Calculator settings (JSONB for flexibility)
+    calculatorSettings: jsonb("calculator_settings").$type<BusinessCalculatorSettings>().default(defaultCalculatorSettings),
 
     isActive: boolean("is_active").notNull().default(true),
 
@@ -89,6 +106,7 @@ export type Business = typeof businesses.$inferSelect;
 export type NewBusiness = typeof businesses.$inferInsert;
 export type BusinessUser = typeof businessUsers.$inferSelect;
 export type NewBusinessUser = typeof businessUsers.$inferInsert;
+// Note: BusinessCalculatorSettings and CalculatorConfig are re-exported from @avileo/shared
 
 export const businessesRelations = relations(businesses, ({ many }) => ({
   users: many(businessUsers),

@@ -18,7 +18,13 @@
     "db:push": "drizzle-kit push",
     "db:seed": "bun run src/seed/index.ts",
     "db:seed:client": "bun run src/seed/index.ts --client",
-    "db:reset": "bun run scripts/reset-db.ts"
+    "db:reset": "bun run scripts/reset-db.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:e2e": "vitest run --config=vitest.e2e.config.ts",
+    "test:e2e:watch": "vitest --config=vitest.e2e.config.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@avileo/shared": "workspace:*",
@@ -34,6 +40,8 @@
   "devDependencies": {
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.7.3",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "dotenv": "^16.4.7",
+    "vitest": "^3.0.2"
   }
 }

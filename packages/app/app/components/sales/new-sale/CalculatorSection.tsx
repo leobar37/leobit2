@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { FormProvider } from "react-hook-form";
+import { FormProvider, Controller } from "react-hook-form";
 import { VariantSelector } from "~/components/sales/variant-selector";
 import { showVariantSelectorAtom } from "~/atoms/new-sale";
 import { useProductSelection } from "~/hooks/use-product-selection";
 import { useSaleCalculator } from "~/hooks/use-sale-calculator";
+import { useBusinessSettings } from "~/hooks/use-business-settings";
 import {
   KgCalculatorForm,
   UnitCalculatorForm,
@@ -20,6 +21,7 @@ import type { ProductVariant } from "~/hooks/use-product-variants";
 
 export function CalculatorSection() {
   const [showVariantSelector, setShowVariantSelector] = useAtom(showVariantSelectorAtom);
+  const { settings } = useBusinessSettings();
 
   const {
     selectedProduct,
@@ -29,19 +31,24 @@ export function CalculatorSection() {
     hasSelection,
   } = useProductSelection();
 
+  const salesConfig = settings?.calculators.sales;
+
   const {
     form,
     isValid,
     calculation,
     handleClear,
     handleAddToCart,
+    setFieldValue,
   } = useSaleCalculator({
     product: selectedProduct,
     variant: selectedVariant,
     initialPrice,
+    autoFillPrice: salesConfig?.autoFillPrice ?? false,
   });
 
   const isKgProduct = selectedProduct?.unit === "kg";
+  const hideTara = salesConfig?.hideTara ?? true;
 
   const handleVariantSelect = (product: Product, variant: ProductVariant) => {
     selectProduct(product.id, variant.id);
@@ -102,19 +109,31 @@ export function CalculatorSection() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Total (S/)</Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      className="rounded-xl text-lg"
-                      data-testid="calculator-total-amount"
-                      autoFocus
-                      {...form.register("totalAmount")}
+                    <Controller
+                      name="totalAmount"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          className="rounded-xl text-lg"
+                          data-testid="calculator-total-amount"
+                          autoFocus
+                          value={field.value}
+                          onChange={(e) => setFieldValue("totalAmount", e.target.value)}
+                        />
+                      )}
                     />
                   </div>
 
                   {isKgProduct ? (
-                    <KgCalculatorForm kgNeto={calculation.kgNeto} variantPrice={selectedVariant?.price || ""} />
+                    <KgCalculatorForm
+                      kgNeto={calculation.kgNeto}
+                      variantPrice={selectedVariant?.price || ""}
+                      hideTara={hideTara}
+                      setFieldValue={setFieldValue}
+                    />
                   ) : (
                     <UnitCalculatorForm variant={selectedVariant} />
                   )}

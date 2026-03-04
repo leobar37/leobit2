@@ -10,6 +10,8 @@ import {
 } from "../../errors";
 import { eq } from "drizzle-orm";
 import { db, businessUsers } from "../../lib/db";
+import { businesses } from "../../db/schema/businesses";
+import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
 
 export class BusinessService {
   constructor(
@@ -146,5 +148,41 @@ export class BusinessService {
     }
 
     return this.repository.updateLogo(ctx, id, logoUrl);
+  }
+
+  async getCalculatorSettings(ctx: RequestContext): Promise<BusinessCalculatorSettings> {
+    const membership = await this.repository.findByUserId(ctx);
+
+    if (!membership) {
+      throw new NotFoundError("Negocio");
+    }
+
+    return membership.business.calculatorSettings ?? defaultCalculatorSettings;
+  }
+
+  async updateCalculatorSettings(
+    ctx: RequestContext,
+    settings: BusinessCalculatorSettings
+  ): Promise<BusinessCalculatorSettings> {
+    if (!ctx.isAdmin()) {
+      throw new ForbiddenError("No tienes permiso para editar la configuración");
+    }
+
+    const membership = await this.repository.findByUserId(ctx);
+
+    if (!membership) {
+      throw new NotFoundError("Negocio");
+    }
+
+    const [updated] = await db
+      .update(businesses)
+      .set({
+        calculatorSettings: settings,
+        updatedAt: new Date(),
+      })
+      .where(eq(businesses.id, ctx.businessId))
+      .returning();
+
+    return updated.calculatorSettings ?? defaultCalculatorSettings;
   }
 }

@@ -5,8 +5,9 @@ import { servicesPlugin } from "../plugins/services";
 import { r2Storage } from "../services/r2-storage.service";
 import type { RequestContext } from "../context/request-context";
 import { db } from "../lib/db";
-import { businessUsers } from "../db/schema/businesses";
+import { businessUsers, businesses } from "../db/schema/businesses";
 import { user } from "../db/schema/auth";
+import type { BusinessCalculatorSettings } from "../db/schema/businesses";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
   .use(servicesPlugin)
@@ -246,6 +247,55 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
     {
       params: t.Object({
         id: t.String(),
+      }),
+    }
+  )
+  // Calculator Settings endpoints
+  .get("/me/calculator-settings", async ({ ctx }) => {
+    const typedCtx = ctx as RequestContext;
+    return {
+      success: true,
+      data: typedCtx.calculatorSettings,
+    };
+  })
+  .put(
+    "/me/calculator-settings",
+    async ({ ctx, body, businessService }) => {
+      const typedCtx = ctx as RequestContext;
+
+      if (!typedCtx.isAdmin()) {
+        return {
+          success: false,
+          error: "No tienes permiso para editar la configuración",
+        };
+      }
+
+      const updatedSettings = await businessService.updateCalculatorSettings(
+        typedCtx,
+        body as BusinessCalculatorSettings
+      );
+
+      return {
+        success: true,
+        data: updatedSettings,
+      };
+    },
+    {
+      body: t.Object({
+        calculators: t.Object({
+          sales: t.Object({
+            hideTara: t.Boolean(),
+            autoFillPrice: t.Boolean(),
+          }),
+          orders: t.Object({
+            hideTara: t.Boolean(),
+            autoFillPrice: t.Boolean(),
+          }),
+          purchases: t.Object({
+            hideTara: t.Boolean(),
+            autoFillPrice: t.Boolean(),
+          }),
+        }),
       }),
     }
   );

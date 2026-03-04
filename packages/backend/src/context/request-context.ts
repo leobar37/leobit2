@@ -2,6 +2,8 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { businessUsers, businessUserRoleEnum } from "../db/schema";
 import { ForbiddenError } from "../errors";
+import type { BusinessCalculatorSettings } from "../db/schema/businesses";
+import { defaultCalculatorSettings } from "../db/schema/businesses";
 
 type BusinessUserRole = typeof businessUserRoleEnum.enumValues[number];
 
@@ -69,6 +71,7 @@ export class RequestContext {
     public readonly permissions: Permission[],
     public readonly isAuthenticated: boolean,
     public readonly isActive: boolean,
+    public readonly calculatorSettings: BusinessCalculatorSettings,
     public readonly sessionId?: string
   ) {}
 
@@ -117,6 +120,7 @@ export class RequestContext {
       this.permissions,
       this.isAuthenticated,
       this.isActive,
+      this.calculatorSettings,
       this.sessionId
     );
   }
@@ -167,6 +171,9 @@ export class RequestContext {
     // Calcular permisos según el rol
     const permissions = ROLE_PERMISSIONS[membership.role] || [];
 
+    // Get calculator settings from business or use defaults
+    const calculatorSettings = membership.business?.calculatorSettings || defaultCalculatorSettings;
+
     return new RequestContext(
       user.id,
       user.email,
@@ -178,6 +185,7 @@ export class RequestContext {
       permissions,
       true, // isAuthenticated
       membership.isActive,
+      calculatorSettings,
       sess.id
     );
   }
@@ -196,7 +204,8 @@ export class RequestContext {
       null,
       [],
       false,
-      false
+      false,
+      defaultCalculatorSettings
     );
   }
 
@@ -215,7 +224,8 @@ export class RequestContext {
       null,
       ["*"],
       true,
-      true
+      true,
+      defaultCalculatorSettings
     );
   }
 }

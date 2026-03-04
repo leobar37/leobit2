@@ -208,7 +208,7 @@ export function usePurchaseCalculator(
   // Set field value with auto-calculation
   const setFieldValue = useCallback(
     (field: string, value: unknown) => {
-      form.setValue(field as keyof PurchaseCalculatorData, value as never);
+      form.setValue(field as keyof PurchaseCalculatorData, value as never, { shouldValidate: true });
 
       // Auto-calculate related fields
       const currentValues = form.getValues();
@@ -225,8 +225,11 @@ export function usePurchaseCalculator(
         baseUnitQuantity
       );
 
+      // Only set values that are strings or numbers (not objects)
       Object.entries(calculated).forEach(([key, val]) => {
-        form.setValue(key as keyof PurchaseCalculatorData, val as never);
+        if (typeof val === 'string' || typeof val === 'number') {
+          form.setValue(key as keyof PurchaseCalculatorData, val as never, { shouldValidate: true });
+        }
       });
     },
     [form, baseUnitQuantity]

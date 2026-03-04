@@ -1,42 +1,25 @@
-import { useCallback, useMemo } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback } from "react";
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import { useSaleStore } from "~/stores/sale.store";
-import {
-	type KgCalculatorFormData,
-	type UnitCalculatorFormData,
-	kgCalculatorSchema,
-	unitCalculatorSchema,
-} from "~/lib/sales/calculator-schema";
-import {
-	calculateKgProduct,
-	calculateUnitProduct,
-	createCartItem,
-	autoCalculateKgField,
-} from "~/lib/sales/calculator-logic";
+import { createCartItem } from "~/lib/sales/calculator-logic";
+import { useCalculator } from "./use-calculator";
 
 interface UseSaleCalculatorOptions {
 	product: Product | undefined;
 	variant: ProductVariant | undefined;
 	initialPrice: string;
+	autoFillPrice?: boolean;
 }
 
 interface UseSaleCalculatorReturn {
 	// Form
-	form: ReturnType<typeof useForm<KgCalculatorFormData | UnitCalculatorFormData>>;
-	formValues: KgCalculatorFormData | UnitCalculatorFormData;
+	form: ReturnType<typeof useCalculator>["form"];
+	formValues: ReturnType<typeof useCalculator>["formValues"];
 
 	// Computed
 	isValid: boolean;
-	calculation: {
-		kgNeto: number;
-		unitPrice: number;
-		quantity: number;
-		subtotal: number;
-		isValid: boolean;
-	};
+	calculation: ReturnType<typeof useCalculator>["calculation"];
 
 	// Actions
 	handleClear: () => void;
@@ -47,132 +30,56 @@ interface UseSaleCalculatorReturn {
 export function useSaleCalculator(
 	options: UseSaleCalculatorOptions,
 ): UseSaleCalculatorReturn {
-	const { product, variant, initialPrice } = options;
+	const { product, variant, initialPrice, autoFillPrice = false } = options;
 	const { addToCart, setLastPricePerKg } = useSaleStore();
 
-	const isKgProduct = product?.unit === "kg";
-
-	// Initialize form with correct schema
-	const form = useForm<KgCalculatorFormData | UnitCalculatorFormData>({
-		resolver: zodResolver(
-			isKgProduct ? kgCalculatorSchema : unitCalculatorSchema,
-		),
-		defaultValues: isKgProduct
-			? {
-					totalAmount: "",
-					pricePerKg: initialPrice,
-					kilos: "",
-					tara: "0",
-				}
-			: {
-					totalAmount: "",
-					packs: "",
-					units: "",
-				},
+	// Use the unified calculator hook
+	const calculator = useCalculator({
+		product,
+		variant,
+		initialPrice,
+		autoFillPrice,
 	});
 
-	// Watch all form values
-	const formValues = useWatch({ control: form.control });
-
-	// Calculate derived values
-	const calculation = useMemo(() => {
-		if (!product || !variant) {
-			return {
-				kgNeto: 0,
-				unitPrice: 0,
-				quantity: 0,
-				subtotal: 0,
-				isValid: false,
-			};
-		}
-
-		if (isKgProduct) {
-			const values = formValues as KgCalculatorFormData;
-			return calculateKgProduct(values, variant.price || "0");
-		}
-
-		const values = formValues as UnitCalculatorFormData;
-		return calculateUnitProduct(values, variant, product);
-	}, [formValues, product, variant, isKgProduct]);
-
-	// Check if form is valid for submission
-	const isValid = calculation.isValid;
-
-	// Clear form handler - SOLVES THE BUG!
-	const handleClear = useCallback(() => {
-		if (isKgProduct) {
-			form.reset({
-				totalAmount: "",
-				pricePerKg: initialPrice,
-				kilos: "",
-				tara: "0",
-			});
-		} else {
-			form.reset({
-				totalAmount: "",
-				packs: "",
-				units: "",
-			});
-		}
-	}, [form, isKgProduct, initialPrice]);
-
-	// Add to cart handler
+	// Add to cart handler with sale-specific logic
 	const handleAddToCart = useCallback(() => {
-		if (!product || !variant || !calculation.isValid) {
+		if (!product || !variant || !calculator.calculation.isValid) {
 			return;
 		}
 
-		const cartItem = createCartItem(product, variant, calculation);
+		const cartItem = createCartItem(product, variant, calculator.calculation);
 		if (cartItem) {
 			addToCart(cartItem);
 
-			// Persist price for next time
-			if (isKgProduct) {
-				const values = formValues as KgCalculatorFormData;
+			// Persist price for next time (only for kg products)
+			if (calculator.isKgProduct) {
+				const values = calculator.form.getValues() as { pricePerKg?: string };
 				if (values.pricePerKg) {
 					setLastPricePerKg(values.pricePerKg);
 				}
 			}
 
 			// Clear form after adding
-			handleClear();
+			calculator.handleClear();
 		}
 	}, [
 		product,
 		variant,
-		calculation,
+		calculator.calculation,
+		calculator.isKgProduct,
+		calculator.form,
+		calculator.handleClear,
 		addToCart,
 		setLastPricePerKg,
-		isKgProduct,
-		formValues,
-		handleClear,
 	]);
 
-	// Set field value with auto-calculation for kg products
-	const setFieldValue = useCallback(
-		(field: string, value: string) => {
-			form.setValue(field as never, value as never);
-
-			// Auto-calculate for kg products
-			if (isKgProduct) {
-				const values = form.getValues() as KgCalculatorFormData;
-				const calculated = autoCalculateKgField(values, field);
-
-				Object.entries(calculated).forEach(([key, val]) => {
-					form.setValue(key as never, val as never);
-				});
-			}
-		},
-		[form, isKgProduct],
-	);
-
 	return {
-		form,
-		formValues,
-		isValid,
-		calculation,
-		handleClear,
+		form: calculator.form,
+		formValues: calculator.formValues,
+		isValid: calculator.isValid,
+		calculation: calculator.calculation,
+		handleClear: calculator.handleClear,
 		handleAddToCart,
-		setFieldValue,
+		setFieldValue: calculator.setFieldValue,
 	};
 }
