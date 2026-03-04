@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
-import { Wallet, Banknote, Smartphone, Building2, X } from "lucide-react";
+import { Wallet, Banknote, Smartphone, Building2, X, QrCode, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { FormNumberInput } from "@/components/forms/form-number-input";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useFileUpload } from "~/hooks/use-file-upload";
+import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 
 const paymentFormSchema = z.object({
   amount: z.string().refine(
@@ -40,11 +41,72 @@ const paymentMethods = [
   { value: "transferencia" as const, label: "Transferencia", icon: Building2 },
 ];
 
+interface PaymentMethodInfoProps {
+  method: "yape" | "plin" | "transferencia";
+  config: ReturnType<typeof usePaymentMethodsConfig>["data"];
+}
+
+function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
+  const methodConfig = config?.methods?.[method];
+  
+  if (!methodConfig) return null;
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2 text-blue-800 font-medium">
+        <QrCode className="h-4 w-4" />
+        <span>Datos para el pago</span>
+      </div>
+
+      {methodConfig.qrImageUrl ? (
+        <div className="space-y-2">
+          <p className="text-sm text-blue-700">Escanea el código QR para pagar:</p>
+          <div className="bg-white p-3 rounded-lg inline-block">
+            <img
+              src={methodConfig.qrImageUrl}
+              alt={`Código QR ${method}`}
+              className="max-h-40 w-auto object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {methodConfig.phone ? (
+        <div className="flex items-center gap-2 text-sm">
+          <Phone className="h-4 w-4 text-blue-600" />
+          <span className="text-blue-800">
+            Número: <strong>{methodConfig.phone}</strong>
+          </span>
+        </div>
+      ) : null}
+
+      {methodConfig.accountName ? (
+        <p className="text-sm text-blue-700">
+          Titular: <strong>{methodConfig.accountName}</strong>
+        </p>
+      ) : null}
+
+      {method === "transferencia" && methodConfig.bank ? (
+        <div className="space-y-1 text-sm text-blue-700">
+          <p>Banco: <strong>{methodConfig.bank}</strong></p>
+          {methodConfig.accountNumber && (
+            <p>Cuenta: <strong>{methodConfig.accountNumber}</strong></p>
+          )}
+          {methodConfig.cci && (
+            <p>CCI: <strong>{methodConfig.cci}</strong></p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const createPayment = useCreatePayment();
   const fileUpload = useFileUpload();
+  const { data: paymentConfig } = usePaymentMethodsConfig();
 
   const {
     register,
@@ -78,6 +140,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
 
   const paymentMethod = watch("paymentMethod");
   const showDigitalFields = ["yape", "plin", "transferencia"].includes(paymentMethod);
+  const showMethodInfo = ["yape", "plin", "transferencia"].includes(paymentMethod);
 
   const handleFileSelect = (file: File) => {
     setProofFile(file);
@@ -175,6 +238,13 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
               </div>
               <input type="hidden" {...register("paymentMethod")} />
             </div>
+
+            {showMethodInfo && paymentConfig && (
+              <PaymentMethodInfo
+                method={paymentMethod as "yape" | "plin" | "transferencia"}
+                config={paymentConfig}
+              />
+            )}
 
             {showDigitalFields && (
               <FormInput

@@ -6,14 +6,15 @@ import type { BusinessPaymentSettings } from "../../db/schema";
 export interface PaymentMethodUpdateInput {
   methods: {
     efectivo: { enabled: boolean };
-    yape: { enabled: boolean; phone?: string; accountName?: string };
-    plin: { enabled: boolean; phone?: string; accountName?: string };
-    transferencia: { 
-      enabled: boolean; 
-      accountNumber?: string; 
+    yape: { enabled: boolean; phone?: string; accountName?: string; qrImageUrl?: string };
+    plin: { enabled: boolean; phone?: string; accountName?: string; qrImageUrl?: string };
+    transferencia: {
+      enabled: boolean;
+      accountNumber?: string;
       accountName?: string;
       bank?: string;
       cci?: string;
+      qrImageUrl?: string;
     };
     tarjeta: { enabled: boolean };
   };

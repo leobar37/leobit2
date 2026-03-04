@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from "react-router";
-import { Wallet, User, AlertCircle, Check, Receipt, Camera, X } from "lucide-react";
+import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useUploadFile, validateFile } from "~/hooks/use-files";
+import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { formatCurrency } from "~/lib/formatting";
 import { FormPage } from "~/components/layout/form-page";
 
@@ -54,6 +55,66 @@ function QuickAmountButton({
   );
 }
 
+interface PaymentMethodInfoProps {
+  method: "yape" | "plin" | "transferencia";
+  config: ReturnType<typeof usePaymentMethodsConfig>["data"];
+}
+
+function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
+  const methodConfig = config?.methods?.[method];
+  
+  if (!methodConfig) return null;
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2 text-blue-800 font-medium">
+        <QrCode className="h-4 w-4" />
+        <span>Datos para el pago</span>
+      </div>
+
+      {methodConfig.qrImageUrl ? (
+        <div className="space-y-2">
+          <p className="text-sm text-blue-700">Escanea el código QR para pagar:</p>
+          <div className="bg-white p-3 rounded-lg inline-block">
+            <img
+              src={methodConfig.qrImageUrl}
+              alt={`Código QR ${method}`}
+              className="max-h-40 w-auto object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {methodConfig.phone ? (
+        <div className="flex items-center gap-2 text-sm">
+          <Phone className="h-4 w-4 text-blue-600" />
+          <span className="text-blue-800">
+            Número: <strong>{methodConfig.phone}</strong>
+          </span>
+        </div>
+      ) : null}
+
+      {methodConfig.accountName ? (
+        <p className="text-sm text-blue-700">
+          Titular: <strong>{methodConfig.accountName}</strong>
+        </p>
+      ) : null}
+
+      {method === "transferencia" && methodConfig.bank ? (
+        <div className="space-y-1 text-sm text-blue-700">
+          <p>Banco: <strong>{methodConfig.bank}</strong></p>
+          {methodConfig.accountNumber && (
+            <p>Cuenta: <strong>{methodConfig.accountNumber}</strong></p>
+          )}
+          {methodConfig.cci && (
+            <p>CCI: <strong>{methodConfig.cci}</strong></p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function NuevoCobroPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -61,6 +122,7 @@ export default function NuevoCobroPage() {
 
   const { data: customer } = useCustomer(customerId || "");
   const { data: accounts } = useAccountsReceivable();
+  const { data: paymentConfig } = usePaymentMethodsConfig();
   const createPayment = useCreatePayment();
   const uploadFile = useUploadFile();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -173,6 +235,8 @@ export default function NuevoCobroPage() {
       </div>
     );
   }
+
+  const showMethodInfo = ["yape", "plin", "transferencia"].includes(paymentMethod);
 
   return (
     <FormPage
@@ -316,6 +380,13 @@ export default function NuevoCobroPage() {
                 );
               })}
             </div>
+
+            {showMethodInfo && paymentConfig && (
+              <PaymentMethodInfo
+                method={paymentMethod as "yape" | "plin" | "transferencia"}
+                config={paymentConfig}
+              />
+            )}
 
             {(paymentMethod === "yape" ||
               paymentMethod === "plin" ||

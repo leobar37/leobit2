@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,9 @@ import {
   Building2,
   Wallet,
   QrCode,
+  Upload,
+  X,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +28,7 @@ import {
   usePaymentMethodsConfig,
   useUpdatePaymentMethodsConfig,
 } from "~/hooks/use-payment-methods-config";
+import { useUploadFile, validateFile } from "~/hooks/use-files";
 
 const METHOD_DEFINITIONS = [
   {
@@ -64,6 +68,109 @@ const METHOD_DEFINITIONS = [
   },
 ];
 
+interface QRUploadProps {
+  methodId: string;
+  qrImageUrl?: string;
+  onQRImageChange: (methodId: string, url: string | undefined) => void;
+}
+
+function QRImageUpload({ methodId, qrImageUrl, onQRImageChange }: QRUploadProps) {
+  const uploadFile = useUploadFile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadFile.mutateAsync(file);
+      const fileUrl = `/api/files/${result.id}`;
+      onQRImageChange(methodId, fileUrl);
+      toast.success("Código QR subido correctamente");
+    } catch (error) {
+      toast.error("Error al subir el código QR");
+      console.error(error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemove = () => {
+    onQRImageChange(methodId, undefined);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Código QR (opcional)</label>
+      
+      {qrImageUrl ? (
+        <div className="relative">
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
+            <img
+              src={qrImageUrl}
+              alt="Código QR"
+              className="max-h-48 mx-auto object-contain"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="absolute top-2 right-2 rounded-full h-8 w-8 p-0"
+            onClick={handleRemove}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Los clientes podrán escanear este código para pagar
+          </p>
+        </div>
+      ) : (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <div className="flex flex-col items-center gap-2">
+            {isUploading ? (
+              <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <Upload className="h-6 w-6 text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Subir código QR
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  JPG, PNG o WEBP (máx. 5MB)
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PaymentMethodsConfigPage() {
   const { data: config, isLoading } = usePaymentMethodsConfig();
   const updateMutation = useUpdatePaymentMethodsConfig();
@@ -84,10 +191,17 @@ export default function PaymentMethodsConfigPage() {
     }));
   };
 
-  const updateMethodDetails = (id: string, field: string, value: string) => {
+  const updateMethodDetails = (id: string, field: string, value: string | undefined) => {
     setMethods((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
+    }));
+  };
+
+  const handleQRImageChange = (methodId: string, url: string | undefined) => {
+    setMethods((prev) => ({
+      ...prev,
+      [methodId]: { ...prev[methodId], qrImageUrl: url },
     }));
   };
 
@@ -214,6 +328,11 @@ export default function PaymentMethodsConfigPage() {
                                   e.target.value
                                 )
                               }
+                            />
+                            <QRImageUpload
+                              methodId={methodDef.id}
+                              qrImageUrl={methodData.qrImageUrl}
+                              onQRImageChange={handleQRImageChange}
                             />
                           </>
                         )}
