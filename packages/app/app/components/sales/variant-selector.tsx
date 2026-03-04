@@ -15,11 +15,12 @@ interface VariantSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (product: Product, variant: ProductVariant) => void;
+  "data-testid"?: string;
 }
 
 type Step = "products" | "variants";
 
-export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelectorProps) {
+export function VariantSelector({ open, onOpenChange, onSelect, "data-testid": dataTestId }: VariantSelectorProps) {
   const [step, setStep] = useState<Step>("products");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -75,7 +76,7 @@ export function VariantSelector({ open, onOpenChange, onSelect }: VariantSelecto
         }
         onOpenChange(true);
       }}
-      data-testid="variant-selector-modal"
+      data-testid={dataTestId || "variant-selector-modal"}
     >
       <AppDrawer.Header
         title={

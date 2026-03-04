@@ -1,25 +1,26 @@
-import { useAtom, useAtomValue } from "jotai";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSaleStore } from "~/stores/sale.store";
 import {
-  amountPaidAtom,
-  balanceDueAtom,
-  paymentModeAtom,
-  saleTypeAtom,
-  submitErrorAtom,
-  totalAmountAtom,
-} from "~/atoms/new-sale";
+  useSaleStore,
+  getTotalAmount,
+  getSaleType,
+  getAmountPaidValue,
+  getBalanceDue,
+} from "~/stores/sale.store";
 
 export function SaleSummaryCard() {
   const cartItems = useSaleStore((state) => state.cartItems);
-  const totalAmount = useAtomValue(totalAmountAtom);
-  const saleType = useAtomValue(saleTypeAtom);
-  const paymentMode = useAtomValue(paymentModeAtom);
-  const balanceDue = useAtomValue(balanceDueAtom);
-  const submitError = useAtomValue(submitErrorAtom);
-  const [amountPaid, setAmountPaid] = useAtom(amountPaidAtom);
+  const paymentMode = useSaleStore((state) => state.paymentMode);
+  const amountPaid = useSaleStore((state) => state.amountPaid);
+  const setAmountPaid = useSaleStore((state) => state.setAmountPaid);
+  const submitError = useSaleStore((state) => state.submitError);
+
+  // Compute derived values
+  const totalAmount = getTotalAmount(cartItems);
+  const saleType = getSaleType(paymentMode);
+  const amountPaidValue = getAmountPaidValue(paymentMode, totalAmount, amountPaid);
+  const balanceDue = getBalanceDue(saleType, totalAmount, amountPaidValue);
 
   if (cartItems.length === 0) {
     return null;

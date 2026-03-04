@@ -1,9 +1,9 @@
-import { useAtom } from "jotai";
 import { CustomerSearch } from "~/components/sales/customer-search";
-import { selectedCustomerAtom } from "~/atoms/new-sale";
+import { useSaleStore } from "~/stores/sale.store";
 
 export function CustomerSection() {
-  const [selectedCustomer, setSelectedCustomer] = useAtom(selectedCustomerAtom);
+  const selectedCustomer = useSaleStore((state) => state.selectedCustomer);
+  const setSelectedCustomer = useSaleStore((state) => state.setSelectedCustomer);
 
   return (
     <section>

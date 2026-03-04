@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "bun run src/seed/index.ts",
+    "db:seed:client": "bun run src/seed/index.ts --client",
     "db:reset": "bun run scripts/reset-db.ts"
   },
   "dependencies": {

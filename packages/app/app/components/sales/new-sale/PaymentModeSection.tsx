@@ -1,20 +1,21 @@
-import { useAtom, useAtomValue } from "jotai";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
 import {
-  amountPaidAtom,
-  paymentModeAtom,
-  requiresCustomerAtom,
-  selectedCustomerAtom,
-  submitErrorAtom,
-} from "~/atoms/new-sale";
+  useSaleStore,
+  getSaleType,
+  getRequiresCustomer,
+} from "~/stores/sale.store";
 
 export function PaymentModeSection() {
-  const [paymentMode, setPaymentMode] = useAtom(paymentModeAtom);
-  const [submitError, setSubmitError] = useAtom(submitErrorAtom);
-  const [, setAmountPaid] = useAtom(amountPaidAtom);
-  const requiresCustomer = useAtomValue(requiresCustomerAtom);
-  const selectedCustomer = useAtomValue(selectedCustomerAtom);
+  const paymentMode = useSaleStore((state) => state.paymentMode);
+  const setPaymentMode = useSaleStore((state) => state.setPaymentMode);
+  const submitError = useSaleStore((state) => state.submitError);
+  const setSubmitError = useSaleStore((state) => state.setSubmitError);
+  const setAmountPaid = useSaleStore((state) => state.setAmountPaid);
+  const selectedCustomer = useSaleStore((state) => state.selectedCustomer);
+
+  const saleType = getSaleType(paymentMode);
+  const requiresCustomer = getRequiresCustomer(saleType);
 
   return (
     <section data-testid="payment-mode-section">

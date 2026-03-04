@@ -17,36 +17,16 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   projects: [
-    // Auth setup project - runs first to authenticate
-    {
-      name: "setup",
-      testMatch: /auth\.setup\.ts/,
-    },
-    // Mobile Chrome tests - depend on auth setup
+    // Single project: all tests run sequentially in one browser session
     {
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 5"],
-        storageState: "./e2e/.auth/user.json",
       },
-      dependencies: ["setup"],
-    },
-    // Mobile Safari tests - depend on auth setup
-    {
-      name: "mobile-safari",
-      use: {
-        ...devices["iPhone 12"],
-        storageState: "./e2e/.auth/user.json",
-      },
-      dependencies: ["setup"],
     },
   ],
-  webServer: process.env.WEB_SERVER
-    ? {
-        command: "cd ../backend && bun run db:reset && (bun run dev &) && cd ../app && bun run dev",
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 300000,
-      }
-    : undefined,
+  // Note: Tests include db:reset internally. Start servers manually:
+  // Terminal 1: cd packages/backend && bun run dev
+  // Terminal 2: cd packages/app && bun run dev
+  // Then run: bun run test:e2e --project=mobile-chrome
 });

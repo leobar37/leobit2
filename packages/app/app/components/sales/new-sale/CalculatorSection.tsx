@@ -70,7 +70,8 @@ export function CalculatorSection() {
             <CardContent className="p-6 text-center">
               <p className="text-sm text-muted-foreground mb-3">Selecciona un producto para comenzar</p>
               <Button
-                onClick={() => setShowVariantSelector(true)}
+                type="button"
+                onClick={handleSelectAnother}
                 data-testid="select-product-button"
                 className="bg-orange-500 hover:bg-orange-600"
               >

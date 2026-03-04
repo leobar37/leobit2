@@ -9,9 +9,9 @@ export class LoginPage {
   }
 
   async login(email: string = E2E_CREDENTIALS.email, password: string = E2E_CREDENTIALS.password) {
-    await this.page.fill('input[type="email"]', email);
-    await this.page.fill('input[type="password"]', password);
-    await this.page.click('button[type="submit"]');
+    await this.page.getByTestId("input-email").fill(email);
+    await this.page.getByTestId("input-password").fill(password);
+    await this.page.getByRole("button", { name: /iniciar sesión/i }).click();
     await this.page.waitForURL("/dashboard");
   }
 

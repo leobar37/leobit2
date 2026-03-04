@@ -1,6 +1,6 @@
 import { db, businessUsers } from "../lib/db";
 import { RequestContext } from "../context/request-context";
-import { createTestUser } from "./auth";
+import { createTestUser, createClientUser } from "./auth";
 import { services } from "./services";
 import { repositories } from "./services";
 import {
@@ -14,9 +14,22 @@ import {
   SUPPLIERS,
   PURCHASES,
 } from "./data";
+import {
+  CLIENT_USER,
+  CLIENT_BUSINESS,
+  PRODUCTS as CLIENT_PRODUCTS,
+  PRODUCT_VARIANTS as CLIENT_PRODUCT_VARIANTS,
+  CUSTOMERS as CLIENT_CUSTOMERS,
+  SALES as CLIENT_SALES,
+  ABONOS as CLIENT_ABONOS,
+  DISTRIBUCIONES as CLIENT_DISTRIBUCIONES,
+  SUPPLIERS as CLIENT_SUPPLIERS,
+  PURCHASES as CLIENT_PURCHASES,
+} from "./client-data";
 import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants, businessPaymentSettings } from "../db/schema";
 
 const FORCE_MODE = process.argv.includes("--force");
+const CLIENT_MODE = process.argv.includes("--client");
 
 interface SeedProduct {
   id: string;
@@ -47,15 +60,31 @@ export async function seedDatabase(): Promise<SeedResult> {
     throw new Error("Seed cannot run in production environment");
   }
 
-  if (FORCE_MODE) {
+  // Select data based on mode
+  const isClient = CLIENT_MODE;
+  const currentUser = isClient ? CLIENT_USER : { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
+  const currentBusiness = isClient ? CLIENT_BUSINESS : TEST_BUSINESS;
+  const currentProducts = isClient ? CLIENT_PRODUCTS : PRODUCTS;
+  const currentProductVariants = isClient ? CLIENT_PRODUCT_VARIANTS : PRODUCT_VARIANTS;
+  const currentCustomers = isClient ? CLIENT_CUSTOMERS : CUSTOMERS;
+  const currentSales = isClient ? CLIENT_SALES : SALES;
+  const currentAbonos = isClient ? CLIENT_ABONOS : ABONOS;
+  const currentDistribuciones = isClient ? CLIENT_DISTRIBUCIONES : DISTRIBUCIONES;
+  const currentSuppliers = isClient ? CLIENT_SUPPLIERS : SUPPLIERS;
+  const currentPurchases = isClient ? CLIENT_PURCHASES : PURCHASES;
+
+  if (FORCE_MODE && !isClient) {
     console.log("⚠️ FORCE MODE: Clearing existing seeded data...\n");
     await clearExistingData();
   }
 
-  const user = await createTestUser();
+  // Create user (different function for client vs e2e)
+  const user = isClient
+    ? await createClientUser(currentUser.email, currentUser.password, currentUser.name)
+    : await createTestUser();
   console.log();
 
-  const { business, businessUserId } = await createBusinessAndLinkUser(user.userId);
+  const { business, businessUserId } = await createBusinessAndLinkUser(user.userId, currentBusiness);
   console.log(`✓ Business created: ${business.name} (ID: ${business.id})\n`);
 
   const ctx = RequestContext.forWorker(business.id, businessUserId);
@@ -64,46 +93,46 @@ export async function seedDatabase(): Promise<SeedResult> {
   const paymentMethods = await seedPaymentMethods(ctx);
   console.log(`✓ Payment methods configured\n`);
 
-  const products = await seedProducts(ctx);
-  console.log(`✓ Seeded ${products.length} products with variants\n`);
+  const seededProducts = await seedProducts(ctx, currentProducts, currentProductVariants);
+  console.log(`✓ Seeded ${seededProducts.length} products with variants\n`);
 
-  const suppliers = await seedSuppliers(ctx);
+  const suppliers = await seedSuppliers(ctx, currentSuppliers);
   console.log(`✓ Seeded ${suppliers.length} suppliers\n`);
 
-  const purchases = await seedPurchases(ctx, suppliers, products);
+  const purchases = await seedPurchases(ctx, suppliers, seededProducts, currentPurchases);
   console.log(`✓ Seeded ${purchases.length} purchases\n`);
 
-  const inventoryItems = await seedInventory(ctx, products);
+  const inventoryItems = await seedInventory(ctx, seededProducts);
   console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
 
-  const customers = await seedCustomers(ctx);
-  console.log(`✓ Seeded ${customers.length} customers\n`);
+  const seededCustomers = await seedCustomers(ctx, currentCustomers);
+  console.log(`✓ Seeded ${seededCustomers.length} customers\n`);
 
-  const sales = await seedSales(ctx, customers, products);
-  console.log(`✓ Seeded ${sales.length} sales\n`);
+  const seededSales = await seedSales(ctx, seededCustomers, seededProducts, currentSales);
+  console.log(`✓ Seeded ${seededSales.length} sales\n`);
 
-  const abonos = await seedAbonos(ctx, customers);
-  console.log(`✓ Seeded ${abonos.length} abonos\n`);
+  const seededAbonos = await seedAbonos(ctx, seededCustomers, currentAbonos);
+  console.log(`✓ Seeded ${seededAbonos.length} abonos\n`);
 
-  const distribuciones = await seedDistribuciones(ctx, businessUserId, products);
+  const distribuciones = await seedDistribuciones(ctx, businessUserId, seededProducts, currentDistribuciones);
   console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
 
   console.log("✅ Seed completed successfully!\n");
   console.log("Login credentials:");
-  console.log(`  Email: e2e@avileo.com`);
-  console.log(`  Password: e2e123456`);
+  console.log(`  Email: ${currentUser.email}`);
+  console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
   console.log();
 
   return {
     userId: user.userId,
     businessId: business.id,
     businessUserId,
-    productsCount: products.length,
-    variantsCount: products.reduce((acc, p) => acc + p.variants.length, 0),
+    productsCount: seededProducts.length,
+    variantsCount: seededProducts.reduce((acc, p) => acc + p.variants.length, 0),
     inventoryCount: inventoryItems.length,
-    customersCount: customers.length,
-    salesCount: sales.length,
-    abonosCount: abonos.length,
+    customersCount: seededCustomers.length,
+    salesCount: seededSales.length,
+    abonosCount: seededAbonos.length,
     distribucionesCount: distribuciones.length,
     suppliersCount: suppliers.length,
     purchasesCount: purchases.length,
@@ -111,29 +140,15 @@ export async function seedDatabase(): Promise<SeedResult> {
   };
 }
 
-async function createBusinessAndLinkUser(userId: string): Promise<{ business: { id: string; name: string }; businessUserId: string }> {
-  const existingMembership = await db.query.businessUsers.findFirst({
-    where: (bu, { eq }) => eq(bu.userId, userId),
-  });
-
-  if (existingMembership) {
-    const business = await db.query.businesses.findFirst({
-      where: (b, { eq }) => eq(b.id, existingMembership.businessId),
-    });
-    if (business) {
-      console.log(`⚠ User already linked to business: ${business.name}`);
-      return { business, businessUserId: existingMembership.id };
-    }
-  }
-
+async function createBusinessAndLinkUser(userId: string, businessData: typeof TEST_BUSINESS): Promise<{ business: { id: string; name: string }; businessUserId: string }> {
   const tempCtx = RequestContext.forWorker("temp", "temp");
 
   const business = await repositories.business.create(tempCtx, {
-    name: TEST_BUSINESS.name,
-    ruc: TEST_BUSINESS.ruc,
-    address: TEST_BUSINESS.address,
-    phone: TEST_BUSINESS.phone,
-    email: TEST_BUSINESS.email,
+    name: businessData.name,
+    ruc: businessData.ruc,
+    address: businessData.address,
+    phone: businessData.phone,
+    email: businessData.email,
   });
 
   const [businessUser] = await db.insert(businessUsers).values({
@@ -144,16 +159,16 @@ async function createBusinessAndLinkUser(userId: string): Promise<{ business: { 
   }).returning();
 
   await repositories.business.update(tempCtx, business.id, {
-    modoOperacion: TEST_BUSINESS.modoOperacion,
-    controlKilos: TEST_BUSINESS.controlKilos,
-    usarDistribucion: TEST_BUSINESS.usarDistribucion,
-    permitirVentaSinStock: TEST_BUSINESS.permitirVentaSinStock,
+    modoOperacion: businessData.modoOperacion,
+    controlKilos: businessData.controlKilos,
+    usarDistribucion: businessData.usarDistribucion,
+    permitirVentaSinStock: businessData.permitirVentaSinStock,
   });
 
   return { business, businessUserId: businessUser.id };
 }
 
-async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
+async function seedProducts(ctx: RequestContext, productsData: typeof PRODUCTS, variantsData: typeof PRODUCT_VARIANTS): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} products already exist, loading with variants`);
@@ -171,9 +186,9 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
 
   const seedProducts: SeedProduct[] = [];
 
-  for (let i = 0; i < PRODUCTS.length; i++) {
-    const productDef = PRODUCTS[i];
-    const variantsDef = PRODUCT_VARIANTS[i];
+  for (let i = 0; i < productsData.length; i++) {
+    const productDef = productsData[i];
+    const variantsDef = variantsData[i];
 
     const product = await services.product.createProduct(ctx, {
       name: productDef.name,
@@ -215,7 +230,12 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
   return seedProducts;
 }
 
-async function seedSuppliers(ctx: RequestContext): Promise<Array<{ id: string; name: string }>> {
+async function seedSuppliers(ctx: RequestContext, suppliersData: typeof SUPPLIERS): Promise<Array<{ id: string; name: string }>> {
+  if (suppliersData.length === 0) {
+    console.log(`⚠ No suppliers to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.supplier.getSuppliers(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} suppliers already exist, loading`);
@@ -232,7 +252,7 @@ async function seedSuppliers(ctx: RequestContext): Promise<Array<{ id: string; n
     console.log(`   ℹ Generic supplier already exists`);
   }
 
-  for (const supplierDef of SUPPLIERS) {
+  for (const supplierDef of suppliersData) {
     const supplier = await services.supplier.createSupplier(ctx, {
       name: supplierDef.name,
       type: supplierDef.type,
@@ -253,8 +273,14 @@ async function seedSuppliers(ctx: RequestContext): Promise<Array<{ id: string; n
 async function seedPurchases(
   ctx: RequestContext,
   suppliers: Array<{ id: string }>,
-  products: SeedProduct[]
+  products: SeedProduct[],
+  purchasesData: typeof PURCHASES
 ): Promise<Array<{ id: string }>> {
+  if (purchasesData.length === 0) {
+    console.log(`⚠ No purchases to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.purchase.getPurchases(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} purchases already exist, skipping`);
@@ -263,7 +289,7 @@ async function seedPurchases(
 
   const seedPurchases: Array<{ id: string }> = [];
 
-  for (const purchaseDef of PURCHASES) {
+  for (const purchaseDef of purchasesData) {
     const supplier = suppliers[purchaseDef.supplierIndex];
     if (!supplier) {
       console.warn(`   ⚠ Supplier not found at index ${purchaseDef.supplierIndex}, skipping purchase`);
@@ -304,7 +330,12 @@ async function seedPurchases(
   return seedPurchases;
 }
 
-async function seedCustomers(ctx: RequestContext) {
+async function seedCustomers(ctx: RequestContext, customersData: typeof CUSTOMERS) {
+  if (customersData.length === 0) {
+    console.log(`⚠ No customers to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.customer.getCustomers(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} customers already exist, skipping`);
@@ -312,7 +343,7 @@ async function seedCustomers(ctx: RequestContext) {
   }
 
   const customers = [];
-  for (const customer of CUSTOMERS) {
+  for (const customer of customersData) {
     const created = await services.customer.createCustomer(ctx, {
       name: customer.name,
       dni: customer.dni,
@@ -329,8 +360,14 @@ async function seedCustomers(ctx: RequestContext) {
 async function seedSales(
   ctx: RequestContext,
   customers: Array<{ id: string }>,
-  products: SeedProduct[]
+  products: SeedProduct[],
+  salesData: typeof SALES
 ) {
+  if (salesData.length === 0) {
+    console.log(`⚠ No sales to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.sale.getSales(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} sales already exist, skipping`);
@@ -338,7 +375,7 @@ async function seedSales(
   }
 
   const sales = [];
-  for (const saleData of SALES) {
+  for (const saleData of salesData) {
     const customer = customers[saleData.customerIndex];
     if (!customer) continue;
 
@@ -375,7 +412,12 @@ async function seedSales(
   return sales;
 }
 
-async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>) {
+async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>, abonosData: typeof ABONOS) {
+  if (abonosData.length === 0) {
+    console.log(`⚠ No abonos to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.payment.getPayments(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} abonos already exist, skipping`);
@@ -383,7 +425,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   }
 
   const abonos = [];
-  for (const abonoData of ABONOS) {
+  for (const abonoData of abonosData) {
     const customer = customers[abonoData.customerIndex];
     if (!customer) continue;
 
@@ -400,7 +442,12 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   return abonos;
 }
 
-async function seedDistribuciones(ctx: RequestContext, businessUserId: string, products: SeedProduct[]) {
+async function seedDistribuciones(ctx: RequestContext, businessUserId: string, products: SeedProduct[], distribucionesData: typeof DISTRIBUCIONES) {
+  if (distribucionesData.length === 0) {
+    console.log(`⚠ No distribuciones to seed (empty array)`);
+    return [];
+  }
+
   const existing = await services.distribucion.getDistribuciones(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} distribuciones already exist, skipping`);
@@ -410,7 +457,7 @@ async function seedDistribuciones(ctx: RequestContext, businessUserId: string, p
   const distribuciones = [];
   const seenDates = new Set<string>();
 
-  for (const distData of DISTRIBUCIONES) {
+  for (const distData of distribucionesData) {
     // Skip duplicate dates for the same seller
     if (seenDates.has(distData.fecha)) {
       console.log(`⚠ Skipping duplicate distribucion for fecha: ${distData.fecha}`);

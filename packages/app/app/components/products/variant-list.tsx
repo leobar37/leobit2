@@ -32,6 +32,7 @@ export function VariantList({
           <Button
             size="sm"
             onClick={onAdd}
+            data-testid="add-variant-button"
             className="rounded-full bg-orange-500 hover:bg-orange-600 text-white px-4"
           >
             <Plus className="h-4 w-4 mr-1" />

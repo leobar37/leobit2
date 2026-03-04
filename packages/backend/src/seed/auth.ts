@@ -48,3 +48,53 @@ export async function createTestUser(): Promise<{ userId: string; email: string;
     throw new Error(`Failed to create test user: ${error?.message || error}`);
   }
 }
+
+export async function createClientUser(
+  email: string,
+  password: string,
+  name: string
+): Promise<{ userId: string; email: string; name: string }> {
+  console.log(`Creating client user: ${email}`);
+
+  try {
+    const result = await auth.api.signUpEmail({
+      body: {
+        email,
+        password,
+        name,
+      },
+    });
+
+    console.log(`✓ Client user created with ID: ${result.user.id}`);
+    return {
+      userId: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+    };
+  } catch (error: any) {
+    // Check if user already exists
+    if (error?.message?.includes("already exists") || error?.message?.includes("already registered")) {
+      console.log(`⚠ Client user already exists`);
+
+      try {
+        const result = await auth.api.signInEmail({
+          body: {
+            email,
+            password,
+          },
+        });
+
+        console.log(`✓ Found existing client user with ID: ${result.user.id}`);
+        return {
+          userId: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+        };
+      } catch (signInError) {
+        throw new Error(`User exists but failed to sign in: ${signInError}`);
+      }
+    }
+
+    throw new Error(`Failed to create client user: ${error?.message || error}`);
+  }
+}

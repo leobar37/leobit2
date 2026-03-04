@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, Plus, Trash2 } from "lucide-react";
+import { Box, Package, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -261,6 +261,21 @@ export function PurchaseCalculatorSection() {
           </CardContent>
         </Card>
       )}
+
+      <Button
+        variant="outline"
+        onClick={() => setShowVariantSelector(true)}
+        data-testid="purchase-variant-selector-button"
+        className="w-full h-auto py-4 rounded-xl justify-start items-start text-wrap"
+      >
+        <Box className="h-5 w-5 mr-3 text-orange-500" />
+        <div className="text-left">
+          <p className="font-medium">Seleccionar Producto y Variante</p>
+          <p className="text-xs text-muted-foreground">
+            La primera variante activa se selecciona automaticamente
+          </p>
+        </div>
+      </Button>
 
       <VariantSelector
         open={showVariantSelector}

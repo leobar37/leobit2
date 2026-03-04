@@ -17,6 +17,7 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
         {label && <Label>{label}</Label>}
         <Input
           ref={ref}
+          data-testid={props.name ? `input-${props.name}` : undefined}
           className={cn(
             "h-12 rounded-xl border-input bg-background px-4",
             error && "border-destructive focus-visible:ring-destructive",

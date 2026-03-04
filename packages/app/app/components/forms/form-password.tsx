@@ -22,6 +22,7 @@ const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
           <Input
             ref={ref}
             type={showPassword ? "text" : "password"}
+            data-testid={props.name ? `input-${props.name}` : "input-password"}
             className={cn(
               "h-12 rounded-xl border-input bg-background px-4 pr-12",
               error && "border-destructive focus-visible:ring-destructive",

@@ -67,7 +67,7 @@ const queryClient = new QueryClient({
 
 export default function App() {
   useEffect(() => {
-    if (import.meta.env.DEV && typeof window !== "undefined") {
+    if (import.meta.env.DEV && typeof window !== "undefined" && !import.meta.env.VITE_E2E_MODE) {
       import("react-grab");
     }
   }, []);

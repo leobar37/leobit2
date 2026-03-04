@@ -1,21 +1,17 @@
-import { useAtom, useAtomValue } from "jotai";
 import { ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCreateSale } from "~/hooks/use-sales";
-import { useSaleStore } from "~/stores/sale.store";
 import {
-  amountPaidValueAtom,
-  canSubmitAtom,
-  hasValidPartialAmountAtom,
-  paymentModeAtom,
-  requiresCustomerAtom,
-  saleTypeAtom,
-  selectedCustomerAtom,
-  submitErrorAtom,
-  totalAmountAtom,
-  totalNetoKgAtom,
-} from "~/atoms/new-sale";
+  useSaleStore,
+  getTotalAmount,
+  getTotalNetoKg,
+  getSaleType,
+  getAmountPaidValue,
+  getRequiresCustomer,
+  getHasValidPartialAmount,
+  getCanSubmit,
+} from "~/stores/sale.store";
 
 export function SubmitSaleButton() {
   const navigate = useNavigate();
@@ -23,16 +19,19 @@ export function SubmitSaleButton() {
 
   const cartItems = useSaleStore((state) => state.cartItems);
   const clearCart = useSaleStore((state) => state.clearCart);
-  const selectedCustomer = useAtomValue(selectedCustomerAtom);
-  const paymentMode = useAtomValue(paymentModeAtom);
-  const saleType = useAtomValue(saleTypeAtom);
-  const totalAmount = useAtomValue(totalAmountAtom);
-  const amountPaidValue = useAtomValue(amountPaidValueAtom);
-  const totalNetoKg = useAtomValue(totalNetoKgAtom);
-  const requiresCustomer = useAtomValue(requiresCustomerAtom);
-  const hasValidPartialAmount = useAtomValue(hasValidPartialAmountAtom);
-  const canSubmit = useAtomValue(canSubmitAtom);
-  const [_, setSubmitError] = useAtom(submitErrorAtom);
+  const selectedCustomer = useSaleStore((state) => state.selectedCustomer);
+  const paymentMode = useSaleStore((state) => state.paymentMode);
+  const amountPaid = useSaleStore((state) => state.amountPaid);
+  const setSubmitError = useSaleStore((state) => state.setSubmitError);
+
+  // Compute derived values
+  const totalAmount = getTotalAmount(cartItems);
+  const totalNetoKg = getTotalNetoKg(cartItems);
+  const saleType = getSaleType(paymentMode);
+  const amountPaidValue = getAmountPaidValue(paymentMode, totalAmount, amountPaid);
+  const requiresCustomer = getRequiresCustomer(saleType);
+  const hasValidPartialAmount = getHasValidPartialAmount(paymentMode, amountPaidValue, totalAmount);
+  const canSubmit = getCanSubmit(cartItems.length, requiresCustomer, selectedCustomer, hasValidPartialAmount);
 
   if (cartItems.length === 0) {
     return null;
@@ -53,6 +52,10 @@ export function SubmitSaleButton() {
       return;
     }
 
+    if (!canSubmit) {
+      return;
+    }
+
     setSubmitError(null);
 
     try {
@@ -69,6 +72,8 @@ export function SubmitSaleButton() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Error creating sale:", error);
+      const message = error instanceof Error ? error.message : "Error al crear la venta. Intente nuevamente.";
+      setSubmitError(message);
     }
   };
 

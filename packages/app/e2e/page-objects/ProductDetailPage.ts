@@ -6,6 +6,7 @@ export class ProductDetailPage {
   readonly variantUnitQuantityInput: Locator;
   readonly variantPriceInput: Locator;
   readonly saveVariantButton: Locator;
+  readonly addVariantButton: Locator;
 
   constructor(private page: Page) {
     this.variantNameInput = page.getByTestId("variant-name-input");
@@ -13,6 +14,7 @@ export class ProductDetailPage {
     this.variantUnitQuantityInput = page.getByTestId("variant-unitquantity-input");
     this.variantPriceInput = page.getByTestId("variant-price-input");
     this.saveVariantButton = page.getByTestId("save-variant-button");
+    this.addVariantButton = page.getByTestId("add-variant-button");
   }
 
   async goto(productId: string) {
@@ -20,9 +22,9 @@ export class ProductDetailPage {
   }
 
   async addVariant(data: { name: string; sku: string; unitQuantity: string; price: string }) {
-    // Click "Agregar Variante" button (assumes it exists on page)
-    await this.page.getByRole("button", { name: /agregar variante/i }).click();
-    
+    // Click "Agregar Variante" button
+    await this.addVariantButton.click();
+
     await this.variantNameInput.fill(data.name);
     await this.variantSkuInput.fill(data.sku);
     await this.variantUnitQuantityInput.fill(data.unitQuantity);

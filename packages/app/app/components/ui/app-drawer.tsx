@@ -114,17 +114,22 @@ interface AppDrawerProps {
   onOpenChange?: (open: boolean) => void
   size?: VariantProps<typeof appDrawerVariants>["size"]
   contentClassName?: string
+  "data-testid"?: string
 }
 
 function AppDrawerRoot({
   children,
   size,
   contentClassName,
+  "data-testid": dataTestId,
   ...props
 }: AppDrawerProps) {
   return (
     <Drawer {...props}>
-      <DrawerContent className={cn(appDrawerVariants({ size }), contentClassName)}>
+      <DrawerContent 
+        className={cn(appDrawerVariants({ size }), contentClassName)}
+        data-testid={dataTestId}
+      >
         {children}
       </DrawerContent>
     </Drawer>

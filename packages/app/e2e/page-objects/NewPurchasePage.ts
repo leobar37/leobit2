@@ -30,10 +30,35 @@ export class NewPurchasePage {
   }
 
   async selectProductAndVariant(productName: string, variantName: string) {
-    await this.selectProductButton.click();
-    await this.page.waitForSelector("[data-testid='variant-selector-modal']");
-    await this.page.click(`text=${productName}`);
-    await this.page.click(`text=${variantName}`);
+    // Use the outline button which is more reliable
+    await this.page.getByTestId('purchase-variant-selector-button').click();
+
+    // Wait for modal to open
+    await this.page.waitForSelector('[data-testid="variant-selector-modal"]', { state: 'visible', timeout: 5000 });
+
+    // Wait for product list to appear
+    await this.page.waitForSelector('[data-testid^="product-option-"]', { timeout: 5000 });
+
+    // Click product by name
+    await this.page.locator('[data-testid="product-option-name"]').filter({ hasText: productName }).first().click();
+
+    // Wait for variant list to appear
+    await this.page.waitForSelector('[data-testid^="variant-option-"]', { timeout: 5000 });
+
+    // Wait a bit for the auto-selection to happen
+    await this.page.waitForTimeout(500);
+
+    // Click variant by name to ensure it's selected
+    await this.page.locator('[data-testid="variant-option-name"]').filter({ hasText: variantName }).first().click();
+
+    // Wait for selection to register
+    await this.page.waitForTimeout(300);
+
+    // Click confirm button to add to cart
+    await this.page.getByTestId('variant-selector-confirm').click();
+
+    // Wait for modal to close
+    await this.page.waitForSelector('[data-testid="variant-selector-modal"]', { state: 'hidden', timeout: 5000 });
   }
 
   async enterQuantityAndCost(quantity: string, unitCost: string) {
