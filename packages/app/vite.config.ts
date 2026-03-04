@@ -3,11 +3,13 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export default defineConfig({
   plugins: [
     reactRouter(),
     tsconfigPaths(),
-    VitePWA({
+    !isDev && VitePWA({
       registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
@@ -92,7 +94,7 @@ export default defineConfig({
         ],
       },
     }),
-  ],
+  ].filter(Boolean),
   server: {
     host: "0.0.0.0",
     port: 5173,
