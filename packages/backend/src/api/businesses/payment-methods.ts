@@ -10,6 +10,7 @@ const paymentMethodSchema = t.Object({
   accountNumber: t.Optional(t.String()),
   bank: t.Optional(t.String()),
   cci: t.Optional(t.String()),
+  qrImageUrl: t.Optional(t.String()),
 });
 
 export const paymentMethodConfigRoutes = new Elysia({

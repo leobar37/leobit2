@@ -11,6 +11,7 @@ const paymentMethodSchema = z.object({
   accountNumber: z.string().optional(),
   bank: z.string().optional(),
   cci: z.string().optional(),
+  qrImageUrl: z.string().optional(),
 });
 
 const paymentMethodsSchema = z.object({
