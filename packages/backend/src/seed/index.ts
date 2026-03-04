@@ -40,7 +40,7 @@ interface SeedResult {
   paymentMethodsConfigured: boolean;
 }
 
-async function seed(): Promise<SeedResult> {
+export async function seedDatabase(): Promise<SeedResult> {
   console.log("🌱 Starting database seed...\n");
 
   if (process.env.NODE_ENV === "production") {
@@ -90,8 +90,8 @@ async function seed(): Promise<SeedResult> {
 
   console.log("✅ Seed completed successfully!\n");
   console.log("Login credentials:");
-  console.log(`  Email: demo@avileo.com`);
-  console.log(`  Password: demo123456`);
+  console.log(`  Email: e2e@avileo.com`);
+  console.log(`  Password: e2e123456`);
   console.log();
 
   return {
@@ -489,23 +489,26 @@ async function clearExistingData() {
   console.log("✓ Cleared existing data\n");
 }
 
-seed()
-  .then((result) => {
-    console.log("\n📊 Seed Summary:");
-    console.log(`  User ID: ${result.userId}`);
-    console.log(`  Business ID: ${result.businessId}`);
-    console.log(`  Products: ${result.productsCount} (${result.variantsCount} variants)`);
-    console.log(`  Suppliers: ${result.suppliersCount}`);
-    console.log(`  Purchases: ${result.purchasesCount}`);
-    console.log(`  Inventory Items: ${result.inventoryCount}`);
-    console.log(`  Customers: ${result.customersCount}`);
-    console.log(`  Sales: ${result.salesCount}`);
-    console.log(`  Abonos: ${result.abonosCount}`);
-    console.log(`  Distribuciones: ${result.distribucionesCount}`);
-    console.log(`  Payment Methods: ${result.paymentMethodsConfigured ? "✓ Configured" : "✗ Not Configured"}`);
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("\n❌ Seed failed:", error);
-    process.exit(1);
-  });
+// Run seed if this file is executed directly
+if (import.meta.main) {
+  seedDatabase()
+    .then((result) => {
+      console.log("\n📊 Seed Summary:");
+      console.log(`  User ID: ${result.userId}`);
+      console.log(`  Business ID: ${result.businessId}`);
+      console.log(`  Products: ${result.productsCount} (${result.variantsCount} variants)`);
+      console.log(`  Suppliers: ${result.suppliersCount}`);
+      console.log(`  Purchases: ${result.purchasesCount}`);
+      console.log(`  Inventory Items: ${result.inventoryCount}`);
+      console.log(`  Customers: ${result.customersCount}`);
+      console.log(`  Sales: ${result.salesCount}`);
+      console.log(`  Abonos: ${result.abonosCount}`);
+      console.log(`  Distribuciones: ${result.distribucionesCount}`);
+      console.log(`  Payment Methods: ${result.paymentMethodsConfigured ? "✓ Configured" : "✗ Not Configured"}`);
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("\n❌ Seed failed:", error);
+      process.exit(1);
+    });
+}

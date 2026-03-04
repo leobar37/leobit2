@@ -17,6 +17,7 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
   return (
     <Card
       className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow active:scale-[0.98]"
+      data-testid={`cliente-deuda-row-${account.customer.id}`}
       onClick={() => navigate(`/cobros/nuevo?clienteId=${account.customer.id}`)}
     >
       <CardContent className="p-4">

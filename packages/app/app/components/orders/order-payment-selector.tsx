@@ -12,7 +12,7 @@ export function OrderPaymentSelector({
   onChange,
 }: OrderPaymentSelectorProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="order-payment-selector">
       <Label className="flex items-center gap-2">
         <CreditCard className="h-4 w-4" />
         Forma de pago
@@ -22,6 +22,7 @@ export function OrderPaymentSelector({
           type="button"
           variant={value === "contado" ? "default" : "outline"}
           onClick={() => onChange("contado")}
+          data-testid="order-payment-contado"
           className="flex-1 rounded-xl"
         >
           Contado
@@ -30,6 +31,7 @@ export function OrderPaymentSelector({
           type="button"
           variant={value === "credito" ? "default" : "outline"}
           onClick={() => onChange("credito")}
+          data-testid="order-payment-credito"
           className="flex-1 rounded-xl"
         >
           Crédito

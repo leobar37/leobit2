@@ -137,6 +137,7 @@ export function SupplierSelector({
     <>
       <button
         type="button"
+        data-testid="supplier-selector-trigger"
         onClick={handleOpen}
         className="w-full h-20 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/50 hover:bg-orange-50 hover:border-orange-300 transition-colors flex flex-col items-center justify-center gap-2"
       >
@@ -186,6 +187,7 @@ export function SupplierSelector({
                 <button
                   key={supplier.id}
                   type="button"
+                  data-testid={`supplier-option-${supplier.id}`}
                   onClick={() => handleSelect(supplier)}
                   className="w-full text-left"
                 >

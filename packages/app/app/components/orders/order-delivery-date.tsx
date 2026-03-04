@@ -16,7 +16,7 @@ export function OrderDeliveryDate({
   const computedMinDate = minDate ?? toDateString(addDays(new Date(), 1));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="order-delivery-date">
       <DatePicker
         value={value}
         onChange={onChange}

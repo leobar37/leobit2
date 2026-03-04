@@ -1,57 +1,50 @@
 import { TEST_USER } from "./data";
+import { auth } from "../lib/auth";
 
 export async function createTestUser(): Promise<{ userId: string; email: string; name: string }> {
   console.log(`Creating test user: ${TEST_USER.email}`);
 
-  const port = process.env.PORT || "3000";
-  const baseUrl = `http://localhost:${port}`;
+  try {
+    // Use Better Auth directly to create user (no server required)
+    const result = await auth.api.signUpEmail({
+      body: {
+        email: TEST_USER.email,
+        password: TEST_USER.password,
+        name: TEST_USER.name,
+      },
+    });
 
-  const signUpResponse = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: TEST_USER.email,
-      password: TEST_USER.password,
-      name: TEST_USER.name,
-    }),
-  });
-
-  if (signUpResponse.ok) {
-    const result = await signUpResponse.json();
     console.log(`✓ Test user created with ID: ${result.user.id}`);
     return {
       userId: result.user.id,
       email: result.user.email,
       name: result.user.name,
     };
-  }
+  } catch (error: any) {
+    // Check if user already exists
+    if (error?.message?.includes("already exists") || error?.message?.includes("already registered")) {
+      console.log(`⚠ Test user already exists`);
 
-  const errorText = await signUpResponse.text();
-  if (errorText.includes("already exists") || errorText.includes("already registered")) {
-    console.log(`⚠ Test user already exists, signing in...`);
+      // Try to sign in to get user info
+      try {
+        const result = await auth.api.signInEmail({
+          body: {
+            email: TEST_USER.email,
+            password: TEST_USER.password,
+          },
+        });
 
-    const signInResponse = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: TEST_USER.email,
-        password: TEST_USER.password,
-      }),
-    });
-
-    if (!signInResponse.ok) {
-      throw new Error(`Failed to sign in existing user: ${await signInResponse.text()}`);
+        console.log(`✓ Found existing user with ID: ${result.user.id}`);
+        return {
+          userId: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+        };
+      } catch (signInError) {
+        throw new Error(`User exists but failed to sign in: ${signInError}`);
+      }
     }
 
-    const result = await signInResponse.json();
-    console.log(`✓ Found existing user with ID: ${result.user.id}`);
-
-    return {
-      userId: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
-    };
+    throw new Error(`Failed to create test user: ${error?.message || error}`);
   }
-
-  throw new Error(`Failed to create test user: ${errorText}`);
 }

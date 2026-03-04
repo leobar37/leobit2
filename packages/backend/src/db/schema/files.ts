@@ -9,6 +9,7 @@ import {
   varchar,
   integer,
   timestamp,
+  text,
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -32,7 +33,7 @@ export const files = pgTable(
     // Audit
     createdAt: timestamp("created_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
-    deletedBy: uuid("deleted_by").references(() => user.id),
+    deletedBy: text("deleted_by").references(() => user.id),
   },
   (table) => [
     index("idx_files_business_id").on(table.businessId),

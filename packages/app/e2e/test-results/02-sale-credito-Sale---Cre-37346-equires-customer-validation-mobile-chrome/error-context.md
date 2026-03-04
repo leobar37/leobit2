@@ -1,0 +1,97 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e7]: A
+          - generic [ref=e8]: Avileo
+        - button [ref=e10] [cursor=pointer]:
+          - img
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e14]:
+          - link [ref=e15] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e16]
+          - heading "Nueva Venta" [level=1] [ref=e18]
+        - main [ref=e19]:
+          - generic [ref=e20]:
+            - heading "Cliente" [level=2] [ref=e21]
+            - button "Seleccionar cliente" [ref=e22] [cursor=pointer]:
+              - img [ref=e23]
+              - generic [ref=e26]: Seleccionar cliente
+          - generic [ref=e27]:
+            - heading "Tipo de Cobro" [level=2] [ref=e28]
+            - generic [ref=e29]:
+              - button "Pago total" [ref=e30] [cursor=pointer]
+              - button "A cuenta" [ref=e31] [cursor=pointer]
+              - button "Debe" [ref=e32] [cursor=pointer]
+            - paragraph [ref=e33]: Pago completo hoy, no aumenta deuda.
+          - generic [ref=e34]:
+            - heading "Calcular Producto" [level=2] [ref=e36]
+            - generic [ref=e38]:
+              - paragraph [ref=e39]: Selecciona un producto para comenzar
+              - button "Seleccionar Producto" [ref=e40] [cursor=pointer]:
+                - img
+                - text: Seleccionar Producto
+          - button "Seleccionar Producto y Variante La primera variante activa se selecciona automaticamente" [ref=e42] [cursor=pointer]:
+            - img
+            - generic [ref=e43]:
+              - paragraph [ref=e44]: Seleccionar Producto y Variante
+              - paragraph [ref=e45]: La primera variante activa se selecciona automaticamente
+      - button [ref=e46] [cursor=pointer]:
+        - img
+    - navigation [ref=e47]:
+      - generic [ref=e48]:
+        - link "Inicio" [ref=e49] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e50]
+          - generic [ref=e53]: Inicio
+        - link "Ventas" [ref=e54] [cursor=pointer]:
+          - /url: /ventas
+          - img [ref=e55]
+          - generic [ref=e59]: Ventas
+        - link "Pedidos" [ref=e60] [cursor=pointer]:
+          - /url: /pedidos
+          - img [ref=e61]
+          - generic [ref=e64]: Pedidos
+        - link "Cobros" [ref=e65] [cursor=pointer]:
+          - /url: /cobros
+          - img [ref=e66]
+          - generic [ref=e69]: Cobros
+        - link "Clientes" [ref=e70] [cursor=pointer]:
+          - /url: /clientes
+          - img [ref=e71]
+          - generic [ref=e76]: Clientes
+        - link "Activos" [ref=e77] [cursor=pointer]:
+          - /url: /activos
+          - img [ref=e78]
+          - generic [ref=e82]: Activos
+        - link "Más" [ref=e83] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e84]
+          - generic [ref=e85]: Más
+  - region "Notifications alt+T"
+  - generic [ref=e87]:
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - button [ref=e93] [cursor=pointer]:
+          - img [ref=e94]
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button:
+              - img
+        - button [ref=e99] [cursor=pointer]:
+          - img [ref=e100]
+      - button [ref=e105] [cursor=pointer]
+    - button [ref=e108] [cursor=pointer]:
+      - img [ref=e109]
+```

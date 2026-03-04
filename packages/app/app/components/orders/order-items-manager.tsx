@@ -44,6 +44,7 @@ export function OrderItemsManager() {
           variant="outline"
           size="sm"
           onClick={() => setShowVariantSelector(true)}
+          data-testid="order-add-item-button"
           className="rounded-xl"
         >
           <Plus className="h-4 w-4 mr-1" />

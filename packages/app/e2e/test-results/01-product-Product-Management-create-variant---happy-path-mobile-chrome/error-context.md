@@ -1,0 +1,136 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e7]: A
+          - generic [ref=e8]: Avileo
+        - button [ref=e10] [cursor=pointer]:
+          - img
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e14]:
+          - heading "Catálogo" [level=1] [ref=e15]
+          - generic [ref=e16]:
+            - link "Nuevo" [ref=e17] [cursor=pointer]:
+              - /url: /productos/nuevo
+              - button "Nuevo" [ref=e18]:
+                - img
+                - text: Nuevo
+            - generic [ref=e20]:
+              - img [ref=e21]
+              - text: Sincronizado
+        - main [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - img [ref=e27]
+              - textbox "Buscar producto..." [ref=e30]
+            - generic [ref=e31]:
+              - link "Pollo E2E Variant Test pollo S/ 20.00 / kg Activo" [ref=e32] [cursor=pointer]:
+                - /url: /productos/ce974ba9-94ba-414c-ad74-c420aefb4c01
+                - generic [ref=e35]:
+                  - img [ref=e37]
+                  - generic [ref=e41]:
+                    - generic [ref=e42]:
+                      - heading "Pollo E2E Variant Test" [level=3] [ref=e43]
+                      - generic [ref=e44]: pollo
+                    - generic [ref=e45]:
+                      - generic [ref=e46]:
+                        - img [ref=e47]
+                        - generic [ref=e49]: S/ 20.00 / kg
+                      - generic [ref=e50]: Activo
+              - link "Pollo E2E pollo S/ 20.00 / kg Activo" [ref=e51] [cursor=pointer]:
+                - /url: /productos/9516f45e-bd9c-4312-be91-913d3303b280
+                - generic [ref=e54]:
+                  - img [ref=e56]
+                  - generic [ref=e60]:
+                    - generic [ref=e61]:
+                      - heading "Pollo E2E" [level=3] [ref=e62]
+                      - generic [ref=e63]: pollo
+                    - generic [ref=e64]:
+                      - generic [ref=e65]:
+                        - img [ref=e66]
+                        - generic [ref=e68]: S/ 20.00 / kg
+                      - generic [ref=e69]: Activo
+              - link "Menudencias otro S/ 15.00 / kg Activo" [ref=e70] [cursor=pointer]:
+                - /url: /productos/308ff322-e3ed-46f9-b7cb-0eabfe1393c1
+                - generic [ref=e73]:
+                  - img [ref=e75]
+                  - generic [ref=e79]:
+                    - generic [ref=e80]:
+                      - heading "Menudencias" [level=3] [ref=e81]
+                      - generic [ref=e82]: otro
+                    - generic [ref=e83]:
+                      - generic [ref=e84]:
+                        - img [ref=e85]
+                        - generic [ref=e87]: S/ 15.00 / kg
+                      - generic [ref=e88]: Activo
+              - link "Huevos huevo S/ 0.80 / unidad Activo" [ref=e89] [cursor=pointer]:
+                - /url: /productos/9febe2b6-3bae-48aa-810f-9e3d97e093b7
+                - generic [ref=e92]:
+                  - img [ref=e94]
+                  - generic [ref=e98]:
+                    - generic [ref=e99]:
+                      - heading "Huevos" [level=3] [ref=e100]
+                      - generic [ref=e101]: huevo
+                    - generic [ref=e102]:
+                      - generic [ref=e103]:
+                        - img [ref=e104]
+                        - generic [ref=e106]: S/ 0.80 / unidad
+                      - generic [ref=e107]: Activo
+      - button [ref=e108] [cursor=pointer]:
+        - img
+    - navigation [ref=e109]:
+      - generic [ref=e110]:
+        - link "Inicio" [ref=e111] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e112]
+          - generic [ref=e115]: Inicio
+        - link "Ventas" [ref=e116] [cursor=pointer]:
+          - /url: /ventas
+          - img [ref=e117]
+          - generic [ref=e121]: Ventas
+        - link "Pedidos" [ref=e122] [cursor=pointer]:
+          - /url: /pedidos
+          - img [ref=e123]
+          - generic [ref=e126]: Pedidos
+        - link "Cobros" [ref=e127] [cursor=pointer]:
+          - /url: /cobros
+          - img [ref=e128]
+          - generic [ref=e131]: Cobros
+        - link "Clientes" [ref=e132] [cursor=pointer]:
+          - /url: /clientes
+          - img [ref=e133]
+          - generic [ref=e138]: Clientes
+        - link "Activos" [ref=e139] [cursor=pointer]:
+          - /url: /activos
+          - img [ref=e140]
+          - generic [ref=e144]: Activos
+        - link "Más" [ref=e145] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e146]
+          - generic [ref=e147]: Más
+  - region "Notifications alt+T"
+  - generic [ref=e149]:
+    - generic [ref=e151]:
+      - generic [ref=e152]:
+        - button [ref=e155] [cursor=pointer]:
+          - img [ref=e156]
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button:
+              - img
+        - button [ref=e161] [cursor=pointer]:
+          - img [ref=e162]
+      - button [ref=e167] [cursor=pointer]
+    - button [ref=e170] [cursor=pointer]:
+      - img [ref=e171]
+```

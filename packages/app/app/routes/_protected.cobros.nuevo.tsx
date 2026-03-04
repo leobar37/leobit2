@@ -247,6 +247,7 @@ export default function NuevoCobroPage() {
         <Button
           onClick={handleSubmit(onSubmit)}
           disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0}
+          data-testid="save-abono-button"
           className="w-full h-14 text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isSubmitting ? (
@@ -298,6 +299,7 @@ export default function NuevoCobroPage() {
                 </span>
                 <Input
                   id="amount"
+                  data-testid="abono-monto-input"
                   type="number"
                   step="0.01"
                   min="0.01"

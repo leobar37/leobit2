@@ -170,6 +170,7 @@ function PurchaseFormContent() {
         <Button
           onClick={onSubmit}
           disabled={isPending || fileUploadStatus.isUploading || !isFormValid}
+          data-testid="save-purchase-button"
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isPending || fileUploadStatus.isUploading ? (

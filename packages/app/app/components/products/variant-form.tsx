@@ -75,6 +75,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
           </Label>
           <Input
             id="name"
+            data-testid="variant-name-input"
             placeholder="Ej: Jaba 30 unidades"
             {...register("name")}
             className="rounded-xl"
@@ -91,6 +92,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
           </Label>
           <Input
             id="sku"
+            data-testid="variant-sku-input"
             placeholder="Ej: SKU-001"
             {...register("sku")}
             className="rounded-xl"
@@ -108,6 +110,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
             </Label>
             <Input
               id="unitQuantity"
+              data-testid="variant-unitquantity-input"
               type="number"
               step="0.001"
               {...register("unitQuantity", { valueAsNumber: true })}
@@ -125,6 +128,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
             </Label>
             <Input
               id="price"
+              data-testid="variant-price-input"
               type="number"
               step="0.01"
               {...register("price", { valueAsNumber: true })}
@@ -153,6 +157,7 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
             type="button"
             onClick={handleSubmit(onSubmit)}
             disabled={isLoading || !isValid}
+            data-testid="save-variant-button"
             className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
           >
             {isLoading

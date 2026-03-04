@@ -16,7 +16,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun run src/seed/index.ts"
+    "db:seed": "bun run src/seed/index.ts",
+    "db:reset": "bun run scripts/reset-db.ts"
   },
   "dependencies": {
     "@avileo/shared": "workspace:*",

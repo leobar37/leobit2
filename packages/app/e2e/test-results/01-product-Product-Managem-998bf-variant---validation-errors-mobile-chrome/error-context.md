@@ -1,0 +1,151 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e7]: A
+          - generic [ref=e8]: Avileo
+        - button [ref=e10] [cursor=pointer]:
+          - img
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e14]:
+          - button [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+          - heading "Editar Producto" [level=1] [ref=e18]
+        - main [ref=e19]:
+          - generic [ref=e20]:
+            - generic [ref=e22]:
+              - img [ref=e24]
+              - generic [ref=e28]:
+                - heading "Pollo E2E Variant Test" [level=2] [ref=e29]
+                - generic [ref=e30]: Pollo
+            - generic [ref=e31]:
+              - generic [ref=e32]:
+                - generic [ref=e33]:
+                  - generic [ref=e34]:
+                    - img [ref=e35]
+                    - generic [ref=e37]: Precio actual
+                  - paragraph [ref=e38]: S/ 20.00
+                - generic [ref=e39]:
+                  - generic [ref=e40]:
+                    - img [ref=e41]
+                    - generic [ref=e44]: Unidad
+                  - paragraph [ref=e45]: Kilogramo (kg)
+              - generic [ref=e46]:
+                - generic [ref=e47]:
+                  - img [ref=e48]
+                  - generic [ref=e50]: Creado el 4/3/2026
+                - generic [ref=e51]: Activo
+          - generic [ref=e52]:
+            - generic [ref=e54]: Información del Producto
+            - generic [ref=e55]:
+              - generic [ref=e56]:
+                - generic [ref=e57]:
+                  - img [ref=e58]
+                  - text: Nombre *
+                - textbox "Nombre *" [ref=e62]:
+                  - /placeholder: Nombre del producto
+                  - text: Pollo E2E Variant Test
+              - generic [ref=e63]:
+                - text: Imagen del producto
+                - button "Seleccionar imagen" [ref=e65] [cursor=pointer]:
+                  - img
+                  - generic [ref=e66]: Seleccionar imagen
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - img [ref=e69]
+                  - text: Tipo *
+                - combobox "Tipo *" [ref=e73]:
+                  - option "Pollo" [selected]
+                  - option "Huevo"
+                  - option "Otro"
+              - generic [ref=e74]:
+                - generic [ref=e75]:
+                  - img [ref=e76]
+                  - text: Unidad *
+                - combobox "Unidad *" [ref=e80]:
+                  - option "Kilogramo (kg)" [selected]
+                  - option "Unidad"
+              - generic [ref=e81]:
+                - generic [ref=e82]:
+                  - img [ref=e83]
+                  - text: Precio base (S/) *
+                - textbox "Precio base (S/) *" [ref=e85]:
+                  - /placeholder: "0.00"
+                  - text: "20.00"
+              - generic [ref=e87] [cursor=pointer]:
+                - checkbox "Activo" [checked] [ref=e88]
+                - generic [ref=e89]: Activo
+              - button "Guardar cambios" [ref=e90] [cursor=pointer]
+              - button "Cancelar" [ref=e91] [cursor=pointer]
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - img [ref=e95]
+                - text: Variantes
+              - button "Agregar" [ref=e99] [cursor=pointer]:
+                - img
+                - text: Agregar
+            - generic [ref=e101]:
+              - img [ref=e102]
+              - paragraph [ref=e106]: No hay variantes registradas
+              - button "Crear primera variante" [ref=e107] [cursor=pointer]:
+                - img
+                - text: Crear primera variante
+      - button [ref=e108] [cursor=pointer]:
+        - img
+    - navigation [ref=e109]:
+      - generic [ref=e110]:
+        - link "Inicio" [ref=e111] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e112]
+          - generic [ref=e115]: Inicio
+        - link "Ventas" [ref=e116] [cursor=pointer]:
+          - /url: /ventas
+          - img [ref=e117]
+          - generic [ref=e121]: Ventas
+        - link "Pedidos" [ref=e122] [cursor=pointer]:
+          - /url: /pedidos
+          - img [ref=e123]
+          - generic [ref=e126]: Pedidos
+        - link "Cobros" [ref=e127] [cursor=pointer]:
+          - /url: /cobros
+          - img [ref=e128]
+          - generic [ref=e131]: Cobros
+        - link "Clientes" [ref=e132] [cursor=pointer]:
+          - /url: /clientes
+          - img [ref=e133]
+          - generic [ref=e138]: Clientes
+        - link "Activos" [ref=e139] [cursor=pointer]:
+          - /url: /activos
+          - img [ref=e140]
+          - generic [ref=e144]: Activos
+        - link "Más" [ref=e145] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e146]
+          - generic [ref=e147]: Más
+  - region "Notifications alt+T"
+  - generic [ref=e149]:
+    - generic [ref=e151]:
+      - generic [ref=e152]:
+        - button [ref=e155] [cursor=pointer]:
+          - img [ref=e156]
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button:
+              - img
+        - button [ref=e161] [cursor=pointer]:
+          - img [ref=e162]
+      - button [ref=e167] [cursor=pointer]
+    - button [ref=e170] [cursor=pointer]:
+      - img [ref=e171]
+```

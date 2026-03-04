@@ -48,6 +48,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           </Label>
           <Input
             id="name"
+            data-testid="product-name-input"
             placeholder="Nombre del producto"
             {...register("name")}
             className="rounded-xl"
@@ -73,6 +74,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           </Label>
           <select
             id="type"
+            data-testid="product-type-select"
             {...register("type")}
             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
@@ -92,6 +94,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           </Label>
           <select
             id="unit"
+            data-testid="product-unit-select"
             {...register("unit")}
             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
@@ -110,6 +113,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           </Label>
           <Input
             id="basePrice"
+            data-testid="product-baseprice-input"
             placeholder="0.00"
             {...register("basePrice")}
             className="rounded-xl"

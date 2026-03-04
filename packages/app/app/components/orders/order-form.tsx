@@ -88,6 +88,7 @@ function OrderFormToolbar({ onCancel, isSubmitting }: { onCancel: () => void; is
           type="button"
           onClick={orderForm.handleSubmit}
           disabled={!orderForm.isValid || isSubmitting}
+          data-testid="save-order-button"
           className="flex-1 rounded-xl h-14 bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isSubmitting ? "Guardando..." : "Crear pedido"}

@@ -80,6 +80,7 @@ export function PurchaseCalculatorSection() {
 
             <Button
               type="button"
+              data-testid="purchase-select-product-button"
               onClick={() => setShowVariantSelector(true)}
               className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
             >
@@ -248,6 +249,7 @@ export function PurchaseCalculatorSection() {
               </Button>
               <Button
                 type="button"
+                data-testid="purchase-add-to-cart-button"
                 onClick={handleAddToCart}
                 disabled={!isValid}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"

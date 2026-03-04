@@ -54,6 +54,7 @@ export default function NuevoProductoPage() {
         <Button
           onClick={form.handleSubmit(handleSubmit)}
           disabled={createProduct.isPending || !isValid}
+          data-testid="save-product-button"
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {createProduct.isPending ? (

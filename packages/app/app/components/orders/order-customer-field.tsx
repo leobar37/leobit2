@@ -13,7 +13,7 @@ export function OrderCustomerField({
   onSelectCustomer,
 }: OrderCustomerFieldProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="order-customer-field">
       <Label className="flex items-center gap-2">
         <User className="h-4 w-4" />
         Cliente

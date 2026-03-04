@@ -1,0 +1,103 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e7]: A
+          - generic [ref=e8]: Avileo
+        - button [ref=e10] [cursor=pointer]:
+          - img
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e14]:
+          - link [ref=e15] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e16]
+          - heading "Nueva Venta" [level=1] [ref=e18]
+        - main [ref=e19]:
+          - generic [ref=e20]:
+            - heading "Cliente" [level=2] [ref=e21]
+            - generic [ref=e24]:
+              - generic [ref=e25]:
+                - img [ref=e27]
+                - generic [ref=e30]:
+                  - paragraph [ref=e31]: Maria Garcia
+                  - paragraph [ref=e32]: "999111222"
+              - button "Cambiar" [ref=e33] [cursor=pointer]
+              - button "Limpiar cliente seleccionado" [ref=e34] [cursor=pointer]:
+                - img
+          - generic [ref=e35]:
+            - heading "Tipo de Cobro" [level=2] [ref=e36]
+            - generic [ref=e37]:
+              - button "Pago total" [ref=e38] [cursor=pointer]
+              - button "A cuenta" [ref=e39] [cursor=pointer]
+              - button "Debe" [ref=e40] [cursor=pointer]
+            - paragraph [ref=e41]: Pago completo hoy, no aumenta deuda.
+          - generic [ref=e42]:
+            - heading "Calcular Producto" [level=2] [ref=e44]
+            - generic [ref=e46]:
+              - paragraph [ref=e47]: Selecciona un producto para comenzar
+              - button "Seleccionar Producto" [ref=e48] [cursor=pointer]:
+                - img
+                - text: Seleccionar Producto
+          - button "Seleccionar Producto y Variante La primera variante activa se selecciona automaticamente" [ref=e50] [cursor=pointer]:
+            - img
+            - generic [ref=e51]:
+              - paragraph [ref=e52]: Seleccionar Producto y Variante
+              - paragraph [ref=e53]: La primera variante activa se selecciona automaticamente
+      - button [ref=e54] [cursor=pointer]:
+        - img
+    - navigation [ref=e55]:
+      - generic [ref=e56]:
+        - link "Inicio" [ref=e57] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e58]
+          - generic [ref=e61]: Inicio
+        - link "Ventas" [ref=e62] [cursor=pointer]:
+          - /url: /ventas
+          - img [ref=e63]
+          - generic [ref=e67]: Ventas
+        - link "Pedidos" [ref=e68] [cursor=pointer]:
+          - /url: /pedidos
+          - img [ref=e69]
+          - generic [ref=e72]: Pedidos
+        - link "Cobros" [ref=e73] [cursor=pointer]:
+          - /url: /cobros
+          - img [ref=e74]
+          - generic [ref=e77]: Cobros
+        - link "Clientes" [ref=e78] [cursor=pointer]:
+          - /url: /clientes
+          - img [ref=e79]
+          - generic [ref=e84]: Clientes
+        - link "Activos" [ref=e85] [cursor=pointer]:
+          - /url: /activos
+          - img [ref=e86]
+          - generic [ref=e90]: Activos
+        - link "Más" [ref=e91] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e92]
+          - generic [ref=e93]: Más
+  - region "Notifications alt+T"
+  - generic [ref=e95]:
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - button [ref=e101] [cursor=pointer]:
+          - img [ref=e102]
+        - generic:
+          - generic:
+            - button:
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button:
+              - img
+        - button [ref=e107] [cursor=pointer]:
+          - img [ref=e108]
+      - button [ref=e113] [cursor=pointer]
+    - button [ref=e116] [cursor=pointer]:
+      - img [ref=e117]
+```

@@ -49,9 +49,9 @@ export function PurchaseCartSection() {
   }
 
   return (
-    <section data-testid="cart-section">
+    <section data-testid="purchase-cart-section">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-medium text-muted-foreground">
+        <h2 className="text-sm font-medium text-muted-foreground" data-testid="purchase-cart-title">
           Carrito ({cartItems.length} items)
         </h2>
         <Button
@@ -63,9 +63,11 @@ export function PurchaseCartSection() {
           Limpiar todo
         </Button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2" data-testid="purchase-cart-items">
         {cartItems.map((item, index) => (
-          <PurchaseCartItemCard key={`${item.productId}-${index}`} item={item} index={index} />
+          <div key={`${item.productId}-${index}`} data-testid={`purchase-cart-item-${index}`}>
+            <PurchaseCartItemCard item={item} index={index} />
+          </div>
         ))}
       </div>
       <div className="mt-3 p-3 bg-orange-100 rounded-xl">
