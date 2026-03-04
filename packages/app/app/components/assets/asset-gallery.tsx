@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CameraGalleryDrawer } from "@/components/ui/camera-gallery-drawer";
 import { useAssets, useUploadAsset, useDeleteAsset, type Asset } from "~/hooks/use-assets";
 
 interface AssetGalleryProps {
@@ -21,6 +22,33 @@ export function AssetGallery({
   const uploadAsset = useUploadAsset();
   const deleteAsset = useDeleteAsset();
   const [uploading, setUploading] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(typeof window !== "undefined" && window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const handleDrawerFileSelect = async (file: File) => {
+    setUploading(true);
+    try {
+      const result = await uploadAsset.mutateAsync(file);
+      // Auto-select the newly uploaded asset
+      const newAsset = assets?.find((a) => a.id === result.id);
+      if (newAsset && onSelect) {
+        onSelect(newAsset);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,29 +83,51 @@ export function AssetGallery({
   return (
     <div className="space-y-4">
       {allowUpload && (
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="asset-upload"
-            disabled={uploading}
-          />
-          <label htmlFor="asset-upload">
+        <>
+          {isMobile ? (
             <Button
+              onClick={() => setDrawerOpen(true)}
               variant="outline"
-              className="rounded-xl"
+              className="rounded-xl w-full"
               disabled={uploading}
-              asChild
             >
-              <span>
-                <Plus className="h-4 w-4 mr-2" />
-                {uploading ? "Subiendo..." : "Subir imagen"}
-              </span>
+              <Plus className="h-4 w-4 mr-2" />
+              {uploading ? "Subiendo..." : "Subir imagen"}
             </Button>
-          </label>
-        </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="asset-upload"
+                disabled={uploading}
+              />
+              <label htmlFor="asset-upload">
+                <Button
+                  variant="outline"
+                  className="rounded-xl"
+                  disabled={uploading}
+                  asChild
+                >
+                  <span>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {uploading ? "Subiendo..." : "Subir imagen"}
+                  </span>
+                </Button>
+              </label>
+            </div>
+          )}
+
+          <CameraGalleryDrawer
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            onFileSelect={handleDrawerFileSelect}
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4"
+            title="Adjuntar imagen"
+          />
+        </>
       )}
 
       {!assets || assets.length === 0 ? (

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Camera, Upload, ImageIcon, CloudOff, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CameraGalleryDrawer } from "./camera-gallery-drawer";
+import { useMobile } from "~/hooks/use-mobile";
 import { cn } from "~/lib/utils";
 
 export type UploadStatus = "idle" | "validating" | "uploading" | "pending" | "synced" | "error";
@@ -58,6 +60,8 @@ export function FileUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isMobile = useMobile();
 
   // Clean up object URL on unmount
   useEffect(() => {
@@ -86,28 +90,50 @@ export function FileUploader({
     [accept, maxSize]
   );
 
-  // Handle file selection
+  // Handle file from drawer or direct input
+  const processFile = useCallback(
+    (selectedFile: File) => {
+      const validation = validateFile(selectedFile);
+      if (validation) {
+        setValidationError(validation);
+        return;
+      }
+
+      setValidationError(null);
+
+      // Create local preview
+      const objectUrl = URL.createObjectURL(selectedFile);
+      setLocalPreview(objectUrl);
+
+      onFileSelect?.(selectedFile);
+    },
+    [validateFile, onFileSelect]
+  );
+
+  // Handle file selection from desktop file input
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    const validation = validateFile(selectedFile);
-    if (validation) {
-      setValidationError(validation);
-      return;
-    }
-
-    setValidationError(null);
-
-    // Create local preview
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setLocalPreview(objectUrl);
-
-    onFileSelect?.(selectedFile);
+    processFile(selectedFile);
 
     // Reset input value to allow selecting same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  // Handle file selection from drawer
+  const handleDrawerFileSelect = (selectedFile: File) => {
+    processFile(selectedFile);
+  };
+
+  // Handle button click - open drawer on mobile, file input on desktop
+  const handleUploadClick = () => {
+    if (isMobile) {
+      setDrawerOpen(true);
+    } else {
+      fileInputRef.current?.click();
     }
   };
 
@@ -221,16 +247,16 @@ export function FileUploader({
         className="hidden"
         disabled={disabled || status === "uploading"}
       />
-      <Button
-        type="button"
-        variant="outline"
-        className={cn(
-          "w-full rounded-xl h-20 border-dashed",
-          displayError && "border-red-500"
-        )}
-        onClick={() => fileInputRef.current?.click()}
-        disabled={disabled || status === "uploading"}
-      >
+       <Button
+         type="button"
+         variant="outline"
+         className={cn(
+           "w-full rounded-xl h-20 border-dashed",
+           displayError && "border-red-500"
+         )}
+         onClick={handleUploadClick}
+         disabled={disabled || status === "uploading"}
+       >
         <div className="flex flex-col items-center gap-1">
           <Camera className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
@@ -238,13 +264,23 @@ export function FileUploader({
           </span>
         </div>
       </Button>
-      {renderStatus()}
-      {helperText && !displayError && (
-        <p className="text-xs text-muted-foreground">{helperText}</p>
-      )}
-      {displayError && (
-        <p className="text-xs text-red-500">{displayError}</p>
-      )}
-    </div>
-  );
-}
+       {renderStatus()}
+       {helperText && !displayError && (
+         <p className="text-xs text-muted-foreground">{helperText}</p>
+       )}
+       {displayError && (
+         <p className="text-xs text-red-500">{displayError}</p>
+       )}
+
+       {/* Camera/Gallery drawer for mobile */}
+       <CameraGalleryDrawer
+         open={drawerOpen}
+         onOpenChange={setDrawerOpen}
+         onFileSelect={handleDrawerFileSelect}
+         accept={accept}
+         maxSize={maxSize}
+         title={label || "Adjuntar imagen"}
+       />
+     </div>
+   );
+ }
