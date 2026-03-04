@@ -23,7 +23,7 @@ import { OrderItemModal } from "~/components/orders/order-item-modal";
 import { OrderDeliveryModal } from "~/components/orders/order-delivery-modal";
 import type { OrderItem } from "~/lib/db/schema";
 import { isOnline } from "~/lib/sync/utils";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 
 const statusConfig = {
   draft: {
@@ -59,7 +59,7 @@ export default function OrderDetailPage() {
 
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
-  const { toast } = useToast();
+
 
   useSetLayout({
     title: "Detalle del pedido",
