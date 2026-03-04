@@ -2,7 +2,7 @@
 # Multi-stage build: Bun for deps, Node.js for build, Bun for runtime
 
 # Stage 1: Dependencies
-FROM oven/bun:1.1.38-slim AS deps
+FROM oven/bun:1.2.10-slim AS deps
 WORKDIR /app
 
 # Copy all files (respecting .dockerignore)
@@ -34,7 +34,7 @@ RUN cd packages/shared && npm run build
 RUN cd packages/app && npm run build
 
 # Stage 3: Production (Bun for runtime)
-FROM oven/bun:1.1.38-slim AS runner
+FROM oven/bun:1.2.10-slim AS runner
 WORKDIR /app
 
 # Copy built application from builder
