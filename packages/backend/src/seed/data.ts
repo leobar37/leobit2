@@ -5,9 +5,9 @@ export const TEST_USER = {
 };
 
 // Helper function to get local date in YYYY-MM-DD format
-function getLocalDate(daysAgo = 0): string {
+function getLocalDate(daysOffset = 0): string {
   const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
+  date.setDate(date.getDate() + daysOffset);
   return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
 }
 export const TEST_BUSINESS = {
@@ -131,3 +131,54 @@ export const PURCHASES: PurchaseData[] = [];
 
 // No se seedean distribuciones para E2E
 export const DISTRIBUCIONES: DistribucionData[] = [];
+
+export interface OrderData {
+  customerIndex: number;
+  status: "draft" | "confirmed" | "delivered" | "cancelled";
+  paymentIntent: "contado" | "credito";
+  deliveryDate: string; // YYYY-MM-DD
+  items: Array<{
+    productIndex: number;
+    variantIndex: number;
+    orderedQuantity: number;
+    unitPriceQuoted: number;
+  }>;
+  totalAmount: number;
+}
+
+// Pedidos para testing E2E del flujo pedidos → ventas
+export const ORDERS: OrderData[] = [
+  // Pedido en borrador - para testear confirmación (fecha de mañana)
+  {
+    customerIndex: 0, // Maria Garcia
+    status: "draft",
+    paymentIntent: "contado",
+    deliveryDate: getLocalDate(1), // Mañana
+    items: [
+      { productIndex: 0, variantIndex: 0, orderedQuantity: 5, unitPriceQuoted: 0.8 }, // Huevos Unidad
+    ],
+    totalAmount: 4.0,
+  },
+  // Pedido confirmado con fecha de mañana - se puede entregar mañana
+  {
+    customerIndex: 1, // Juan Perez
+    status: "confirmed",
+    paymentIntent: "credito",
+    deliveryDate: getLocalDate(1), // Mañana
+    items: [
+      { productIndex: 1, variantIndex: 0, orderedQuantity: 2, unitPriceQuoted: 14.0 }, // Menudencias Mollejas
+    ],
+    totalAmount: 28.0,
+  },
+  // Pedido confirmado con fecha futura - no se puede entregar aún
+  {
+    customerIndex: 0, // Maria Garcia
+    status: "confirmed",
+    paymentIntent: "contado",
+    deliveryDate: getLocalDate(3), // En 3 días
+    items: [
+      { productIndex: 0, variantIndex: 1, orderedQuantity: 2, unitPriceQuoted: 21.0 }, // Huevos Maple
+    ],
+    totalAmount: 42.0,
+  },
+];

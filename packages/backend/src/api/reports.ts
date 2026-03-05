@@ -32,4 +32,23 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
       const total = await customerService.getTotalAccountsReceivable(ctx as RequestContext);
       return { success: true, data: { total } };
     }
+  )
+  .get(
+    "/missing-inventory",
+    async ({ inventoryService, ctx, query }) => {
+      const report = await inventoryService.getMissingInventoryReport(
+        ctx as RequestContext,
+        {
+          startDate: query.startDate ? new Date(query.startDate) : undefined,
+          endDate: query.endDate ? new Date(query.endDate) : undefined,
+        }
+      );
+      return { success: true, data: report };
+    },
+    {
+      query: t.Object({
+        startDate: t.Optional(t.String()),
+        endDate: t.Optional(t.String()),
+      }),
+    }
   );

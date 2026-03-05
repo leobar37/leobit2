@@ -13,6 +13,7 @@ import {
   DISTRIBUCIONES,
   SUPPLIERS,
   PURCHASES,
+  ORDERS,
 } from "./data";
 import {
   CLIENT_USER,
@@ -25,6 +26,7 @@ import {
   DISTRIBUCIONES as CLIENT_DISTRIBUCIONES,
   SUPPLIERS as CLIENT_SUPPLIERS,
   PURCHASES as CLIENT_PURCHASES,
+  ORDERS as CLIENT_ORDERS,
 } from "./client-data";
 import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants, businessPaymentSettings } from "../db/schema";
 
@@ -72,6 +74,7 @@ export async function seedDatabase(): Promise<SeedResult> {
   const currentDistribuciones = isClient ? CLIENT_DISTRIBUCIONES : DISTRIBUCIONES;
   const currentSuppliers = isClient ? CLIENT_SUPPLIERS : SUPPLIERS;
   const currentPurchases = isClient ? CLIENT_PURCHASES : PURCHASES;
+  const currentOrders = isClient ? CLIENT_ORDERS : ORDERS;
 
   if (FORCE_MODE && !isClient) {
     console.log("⚠️ FORCE MODE: Clearing existing seeded data...\n");
@@ -117,6 +120,9 @@ export async function seedDatabase(): Promise<SeedResult> {
   const distribuciones = await seedDistribuciones(ctx, businessUserId, seededProducts, currentDistribuciones);
   console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
 
+  const seededOrders = await seedOrders(ctx, seededCustomers, seededProducts, currentOrders);
+  console.log(`✓ Seeded ${seededOrders.length} orders\n`);
+
   console.log("✅ Seed completed successfully!\n");
   console.log("Login credentials:");
   console.log(`  Email: ${currentUser.email}`);
@@ -136,6 +142,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     distribucionesCount: distribuciones.length,
     suppliersCount: suppliers.length,
     purchasesCount: purchases.length,
+    ordersCount: seededOrders.length,
     paymentMethodsConfigured: !!paymentMethods,
   };
 }
@@ -520,7 +527,80 @@ async function seedPaymentMethods(ctx: RequestContext) {
   return config;
 }
 
+async function seedOrders(
+  ctx: RequestContext,
+  customers: Array<{ id: string }>,
+  products: SeedProduct[],
+  ordersData: typeof ORDERS
+) {
+  if (ordersData.length === 0) {
+    console.log(`⚠ No orders to seed (empty array)`);
+    return [];
+  }
+
+  const existing = await services.order.getOrders(ctx);
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} orders already exist, skipping`);
+    return existing;
+  }
+
+  const orders = [];
+  for (const orderData of ordersData) {
+    const customer = customers[orderData.customerIndex];
+    if (!customer) continue;
+
+    const items = orderData.items.map((item) => {
+      const product = products[item.productIndex];
+      const variant = product.variants[item.variantIndex];
+      return {
+        productId: product.id,
+        productName: product.name,
+        variantId: variant.id,
+        variantName: variant.name,
+        orderedQuantity: item.orderedQuantity,
+        unitPriceQuoted: item.unitPriceQuoted,
+      };
+    });
+
+    // Calculate total amount
+    const totalAmount = items.reduce((sum, item) => 
+      sum + (item.orderedQuantity * item.unitPriceQuoted), 0
+    );
+
+    // Create order based on status
+    let created;
+    if (orderData.status === "draft") {
+      created = await services.order.createOrder(ctx, {
+        clientId: customer.id,
+        deliveryDate: orderData.deliveryDate,
+        paymentIntent: orderData.paymentIntent,
+        totalAmount,
+        items,
+      });
+    } else if (orderData.status === "confirmed") {
+      const draft = await services.order.createOrder(ctx, {
+        clientId: customer.id,
+        deliveryDate: orderData.deliveryDate,
+        paymentIntent: orderData.paymentIntent,
+        totalAmount,
+        items,
+      });
+      created = await services.order.confirmOrder(ctx, draft.id, draft.version);
+    }
+
+    if (created) {
+      orders.push(created);
+      console.log(`   ✓ Order: ${created.id.slice(-8)} - ${orderData.status} - S/ ${orderData.totalAmount}`);
+    }
+  }
+
+  return orders;
+}
+
 async function clearExistingData() {
+  const { orderItems, orders } = await import("../db/schema/orders");
+  await db.delete(orderItems);
+  await db.delete(orders);
   await db.delete(saleItems);
   await db.delete(sales);
   await db.delete(abonos);
@@ -551,6 +631,7 @@ if (import.meta.main) {
       console.log(`  Sales: ${result.salesCount}`);
       console.log(`  Abonos: ${result.abonosCount}`);
       console.log(`  Distribuciones: ${result.distribucionesCount}`);
+      console.log(`  Orders: ${result.ordersCount}`);
       console.log(`  Payment Methods: ${result.paymentMethodsConfigured ? "✓ Configured" : "✗ Not Configured"}`);
       process.exit(0);
     })

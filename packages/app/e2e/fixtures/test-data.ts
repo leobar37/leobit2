@@ -60,6 +60,34 @@ export const TEST_PRODUCTS = [
   },
 ];
 
+// Test orders from seed data
+export const TEST_ORDERS = {
+  // Draft order - for testing confirmation
+  DRAFT: {
+    customer: "Maria Garcia",
+    status: "draft",
+    paymentIntent: "contado",
+    items: [{ product: "Huevos", variant: "Unidad", quantity: 5 }],
+    totalAmount: 4.0,
+  },
+  // Confirmed order with today's date - ready to deliver
+  CONFIRMED_TODAY: {
+    customer: "Juan Perez",
+    status: "confirmed",
+    paymentIntent: "credito",
+    items: [{ product: "Menudencias", variant: "Mollejas", quantity: 2 }],
+    totalAmount: 28.0,
+  },
+  // Confirmed order with future date - cannot deliver yet
+  CONFIRMED_FUTURE: {
+    customer: "Maria Garcia",
+    status: "confirmed",
+    paymentIntent: "contado",
+    items: [{ product: "Huevos", variant: "Maple (30un)", quantity: 2 }],
+    totalAmount: 42.0,
+  },
+};
+
 // Test scenarios data
 export const TEST_SCENARIOS = {
   // Cash sale with single product

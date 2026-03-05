@@ -69,12 +69,13 @@ export function DatePicker({
   const canSelectSecond = !isDateDisabled(secondQuickDate);
   
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-2", className)} data-testid="date-picker">
       <Button
         type="button"
         variant="outline"
         onClick={() => setOpen(true)}
         disabled={disabled}
+        data-testid="date-picker-trigger"
         className={cn(
           "w-full justify-start text-left font-normal rounded-xl h-12 px-4",
           "bg-white border-gray-200 hover:bg-gray-50 hover:border-orange-300",
@@ -83,7 +84,7 @@ export function DatePicker({
         )}
       >
         <CalendarIcon className="mr-3 h-5 w-5 text-orange-500" />
-        <span className="flex-1">{displayValue || placeholder}</span>
+        <span className="flex-1" data-testid="date-picker-value">{displayValue || placeholder}</span>
         {value && (
           <span className="text-xs text-orange-600 font-medium">
             Cambiar
@@ -179,6 +180,7 @@ export function DatePicker({
                 variant="outline"
                 onClick={() => handleSelect(firstQuickDate)}
                 disabled={!canSelectFirst}
+                data-testid="date-quick-action-1"
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",
@@ -194,6 +196,7 @@ export function DatePicker({
                 variant="outline"
                 onClick={() => handleSelect(secondQuickDate)}
                 disabled={!canSelectSecond}
+                data-testid="date-quick-action-2"
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",

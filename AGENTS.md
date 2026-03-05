@@ -35,6 +35,7 @@ packages/
 | `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer, sync engine |
 | `app/routes` | `packages/app/app/routes/AGENTS.md` | File-based routing conventions |
 | `app/hooks` | `packages/app/app/hooks/AGENTS.md` | Custom React hooks patterns |
+| `app/e2e` | `packages/app/e2e/AGENTS.md` | E2E testing patterns |
 | `backend/services` | `packages/backend/src/services/AGENTS.md` | Repository/service layer |
 
 ## Quick Commands
@@ -53,6 +54,7 @@ bun run db:push                # Push schema changes (dev)
 
 # Testing
 cd packages/app && bun test    # Run Vitest tests
+cd packages/app && bun run test:e2e  # Run Playwright E2E tests
 ```
 
 ## Import Patterns
@@ -85,23 +87,45 @@ import type { ApiResponse } from "@avileo/shared";
 
 ### Backend (ElysiaJS)
 
-1. **RequestContext Pattern**: All repository/service methods receive `ctx` as FIRST parameter
-2. **Multi-tenancy**: All queries MUST filter by `ctx.businessId`
-3. **Single Decorate**: Use ONE `decorate()` call to avoid Elysia hangs
-4. **Error Hierarchy**: Services throw `NotFoundError`, `ValidationError`, `ConflictError`
+| Pattern | Rule | Violation Impact |
+|---------|------|------------------|
+| **RequestContext** | `ctx` MUST be FIRST parameter in ALL repo/service methods | Data inconsistency |
+| **Multi-tenancy** | ALL queries MUST filter by `ctx.businessId` | Security breach |
+| **Single Decorate** | Use ONE `decorate()` call only | Elysia server hang |
+| **Error Handling** | Services throw domain errors, not HTTP responses | Inconsistent API |
+
+```typescript
+// ✅ CORRECT - ctx first
+async findById(ctx: RequestContext, id: string)
+
+// ❌ INCORRECT - ctx last
+async findById(id: string, ctx: RequestContext)
+
+// ✅ CORRECT - single decorate
+.decorate(() => ({
+  repo: new Repository(),
+  service: new Service(),
+}))
+
+// ❌ INCORRECT - multiple decorate
+.decorate("repo", new Repository())
+.decorate("service", new Service()) // NEVER
+```
 
 ### Frontend (React Router v7)
 
-1. **File-based Routing**: Routes auto-generated from `app/routes/` filenames
-2. **Protected Routes**: `_protected.*` prefix wraps auth + sync providers
-3. **Index Convention**: Use `._index.tsx` suffix for routes with children
-4. **Offline-first**: All writes check `isOnline()`, queue if offline
+| Pattern | Rule | Violation Impact |
+|---------|------|------------------|
+| **File-based Routing** | Routes auto-generated from filenames | 404 errors |
+| **Protected Routes** | `_protected.*` prefix for auth pages | Missing auth guard |
+| **Index Convention** | Use `._index.tsx` suffix for parent routes | Nested route conflicts |
+| **Offline-first** | ALL writes check `isOnline()` before API call | Crashes when offline |
 
 ### Database (Drizzle)
 
-1. **Better Auth Tables**: `user`, `session` managed by Better Auth
-2. **FK Pattern**: Operational FKs point to `business_users.id`
-3. **Sync Status**: Tables `customers`, `sales`, `abonos` have `sync_status` + `sync_attempts`
+1. **Better Auth Tables**: `user`, `session` managed by Better Auth - don't modify directly
+2. **FK Pattern**: Operational FKs point to `business_users.id` (not `users.id`)
+3. **Sync Status**: Offline-capable tables MUST have `sync_status` + `sync_attempts`
 
 ## Key Entry Points
 

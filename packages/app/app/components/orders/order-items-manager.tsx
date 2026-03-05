@@ -54,19 +54,19 @@ export function OrderItemsManager() {
 
       {/* Items List */}
       {items.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-testid="order-items-list">
           {items.map((item, index) => (
-            <Card key={index} className="border-0 shadow-sm">
+            <Card key={index} className="border-0 shadow-sm" data-testid="order-item-card" data-item-index={index}>
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{item.productName}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium" data-testid="order-item-product-name">{item.productName}</p>
+                    <p className="text-sm text-muted-foreground" data-testid="order-item-variant-info">
                       {item.variantName} · {item.orderedQuantity.toFixed(3)} unidades
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold">
+                    <span className="font-semibold" data-testid="order-item-total">
                       S/ {(item.orderedQuantity * item.unitPriceQuoted).toFixed(2)}
                     </span>
                     <Button
@@ -75,6 +75,7 @@ export function OrderItemsManager() {
                       size="icon"
                       onClick={() => handleRemoveItem(index)}
                       className="h-8 w-8 text-red-500 hover:text-red-600"
+                      data-testid="order-item-remove-button"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -117,25 +118,29 @@ export function OrderItemsManager() {
             {/* Calculator for kg products */}
             {/* Key forces form recreation when variant changes to use correct schema */}
             {isKgProduct ? (
-              <div key={selectedVariant?.id} className="space-y-3">
+              <div key={selectedVariant?.id} className="space-y-3" data-testid="kg-calculator-section">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm">Kilos brutos</Label>
+                    <Label className="text-sm" htmlFor="kilos-brutos">Kilos brutos</Label>
                     <Input
+                      id="kilos-brutos"
                       type="text"
                       inputMode="decimal"
                       placeholder="0.000"
                       className="rounded-xl"
+                      data-testid="kilos-brutos-input"
                       {...calculator.register("kilos")}
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">Tara (kg)</Label>
+                    <Label className="text-sm" htmlFor="tara">Tara (kg)</Label>
                     <Input
+                      id="tara"
                       type="text"
                       inputMode="decimal"
                       placeholder="0"
                       className="rounded-xl"
+                      data-testid="tara-input"
                       {...calculator.register("tara")}
                     />
                   </div>
@@ -143,29 +148,33 @@ export function OrderItemsManager() {
 
                 <div className="flex items-center justify-between px-3 py-2 bg-orange-50 rounded-xl">
                   <span className="text-sm text-orange-700">Kilos netos:</span>
-                  <span className="font-semibold text-orange-700">
+                  <span className="font-semibold text-orange-700" data-testid="kg-neto-display">
                     {calculator.kgNeto.toFixed(3)} kg
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm">Precio por kg</Label>
+                    <Label className="text-sm" htmlFor="price-per-kg">Precio por kg</Label>
                     <Input
+                      id="price-per-kg"
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00"
                       className="rounded-xl"
+                      data-testid="price-per-kg-input"
                       {...calculator.register("pricePerKg")}
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">Total</Label>
+                    <Label className="text-sm" htmlFor="total-amount">Total</Label>
                     <Input
+                      id="total-amount"
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00"
                       className="rounded-xl"
+                      data-testid="total-amount-input"
                       {...calculator.register("totalAmount")}
                     />
                   </div>
@@ -187,6 +196,7 @@ export function OrderItemsManager() {
                 variant="outline"
                 onClick={() => setShowItemForm(false)}
                 className="flex-1 rounded-xl"
+                data-testid="cancel-add-item-button"
               >
                 Cancelar
               </Button>
@@ -195,6 +205,7 @@ export function OrderItemsManager() {
                 onClick={handleAddItem}
                 disabled={!calculator.isValid}
                 className="flex-1 rounded-xl"
+                data-testid="confirm-add-item-button"
               >
                 Agregar
               </Button>

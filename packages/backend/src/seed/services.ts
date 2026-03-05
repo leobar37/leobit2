@@ -11,6 +11,8 @@ import { ClosingRepository } from "../services/repository/closing.repository";
 import { SupplierRepository } from "../services/repository/supplier.repository";
 import { PurchaseRepository } from "../services/repository/purchase.repository";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
+import { OrderRepository } from "../services/repository/order.repository";
+import { OrderEventsRepository } from "../services/repository/order-events.repository";
 
 import { BusinessService } from "../services/business/business.service";
 import { ProductService } from "../services/business/product.service";
@@ -24,6 +26,7 @@ import { ClosingService } from "../services/business/closing.service";
 import { SupplierService } from "../services/business/supplier.service";
 import { PurchaseService } from "../services/business/purchase.service";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
+import { OrderService } from "../services/business/order.service";
 
 export const repositories = {
   business: new BusinessRepository(),
@@ -39,6 +42,8 @@ export const repositories = {
   supplier: new SupplierRepository(),
   purchase: new PurchaseRepository(),
   paymentMethodConfig: new PaymentMethodConfigRepository(),
+  order: new OrderRepository(),
+  orderEvents: new OrderEventsRepository(),
 };
 
 export const services = {
@@ -69,6 +74,7 @@ export const services = {
     repositories.productVariant
   ),
   paymentMethodConfig: new PaymentMethodConfigService(repositories.paymentMethodConfig),
+  order: new OrderService(repositories.order, repositories.orderEvents, repositories.sale, repositories.inventory),
 };
 
 export type Services = typeof services;

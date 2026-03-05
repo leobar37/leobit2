@@ -90,4 +90,28 @@ export class InventoryService {
 
     await this.repository.delete(ctx, id);
   }
+
+  async getMissingInventoryReport(
+    ctx: RequestContext,
+    filters?: { startDate?: Date; endDate?: Date }
+  ): Promise<
+    Array<{
+      productId: string;
+      productName: string;
+      variantId: string | null;
+      variantName: string | null;
+      totalSold: string;
+      currentStock: string;
+      needed: string;
+    }>
+  > {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver inventario");
+    }
+    if (!ctx.hasPermission("purchases.read")) {
+      throw new ForbiddenError("No tiene permisos para ver compras");
+    }
+
+    return this.repository.getMissingInventoryReport(ctx, filters);
+  }
 }

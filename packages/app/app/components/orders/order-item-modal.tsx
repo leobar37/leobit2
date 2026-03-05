@@ -49,7 +49,7 @@ export function OrderItemModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" data-testid="order-item-modal">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -61,10 +61,10 @@ export function OrderItemModal({
 
         {item && (
           <div className="space-y-4 py-4">
-            <div className="bg-muted rounded-xl p-4">
-              <p className="font-semibold">{item.productName}</p>
-              <p className="text-sm text-muted-foreground">{item.variantName}</p>
-              <p className="text-sm text-muted-foreground mt-1">
+            <div className="bg-muted rounded-xl p-4" data-testid="order-item-info">
+              <p className="font-semibold" data-testid="order-item-modal-product-name">{item.productName}</p>
+              <p className="text-sm text-muted-foreground" data-testid="order-item-modal-variant-name">{item.variantName}</p>
+              <p className="text-sm text-muted-foreground mt-1" data-testid="order-item-modal-price">
                 Precio: S/ {Number(item.unitPriceQuoted).toFixed(2)}
               </p>
             </div>
@@ -80,12 +80,13 @@ export function OrderItemModal({
                 onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 className="rounded-xl"
                 autoFocus
+                data-testid="order-item-quantity-input"
               />
             </div>
 
             <div className="flex items-center justify-between py-2 px-4 bg-orange-50 rounded-xl">
               <span className="text-sm text-muted-foreground">Nuevo subtotal</span>
-              <span className="font-semibold text-lg">S/ {subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-lg" data-testid="order-item-new-subtotal">S/ {subtotal.toFixed(2)}</span>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -95,6 +96,7 @@ export function OrderItemModal({
                 onClick={onClose}
                 className="flex-1 rounded-xl"
                 disabled={isSubmitting}
+                data-testid="order-item-cancel-button"
               >
                 Cancelar
               </Button>
@@ -103,6 +105,7 @@ export function OrderItemModal({
                 onClick={handleSave}
                 disabled={quantity <= 0 || isSubmitting}
                 className="flex-1 rounded-xl"
+                data-testid="order-item-save-button"
               >
                 {isSubmitting ? "Guardando..." : "Guardar cambios"}
               </Button>

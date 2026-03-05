@@ -142,7 +142,7 @@ export function OrderDeliveryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" data-testid="order-delivery-modal">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -157,7 +157,7 @@ export function OrderDeliveryModal({
 
         <div className="space-y-4 py-4">
           {/* Items List */}
-          <div className="space-y-4">
+          <div className="space-y-4" data-testid="delivery-items-list">
             {items.map((item, index) => {
               const subtotal = itemTotals.find((t) => t.itemId === item.itemId)?.subtotal || 0;
 
@@ -165,6 +165,8 @@ export function OrderDeliveryModal({
                 <div
                   key={item.itemId}
                   className="border rounded-xl p-4 space-y-3 bg-muted/30"
+                  data-testid="delivery-item"
+                  data-item-id={item.itemId}
                 >
                   {/* Product Info */}
                   <div className="flex items-start gap-3">
@@ -172,9 +174,9 @@ export function OrderDeliveryModal({
                       <Package className="h-5 w-5 text-orange-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium">{item.productName}</p>
-                      <p className="text-sm text-muted-foreground">{item.variantName}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium" data-testid="delivery-item-product-name">{item.productName}</p>
+                      <p className="text-sm text-muted-foreground" data-testid="delivery-item-variant-name">{item.variantName}</p>
+                      <p className="text-xs text-muted-foreground" data-testid="delivery-item-ordered-info">
                         Pedido: {item.orderedQuantity} un · Precio: S/{" "}
                         {item.unitPriceQuoted.toFixed(2)}
                       </p>
@@ -184,8 +186,9 @@ export function OrderDeliveryModal({
                   {/* Inputs */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Cantidad entregada</Label>
+                      <Label className="text-xs" htmlFor={`delivered-qty-${item.itemId}`}>Cantidad entregada</Label>
                       <Input
+                        id={`delivered-qty-${item.itemId}`}
                         type="number"
                         min="0"
                         max={item.orderedQuantity}
@@ -196,13 +199,15 @@ export function OrderDeliveryModal({
                         }
                         className="rounded-xl h-10"
                         disabled={isSubmitting}
+                        data-testid="delivered-quantity-input"
                       />
 
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-xs">Precio final (S/)</Label>
+                      <Label className="text-xs" htmlFor={`final-price-${item.itemId}`}>Precio final (S/)</Label>
                       <Input
+                        id={`final-price-${item.itemId}`}
                         type="number"
                         min="0"
                         step="0.01"
@@ -212,6 +217,7 @@ export function OrderDeliveryModal({
                         }
                         className="rounded-xl h-10"
                         disabled={isSubmitting}
+                        data-testid="final-price-input"
                       />
                     </div>
                   </div>
@@ -219,7 +225,7 @@ export function OrderDeliveryModal({
                   {/* Subtotal */}
                   <div className="flex items-center justify-between py-2 px-3 bg-orange-50 rounded-lg">
                     <span className="text-sm text-muted-foreground">Subtotal</span>
-                    <span className="font-semibold">S/ {subtotal.toFixed(2)}</span>
+                    <span className="font-semibold" data-testid="delivery-item-subtotal">S/ {subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               );
@@ -228,7 +234,7 @@ export function OrderDeliveryModal({
 
           {/* Error Alert */}
           {error && (
-            <Alert variant="destructive" className="rounded-xl">
+            <Alert variant="destructive" className="rounded-xl" data-testid="delivery-error-alert">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -237,7 +243,7 @@ export function OrderDeliveryModal({
           {/* Total */}
           <div className="flex items-center justify-between py-3 px-4 bg-orange-100 rounded-xl">
             <span className="font-medium">Total de la venta</span>
-            <span className="text-xl font-bold">S/ {grandTotal.toFixed(2)}</span>
+            <span className="text-xl font-bold" data-testid="delivery-grand-total">S/ {grandTotal.toFixed(2)}</span>
           </div>
 
           {/* Actions */}
@@ -248,6 +254,7 @@ export function OrderDeliveryModal({
               onClick={handleClose}
               className="flex-1 rounded-xl h-12"
               disabled={isSubmitting}
+              data-testid="delivery-cancel-button"
             >
               Cancelar
             </Button>
@@ -256,6 +263,7 @@ export function OrderDeliveryModal({
               onClick={handleConfirm}
               disabled={!isValid || isSubmitting}
               className="flex-1 rounded-xl h-12 bg-orange-500 hover:bg-orange-600"
+              data-testid="confirm-delivery-button"
             >
               {isSubmitting ? "Procesando..." : "Confirmar entrega"}
             </Button>

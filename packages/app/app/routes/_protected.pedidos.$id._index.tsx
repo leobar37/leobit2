@@ -187,7 +187,7 @@ export default function OrderDetailPage() {
                 <p className="font-semibold">#{order.id.slice(-8)}</p>
               </div>
             </div>
-            <Badge className={status.color} variant="secondary">
+            <Badge className={status.color} variant="secondary" data-testid="order-status-badge">
               <StatusIcon className="h-3 w-3 mr-1" />
               {status.label}
             </Badge>
@@ -204,9 +204,9 @@ export default function OrderDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Cliente</p>
-              <p className="font-semibold">{order.client?.name || "No especificado"}</p>
+              <p className="font-semibold" data-testid="order-customer-name">{order.client?.name || "No especificado"}</p>
               {order.client?.phone && (
-                <p className="text-sm text-muted-foreground">{order.client.phone}</p>
+                <p className="text-sm text-muted-foreground" data-testid="order-customer-phone">{order.client.phone}</p>
               )}
             </div>
           </div>
@@ -219,9 +219,9 @@ export default function OrderDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Fecha de entrega</p>
-              <p className="font-semibold">{formatDate(order.deliveryDate)}</p>
+              <p className="font-semibold" data-testid="order-delivery-date-display">{formatDate(order.deliveryDate)}</p>
               {isToday(order.deliveryDate) && (
-                <Badge className="bg-orange-100 text-orange-700 mt-1">Hoy</Badge>
+                <Badge className="bg-orange-100 text-orange-700 mt-1" data-testid="order-today-badge">Hoy</Badge>
               )}
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function OrderDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Forma de pago</p>
-              <p className="font-semibold">
+              <p className="font-semibold" data-testid="order-payment-display">
                 {order.paymentIntent === "contado" ? "Contado" : "Crédito"}
               </p>
             </div>
@@ -251,24 +251,26 @@ export default function OrderDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="space-y-3">
+          <div className="space-y-3" data-testid="order-items-list">
             {order.items?.map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between py-2 border-b last:border-b-0"
+                data-testid="order-item"
+                data-item-id={item.id}
               >
                 <div>
-                  <p className="font-medium">{item.productName}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium" data-testid="order-item-product-name">{item.productName}</p>
+                  <p className="text-sm text-muted-foreground" data-testid="order-item-variant">
                     {item.variantName} · {item.orderedQuantity} unidades
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">
+                  <p className="font-semibold" data-testid="order-item-subtotal">
                     S/{" "}
                     {(Number(item.orderedQuantity) * Number(item.unitPriceQuoted)).toFixed(2)}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground" data-testid="order-item-unit-price">
                     S/ {Number(item.unitPriceQuoted).toFixed(2)} c/u
                   </p>
                 </div>
@@ -280,7 +282,7 @@ export default function OrderDetailPage() {
 
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Total</span>
-            <span className="text-xl font-bold">S/ {Number(order.totalAmount).toFixed(2)}</span>
+            <span className="text-xl font-bold" data-testid="order-total-amount">S/ {Number(order.totalAmount).toFixed(2)}</span>
           </div>
         </CardContent>
       </Card>
@@ -294,6 +296,7 @@ export default function OrderDetailPage() {
                 <Button
                   onClick={handleConfirm}
                   disabled={confirmOrder.isPending}
+                  data-testid="confirm-order-button"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   {confirmOrder.isPending ? "Confirmando..." : "Confirmar"}
@@ -303,6 +306,7 @@ export default function OrderDetailPage() {
                 <Button
                   onClick={handleDeliverClick}
                   disabled={deliverOrder.isPending}
+                  data-testid="deliver-order-button"
                 >
                   <Truck className="h-4 w-4 mr-2" />
                   {deliverOrder.isPending ? "Procesando..." : "Entregar"}
@@ -313,6 +317,7 @@ export default function OrderDetailPage() {
                   variant="destructive"
                   onClick={handleCancel}
                   disabled={cancelOrder.isPending}
+                  data-testid="cancel-order-button"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   {cancelOrder.isPending ? "Cancelando..." : "Cancelar"}
@@ -325,7 +330,7 @@ export default function OrderDetailPage() {
 
       {/* Sync Status */}
       {order.syncStatus === "pending" && !isOnline() && (
-        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-xl">
+        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-xl" data-testid="order-sync-pending">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
           Este pedido está pendiente de sincronización
         </div>

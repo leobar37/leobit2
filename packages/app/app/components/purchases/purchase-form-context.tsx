@@ -79,12 +79,18 @@ export function usePurchaseForm() {
 interface PurchaseFormProviderProps {
   children: React.ReactNode;
   initialSupplier?: Supplier | null;
+  initialItems?: Array<{
+    productId: string;
+    variantId?: string;
+    quantity: number;
+  }>;
   onSuccess?: () => void;
 }
 
 export function PurchaseFormProvider({
   children,
   initialSupplier = null,
+  initialItems,
   onSuccess,
 }: PurchaseFormProviderProps) {
   const navigate = useNavigate();

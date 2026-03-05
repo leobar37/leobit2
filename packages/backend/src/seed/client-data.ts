@@ -85,3 +85,4 @@ export const SALES: never[] = [];
 export const ABONOS: never[] = [];
 export const DISTRIBUCIONES: never[] = [];
 export const PURCHASES: never[] = [];
+export const ORDERS: never[] = [];
