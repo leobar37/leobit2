@@ -103,7 +103,7 @@ async function getDistribuciones(
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<Distribucion[]>,
+    data as unknown as ApiEnvelope<Distribucion[]>,
     "Failed to fetch distribuciones"
   );
 }
@@ -116,7 +116,7 @@ async function getDistribucion(id: string): Promise<Distribucion> {
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<Distribucion>,
+    data as unknown as ApiEnvelope<Distribucion>,
     "Failed to fetch distribucion"
   );
 }
@@ -131,7 +131,7 @@ async function getMiDistribucion(fecha?: string): Promise<Distribucion | null> {
   }
 
   return unwrapApiResponse(
-    response.data as ApiEnvelope<Distribucion | null>,
+    response.data as unknown as ApiEnvelope<Distribucion | null>,
     "Failed to fetch distribucion"
   );
 }
@@ -146,7 +146,7 @@ async function getStockDisponible(
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<StockDisponibleResult>,
+    data as unknown as ApiEnvelope<StockDisponibleResult>,
     "Failed to fetch stock disponible"
   );
 }
@@ -195,7 +195,7 @@ async function createDistribucion(
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<Distribucion>,
+    data as unknown as ApiEnvelope<Distribucion>,
     "Failed to create distribucion"
   );
 }
@@ -242,7 +242,7 @@ async function updateDistribucion({
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<Distribucion>,
+    data as unknown as ApiEnvelope<Distribucion>,
     "Failed to update distribucion"
   );
 }
@@ -286,7 +286,7 @@ async function closeDistribucion(id: string): Promise<Distribucion> {
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<Distribucion>,
+    data as unknown as ApiEnvelope<Distribucion>,
     "Failed to close distribucion"
   );
 }
@@ -399,7 +399,7 @@ async function getDistribucionItems(distribucionId: string): Promise<Distribucio
   }
 
   return unwrapApiResponse(
-    data as ApiEnvelope<DistribucionItem[]>,
+    data as unknown as ApiEnvelope<DistribucionItem[]>,
     "Failed to fetch distribucion items"
   );
 }

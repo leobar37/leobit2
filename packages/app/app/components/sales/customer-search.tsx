@@ -20,6 +20,7 @@ interface CustomerSearchProps {
 export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerSearchProps) {
   const {
     isOpen,
+    isCreateDrawerOpen,
     search,
     showCreateForm,
     newCustomerName,
@@ -32,6 +33,8 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
     filteredCustomers,
     openDrawer,
     closeDrawer,
+    openCreateDrawer,
+    closeCreateDrawer,
     handleSearchChange,
     handleListScroll,
     handleSelectCustomer,
@@ -191,56 +194,83 @@ export function CustomerSearch({ selectedCustomer, onSelectCustomer }: CustomerS
             {!showCreateForm && (
               <button
                 type="button"
-                onClick={() => setShowCreateForm(true)}
+                onClick={openCreateDrawer}
                 className="absolute bottom-4 right-4 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
                 aria-label="Crear nuevo cliente"
               >
                 <Plus className="h-6 w-6" />
               </button>
             )}
+          </div>
+        </DrawerContent>
+      </Drawer>
 
-            {showCreateForm && (
-              <div className="mt-4 p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                <p className="text-sm font-medium text-orange-800 mb-3">Nuevo cliente</p>
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Nombre *"
-                    value={newCustomerName}
-                    onChange={(e) => setNewCustomerName(e.target.value)}
-                    className="rounded-xl bg-white"
-                    autoFocus
-                  />
-                  <Input
-                    placeholder="Teléfono (opcional)"
-                    value={newCustomerPhone}
-                    onChange={(e) => setNewCustomerPhone(e.target.value)}
-                    className="rounded-xl bg-white"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setShowCreateForm(false);
-                        setNewCustomerName("");
-                        setNewCustomerPhone("");
-                      }}
-                      className="flex-1 rounded-xl"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleCreateCustomer}
-                      disabled={!isValidName || isCreating}
-                      className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
-                    >
-                      {isCreating ? "Guardando..." : "Guardar"}
-                    </Button>
-                  </div>
-                </div>
+      <Drawer
+        open={isCreateDrawerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeCreateDrawer();
+          }
+        }}
+        data-testid="customer-create-drawer"
+      >
+        <DrawerContent className="flex flex-col max-h-[85vh] p-0">
+          <DrawerHeader className="border-b px-4 pb-4 pt-2">
+            <DrawerTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-orange-500" />
+              Nuevo Cliente
+            </DrawerTitle>
+            <DrawerDescription>
+              Crea un nuevo cliente para la venta.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 py-4">
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="new-customer-name" className="text-sm font-medium text-foreground mb-1.5 block">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  id="new-customer-name"
+                  placeholder="Nombre del cliente"
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                  className="rounded-xl"
+                  autoFocus
+                />
               </div>
-            )}
+              <div>
+                <label htmlFor="new-customer-phone" className="text-sm font-medium text-foreground mb-1.5 block">
+                  Teléfono <span className="text-muted-foreground">(opcional)</span>
+                </label>
+                <Input
+                  id="new-customer-phone"
+                  placeholder="Número de teléfono"
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeCreateDrawer}
+                  className="flex-1 rounded-xl"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCreateCustomer}
+                  disabled={!isValidName || isCreating}
+                  className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
+                >
+                  {isCreating ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </div>
           </div>
         </DrawerContent>
       </Drawer>

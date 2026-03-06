@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState, useCallback, type UIEvent } from "react";
 import { useCustomers } from "~/hooks/use-customers-live";
 import { useCreateCustomer } from "~/hooks/use-customers";
+import { useToastError } from "~/hooks/use-toast-error";
 import type { Customer } from "~/lib/db/schema";
 
 export interface UseCustomerSearchOptions {
@@ -9,6 +10,7 @@ export interface UseCustomerSearchOptions {
 
 export interface UseCustomerSearchReturn {
   isOpen: boolean;
+  isCreateDrawerOpen: boolean;
   search: string;
   visibleCount: number;
   showCreateForm: boolean;
@@ -22,6 +24,8 @@ export interface UseCustomerSearchReturn {
   isCreating: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
+  openCreateDrawer: () => void;
+  closeCreateDrawer: () => void;
   handleSearchChange: (value: string) => void;
   handleListScroll: (event: UIEvent<HTMLDivElement>) => void;
   handleSelectCustomer: (customer: Customer) => void;
@@ -37,6 +41,7 @@ export function useCustomerSearch({
   onSelectCustomer,
 }: UseCustomerSearchOptions): UseCustomerSearchReturn {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(50);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -45,6 +50,7 @@ export function useCustomerSearch({
 
   const { data: customers, isLoading } = useCustomers();
   const createCustomer = useCreateCustomer();
+  const { showError, showSuccess } = useToastError();
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
   const filteredCustomers = useMemo(() => {
@@ -76,6 +82,17 @@ export function useCustomerSearch({
     setSearch("");
     setVisibleCount(50);
     setShowCreateForm(false);
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    setIsCreateDrawerOpen(false);
+  }, []);
+
+  const openCreateDrawer = useCallback(() => {
+    setIsCreateDrawerOpen(true);
+  }, []);
+
+  const closeCreateDrawer = useCallback(() => {
+    setIsCreateDrawerOpen(false);
     setNewCustomerName("");
     setNewCustomerPhone("");
   }, []);
@@ -116,15 +133,18 @@ export function useCustomerSearch({
         phone: newCustomerPhone.trim() || undefined,
       });
 
+      showSuccess("Cliente creado correctamente");
       onSelectCustomer(newCustomer as unknown as Customer);
       closeDrawer();
+      closeCreateDrawer();
     } catch (error) {
-      // Error handled by mutation
+      showError("Error al crear cliente", error);
     }
-  }, [newCustomerName, newCustomerPhone, createCustomer, onSelectCustomer, closeDrawer]);
+  }, [newCustomerName, newCustomerPhone, createCustomer, onSelectCustomer, closeDrawer, closeCreateDrawer, showError, showSuccess]);
 
   return {
     isOpen,
+    isCreateDrawerOpen,
     search,
     visibleCount,
     showCreateForm,
@@ -138,6 +158,8 @@ export function useCustomerSearch({
     isCreating: createCustomer.isPending,
     openDrawer,
     closeDrawer,
+    openCreateDrawer,
+    closeCreateDrawer,
     handleSearchChange,
     handleListScroll,
     handleSelectCustomer,
