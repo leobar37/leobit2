@@ -5,6 +5,14 @@ import type { Customer } from "../../lib/db/schema";
 
 import { CustomerSearch } from "./customer-search";
 
+// Mock useCreateCustomer hook
+vi.mock("~/hooks/use-customers", () => ({
+  useCreateCustomer: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+}));
+
 const now = new Date("2026-02-26T00:00:00.000Z");
 
 function buildCustomer(partial: Partial<Customer> & Pick<Customer, "id" | "name">): Customer {
