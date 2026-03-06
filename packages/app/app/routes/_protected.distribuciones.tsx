@@ -60,7 +60,7 @@ export default function DistribucionesPage() {
   const deleteMutation = useDeleteDistribucion();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const distribuciones = Array.isArray(distribucionesData) ? distribucionesData : [];
+  const distribuciones = distribucionesData ?? [];
   const totalAsignado = distribuciones.reduce(
     (sum, d) => sum + (d.kilosAsignados || 0),
     0

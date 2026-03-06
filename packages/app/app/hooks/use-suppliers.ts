@@ -122,7 +122,15 @@ export function useCreateSupplier() {
 
   return useMutation({
     mutationFn: createSupplier,
-    onSuccess: () => {
+    onSuccess: (newSupplier) => {
+      // Optimistically add the new supplier to the cache immediately
+      queryClient.setQueryData<Supplier[]>(["suppliers"], (old = []) => {
+        // Avoid duplicates if the supplier is already in the cache
+        const exists = old.some((s) => s.id === newSupplier.id);
+        if (exists) return old;
+        return [...old, newSupplier];
+      });
+      // Then invalidate to ensure consistency with server
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     },
   });

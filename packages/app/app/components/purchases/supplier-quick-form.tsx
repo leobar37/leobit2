@@ -3,6 +3,7 @@ import { Building2, Loader2, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ export function SupplierQuickForm({
   onCancel,
 }: SupplierQuickFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const { mutate: createSupplier, isPending } = useCreateSupplier();
 
   const form = useForm<QuickSupplierFormData>({
@@ -57,10 +59,12 @@ export function SupplierQuickForm({
     onCancel?.();
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(async (data) => {
     setError(null);
     createSupplier(data, {
-      onSuccess: (supplier) => {
+      onSuccess: async (supplier) => {
+        // Wait for the cache to be updated before notifying parent
+        await queryClient.invalidateQueries({ queryKey: ["suppliers"] });
         onSuccess(supplier);
         handleClose();
       },

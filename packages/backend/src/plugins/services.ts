@@ -74,6 +74,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       saleRepo,
       paymentRepo,
       distribucionRepo,
+      distribucionService,
       orderRepo,
     });
     const assetService = new AssetService(assetRepo);

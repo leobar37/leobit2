@@ -3,6 +3,12 @@ import { api } from "~/lib/api-client";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
+interface ApiEnvelope<T> {
+  success?: boolean;
+  data?: T;
+  error?: string;
+}
+
 export interface DistribucionItem {
   id: string;
   distribucionId: string;
@@ -74,6 +80,17 @@ export interface StockDisponibleResult {
   vendido: number;
 }
 
+function unwrapApiResponse<T>(
+  response: ApiEnvelope<T> | undefined,
+  fallbackMessage: string
+): T {
+  if (!response?.success) {
+    throw new Error(response?.error || fallbackMessage);
+  }
+
+  return response.data as T;
+}
+
 async function getDistribuciones(
   filters?: DistribucionFilters
 ): Promise<Distribucion[]> {
@@ -85,7 +102,10 @@ async function getDistribuciones(
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Distribucion[];
+  return unwrapApiResponse(
+    data as ApiEnvelope<Distribucion[]>,
+    "Failed to fetch distribuciones"
+  );
 }
 
 async function getDistribucion(id: string): Promise<Distribucion> {
@@ -95,7 +115,10 @@ async function getDistribucion(id: string): Promise<Distribucion> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Distribucion;
+  return unwrapApiResponse(
+    data as ApiEnvelope<Distribucion>,
+    "Failed to fetch distribucion"
+  );
 }
 
 async function getMiDistribucion(fecha?: string): Promise<Distribucion | null> {
@@ -107,14 +130,10 @@ async function getMiDistribucion(fecha?: string): Promise<Distribucion | null> {
     throw new Error(String(response.error.value));
   }
 
-  // Eden Treaty returns { data: { success: boolean; data: T | null } }
-  // We need to access response.data.data to get the actual value
-  const apiResponse = response.data;
-  if (!apiResponse?.success) {
-    throw new Error(apiResponse?.error || "Failed to fetch distribucion");
-  }
-
-  return apiResponse.data as Distribucion | null;
+  return unwrapApiResponse(
+    response.data as ApiEnvelope<Distribucion | null>,
+    "Failed to fetch distribucion"
+  );
 }
 
 async function getStockDisponible(
@@ -126,7 +145,10 @@ async function getStockDisponible(
     throw new Error(String(error.value));
   }
 
-  return data as unknown as StockDisponibleResult;
+  return unwrapApiResponse(
+    data as ApiEnvelope<StockDisponibleResult>,
+    "Failed to fetch stock disponible"
+  );
 }
 
 async function createDistribucion(
@@ -172,7 +194,10 @@ async function createDistribucion(
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Distribucion;
+  return unwrapApiResponse(
+    data as ApiEnvelope<Distribucion>,
+    "Failed to create distribucion"
+  );
 }
 
 async function updateDistribucion({
@@ -216,7 +241,10 @@ async function updateDistribucion({
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Distribucion;
+  return unwrapApiResponse(
+    data as ApiEnvelope<Distribucion>,
+    "Failed to update distribucion"
+  );
 }
 
 async function closeDistribucion(id: string): Promise<Distribucion> {
@@ -257,7 +285,10 @@ async function closeDistribucion(id: string): Promise<Distribucion> {
     throw new Error(String(error.value));
   }
 
-  return data as unknown as Distribucion;
+  return unwrapApiResponse(
+    data as ApiEnvelope<Distribucion>,
+    "Failed to close distribucion"
+  );
 }
 
 async function deleteDistribucion(id: string): Promise<void> {
@@ -298,7 +329,7 @@ export function useMiDistribucion(fecha?: string) {
   return useQuery({
     queryKey: ["distribuciones", "mine", fecha],
     queryFn: () => getMiDistribucion(fecha),
-    staleTime: 0,  // Siempre refetch
+    staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
@@ -367,7 +398,10 @@ async function getDistribucionItems(distribucionId: string): Promise<Distribucio
     throw new Error(String(error.value));
   }
 
-  return data as unknown as DistribucionItem[];
+  return unwrapApiResponse(
+    data as ApiEnvelope<DistribucionItem[]>,
+    "Failed to fetch distribucion items"
+  );
 }
 
 export function useDistribucionItems(distribucionId: string) {

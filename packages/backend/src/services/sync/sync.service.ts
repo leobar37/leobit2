@@ -7,6 +7,7 @@ import type { SaleRepository } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { OrderRepository } from "../repository/order.repository";
+import type { DistribucionService } from "../business/distribucion.service";
 import { toISODate, now, getToday } from "../../lib/date-utils";
 
 export type SyncEntity =
@@ -50,6 +51,7 @@ interface SyncServiceDeps {
   saleRepo: SaleRepository;
   paymentRepo: PaymentRepository;
   distribucionRepo: DistribucionRepository;
+  distribucionService: DistribucionService;
   orderRepo: OrderRepository;
 }
 
@@ -75,13 +77,14 @@ type ParsedSaleInsert = {
 type ParsedDistribucionInsert = {
   vendedorId: string;
   puntoVenta: string;
-  kilosAsignados: string;
-  kilosVendidos: string;
-  montoRecaudado: string;
-  fecha: string;
-  estado: "activo" | "cerrado" | "en_ruta";
-  syncStatus: "pending" | "synced" | "error";
-  syncAttempts: number;
+  fecha?: string;
+  modo?: "estricto" | "acumulativo" | "libre";
+  confiarEnVendedor?: boolean;
+  items: Array<{
+    variantId: string;
+    cantidadAsignada: number;
+    unidad: string;
+  }>;
 };
 
 type ParsedOrderInsert = {
@@ -171,7 +174,7 @@ export class SyncService {
         results.push({
           operationId: operation.operationId,
           success: true,
-            serverTimestamp: toISODate(processedAt),
+          serverTimestamp: toISODate(processedAt),
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
@@ -409,7 +412,7 @@ export class SyncService {
 
     if (operation.action === "insert") {
       const parsed = this.parseDistribucionInsert(payload);
-      await this.deps.distribucionRepo.create(ctx, parsed);
+      await this.deps.distribucionService.createDistribucion(ctx, parsed);
       return;
     }
 
@@ -570,17 +573,40 @@ export class SyncService {
   private parseDistribucionInsert(
     payload: Record<string, unknown>
   ): ParsedDistribucionInsert {
+    const rawItems = Array.isArray(payload.items) ? payload.items : [];
+
+    if (rawItems.length === 0) {
+      throw new ValidationError("La distribución requiere items");
+    }
+
+    const items = rawItems.map((item, index) => {
+      if (!item || typeof item !== "object") {
+        throw new ValidationError(`Item inválido en posición ${index}`);
+      }
+
+      const safe = item as Record<string, unknown>;
+      return {
+        variantId: this.requiredString(safe.variantId, "variantId"),
+        cantidadAsignada: Number(
+          this.requiredNumericString(safe.cantidadAsignada, "cantidadAsignada")
+        ),
+        unidad: this.requiredString(safe.unidad, "unidad"),
+      };
+    });
+
     return {
       vendedorId: this.requiredString(payload.vendedorId, "vendedorId"),
       puntoVenta: this.requiredString(payload.puntoVenta, "puntoVenta"),
-      kilosAsignados: this.requiredNumericString(payload.kilosAsignados, "kilosAsignados"),
-      kilosVendidos: this.optionalNumericString(payload.kilosVendidos) ?? "0",
-      montoRecaudado: this.optionalNumericString(payload.montoRecaudado) ?? "0",
-      fecha:
-        this.optionalString(payload.fecha) ?? new Date().toISOString().split("T")[0],
-      estado: this.optionalDistribucionStatus(payload.estado) ?? "activo",
-      syncStatus: "pending",
-      syncAttempts: 0,
+      fecha: this.optionalString(payload.fecha) ?? getToday(),
+      modo:
+        payload.modo !== undefined
+          ? this.requiredDistribucionMode(payload.modo)
+          : undefined,
+      confiarEnVendedor:
+        payload.confiarEnVendedor !== undefined
+          ? this.requiredBoolean(payload.confiarEnVendedor, "confiarEnVendedor")
+          : undefined,
+      items,
     };
   }
 
@@ -677,13 +703,18 @@ export class SyncService {
     throw new ValidationError("estado inválido");
   }
 
-  private optionalDistribucionStatus(
+  private requiredDistribucionMode(
     value: unknown
-  ): "activo" | "cerrado" | "en_ruta" | undefined {
-    if (value === undefined) {
-      return undefined;
+  ): "estricto" | "acumulativo" | "libre" {
+    if (
+      value === "estricto" ||
+      value === "acumulativo" ||
+      value === "libre"
+    ) {
+      return value;
     }
-    return this.requiredDistribucionStatus(value);
+
+    throw new ValidationError("modo inválido");
   }
 
   private requiredString(value: unknown, field: string): string {
@@ -704,6 +735,14 @@ export class SyncService {
     }
 
     return undefined;
+  }
+
+  private requiredBoolean(value: unknown, field: string): boolean {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    throw new ValidationError(`${field} inválido`);
   }
 
   private requiredNumericString(value: unknown, field: string): string {
