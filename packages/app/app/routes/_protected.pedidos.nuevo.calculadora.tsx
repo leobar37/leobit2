@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { formatWeight } from "~/lib/utils";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Package } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -100,7 +101,7 @@ export default function OrderCalculadoraPage() {
                 <div className="flex items-center justify-between px-3 py-2 bg-orange-50 rounded-xl">
                   <span className="text-sm text-orange-700">Kilos netos:</span>
                   <span className="font-semibold text-orange-700" data-testid="kg-neto-display">
-                    {calculator.kgNeto.toFixed(3)} kg
+                    {formatWeight(calculator.kgNeto)} kg
                   </span>
                 </div>
 

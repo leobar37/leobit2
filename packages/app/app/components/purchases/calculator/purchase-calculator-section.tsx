@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { VariantSelector } from "~/components/sales/variant-selector";
 import { usePurchaseCalculator } from "~/hooks/use-purchase-calculator";
 import { usePurchaseStore } from "~/stores/purchase.store";
+import { formatCurrency } from "~/lib/utils";
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 
@@ -237,8 +238,8 @@ export function PurchaseCalculatorContent({ onAddedToCart }: PurchaseCalculatorC
               <div className="p-3 bg-orange-50 rounded-xl">
                 <p className="text-sm text-orange-600 font-medium">
                   Cantidad: {calculation.quantity} | Costo: S/{" "}
-                  {calculation.unitCost.toFixed(2)} | Total: S/{" "}
-                  {calculation.subtotal.toFixed(2)}
+                  {formatCurrency(calculation.unitCost)} | Total: S/{" "}
+                  {formatCurrency(calculation.subtotal)}
                 </p>
               </div>
             )}
@@ -510,8 +511,8 @@ export function PurchaseCalculatorSection() {
               <div className="p-3 bg-orange-50 rounded-xl">
                 <p className="text-sm text-orange-600 font-medium">
                   Cantidad: {calculation.quantity} | Costo: S/{" "}
-                  {calculation.unitCost.toFixed(2)} | Total: S/{" "}
-                  {calculation.subtotal.toFixed(2)}
+                  {formatCurrency(calculation.unitCost)} | Total: S/{" "}
+                  {formatCurrency(calculation.subtotal)}
                 </p>
               </div>
             )}

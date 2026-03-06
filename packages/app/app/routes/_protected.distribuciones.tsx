@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { formatKilos } from "~/lib/utils";
 import { Plus, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,13 +168,13 @@ export default function DistribucionesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-orange-50 rounded-xl">
                 <span className="text-xl font-bold text-orange-600">
-                  {totalAsignado.toFixed(0)}
+                  {formatKilos(totalAsignado, 0)}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">Asignado (kg)</p>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-xl">
                 <span className="text-xl font-bold text-green-600">
-                  {totalVendido.toFixed(0)}
+                  {formatKilos(totalVendido, 0)}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">Vendido (kg)</p>
               </div>

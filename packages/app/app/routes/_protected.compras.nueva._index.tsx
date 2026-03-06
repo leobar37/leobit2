@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "~/lib/utils";
 import { useNavigate } from "react-router";
 import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,7 @@ export default function NuevaCompraIndexPage() {
         <>
           <div className="flex items-center justify-between px-1 pb-2">
             <span className="text-sm text-muted-foreground">Total:</span>
-            <span className="text-lg font-bold">S/ {totalAmount.toFixed(2)}</span>
+            <span className="text-lg font-bold">S/ {formatCurrency(totalAmount)}</span>
           </div>
           <Button
             onClick={onSubmit}

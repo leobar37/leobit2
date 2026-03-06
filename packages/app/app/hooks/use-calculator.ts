@@ -29,6 +29,7 @@ const kgCalculatorSchema = z.object({
 
 const unitCalculatorSchema = z.object({
 	totalAmount: z.string(),
+	pricePerPack: z.string(),
 	packs: z.string(),
 	units: z.string(),
 });
@@ -76,6 +77,7 @@ type KgFieldTimestamps = {
 
 type UnitFieldTimestamps = {
 	totalAmount: number;
+	pricePerPack: number;
 	packs: number;
 	units: number;
 };
@@ -102,7 +104,7 @@ export function useCalculator(
 		),
 		defaultValues: isKgProduct
 			? getKgDefaultValues(defaultPrice)
-			: getUnitDefaultValues(),
+			: getUnitDefaultValues(defaultPrice),
 	});
 
 	// Watch all form values for calculations
@@ -121,6 +123,7 @@ export function useCalculator(
 
 	const unitFieldTimestamps = useRef<UnitFieldTimestamps>({
 		totalAmount: 0,
+		pricePerPack: 0,
 		packs: 0,
 		units: 0,
 	});
@@ -137,7 +140,7 @@ export function useCalculator(
 		if (isKgProduct) {
 			form.reset(getKgDefaultValues(defaultPrice));
 		} else {
-			form.reset(getUnitDefaultValues());
+			form.reset(getUnitDefaultValues(defaultPrice));
 		}
 		
 		// Reset timestamps on product change
@@ -149,6 +152,7 @@ export function useCalculator(
 		};
 		unitFieldTimestamps.current = {
 			totalAmount: 0,
+			pricePerPack: 0,
 			packs: 0,
 			units: 0,
 		};
@@ -198,6 +202,7 @@ export function useCalculator(
 		};
 		unitFieldTimestamps.current = {
 			totalAmount: 0,
+			pricePerPack: 0,
 			packs: 0,
 			units: 0,
 		};
@@ -214,6 +219,7 @@ export function useCalculator(
 		} else {
 			form.reset({
 				totalAmount: "",
+				pricePerPack: currentDefaultPrice,
 				packs: "",
 				units: "",
 			});

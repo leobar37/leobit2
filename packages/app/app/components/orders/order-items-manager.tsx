@@ -2,6 +2,7 @@ import { Plus, Trash2, Package } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatCurrency, formatWeight } from "~/lib/utils";
 import { useOrderFormContext } from "./order-form-context";
 
 export function OrderItemsManager() {
@@ -40,12 +41,12 @@ export function OrderItemsManager() {
                   <div>
                     <p className="font-medium" data-testid="order-item-product-name">{item.productName}</p>
                     <p className="text-sm text-muted-foreground" data-testid="order-item-variant-info">
-                      {item.variantName} · {item.orderedQuantity.toFixed(3)} unidades
+                      {item.variantName} · {formatWeight(item.orderedQuantity)} unidades
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold" data-testid="order-item-total">
-                      S/ {(item.orderedQuantity * item.unitPriceQuoted).toFixed(2)}
+                      S/ {formatCurrency(item.orderedQuantity * item.unitPriceQuoted)}
                     </span>
                     <Button
                       type="button"

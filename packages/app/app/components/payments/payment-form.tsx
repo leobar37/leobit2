@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { FormInput } from "@/components/forms/form-input";
 import { FormNumberInput } from "@/components/forms/form-number-input";
+import { formatCurrency } from "~/lib/utils";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useFileUpload } from "~/hooks/use-file-upload";
@@ -123,7 +124,7 @@ export function PaymentForm({ clientId, onClose, maxAmount }: PaymentFormProps) 
               return amount <= maxAmount;
             },
             {
-              message: `El monto no puede exceder S/ ${maxAmount?.toFixed(2)}`,
+              message: `El monto no puede exceder S/ ${formatCurrency(maxAmount)}`,
               path: ["amount"],
             }
           )

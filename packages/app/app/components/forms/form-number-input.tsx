@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "~/lib/utils";
 import {
   NumericInput,
   type NumericInputProps,
@@ -39,7 +40,7 @@ const FormNumberInput = forwardRef<HTMLInputElement, FormNumberInputProps>(
   ) => {
     const fieldDescription =
       maxAmount !== undefined
-        ? `Máximo: S/ ${maxAmount.toFixed(2)}`
+        ? `Máximo: S/ ${formatCurrency(maxAmount)}`
         : description;
 
     return (

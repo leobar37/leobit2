@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Wallet } from "lucide-react";
-import { cn } from "~/lib/utils";
+import { cn, formatCurrency } from "~/lib/utils";
 
 interface BalanceCardProps {
   balance: number;
@@ -24,7 +24,7 @@ function getBalanceConfig(balance: number): BalanceConfig {
       status: "positive",
       gradient: "bg-gradient-to-br from-red-500 to-red-600",
       label: "Deuda total",
-      amountText: `S/ ${balance.toFixed(2)}`,
+      amountText: `S/ ${formatCurrency(balance)}`,
       showPaymentButton: true,
     };
   }
@@ -34,7 +34,7 @@ function getBalanceConfig(balance: number): BalanceConfig {
       status: "negative",
       gradient: "bg-gradient-to-br from-blue-500 to-blue-600",
       label: "Saldo a favor",
-      amountText: `S/ ${Math.abs(balance).toFixed(2)}`,
+      amountText: `S/ ${formatCurrency(Math.abs(balance))}`,
       showPaymentButton: false,
     };
   }

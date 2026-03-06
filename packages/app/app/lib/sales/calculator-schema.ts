@@ -15,6 +15,7 @@ export const kgCalculatorSchema = z.object({
  */
 export const unitCalculatorSchema = z.object({
 	totalAmount: z.string().default(""),
+	pricePerPack: z.string().default(""),
 	packs: z.string().default(""),
 	units: z.string().default(""),
 });

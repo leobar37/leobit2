@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "~/lib/utils";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import {
@@ -172,7 +173,7 @@ export default function CierreDiaPage() {
               </div>
               <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-orange-100 text-xs">Kilos</p>
-                <p className="text-xl font-semibold">{totalKilos.toFixed(2)} kg</p>
+                <p className="text-xl font-semibold">{formatCurrency(totalKilos)} kg</p>
               </div>
             </div>
           </CardContent>
@@ -201,10 +202,9 @@ export default function CierreDiaPage() {
               </div>
               <p className="font-bold text-lg">
                 S/{" "}
-                {selectedSales
+                {formatCurrency(selectedSales
                   .filter((s) => s.saleType === "contado")
-                  .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0)
-                  .toFixed(2)}
+                  .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0))}
               </p>
             </div>
 
@@ -223,10 +223,9 @@ export default function CierreDiaPage() {
               </div>
               <p className="font-bold text-lg">
                 S/{" "}
-                {selectedSales
+                {formatCurrency(selectedSales
                   .filter((s) => s.saleType === "credito")
-                  .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0)
-                  .toFixed(2)}
+                  .reduce((sum, s) => sum + parseFloat(s.totalAmount), 0))}
               </p>
             </div>
           </CardContent>
@@ -263,7 +262,7 @@ export default function CierreDiaPage() {
                       </p>
                     </div>
                     <p className="font-semibold">
-                      S/ {parseFloat(sale.totalAmount).toFixed(2)}
+                      S/ {formatCurrency(sale.totalAmount)}
                     </p>
                   </div>
                 ))}

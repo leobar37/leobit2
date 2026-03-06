@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import type { UnitCalculatorFormData } from "~/lib/sales/calculator-schema";
 import { parseNumber } from "~/lib/sales/calculator-schema";
+import { formatCurrency } from "~/lib/utils";
 
 interface UnitCalculatorFormProps {
 	variant: ProductVariant | undefined;
@@ -14,10 +15,14 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 	const { watch, setValue } = useFormContext<UnitCalculatorFormData>();
 
 	// Watch all form values to display calculated values
+	const pricePerPackValue = watch("pricePerPack");
 	const packsValue = watch("packs");
 	const unitsValue = watch("units");
 	const totalAmountValue = watch("totalAmount");
 
+	const pricePerPack = pricePerPackValue 
+		? parseNumber(pricePerPackValue) 
+		: parseNumber(variant?.price || "0");
 	const packs = parseNumber(packsValue);
 	const hasPacks = packs > 0;
 
@@ -25,16 +30,25 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 	const variantPrice = parseNumber(variant?.price || "0");
 	const totalUnits = hasPacks ? packs * unitQuantity : 0;
 
-	const pricePerUnit = unitQuantity > 0 ? variantPrice / unitQuantity : 0;
+	// Use pricePerPack from form if entered, otherwise fall back to variant price
+	const effectivePricePerPack = parseNumber(pricePerPackValue) > 0 
+		? parseNumber(pricePerPackValue) 
+		: variantPrice;
+	
+	const pricePerUnit = unitQuantity > 0 ? effectivePricePerPack / unitQuantity : 0;
 
 	const packsHelperText = variant?.unitQuantity 
 		? `${variant.unitQuantity} unidades por pack` 
 		: undefined;
 
+	const pricePerPackHelperText = variant?.price
+		? `Precio base: S/ ${variant.price}`
+		: undefined;
+
 	const unitsHelperText = hasPacks 
 		? "Auto-calculado desde packs" 
 		: pricePerUnit > 0 
-			? `S/ ${pricePerUnit.toFixed(2)} / un`
+			? `S/ ${formatCurrency(pricePerUnit)} / un`
 			: undefined;
 
 	const handleChange = (field: string, value: string) => {
@@ -47,6 +61,16 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 
 	return (
 		<>
+			<FormCalculatorInput
+				name="pricePerPack"
+				label="Precio pack (S/)"
+				placeholder={variant?.price || "0.00"}
+				data-testid="calculator-price-per-pack"
+				helperText={pricePerPackHelperText}
+				decimals={2}
+				value={pricePerPackValue || variant?.price || ""}
+				onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("pricePerPack", e.target.value)}
+			/>
 			<FormCalculatorInput
 				name="packs"
 				label="Packs"

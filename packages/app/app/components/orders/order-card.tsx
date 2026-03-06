@@ -1,4 +1,5 @@
 import { ClipboardList, Calendar, User, CheckCircle, XCircle, Truck } from "lucide-react";
+import { formatCurrency } from "~/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "~/lib/db/schema";
@@ -97,7 +98,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
                   </Badge>
                 )}
                 <span className="font-semibold text-lg" data-testid="order-card-total">
-                  S/ {Number(order.totalAmount).toFixed(2)}
+                  S/ {formatCurrency(order.totalAmount)}
                 </span>
               </div>
             </div>

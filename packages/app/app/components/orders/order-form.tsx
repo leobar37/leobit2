@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { formatCurrency } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
 import { OrderCustomerField } from "./order-customer-field";
@@ -36,7 +37,7 @@ function OrderFormContent() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-orange-100">Total del pedido</span>
-            <span className="text-2xl font-bold">S/ {orderForm.totalAmount.toFixed(2)}</span>
+            <span className="text-2xl font-bold">S/ {formatCurrency(orderForm.totalAmount)}</span>
           </div>
         </CardContent>
       </Card>

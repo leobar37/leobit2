@@ -1,4 +1,5 @@
 import { Calculator, RotateCcw, DollarSign, Weight, Package } from "lucide-react";
+import { formatWeight } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormCalculatorInput } from "@/components/forms/form-calculator-input";
@@ -83,7 +84,7 @@ export function ChickenCalculator({
 							<div className="text-center">
 								<p className="text-xs text-gray-500 uppercase">Neto</p>
 								<p className="text-lg font-bold text-orange-600">
-									{kgNeto.toFixed(3)} kg
+									{formatWeight(kgNeto)} kg
 								</p>
 							</div>
 							<div className="text-center">

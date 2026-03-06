@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -184,7 +185,7 @@ export function CreateDistribucionForm({
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Asignado:</span>
             <span className="text-xl font-bold text-orange-600">
-              {totalKilos.toFixed(2)} kg
+              {formatKilos(totalKilos, 2)} kg
             </span>
           </div>
         </div>

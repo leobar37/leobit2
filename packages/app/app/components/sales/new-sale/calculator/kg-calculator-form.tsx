@@ -3,6 +3,7 @@ import { FormCalculatorInput } from "@/components/forms/form-calculator-input";
 import type { KgCalculatorFormData } from "~/lib/sales/calculator-schema";
 import { OCRButton } from "./ocr-button";
 import type { OCRResult } from "~/hooks/use-ocr-calculator";
+import { formatWeight } from "~/lib/utils";
 
 interface KgCalculatorFormProps {
 	kgNeto: number;
@@ -87,7 +88,7 @@ export function KgCalculatorForm({ kgNeto, variantPrice, hideTara = false, setFi
 					<div className="text-center">
 						<p className="text-xs text-gray-500 uppercase">Neto</p>
 						<p className="text-lg font-bold text-orange-600" data-testid="calculator-net-weight">
-							{kgNeto.toFixed(3)} kg
+							{formatWeight(kgNeto)} kg
 						</p>
 					</div>
 				</div>

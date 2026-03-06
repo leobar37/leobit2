@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Package, ShoppingCart, AlertCircle } from "lucide-react";
+import { formatKilos } from "~/lib/utils";
 import { useMissingInventory } from "~/hooks/use-missing-inventory";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +69,7 @@ export default function ComprasSugeridasPage() {
                   {isLoading ? (
                     <span className="inline-block h-8 w-16 bg-muted animate-pulse rounded" />
                   ) : (
-                    `${totalNeeded.toFixed(2)}`
+                    `${formatKilos(totalNeeded, 2)}`
                   )}
                 </p>
                 <p className="text-sm text-muted-foreground">Total necesario</p>
@@ -115,18 +116,18 @@ export default function ComprasSugeridasPage() {
                       )}
                     </div>
                     <Badge variant="destructive" className="bg-orange-500">
-                      Falta: {parseFloat(item.needed).toFixed(2)}
+                       Falta: {formatKilos(item.needed, 2)}
                     </Badge>
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
                     <div className="bg-muted rounded-lg p-2">
                       <p className="text-muted-foreground">Vendido</p>
-                      <p className="font-medium">{parseFloat(item.totalSold).toFixed(2)}</p>
+                      <p className="font-medium">{formatKilos(item.totalSold, 2)}</p>
                     </div>
                     <div className="bg-muted rounded-lg p-2">
                       <p className="text-muted-foreground">En Stock</p>
-                      <p className="font-medium">{parseFloat(item.currentStock).toFixed(2)}</p>
+                      <p className="font-medium">{formatKilos(item.currentStock, 2)}</p>
                     </div>
                   </div>
                 </CardContent>

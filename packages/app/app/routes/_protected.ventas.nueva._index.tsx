@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router";
+import { formatCurrency } from "~/lib/utils";
 import { ArrowLeft, Calculator, Plus, ShoppingCart } from "lucide-react";
 import {
   CartSection,
@@ -22,7 +23,7 @@ function HeaderTotal() {
   return (
     <div className="flex items-center gap-2 bg-orange-500 text-white px-3 py-1.5 rounded-full">
       <ShoppingCart className="h-4 w-4" />
-      <span className="font-semibold text-sm">S/ {totalAmount.toFixed(2)}</span>
+      <span className="font-semibold text-sm">S/ {formatCurrency(totalAmount)}</span>
     </div>
   );
 }

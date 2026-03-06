@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
+import { formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
@@ -96,7 +97,7 @@ export function ProductVariantSelector({
               <option key={variant.id} value={variant.id}>
                 {variant.name}
                 {variant.inventory
-                  ? ` (Stock: ${parseFloat(variant.inventory.quantity).toFixed(1)} kg)`
+                  ? ` (Stock: ${formatKilos(variant.inventory.quantity, 1)} kg)`
                   : ""}
               </option>
             ))}
@@ -128,7 +129,7 @@ export function ProductVariantSelector({
           {selectedVariant?.inventory && (
             <p className="text-xs text-muted-foreground">
               Disponible:{" "}
-              {parseFloat(selectedVariant.inventory.quantity).toFixed(1)} kg
+              {formatKilos(selectedVariant.inventory.quantity, 1)} kg
             </p>
           )}
         </div>
