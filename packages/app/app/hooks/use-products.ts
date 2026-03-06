@@ -10,6 +10,7 @@ export interface Product {
   isActive: boolean;
   imageId: string | null;
   createdAt: Date;
+  hasVariants?: boolean;
 }
 
 export interface CreateProductInput {
@@ -28,6 +29,7 @@ export interface UpdateProductInput {
   basePrice?: string;
   isActive?: boolean;
   imageId?: string;
+  syncPriceToVariants?: boolean;
 }
 
 async function getProducts(): Promise<Product[]> {
@@ -64,7 +66,10 @@ async function updateProduct({
   id,
   ...input
 }: UpdateProductInput & { id: string }): Promise<Product> {
-  const { data, error } = await api.products({ id }).put(input);
+  const { data, error } = await api.products({ id }).put({
+    ...input,
+    syncPriceToVariants: input.syncPriceToVariants,
+  });
 
   if (error) {
     throw new Error(String(error.value));

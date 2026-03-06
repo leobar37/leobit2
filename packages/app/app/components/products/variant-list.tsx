@@ -9,6 +9,7 @@ interface VariantListProps {
   onEdit?: (variant: ProductVariant) => void;
   onDelete?: (variantId: string) => void;
   onAdd?: () => void;
+  onReorder?: (variantIds: string[]) => void;
   isLoading?: boolean;
 }
 
