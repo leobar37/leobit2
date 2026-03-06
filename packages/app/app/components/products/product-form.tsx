@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, DollarSign } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Package, DollarSign, Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
 import type { Product } from "~/lib/db/schema";
 
@@ -16,6 +17,7 @@ const productSchema = z.object({
   basePrice: z.string().min(1, "El precio es requerido"),
   isActive: z.boolean(),
   imageId: z.string().optional(),
+  syncPriceToVariants: z.boolean().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -25,9 +27,11 @@ interface ProductFormProps {
   onCancel?: () => void;
   isLoading?: boolean;
   product?: Product;
+  hasVariants?: boolean;
+  variantCount?: number;
 }
 
-export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductFormProps) {
+export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariants, variantCount }: ProductFormProps) {
   const isEditing = !!product;
 
   const {
@@ -47,6 +51,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
           basePrice: product.basePrice,
           isActive: product.isActive,
           imageId: product.imageId ?? undefined,
+          syncPriceToVariants: false,
         }
       : undefined,
     defaultValues: {
@@ -56,6 +61,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
       basePrice: "",
       isActive: true,
       imageId: undefined,
+      syncPriceToVariants: false,
     },
   });
 
@@ -127,6 +133,16 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
           )}
         </div>
 
+        {hasVariants && (
+          <Alert className="bg-orange-50 border-orange-200">
+            <Info className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              Este producto tiene {variantCount} {variantCount === 1 ? "variante" : "variantes"} con precios propios.
+              El precio base solo se usa como referencia.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="basePrice" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
@@ -142,6 +158,22 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product }: ProductF
             <p className="text-sm text-red-500">{errors.basePrice.message}</p>
           )}
         </div>
+
+        {hasVariants && (
+          <div className="space-y-2">
+            <Label htmlFor="syncPriceToVariants" className="flex items-center gap-2 cursor-pointer">
+              <input
+                id="syncPriceToVariants"
+                type="checkbox"
+                {...register("syncPriceToVariants")}
+                className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+              />
+              <span className="text-sm">
+                Sincronizar este precio con todas las variantes activas
+              </span>
+            </Label>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">

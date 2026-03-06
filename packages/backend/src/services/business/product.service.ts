@@ -105,6 +105,7 @@ export class ProductService {
       basePrice?: number;
       isActive?: boolean;
       imageId?: string | null;
+      syncPriceToVariants?: boolean;
     }
   ): Promise<Product> {
     if (!ctx.hasPermission("products.manage")) {
@@ -135,6 +136,16 @@ export class ProductService {
 
     if (!updated) {
       throw new NotFoundError("Producto");
+    }
+
+    // Sync basePrice to all active variants if requested
+    if (data.basePrice !== undefined && data.syncPriceToVariants && existing.hasVariants) {
+      const variants = await this.variantRepo.findByProduct(ctx, id, { includeInactive: false });
+      for (const variant of variants) {
+        await this.variantRepo.update(ctx, variant.id, {
+          price: data.basePrice.toString(),
+        });
+      }
     }
 
     return updated;

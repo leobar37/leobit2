@@ -246,6 +246,8 @@ export default function ProductDetailPage() {
           onSubmit={handleSubmit}
           onCancel={() => navigate("/productos")}
           isLoading={updateProduct.isPending}
+          hasVariants={product.hasVariants || (variants && variants.length > 0)}
+          variantCount={variants?.length || 0}
         />
 
         <VariantList

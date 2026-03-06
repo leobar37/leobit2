@@ -67,6 +67,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
       const product = await productService.updateProduct(ctx as RequestContext, params.id, {
         ...body,
         basePrice: body.basePrice ? parseFloat(body.basePrice) : undefined,
+        syncPriceToVariants: body.syncPriceToVariants,
       });
       return { success: true, data: product };
     },
@@ -81,6 +82,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         basePrice: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
         imageId: t.Optional(t.Union([t.String(), t.Null()])),
+        syncPriceToVariants: t.Optional(t.Boolean()),
       }),
     }
   )
