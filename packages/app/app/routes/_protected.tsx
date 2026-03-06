@@ -12,6 +12,8 @@ function OutletWithLog() {
   return <Outlet />;
 }
 
+
+
 export default function ProtectedLayout() {
   const { user, isLoading } = useAuth();
   const location = useLocation();

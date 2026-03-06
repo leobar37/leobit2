@@ -34,3 +34,17 @@ export const authClient = createAuthClient({
 });
 
 export const { signIn, signUp, signOut, useSession, changePassword } = authClient;
+
+/**
+ * Refresh the current session to extend its lifetime.
+ * Call this periodically (e.g., every 30 minutes) to keep the session alive
+ * while the user is active.
+ */
+export async function refreshSession() {
+  const result = await authClient.getSession();
+  if (result.error) {
+    localStorage.removeItem("bearer_token");
+    return null;
+  }
+  return result.data;
+}
