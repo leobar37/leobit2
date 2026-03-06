@@ -16,6 +16,7 @@ import { useSale } from "~/hooks/use-sales";
 import { useCustomers } from "~/hooks/use-customers-live";
 import { useProducts } from "~/hooks/use-products-live";
 import { Package } from "lucide-react";
+import { formatCurrency, formatKilos } from "~/lib/utils";
 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -134,14 +135,14 @@ export default function SaleDetailPage() {
             {sale.tara && (
               <div className="flex items-center gap-3">
                 <Scale className="h-4 w-4 text-muted-foreground" />
-                <span>Tara: {Number(sale.tara).toFixed(2)} kg</span>
+                <span>Tara: {formatCurrency(sale.tara)} kg</span>
               </div>
             )}
 
             {sale.netWeight && (
               <div className="flex items-center gap-3">
                 <Scale className="h-4 w-4 text-orange-600" />
-                <span className="font-medium">Neto: {Number(sale.netWeight).toFixed(2)} kg</span>
+                <span className="font-medium">Neto: {formatCurrency(sale.netWeight)} kg</span>
               </div>
             )}
           </CardContent>
@@ -167,13 +168,13 @@ export default function SaleDetailPage() {
                         {item.productName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {Number(item.quantity).toFixed(2)} x S/{" "}
-                        {Number(item.unitPrice).toFixed(2)}
+                        {formatCurrency(item.quantity)} x S/{" "}
+                        {formatCurrency(item.unitPrice)}
                       </p>
                     </div>
                   </div>
                   <span className="font-semibold text-foreground ml-4">
-                    S/ {Number(item.subtotal).toFixed(2)}
+                    S/ {formatCurrency(item.subtotal)}
                   </span>
                 </div>
               ))}
@@ -183,7 +184,7 @@ export default function SaleDetailPage() {
                   {sale.items.length > 1 ? "s" : ""}
                 </span>
                 <span className="font-semibold text-lg">
-                  S/ {Number(sale.totalAmount).toFixed(2)}
+                  S/ {formatCurrency(sale.totalAmount)}
                 </span>
               </div>
             </CardContent>
@@ -198,20 +199,20 @@ export default function SaleDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Total</span>
               <span className="font-semibold text-lg">
-                S/ {Number(sale.totalAmount).toFixed(2)}
+                S/ {formatCurrency(sale.totalAmount)}
               </span>
             </div>
 
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Abono inicial</span>
-              <span>S/ {paidAmount.toFixed(2)}</span>
+              <span>S/ {formatCurrency(paidAmount)}</span>
             </div>
 
             {dueAmount > 0 && (
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-red-600 font-medium">Pendiente</span>
                 <span className="text-red-600 font-semibold">
-                  S/ {dueAmount.toFixed(2)}
+                  S/ {formatCurrency(dueAmount)}
                 </span>
               </div>
             )}

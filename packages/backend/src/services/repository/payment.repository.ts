@@ -62,6 +62,34 @@ export class PaymentRepository {
     });
   }
 
+  async createInitialPayment(
+    ctx: RequestContext,
+    data: {
+      clientId: string;
+      amount: string;
+      referenceNumber: string;
+    },
+    tx?: DbTransaction
+  ): Promise<Abono | undefined> {
+    const executor = tx ?? db;
+
+    const [abono] = await executor
+      .insert(abonos)
+      .values({
+        clientId: data.clientId,
+        businessId: ctx.businessId,
+        sellerId: ctx.businessUserId,
+        amount: data.amount,
+        paymentMethod: "efectivo",
+        notes: "Abono inicial registrado en la venta",
+        referenceNumber: data.referenceNumber,
+      })
+      .onConflictDoNothing({ target: abonos.referenceNumber })
+      .returning();
+
+    return abono;
+  }
+
   async delete(ctx: RequestContext, id: string): Promise<void> {
     await db
       .delete(abonos)

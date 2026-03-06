@@ -44,6 +44,7 @@ export const sales = pgTable(
     saleType: saleTypeEnum("sale_type").notNull().default("contado"),
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
     amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    // Historical balance at sale creation - use CustomerRepository.getBalance() for current debt
     balanceDue: decimal("balance_due", { precision: 12, scale: 2 }).notNull().default("0"),
 
     // Weight info

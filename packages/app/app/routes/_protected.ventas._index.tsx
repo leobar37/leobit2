@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router";
+import { formatCurrency } from "~/lib/utils";
 import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export default function SalesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-orange-100 text-sm">Ventas de hoy</p>
-                  <p className="text-2xl font-bold">S/ {Number(todayStats.total).toFixed(2)}</p>
+                  <p className="text-2xl font-bold">S/ {formatCurrency(todayStats.total)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-orange-100 text-sm">Cantidad</p>

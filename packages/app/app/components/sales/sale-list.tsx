@@ -1,6 +1,7 @@
 import { ShoppingCart, Calendar, CreditCard, Banknote, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "~/lib/utils";
 import type { Sale } from "~/lib/db/schema";
 
 interface SaleListProps {
@@ -51,7 +52,7 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-foreground">
-                        S/ {parseFloat(sale.totalAmount).toFixed(2)}
+                       S/ {formatCurrency(sale.totalAmount)}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -78,7 +79,7 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
 
                   {isCredit && dueAmount > 0 && (
                     <Badge variant="destructive" className="shrink-0 text-xs">
-                      Pendiente S/ {dueAmount.toFixed(2)}
+                      Pendiente S/ {formatCurrency(dueAmount)}
                     </Badge>
                   )}
 
@@ -115,7 +116,7 @@ export function SaleList({ sales, showCustomer = false }: SaleListProps) {
                   {isCredit && paidAmount > 0 && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Banknote className="h-3 w-3 shrink-0" />
-                      <span>Abono inicial: S/ {paidAmount.toFixed(2)}</span>
+                      <span>Abono inicial: S/ {formatCurrency(paidAmount)}</span>
                     </div>
                   )}
                 </div>

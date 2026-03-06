@@ -1,6 +1,6 @@
 import { DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "~/lib/formatting";
+import { formatCurrency } from "~/lib/utils";
 import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 interface SummaryCardProps {
@@ -20,7 +20,7 @@ export function SummaryCard({ totalDebt, accounts }: SummaryCardProps) {
           </div>
           <div>
             <p className="text-orange-100 text-sm">Total por Cobrar</p>
-            <p className="text-3xl font-bold">{formatCurrency(totalDebt)}</p>
+            <p className="text-3xl font-bold">S/ {formatCurrency(totalDebt)}</p>
           </div>
         </div>
 
@@ -32,8 +32,8 @@ export function SummaryCard({ totalDebt, accounts }: SummaryCardProps) {
           <div className="bg-white/10 rounded-xl p-3">
             <p className="text-orange-100 text-xs">Promedio por Cliente</p>
             <p className="text-xl font-semibold">
-              {accounts?.length > 0
-                ? formatCurrency(totalDebt / accounts.length)
+              {accounts?.length && accounts.length > 0
+                ? `S/ ${formatCurrency(totalDebt / accounts.length)}`
                 : "S/ 0.00"}
             </p>
           </div>

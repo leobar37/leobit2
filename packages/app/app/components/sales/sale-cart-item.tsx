@@ -1,6 +1,7 @@
 import { Package, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { formatCurrency, formatWeight } from "~/lib/utils";
 
 interface SaleCartItemProps {
   productName: string;
@@ -23,8 +24,8 @@ export function SaleCartItem({
 }: SaleCartItemProps) {
   const quantityLabel =
     unit === "kg"
-      ? `${quantity.toFixed(3)} kg`
-      : `${Number.isInteger(quantity) ? quantity : quantity.toFixed(3)} un`;
+      ? `${formatWeight(quantity)} kg`
+      : `${Number.isInteger(quantity) ? quantity : formatWeight(quantity)} un`;
 
   return (
     <Card className="border-0 shadow-sm rounded-xl" data-testid="sale-cart-item">
@@ -40,13 +41,13 @@ export function SaleCartItem({
                 <p className="text-xs text-orange-600" data-testid="cart-item-variant">{variantName}</p>
               )}
               <p className="text-sm text-muted-foreground" data-testid="cart-item-quantity">
-                {quantityLabel} × S/ {unitPrice.toFixed(2)}
+                {quantityLabel} × S/ {formatCurrency(unitPrice)}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="font-semibold" data-testid="cart-item-subtotal">S/ {subtotal.toFixed(2)}</span>
+            <span className="font-semibold" data-testid="cart-item-subtotal">S/ {formatCurrency(subtotal)}</span>
             <Button
               variant="ghost"
               size="icon"

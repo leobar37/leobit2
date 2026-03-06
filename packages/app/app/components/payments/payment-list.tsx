@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatCurrency } from "~/lib/utils";
 import { Wallet, Calendar, Receipt, ImageIcon, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function PaymentList({ payments, emptyMessage = "No hay abonos" }: Paymen
                 </div>
                 <div>
                   <p className="font-semibold text-green-600">
-                    S/ {parseFloat(payment.amount).toFixed(2)}
+                    S/ {formatCurrency(payment.amount)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {paymentMethodLabels[payment.paymentMethod] || payment.paymentMethod}

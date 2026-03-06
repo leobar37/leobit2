@@ -2,7 +2,8 @@ import { memo } from "react";
 import { Link } from "react-router";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "~/lib/formatting";
+import { formatCurrency } from "~/lib/utils";
+import { formatDate } from "~/lib/formatting";
 import { getDebtLevel } from "~/lib/debt";
 import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
@@ -26,9 +27,9 @@ export const AccountItem = memo(function AccountItem({ account }: AccountItemPro
           {account.customer.phone || "Sin teléfono"}
         </p>
         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <span>Total ventas: {formatCurrency(account.totalSales)}</span>
+          <span>Total ventas: S/ {formatCurrency(account.totalSales)}</span>
           <span>•</span>
-          <span>Abonos: {formatCurrency(account.totalPayments)}</span>
+          <span>Abonos: S/ {formatCurrency(account.totalPayments)}</span>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           Última compra: {formatDate(account.lastSaleDate)}
@@ -37,7 +38,7 @@ export const AccountItem = memo(function AccountItem({ account }: AccountItemPro
 
       <div className="text-right ml-4">
         <p className="text-lg font-bold text-red-600">
-          {formatCurrency(account.totalDebt)}
+          S/ {formatCurrency(account.totalDebt)}
         </p>
         <Link to={`/clientes/${account.customer.id}`}>
           <Button variant="ghost" size="sm" className="h-8 px-2">

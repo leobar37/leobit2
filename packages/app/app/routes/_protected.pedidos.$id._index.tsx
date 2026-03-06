@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useOrder, useConfirmOrder, useCancelOrder, useDeliverOrder } from "~/hooks/use-orders";
+import { formatCurrency } from "~/lib/utils";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { OrderItemModal } from "~/components/orders/order-item-modal";
@@ -268,10 +269,10 @@ export default function OrderDetailPage() {
                 <div className="text-right">
                   <p className="font-semibold" data-testid="order-item-subtotal">
                     S/{" "}
-                    {(Number(item.orderedQuantity) * Number(item.unitPriceQuoted)).toFixed(2)}
+                    {formatCurrency(Number(item.orderedQuantity) * Number(item.unitPriceQuoted))}
                   </p>
                   <p className="text-sm text-muted-foreground" data-testid="order-item-unit-price">
-                    S/ {Number(item.unitPriceQuoted).toFixed(2)} c/u
+                    S/ {formatCurrency(item.unitPriceQuoted)} c/u
                   </p>
                 </div>
               </div>
@@ -282,7 +283,7 @@ export default function OrderDetailPage() {
 
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Total</span>
-            <span className="text-xl font-bold" data-testid="order-total-amount">S/ {Number(order.totalAmount).toFixed(2)}</span>
+            <span className="text-xl font-bold" data-testid="order-total-amount">S/ {formatCurrency(order.totalAmount)}</span>
           </div>
         </CardContent>
       </Card>

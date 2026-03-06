@@ -348,24 +348,15 @@ export class SyncService {
 
         if (sale.saleType === "credito" && sale.clientId && Number(sale.amountPaid) > 0) {
           const initialPaymentReference = `init-sale:${createdSale.id}`;
-          const existingInitialPayment = await this.deps.paymentRepo.findByReferenceNumber(
+          await this.deps.paymentRepo.createInitialPayment(
             ctx,
-            initialPaymentReference
+            {
+              clientId: sale.clientId,
+              amount: Number(sale.amountPaid).toFixed(2),
+              referenceNumber: initialPaymentReference,
+            },
+            tx
           );
-
-          if (!existingInitialPayment) {
-            await this.deps.paymentRepo.create(
-              ctx,
-              {
-                clientId: sale.clientId,
-                amount: Number(sale.amountPaid).toFixed(2),
-                paymentMethod: "efectivo",
-                notes: "Abono inicial registrado en la venta",
-                referenceNumber: initialPaymentReference,
-              },
-              tx
-            );
-          }
         }
       });
       return;

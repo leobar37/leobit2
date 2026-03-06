@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { formatCurrency } from "~/lib/utils";
 import { Search, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ function PurchaseCard({ purchase }: { purchase: {
 
             <div className="mt-2">
               <span className="font-medium">
-                S/ {parseFloat(purchase.totalAmount).toFixed(2)}
+                S/ {formatCurrency(purchase.totalAmount)}
               </span>
             </div>
           </div>

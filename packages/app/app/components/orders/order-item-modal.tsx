@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency } from "~/lib/utils";
 import { Package, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -65,7 +66,7 @@ export function OrderItemModal({
               <p className="font-semibold" data-testid="order-item-modal-product-name">{item.productName}</p>
               <p className="text-sm text-muted-foreground" data-testid="order-item-modal-variant-name">{item.variantName}</p>
               <p className="text-sm text-muted-foreground mt-1" data-testid="order-item-modal-price">
-                Precio: S/ {Number(item.unitPriceQuoted).toFixed(2)}
+                Precio: S/ {formatCurrency(item.unitPriceQuoted)}
               </p>
             </div>
 
@@ -85,7 +86,7 @@ export function OrderItemModal({
 
             <div className="flex items-center justify-between py-2 px-4 bg-orange-50 rounded-xl">
               <span className="text-sm text-muted-foreground">Nuevo subtotal</span>
-              <span className="font-semibold text-lg" data-testid="order-item-new-subtotal">S/ {subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-lg" data-testid="order-item-new-subtotal">S/ {formatCurrency(subtotal)}</span>
             </div>
 
             <div className="flex gap-3 pt-2">

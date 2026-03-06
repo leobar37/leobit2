@@ -14,7 +14,7 @@ import { useCreatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useUploadFile, validateFile } from "~/hooks/use-files";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
-import { formatCurrency } from "~/lib/formatting";
+import { formatCurrency } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
 
 const paymentSchema = z.object({
@@ -284,7 +284,7 @@ export default function NuevoCobroPage() {
             <div className="text-center py-4">
               <p className="text-sm text-muted-foreground mb-1">Deuda actual</p>
               <p className="text-4xl font-bold text-red-600">
-                {formatCurrency(currentDebt)}
+                S/ {formatCurrency(currentDebt)}
               </p>
             </div>
           </CardContent>
@@ -336,16 +336,16 @@ export default function NuevoCobroPage() {
               <div className="p-3 bg-gray-50 rounded-lg space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Deuda:</span>
-                  <span className="font-medium">{formatCurrency(currentDebt)}</span>
+                  <span className="font-medium">S/ {formatCurrency(currentDebt)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Abono:</span>
-                  <span className="font-medium text-green-600">-{formatCurrency(parsedAmount)}</span>
+                  <span className="font-medium text-green-600">-S/ {formatCurrency(parsedAmount)}</span>
                 </div>
                 <div className="border-t pt-1 flex justify-between font-semibold">
                   <span>Queda:</span>
                   <span className={remainingDebt > 0 ? "text-red-600" : "text-green-600"}>
-                    {formatCurrency(remainingDebt)}
+                    S/ {formatCurrency(remainingDebt)}
                   </span>
                 </div>
               </div>

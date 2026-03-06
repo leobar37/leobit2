@@ -1,14 +1,12 @@
-import { useNavigate } from "react-router";
-import { OrderForm } from "~/components/orders/order-form";
+import { Outlet, useNavigate } from "react-router";
+import { OrderFormProvider } from "~/components/orders/order-form-context";
 import { useCreateOrder } from "~/hooks/use-orders";
-import { FormPage } from "~/components/layout/form-page";
-import type { CreateOrderInput } from "~/lib/db/schema";
 
-export default function NewOrderPage() {
+export default function NewOrderLayout() {
   const navigate = useNavigate();
   const createOrder = useCreateOrder();
 
-  const handleSubmit = async (data: CreateOrderInput) => {
+  const handleSubmit = async (data: Parameters<typeof createOrder.mutateAsync>[0]) => {
     try {
       await createOrder.mutateAsync(data);
       navigate("/pedidos");
@@ -18,16 +16,12 @@ export default function NewOrderPage() {
   };
 
   return (
-    <FormPage
-      title="Nuevo pedido"
-      backHref="/pedidos"
-      maxWidth="lg"
+    <OrderFormProvider
+      onSubmit={handleSubmit}
+      isSubmitting={createOrder.isPending}
+      onNavigateToCalculadora={() => navigate("/pedidos/nuevo/calculadora")}
     >
-      <OrderForm
-        onSubmit={handleSubmit}
-        onCancel={() => navigate("/pedidos")}
-        isSubmitting={createOrder.isPending}
-      />
-    </FormPage>
+      <Outlet />
+    </OrderFormProvider>
   );
 }

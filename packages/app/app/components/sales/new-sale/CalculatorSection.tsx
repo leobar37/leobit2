@@ -6,11 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { FormProvider, Controller } from "react-hook-form";
 import { FormCalculatorInput } from "@/components/forms";
 import { VariantSelector } from "~/components/sales/variant-selector";
-import { showVariantSelectorAtom, showCalculatorModalAtom } from "~/atoms/new-sale";
+import { showVariantSelectorAtom } from "~/atoms/new-sale";
 import { useProductSelection } from "~/hooks/use-product-selection";
 import { useSaleCalculator } from "~/hooks/use-sale-calculator";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
-import { createModal } from "~/lib/modal/create-modal";
 import {
   KgCalculatorForm,
   UnitCalculatorForm,
@@ -19,7 +18,11 @@ import {
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 
-function CalculatorContent({ close }: { close?: () => void }) {
+interface CalculatorContentProps {
+  onAddedToCart?: () => void;
+}
+
+function CalculatorContent({ onAddedToCart }: CalculatorContentProps) {
   const [showVariantSelector, setShowVariantSelector] = useAtom(showVariantSelectorAtom);
   const { settings } = useBusinessSettings();
 
@@ -62,8 +65,8 @@ function CalculatorContent({ close }: { close?: () => void }) {
 
   const handleAddToCartAndClose = async () => {
     await handleAddToCart();
-    if (close) {
-      close();
+    if (onAddedToCart) {
+      onAddedToCart();
     }
   };
 
@@ -206,69 +209,4 @@ function CalculatorContent({ close }: { close?: () => void }) {
   );
 }
 
-export const [CalculatorModal, useCalculatorModal] = createModal(
-  CalculatorContent,
-  { type: "responsive", side: "bottom" }
-);
-
-export function CalculatorSection() {
-  const [isOpen, setIsOpen] = useAtom(showCalculatorModalAtom);
-
-  return (
-    <>
-      <section id="calculator-section" className="space-y-3" data-testid="calculator-section">
-        <Card 
-          className="border-0 shadow-md rounded-2xl bg-card cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setIsOpen(true)}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Calculator className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">Calculadora</p>
-                <p className="text-sm text-muted-foreground">Toca para calcular un producto</p>
-              </div>
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="h-4 w-4 mr-1" />
-                Nuevo
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <CalculatorModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
-    </>
-  );
-}
-
-function Calculator({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect width="16" height="20" x="4" y="2" rx="2" />
-      <line x1="8" x2="16" y1="6" y2="6" />
-      <line x1="16" x2="16" y1="14" y2="18" />
-      <path d="M16 10h.01" />
-      <path d="M12 10h.01" />
-      <path d="M8 10h.01" />
-      <path d="M12 14h.01" />
-      <path d="M8 14h.01" />
-      <path d="M12 18h.01" />
-      <path d="M8 18h.01" />
-    </svg>
-  );
-}
+export { CalculatorContent };

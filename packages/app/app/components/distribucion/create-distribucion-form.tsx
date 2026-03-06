@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "~/hooks/use-auth";
 import { useTeam } from "~/hooks/use-team";
 import { useProducts, type Product } from "~/hooks/use-products";
 import { type ProductVariant } from "~/hooks/use-product-variants";
@@ -27,6 +29,7 @@ interface DistributionItem {
 export function CreateDistribucionForm({
   onSubmit,
 }: CreateDistribucionFormProps) {
+  const { user } = useAuth();
   const { data: team } = useTeam();
   const { data: products } = useProducts();
 
@@ -36,6 +39,8 @@ export function CreateDistribucionForm({
 
   const vendedores =
     team?.filter((m) => (m.role === "VENDEDOR" || m.role === "ADMIN_NEGOCIO") && m.isActive) || [];
+  const currentMemberId =
+    team?.find((member) => member.userId === user?.id)?.id ?? null;
 
   const handleAddItem = (
     variant: ProductVariant,
@@ -92,7 +97,7 @@ export function CreateDistribucionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="vendedorId">Vendedor *</Label>
         <select
@@ -104,11 +109,13 @@ export function CreateDistribucionForm({
         >
           <option value="">Seleccionar vendedor</option>
           {vendedores.length === 0 && (
-            <option value="" disabled>No hay vendedores activos</option>
+            <option value="" disabled>No hay miembros activos para asignar</option>
           )}
           {vendedores.map((vendedor) => (
-            <option key={vendedor.id} value={vendedor.userId}>
-              {vendedor.name} {vendedor.role === "ADMIN_NEGOCIO" ? "(Admin)" : ""}
+            <option key={vendedor.id} value={vendedor.id}>
+              {vendedor.id === currentMemberId
+                ? "Yo (Admin)"
+                : `${vendedor.name}${vendedor.role === "ADMIN_NEGOCIO" ? " (Admin)" : ""}`}
             </option>
           ))}
         </select>
@@ -178,7 +185,7 @@ export function CreateDistribucionForm({
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Asignado:</span>
             <span className="text-xl font-bold text-orange-600">
-              {totalKilos.toFixed(2)} kg
+              {formatKilos(totalKilos, 2)} kg
             </span>
           </div>
         </div>

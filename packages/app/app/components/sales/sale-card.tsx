@@ -1,6 +1,7 @@
 import { ShoppingCart, User, Calendar, Banknote } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "~/lib/utils";
 import type { Sale } from "~/lib/db/schema";
 
 interface SaleCardProps {
@@ -16,7 +17,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
     minute: "2-digit",
   });
 
-  const formattedAmount = Number(sale.totalAmount).toFixed(2);
+  const formattedAmount = formatCurrency(Number(sale.totalAmount));
   const paidAmount = Number(sale.amountPaid);
   const dueAmount = Number(sale.balanceDue);
   const isCredit = sale.saleType === "credito";
@@ -75,7 +76,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
               {isCredit && dueAmount > 0 && (
                 <Badge variant="destructive" className="shrink-0 text-xs">
-                  Pendiente S/ {dueAmount.toFixed(2)}
+                  Pendiente S/ {formatCurrency(dueAmount)}
                 </Badge>
               )}
             </div>
@@ -101,7 +102,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
               {isCredit && paidAmount > 0 && (
                 <div className="text-xs text-muted-foreground">
-                  Abono inicial: S/ {paidAmount.toFixed(2)}
+                  Abono inicial: S/ {formatCurrency(paidAmount)}
                 </div>
               )}
             </div>

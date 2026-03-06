@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { formatCurrency, formatDate } from "~/lib/formatting";
+import { formatCurrency } from "~/lib/utils";
+import { formatDate } from "~/lib/formatting";
 import { getDebtLevel } from "~/lib/debt";
 import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
@@ -49,7 +50,7 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
 
           <div className="text-right ml-3">
             <p className="text-xl font-bold text-red-600">
-              {formatCurrency(account.totalDebt)}
+              S/ {formatCurrency(account.totalDebt)}
             </p>
             <Button
               size="sm"
@@ -89,7 +90,7 @@ export default function CobrosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Total por cobrar</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalDebt)}</p>
+              <p className="text-3xl font-bold">S/ {formatCurrency(totalDebt)}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <Wallet className="h-6 w-6" />

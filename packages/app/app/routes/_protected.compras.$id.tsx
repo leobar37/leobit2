@@ -11,6 +11,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { formatCurrency, formatWeight } from "~/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,7 @@ export default function PurchaseDetailPage() {
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl">
               <span className="font-medium">Total:</span>
               <span className="text-xl font-bold text-orange-600">
-                S/ {parseFloat(purchase.totalAmount).toFixed(2)}
+                S/ {formatCurrency(purchase.totalAmount)}
               </span>
             </div>
 
@@ -243,12 +244,12 @@ export default function PurchaseDetailPage() {
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {parseFloat(item.quantity).toFixed(3)} unidades × S/{" "}
-                      {parseFloat(item.unitCost).toFixed(2)}
+                      {formatWeight(item.quantity)} unidades × S/{" "}
+                      {formatCurrency(item.unitCost)}
                     </p>
                   </div>
                   <span className="font-medium text-orange-600">
-                    S/ {parseFloat(item.totalCost).toFixed(2)}
+                    S/ {formatCurrency(item.totalCost)}
                   </span>
                 </div>
               ))}

@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "~/lib/utils";
 import { usePurchaseStore, type PurchaseCartItem } from "~/stores/purchase.store";
 
 interface PurchaseCartItemCardProps {
@@ -19,11 +20,11 @@ function PurchaseCartItemCard({ item, index }: PurchaseCartItemCardProps) {
         )}
         <div className="flex gap-2 text-xs text-muted-foreground mt-1">
           <span>Cant: {item.quantity}</span>
-          <span>x S/ {item.unitCost.toFixed(2)}</span>
+          <span>x S/ {formatCurrency(item.unitCost)}</span>
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="font-semibold">S/ {item.subtotal.toFixed(2)}</span>
+        <span className="font-semibold">S/ {formatCurrency(item.subtotal)}</span>
         <Button
           variant="ghost"
           size="sm"
@@ -73,7 +74,7 @@ export function PurchaseCartSection() {
       <div className="mt-3 p-3 bg-orange-100 rounded-xl">
         <div className="flex items-center justify-between">
           <span className="font-medium">Total:</span>
-          <span className="text-xl font-bold">S/ {total.toFixed(2)}</span>
+          <span className="text-xl font-bold">S/ {formatCurrency(total)}</span>
         </div>
       </div>
     </section>

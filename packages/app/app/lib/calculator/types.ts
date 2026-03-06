@@ -12,6 +12,7 @@ export interface KgCalculatorFields {
 
 export interface UnitCalculatorFields {
 	totalAmount: string;
+	pricePerPack: string;
 	packs: string;
 	units: string;
 }

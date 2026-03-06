@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatCurrency } from "~/lib/utils";
 import { Package, Truck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -178,7 +179,7 @@ export function OrderDeliveryModal({
                       <p className="text-sm text-muted-foreground" data-testid="delivery-item-variant-name">{item.variantName}</p>
                       <p className="text-xs text-muted-foreground" data-testid="delivery-item-ordered-info">
                         Pedido: {item.orderedQuantity} un · Precio: S/{" "}
-                        {item.unitPriceQuoted.toFixed(2)}
+                        {formatCurrency(item.unitPriceQuoted)}
                       </p>
                     </div>
                   </div>
@@ -223,7 +224,7 @@ export function OrderDeliveryModal({
                   {/* Subtotal */}
                   <div className="flex items-center justify-between py-2 px-3 bg-orange-50 rounded-lg">
                     <span className="text-sm text-muted-foreground">Subtotal</span>
-                    <span className="font-semibold" data-testid="delivery-item-subtotal">S/ {subtotal.toFixed(2)}</span>
+                    <span className="font-semibold" data-testid="delivery-item-subtotal">S/ {formatCurrency(subtotal)}</span>
                   </div>
                 </div>
               );
@@ -241,7 +242,7 @@ export function OrderDeliveryModal({
           {/* Total */}
           <div className="flex items-center justify-between py-3 px-4 bg-orange-100 rounded-xl">
             <span className="font-medium">Total de la venta</span>
-            <span className="text-xl font-bold" data-testid="delivery-grand-total">S/ {grandTotal.toFixed(2)}</span>
+            <span className="text-xl font-bold" data-testid="delivery-grand-total">S/ {formatCurrency(grandTotal)}</span>
           </div>
 
           {/* Actions */}

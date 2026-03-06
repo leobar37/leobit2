@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
+import { cn, formatCurrency } from "~/lib/utils";
 import {
   useSaleStore,
   getTotalAmount,
@@ -21,6 +22,7 @@ export function SaleSummaryCard() {
   const saleType = getSaleType(paymentMode);
   const amountPaidValue = getAmountPaidValue(paymentMode, totalAmount, amountPaid);
   const balanceDue = getBalanceDue(saleType, totalAmount, amountPaidValue);
+  const abonoExceedsTotal = paymentMode === "a_cuenta" && amountPaidValue > totalAmount;
 
   if (cartItems.length === 0) {
     return null;
@@ -31,7 +33,7 @@ export function SaleSummaryCard() {
       <CardContent className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-orange-100">Total</span>
-          <span className="text-2xl font-bold" data-testid="sale-total-amount">S/ {totalAmount.toFixed(2)}</span>
+          <span className="text-2xl font-bold" data-testid="sale-total-amount">S/ {formatCurrency(totalAmount)}</span>
         </div>
 
         {paymentMode === "a_cuenta" && (
@@ -45,16 +47,24 @@ export function SaleSummaryCard() {
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
               data-testid="initial-payment-input"
-              className="rounded-xl bg-white/20 border-white/30 text-white placeholder:text-white/50"
+              className={cn(
+                "rounded-xl bg-white/20 border-white/30 text-white placeholder:text-white/50",
+                abonoExceedsTotal && "border-red-300 bg-red-500/20",
+              )}
               placeholder="0.00"
             />
+            {abonoExceedsTotal && (
+              <p className="text-xs text-red-200" data-testid="abono-exceeds-error">
+                El abono no puede superar el total (S/ {formatCurrency(totalAmount)})
+              </p>
+            )}
           </div>
         )}
 
         {saleType === "credito" && (
           <div className="flex items-center justify-between text-orange-100">
             <span>Saldo pendiente</span>
-            <span data-testid="sale-balance-due">S/ {balanceDue.toFixed(2)}</span>
+            <span data-testid="sale-balance-due">S/ {formatCurrency(balanceDue)}</span>
           </div>
         )}
 
