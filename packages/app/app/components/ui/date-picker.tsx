@@ -93,9 +93,8 @@ export function DatePicker({
       </Button>
       
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent className="w-full rounded-t-[24px]">
-          {/* Header */}
-          <DrawerHeader className="border-b border-gray-100 px-4 pb-3 pt-2">
+        <DrawerContent className="w-full rounded-t-[24px] flex flex-col">
+          <DrawerHeader className="border-b border-gray-100 px-4 pb-3 pt-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-lg font-semibold text-gray-900">
                 {label || "Seleccionar fecha"}
@@ -111,69 +110,8 @@ export function DatePicker({
               </Button>
             </div>
           </DrawerHeader>
-          
-          {/* Calendar */}
-          <div className="p-4 bg-white">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleSelect}
-              disabled={isDateDisabled}
-              initialFocus
-              className={cn(
-                // Base styles - full width
-                "border-0 w-full",
-                // Header/caption
-                "[&_.rdp-caption]:text-gray-900",
-                "[&_.rdp-caption]:font-semibold",
-                "[&_.rdp-caption]:text-lg",
-                "[&_.rdp-nav_button]:w-9",
-                "[&_.rdp-nav_button]:h-9",
-                "[&_.rdp-nav_button]:rounded-full",
-                "[&_.rdp-nav_button]:hover:bg-orange-50",
-                // Weekday headers - responsive sizing
-                "[&_.rdp-head_cell]:text-gray-500",
-                "[&_.rdp-head_cell]:font-medium",
-                "[&_.rdp-head_cell]:text-sm",
-                "[&_.rdp-head_cell]:w-full",
-                "[&_.rdp-head_cell]:h-10",
-                // Day cells - responsive full width
-                "[&_.rdp-cell]:w-full",
-                "[&_.rdp-cell]:h-auto",
-                "[&_.rdp-cell]:aspect-square",
-                "[&_.rdp-button]:w-full",
-                "[&_.rdp-button]:h-full",
-                "[&_.rdp-button]:min-h-[44px]",
-                "[&_.rdp-button]:rounded-full",
-                "[&_.rdp-button]:text-base",
-                "[&_.rdp-button]:font-normal",
-                // Today highlight
-                "[&_.rdp-day_today]:bg-orange-100",
-                "[&_.rdp-day_today]:text-orange-700",
-                "[&_.rdp-day_today]:font-semibold",
-                "[&_.rdp-day_today]:rounded-full",
-                // Selected day
-                "[&_.rdp-day_selected]:bg-orange-500",
-                "[&_.rdp-day_selected]:text-white",
-                "[&_.rdp-day_selected]:font-semibold",
-                "[&_.rdp-day_selected]:rounded-full",
-                "[&_.rdp-day_selected:hover]:bg-orange-600",
-                // Hover states
-                "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50",
-                "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-gray-900",
-                // Disabled
-                "[&_.rdp-disabled]:opacity-30",
-                "[&_.rdp-disabled]:cursor-not-allowed",
-                // Outside days
-                "[&_.rdp-day_outside]:text-gray-300",
-                // Table full width
-                "[&_.rdp-table]:w-full"
-              )}
-            />
-          </div>
-          
-          {/* Quick Actions */}
-          <div className="px-4 pb-2">
+
+          <div className="px-4 pt-3 pb-2 flex-shrink-0">
             <div className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
@@ -209,9 +147,59 @@ export function DatePicker({
               </Button>
             </div>
           </div>
-          
-          {/* Footer */}
-          <DrawerFooter className="pt-2 pb-6">
+
+          <div className="overflow-y-auto flex-1">
+            <div className="p-4 bg-white">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleSelect}
+                disabled={isDateDisabled}
+                initialFocus
+                className={cn(
+                  "border-0 w-full",
+                  "[&_.rdp-caption]:text-gray-900",
+                  "[&_.rdp-caption]:font-semibold",
+                  "[&_.rdp-caption]:text-lg",
+                  "[&_.rdp-nav_button]:w-9",
+                  "[&_.rdp-nav_button]:h-9",
+                  "[&_.rdp-nav_button]:rounded-full",
+                  "[&_.rdp-nav_button]:hover:bg-orange-50",
+                  "[&_.rdp-head_cell]:text-gray-500",
+                  "[&_.rdp-head_cell]:font-medium",
+                  "[&_.rdp-head_cell]:text-sm",
+                  "[&_.rdp-head_cell]:w-full",
+                  "[&_.rdp-head_cell]:h-10",
+                  "[&_.rdp-cell]:w-full",
+                  "[&_.rdp-cell]:h-auto",
+                  "[&_.rdp-cell]:aspect-square",
+                  "[&_.rdp-button]:w-full",
+                  "[&_.rdp-button]:h-full",
+                  "[&_.rdp-button]:min-h-[44px]",
+                  "[&_.rdp-button]:rounded-full",
+                  "[&_.rdp-button]:text-base",
+                  "[&_.rdp-button]:font-normal",
+                  "[&_.rdp-day_today]:bg-orange-100",
+                  "[&_.rdp-day_today]:text-orange-700",
+                  "[&_.rdp-day_today]:font-semibold",
+                  "[&_.rdp-day_today]:rounded-full",
+                  "[&_.rdp-day_selected]:bg-orange-500",
+                  "[&_.rdp-day_selected]:text-white",
+                  "[&_.rdp-day_selected]:font-semibold",
+                  "[&_.rdp-day_selected]:rounded-full",
+                  "[&_.rdp-day_selected:hover]:bg-orange-600",
+                  "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50",
+                  "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-gray-900",
+                  "[&_.rdp-disabled]:opacity-30",
+                  "[&_.rdp-disabled]:cursor-not-allowed",
+                  "[&_.rdp-day_outside]:text-gray-300",
+                  "[&_.rdp-table]:w-full"
+                )}
+              />
+            </div>
+          </div>
+
+          <DrawerFooter className="pt-2 pb-6 flex-shrink-0">
             <Button
               type="button"
               variant="outline"

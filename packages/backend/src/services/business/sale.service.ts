@@ -173,24 +173,15 @@ export class SaleService {
 
       if (data.saleType === "credito" && data.clientId && amountPaid > 0) {
         const initialPaymentReference = `init-sale:${sale.id}`;
-        const existingInitialPayment = await this.paymentRepository.findByReferenceNumber(
+        await this.paymentRepository.createInitialPayment(
           ctx,
-          initialPaymentReference
+          {
+            clientId: data.clientId,
+            amount: amountPaid.toFixed(2),
+            referenceNumber: initialPaymentReference,
+          },
+          tx
         );
-
-        if (!existingInitialPayment) {
-          await this.paymentRepository.create(
-            ctx,
-            {
-              clientId: data.clientId,
-              amount: amountPaid.toFixed(2),
-              paymentMethod: "efectivo",
-              notes: "Abono inicial registrado en la venta",
-              referenceNumber: initialPaymentReference,
-            },
-            tx
-          );
-        }
       }
 
       return sale;

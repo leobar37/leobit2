@@ -36,14 +36,11 @@ async function fixCorruptedSales() {
       console.log(`  Calculated: ${calculatedTotal.toFixed(2)}`);
       console.log(`  Diff: ${(currentTotal - calculatedTotal).toFixed(2)}`);
       
-      // Update total
+      // Update total only - balanceDue is historical and should not be modified
       await db
         .update(sales)
         .set({ 
-          totalAmount: calculatedTotal.toFixed(2),
-          balanceDue: sale.saleType === "credito" 
-            ? Math.max(calculatedTotal - Number(sale.amountPaid || 0), 0).toFixed(2)
-            : "0.00"
+          totalAmount: calculatedTotal.toFixed(2)
         })
         .where(eq(sales.id, sale.id!));
       

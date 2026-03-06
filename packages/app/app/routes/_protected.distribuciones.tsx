@@ -1,21 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Plus, ArrowLeft, Calendar, ChevronDown } from "lucide-react";
+import { Plus, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "~/lib/utils";
+import { AppDrawer } from "@/components/ui/app-drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import { getToday, parseDateString } from "~/lib/date-utils";
+import { getToday } from "~/lib/date-utils";
 import { useBusiness } from "@/hooks/use-business";
 import {
   useDistribuciones,
@@ -130,20 +120,24 @@ export default function DistribucionesPage() {
             <h1 className="text-lg font-semibold">Distribuciones</h1>
           </div>
           {isAdmin && (
-            <Drawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DrawerTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nueva
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="max-h-[85vh]">
-                <DrawerHeader className="px-4 pb-3 pt-2">
-                  <DrawerTitle>Nueva Distribución</DrawerTitle>
-                </DrawerHeader>
-                <CreateDistribucionForm onSubmit={handleCreate} />
-              </DrawerContent>
-            </Drawer>
+            <>
+              <Button
+                className="bg-orange-500 hover:bg-orange-600"
+                onClick={() => setIsCreateOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva
+              </Button>
+              <AppDrawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <AppDrawer.Header
+                  title="Nueva Distribución"
+                  onClose={() => setIsCreateOpen(false)}
+                />
+                <AppDrawer.Body>
+                  <CreateDistribucionForm onSubmit={handleCreate} />
+                </AppDrawer.Body>
+              </AppDrawer>
+            </>
           )}
         </div>
       </header>
@@ -196,22 +190,23 @@ export default function DistribucionesPage() {
         />
       </main>
 
-      <Drawer
+      <AppDrawer
         open={!!editingDistribucion}
         onOpenChange={() => setEditingDistribucion(null)}
       >
-        <DrawerContent className="max-h-[85vh]">
-<DrawerHeader className="px-4 pb-3 pt-2">
-                  <DrawerTitle>Editar Distribución</DrawerTitle>
-                </DrawerHeader>
+        <AppDrawer.Header
+          title="Editar Distribución"
+          onClose={() => setEditingDistribucion(null)}
+        />
+        <AppDrawer.Body>
           {editingDistribucion && (
             <EditDistribucionForm
               distribucion={editingDistribucion}
               onSubmit={handleEdit}
             />
           )}
-        </DrawerContent>
-      </Drawer>
+        </AppDrawer.Body>
+      </AppDrawer>
 
       <ConfirmDialog />
     </div>

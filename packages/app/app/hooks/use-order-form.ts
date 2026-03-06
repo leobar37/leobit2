@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { toDateString, addDays, now } from "~/lib/date-utils";
 import type { Customer, Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
@@ -21,6 +21,8 @@ export interface UseOrderFormOptions {
     totalAmount: number;
     items: OrderItem[];
   }) => void;
+  onNavigateToCalculadora?: () => void;
+  isSubmitting?: boolean;
 }
 
 export interface UseOrderFormReturn {
@@ -31,7 +33,6 @@ export interface UseOrderFormReturn {
   items: OrderItem[];
 
   // UI State
-  showItemForm: boolean;
   showVariantSelector: boolean;
 
   // Selected product/variant
@@ -59,21 +60,24 @@ export interface UseOrderFormReturn {
   isValid: boolean;
   isKgProduct: boolean;
   minDeliveryDate: string;
+  isSubmitting: boolean;
 
   // Actions
   setSelectedCustomer: (customer: Customer | null) => void;
   setDeliveryDate: (date: string) => void;
   setPaymentIntent: (intent: "contado" | "credito") => void;
   setShowVariantSelector: (show: boolean) => void;
-  setShowItemForm: (show: boolean) => void;
   handleVariantSelect: (product: Product, variant: ProductVariant) => void;
-  handleAddItem: () => void;
+  // Called from the calculator route page when an item is confirmed
+  handleAddItem: (onAddedToCart?: () => void) => void;
   handleRemoveItem: (index: number) => void;
   handleSubmit: () => void;
 }
 
 export function useOrderForm({
   onSubmit,
+  onNavigateToCalculadora,
+  isSubmitting = false,
 }: UseOrderFormOptions): UseOrderFormReturn {
   // Main form state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -85,7 +89,6 @@ export function useOrderForm({
   const [items, setItems] = useState<OrderItem[]>([]);
 
   // UI state
-  const [showItemForm, setShowItemForm] = useState(false);
   const [showVariantSelector, setShowVariantSelector] = useState(false);
 
   // Selected product/variant for calculator
@@ -112,7 +115,7 @@ export function useOrderForm({
   const isValid =
     selectedCustomer !== null && deliveryDate !== "" && items.length > 0;
 
-  // Min delivery date is tomorrow - using date-utils
+  // Min delivery date is tomorrow
   const minDeliveryDate = useMemo(
     () => toDateString(addDays(now(), 1)),
     [],
@@ -124,14 +127,14 @@ export function useOrderForm({
       setSelectedProduct(product);
       setSelectedVariant(variant);
       setShowVariantSelector(false);
-      setShowItemForm(true);
-      // Use handleClear from the calculator hook
       handleClear();
+          onNavigateToCalculadora?.();
     },
-    [handleClear, setShowVariantSelector, setShowItemForm],
+
+    [handleClear, onNavigateToCalculadora],
   );
 
-  const handleAddItem = useCallback(() => {
+  const handleAddItem = useCallback((onAddedToCart?: () => void) => {
     if (!selectedProduct || !selectedVariant) return;
 
     if (!calculation.isValid) return;
@@ -146,17 +149,15 @@ export function useOrderForm({
     };
 
     setItems((prev) => [...prev, item]);
-    setShowItemForm(false);
     setSelectedProduct(null);
     setSelectedVariant(null);
-    // Use handleClear to reset form
     handleClear();
+    onAddedToCart?.();
   }, [
     selectedProduct,
     selectedVariant,
     calculation,
     handleClear,
-    setShowItemForm,
   ]);
 
   const handleRemoveItem = useCallback((index: number) => {
@@ -190,7 +191,6 @@ export function useOrderForm({
     items,
 
     // UI State
-    showItemForm,
     showVariantSelector,
 
     // Selected product/variant
@@ -213,13 +213,13 @@ export function useOrderForm({
     isValid,
     isKgProduct,
     minDeliveryDate,
+    isSubmitting,
 
     // Actions
     setSelectedCustomer,
     setDeliveryDate,
     setPaymentIntent,
     setShowVariantSelector,
-    setShowItemForm,
     handleVariantSelect,
     handleAddItem,
     handleRemoveItem,

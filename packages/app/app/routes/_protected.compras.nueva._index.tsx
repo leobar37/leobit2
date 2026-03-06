@@ -1,0 +1,193 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FormInput } from "@/components/forms/form-input";
+import { FormDate } from "@/components/forms/form-date";
+import { FileUploader } from "@/components/ui/file-uploader";
+import { SupplierSelector } from "~/components/purchases/supplier-selector";
+import { SupplierQuickForm } from "~/components/purchases/supplier-quick-form";
+import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
+import { PurchaseCartSection } from "~/components/purchases/calculator";
+import { FormPage } from "~/components/layout/form-page";
+import type { Supplier } from "~/hooks/use-suppliers";
+
+function PurchaseFormInner() {
+  const {
+    supplier,
+    setSupplier,
+    receiptFile,
+    receiptPreview,
+    handleReceiptSelect,
+    handleReceiptClear,
+    fileUploadStatus,
+    onSubmit,
+    cartItemsCount,
+    form,
+  } = usePurchaseForm();
+
+  const navigate = useNavigate();
+  const [isQuickFormOpen, setIsQuickFormOpen] = useState(false);
+
+  const handleSupplierSelect = (newSupplier: Supplier | null) => {
+    setSupplier(newSupplier);
+  };
+
+  const handleQuickFormSuccess = (newSupplier: Supplier) => {
+    setSupplier(newSupplier);
+  };
+
+  const hasError = !!form.formState.errors.root;
+  const errorMessage = form.formState.errors.root?.message;
+
+  return (
+    <>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Proveedor *
+            </label>
+            <SupplierSelector
+              selectedSupplier={supplier}
+              onSelectSupplier={handleSupplierSelect}
+              onCreateNew={() => setIsQuickFormOpen(true)}
+            />
+          </div>
+
+          <FormDate
+            name="purchaseDate"
+            label="Fecha de compra"
+            required
+          />
+
+          <FormInput
+            name="invoiceNumber"
+            label="Número de factura"
+            placeholder="Opcional"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate("/compras/nueva/calculadora")}
+            className="w-full flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-2xl hover:bg-orange-100 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                <Calculator className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-orange-700">Agregar Producto</p>
+                <p className="text-xs text-orange-600">
+                  {cartItemsCount > 0
+                    ? `${cartItemsCount} producto${cartItemsCount > 1 ? "s" : ""} agregado${cartItemsCount > 1 ? "s" : ""}`
+                    : "Usa la calculadora para calcular costos"}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-orange-500" />
+          </button>
+
+          <PurchaseCartSection />
+
+          {cartItemsCount === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              Agrega productos usando la calculadora
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Foto del comprobante
+          </label>
+          <FileUploader
+            file={receiptFile}
+            previewUrl={receiptPreview}
+            status={
+              fileUploadStatus.isUploading
+                ? "uploading"
+                : fileUploadStatus.isPending
+                ? "pending"
+                : "idle"
+            }
+            error={fileUploadStatus.isError ? "Error al subir imagen" : null}
+            label="Foto del comprobante (opcional)"
+            helperText="Toma una foto de la factura o boleta"
+            onFileSelect={handleReceiptSelect}
+            onClear={handleReceiptClear}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Notas
+          </label>
+          <textarea
+            {...form.register("notes")}
+            rows={3}
+            placeholder="Información adicional sobre la compra"
+            className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+          />
+        </div>
+
+        {hasError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-sm text-red-600 text-center">{errorMessage}</p>
+          </div>
+        )}
+      </form>
+
+      <SupplierQuickForm
+        open={isQuickFormOpen}
+        onOpenChange={setIsQuickFormOpen}
+        onSuccess={handleQuickFormSuccess}
+      />
+    </>
+  );
+}
+
+export default function NuevaCompraIndexPage() {
+  const { onSubmit, isPending, fileUploadStatus, isFormValid, totalAmount } =
+    usePurchaseForm();
+
+  return (
+    <FormPage
+      title="Nueva Compra"
+      backHref="/compras"
+      icon={ShoppingCart}
+      maxWidth="lg"
+      toolbar={
+        <>
+          <div className="flex items-center justify-between px-1 pb-2">
+            <span className="text-sm text-muted-foreground">Total:</span>
+            <span className="text-lg font-bold">S/ {totalAmount.toFixed(2)}</span>
+          </div>
+          <Button
+            onClick={onSubmit}
+            disabled={isPending || fileUploadStatus.isUploading || !isFormValid}
+            data-testid="save-purchase-button"
+            className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+          >
+            {isPending || fileUploadStatus.isUploading ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5 mr-2" />
+                Guardar Compra
+              </>
+            )}
+          </Button>
+        </>
+      }
+    >
+      <PurchaseFormInner />
+    </FormPage>
+  );
+}

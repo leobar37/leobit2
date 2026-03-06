@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext } from "react";
 import { useOrderForm, type UseOrderFormReturn } from "~/hooks/use-order-form";
 
 const OrderFormContext = createContext<UseOrderFormReturn | null>(null);
@@ -15,6 +15,8 @@ export function useOrderFormContext() {
 
 interface OrderFormProviderProps {
   children: React.ReactNode;
+  isSubmitting?: boolean;
+  onNavigateToCalculadora?: () => void;
   onSubmit: (data: {
     clientId: string;
     deliveryDate: string;
@@ -34,10 +36,10 @@ interface OrderFormProviderProps {
 export function OrderFormProvider({
   children,
   onSubmit,
+  isSubmitting,
+  onNavigateToCalculadora,
 }: OrderFormProviderProps) {
-  const form = useOrderForm({ onSubmit });
-
-  const value = useMemo(() => form, [form]);
+  const form = useOrderForm({ onSubmit, isSubmitting, onNavigateToCalculadora });
 
   return (
     <OrderFormContext.Provider value={form}>

@@ -36,7 +36,7 @@ export function EditDistribucionForm({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4 max-h-[70vh] overflow-y-auto">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <FormInput
           name="puntoVenta"
           label="Punto de Venta"
