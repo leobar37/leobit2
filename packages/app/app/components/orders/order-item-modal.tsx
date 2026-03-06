@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Package, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Dialog,
   DialogContent,
@@ -71,11 +71,10 @@ export function OrderItemModal({
 
             <div className="space-y-2">
               <Label htmlFor="quantity">Nueva cantidad</Label>
-              <Input
+              <NumericInput
                 id="quantity"
-                type="number"
                 min="0.001"
-                step="0.001"
+                decimals={3}
                 value={quantity || ""}
                 onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 className="rounded-xl"

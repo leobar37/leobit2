@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
@@ -297,11 +298,10 @@ export default function NuevoCobroPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">
                   S/
                 </span>
-                <Input
+                <NumericInput
                   id="amount"
                   data-testid="abono-monto-input"
-                  type="number"
-                  step="0.01"
+                  decimals={2}
                   min="0.01"
                   max={currentDebt}
                   className="pl-10 text-lg font-semibold"

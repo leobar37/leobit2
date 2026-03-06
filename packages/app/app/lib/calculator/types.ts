@@ -41,6 +41,9 @@ export interface AutoCalculateInput {
 // Field names for kg calculator
 export type KgCalculatorFieldName = keyof KgCalculatorFields;
 
+// Field names for unit calculator
+export type UnitCalculatorFieldName = keyof UnitCalculatorFields;
+
 // Unit types
 export type UnitType = "kg" | "unidad";
 

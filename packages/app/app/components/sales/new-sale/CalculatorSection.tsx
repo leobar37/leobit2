@@ -2,15 +2,15 @@ import { useAtom } from "jotai";
 import { Box, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FormProvider, Controller } from "react-hook-form";
+import { FormCalculatorInput } from "@/components/forms";
 import { VariantSelector } from "~/components/sales/variant-selector";
-import { showVariantSelectorAtom } from "~/atoms/new-sale";
+import { showVariantSelectorAtom, showCalculatorModalAtom } from "~/atoms/new-sale";
 import { useProductSelection } from "~/hooks/use-product-selection";
 import { useSaleCalculator } from "~/hooks/use-sale-calculator";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
+import { createModal } from "~/lib/modal/create-modal";
 import {
   KgCalculatorForm,
   UnitCalculatorForm,
@@ -19,7 +19,7 @@ import {
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 
-export function CalculatorSection() {
+function CalculatorContent({ close }: { close?: () => void }) {
   const [showVariantSelector, setShowVariantSelector] = useAtom(showVariantSelectorAtom);
   const { settings } = useBusinessSettings();
 
@@ -60,99 +60,126 @@ export function CalculatorSection() {
     setShowVariantSelector(true);
   };
 
+  const handleAddToCartAndClose = async () => {
+    await handleAddToCart();
+    if (close) {
+      close();
+    }
+  };
+
   return (
     <>
-      <section id="calculator-section" className="space-y-3" data-testid="calculator-section">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Calcular Producto</h2>
-          {selectedVariant && (
-            <Badge variant="secondary" className="text-xs" data-testid="selected-variant-badge">
-              {selectedProduct?.name} - {selectedVariant.name}
-            </Badge>
-          )}
-        </div>
-
-        {!hasSelection ? (
-          <Card className="border-0 shadow-md rounded-2xl bg-muted/50" data-testid="calculator-empty-state">
-            <CardContent className="p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-3">Selecciona un producto para comenzar</p>
-              <Button
-                type="button"
-                onClick={handleSelectAnother}
-                data-testid="select-product-button"
-                className="bg-orange-500 hover:bg-orange-600"
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Calcular Producto</h2>
+            {selectedVariant && (
+              <Badge
+                variant="secondary"
+                className="hidden sm:inline-flex text-xs"
+                data-testid="selected-variant-badge"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Seleccionar Producto
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <FormProvider {...form}>
-            <Card className="border-0 shadow-md rounded-2xl" data-testid="calculator-form">
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-xl" data-testid="selected-product-card">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                      <Package className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium" data-testid="selected-product-name">{selectedProduct?.name}</p>
-                      <p className="text-sm text-muted-foreground" data-testid="selected-variant-name">{selectedVariant?.name}</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setShowVariantSelector(true)} data-testid="change-product-button">
-                    Cambiar
-                  </Button>
-                </div>
+                {selectedProduct?.name} - {selectedVariant.name}
+              </Badge>
+            )}
+          </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Total (S/)</Label>
+          {!hasSelection ? (
+            <Card className="border-0 shadow-md rounded-2xl bg-muted/50" data-testid="calculator-empty-state">
+              <CardContent className="p-6 text-center space-y-3">
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto">
+                  <Package className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className="text-sm text-muted-foreground">Selecciona un producto para comenzar</p>
+                <Button
+                  type="button"
+                  onClick={handleSelectAnother}
+                  data-testid="select-product-button"
+                  className="bg-orange-500 hover:bg-orange-600 h-11 px-5 rounded-xl w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Seleccionar Producto
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <FormProvider {...form}>
+              <Card className="border-0 shadow-md rounded-2xl bg-card" data-testid="calculator-form">
+                <CardContent className="p-4 space-y-4">
+                  <div
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100"
+                    data-testid="selected-product-card"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                        <Package className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium" data-testid="selected-product-name">{selectedProduct?.name}</p>
+                        <p className="text-sm text-muted-foreground" data-testid="selected-variant-name">{selectedVariant?.name}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowVariantSelector(true)}
+                      data-testid="change-product-button"
+                      className="text-orange-700 hover:bg-orange-100"
+                    >
+                      Cambiar
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <Controller
                       name="totalAmount"
                       control={form.control}
                       render={({ field }) => (
-                        <Input
-                          type="text"
-                          inputMode="decimal"
+                        <FormCalculatorInput
+                          label="Total (S/)"
                           placeholder="0.00"
-                          className="rounded-xl text-lg"
+                          decimals={2}
                           data-testid="calculator-total-amount"
                           autoFocus
                           value={field.value}
-                          onChange={(e) => setFieldValue("totalAmount", e.target.value)}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setFieldValue("totalAmount", e.target.value);
+                          }}
                         />
                       )}
                     />
+
+                    {isKgProduct ? (
+                      <KgCalculatorForm
+                        kgNeto={calculation.kgNeto}
+                        variantPrice={selectedVariant?.price || ""}
+                        hideTara={hideTara}
+                        setFieldValue={setFieldValue}
+                      />
+                    ) : (
+                      <UnitCalculatorForm 
+                        variant={selectedVariant} 
+                        setFieldValue={setFieldValue}
+                      />
+                    )}
                   </div>
 
-                  {isKgProduct ? (
-                    <KgCalculatorForm
-                      kgNeto={calculation.kgNeto}
-                      variantPrice={selectedVariant?.price || ""}
-                      hideTara={hideTara}
-                      setFieldValue={setFieldValue}
-                    />
-                  ) : (
-                    <UnitCalculatorForm variant={selectedVariant} />
-                  )}
-                </div>
+                  <CalculatorActions
+                    isValid={isValid}
+                    isKgProduct={isKgProduct}
+                    onAddToCart={handleAddToCartAndClose}
+                    onClear={handleClear}
+                    onSelectAnother={handleSelectAnother}
+                  />
+                </CardContent>
+              </Card>
+            </FormProvider>
+          )}
+        </div>
+      </div>
 
-                <CalculatorActions
-                  isValid={isValid}
-                  isKgProduct={isKgProduct}
-                  onAddToCart={handleAddToCart}
-                  onClear={handleClear}
-                  onSelectAnother={handleSelectAnother}
-                />
-              </CardContent>
-            </Card>
-          </FormProvider>
-        )}
-      </section>
-
-      <section>
+      <div className="p-4 border-t bg-background">
         <Button
           variant="outline"
           onClick={() => setShowVariantSelector(true)}
@@ -167,7 +194,7 @@ export function CalculatorSection() {
             </p>
           </div>
         </Button>
-      </section>
+      </div>
 
       <VariantSelector
         open={showVariantSelector}
@@ -176,5 +203,72 @@ export function CalculatorSection() {
         data-testid="variant-selector-modal"
       />
     </>
+  );
+}
+
+export const [CalculatorModal, useCalculatorModal] = createModal(
+  CalculatorContent,
+  { type: "responsive", side: "bottom" }
+);
+
+export function CalculatorSection() {
+  const [isOpen, setIsOpen] = useAtom(showCalculatorModalAtom);
+
+  return (
+    <>
+      <section id="calculator-section" className="space-y-3" data-testid="calculator-section">
+        <Card 
+          className="border-0 shadow-md rounded-2xl bg-card cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => setIsOpen(true)}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Calculator className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Calculadora</p>
+                <p className="text-sm text-muted-foreground">Toca para calcular un producto</p>
+              </div>
+              <Button className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <CalculatorModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+      />
+    </>
+  );
+}
+
+function Calculator({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect width="16" height="20" x="4" y="2" rx="2" />
+      <line x1="8" x2="16" y1="6" y2="6" />
+      <line x1="16" x2="16" y1="14" y2="18" />
+      <path d="M16 10h.01" />
+      <path d="M12 10h.01" />
+      <path d="M8 10h.01" />
+      <path d="M12 14h.01" />
+      <path d="M8 14h.01" />
+      <path d="M12 18h.01" />
+      <path d="M8 18h.01" />
+    </svg>
   );
 }

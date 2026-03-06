@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Box, Hash, Scale } from "lucide-react";
 import type { ProductVariant } from "~/hooks/use-product-variants";
@@ -115,11 +116,13 @@ export function UnitForm({
               <Scale className="h-4 w-4" />
               Cantidad *
             </Label>
-            <Input
+            <NumericInput
               id="baseUnitQuantity"
-              type="number"
-              step="0.001"
-              {...register("baseUnitQuantity", { valueAsNumber: true })}
+              decimals={3}
+              {...register("baseUnitQuantity", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number.parseFloat(value),
+              })}
               className="rounded-xl"
             />
             {errors.baseUnitQuantity && (

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Package, Truck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Dialog,
   DialogContent,
@@ -187,12 +187,11 @@ export function OrderDeliveryModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs" htmlFor={`delivered-qty-${item.itemId}`}>Cantidad entregada</Label>
-                      <Input
+                      <NumericInput
                         id={`delivered-qty-${item.itemId}`}
-                        type="number"
                         min="0"
                         max={item.orderedQuantity}
-                        step="0.001"
+                        decimals={3}
                         value={item.deliveredQuantity || ""}
                         onChange={(e) =>
                           updateItemQuantity(item.itemId, parseFloat(e.target.value) || 0)
@@ -206,11 +205,10 @@ export function OrderDeliveryModal({
 
                     <div className="space-y-1">
                       <Label className="text-xs" htmlFor={`final-price-${item.itemId}`}>Precio final (S/)</Label>
-                      <Input
+                      <NumericInput
                         id={`final-price-${item.itemId}`}
-                        type="number"
                         min="0"
-                        step="0.01"
+                        decimals={2}
                         value={item.unitPriceFinal || ""}
                         onChange={(e) =>
                           updateItemPrice(item.itemId, parseFloat(e.target.value) || 0)

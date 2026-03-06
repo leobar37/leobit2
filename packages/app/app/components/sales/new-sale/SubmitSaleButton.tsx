@@ -69,7 +69,7 @@ export function SubmitSaleButton() {
         items,
       });
       clearCart();
-      navigate("/dashboard");
+      navigate("/ventas");
     } catch (error) {
       console.error("Error creating sale:", error);
       const message = error instanceof Error ? error.message : "Error al crear la venta. Intente nuevamente.";

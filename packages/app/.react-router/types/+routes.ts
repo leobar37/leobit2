@@ -22,6 +22,9 @@ type Pages = {
   "/reportes/cuentas-por-cobrar": {
     params: {};
   };
+  "/reportes/compras-sugeridas": {
+    params: {};
+  };
   "/ayuda/:module/:slug": {
     params: {
       "module": string;
@@ -168,7 +171,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/reportes/cuentas-por-cobrar" | "/ayuda/:module/:slug" | "/clientes/:id" | "/pedidos/:id" | "/proveedores" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/compras" | "/distribuciones" | "/pedidos" | "/business/edit" | "/cobros" | "/compras/nueva" | "/pedidos/nuevo" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/ventas/nueva" | "/ventas/nueva/test" | "/compras/:id" | "/invitations" | "/dashboard" | "/activos" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/appearance" | "/config/inventory" | "/config/security" | "/config/flags" | "/team" | "/register" | "/login";
+    page: "/" | "/invitations/:token" | "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/ayuda/:module/:slug" | "/clientes/:id" | "/pedidos/:id" | "/proveedores" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/compras" | "/distribuciones" | "/pedidos" | "/business/edit" | "/cobros" | "/compras/nueva" | "/pedidos/nuevo" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/ventas/nueva" | "/ventas/nueva/test" | "/compras/:id" | "/invitations" | "/dashboard" | "/activos" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/appearance" | "/config/inventory" | "/config/security" | "/config/flags" | "/team" | "/register" | "/login";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -176,11 +179,15 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/reportes/cuentas-por-cobrar" | "/ayuda/:module/:slug" | "/clientes/:id" | "/pedidos/:id" | "/proveedores" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/compras" | "/distribuciones" | "/pedidos" | "/business/edit" | "/cobros" | "/compras/nueva" | "/pedidos/nuevo" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/ventas/nueva" | "/ventas/nueva/test" | "/compras/:id" | "/invitations" | "/dashboard" | "/activos" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/appearance" | "/config/inventory" | "/config/security" | "/config/flags" | "/team";
+    page: "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/ayuda/:module/:slug" | "/clientes/:id" | "/pedidos/:id" | "/proveedores" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/compras" | "/distribuciones" | "/pedidos" | "/business/edit" | "/cobros" | "/compras/nueva" | "/pedidos/nuevo" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/ventas/nueva" | "/ventas/nueva/test" | "/compras/:id" | "/invitations" | "/dashboard" | "/activos" | "/profile" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/appearance" | "/config/inventory" | "/config/security" | "/config/flags" | "/team";
   };
   "routes/_protected.reportes.cuentas-por-cobrar.tsx": {
     id: "routes/_protected.reportes.cuentas-por-cobrar";
     page: "/reportes/cuentas-por-cobrar";
+  };
+  "routes/_protected.reportes.compras-sugeridas.tsx": {
+    id: "routes/_protected.reportes.compras-sugeridas";
+    page: "/reportes/compras-sugeridas";
   };
   "routes/_protected.ayuda.$module.$slug.tsx": {
     id: "routes/_protected.ayuda.$module.$slug";
@@ -365,6 +372,7 @@ type RouteModules = {
   "routes/invitations.$token": typeof import("./app/routes/invitations.$token.tsx");
   "routes/_protected": typeof import("./app/routes/_protected.tsx");
   "routes/_protected.reportes.cuentas-por-cobrar": typeof import("./app/routes/_protected.reportes.cuentas-por-cobrar.tsx");
+  "routes/_protected.reportes.compras-sugeridas": typeof import("./app/routes/_protected.reportes.compras-sugeridas.tsx");
   "routes/_protected.ayuda.$module.$slug": typeof import("./app/routes/_protected.ayuda.$module.$slug.tsx");
   "routes/_protected.clientes.$id._index": typeof import("./app/routes/_protected.clientes.$id._index.tsx");
   "routes/_protected.pedidos.$id._index": typeof import("./app/routes/_protected.pedidos.$id._index.tsx");

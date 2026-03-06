@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { inventory, type Inventory, type NewInventory, sales, saleItems, products, productVariants } from "../../db/schema";
+import { inventory, variantInventory, type Inventory, type NewInventory, sales, saleItems, products, productVariants } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
 export class InventoryRepository {
@@ -132,6 +132,7 @@ export class InventoryRepository {
       .as("sold");
 
     // Main query: products with sold quantities and inventory
+    // Uses variantInventory for variant-level stock, inventory table for products without variants
     const result = await db
       .select({
         productId: products.id,
@@ -139,8 +140,17 @@ export class InventoryRepository {
         variantId: productVariants.id,
         variantName: productVariants.name,
         totalSold: sql<string>`coalesce(${soldSubquery.totalSold}, '0')`,
-        currentStock: sql<string>`coalesce(${inventory.quantity}, '0')`,
-        needed: sql<string>`greatest(coalesce(${soldSubquery.totalSold}, '0')::decimal - coalesce(${inventory.quantity}, '0')::decimal, 0)`,
+        // Use variantInventory when variant exists, otherwise use inventory table
+        currentStock: sql<string>`coalesce(
+          ${variantInventory.quantity},
+          ${inventory.quantity},
+          '0'
+        )`,
+        needed: sql<string>`greatest(
+          coalesce(${soldSubquery.totalSold}, '0')::decimal - 
+          coalesce(${variantInventory.quantity}, ${inventory.quantity}, '0')::decimal, 
+          0
+        )`,
       })
       .from(products)
       .leftJoin(productVariants, eq(productVariants.productId, products.id))
@@ -152,7 +162,11 @@ export class InventoryRepository {
         )
       )
       .leftJoin(inventory, eq(inventory.productId, products.id))
-      .where(eq(products.businessId, ctx.businessId))
+      .leftJoin(variantInventory, eq(variantInventory.variantId, productVariants.id))
+      .where(and(
+        eq(products.businessId, ctx.businessId),
+        eq(products.isActive, true)
+      ))
       .orderBy(desc(sql`needed`));
 
     return result;

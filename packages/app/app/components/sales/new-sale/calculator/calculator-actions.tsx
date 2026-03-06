@@ -22,7 +22,7 @@ export function CalculatorActions({
 				onClick={onAddToCart}
 				disabled={!isValid}
 				data-testid="add-to-cart-button"
-				className="w-full bg-orange-500 hover:bg-orange-600 h-12"
+				className="w-full bg-orange-500 hover:bg-orange-600 h-12 disabled:opacity-100 disabled:bg-orange-200 disabled:text-orange-50"
 			>
 				<Plus className="h-4 w-4 mr-2" />
 				Agregar al Carrito
@@ -37,7 +37,7 @@ export function CalculatorActions({
 					size="sm"
 				>
 					<RotateCcw className="h-4 w-4 mr-2" />
-					{isKgProduct ? "Limpiar Peso" : "Limpiar"}
+					Limpiar
 				</Button>
 				<Button
 					variant="outline"

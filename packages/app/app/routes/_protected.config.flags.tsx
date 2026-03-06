@@ -129,7 +129,7 @@ export default function FlagsConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-pink-500 to-pink-600 text-white">
+      <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2 mb-2">
             <Button
@@ -142,7 +142,7 @@ export default function FlagsConfigPage() {
             </Button>
           </div>
           <CardTitle className="text-2xl">Flags</CardTitle>
-          <CardDescription className="text-pink-100">
+          <CardDescription className="text-orange-100">
             Configuración de calculadoras y features del negocio
           </CardDescription>
         </CardHeader>
@@ -151,8 +151,8 @@ export default function FlagsConfigPage() {
       <Card className="border-0 shadow-md rounded-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center">
-              <Calculator className="h-5 w-5 text-pink-600" />
+            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+              <Calculator className="h-5 w-5 text-orange-600" />
             </div>
             <div>
               <CardTitle className="text-lg">Calculadoras</CardTitle>
@@ -205,7 +205,7 @@ export default function FlagsConfigPage() {
           Cancelar
         </Button>
         <Button
-          className="flex-1 rounded-xl bg-pink-600 hover:bg-pink-700"
+          className="flex-1 rounded-xl"
           onClick={handleSave}
           disabled={isSaving || !localSettings}
         >

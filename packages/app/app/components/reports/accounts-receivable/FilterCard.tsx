@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { useAtom } from "jotai";
 import { searchAtom, minBalanceAtom } from "~/atoms/accounts-receivable";
 
@@ -28,8 +29,8 @@ export function FilterCard() {
           />
         </div>
         <div className="flex gap-2">
-          <Input
-            type="number"
+          <NumericInput
+            decimals={2}
             placeholder="Monto mínimo (S/)"
             value={minBalance}
             onChange={(e) => setMinBalance(e.target.value)}

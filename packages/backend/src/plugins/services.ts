@@ -36,6 +36,7 @@ import { OrderEventsRepository } from "../services/repository/order-events.repos
 import { OrderService } from "../services/business/order.service";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
+import { OCRService } from "../services/business/ocr.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -84,6 +85,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
+    const ocrService = new OCRService();
 
     return {
       businessRepo,
@@ -123,5 +125,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       orderService,
       paymentMethodConfigRepo,
       paymentMethodConfigService,
+      ocrService,
     };
   });

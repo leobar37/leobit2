@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
+import { FormNumberInput } from "@/components/forms/form-number-input";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 
@@ -79,15 +80,13 @@ export default function InventoryConfigPage() {
                     Alertas de Stock
                   </h3>
 
-                  <FormInput
+                  <FormNumberInput
                     label="Stock mínimo de alerta"
-                    type="number"
                     placeholder="10"
+                    decimals={0}
+                    description="Cantidad mínima antes de mostrar alerta"
                     {...form.register("stockMinimo")}
                   />
-                  <p className="text-sm text-muted-foreground -mt-2">
-                    Cantidad mínima antes de mostrar alerta
-                  </p>
 
                   <div className="flex items-center justify-between py-2">
                     <div>

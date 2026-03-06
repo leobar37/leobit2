@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Box, Package, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import { VariantSelector } from "~/components/sales/variant-selector";
 import { usePurchaseCalculator } from "~/hooks/use-purchase-calculator";
@@ -166,10 +166,9 @@ export function PurchaseCalculatorSection() {
                 </Label>
                 {selectedUnitId ? (
                   <>
-                    <Input
-                      type="number"
+                    <NumericInput
+                      decimals={3}
                       min="0.001"
-                      step="0.001"
                       placeholder="Packs"
                       className="rounded-xl"
                       value={formValues.packs || ""}
@@ -184,10 +183,9 @@ export function PurchaseCalculatorSection() {
                     )}
                   </>
                 ) : (
-                  <Input
-                    type="number"
+                  <NumericInput
+                    decimals={3}
                     min="0.001"
-                    step="0.001"
                     placeholder="Cantidad"
                     className="rounded-xl"
                     value={formValues.quantity || ""}
@@ -200,10 +198,9 @@ export function PurchaseCalculatorSection() {
 
               <div className="space-y-2">
                 <Label className="text-xs">Costo unitario (S/)</Label>
-                <Input
-                  type="number"
+                <NumericInput
+                  decimals={2}
                   min="0"
-                  step="0.01"
                   placeholder="0.00"
                   className="rounded-xl"
                   value={formValues.unitCost || ""}
@@ -217,9 +214,8 @@ export function PurchaseCalculatorSection() {
             {/* Total Amount */}
             <div className="space-y-2">
               <Label className="text-xs">Total (S/)</Label>
-              <Input
-                type="text"
-                inputMode="decimal"
+              <NumericInput
+                decimals={2}
                 placeholder="0.00"
                 className="rounded-xl text-lg"
                 value={formValues.totalAmount || ""}

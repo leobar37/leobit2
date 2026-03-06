@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign, Hash, Scale } from "lucide-react";
 
@@ -108,12 +109,14 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
               <Scale className="h-4 w-4" />
               Cantidad Unit. *
             </Label>
-            <Input
+            <NumericInput
               id="unitQuantity"
               data-testid="variant-unitquantity-input"
-              type="number"
-              step="0.001"
-              {...register("unitQuantity", { valueAsNumber: true })}
+              decimals={3}
+              {...register("unitQuantity", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number.parseFloat(value),
+              })}
               className="rounded-xl"
             />
             {errors.unitQuantity && (
@@ -126,12 +129,14 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
               <DollarSign className="h-4 w-4" />
               Precio (S/) *
             </Label>
-            <Input
+            <NumericInput
               id="price"
               data-testid="variant-price-input"
-              type="number"
-              step="0.01"
-              {...register("price", { valueAsNumber: true })}
+              decimals={2}
+              {...register("price", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number.parseFloat(value),
+              })}
               className="rounded-xl"
             />
             {errors.price && (

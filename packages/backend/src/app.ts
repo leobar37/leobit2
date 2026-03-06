@@ -21,6 +21,7 @@ import { supplierRoutes } from "./api/suppliers";
 import { purchaseRoutes } from "./api/purchases";
 import { productUnitsRoutes } from "./api/product-units";
 import { paymentMethodConfigRoutes } from "./api/businesses/payment-methods";
+import { ocrRoutes } from "./api/ocr";
 import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -67,6 +68,7 @@ export const app = new Elysia()
   .use(purchaseRoutes)
   .use(productUnitsRoutes)
   .use(paymentMethodConfigRoutes)
+  .use(ocrRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

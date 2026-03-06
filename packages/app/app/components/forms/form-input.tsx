@@ -1,20 +1,38 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { FormFieldShell } from "./form-field-shell";
 
 export interface FormInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
+  description?: string;
   label?: string;
   error?: string;
   helperText?: string;
+  reserveMessageSpace?: boolean;
 }
 
 const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-  ({ className, label, error, helperText, ...props }, ref) => {
+  (
+    {
+      className,
+      description,
+      error,
+      helperText,
+      label,
+      reserveMessageSpace = true,
+      ...props
+    },
+    ref
+  ) => {
     return (
-      <div className="space-y-2">
-        {label && <Label>{label}</Label>}
+      <FormFieldShell
+        description={description}
+        error={error}
+        helperText={helperText}
+        label={label}
+        reserveMessageSpace={reserveMessageSpace}
+      >
         <Input
           ref={ref}
           data-testid={props.name ? `input-${props.name}` : undefined}
@@ -25,12 +43,7 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
           )}
           {...props}
         />
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : helperText ? (
-          <p className="text-xs text-muted-foreground">{helperText}</p>
-        ) : null}
-      </div>
+      </FormFieldShell>
     );
   }
 );

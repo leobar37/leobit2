@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   useSaleStore,
   getTotalAmount,
@@ -39,10 +39,9 @@ export function SaleSummaryCard() {
             <Label htmlFor="initial-payment-input" className="text-orange-100">
               Abono inicial
             </Label>
-            <Input
+            <NumericInput
               id="initial-payment-input"
-              type="number"
-              step="0.01"
+              decimals={2}
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
               data-testid="initial-payment-input"

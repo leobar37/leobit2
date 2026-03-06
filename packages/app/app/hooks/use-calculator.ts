@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,10 +9,12 @@ import {
 	type UnitCalculatorFields,
 	type CalculationResult,
 	type KgCalculatorFieldName,
+	type UnitCalculatorFieldName,
 	type UnitType,
 	calculateKgProduct,
 	calculateUnitProduct,
 	autoCalculateKgField,
+	autoCalculateUnitField,
 	getKgDefaultValues,
 	getUnitDefaultValues,
 } from "~/lib/calculator";
@@ -64,6 +66,20 @@ interface UseCalculatorReturn {
 	setFieldValue: (field: string, value: string) => void;
 }
 
+// Type for field timestamps
+type KgFieldTimestamps = {
+	totalAmount: number;
+	pricePerKg: number;
+	kilos: number;
+	tara: number;
+};
+
+type UnitFieldTimestamps = {
+	totalAmount: number;
+	packs: number;
+	units: number;
+};
+
 /**
  * Unified calculator hook for sales, purchases, and orders.
  * Handles both kg-based and unit-based products with auto-calculation.
@@ -91,6 +107,52 @@ export function useCalculator(
 
 	// Watch all form values for calculations
 	const formValues = useWatch({ control: form.control });
+
+	// Track if this is the first render
+	const isFirstRender = useRef(true);
+
+	// Track timestamps of when each field was last edited
+	const kgFieldTimestamps = useRef<KgFieldTimestamps>({
+		totalAmount: 0,
+		pricePerKg: 0,
+		kilos: 0,
+		tara: 0,
+	});
+
+	const unitFieldTimestamps = useRef<UnitFieldTimestamps>({
+		totalAmount: 0,
+		packs: 0,
+		units: 0,
+	});
+
+	// Update form default values when product type changes
+	useEffect(() => {
+		// Skip on first render to avoid double reset
+		if (isFirstRender.current) {
+			isFirstRender.current = false;
+			return;
+		}
+
+		const defaultPrice = autoFillPrice ? initialPrice : "";
+		if (isKgProduct) {
+			form.reset(getKgDefaultValues(defaultPrice));
+		} else {
+			form.reset(getUnitDefaultValues());
+		}
+		
+		// Reset timestamps on product change
+		kgFieldTimestamps.current = {
+			totalAmount: 0,
+			pricePerKg: 0,
+			kilos: 0,
+			tara: 0,
+		};
+		unitFieldTimestamps.current = {
+			totalAmount: 0,
+			packs: 0,
+			units: 0,
+		};
+	}, [form, isKgProduct, autoFillPrice, initialPrice]);
 
 	// Calculate derived values
 	const calculation = useMemo<CalculationResult>(() => {
@@ -124,46 +186,106 @@ export function useCalculator(
 	 * Clear the form and reset to default values
 	 */
 	const handleClear = useCallback(() => {
-		// Re-compute current default price at reset time
+		// Get fresh default values for the current product type
 		const currentDefaultPrice = autoFillPrice ? initialPrice : "";
 
+		// Reset timestamps
+		kgFieldTimestamps.current = {
+			totalAmount: 0,
+			pricePerKg: 0,
+			kilos: 0,
+			tara: 0,
+		};
+		unitFieldTimestamps.current = {
+			totalAmount: 0,
+			packs: 0,
+			units: 0,
+		};
+
+		// Reset with explicit empty values to clear the form
+		// Use type assertion since we know the current product type
 		if (isKgProduct) {
-			form.reset(getKgDefaultValues(currentDefaultPrice));
+			form.reset({
+				totalAmount: "",
+				pricePerKg: currentDefaultPrice,
+				kilos: "",
+				tara: "0",
+			});
 		} else {
-			form.reset(getUnitDefaultValues());
+			form.reset({
+				totalAmount: "",
+				packs: "",
+				units: "",
+			});
 		}
 	}, [form, isKgProduct, autoFillPrice, initialPrice]);
 
 	/**
-	 * Set a field value with auto-calculation for kg products
-	 * When 2 of 3 fields are filled, the third is automatically calculated
+	 * Set a field value with smart auto-calculation for both kg and unit products.
+	 * When 2 of 3 fields are filled, calculate the third.
+	 * When 3 fields are filled and user edits one, recalculate the oldest field.
+	 * Does NOT recalculate when user is clearing a field (setting to empty).
 	 */
 	const setFieldValue = useCallback(
 		(field: string, value: string) => {
+			// Get current value to detect if user is clearing the field
+			const currentValue = form.getValues(field as never);
+			const isClearingField = currentValue && !value;
+
+			// Update timestamp for this field (only when writing, not clearing)
+			if (isKgProduct) {
+				if (field in kgFieldTimestamps.current && !isClearingField) {
+					kgFieldTimestamps.current[field as keyof KgFieldTimestamps] = Date.now();
+				}
+			} else {
+				if (field in unitFieldTimestamps.current && !isClearingField) {
+					unitFieldTimestamps.current[field as keyof UnitFieldTimestamps] = Date.now();
+				}
+			}
+
 			// Set the field value and trigger validation
 			form.setValue(field as never, value as never, {
 				shouldValidate: true,
 			});
 
-			// Auto-calculate for kg products
-			if (isKgProduct) {
-				const values = form.getValues() as KgCalculatorFields;
-				const calculated = autoCalculateKgField(
-					values,
-					field as KgCalculatorFieldName,
-				);
+			// Auto-calculate, but NOT when clearing a field
+			if (!isClearingField) {
+				if (isKgProduct) {
+					const values = form.getValues() as KgCalculatorFields;
+					const calculated = autoCalculateKgField(
+						values,
+						field as KgCalculatorFieldName,
+						kgFieldTimestamps.current,
+					);
 
-				// Only set values that are strings (not objects)
-				Object.entries(calculated).forEach(([key, val]) => {
-					if (typeof val === "string") {
-						form.setValue(key as never, val as never, {
-							shouldValidate: true,
-						});
-					}
-				});
+					Object.entries(calculated).forEach(([key, val]) => {
+						if (typeof val === "string") {
+							form.setValue(key as never, val as never, {
+								shouldValidate: true,
+							});
+						}
+					});
+				} else {
+					const values = form.getValues() as UnitCalculatorFields;
+					const unitQuantity = Math.max(1, parseInt(variant?.unitQuantity || "1", 10) || 1);
+					const calculated = autoCalculateUnitField(
+						values,
+						field as UnitCalculatorFieldName,
+						unitQuantity,
+						unitFieldTimestamps.current,
+					);
+
+					Object.entries(calculated).forEach(([key, val]) => {
+						if (typeof val === "string") {
+							form.setValue(key as never, val as never, {
+								shouldValidate: true,
+							});
+						}
+					});
+				}
 			}
 		},
-		[form, isKgProduct],
+		[form, isKgProduct, variant],
 	);
 
 	return {

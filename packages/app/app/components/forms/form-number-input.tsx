@@ -1,39 +1,67 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { FormInput, type FormInputProps } from "./form-input";
+import {
+  NumericInput,
+  type NumericInputProps,
+} from "@/components/ui/numeric-input";
+import { FormFieldShell } from "./form-field-shell";
 
-export interface FormNumberInputProps extends FormInputProps {
-	/** Maximum amount to display as helper text */
-	maxAmount?: number;
-	/** Step value for number input (default: 0.01) */
-	step?: string;
+interface FormNumberInputBaseProps {
+  description?: string;
+  error?: string;
+  helperText?: string;
+  label?: string;
+  maxAmount?: number;
+  reserveMessageSpace?: boolean;
 }
 
-/**
- * Specialized form input for number/currency fields.
- * Adds max amount helper text and defaults to step="0.01".
- */
-const FormNumberInput = forwardRef<
-	HTMLInputElement,
-	FormNumberInputProps
->(({ className, maxAmount, step = "0.01", ...props }, ref) => {
-	return (
-		<div className="space-y-2">
-			<FormInput
-				ref={ref}
-				type="number"
-				step={step}
-				className={cn("rounded-xl text-lg", className)}
-				{...props}
-			/>
-			{maxAmount !== undefined && (
-				<p className="text-xs text-muted-foreground">
-					Máximo: S/ {maxAmount.toFixed(2)}
-				</p>
-			)}
-		</div>
-	);
-});
+export interface FormNumberInputProps
+  extends Omit<NumericInputProps, "children">,
+    FormNumberInputBaseProps {
+  maxAmount?: number;
+  decimals?: number;
+}
+
+const FormNumberInput = forwardRef<HTMLInputElement, FormNumberInputProps>(
+  (
+    {
+      className,
+      decimals = 2,
+      description,
+      error,
+      helperText,
+      label,
+      maxAmount,
+      reserveMessageSpace = true,
+      ...props
+    },
+    ref,
+  ) => {
+    const fieldDescription =
+      maxAmount !== undefined
+        ? `Máximo: S/ ${maxAmount.toFixed(2)}`
+        : description;
+
+    return (
+      <FormFieldShell
+        description={fieldDescription}
+        error={error}
+        helperText={helperText}
+        label={label}
+        reserveMessageSpace={reserveMessageSpace}
+      >
+        <NumericInput
+          {...props}
+          ref={ref}
+          className={cn("h-12 rounded-xl bg-background px-4 text-lg", className)}
+          data-testid={props.name ? `input-${props.name}` : undefined}
+          decimals={decimals}
+        />
+      </FormFieldShell>
+    );
+  },
+);
+
 FormNumberInput.displayName = "FormNumberInput";
 
 export { FormNumberInput };

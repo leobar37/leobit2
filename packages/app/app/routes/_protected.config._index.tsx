@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Shield,
   Bell,
-  Moon,
   Truck,
   ShoppingCart,
   Flag,
@@ -73,14 +72,6 @@ const baseConfigItems: ConfigItem[] = [
   //   color: "text-yellow-600",
   //   iconBg: "bg-yellow-100",
   // },
-  {
-    icon: Moon,
-    title: "Apariencia",
-    description: "Tema y colores",
-    href: "/config/appearance",
-    color: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-  },
   {
     icon: Shield,
     title: "Seguridad",

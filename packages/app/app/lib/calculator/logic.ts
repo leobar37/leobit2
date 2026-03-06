@@ -119,10 +119,12 @@ export function calculateUnitProduct(
 /**
  * Auto-calculate missing field in kg calculator
  * When 2 of 3 fields are filled, calculate the third
+ * When 3 fields are filled, recalculate the oldest field (smart recalculate)
  */
 export function autoCalculateKgField(
 	values: AutoCalculateInput,
 	activeField: KgCalculatorFieldName | null,
+	timestamps?: { totalAmount: number; pricePerKg: number; kilos: number; tara: number },
 ): Partial<KgCalculatorFields> {
 	const kgNeto = calculateKgNeto(values.kilos, values.tara);
 	const price = parseNumber(values.pricePerKg);
@@ -135,31 +137,159 @@ export function autoCalculateKgField(
 		};
 	}
 
-	const filledFields = [
-		values.totalAmount && "totalAmount",
-		values.pricePerKg && "pricePerKg",
-		values.kilos && "kilos",
-	].filter(Boolean);
+	// Check which of the 3 main fields are filled
+	const mainFields: Array<{ name: "totalAmount" | "pricePerKg" | "kilos"; value: string }> = [
+		{ name: "totalAmount", value: values.totalAmount },
+		{ name: "pricePerKg", value: values.pricePerKg },
+		{ name: "kilos", value: values.kilos },
+	];
 
-	if (filledFields.length !== 2) {
-		return {};
+	const filledMainFields = mainFields.filter((f) => f.value);
+	const emptyMainFields = mainFields.filter((f) => !f.value);
+
+	// Case 1: Exactly 2 fields filled - calculate the missing one (standard behavior)
+	if (filledMainFields.length === 2 && emptyMainFields.length === 1) {
+		const missingField = emptyMainFields[0].name;
+
+		// Calculate missing total
+		if (missingField === "totalAmount" && price > 0 && kgNeto > 0) {
+			return { totalAmount: (price * kgNeto).toFixed(2) };
+		}
+
+		// Calculate missing price per kg
+		if (missingField === "pricePerKg" && total > 0 && kgNeto > 0) {
+			return { pricePerKg: (total / kgNeto).toFixed(2) };
+		}
+
+		// Calculate missing kilos
+		if (missingField === "kilos" && total > 0 && price > 0) {
+			const taraNum = parseNumber(values.tara);
+			const kgBruto = total / price + taraNum;
+			return { kilos: kgBruto.toFixed(3) };
+		}
 	}
 
-	// Calculate missing total
-	if (!values.totalAmount && price > 0 && kgNeto > 0) {
-		return { totalAmount: (price * kgNeto).toFixed(2) };
+	// Case 2: All 3 fields filled + timestamps available - smart recalculate (Option 1)
+	if (filledMainFields.length === 3 && timestamps && activeField) {
+		// Find the field with the oldest timestamp (excluding the active field being edited)
+		const fieldEntries: Array<{ name: "totalAmount" | "pricePerKg" | "kilos"; timestamp: number }> = [
+			{ name: "totalAmount", timestamp: timestamps.totalAmount },
+			{ name: "pricePerKg", timestamp: timestamps.pricePerKg },
+			{ name: "kilos", timestamp: timestamps.kilos },
+		];
+
+		// Filter out the active field and find oldest
+		const otherFields = fieldEntries.filter((f) => f.name !== activeField);
+		const oldestField = otherFields.reduce((oldest, current) =>
+			current.timestamp < oldest.timestamp ? current : oldest,
+		);
+
+		// Recalculate the oldest field based on the other two
+		if (oldestField.name === "totalAmount" && price > 0 && kgNeto > 0) {
+			return { totalAmount: (price * kgNeto).toFixed(2) };
+		}
+
+		if (oldestField.name === "pricePerKg" && total > 0 && kgNeto > 0) {
+			return { pricePerKg: (total / kgNeto).toFixed(2) };
+		}
+
+		if (oldestField.name === "kilos" && total > 0 && price > 0) {
+			const taraNum = parseNumber(values.tara);
+			const kgBruto = total / price + taraNum;
+			return { kilos: kgBruto.toFixed(3) };
+		}
 	}
 
-	// Calculate missing price per kg
-	if (!values.pricePerKg && total > 0 && kgNeto > 0) {
-		return { pricePerKg: (total / kgNeto).toFixed(2) };
+	return {};
+}
+
+/**
+ * Auto-calculate missing field in unit calculator
+ * When 2 of 3 fields are filled, calculate the third
+ * When 3 fields are filled, recalculate the oldest field (smart recalculate)
+ */
+export function autoCalculateUnitField(
+	values: { totalAmount: string; packs: string; units: string },
+	activeField: "totalAmount" | "packs" | "units" | null,
+	unitQuantity: number,
+	timestamps?: { totalAmount: number; packs: number; units: number },
+): Partial<{ totalAmount: string; packs: string; units: string }> {
+	const total = parseNumber(values.totalAmount);
+	const packs = parseNumber(values.packs);
+	const units = parseNumber(values.units);
+	const unitsPerPack = Math.max(1, unitQuantity);
+
+	// Check which of the 3 main fields are filled
+	const mainFields: Array<{ name: "totalAmount" | "packs" | "units"; value: string }> = [
+		{ name: "totalAmount", value: values.totalAmount },
+		{ name: "packs", value: values.packs },
+		{ name: "units", value: values.units },
+	];
+
+	const filledMainFields = mainFields.filter((f) => f.value);
+	const emptyMainFields = mainFields.filter((f) => !f.value);
+
+	// Case 1: Exactly 2 fields filled - calculate the missing one (standard behavior)
+	if (filledMainFields.length === 2 && emptyMainFields.length === 1) {
+		const missingField = emptyMainFields[0].name;
+
+		// Calculate missing total
+		if (missingField === "totalAmount") {
+			if (packs > 0) {
+				// Calculate from packs
+				const unitPrice = units > 0 ? total / units : 0;
+				const totalUnits = packs * unitsPerPack;
+				return { totalAmount: (totalUnits * unitPrice).toFixed(2) };
+			} else if (units > 0 && total > 0) {
+				// Keep current total if units exist and total was entered
+				return {};
+			}
+		}
+
+		// Calculate missing packs
+		if (missingField === "packs" && units > 0) {
+			const calculatedPacks = Math.ceil(units / unitsPerPack);
+			return { packs: calculatedPacks.toString() };
+		}
+
+		// Calculate missing units
+		if (missingField === "units" && packs > 0) {
+			const calculatedUnits = packs * unitsPerPack;
+			return { units: calculatedUnits.toString() };
+		}
 	}
 
-	// Calculate missing kilos
-	if (!values.kilos && total > 0 && price > 0) {
-		const taraNum = parseNumber(values.tara);
-		const kgBruto = total / price + taraNum;
-		return { kilos: kgBruto.toFixed(3) };
+	// Case 2: All 3 fields filled + timestamps available - smart recalculate
+	if (filledMainFields.length === 3 && timestamps && activeField) {
+		// Find the field with the oldest timestamp (excluding the active field being edited)
+		const fieldEntries: Array<{ name: "totalAmount" | "packs" | "units"; timestamp: number }> = [
+			{ name: "totalAmount", timestamp: timestamps.totalAmount },
+			{ name: "packs", timestamp: timestamps.packs },
+			{ name: "units", timestamp: timestamps.units },
+		];
+
+		// Filter out the active field and find oldest
+		const otherFields = fieldEntries.filter((f) => f.name !== activeField);
+		const oldestField = otherFields.reduce((oldest, current) =>
+			current.timestamp < oldest.timestamp ? current : oldest,
+		);
+
+		// Recalculate the oldest field based on the other two
+		if (oldestField.name === "totalAmount" && packs > 0) {
+			const unitPrice = units > 0 && total > 0 ? total / units : 0;
+			const totalUnits = packs * unitsPerPack;
+			return { totalAmount: (totalUnits * unitPrice).toFixed(2) };
+		}
+
+		if (oldestField.name === "packs" && units > 0) {
+			const calculatedPacks = Math.ceil(units / unitsPerPack);
+			return { packs: calculatedPacks.toString() };
+		}
+
+		if (oldestField.name === "units" && packs > 0) {
+			const calculatedUnits = packs * unitsPerPack;
+			return { units: calculatedUnits.toString() };
+		}
 	}
 
 	return {};

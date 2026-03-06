@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
+import { FormNumberInput } from "@/components/forms/form-number-input";
 import type { Distribucion } from "~/hooks/use-distribuciones";
 
 const editDistribucionSchema = z.object({
@@ -42,11 +43,10 @@ export function EditDistribucionForm({
           error={form.formState.errors.puntoVenta?.message}
         />
         
-        <FormInput
+        <FormNumberInput
           name="kilosAsignados"
           label="Kilos Asignados"
-          type="number"
-          step="0.1"
+          decimals={1}
           min="0.1"
           error={form.formState.errors.kilosAsignados?.message as string}
         />

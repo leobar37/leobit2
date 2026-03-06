@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { useVariantsByProduct, type ProductVariant } from "~/hooks/use-product-variants";
 import type { Product } from "~/hooks/use-products";
 
@@ -108,9 +108,8 @@ export function ProductVariantSelector({
         <div className="space-y-2">
           <Label className="text-sm">Cantidad (kg)</Label>
           <div className="flex gap-2">
-            <Input
-              type="number"
-              step="0.1"
+            <NumericInput
+              decimals={1}
               min="0.1"
               value={cantidad}
               onChange={(e) => setCantidad(e.target.value)}

@@ -40,8 +40,7 @@ export function ChickenCalculator({
 						label="Monto Total (S/)"
 						icon={DollarSign}
 						isActive={activeField === "totalAmount"}
-						type="text"
-						inputMode="decimal"
+						decimals={2}
 						value={values.totalAmount}
 						onChange={(e) => handleChange("totalAmount", e.target.value)}
 						placeholder="0.00"
@@ -51,8 +50,7 @@ export function ChickenCalculator({
 						label="Precio/kg (S/)"
 						icon={DollarSign}
 						isActive={activeField === "pricePerKg"}
-						type="text"
-						inputMode="decimal"
+						decimals={2}
 						value={values.pricePerKg}
 						onChange={(e) => handleChange("pricePerKg", e.target.value)}
 						placeholder="0.00"
@@ -62,24 +60,20 @@ export function ChickenCalculator({
 						label="Bruto (kg)"
 						icon={Weight}
 						isActive={activeField === "kilos"}
-						type="text"
-						inputMode="decimal"
+						decimals={3}
 						value={values.kilos}
 						onChange={(e) => handleChange("kilos", e.target.value)}
 						placeholder="0.000"
-						step="0.001"
 					/>
 
 					<FormCalculatorInput
 						label="Tara (kg)"
 						icon={Package}
 						isActive={activeField === "tara"}
-						type="text"
-						inputMode="decimal"
+						decimals={3}
 						value={values.tara}
 						onChange={(e) => handleChange("tara", e.target.value)}
 						placeholder="0"
-						step="0.001"
 					/>
 				</div>
 
