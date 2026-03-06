@@ -1,4 +1,5 @@
 import type { ProductRepository } from "../repository/product.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -8,7 +9,10 @@ import {
 import type { Product } from "../../db/schema";
 
 export class ProductService {
-  constructor(private repository: ProductRepository) {}
+  constructor(
+    private repository: ProductRepository,
+    private variantRepo: ProductVariantRepository,
+  ) {}
 
   async getProducts(
     ctx: RequestContext,
@@ -71,7 +75,7 @@ export class ProductService {
       throw new ValidationError("El precio no puede ser negativo");
     }
 
-    return this.repository.create(ctx, {
+    const product = await this.repository.create(ctx, {
       name: data.name,
       type: data.type,
       unit: data.unit,
@@ -79,6 +83,16 @@ export class ProductService {
       isActive: data.isActive ?? true,
       imageId: data.imageId,
     });
+
+    await this.variantRepo.create(ctx, {
+      productId: product.id,
+      name: "Estándar",
+      unitQuantity: "1",
+      price: data.basePrice.toString(),
+      isActive: true,
+    });
+
+    return product;
   }
 
   async updateProduct(

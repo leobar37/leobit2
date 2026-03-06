@@ -1,8 +1,9 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { bearer } from "better-auth/plugins";
+import { bearer, jwt } from "better-auth/plugins";
 import { db } from "./db";
 import { getCorsConfig } from "./cors";
+import * as schema from "../db/schema";
 
 const corsConfig = getCorsConfig();
 
@@ -11,6 +12,7 @@ export const auth = betterAuth({
   trustedOrigins: corsConfig.allowedOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
+    schema: schema,
   }),
   emailAndPassword: {
     enabled: true,
@@ -26,12 +28,19 @@ export const auth = betterAuth({
   socialProviders: {},
   plugins: [
     bearer(),
+    jwt({
+      jwt: {
+        // Security: Extended from default 15min to 7 days for mobile vendor use case
+        expirationTime: "7d",
+      },
+    }),
   ],
   advanced: {
+    useSecureCookies: process.env.NODE_ENV === "production",
     defaultCookieAttributes: {
-      secure: false,
-      httpOnly: false,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "lax",
     },
   },
 });

@@ -5,6 +5,7 @@ import type {
   UpdateBusinessInput,
 } from "@avileo/shared";
 import { api } from "~/lib/api-client";
+import { setStoredBusinessId } from "~/lib/session-storage";
 
 async function getBusiness(): Promise<Business> {
   const { data, error } = await api.businesses.me.get();
@@ -19,8 +20,8 @@ async function getBusiness(): Promise<Business> {
   const business = data.data as unknown as Business;
   
   // Store business ID for multi-business support in API requests
-  if (typeof window !== "undefined" && business.id) {
-    localStorage.setItem("current_business_id", business.id);
+  if (business.id) {
+    setStoredBusinessId(business.id);
   }
   
   return business;

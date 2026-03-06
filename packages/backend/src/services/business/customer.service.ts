@@ -42,10 +42,10 @@ export class CustomerService {
     ctx: RequestContext,
     data: {
       name: string;
-      dni?: string;
-      phone?: string;
-      address?: string;
-      notes?: string;
+      dni?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      notes?: string | null;
     }
   ): Promise<Customer> {
     if (!ctx.hasPermission("customers.write")) {
@@ -77,10 +77,10 @@ export class CustomerService {
     id: string,
     data: {
       name?: string;
-      dni?: string;
-      phone?: string;
-      address?: string;
-      notes?: string;
+      dni?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      notes?: string | null;
     }
   ): Promise<Customer> {
     if (!ctx.hasPermission("customers.write")) {

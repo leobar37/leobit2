@@ -9,6 +9,7 @@ export {
   session,
   account,
   verification,
+  jwks,
   userRelations,
   sessionRelations,
   accountRelations,
@@ -20,6 +21,8 @@ export {
   type NewAccount,
   type Verification,
   type NewVerification,
+  type Jwks,
+  type NewJwks,
 } from "./auth";
 
 // Enums

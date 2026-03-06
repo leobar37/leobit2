@@ -1,25 +1,16 @@
 import { treaty } from "@elysiajs/eden";
 import type { App } from "@avileo/backend";
+import { getStoredAuthToken, getStoredBusinessId } from "./session-storage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("bearer_token");
-}
-
-function getBusinessId(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("current_business_id");
-}
 
 export const api = treaty<App>(API_URL, {
   fetch: {
     credentials: "omit",
   },
   headers: (path) => {
-    const token = getAuthToken();
-    const businessId = getBusinessId();
+    const token = getStoredAuthToken();
+    const businessId = getStoredBusinessId();
     const headers: Record<string, string> = {};
 
     if (token) {
@@ -57,8 +48,8 @@ export function extractData<T>(
  * @throws Error if upload fails
  */
 export async function uploadFile<T>(endpoint: string, formData: FormData): Promise<T> {
-  const token = getAuthToken();
-  const businessId = getBusinessId();
+  const token = getStoredAuthToken();
+  const businessId = getStoredBusinessId();
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
   const headers: Record<string, string> = {};

@@ -77,6 +77,18 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+export const jwks = pgTable(
+  "jwks",
+  {
+    id: text("id").primaryKey(),
+    publicKey: text("public_key").notNull(),
+    privateKey: text("private_key").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at"),
+  },
+  (table) => [index("jwks_createdAt_idx").on(table.createdAt)]
+);
+
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Session = typeof session.$inferSelect;
@@ -85,6 +97,8 @@ export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
+export type Jwks = typeof jwks.$inferSelect;
+export type NewJwks = typeof jwks.$inferInsert;
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),

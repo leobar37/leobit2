@@ -35,7 +35,7 @@ export function CreateDistribucionForm({
   const [items, setItems] = useState<DistributionItem[]>([]);
 
   const vendedores =
-    team?.filter((m) => m.role === "VENDEDOR" && m.isActive) || [];
+    team?.filter((m) => (m.role === "VENDEDOR" || m.role === "ADMIN_NEGOCIO") && m.isActive) || [];
 
   const handleAddItem = (
     variant: ProductVariant,
@@ -108,7 +108,7 @@ export function CreateDistribucionForm({
           )}
           {vendedores.map((vendedor) => (
             <option key={vendedor.id} value={vendedor.userId}>
-              {vendedor.name}
+              {vendedor.name} {vendedor.role === "ADMIN_NEGOCIO" ? "(Admin)" : ""}
             </option>
           ))}
         </select>

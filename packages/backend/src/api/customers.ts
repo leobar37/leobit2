@@ -58,10 +58,10 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
     {
       body: t.Object({
         name: t.String({ minLength: 2 }),
-        dni: t.Optional(t.String()),
-        phone: t.Optional(t.String()),
-        address: t.Optional(t.String()),
-        notes: t.Optional(t.String()),
+        dni: t.Optional(t.Union([t.String(), t.Null()])),
+        phone: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )
@@ -77,10 +77,10 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
       }),
       body: t.Object({
         name: t.Optional(t.String({ minLength: 2 })),
-        dni: t.Optional(t.String()),
-        phone: t.Optional(t.String()),
-        address: t.Optional(t.String()),
-        notes: t.Optional(t.String()),
+        dni: t.Optional(t.Union([t.String(), t.Null()])),
+        phone: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )

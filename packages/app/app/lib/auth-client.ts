@@ -1,4 +1,5 @@
 import { createAuthClient } from "better-auth/react";
+import { clearStoredAuthState, getStoredAuthToken } from "./session-storage";
 
 /**
  * Better Auth Client - JWT Mode with Bearer Token
@@ -27,7 +28,7 @@ export const authClient = createAuthClient({
     auth: {
       type: "Bearer",
       token: () => {
-        return localStorage.getItem("bearer_token") || "";
+        return getStoredAuthToken() || "";
       },
     },
   },
@@ -43,7 +44,7 @@ export const { signIn, signUp, signOut, useSession, changePassword } = authClien
 export async function refreshSession() {
   const result = await authClient.getSession();
   if (result.error) {
-    localStorage.removeItem("bearer_token");
+    clearStoredAuthState();
     return null;
   }
   return result.data;
