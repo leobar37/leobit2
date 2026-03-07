@@ -85,6 +85,22 @@ export {
   type NewCustomer,
 } from "./customers";
 
+// Tags
+export {
+  tags,
+  tagsRelations,
+  type Tag,
+  type NewTag,
+} from "./tags";
+
+// Customer Tags
+export {
+  customerTags,
+  customerTagsRelations,
+  type CustomerTag,
+  type NewCustomerTag,
+} from "./customer-tags";
+
 // Sales
 export {
   sales,

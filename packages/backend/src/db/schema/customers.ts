@@ -14,6 +14,7 @@ import {
 import { relations } from "drizzle-orm";
 import { syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
+import { customerTags } from "./customer-tags";
 
 // Table definition
 export const customers = pgTable(
@@ -55,7 +56,7 @@ export const customers = pgTable(
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 
-export const customersRelations = relations(customers, ({ one }) => ({
+export const customersRelations = relations(customers, ({ one, many }) => ({
   business: one(businesses, {
     fields: [customers.businessId],
     references: [businesses.id],
@@ -64,4 +65,5 @@ export const customersRelations = relations(customers, ({ one }) => ({
     fields: [customers.createdBy],
     references: [businessUsers.id],
   }),
+  tags: many(customerTags),
 }));

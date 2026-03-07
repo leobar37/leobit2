@@ -8,11 +8,22 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
   .use(servicesPlugin)
   .get(
     "/",
-    async ({ customerService, ctx, query }) => {
+    async ({ customerService, customerTagService, ctx, query }) => {
+      let customerIds: string[] | undefined;
+
+      // If tagIds provided, filter by tags
+      if (query.tagIds) {
+        const tagIds = query.tagIds.split(",").filter(Boolean);
+        if (tagIds.length > 0) {
+          customerIds = await customerTagService.getCustomersByTags(ctx as RequestContext, tagIds);
+        }
+      }
+
       const customers = await customerService.getCustomers(ctx as RequestContext, {
         search: query.search,
         limit: query.limit ? parseInt(query.limit) : undefined,
         offset: query.offset ? parseInt(query.offset) : undefined,
+        customerIds, // Filter by tag results if provided
       });
       return { success: true, data: customers };
     },
@@ -21,6 +32,7 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         search: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
+        tagIds: t.Optional(t.String()),
       }),
     }
   )
@@ -93,6 +105,34 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
     {
       params: t.Object({
         id: t.String(),
+      }),
+    }
+  )
+  // Customer Tags endpoints
+  .get(
+    "/:id/tags",
+    async ({ customerTagService, ctx, params }) => {
+      const tags = await customerTagService.getCustomerTags(ctx as RequestContext, params.id);
+      return { success: true, data: tags };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/:id/tags",
+    async ({ customerTagService, ctx, params, body }) => {
+      const tags = await customerTagService.assignTags(ctx as RequestContext, params.id, body.tagIds);
+      return { success: true, data: tags };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        tagIds: t.Array(t.String()),
       }),
     }
   );

@@ -11,6 +11,7 @@ import {
   Truck,
   ShoppingCart,
   Flag,
+  Tag,
 } from "lucide-react";
 import {
   Card,
@@ -118,6 +119,15 @@ const flagsConfigItem: ConfigItem = {
   iconBg: "bg-pink-100",
 };
 
+const tagsConfigItem: ConfigItem = {
+  icon: Tag,
+  title: "Etiquetas",
+  description: "Segmenta tus clientes con etiquetas",
+  href: "/config/tags",
+  color: "text-rose-600",
+  iconBg: "bg-rose-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -131,6 +141,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        tagsConfigItem,
         flagsConfigItem,
         ...baseConfigItems.slice(2),
       ]
