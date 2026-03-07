@@ -30,8 +30,14 @@ export interface UpdateCustomerInput {
   notes?: string;
 }
 
-async function getCustomers(): Promise<Customer[]> {
-  const { data, error } = await api.customers.get();
+async function getCustomers(options?: { tagIds?: string[] }): Promise<Customer[]> {
+  const query: Record<string, string> = {};
+  
+  if (options?.tagIds && options.tagIds.length > 0) {
+    query.tagIds = options.tagIds.join(",");
+  }
+
+  const { data, error } = await api.customers.get({ query });
 
   if (error) {
     throw new Error(String(error.value));
@@ -140,10 +146,10 @@ async function deleteCustomer(id: string): Promise<void> {
   }
 }
 
-export function useCustomers() {
+export function useCustomers(options?: { tagIds?: string[] }) {
   return useQuery({
-    queryKey: ["customers"],
-    queryFn: getCustomers,
+    queryKey: ["customers", options?.tagIds],
+    queryFn: () => getCustomers(options),
   });
 }
 

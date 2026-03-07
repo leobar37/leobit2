@@ -1,8 +1,9 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil, Trash2, Tag } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useCustomer } from "~/hooks/use-customer";
 import { useSales } from "~/hooks/use-sales";
 import { usePayments } from "~/hooks/use-payments";
@@ -12,6 +13,9 @@ import { PaymentForm } from "~/components/payments/payment-form";
 import { PaymentList } from "~/components/payments/payment-list";
 import { SaleList } from "~/components/sales/sale-list";
 import { BalanceCard } from "~/components/payments/balance-card";
+import { CustomerTagsModal } from "~/components/customers/customer-tags-modal";
+import { TagBadge } from "~/components/tags";
+import { useCustomerTags } from "~/hooks/use-customer-tags";
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
@@ -19,10 +23,12 @@ export default function CustomerDetailPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTagsModal, setShowTagsModal] = useState(false);
 
   const { data: customer, isLoading: customerLoading } = useCustomer(id!);
   const { data: sales, isLoading: salesLoading } = useSales();
   const { data: payments, isLoading: paymentsLoading } = usePayments(id);
+  const { data: customerTags } = useCustomerTags(id!);
   const { user } = useAuth();
   const deleteCustomer = useDeleteCustomer();
 
@@ -97,6 +103,26 @@ export default function CustomerDetailPage() {
 
               <div className="flex-1 min-w-0">
                 <h2 className="font-bold text-lg">{customer.name}</h2>
+
+                {/* Tags */}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {customerTags?.map((ct) => (
+                    <TagBadge
+                      key={ct.tagId}
+                      tag={{ id: ct.tagId, name: ct.tagName, color: ct.tagColor }}
+                      size="sm"
+                    />
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowTagsModal(true)}
+                  >
+                    <Tag className="h-3.5 w-3.5 mr-1" />
+                    {customerTags?.length ? "Editar etiquetas" : "Agregar etiquetas"}
+                  </Button>
+                </div>
 
                 <div className="mt-3 space-y-2">
                   {customer.dni && (
@@ -232,6 +258,13 @@ export default function CustomerDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Tags Modal */}
+      <CustomerTagsModal
+        customerId={id!}
+        open={showTagsModal}
+        onClose={() => setShowTagsModal(false)}
+      />
     </div>
   );
 }
