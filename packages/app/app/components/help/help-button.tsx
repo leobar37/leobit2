@@ -51,9 +51,9 @@ export function HelpButton({ onMenuClick }: HelpButtonProps) {
         size="icon"
         onClick={onMenuClick}
         className={cn(
-          "fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg",
+          "fixed bottom-20 right-4 z-[60] h-14 w-14 rounded-full",
           "bg-orange-600 hover:bg-orange-700 text-white",
-          "transition-all duration-300 hover:scale-110"
+          "transition-all duration-200 hover:scale-105"
         )}
       >
         <Menu className="w-6 h-6" />
@@ -67,9 +67,9 @@ export function HelpButton({ onMenuClick }: HelpButtonProps) {
         <Button
           size="icon"
           className={cn(
-            "fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg",
+            "fixed bottom-20 right-4 z-[60] h-14 w-14 rounded-full",
             "bg-orange-600 hover:bg-orange-700 text-white",
-            "transition-all duration-300 hover:scale-110"
+            "transition-all duration-200 hover:scale-105"
           )}
         >
           {isOpen ? (

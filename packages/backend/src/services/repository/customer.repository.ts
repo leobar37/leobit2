@@ -2,6 +2,7 @@ import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import { saleStatusEnum } from "../../db/schema/enums";
 
 export interface AccountsReceivableItem {
   customer: Customer;
@@ -53,6 +54,18 @@ export class CustomerRepository {
       ),
     });
     return customer;
+  }
+
+  async findByIds(ctx: RequestContext, ids: string[]): Promise<Customer[]> {
+    if (ids.length === 0) return [];
+
+    const results = await db.query.customers.findMany({
+      where: and(
+        inArray(customers.id, ids),
+        eq(customers.businessId, ctx.businessId)
+      ),
+    });
+    return results;
   }
 
   async findByDni(ctx: RequestContext, dni: string): Promise<Customer | undefined> {
@@ -245,7 +258,8 @@ export class CustomerRepository {
       .from(sales)
       .where(and(
         eq(sales.businessId, ctx.businessId),
-        eq(sales.clientId, customerId)
+        eq(sales.clientId, customerId),
+        eq(sales.status, "active")
       ));
 
     const paymentsResult = await db

@@ -94,7 +94,7 @@ export default function DistribucionesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+    <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center justify-between h-16 px-3 sm:px-4">
           <div className="flex items-center">

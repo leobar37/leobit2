@@ -201,6 +201,106 @@ export class SaleService {
     await this.repository.delete(ctx, id);
   }
 
+  async cancelSale(
+    ctx: RequestContext,
+    id: string,
+    data: {
+      reason: string;
+      refundAmount?: number;
+      refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
+      refundReference?: string;
+      refundNotes?: string;
+    }
+  ): Promise<Sale> {
+    if (!ctx.isAdmin()) {
+      throw new ForbiddenError("Solo los administradores pueden cancelar ventas");
+    }
+
+    const sale = await this.repository.findById(ctx, id);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.status === "cancelled") {
+      return sale;
+    }
+
+    const amountPaid = parseFloat(sale.amountPaid);
+
+    return db.transaction(async (tx) => {
+      const updateData: Partial<Sale> = {
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancelledBy: ctx.businessUserId,
+        cancelReason: data.reason,
+      };
+
+      if (data.refundAmount && data.refundAmount > 0) {
+        updateData.refundAmount = data.refundAmount.toFixed(2);
+        updateData.refundDate = new Date();
+        updateData.refundMethod = data.refundMethod as any;
+        updateData.refundReference = data.refundReference;
+        updateData.refundNotes = data.refundNotes;
+
+        if (data.refundMethod === "saldo" && sale.clientId) {
+          await this.paymentRepository.createReversal(
+            ctx,
+            {
+              clientId: sale.clientId,
+              amount: (-data.refundAmount).toFixed(2),
+              paymentMethod: "saldo",
+              notes: `Saldo a favor por cancelación de venta #${sale.id}`,
+              relatedSaleId: sale.id,
+            },
+            tx
+          );
+        } else if (sale.clientId) {
+          await this.paymentRepository.createReversal(
+            ctx,
+            {
+              clientId: sale.clientId,
+              amount: (-data.refundAmount).toFixed(2),
+              paymentMethod: data.refundMethod || "efectivo",
+              referenceNumber: data.refundReference,
+              notes: `Reembolso por cancelación de venta #${sale.id}`,
+              relatedSaleId: sale.id,
+            },
+            tx
+          );
+        }
+      }
+
+      const cancelledSale = await this.repository.update(ctx, id, updateData, tx);
+
+      if (sale.distribucionId) {
+        const saleItems = await this.repository.findSaleItems(ctx, id, tx);
+        const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+          ctx,
+          sale.distribucionId
+        );
+
+        for (const saleItem of saleItems) {
+          const distItem = distribucionItems.find(
+            (di) => di.variantId === saleItem.variantId
+          );
+
+          if (distItem) {
+            const currentVendida = parseFloat(distItem.cantidadVendida);
+            const newVendida = Math.max(currentVendida - parseFloat(saleItem.quantity), 0);
+            await this.distribucionItemRepository.updateVendido(
+              ctx,
+              distItem.id,
+              newVendida.toString(),
+              tx
+            );
+          }
+        }
+      }
+
+      return cancelledSale;
+    });
+  }
+
   async getTodayStats(ctx: RequestContext): Promise<{ count: number; total: string }> {
     return this.repository.getTotalSalesToday(ctx);
   }

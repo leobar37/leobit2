@@ -1,8 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Package } from "lucide-react";
-import { formatKilos, formatPercentage } from "~/lib/utils";
+import { formatKilos } from "~/lib/utils";
+import {
+  MinimalCard,
+  MinimalCardContent,
+  MinimalCardTitle,
+  MinimalCardMedia,
+} from "~/components/cards";
 
 interface InventoryCardProps {
   kilosAsignados: number;
@@ -26,19 +31,18 @@ export function InventoryCard({
   const kilosDisponibles = Math.max(asignados - vendidos, 0);
 
   return (
-    <Card
-      className={`border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20 ${className}`}
-    >
-      <CardHeader className="pb-3">
+    <MinimalCard variant="filled" tone="primary" padding="lg" radius="lg" className={className}>
+      <MinimalCardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
-            </div>
+          <div className="flex items-center gap-3">
+            <MinimalCardMedia 
+              icon={Package} 
+              iconColor="text-orange-600" 
+              size="md" 
+              className="bg-orange-100"
+            />
             <div>
-              <CardTitle className="text-base font-semibold text-foreground">
-                Mi Asignación
-              </CardTitle>
+              <MinimalCardTitle className="text-base">Mi Asignación</MinimalCardTitle>
               <p className="text-xs text-muted-foreground">Hoy</p>
             </div>
           </div>
@@ -49,9 +53,8 @@ export function InventoryCard({
             {puntoVenta}
           </Badge>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-center">
+
+        <div className="text-center py-2">
           <span className="text-4xl font-bold text-foreground">
             {formatKilos(asignados)}
           </span>
@@ -71,7 +74,7 @@ export function InventoryCard({
           <Progress value={porcentajeVendido} className="h-2 bg-orange-100" />
         </div>
 
-        <div className="pt-2 border-t border-orange-500/10">
+        <div className="pt-2 border-t border-gray-100">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Disponible</span>
             <span className="text-lg font-semibold text-green-600">
@@ -79,7 +82,7 @@ export function InventoryCard({
             </span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </MinimalCardContent>
+    </MinimalCard>
   );
 }

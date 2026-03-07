@@ -64,6 +64,12 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         clientId: body.clientId,
         deliveryDate: body.deliveryDate,
         paymentIntent: body.paymentIntent,
+        paymentStatus: body.paymentStatus,
+        advanceAmount: body.advanceAmount,
+        balanceDue: body.balanceDue,
+        advancePaymentMethod: body.advancePaymentMethod,
+        advanceReferenceNumber: body.advanceReferenceNumber,
+        advanceProofImageId: body.advanceProofImageId,
         totalAmount: body.totalAmount,
         items: body.items,
         clientEventId: body.clientEventId,
@@ -76,6 +82,22 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         clientId: t.String(),
         deliveryDate: t.String(),
         paymentIntent: t.Union([t.Literal("contado"), t.Literal("credito")]),
+        paymentStatus: t.Optional(t.Union([
+          t.Literal("sin_pago"),
+          t.Literal("adelanto_parcial"),
+          t.Literal("pagado_total"),
+          t.Literal("saldo_pendiente"),
+        ])),
+        advanceAmount: t.Optional(t.Number({ minimum: 0 })),
+        balanceDue: t.Optional(t.Number({ minimum: 0 })),
+        advancePaymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+        ])),
+        advanceReferenceNumber: t.Optional(t.String({ maxLength: 50 })),
+        advanceProofImageId: t.Optional(t.String()),
         totalAmount: t.Number(),
         items: t.Array(
           t.Object({
@@ -98,6 +120,12 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         baseVersion: body.baseVersion,
         deliveryDate: body.deliveryDate,
         paymentIntent: body.paymentIntent,
+        paymentStatus: body.paymentStatus,
+        advanceAmount: body.advanceAmount,
+        balanceDue: body.balanceDue,
+        advancePaymentMethod: body.advancePaymentMethod,
+        advanceReferenceNumber: body.advanceReferenceNumber,
+        advanceProofImageId: body.advanceProofImageId,
         totalAmount: body.totalAmount,
         items: body.items,
         clientEventId: body.clientEventId,
@@ -111,6 +139,22 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         baseVersion: t.Number({ minimum: 1 }),
         deliveryDate: t.Optional(t.String()),
         paymentIntent: t.Optional(t.Union([t.Literal("contado"), t.Literal("credito")])),
+        paymentStatus: t.Optional(t.Union([
+          t.Literal("sin_pago"),
+          t.Literal("adelanto_parcial"),
+          t.Literal("pagado_total"),
+          t.Literal("saldo_pendiente"),
+        ])),
+        advanceAmount: t.Optional(t.Number({ minimum: 0 })),
+        balanceDue: t.Optional(t.Number({ minimum: 0 })),
+        advancePaymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+        ])),
+        advanceReferenceNumber: t.Optional(t.String({ maxLength: 50 })),
+        advanceProofImageId: t.Optional(t.String()),
         totalAmount: t.Optional(t.Number({ minimum: 0 })),
         items: t.Optional(
           t.Array(
@@ -174,7 +218,11 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         params.id,
         body.deliveredItems,
         body.baseVersion,
-        body.clientEventId
+        body.clientEventId,
+        body.additionalPaymentAmount,
+        body.paymentMethod,
+        body.referenceNumber,
+        body.proofImageId
       );
       return { success: true, data: result };
     },
@@ -189,6 +237,15 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
             unitPriceFinal: t.Optional(t.Number({ minimum: 0 })),
           })
         ),
+        additionalPaymentAmount: t.Optional(t.Number({ minimum: 0 })),
+        paymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+        ])),
+        referenceNumber: t.Optional(t.String({ maxLength: 50 })),
+        proofImageId: t.Optional(t.String()),
         clientEventId: t.Optional(t.String()),
       }),
     }

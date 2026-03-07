@@ -3,6 +3,7 @@ import { api } from "~/lib/api-client";
 import type { Sale, CreateSaleInput } from "~/lib/db/schema";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
+import { toast } from "sonner";
 
 const QUERY_KEY = "sales";
 
@@ -99,5 +100,40 @@ export function useTodayStats() {
       return (data as { data: { count: number; total: string } })?.data;
     },
     staleTime: 1000 * 60 * 1,
+  });
+}
+
+export interface CancelSaleInput {
+  reason: string;
+  refundAmount?: number;
+  refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
+  refundReference?: string;
+  refundNotes?: string;
+}
+
+export function useCancelSale() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason, refundAmount, refundMethod, refundReference, refundNotes }: { id: string } & CancelSaleInput) => {
+      const { data, error } = await api.sales({ id }).cancel.post({
+        reason,
+        refundAmount,
+        refundMethod,
+        refundReference,
+        refundNotes,
+      });
+      if (error) throw new Error(String(error.value));
+      return (data as { data: Sale })?.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Venta cancelada correctamente");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Error al cancelar la venta");
+    },
   });
 }

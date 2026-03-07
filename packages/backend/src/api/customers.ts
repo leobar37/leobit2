@@ -135,4 +135,18 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         tagIds: t.Array(t.String()),
       }),
     }
+  )
+  // Bulk tag assignment endpoint
+  .post(
+    "/bulk/tags",
+    async ({ customerTagService, ctx, body }) => {
+      await customerTagService.assignTagsBulk(ctx as RequestContext, body.customerIds, body.tagIds);
+      return { success: true, data: { success: true, message: "Etiquetas asignadas correctamente" } };
+    },
+    {
+      body: t.Object({
+        customerIds: t.Array(t.String()),
+        tagIds: t.Array(t.String()),
+      }),
+    }
   );

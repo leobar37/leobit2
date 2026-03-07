@@ -7,7 +7,6 @@ import {
   Store,
   ChevronRight,
   Shield,
-  Bell,
   Truck,
   ShoppingCart,
   Flag,
@@ -15,22 +14,23 @@ import {
   Tag,
 } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MinimalCard,
+  MinimalCardContent,
+  MinimalCardTitle,
+  MinimalCardDescription,
+  MinimalCardMedia,
+} from "~/components/cards";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 
+import { type LucideIcon } from "lucide-react";
+
 interface ConfigItem {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   href: string;
   color: string;
-  iconBg: string;
 }
 
 const baseConfigItems: ConfigItem[] = [
@@ -40,7 +40,6 @@ const baseConfigItems: ConfigItem[] = [
     description: "Editar datos personales y foto",
     href: "/profile",
     color: "text-blue-600",
-    iconBg: "bg-blue-100",
   },
   {
     icon: Store,
@@ -48,7 +47,6 @@ const baseConfigItems: ConfigItem[] = [
     description: "Configuración general del negocio",
     href: "/business/edit",
     color: "text-orange-600",
-    iconBg: "bg-orange-100",
   },
   {
     icon: Package,
@@ -56,7 +54,6 @@ const baseConfigItems: ConfigItem[] = [
     description: "Gestiona tus productos y stock",
     href: "/productos",
     color: "text-green-600",
-    iconBg: "bg-green-100",
   },
   {
     icon: CreditCard,
@@ -64,23 +61,13 @@ const baseConfigItems: ConfigItem[] = [
     description: "Yape, Plin, transferencias",
     href: "/config/payment-methods",
     color: "text-purple-600",
-    iconBg: "bg-purple-100",
   },
-  // {
-  //   icon: Bell,
-  //   title: "Notificaciones",
-  //   description: "Alertas y recordatorios",
-  //   href: "/config/notifications",
-  //   color: "text-yellow-600",
-  //   iconBg: "bg-yellow-100",
-  // },
   {
     icon: Shield,
     title: "Seguridad",
     description: "Cambiar contraseña",
     href: "/config/security",
     color: "text-red-600",
-    iconBg: "bg-red-100",
   },
 ];
 
@@ -90,7 +77,6 @@ const teamConfigItem: ConfigItem = {
   description: "Gestiona vendedores e invitaciones",
   href: "/team",
   color: "text-teal-600",
-  iconBg: "bg-teal-100",
 };
 
 const distribucionesConfigItem: ConfigItem = {
@@ -99,7 +85,6 @@ const distribucionesConfigItem: ConfigItem = {
   description: "Asigna inventario a vendedores",
   href: "/distribuciones",
   color: "text-amber-600",
-  iconBg: "bg-amber-100",
 };
 
 const comprasConfigItem: ConfigItem = {
@@ -108,7 +93,6 @@ const comprasConfigItem: ConfigItem = {
   description: "Gestiona compras y proveedores",
   href: "/compras",
   color: "text-cyan-600",
-  iconBg: "bg-cyan-100",
 };
 
 const flagsConfigItem: ConfigItem = {
@@ -117,7 +101,6 @@ const flagsConfigItem: ConfigItem = {
   description: "Configuración de calculadoras y features",
   href: "/config/flags",
   color: "text-pink-600",
-  iconBg: "bg-pink-100",
 };
 
 const tagsConfigItem: ConfigItem = {
@@ -159,39 +142,37 @@ export default function ConfigIndexPage() {
     : baseConfigItems;
 
   return (
-    <div className="space-y-4">
-      <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-        <CardHeader>
-          <CardTitle className="text-2xl">Menú</CardTitle>
-          <CardDescription className="text-orange-100">
-            Todas las opciones de la aplicación
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6">
+      {/* Header - Sin fondo, solo texto */}
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold text-foreground">Menú</h1>
+        <p className="text-base text-muted-foreground mt-1">
+          Todas las opciones de la aplicación
+        </p>
+      </div>
 
+      {/* Lista de opciones */}
       <div className="space-y-3">
         {configItems.map((item) => (
           <Link key={item.href} to={item.href} className="block">
-            <Card className="border-0 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div
-                  className={`w-12 h-12 ${item.iconBg} rounded-2xl flex items-center justify-center shrink-0`}
-                >
-                  <item.icon className={`h-6 w-6 ${item.color}`} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground group-hover:text-orange-600 transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
-              </CardContent>
-            </Card>
+            <MinimalCard 
+              variant="outlined" 
+              interactive 
+              clickable 
+              radius="md"
+              className="flex items-center gap-4"
+            >
+              <MinimalCardMedia icon={item.icon} iconColor={item.color} size="md" />
+              <MinimalCardContent>
+                <MinimalCardTitle className="text-base font-medium">
+                  {item.title}
+                </MinimalCardTitle>
+                <MinimalCardDescription>
+                  {item.description}
+                </MinimalCardDescription>
+              </MinimalCardContent>
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </MinimalCard>
           </Link>
         ))}
       </div>

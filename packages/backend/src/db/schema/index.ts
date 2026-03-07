@@ -39,6 +39,7 @@ export {
   modoOperacionEnum,
   supplierTypeEnum,
   purchaseStatusEnum,
+  orderPaymentStatusEnum,
 } from "./enums";
 
 // User Profiles (extiende Better Auth)

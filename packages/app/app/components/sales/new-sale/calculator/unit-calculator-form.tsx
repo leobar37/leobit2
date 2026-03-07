@@ -1,20 +1,21 @@
-import { useFormContext } from "react-hook-form";
+import { useFormContext, Controller } from "react-hook-form";
 import { FormCalculatorInput } from "@/components/forms/form-calculator-input";
 import { Info } from "lucide-react";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import type { UnitCalculatorFormData } from "~/lib/sales/calculator-schema";
 import { parseNumber } from "~/lib/sales/calculator-schema";
 import { formatCurrency } from "~/lib/utils";
+import type { Control } from "react-hook-form";
 
 interface UnitCalculatorFormProps {
 	variant: ProductVariant | undefined;
 	setFieldValue?: (field: string, value: string) => void;
+	formControl?: Control<UnitCalculatorFormData>;
 }
 
-export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFormProps) {
+export function UnitCalculatorForm({ variant, setFieldValue, formControl }: UnitCalculatorFormProps) {
 	const { watch, setValue } = useFormContext<UnitCalculatorFormData>();
 
-	// Watch all form values to display calculated values
 	const pricePerPackValue = watch("pricePerPack");
 	const packsValue = watch("packs");
 	const unitsValue = watch("units");
@@ -30,7 +31,6 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 	const variantPrice = parseNumber(variant?.price || "0");
 	const totalUnits = hasPacks ? packs * unitQuantity : 0;
 
-	// Use pricePerPack from form if entered, otherwise fall back to variant price
 	const effectivePricePerPack = parseNumber(pricePerPackValue) > 0 
 		? parseNumber(pricePerPackValue) 
 		: variantPrice;
@@ -62,16 +62,6 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 	return (
 		<>
 			<FormCalculatorInput
-				name="pricePerPack"
-				label="Precio pack (S/)"
-				placeholder={variant?.price || "0.00"}
-				data-testid="calculator-price-per-pack"
-				helperText={pricePerPackHelperText}
-				decimals={2}
-				value={pricePerPackValue || variant?.price || ""}
-				onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("pricePerPack", e.target.value)}
-			/>
-			<FormCalculatorInput
 				name="packs"
 				label="Packs"
 				placeholder="0"
@@ -82,11 +72,49 @@ export function UnitCalculatorForm({ variant, setFieldValue }: UnitCalculatorFor
 				onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("packs", e.target.value)}
 			/>
 			<FormCalculatorInput
+				name="pricePerPack"
+				label="Precio pack (S/)"
+				placeholder={variant?.price || "0.00"}
+				data-testid="calculator-price-per-pack"
+				helperText={pricePerPackHelperText}
+				decimals={2}
+				value={pricePerPackValue || variant?.price || ""}
+				onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("pricePerPack", e.target.value)}
+			/>
+			{formControl ? (
+				<Controller
+					name="totalAmount"
+					control={formControl}
+					render={({ field }) => (
+						<FormCalculatorInput
+							label="Total (S/)"
+							placeholder="0.00"
+							decimals={2}
+							data-testid="calculator-total-amount"
+							value={field.value}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+								field.onChange(e.target.value);
+								handleChange("totalAmount", e.target.value);
+							}}
+						/>
+					)}
+				/>
+			) : (
+				<FormCalculatorInput
+					name="totalAmount"
+					label="Total (S/)"
+					placeholder="0.00"
+					decimals={2}
+					data-testid="calculator-total-amount"
+					value={totalAmountValue}
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("totalAmount", e.target.value)}
+				/>
+			)}
+			<FormCalculatorInput
 				name="units"
 				label="Unidades"
 				placeholder="0"
 				data-testid="calculator-units"
-				disabled={hasPacks}
 				helperText={unitsHelperText}
 				decimals={3}
 				value={unitsValue}

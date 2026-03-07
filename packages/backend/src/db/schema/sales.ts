@@ -9,10 +9,11 @@ import {
   decimal,
   timestamp,
   integer,
+  text,
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { saleTypeEnum, syncStatusEnum } from "./enums";
+import { saleTypeEnum, saleStatusEnum, refundMethodEnum, syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
@@ -55,6 +56,21 @@ export const sales = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
+    // Sale status for cancellation
+    status: saleStatusEnum("status").notNull().default("active"),
+
+    // Cancellation fields
+    cancelledAt: timestamp("cancelled_at"),
+    cancelledBy: uuid("cancelled_by").references(() => businessUsers.id),
+    cancelReason: text("cancel_reason"),
+
+    // Refund tracking
+    refundAmount: decimal("refund_amount", { precision: 12, scale: 2 }),
+    refundDate: timestamp("refund_date"),
+    refundMethod: refundMethodEnum("refund_method"),
+    refundReference: varchar("refund_reference", { length: 100 }),
+    refundNotes: text("refund_notes"),
+
     // Dates
     saleDate: timestamp("sale_date").notNull().defaultNow(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -67,6 +83,8 @@ export const sales = pgTable(
     index("idx_sales_distribucion_id").on(table.distribucionId),
     index("idx_sales_sale_type").on(table.saleType),
     index("idx_sales_sync_status").on(table.syncStatus),
+    index("idx_sales_status").on(table.status),
+    index("idx_sales_cancelled_at").on(table.cancelledAt),
     index("idx_sales_sale_date").on(table.saleDate),
   ]
 );

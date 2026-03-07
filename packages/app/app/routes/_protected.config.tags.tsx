@@ -14,12 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDrawer } from "~/components/ui/app-drawer";
 import { TagForm, TagBadge } from "~/components/tags";
 import { useTags, useDeleteTag, type Tag } from "~/hooks/use-tags";
 
@@ -152,22 +147,27 @@ export default function TagsConfigPage() {
       {/* FAB - New Tag */}
       <button
         onClick={openCreateModal}
-        className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center transition-colors"
+        className="fixed bottom-28 right-4 z-50 h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center transition-colors"
       >
         <Plus className="h-6 w-6" />
       </button>
 
-      {/* Create/Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTag ? "Editar Etiqueta" : "Nueva Etiqueta"}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Create/Edit Drawer */}
+      <AppDrawer
+        open={isModalOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) closeModal();
+        }}
+      >
+        <AppDrawer.Header
+          title={editingTag ? "Editar Etiqueta" : "Nueva Etiqueta"}
+          icon={<TagIcon className="h-5 w-5" />}
+          onClose={closeModal}
+        />
+        <AppDrawer.Body>
           <TagForm tag={editingTag} onClose={closeModal} />
-        </DialogContent>
-      </Dialog>
+        </AppDrawer.Body>
+      </AppDrawer>
     </div>
   );
 }

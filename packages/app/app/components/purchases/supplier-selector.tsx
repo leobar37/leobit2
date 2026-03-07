@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { Building2, Search, X, Plus, Phone, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export function SupplierSelector({
   onSelectSupplier,
   onCreateNew,
 }: SupplierSelectorProps) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: suppliers, isLoading } = useSuppliers();
@@ -70,7 +72,8 @@ export function SupplierSelector({
 
   const handleCreateNew = () => {
     handleClose();
-    onCreateNew?.();
+    const currentPath = window.location.pathname;
+    navigate(`/proveedores/nuevo?returnTo=${encodeURIComponent(currentPath)}`);
   };
 
   // Selected state - show card with details

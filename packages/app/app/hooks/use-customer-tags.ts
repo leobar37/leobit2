@@ -18,7 +18,7 @@ export interface AssignTagsInput {
 }
 
 // Query key factory
-const customerTagsKeys = {
+export const customerTagsKeys = {
   all: ["customer-tags"] as const,
   forCustomer: (customerId: string) =>
     [...customerTagsKeys.all, "customer", customerId] as const,
@@ -32,7 +32,7 @@ export function useCustomerTags(customerId: string | undefined) {
     queryKey: customerTagsKeys.forCustomer(customerId || ""),
     queryFn: async () => {
       if (!customerId) return [];
-      const response = await api.v1.customers({ id: customerId }).tags.get();
+      const response = await api.customers({ id: customerId }).tags.get();
       return extractData<CustomerTagAssignment[]>(
         response,
         "Error al cargar etiquetas del cliente"
@@ -50,7 +50,7 @@ export function useAssignCustomerTags() {
 
   return useMutation({
     mutationFn: async ({ customerId, tagIds }: AssignTagsInput) => {
-      const response = await api.v1.customers({ id: customerId }).tags.post({
+      const response = await api.customers({ id: customerId }).tags.post({
         tagIds,
       });
       return extractData<CustomerTagAssignment[]>(

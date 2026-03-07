@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Building2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
-import { useCreateSupplier } from "~/hooks/use-suppliers";
+import { useCreateSupplier, type Supplier } from "~/hooks/use-suppliers";
 import { FormPage } from "~/components/layout/form-page";
 
 const supplierSchema = z.object({
@@ -22,6 +22,8 @@ type SupplierFormData = z.infer<typeof supplierSchema>;
 
 export default function NuevoProveedorPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/proveedores";
   const { mutate: createSupplier, isPending } = useCreateSupplier();
 
   const form = useForm<SupplierFormData>({
@@ -40,8 +42,12 @@ export default function NuevoProveedorPage() {
 
   const onSubmit = form.handleSubmit((data) => {
     createSupplier(data, {
-      onSuccess: () => {
-        navigate("/proveedores");
+      onSuccess: (supplier: Supplier) => {
+        if (returnTo && returnTo !== "/proveedores") {
+          navigate(returnTo, { state: { supplier } });
+        } else {
+          navigate("/proveedores");
+        }
       },
     });
   });
@@ -51,7 +57,7 @@ export default function NuevoProveedorPage() {
   return (
     <FormPage
       title="Nuevo Proveedor"
-      backHref="/proveedores"
+      backHref={returnTo && returnTo !== "/proveedores" ? returnTo : "/proveedores"}
       icon={Building2}
       toolbar={
         <Button

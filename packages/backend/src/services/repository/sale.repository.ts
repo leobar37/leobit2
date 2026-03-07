@@ -112,6 +112,26 @@ export class SaleRepository {
       ));
   }
 
+  async update(
+    ctx: RequestContext,
+    id: string,
+    data: Partial<Pick<Sale, "status" | "cancelledAt" | "cancelledBy" | "cancelReason" | "refundAmount" | "refundDate" | "refundMethod" | "refundReference" | "refundNotes">>,
+    tx?: DbTransaction
+  ): Promise<Sale> {
+    const executor = tx ?? db;
+
+    const [sale] = await executor
+      .update(sales)
+      .set(data)
+      .where(and(
+        eq(sales.id, id),
+        eq(sales.businessId, ctx.businessId)
+      ))
+      .returning();
+
+    return sale;
+  }
+
   async count(ctx: RequestContext, filters?: { startDate?: Date; endDate?: Date }): Promise<number> {
     const result = await db
       .select({ count: db.$count(sales) })
@@ -151,5 +171,17 @@ export class SaleRepository {
       count: countResult[0]?.count ?? 0,
       total: totalResult[0]?.total ?? "0",
     };
+  }
+
+  async findSaleItems(
+    ctx: RequestContext,
+    saleId: string,
+    tx?: DbTransaction
+  ): Promise<SaleItem[]> {
+    const executor = tx ?? db;
+    return executor
+      .select()
+      .from(saleItems)
+      .where(eq(saleItems.saleId, saleId));
   }
 }

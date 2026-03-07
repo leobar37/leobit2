@@ -31,6 +31,25 @@ interface OrderFormProviderProps {
       unitPriceQuoted: number;
     }>;
   }) => void;
+  initialOrder?: {
+    clientId: string;
+    deliveryDate: string;
+    paymentIntent: "contado" | "credito";
+    paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+    advanceAmount?: number;
+    balanceDue?: number;
+    advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+    advanceReferenceNumber?: string;
+    totalAmount: number;
+    items: Array<{
+      productId: string;
+      variantId: string;
+      productName: string;
+      variantName: string;
+      orderedQuantity: number;
+      unitPriceQuoted: number;
+    }>;
+  };
 }
 
 export function OrderFormProvider({
@@ -38,8 +57,9 @@ export function OrderFormProvider({
   onSubmit,
   isSubmitting,
   onNavigateToCalculadora,
+  initialOrder,
 }: OrderFormProviderProps) {
-  const form = useOrderForm({ onSubmit, isSubmitting, onNavigateToCalculadora });
+  const form = useOrderForm({ onSubmit, isSubmitting, onNavigateToCalculadora, initialOrder });
 
   return (
     <OrderFormContext.Provider value={form}>

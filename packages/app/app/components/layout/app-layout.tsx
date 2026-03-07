@@ -19,7 +19,6 @@ import {
   User,
   ArrowLeft,
   Wallet,
-  Image,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,6 @@ const menuItems = [
   { icon: ClipboardList, label: "Pedidos", href: "/pedidos" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
-  { icon: Image, label: "Activos", href: "/activos" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
 
@@ -121,8 +119,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ config, setConfig, toolbarPortalHost }}>
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
+      <div className="min-h-screen bg-gray-50">
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-3 sm:px-4">
             <div className="flex items-center gap-3">
               {showBackButton && (
@@ -133,7 +131,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
               {title === "Avileo" && !showBackButton ? (
                 <>
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
                     <span className="text-white font-bold text-lg">A</span>
                   </div>
                   <span className="font-bold text-lg text-foreground">Avileo</span>
@@ -158,7 +156,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   </SheetHeader>
                   <div className="mt-6 space-y-4">
                     <div className="flex items-center gap-3 p-4 bg-muted rounded-2xl">
-                      <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
                         <span className="text-white font-bold">
                           {user?.name?.[0]?.toUpperCase() || "U"}
                         </span>
@@ -191,15 +189,20 @@ export function AppLayout({ children }: AppLayoutProps) {
         {showBottomNav && (
           <div
             ref={setToolbarPortalHost}
-            className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] px-3 sm:px-4 py-4 z-50 pointer-events-none"
-          />
+            className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-50 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top, rgba(255,255,255,0.98) 16px, transparent)',
+            }}
+          >
+            <div className="px-3 sm:px-4 py-4" />
+          </div>
         )}
 
         {showBottomNav && (
-          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-orange-100 px-3 sm:px-4 py-2">
+          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 px-3 sm:px-4 py-2">
             <div className="flex items-center justify-around max-w-md mx-auto">
               {menuItems.map((item) => {
-                const isActive = location.pathname === item.href;
+                const isActive = location.pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}

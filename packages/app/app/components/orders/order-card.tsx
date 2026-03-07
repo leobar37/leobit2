@@ -1,10 +1,14 @@
 import { ClipboardList, Calendar, User, CheckCircle, XCircle, Truck } from "lucide-react";
 import { formatCurrency } from "~/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "~/lib/db/schema";
 import { formatDisplayDate, isToday } from "~/lib/date-utils";
 import { isOnline } from "~/lib/sync/utils";
+import {
+  MinimalCard,
+  MinimalCardContent,
+  MinimalCardMedia,
+} from "~/components/cards";
 
 interface OrderCardProps {
   order: Order;
@@ -42,21 +46,24 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
     order.status === "confirmed" && isToday(order.deliveryDate);
 
   return (
-    <Card
-      className="cursor-pointer hover:shadow-md transition-shadow"
+    <MinimalCard 
+      variant="outlined" 
+      interactive 
+      clickable 
+      radius="md"
       onClick={onClick}
       data-testid="order-card"
       data-order-id={order.id}
       data-order-status={order.status}
     >
-      <CardContent className="p-4">
+      <MinimalCardContent className="p-4">
         <div className="flex items-start gap-4">
-          {/* Icon Container */}
-          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <ClipboardList className="h-6 w-6 text-orange-600" />
-          </div>
+          <MinimalCardMedia 
+            icon={ClipboardList} 
+            iconColor="text-orange-600" 
+            size="md" 
+          />
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -111,7 +118,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </MinimalCardContent>
+    </MinimalCard>
   );
 }

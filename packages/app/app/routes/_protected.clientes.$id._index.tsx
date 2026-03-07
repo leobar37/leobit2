@@ -48,7 +48,7 @@ export default function CustomerDetailPage() {
 
   if (customerLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p>Cargando cliente...</p>
       </div>
     );
@@ -56,14 +56,14 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p>Cliente no encontrado</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+    <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <button

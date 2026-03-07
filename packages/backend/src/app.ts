@@ -25,7 +25,6 @@ import { variantRoutes } from "./api/products";
 import { supplierRoutes } from "./api/suppliers";
 import { purchaseRoutes } from "./api/purchases";
 import { productUnitsRoutes } from "./api/product-units";
-import { paymentMethodConfigRoutes } from "./api/businesses/payment-methods";
 import { ocrRoutes } from "./api/ocr";
 import { whatsappTemplateRoutes } from "./api/whatsapp/templates";
 import { whatsAppSettingsRoutes } from "./api/whatsapp/settings";
@@ -78,7 +77,6 @@ export const app = new Elysia()
   .use(supplierRoutes)
   .use(purchaseRoutes)
   .use(productUnitsRoutes)
-  .use(paymentMethodConfigRoutes)
   .use(ocrRoutes)
   .use(whatsappTemplateRoutes)
   .use(whatsAppSettingsRoutes)

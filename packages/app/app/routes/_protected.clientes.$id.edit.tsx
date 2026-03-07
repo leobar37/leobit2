@@ -76,7 +76,7 @@ export default function EditCustomerPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-stone-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
@@ -84,7 +84,7 @@ export default function EditCustomerPage() {
 
   if (!customer) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-orange-50 to-stone-100">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
         <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
           <CardHeader className="text-center">
             <CardTitle>Cliente no encontrado</CardTitle>

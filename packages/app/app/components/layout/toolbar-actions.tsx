@@ -16,8 +16,13 @@ export function ToolbarActions({ children, className }: ToolbarActionsProps) {
   }
 
   return createPortal(
-    <div className={cn("pointer-events-auto w-full bg-white border-t border-orange-100", className)}>
-      {children}
+    <div className={cn(
+      "pointer-events-auto w-full bg-white/95 backdrop-blur-xl border-t border-gray-200",
+      className
+    )}>
+      <div className="max-w-lg mx-auto">
+        {children}
+      </div>
     </div>,
     toolbarPortalHost
   );
