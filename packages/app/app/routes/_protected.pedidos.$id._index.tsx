@@ -17,9 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useOrder, useConfirmOrder, useCancelOrder, useDeliverOrder } from "~/hooks/use-orders";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency, cn } from "~/lib/utils";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { useToggleOrderTokenStatus, useRegenerateOrderToken } from "~/hooks/use-orders";
+import { Switch } from "@/components/ui/switch";
+import { Copy, RefreshCw, Link2, Lock } from "lucide-react";
 import { OrderItemModal } from "~/components/orders/order-item-modal";
 import { OrderDeliveryModal } from "~/components/orders/order-delivery-modal";
 import type { OrderItem } from "~/lib/db/schema";
@@ -105,6 +108,50 @@ export default function OrderDetailPage() {
   const canConfirm = order.status === "draft";
   const canCancel = order.status !== "delivered" && order.status !== "cancelled";
   const canDeliver = order.status === "confirmed" && isToday(order.deliveryDate);
+  const isDraft = order.status === "draft";
+
+  const toggleTokenStatus = useToggleOrderTokenStatus();
+  const regenerateToken = useRegenerateOrderToken();
+
+  const orderUrl = order.token?.token
+    ? `${import.meta.env.VITE_APP_URL}/pedido/${order.token.token}`
+    : null;
+
+  const handleCopyLink = async () => {
+    if (orderUrl) {
+      await navigator.clipboard.writeText(orderUrl);
+      toast.success("Link copiado al portapapeles");
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    const confirmed = await confirm({
+      title: "Regenerar link",
+      description: "¿Estás seguro de regenerar el link? El link anterior dejará de funcionar.",
+      confirmText: "Sí, regenerar",
+    });
+    if (confirmed && id) {
+      await regenerateToken.mutateAsync({ id });
+      toast.success("Link regenerado correctamente");
+    }
+  };
+
+  const handleToggleTokenStatus = async (isActive: boolean) => {
+    if (id) {
+      await toggleTokenStatus.mutateAsync({ id, isActive });
+      toast.success(isActive ? "Link activado" : "Link bloqueado");
+    }
+  };
+
+  const getTokenStatusBadge = () => {
+    if (order.status === "confirmed") {
+      return { label: "Confirmado", color: "bg-blue-100 text-blue-700" };
+    }
+    if (!order.token?.isActive) {
+      return { label: "Bloqueado", color: "bg-red-100 text-red-700" };
+    }
+    return { label: "Activo", color: "bg-green-100 text-green-700" };
+  };
 
   const handleConfirm = async () => {
     const confirmed = await confirm({
@@ -242,6 +289,71 @@ export default function OrderDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {order.token && (
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Link2 className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Link del cliente</p>
+                <p className="font-medium text-sm truncate text-purple-700" data-testid="order-token-url">
+                  {orderUrl}
+                </p>
+              </div>
+              <Badge className={getTokenStatusBadge().color} variant="secondary" data-testid="order-token-status">
+                {getTokenStatusBadge().label}
+              </Badge>
+            </div>
+
+            <div className="border-t" />
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleCopyLink}
+              disabled={!orderUrl}
+              data-testid="copy-order-link-button"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar link
+            </Button>
+
+            {isDraft && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleRegenerateToken}
+                disabled={regenerateToken.isPending}
+                data-testid="regenerate-order-token-button"
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-2", regenerateToken.isPending && "animate-spin")} />
+                {regenerateToken.isPending ? "Regenerando..." : "Regenerar link"}
+              </Button>
+            )}
+
+            {isDraft ? (
+              <div className="pt-2">
+                <Switch
+                  checked={order.token.isActive}
+                  onCheckedChange={handleToggleTokenStatus}
+                  disabled={toggleTokenStatus.isPending}
+                  label="Permitir edición"
+                  description="El cliente puede modificar el pedido"
+                  data-testid="order-token-toggle"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2">
+                <Lock className="h-4 w-4" />
+                <span>No se puede modificar el link en pedidos {order.status === "confirmed" ? "confirmados" : order.status === "delivered" ? "entregados" : "cancelados"}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Items */}
       <Card className="border-0 shadow-md">

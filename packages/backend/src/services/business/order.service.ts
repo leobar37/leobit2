@@ -1,6 +1,6 @@
 import { db } from "../../lib/db";
 import type { RequestContext } from "../../context/request-context";
-import { ConflictError, NotFoundError, ValidationError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../errors";
 import {
   normalizeAmount,
   normalizeQuantity,
@@ -15,6 +15,8 @@ import type { OrderEventsRepository } from "../repository/order-events.repositor
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { SaleService } from "./sale.service";
+import type { OrderTokenService } from "./order-token.service";
+import type { CustomerRepository } from "../repository/customer.repository";
 
 export class OrderService {
   constructor(
@@ -22,7 +24,9 @@ export class OrderService {
     private eventsRepository: OrderEventsRepository,
     private saleService: SaleService,
     private distribucionRepository: DistribucionRepository,
-    private distribucionItemRepository: DistribucionItemRepository
+    private distribucionItemRepository: DistribucionItemRepository,
+    private orderTokenService: OrderTokenService,
+    private customerRepository: CustomerRepository
   ) {}
 
   async getOrders(
@@ -44,7 +48,12 @@ export class OrderService {
       throw new NotFoundError("Order");
     }
 
-    return order;
+    const token = await this.orderTokenService.getTokenByOrderId(ctx, id);
+
+    return {
+      ...order,
+      token: token ? { token: token.token, isActive: token.isActive } : undefined,
+    };
   }
 
   async getOrderEvents(ctx: RequestContext, orderId: string) {
@@ -112,7 +121,12 @@ export class OrderService {
         tx
       );
 
-      return created;
+      const tokenResult = await this.orderTokenService.generateToken(ctx, created.id);
+
+      return {
+        ...created,
+        token: tokenResult.token,
+      };
     });
   }
 
@@ -253,6 +267,99 @@ export class OrderService {
     });
   }
 
+  async confirmWithToken(
+    ctx: RequestContext,
+    token: string,
+    data: {
+      customerName?: string;
+      customerPhone?: string;
+      deliveryDate?: string;
+      notes?: string;
+    }
+  ) {
+    const tokenValidation = await this.orderTokenService.validateTokenForConfirmation(ctx, token);
+    
+    if (!tokenValidation.valid || !tokenValidation.tokenRecord || !tokenValidation.orderId) {
+      throw new ValidationError("Token inválido o expirado");
+    }
+
+    const tokenRecord = tokenValidation.tokenRecord;
+    const order = await this.repository.findById(ctx, tokenValidation.orderId);
+    if (!order) {
+      throw new NotFoundError("Pedido");
+    }
+
+    if (order.status !== "draft") {
+      throw new ValidationError("El pedido ya no está en borrador");
+    }
+
+    const isAnonymous = this.isAnonymousCustomer(order.clientId);
+    const orderId = order.id;
+
+    return db.transaction(async (tx) => {
+      let finalClientId = order.clientId;
+
+      if (isAnonymous && data.customerName) {
+        const newCustomer = await this.customerRepository.create(
+          ctx,
+          {
+            name: data.customerName,
+            phone: data.customerPhone || null,
+          },
+          tx
+        );
+        finalClientId = newCustomer.id;
+
+        await this.repository.update(ctx, orderId, { clientId: finalClientId }, tx);
+      }
+
+      if (data.deliveryDate) {
+        this.validateDeliveryDate(data.deliveryDate);
+        await this.repository.update(ctx, orderId, { deliveryDate: data.deliveryDate }, tx);
+      }
+
+      const confirmed = await this.repository.updateVersion(
+        ctx,
+        orderId,
+        order.version,
+        {
+          status: "confirmed",
+          confirmedSnapshot: this.buildSnapshot(order),
+        },
+        tx
+      );
+
+      if (!confirmed) {
+        throw new ConflictError("El pedido fue modificado por otro usuario");
+      }
+
+      await this.orderTokenService.deactivateToken(ctx, tokenRecord.id, tx);
+
+      await this.eventsRepository.create(
+        ctx,
+        {
+          orderId: orderId,
+          eventType: "confirmed",
+          payload: { 
+            status: confirmed.status,
+            customerName: data.customerName,
+            deliveryDate: data.deliveryDate,
+          },
+        },
+        tx
+      );
+
+      return {
+        ...confirmed,
+        clientId: finalClientId,
+      };
+    });
+  }
+
+  private isAnonymousCustomer(clientId: string): boolean {
+    return clientId.includes("anon") || clientId.includes("temp");
+  }
+
   async cancelOrder(
     ctx: RequestContext,
     id: string,
@@ -368,6 +475,78 @@ export class OrderService {
       return {
         order: updatedOrder,
         item,
+      };
+    });
+  }
+
+  async deleteOrderItemPublic(
+    orderId: string,
+    itemId: string,
+    businessId: string,
+    baseVersion: number
+  ) {
+    const minimalCtx = {
+      businessId,
+      userId: "",
+      businessUserId: "",
+      email: "",
+      role: "",
+    } as unknown as RequestContext;
+
+    const order = await this.repository.findById(minimalCtx, orderId);
+    if (!order) {
+      throw new NotFoundError("Order");
+    }
+
+    if (order.status !== "draft") {
+      throw new ValidationError("Solo se pueden eliminar items de pedidos en borrador");
+    }
+
+    const itemToDelete = await this.repository.findItemById(minimalCtx, orderId, itemId);
+    if (!itemToDelete) {
+      throw new NotFoundError("OrderItem");
+    }
+
+    return db.transaction(async (tx) => {
+      const deleted = await this.repository.deleteItem(minimalCtx, orderId, itemId, tx);
+      if (!deleted) {
+        throw new NotFoundError("OrderItem");
+      }
+
+      const remainingItems = await this.repository.findById(minimalCtx, orderId);
+      const calculatedTotal = (remainingItems?.items ?? []).reduce((sum, item) => {
+        const qty = Number(item.orderedQuantity);
+        const price = Number(item.unitPriceQuoted);
+        return sum + (qty * price);
+      }, 0);
+
+      const updatedOrder = await this.repository.updateVersion(
+        minimalCtx,
+        orderId,
+        baseVersion,
+        { totalAmount: calculatedTotal.toFixed(2) },
+        tx
+      );
+      if (!updatedOrder) {
+        throw new ConflictError("El pedido fue modificado por otro usuario");
+      }
+
+      await this.eventsRepository.create(
+        minimalCtx,
+        {
+          orderId,
+          eventType: "item_removed",
+          payload: {
+            itemId,
+            newTotalAmount: calculatedTotal.toFixed(2),
+          },
+        },
+        tx
+      );
+
+      return {
+        order: updatedOrder,
+        deletedItem: itemToDelete,
       };
     });
   }
@@ -619,5 +798,48 @@ export class OrderService {
         );
       }
     }
+  }
+
+  async toggleTokenStatus(
+    ctx: RequestContext,
+    orderId: string,
+    isActive: boolean
+  ) {
+    // Check if user is admin
+    if (!ctx.isAdmin()) {
+      throw new ForbiddenError("Solo el administrador puede cambiar el estado del token");
+    }
+
+    const order = await this.repository.findById(ctx, orderId);
+    if (!order) {
+      throw new NotFoundError("Order");
+    }
+
+    // Only allow toggle if order is in draft status
+    if (order.status !== "draft") {
+      throw new ValidationError("Solo se puede cambiar el estado del token en pedidos en borrador");
+    }
+
+    // Delegate to OrderTokenService
+    return this.orderTokenService.toggleTokenStatus(ctx, orderId, isActive);
+  }
+
+  async regenerateToken(ctx: RequestContext, orderId: string): Promise<{ token: string }> {
+    // Only admin can regenerate tokens
+    if (!ctx.isAdmin()) {
+      throw new ForbiddenError("Solo administradores pueden regenerar tokens");
+    }
+
+    const order = await this.repository.findById(ctx, orderId);
+    if (!order) {
+      throw new NotFoundError("Order");
+    }
+
+    if (order.status !== "draft") {
+      throw new ValidationError("Solo pedidos en borrador pueden regenerar su token");
+    }
+
+    const result = await this.orderTokenService.regenerateToken(ctx, orderId);
+    return result;
   }
 }

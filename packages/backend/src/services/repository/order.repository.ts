@@ -10,7 +10,7 @@ import {
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type OrderStatus = "draft" | "confirmed" | "cancelled" | "delivered";
 export type OrderWithItems = Order & { items: OrderItem[] };
@@ -40,6 +40,7 @@ export interface CreateOrderInput {
 }
 
 export interface UpdateOrderInput {
+  clientId?: string;
   deliveryDate?: string;
   status?: OrderStatus;
   paymentIntent?: "contado" | "credito";
@@ -240,6 +241,31 @@ export class OrderRepository {
       .returning();
 
     return updated;
+  }
+
+  async deleteItem(
+    ctx: RequestContext,
+    orderId: string,
+    itemId: string,
+    tx?: DbTransaction
+  ): Promise<boolean> {
+    const order = await this.findById(ctx, orderId);
+    if (!order) {
+      return false;
+    }
+
+    const executor = tx ?? db;
+    const result = await executor
+      .delete(orderItems)
+      .where(
+        and(
+          eq(orderItems.id, itemId),
+          eq(orderItems.orderId, orderId)
+        )
+      )
+      .returning({ id: orderItems.id });
+
+    return result.length > 0;
   }
 
   async count(

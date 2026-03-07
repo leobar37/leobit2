@@ -214,4 +214,31 @@ export const orderRoutes = new Elysia({ prefix: "/orders" })
         clientEventId: t.Optional(t.String()),
       }),
     }
+  )
+  .patch(
+    "/:id/token-status",
+    async ({ orderService, ctx, params, body }) => {
+      const result = await orderService.toggleTokenStatus(
+        ctx as RequestContext,
+        params.id,
+        body.isActive
+      );
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        isActive: t.Boolean(),
+      }),
+    }
+  )
+  .post(
+    "/:id/regenerate-token",
+    async ({ orderService, ctx, params }) => {
+      const result = await orderService.regenerateToken(ctx as RequestContext, params.id);
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+    }
   );

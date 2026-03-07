@@ -14,7 +14,7 @@ import { relations } from "drizzle-orm";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { products, productVariants } from "./inventory";
-import { orderStatusEnum, saleTypeEnum, syncStatusEnum } from "./enums";
+import { orderStatusEnum, saleTypeEnum, syncStatusEnum, orderCreatedViaEnum } from "./enums";
 
 export const orders = pgTable(
   "orders",
@@ -42,6 +42,8 @@ export const orders = pgTable(
 
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    createdVia: orderCreatedViaEnum("created_via").notNull().default("manual"),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

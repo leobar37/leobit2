@@ -132,6 +132,13 @@ export const orderItemSchema = z.object({
 
 export type OrderItem = z.infer<typeof orderItemSchema>;
 
+export const orderTokenSchema = z.object({
+  token: z.string(),
+  isActive: z.boolean().default(true),
+});
+
+export type OrderToken = z.infer<typeof orderTokenSchema>;
+
 export const orderSchema = z.object({
   id: z.string(),
   businessId: z.string(),
@@ -142,11 +149,13 @@ export const orderSchema = z.object({
   status: z.enum(["draft", "confirmed", "cancelled", "delivered"]),
   paymentIntent: z.enum(["contado", "credito"]),
   totalAmount: z.string(),
+  token: orderTokenSchema.optional(),
   confirmedSnapshot: z.record(z.string(), z.unknown()).nullable(),
   deliveredSnapshot: z.record(z.string(), z.unknown()).nullable(),
   version: z.number().default(1),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   syncAttempts: z.number().default(0),
+  createdVia: z.enum(["manual", "token"]).default("manual"),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   items: z.array(orderItemSchema).optional(),
@@ -161,7 +170,7 @@ export const orderSchema = z.object({
 export type Order = z.infer<typeof orderSchema>;
 
 export interface CreateOrderInput {
-  clientId: string;
+  clientId: string | null;
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
   totalAmount: number;

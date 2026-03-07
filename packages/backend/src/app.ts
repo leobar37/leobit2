@@ -4,6 +4,8 @@ import { authRoutes } from "./api/auth";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
+import { publicOrderRoutes } from "./api/public-orders";
+import { publicPedidoRoutes } from "./api/public-pedidos";
 import { customerRoutes } from "./api/customers";
 import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
@@ -51,6 +53,8 @@ export const app = new Elysia()
   .use(businessRoutes)
   .use(invitationRoutes)
   .use(publicInvitationRoutes)
+  .use(publicOrderRoutes)
+  .use(publicPedidoRoutes)
   .use(customerRoutes)
   .use(productRoutes)
   .use(paymentRoutes)

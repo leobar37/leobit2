@@ -2,6 +2,7 @@ import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "./order.repository";
 
 export interface AccountsReceivableItem {
   customer: Customer;
@@ -57,9 +58,11 @@ export class CustomerRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">
+    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">,
+    tx?: DbTransaction
   ): Promise<Customer> {
-    const [customer] = await db
+    const dbOrTx = tx || db;
+    const [customer] = await dbOrTx
       .insert(customers)
       .values({
         ...data,

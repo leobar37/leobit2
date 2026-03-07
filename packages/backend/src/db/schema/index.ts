@@ -109,6 +109,13 @@ export {
 } from "./orders";
 
 export {
+  orderTokens,
+  orderTokensRelations,
+  type OrderToken,
+  type NewOrderToken,
+} from "./order-tokens";
+
+export {
   orderEvents,
   orderEventTypeEnum,
   orderEventsRelations,

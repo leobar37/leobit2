@@ -29,6 +29,11 @@ export const orderStatusEnum = pgEnum("order_status", [
   "delivered",
 ]);
 
+export const orderCreatedViaEnum = pgEnum("order_created_via", [
+  "manual",
+  "token",
+]);
+
 // Payments
 export const paymentMethodEnum = pgEnum("payment_method", [
   "efectivo",

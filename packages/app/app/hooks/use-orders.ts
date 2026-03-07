@@ -268,3 +268,41 @@ export function useModifyOrderItem() {
     },
   });
 }
+
+export function useToggleOrderTokenStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      isActive,
+    }: {
+      id: string;
+      isActive: boolean;
+    }) => {
+      const { data, error } = await api.orders({ id })["token-status"].patch({ isActive });
+      if (error) throw new Error(String(error.value));
+      return (data as { data: { token: string; isActive: boolean } })?.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, variables.id] });
+    },
+  });
+}
+
+export function useRegenerateOrderToken() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { data, error } = await api.orders({ id })["regenerate-token"].post();
+      if (error) throw new Error(String(error.value));
+      return (data as { data: { token: string } })?.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, variables.id] });
+    },
+  });
+}

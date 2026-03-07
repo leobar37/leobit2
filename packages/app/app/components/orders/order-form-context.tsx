@@ -18,7 +18,7 @@ interface OrderFormProviderProps {
   isSubmitting?: boolean;
   onNavigateToCalculadora?: () => void;
   onSubmit: (data: {
-    clientId: string;
+    clientId: string | null;
     deliveryDate: string;
     paymentIntent: "contado" | "credito";
     totalAmount: number;

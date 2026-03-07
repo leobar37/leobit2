@@ -15,7 +15,7 @@ export interface OrderItem {
 
 export interface UseOrderFormOptions {
   onSubmit: (data: {
-    clientId: string;
+    clientId: string | null;
     deliveryDate: string;
     paymentIntent: "contado" | "credito";
     totalAmount: number;
@@ -31,6 +31,7 @@ export interface UseOrderFormReturn {
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
   items: OrderItem[];
+  isAnonymousCustomer: boolean;
 
   // UI State
   showVariantSelector: boolean;
@@ -64,6 +65,7 @@ export interface UseOrderFormReturn {
 
   // Actions
   setSelectedCustomer: (customer: Customer | null) => void;
+  setIsAnonymousCustomer: (isAnonymous: boolean) => void;
   setDeliveryDate: (date: string) => void;
   setPaymentIntent: (intent: "contado" | "credito") => void;
   setShowVariantSelector: (show: boolean) => void;
@@ -83,6 +85,7 @@ export function useOrderForm({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
+  const [isAnonymousCustomer, setIsAnonymousCustomer] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [paymentIntent, setPaymentIntent] =
     useState<"contado" | "credito">("contado");
@@ -113,7 +116,9 @@ export function useOrderForm({
   }, [items]);
 
   const isValid =
-    selectedCustomer !== null && deliveryDate !== "" && items.length > 0;
+    (selectedCustomer !== null || isAnonymousCustomer) &&
+    deliveryDate !== "" &&
+    items.length > 0;
 
   // Min delivery date is tomorrow
   const minDeliveryDate = useMemo(
@@ -165,10 +170,10 @@ export function useOrderForm({
   }, []);
 
   const handleSubmit = useCallback(() => {
-    if (!selectedCustomer || !deliveryDate || items.length === 0) return;
+    if ((!selectedCustomer && !isAnonymousCustomer) || !deliveryDate || items.length === 0) return;
 
     onSubmit({
-      clientId: selectedCustomer.id,
+      clientId: isAnonymousCustomer ? null : selectedCustomer!.id,
       deliveryDate,
       paymentIntent,
       totalAmount,
@@ -176,6 +181,7 @@ export function useOrderForm({
     });
   }, [
     selectedCustomer,
+    isAnonymousCustomer,
     deliveryDate,
     paymentIntent,
     totalAmount,
@@ -186,6 +192,7 @@ export function useOrderForm({
   return {
     // State
     selectedCustomer,
+    isAnonymousCustomer,
     deliveryDate,
     paymentIntent,
     items,
@@ -217,6 +224,7 @@ export function useOrderForm({
 
     // Actions
     setSelectedCustomer,
+    setIsAnonymousCustomer,
     setDeliveryDate,
     setPaymentIntent,
     setShowVariantSelector,

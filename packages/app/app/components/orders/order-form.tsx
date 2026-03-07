@@ -18,6 +18,8 @@ function OrderFormContent() {
       <OrderCustomerField
         selectedCustomer={orderForm.selectedCustomer}
         onSelectCustomer={orderForm.setSelectedCustomer}
+        isAnonymousCustomer={orderForm.isAnonymousCustomer}
+        onToggleAnonymous={orderForm.setIsAnonymousCustomer}
       />
 
       <OrderDeliveryDate
