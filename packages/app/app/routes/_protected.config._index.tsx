@@ -10,6 +10,7 @@ import {
   Truck,
   ShoppingCart,
   Flag,
+  MessageCircle,
   Tag,
 } from "lucide-react";
 import {
@@ -105,10 +106,19 @@ const flagsConfigItem: ConfigItem = {
 const tagsConfigItem: ConfigItem = {
   icon: Tag,
   title: "Etiquetas",
-  description: "Segmenta tus clientes con etiquetas",
-  href: "/config/tags",
-  color: "text-rose-600",
-  iconBg: "bg-rose-100",
+  description: "Gestiona etiquetas para clientes",
+  href: "/tags",
+  color: "text-indigo-600",
+  iconBg: "bg-indigo-100",
+};
+
+const whatsappConfigItem: ConfigItem = {
+  icon: MessageCircle,
+  title: "WhatsApp",
+  description: "Conecta WhatsApp para notificaciones",
+  href: "/config/whatsapp",
+  color: "text-green-600",
+  iconBg: "bg-green-100",
 };
 
 export default function ConfigIndexPage() {
@@ -126,6 +136,7 @@ export default function ConfigIndexPage() {
         comprasConfigItem,
         tagsConfigItem,
         flagsConfigItem,
+        whatsappConfigItem,
         ...baseConfigItems.slice(2),
       ]
     : baseConfigItems;

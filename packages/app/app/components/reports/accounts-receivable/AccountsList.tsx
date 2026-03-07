@@ -6,9 +6,10 @@ import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 interface AccountsListProps {
   accounts?: AccountsReceivableItem[];
   isLoading: boolean;
+  onSendReminder?: (account: AccountsReceivableItem) => void;
 }
 
-export function AccountsList({ accounts, isLoading }: AccountsListProps) {
+export function AccountsList({ accounts, isLoading, onSendReminder }: AccountsListProps) {
   return (
     <Card className="border-0 shadow-md rounded-2xl">
       <CardHeader className="pb-3">
@@ -31,7 +32,7 @@ export function AccountsList({ accounts, isLoading }: AccountsListProps) {
         ) : (
           <div className="space-y-3">
             {accounts?.map((account) => (
-              <AccountItem key={account.customer.id} account={account} />
+              <AccountItem key={account.customer.id} account={account} onSendReminder={onSendReminder} />
             ))}
           </div>
         )}

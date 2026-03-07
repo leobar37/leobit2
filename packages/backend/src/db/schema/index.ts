@@ -133,6 +133,13 @@ export {
   type NewOrderEvent,
 } from "./order-events";
 
+export {
+  orderTokens,
+  orderTokensRelations,
+  type OrderToken,
+  type NewOrderToken,
+} from "./order-tokens";
+
 // Payments (Abonos)
 export {
   abonos,
@@ -232,3 +239,25 @@ export {
   type NewBusinessPaymentSettings,
   type PaymentMethodConfig,
 } from "./business-payment-settings";
+
+export {
+  businessUserWhatsAppSettings,
+  businessUserWhatsAppSettingsRelations,
+  type BusinessUserWhatsAppSettings,
+  type NewBusinessUserWhatsAppSettings,
+} from "./business-user-whatsapp-settings";
+
+export {
+  whatsAppTemplates,
+  whatsAppTemplatesRelations,
+  type WhatsAppTemplate,
+  type NewWhatsAppTemplate,
+} from "./whatsapp-templates";
+
+export {
+  whatsAppMessages,
+  whatsAppMessagesRelations,
+  messageStatusEnum,
+  type WhatsAppMessage,
+  type NewWhatsAppMessage,
+} from "./whatsapp-messages";

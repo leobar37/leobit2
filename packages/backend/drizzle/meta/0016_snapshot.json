@@ -1,6 +1,6 @@
 {
-  "id": "2b0e21d3-105f-4816-b8b5-c44c64834126",
-  "prevId": "bd31960d-f8b3-4456-9ecf-e38153dfdf35",
+  "id": "58df3043-e607-4e6e-8ed5-953c2c2b29db",
+  "prevId": "1bbdca28-d802-4d86-9b11-bcdbb61548a3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1256,123 +1256,6 @@
           "value": "\"system_config\".\"id\" IS NOT NULL"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.customer_tags": {
-      "name": "customer_tags",
-      "schema": "",
-      "columns": {
-        "customer_id": {
-          "name": "customer_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tag_id": {
-          "name": "tag_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "assigned_at": {
-          "name": "assigned_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "assigned_by": {
-          "name": "assigned_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "idx_customer_tags_customer_id": {
-          "name": "idx_customer_tags_customer_id",
-          "columns": [
-            {
-              "expression": "customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_tags_tag_id": {
-          "name": "idx_customer_tags_tag_id",
-          "columns": [
-            {
-              "expression": "tag_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "customer_tags_customer_id_customers_id_fk": {
-          "name": "customer_tags_customer_id_customers_id_fk",
-          "tableFrom": "customer_tags",
-          "tableTo": "customers",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "customer_tags_tag_id_tags_id_fk": {
-          "name": "customer_tags_tag_id_tags_id_fk",
-          "tableFrom": "customer_tags",
-          "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "customer_tags_assigned_by_business_users_id_fk": {
-          "name": "customer_tags_assigned_by_business_users_id_fk",
-          "tableFrom": "customer_tags",
-          "tableTo": "business_users",
-          "columnsFrom": [
-            "assigned_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "customer_tags_customer_id_tag_id_pk": {
-          "name": "customer_tags_customer_id_tag_id_pk",
-          "columns": [
-            "customer_id",
-            "tag_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.customers": {
@@ -2816,6 +2699,46 @@
           "notNull": true,
           "default": "'contado'"
         },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "order_payment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'sin_pago'"
+        },
+        "advance_amount": {
+          "name": "advance_amount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "balance_due": {
+          "name": "balance_due",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "advance_payment_method": {
+          "name": "advance_payment_method",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "advance_reference_number": {
+          "name": "advance_reference_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "advance_proof_image_id": {
+          "name": "advance_proof_image_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "total_amount": {
           "name": "total_amount",
           "type": "numeric(12, 2)",
@@ -2955,6 +2878,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_orders_payment_status": {
+          "name": "idx_orders_payment_status",
+          "columns": [
+            {
+              "expression": "business_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "payment_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2990,6 +2934,19 @@
           "tableTo": "business_users",
           "columnsFrom": [
             "seller_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_advance_proof_image_id_files_id_fk": {
+          "name": "orders_advance_proof_image_id_files_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "files",
+          "columnsFrom": [
+            "advance_proof_image_id"
           ],
           "columnsTo": [
             "id"
@@ -4872,104 +4829,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tags": {
-      "name": "tags",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "color": {
-          "name": "color",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'#f97316'"
-        },
-        "business_id": {
-          "name": "business_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_tags_business_id": {
-          "name": "idx_tags_business_id",
-          "columns": [
-            {
-              "expression": "business_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_tags_name": {
-          "name": "idx_tags_name",
-          "columns": [
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tags_business_id_businesses_id_fk": {
-          "name": "tags_business_id_businesses_id_fk",
-          "tableFrom": "tags",
-          "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.user_profiles": {
       "name": "user_profiles",
       "schema": "",
@@ -5221,6 +5080,16 @@
         "sin_inventario",
         "pedidos",
         "mixto"
+      ]
+    },
+    "public.order_payment_status": {
+      "name": "order_payment_status",
+      "schema": "public",
+      "values": [
+        "sin_pago",
+        "adelanto_parcial",
+        "pagado_total",
+        "saldo_pendiente"
       ]
     },
     "public.order_status": {

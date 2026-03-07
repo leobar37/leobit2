@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link } from "react-router";
-import { Eye } from "lucide-react";
+import { Eye, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
@@ -9,9 +9,10 @@ import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 interface AccountItemProps {
   account: AccountsReceivableItem;
+  onSendReminder?: (account: AccountsReceivableItem) => void;
 }
 
-export const AccountItem = memo(function AccountItem({ account }: AccountItemProps) {
+export const AccountItem = memo(function AccountItem({ account, onSendReminder }: AccountItemProps) {
   const debtLevel = getDebtLevel(account.totalDebt);
 
   return (
@@ -40,12 +41,25 @@ export const AccountItem = memo(function AccountItem({ account }: AccountItemPro
         <p className="text-lg font-bold text-red-600">
           S/ {formatCurrency(account.totalDebt)}
         </p>
-        <Link to={`/clientes/${account.customer.id}`}>
-          <Button variant="ghost" size="sm" className="h-8 px-2">
-            <Eye className="h-4 w-4 mr-1" />
-            Ver
-          </Button>
-        </Link>
+        <div className="flex items-center gap-1 mt-2">
+          {account.customer.phone && onSendReminder && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={() => onSendReminder(account)}
+            >
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Recordatorio
+            </Button>
+          )}
+          <Link to={`/clientes/${account.customer.id}`}>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Eye className="h-4 w-4 mr-1" />
+              Ver
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { useAtomValue } from "jotai";
@@ -8,12 +9,27 @@ import {
   FilterCard,
   AccountsList,
   SummaryStats,
+  SendReminderModal,
 } from "~/components/reports/accounts-receivable";
+import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 export default function CuentasPorCobrarPage() {
   const filters = useAtomValue(filtersAtom);
   const { data: accounts, isLoading } = useAccountsReceivable(filters);
   const { data: totalDebt } = useTotalAccountsReceivable();
+
+  const [selectedAccount, setSelectedAccount] = useState<AccountsReceivableItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleSendReminder = (account: AccountsReceivableItem) => {
+    setSelectedAccount(account);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedAccount(null), 300);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -29,9 +45,19 @@ export default function CuentasPorCobrarPage() {
       <main className="p-4 pb-24 space-y-4">
         <SummaryCard totalDebt={totalDebt} accounts={accounts} />
         <FilterCard />
-        <AccountsList accounts={accounts} isLoading={isLoading} />
+        <AccountsList
+          accounts={accounts}
+          isLoading={isLoading}
+          onSendReminder={handleSendReminder}
+        />
         <SummaryStats accounts={accounts} />
       </main>
+
+      <SendReminderModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        account={selectedAccount}
+      />
     </div>
   );
 }

@@ -1,9 +1,14 @@
 import { Elysia } from "elysia";
+import { serve } from "inngest/bun";
 import { errorPlugin } from "./plugins/error-handler";
 import { authRoutes } from "./api/auth";
+import { inngest } from "./lib/inngest";
+import { whatsAppFunctions } from "./inngest/whatsapp-functions";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
+import { publicOrderRoutes } from "./api/public-orders";
+import { publicPedidoRoutes } from "./api/public-pedidos";
 import { customerRoutes } from "./api/customers";
 import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
@@ -21,6 +26,9 @@ import { supplierRoutes } from "./api/suppliers";
 import { purchaseRoutes } from "./api/purchases";
 import { productUnitsRoutes } from "./api/product-units";
 import { ocrRoutes } from "./api/ocr";
+import { whatsappTemplateRoutes } from "./api/whatsapp/templates";
+import { whatsAppSettingsRoutes } from "./api/whatsapp/settings";
+import { whatsAppMessageRoutes } from "./api/whatsapp/messages";
 import { tagRoutes } from "./api/tags";
 import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
@@ -51,6 +59,8 @@ export const app = new Elysia()
   .use(businessRoutes)
   .use(invitationRoutes)
   .use(publicInvitationRoutes)
+  .use(publicOrderRoutes)
+  .use(publicPedidoRoutes)
   .use(customerRoutes)
   .use(productRoutes)
   .use(paymentRoutes)
@@ -68,6 +78,9 @@ export const app = new Elysia()
   .use(purchaseRoutes)
   .use(productUnitsRoutes)
   .use(ocrRoutes)
+  .use(whatsappTemplateRoutes)
+  .use(whatsAppSettingsRoutes)
+  .use(whatsAppMessageRoutes)
   .use(tagRoutes)
   .use(authRoutes)
   .get("/", () => ({
@@ -78,6 +91,13 @@ export const app = new Elysia()
   .get("/health", () => ({
     status: "healthy",
     timestamp: new Date().toISOString(),
-  }));
+  }))
+  .use(
+    "/api/inngest",
+    serve({
+      client: inngest,
+      functions: whatsAppFunctions,
+    })
+  );
 
 export type App = typeof app;

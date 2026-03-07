@@ -33,10 +33,18 @@ import { StaffInvitationRepository } from "../services/repository/staff-invitati
 import { StaffInvitationService } from "../services/business/staff-invitation.service";
 import { OrderRepository } from "../services/repository/order.repository";
 import { OrderEventsRepository } from "../services/repository/order-events.repository";
+import { OrderTokenRepository } from "../services/repository/order-token.repository";
 import { OrderService } from "../services/business/order.service";
+import { OrderTokenService } from "../services/business/order-token.service";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 import { OCRService } from "../services/business/ocr.service";
+import { WhatsAppTemplateRepository } from "../services/repository/whatsapp-template.repository";
+import { WhatsAppTemplateService } from "../services/business/whatsapp-template.service";
+import { WhatsAppSettingsRepository } from "../services/repository/whatsapp-settings.repository";
+import { WhatsAppSettingsService } from "../services/business/whatsapp-settings.service";
+import { WhatsAppMessageRepository } from "../services/repository/whatsapp-message.repository";
+import { WhatsAppMessageService } from "../services/business/whatsapp-message.service";
 import { TagRepository } from "../services/repository/tag.repository";
 import { TagService } from "../services/business/tag.service";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
@@ -63,7 +71,11 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const staffInvitationRepo = new StaffInvitationRepository();
     const orderRepo = new OrderRepository();
     const orderEventsRepo = new OrderEventsRepository();
+    const orderTokenRepo = new OrderTokenRepository();
     const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
+    const whatsAppTemplateRepo = new WhatsAppTemplateRepository();
+    const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
+    const whatsAppMessageRepo = new WhatsAppMessageRepository();
     const tagRepo = new TagRepository();
     const customerTagRepo = new CustomerTagRepository();
 
@@ -90,9 +102,18 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const supplierService = new SupplierService(supplierRepo);
     const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
-    const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo);
+    const orderTokenService = new OrderTokenService(orderTokenRepo);
+    const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo, orderTokenService, customerRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
+    const whatsAppTemplateService = new WhatsAppTemplateService(whatsAppTemplateRepo);
+    const whatsAppSettingsService = new WhatsAppSettingsService(whatsAppSettingsRepo);
+    const whatsAppMessageService = new WhatsAppMessageService(
+      whatsAppMessageRepo,
+      whatsAppTemplateRepo,
+      customerRepo,
+      whatsAppSettingsRepo
+    );
     const tagService = new TagService(tagRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
 
@@ -131,10 +152,18 @@ export const servicesPlugin = new Elysia({ name: "services" })
       staffInvitationService,
       orderRepo,
       orderEventsRepo,
+      orderTokenRepo,
       orderService,
+      orderTokenService,
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,
+      whatsAppTemplateRepo,
+      whatsAppTemplateService,
+      whatsAppSettingsRepo,
+      whatsAppSettingsService,
+      whatsAppMessageRepo,
+      whatsAppMessageService,
       tagRepo,
       tagService,
       customerTagRepo,
