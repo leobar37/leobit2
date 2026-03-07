@@ -15,12 +15,21 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type OrderStatus = "draft" | "confirmed" | "cancelled" | "delivered";
 export type OrderWithItems = Order & { items: OrderItem[] };
 
+export type OrderPaymentStatus = "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+export type PaymentMethod = "efectivo" | "yape" | "plin" | "transferencia";
+
 export interface CreateOrderInput {
   clientId: string;
   deliveryDate: string;
   orderDate: string;
   status?: OrderStatus;
   paymentIntent: "contado" | "credito";
+  paymentStatus?: OrderPaymentStatus;
+  advanceAmount?: string;
+  balanceDue?: string;
+  advancePaymentMethod?: PaymentMethod | null;
+  advanceReferenceNumber?: string | null;
+  advanceProofImageId?: string | null;
   totalAmount: string;
   confirmedSnapshot?: Record<string, unknown>;
   deliveredSnapshot?: Record<string, unknown>;
@@ -43,6 +52,12 @@ export interface UpdateOrderInput {
   deliveryDate?: string;
   status?: OrderStatus;
   paymentIntent?: "contado" | "credito";
+  paymentStatus?: OrderPaymentStatus;
+  advanceAmount?: string;
+  balanceDue?: string;
+  advancePaymentMethod?: PaymentMethod | null;
+  advanceReferenceNumber?: string | null;
+  advanceProofImageId?: string | null;
   totalAmount?: string;
   confirmedSnapshot?: Record<string, unknown>;
   deliveredSnapshot?: Record<string, unknown>;

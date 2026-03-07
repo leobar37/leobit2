@@ -12,7 +12,9 @@ type BalanceStatus = "positive" | "zero" | "negative";
 
 interface BalanceConfig {
   status: BalanceStatus;
-  gradient: string;
+  borderColor: string;
+  bgColor: string;
+  textColor: string;
   label: string;
   amountText: string;
   showPaymentButton: boolean;
@@ -22,7 +24,9 @@ function getBalanceConfig(balance: number): BalanceConfig {
   if (balance > 0) {
     return {
       status: "positive",
-      gradient: "bg-gradient-to-br from-red-500 to-red-600",
+      borderColor: "border-l-red-500",
+      bgColor: "bg-white",
+      textColor: "text-red-600",
       label: "Deuda total",
       amountText: `S/ ${formatCurrency(balance)}`,
       showPaymentButton: true,
@@ -32,7 +36,9 @@ function getBalanceConfig(balance: number): BalanceConfig {
   if (balance < 0) {
     return {
       status: "negative",
-      gradient: "bg-gradient-to-br from-blue-500 to-blue-600",
+      borderColor: "border-l-blue-500",
+      bgColor: "bg-white",
+      textColor: "text-blue-600",
       label: "Saldo a favor",
       amountText: `S/ ${formatCurrency(Math.abs(balance))}`,
       showPaymentButton: false,
@@ -41,7 +47,9 @@ function getBalanceConfig(balance: number): BalanceConfig {
 
   return {
     status: "zero",
-    gradient: "bg-gradient-to-br from-green-500 to-green-600",
+    borderColor: "border-l-green-500",
+    bgColor: "bg-white",
+    textColor: "text-green-600",
     label: "Sin deuda",
     amountText: "S/ 0.00",
     showPaymentButton: false,
@@ -56,24 +64,27 @@ const BalanceCard = React.forwardRef<HTMLDivElement, BalanceCardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-2xl border-0 shadow-md text-white",
-          config.gradient,
+          "rounded-xl border-l-4 border-0 shadow-sm",
+          config.borderColor,
+          config.bgColor,
           className
         )}
       >
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 opacity-80" />
-              <span className="opacity-90">{config.label}</span>
+              <Wallet className={cn("h-5 w-5", config.textColor)} />
+              <span className="text-muted-foreground">{config.label}</span>
             </div>
-            <span className="text-2xl font-bold">{config.amountText}</span>
+            <span className={cn("text-2xl font-bold", config.textColor)}>
+              {config.amountText}
+            </span>
           </div>
 
           {config.showPaymentButton && onRegisterPayment && (
             <button
               onClick={onRegisterPayment}
-              className="w-full mt-4 bg-white text-red-600 hover:bg-white/90 rounded-xl px-4 py-2 font-medium flex items-center justify-center gap-2"
+              className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl px-4 py-2 font-medium flex items-center justify-center gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -89,7 +100,7 @@ const BalanceCard = React.forwardRef<HTMLDivElement, BalanceCardProps>(
                 <path d="M5 12h14" />
                 <path d="M12 5v14" />
               </svg>
-              Registrar pago
+              registrar pago
             </button>
           )}
         </div>

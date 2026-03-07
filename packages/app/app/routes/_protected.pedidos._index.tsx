@@ -3,7 +3,6 @@ import { ClipboardList, Search, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useOrders } from "~/hooks/use-orders";
@@ -113,11 +112,11 @@ export default function OrdersPage() {
       {/* FAB */}
       <Link
         to="/pedidos/nuevo"
-        className="fixed right-4 bottom-20 z-50"
+        className="fixed right-4 bottom-28 z-50"
       >
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+          className="h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600"
         >
           <Plus className="h-6 w-6" />
         </Button>

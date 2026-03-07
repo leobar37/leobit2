@@ -19,6 +19,71 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
       data: business,
     };
   })
+  .get(
+    "/payment-methods",
+    async ({ paymentMethodConfigService, ctx }) => {
+      const config = await paymentMethodConfigService.getConfig(ctx as RequestContext);
+      return { success: true, data: config };
+    }
+  )
+  .put(
+    "/payment-methods",
+    async ({ paymentMethodConfigService, ctx, body }) => {
+      const config = await paymentMethodConfigService.updateConfig(ctx as RequestContext, body);
+      return { success: true, data: config };
+    },
+    {
+      body: t.Object({
+        methods: t.Object({
+          efectivo: t.Object({
+            enabled: t.Boolean(),
+            phone: t.Optional(t.String()),
+            accountName: t.Optional(t.String()),
+            accountNumber: t.Optional(t.String()),
+            bank: t.Optional(t.String()),
+            cci: t.Optional(t.String()),
+            qrImageUrl: t.Optional(t.String()),
+          }),
+          yape: t.Object({
+            enabled: t.Boolean(),
+            phone: t.Optional(t.String()),
+            accountName: t.Optional(t.String()),
+            accountNumber: t.Optional(t.String()),
+            bank: t.Optional(t.String()),
+            cci: t.Optional(t.String()),
+            qrImageUrl: t.Optional(t.String()),
+          }),
+          plin: t.Object({
+            enabled: t.Boolean(),
+            phone: t.Optional(t.String()),
+            accountName: t.Optional(t.String()),
+            accountNumber: t.Optional(t.String()),
+            bank: t.Optional(t.String()),
+            cci: t.Optional(t.String()),
+            qrImageUrl: t.Optional(t.String()),
+          }),
+          transferencia: t.Object({
+            enabled: t.Boolean(),
+            phone: t.Optional(t.String()),
+            accountName: t.Optional(t.String()),
+            accountNumber: t.Optional(t.String()),
+            bank: t.Optional(t.String()),
+            cci: t.Optional(t.String()),
+            qrImageUrl: t.Optional(t.String()),
+          }),
+          tarjeta: t.Object({
+            enabled: t.Boolean(),
+            phone: t.Optional(t.String()),
+            accountName: t.Optional(t.String()),
+            accountNumber: t.Optional(t.String()),
+            bank: t.Optional(t.String()),
+            cci: t.Optional(t.String()),
+            qrImageUrl: t.Optional(t.String()),
+          }),
+        }),
+      }),
+    }
+  )
   .post(
     "/",
     async ({ businessService, ctx, body }) => {

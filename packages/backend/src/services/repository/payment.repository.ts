@@ -139,4 +139,44 @@ export class PaymentRepository {
 
     return abono;
   }
+
+  async findBySaleId(ctx: RequestContext, saleId: string): Promise<Abono | undefined> {
+    return db.query.abonos.findFirst({
+      where: and(
+        eq(abonos.businessId, ctx.businessId),
+        eq(abonos.relatedSaleId, saleId)
+      ),
+    });
+  }
+
+  async createReversal(
+    ctx: RequestContext,
+    data: {
+      clientId: string;
+      amount: string;
+      paymentMethod: "saldo" | "efectivo" | "yape" | "plin" | "transferencia";
+      referenceNumber?: string;
+      notes?: string;
+      relatedSaleId: string;
+    },
+    tx?: DbTransaction
+  ): Promise<Abono> {
+    const executor = tx ?? db;
+
+    const [abono] = await executor
+      .insert(abonos)
+      .values({
+        clientId: data.clientId,
+        businessId: ctx.businessId,
+        sellerId: ctx.businessUserId,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        referenceNumber: data.referenceNumber,
+        notes: data.notes,
+        relatedSaleId: data.relatedSaleId,
+      })
+      .returning();
+
+    return abono;
+  }
 }

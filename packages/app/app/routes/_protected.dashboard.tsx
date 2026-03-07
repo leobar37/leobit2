@@ -3,45 +3,68 @@ import {
   ShoppingCart,
   Users,
   Package,
-  DollarSign,
   FileText,
   Wallet,
+  AlertCircle,
+  Settings,
+  DollarSign,
+  Weight,
+  CreditCard,
 } from "lucide-react";
-import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
+import { BusinessUserRole } from "@avileo/shared";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MinimalCard,
+  MinimalCardTitle,
+  MinimalCardMedia,
+} from "~/components/cards";
+import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
+import { MetricCard } from "~/components/dashboard/metric-card";
+import { WeeklySalesChart } from "~/components/dashboard/weekly-sales-chart";
+import {
+  useSalesStats,
+  useDebtorsSummary,
+  useSalesChart,
+} from "~/hooks/use-dashboard";
+import { formatCurrency, formatKilos } from "~/lib/utils";
+import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-selector";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
-  const { data: accounts } = useAccountsReceivable();
+
+  const [period, setPeriod] = useState<PeriodValue>({
+    type: "day",
+    startDate: undefined,
+    endDate: undefined,
+  });
+
+  const { data: salesStats, isLoading: isLoadingSales } = useSalesStats(period);
+  const { data: debtorsSummary, isLoading: isLoadingDebtors } = useDebtorsSummary();
+  const { data: chartData, isLoading: isLoadingChart } = useSalesChart(period);
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.kilosAsignados != null && distribucion.kilosAsignados > 0;
+  const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
 
-  const debtors = accounts?.filter((a) => a.totalDebt > 0) || [];
-  const totalDebt = debtors.reduce((sum, d) => sum + d.totalDebt, 0);
+  const debtorsCount = debtorsSummary?.debtorsCount ?? 0;
 
   return (
-    <div className="space-y-4">
-      <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-        <CardHeader>
-          <CardTitle className="text-2xl">Hola, {user?.name?.split(" ")[0]}! 👋</CardTitle>
-          <CardDescription className="text-orange-100">
-            Bienvenido de vuelta a tu sistema de ventas
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6">
+      {/* Welcome - Sin fondo, solo texto */}
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold text-foreground">
+          Hola, {user?.name?.split(" ")[0]}! 👋
+        </h1>
+        <p className="text-base text-muted-foreground mt-1">
+          Bienvenido de vuelta a tu sistema de ventas
+        </p>
+      </div>
 
       {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
         <Link to="/mi-distribucion" className="block">
@@ -53,66 +76,122 @@ export default function DashboardPage() {
         </Link>
       )}
 
+      {/* Alerta - Card blanca con borde lateral ámbar */}
       {usarDistribucion && !isLoadingDistribucion && !tieneDistribucion && (
-        <Card className="border-0 shadow-md rounded-2xl bg-amber-50 border-amber-200">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-              <Package className="h-5 w-5 text-amber-600" />
+        <Link to="/distribuciones" className="block">
+          <div className="border-l-4 border-amber-400 bg-white py-3 pl-4 pr-3">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-foreground">Sin distribución asignada</p>
+                <p className="text-sm text-muted-foreground">
+                  {isAdmin
+                    ? "Asigna tu distribución para hoy"
+                    : "Contacta a tu administrador"}
+                </p>
+              </div>
+              {isAdmin && <Settings className="h-4 w-4 text-amber-500 ml-auto" />}
             </div>
-            <div>
-              <p className="font-medium text-amber-900">Sin distribucion asignada</p>
-              <p className="text-sm text-amber-700">Contacta a tu administrador</p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Link>
       )}
 
+      {/* Selector de Período */}
+      <PeriodSelector value={period} onChange={setPeriod} />
+
+      {/* Métricas del Dashboard */}
+      <div className="grid grid-cols-2 gap-3">
+        <MetricCard
+          title={period.type === "day" ? "Ventas Hoy" : period.type === "week" ? "Ventas Semana" : period.type === "month" ? "Ventas Mes" : "Ventas"}
+          value={isLoadingSales ? "S/ -" : `S/ ${formatCurrency(salesStats?.current.amount ?? 0)}`}
+          change={salesStats?.change.amount}
+          icon={DollarSign}
+          iconColor="text-green-600"
+        />
+        <MetricCard
+          title="Kilos Vendidos"
+          value={isLoadingSales ? "-" : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
+          change={salesStats?.change.kilos}
+          icon={Weight}
+          iconColor="text-blue-600"
+        />
+        <MetricCard
+          title="Deudores"
+          value={isLoadingDebtors ? "-" : String(debtorsCount)}
+          subtitle="clientes con deuda"
+          icon={Users}
+          iconColor="text-red-600"
+        />
+        <MetricCard
+          title="Por Cobrar"
+          value={isLoadingDebtors ? "S/ -" : `S/ ${formatCurrency(debtorsSummary?.totalDebt ?? 0)}`}
+          icon={CreditCard}
+          iconColor="text-orange-600"
+        />
+      </div>
+
+      {/* Gráfico de Ventas */}
+      {!isLoadingChart && chartData && (
+        <WeeklySalesChart labels={chartData.labels} data={chartData.data} />
+      )}
+
+      {/* Accesos Rápidos */}
       <div className="grid grid-cols-2 gap-4">
         <Link to="/ventas" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
+          <MinimalCard 
+            variant="outlined" 
+            interactive 
+            clickable 
+            radius="md" 
+            className="h-32 flex flex-col items-center justify-center gap-2"
           >
-            <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center"
-            >
-              <ShoppingCart className="h-6 w-6 text-orange-600" />
-            </div>
-            <p className="font-semibold text-foreground">Nueva Venta</p>
-          </Card>
+            <MinimalCardMedia icon={ShoppingCart} iconColor="text-orange-600" size="lg" />
+            <MinimalCardTitle className="text-sm font-medium">Nueva Venta</MinimalCardTitle>
+          </MinimalCard>
         </Link>
 
         <Link to="/clientes" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
+          <MinimalCard 
+            variant="outlined" 
+            interactive 
+            clickable 
+            radius="md" 
+            className="h-32 flex flex-col items-center justify-center gap-2"
           >
-            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center"
-            >
-              <Users className="h-6 w-6 text-blue-600" />
-            </div>
-            <p className="font-semibold text-foreground">Clientes</p>
-          </Card>
+            <MinimalCardMedia icon={Users} iconColor="text-blue-600" size="lg" />
+            <MinimalCardTitle className="text-sm font-medium">Clientes</MinimalCardTitle>
+          </MinimalCard>
         </Link>
 
         <Link to="/cobros" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3 relative overflow-hidden">
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
-              <Wallet className="h-6 w-6 text-red-600" />
-            </div>
-            <p className="font-semibold text-foreground">Cobros</p>
-            {debtors.length > 0 && (
-              <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {debtors.length}
-              </div>
+          <MinimalCard 
+            variant="outlined" 
+            interactive 
+            clickable 
+            radius="md" 
+            className="h-32 flex flex-col items-center justify-center gap-2 relative"
+          >
+            <MinimalCardMedia icon={Wallet} iconColor="text-red-600" size="lg" />
+            <MinimalCardTitle className="text-sm font-medium">Cobros</MinimalCardTitle>
+            {debtorsCount > 0 && (
+              <Badge className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {debtorsCount}
+              </Badge>
             )}
-          </Card>
+          </MinimalCard>
         </Link>
 
         <Link to="/cierre" className="block">
-          <Card className="border-0 shadow-md rounded-3xl hover:shadow-lg transition-shadow cursor-pointer h-32 flex flex-col items-center justify-center gap-3"
+          <MinimalCard 
+            variant="outlined" 
+            interactive 
+            clickable 
+            radius="md" 
+            className="h-32 flex flex-col items-center justify-center gap-2"
           >
-            <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center"
-            >
-              <FileText className="h-6 w-6 text-purple-600" />
-            </div>
-            <p className="font-semibold text-foreground">Cierre</p>
-          </Card>
+            <MinimalCardMedia icon={FileText} iconColor="text-purple-600" size="lg" />
+            <MinimalCardTitle className="text-sm font-medium">Cierre</MinimalCardTitle>
+          </MinimalCard>
         </Link>
       </div>
     </div>

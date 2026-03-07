@@ -17,6 +17,7 @@ import { paymentMethodEnum, syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { files } from "./files";
+import { sales } from "./sales";
 
 // Table definition
 export const abonos = pgTable(
@@ -47,6 +48,9 @@ export const abonos = pgTable(
     // Reference number for reconciliation (Yape/Plin transaction ID)
     referenceNumber: varchar("reference_number", { length: 50 }),
 
+    // Related sale for cancellation tracking
+    relatedSaleId: uuid("related_sale_id").references(() => sales.id),
+
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
@@ -60,6 +64,7 @@ export const abonos = pgTable(
     index("idx_abonos_seller_id").on(table.sellerId),
     index("idx_abonos_payment_method").on(table.paymentMethod),
     index("idx_abonos_proof_image_id").on(table.proofImageId),
+    index("idx_abonos_related_sale_id").on(table.relatedSaleId),
     index("idx_abonos_sync_status").on(table.syncStatus),
     index("idx_abonos_created_at").on(table.createdAt),
   ]

@@ -14,7 +14,8 @@ import { relations } from "drizzle-orm";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { products, productVariants } from "./inventory";
-import { orderStatusEnum, saleTypeEnum, syncStatusEnum } from "./enums";
+import { files } from "./files";
+import { orderStatusEnum, saleTypeEnum, syncStatusEnum, orderPaymentStatusEnum } from "./enums";
 
 export const orders = pgTable(
   "orders",
@@ -34,6 +35,13 @@ export const orders = pgTable(
     orderDate: date("order_date").notNull(),
     status: orderStatusEnum("status").notNull().default("draft"),
     paymentIntent: saleTypeEnum("payment_intent").notNull().default("contado"),
+
+    paymentStatus: orderPaymentStatusEnum("payment_status").notNull().default("sin_pago"),
+    advanceAmount: decimal("advance_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    balanceDue: decimal("balance_due", { precision: 12, scale: 2 }).notNull().default("0"),
+    advancePaymentMethod: varchar("advance_payment_method", { length: 20 }),
+    advanceReferenceNumber: varchar("advance_reference_number", { length: 50 }),
+    advanceProofImageId: uuid("advance_proof_image_id").references(() => files.id),
 
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
     confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
@@ -55,6 +63,7 @@ export const orders = pgTable(
     index("idx_orders_business_client").on(table.businessId, table.clientId),
     index("idx_orders_business_sync").on(table.businessId, table.syncStatus),
     index("idx_orders_seller_id").on(table.sellerId),
+    index("idx_orders_payment_status").on(table.businessId, table.paymentStatus),
   ]
 );
 

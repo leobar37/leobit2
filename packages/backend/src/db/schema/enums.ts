@@ -22,6 +22,15 @@ export const syncStatusEnum = pgEnum("sync_status", [
 
 // Sales
 export const saleTypeEnum = pgEnum("sale_type", ["contado", "credito"]);
+export const saleStatusEnum = pgEnum("sale_status", ["active", "cancelled"]);
+export const refundMethodEnum = pgEnum("refund_method", [
+  "efectivo",
+  "yape",
+  "plin",
+  "transferencia",
+  "saldo",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "draft",
   "confirmed",
@@ -35,6 +44,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "yape",
   "plin",
   "transferencia",
+  "saldo",
 ]);
 
 // Products
@@ -65,4 +75,11 @@ export const purchaseStatusEnum = pgEnum("purchase_status", [
   "pending",
   "received",
   "cancelled",
+]);
+
+export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
+  "sin_pago",
+  "adelanto_parcial",
+  "pagado_total",
+  "saldo_pendiente",
 ]);

@@ -3,6 +3,7 @@ import { toDateString, addDays, now } from "~/lib/date-utils";
 import type { Customer, Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import { useCalculator } from "./use-order-calculator";
+import { parseAmount, calculateBalanceDue, formatCurrency } from "~/lib/utils";
 
 export interface OrderItem {
   productId: string;
@@ -13,16 +14,36 @@ export interface OrderItem {
   unitPriceQuoted: number;
 }
 
+export type PaymentMethod = "efectivo" | "yape" | "plin" | "transferencia";
+export type PaymentStatus = "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+
 export interface UseOrderFormOptions {
   onSubmit: (data: {
     clientId: string;
     deliveryDate: string;
     paymentIntent: "contado" | "credito";
+    paymentStatus?: PaymentStatus;
+    advanceAmount?: number;
+    balanceDue?: number;
+    advancePaymentMethod?: PaymentMethod;
+    advanceReferenceNumber?: string;
     totalAmount: number;
     items: OrderItem[];
   }) => void;
   onNavigateToCalculadora?: () => void;
   isSubmitting?: boolean;
+  initialOrder?: {
+    clientId: string;
+    deliveryDate: string;
+    paymentIntent: "contado" | "credito";
+    paymentStatus?: PaymentStatus;
+    advanceAmount?: number;
+    balanceDue?: number;
+    advancePaymentMethod?: PaymentMethod;
+    advanceReferenceNumber?: string;
+    totalAmount: number;
+    items: OrderItem[];
+  };
 }
 
 export interface UseOrderFormReturn {
@@ -30,10 +51,16 @@ export interface UseOrderFormReturn {
   selectedCustomer: Customer | null;
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
+  paymentStatus: PaymentStatus;
+  advanceAmount: string;
+  advancePaymentMethod: PaymentMethod | null;
+  advanceReferenceNumber: string;
   items: OrderItem[];
 
   // UI State
   showVariantSelector: boolean;
+  showAdvancePayment: boolean;
+  editingItemIndex: number | null;
 
   // Selected product/variant
   selectedProduct: Product | null;
@@ -57,6 +84,7 @@ export interface UseOrderFormReturn {
 
   // Computed
   totalAmount: number;
+  balanceDue: number;
   isValid: boolean;
   isKgProduct: boolean;
   minDeliveryDate: string;
@@ -66,8 +94,15 @@ export interface UseOrderFormReturn {
   setSelectedCustomer: (customer: Customer | null) => void;
   setDeliveryDate: (date: string) => void;
   setPaymentIntent: (intent: "contado" | "credito") => void;
+  setPaymentStatus: (status: PaymentStatus) => void;
+  setAdvanceAmount: (amount: string) => void;
+  setAdvancePaymentMethod: (method: PaymentMethod | null) => void;
+  setAdvanceReferenceNumber: (ref: string) => void;
   setShowVariantSelector: (show: boolean) => void;
+  setShowAdvancePayment: (show: boolean) => void;
   handleVariantSelect: (product: Product, variant: ProductVariant) => void;
+  startEditingItem: (index: number) => void;
+  handleUpdateItem: (onUpdated?: () => void) => void;
   // Called from the calculator route page when an item is confirmed
   handleAddItem: (onAddedToCart?: () => void) => void;
   handleRemoveItem: (index: number) => void;
@@ -78,15 +113,27 @@ export function useOrderForm({
   onSubmit,
   onNavigateToCalculadora,
   isSubmitting = false,
+  initialOrder,
 }: UseOrderFormOptions): UseOrderFormReturn {
-  // Main form state
+  // Main form state - initialize from initialOrder if provided
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [paymentIntent, setPaymentIntent] =
-    useState<"contado" | "credito">("contado");
-  const [items, setItems] = useState<OrderItem[]>([]);
+  const [deliveryDate, setDeliveryDate] = useState(initialOrder?.deliveryDate || "");
+  const [paymentIntent, setPaymentIntent] = useState<"contado" | "credito">(
+    initialOrder?.paymentIntent || "contado",
+  );
+  const [items, setItems] = useState<OrderItem[]>(initialOrder?.items || []);
+
+  // Track which item is being edited (for calculator)
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+
+  // Financial state
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("sin_pago");
+  const [advanceAmount, setAdvanceAmount] = useState("");
+  const [advancePaymentMethod, setAdvancePaymentMethod] = useState<PaymentMethod | null>(null);
+  const [advanceReferenceNumber, setAdvanceReferenceNumber] = useState("");
+  const [showAdvancePayment, setShowAdvancePayment] = useState(false);
 
   // UI state
   const [showVariantSelector, setShowVariantSelector] = useState(false);
@@ -111,6 +158,11 @@ export function useOrderForm({
       return sum + item.orderedQuantity * item.unitPriceQuoted;
     }, 0);
   }, [items]);
+
+  const balanceDue = useMemo(() => {
+    const advance = parseAmount(advanceAmount);
+    return calculateBalanceDue(totalAmount, advance);
+  }, [totalAmount, advanceAmount]);
 
   const isValid =
     selectedCustomer !== null && deliveryDate !== "" && items.length > 0;
@@ -164,13 +216,57 @@ export function useOrderForm({
     setItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const startEditingItem = useCallback((index: number) => {
+    const item = items[index];
+    if (!item) return;
+    setEditingItemIndex(index);
+    // Store item data for calculator to load full variant
+    setSelectedProduct({ id: item.productId, name: item.productName } as Product);
+    setSelectedVariant({ id: item.variantId, name: item.variantName, price: item.unitPriceQuoted } as unknown as ProductVariant);
+    onNavigateToCalculadora?.();
+  }, [items, onNavigateToCalculadora]);
+
+  const handleUpdateItem = useCallback((onUpdated?: () => void) => {
+    if (editingItemIndex === null) return;
+    
+    const item = items[editingItemIndex];
+    if (!item || !calculation.isValid) return;
+
+    const updatedItem: OrderItem = {
+      ...item,
+      orderedQuantity: calculation.quantity,
+      unitPriceQuoted: calculation.unitPrice,
+    };
+
+    setItems((prev) => prev.map((i, idx) => idx === editingItemIndex ? updatedItem : i));
+    setEditingItemIndex(null);
+    setSelectedProduct(null);
+    setSelectedVariant(null);
+    handleClear();
+    onUpdated?.();
+  }, [editingItemIndex, items, calculation, handleClear]);
+
   const handleSubmit = useCallback(() => {
     if (!selectedCustomer || !deliveryDate || items.length === 0) return;
+
+    const advance = parseAmount(advanceAmount);
+    const calculatedPaymentStatus = advance <= 0 
+      ? "sin_pago" 
+      : advance >= totalAmount 
+        ? "pagado_total" 
+        : paymentIntent === "credito" 
+          ? "adelanto_parcial" 
+          : "saldo_pendiente";
 
     onSubmit({
       clientId: selectedCustomer.id,
       deliveryDate,
       paymentIntent,
+      paymentStatus: calculatedPaymentStatus,
+      advanceAmount: advance > 0 ? advance : undefined,
+      balanceDue: balanceDue > 0 ? balanceDue : undefined,
+      advancePaymentMethod: advance > 0 ? advancePaymentMethod || undefined : undefined,
+      advanceReferenceNumber: advance > 0 && advanceReferenceNumber ? advanceReferenceNumber : undefined,
       totalAmount,
       items,
     });
@@ -178,6 +274,10 @@ export function useOrderForm({
     selectedCustomer,
     deliveryDate,
     paymentIntent,
+    advanceAmount,
+    advancePaymentMethod,
+    advanceReferenceNumber,
+    balanceDue,
     totalAmount,
     items,
     onSubmit,
@@ -188,10 +288,16 @@ export function useOrderForm({
     selectedCustomer,
     deliveryDate,
     paymentIntent,
+    paymentStatus,
+    advanceAmount,
+    advancePaymentMethod,
+    advanceReferenceNumber,
     items,
 
     // UI State
     showVariantSelector,
+    showAdvancePayment,
+    editingItemIndex,
 
     // Selected product/variant
     selectedProduct,
@@ -210,6 +316,7 @@ export function useOrderForm({
 
     // Computed
     totalAmount,
+    balanceDue,
     isValid,
     isKgProduct,
     minDeliveryDate,
@@ -219,8 +326,15 @@ export function useOrderForm({
     setSelectedCustomer,
     setDeliveryDate,
     setPaymentIntent,
+    setPaymentStatus,
+    setAdvanceAmount,
+    setAdvancePaymentMethod,
+    setAdvanceReferenceNumber,
     setShowVariantSelector,
+    setShowAdvancePayment,
     handleVariantSelect,
+    startEditingItem,
+    handleUpdateItem,
     handleAddItem,
     handleRemoveItem,
     handleSubmit,

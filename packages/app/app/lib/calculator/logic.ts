@@ -262,13 +262,28 @@ export function autoCalculateUnitField(
 			return { packs: calculatedPacks.toString() };
 		}
 
-		// Calculate missing units (rarely needed, but included for completeness)
+		// Calculate missing units when packs > 0 (from packs relationship)
 		if (missingField === "units" && packs > 0 && pricePerPack > 0 && total > 0) {
 			const unitPrice = pricePerPack / unitsPerPack;
 			const totalUnits = total / unitPrice;
 			const calculatedUnits = totalUnits - (packs - 1) * unitsPerPack;
 			return { units: Math.max(0, calculatedUnits).toString() };
 		}
+	}
+
+	// Case 1b: User edited units (without packs) - calculate packs based on units
+	// This handles: units + pricePerPack + total = calculate packs
+	if (activeField === "units" && units > 0 && packs === 0 && pricePerPack > 0 && total > 0) {
+		const unitPrice = pricePerPack / unitsPerPack;
+		const calculatedPacks = Math.ceil(units / unitsPerPack);
+		return { packs: calculatedPacks.toString() };
+	}
+
+	// Case 1c: User edited units with total and packs (no pricePerPack) - calculate pricePerPack
+	if (activeField === "units" && units > 0 && packs > 0 && total > 0 && pricePerPack === 0) {
+		const totalUnits = packs * unitsPerPack;
+		const unitPrice = total / totalUnits;
+		return { pricePerPack: (unitPrice * unitsPerPack).toFixed(2) };
 	}
 
 	// Case 2: All 4 fields filled + timestamps available - smart recalculate

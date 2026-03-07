@@ -10,6 +10,7 @@ export function OrderItemsManager() {
     items,
     setShowVariantSelector,
     handleRemoveItem,
+    startEditingItem,
   } = useOrderFormContext();
 
   return (
@@ -35,7 +36,13 @@ export function OrderItemsManager() {
       {items.length > 0 && (
         <div className="space-y-2" data-testid="order-items-list">
           {items.map((item, index) => (
-            <Card key={index} className="border-0 shadow-sm" data-testid="order-item-card" data-item-index={index}>
+            <Card 
+              key={index} 
+              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              data-testid="order-item-card" 
+              data-item-index={index}
+              onClick={() => startEditingItem(index)}
+            >
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -52,7 +59,10 @@ export function OrderItemsManager() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleRemoveItem(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveItem(index);
+                      }}
                       className="h-8 w-8 text-red-500 hover:text-red-600"
                       data-testid="order-item-remove-button"
                     >

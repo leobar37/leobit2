@@ -264,6 +264,12 @@ export interface Order {
   orderDate: string;
   status: OrderStatusType;
   paymentIntent: "contado" | "credito";
+  paymentStatus: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount: string;
+  balanceDue: string;
+  advancePaymentMethod: string | null;
+  advanceReferenceNumber: string | null;
+  advanceProofImageId: string | null;
   totalAmount: string;
   confirmedSnapshot: Record<string, unknown> | null;
   deliveredSnapshot: Record<string, unknown> | null;
@@ -285,6 +291,12 @@ export interface CreateOrderInput {
   clientId: string;
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
+  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount?: number;
+  balanceDue?: number;
+  advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+  advanceReferenceNumber?: string;
+  advanceProofImageId?: string;
   totalAmount: number;
   items: Array<{
     productId: string;
@@ -300,6 +312,12 @@ export interface UpdateOrderInput {
   baseVersion: number;
   deliveryDate?: string;
   paymentIntent?: "contado" | "credito";
+  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount?: number;
+  balanceDue?: number;
+  advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+  advanceReferenceNumber?: string;
+  advanceProofImageId?: string;
   totalAmount?: number;
   items?: Array<{
     productId: string;

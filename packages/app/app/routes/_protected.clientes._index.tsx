@@ -66,11 +66,11 @@ export default function CustomersPage() {
 
       <Link
         to="/clientes/nuevo"
-        className="fixed bottom-20 right-4 z-50"
+        className="fixed right-4 bottom-28 z-50"
       >
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-orange-500 hover:bg-orange-600"
+          className="h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600"
         >
           <Plus className="h-6 w-6" />
         </Button>

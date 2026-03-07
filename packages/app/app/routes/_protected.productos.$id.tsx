@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
 
   if (isProductLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Package className="h-5 w-5 animate-pulse" />
           <p>Cargando producto...</p>
@@ -150,7 +150,7 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-lg font-medium text-muted-foreground">
@@ -168,7 +168,7 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+    <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <button

@@ -134,36 +134,37 @@ function CalculatorContent({ onAddedToCart }: CalculatorContentProps) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <Controller
-                      name="totalAmount"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormCalculatorInput
-                          label="Total (S/)"
-                          placeholder="0.00"
-                          decimals={2}
-                          data-testid="calculator-total-amount"
-                          autoFocus
-                          value={field.value}
-                          onChange={(e) => {
-                            field.onChange(e.target.value);
-                            setFieldValue("totalAmount", e.target.value);
-                          }}
-                        />
-                      )}
-                    />
-
                     {isKgProduct ? (
-                      <KgCalculatorForm
-                        kgNeto={calculation.kgNeto}
-                        variantPrice={selectedVariant?.price || ""}
-                        hideTara={hideTara}
-                        setFieldValue={setFieldValue}
-                      />
+                      <>
+                        <KgCalculatorForm
+                          kgNeto={calculation.kgNeto}
+                          variantPrice={selectedVariant?.price || ""}
+                          hideTara={hideTara}
+                          setFieldValue={setFieldValue}
+                        />
+                        <Controller
+                          name="totalAmount"
+                          control={form.control}
+                          render={({ field }) => (
+                            <FormCalculatorInput
+                              label="Total (S/)"
+                              placeholder="0.00"
+                              decimals={2}
+                              data-testid="calculator-total-amount"
+                              value={field.value}
+                              onChange={(e) => {
+                                field.onChange(e.target.value);
+                                setFieldValue("totalAmount", e.target.value);
+                              }}
+                            />
+                          )}
+                        />
+                      </>
                     ) : (
                       <UnitCalculatorForm 
                         variant={selectedVariant} 
                         setFieldValue={setFieldValue}
+                        formControl={form.control}
                       />
                     )}
                   </div>

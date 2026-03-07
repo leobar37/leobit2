@@ -35,10 +35,11 @@ export const paymentSchema = z.object({
   sellerId: z.string(),
   businessId: z.string(),
   amount: z.string(),
-  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia"]),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]),
   notes: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   createdAt: z.coerce.date(),
+  relatedSaleId: z.string().nullable(),
 });
 
 export type Payment = z.infer<typeof paymentSchema>;
@@ -69,6 +70,15 @@ export const saleSchema = z.object({
   tara: z.string().nullable(),
   netWeight: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  status: z.enum(["active", "cancelled"]).default("active"),
+  cancelledAt: z.coerce.date().nullable(),
+  cancelledBy: z.string().nullable(),
+  cancelReason: z.string().nullable(),
+  refundAmount: z.string().nullable(),
+  refundDate: z.coerce.date().nullable(),
+  refundMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]).nullable(),
+  refundReference: z.string().nullable(),
+  refundNotes: z.string().nullable(),
   saleDate: z.coerce.date(),
   createdAt: z.coerce.date(),
   items: z.array(saleItemSchema).optional(),
@@ -141,6 +151,12 @@ export const orderSchema = z.object({
   orderDate: z.string(),
   status: z.enum(["draft", "confirmed", "cancelled", "delivered"]),
   paymentIntent: z.enum(["contado", "credito"]),
+  paymentStatus: z.enum(["sin_pago", "adelanto_parcial", "pagado_total", "saldo_pendiente"]).default("sin_pago"),
+  advanceAmount: z.string().default("0"),
+  balanceDue: z.string().default("0"),
+  advancePaymentMethod: z.string().nullable(),
+  advanceReferenceNumber: z.string().nullable(),
+  advanceProofImageId: z.string().nullable(),
   totalAmount: z.string(),
   confirmedSnapshot: z.record(z.string(), z.unknown()).nullable(),
   deliveredSnapshot: z.record(z.string(), z.unknown()).nullable(),
@@ -164,6 +180,12 @@ export interface CreateOrderInput {
   clientId: string;
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
+  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount?: number;
+  balanceDue?: number;
+  advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+  advanceReferenceNumber?: string;
+  advanceProofImageId?: string;
   totalAmount: number;
   items: Array<{
     productId: string;

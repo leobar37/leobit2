@@ -1,7 +1,11 @@
 import { User, Phone, MapPin, CreditCard, CloudOff } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
 import type { Customer } from "~/lib/db/schema";
 import { isOnline } from "~/lib/sync/utils";
+import {
+  MinimalCard,
+  MinimalCardContent,
+  MinimalCardMedia,
+} from "~/components/cards";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -12,12 +16,19 @@ export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) 
   const isPending = customer.syncStatus === "pending" && !isOnline();
 
   return (
-    <div className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow bg-card">
-      <CardContent className="p-4">
+    <MinimalCard 
+      variant="outlined" 
+      interactive 
+      clickable 
+      radius="md"
+    >
+      <MinimalCardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <User className="h-6 w-6 text-orange-600" />
-          </div>
+          <MinimalCardMedia 
+            icon={User} 
+            iconColor="text-orange-600" 
+            size="md" 
+          />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -56,7 +67,7 @@ export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) 
             </div>
           </div>
         </div>
-      </CardContent>
-    </div>
+      </MinimalCardContent>
+    </MinimalCard>
   );
 }

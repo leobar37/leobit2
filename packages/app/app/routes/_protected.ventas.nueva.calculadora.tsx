@@ -6,7 +6,7 @@ export default function CalculadoraPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center h-16 px-3 sm:px-4">
           <button

@@ -17,9 +17,9 @@ import { Toaster } from "sonner";
 
 export function HydrateFallback() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+        <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-white animate-spin" />
         </div>
         <p className="text-sm text-muted-foreground">Cargando...</p>

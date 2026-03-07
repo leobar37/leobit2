@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ArrowLeft, Package, TrendingUp, AlertCircle, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, AlertCircle, ShoppingBag, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,16 +7,18 @@ import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
 import { formatKilos, formatCurrency } from "~/lib/utils";
+import { BusinessUserRole } from "@avileo/shared";
 
 export default function MiDistribucionPage() {
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
 
   const usarDistribucion = business?.usarDistribucion ?? true;
+  const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
 
   if (!usarDistribucion) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+      <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
           <div className="flex items-center h-16 px-4">
             <Link to="/dashboard">
@@ -45,7 +47,7 @@ export default function MiDistribucionPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+      <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
           <div className="flex items-center h-16 px-4">
             <Link to="/dashboard">
@@ -66,7 +68,7 @@ export default function MiDistribucionPage() {
 
   if (error || !distribucion) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+      <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
           <div className="flex items-center h-16 px-4">
             <Link to="/dashboard">
@@ -86,9 +88,18 @@ export default function MiDistribucionPage() {
               <p className="text-muted-foreground mb-4">
                 No tienes una distribución asignada para hoy.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Contacta a tu administrador para que te asigne kilos.
-              </p>
+              {isAdmin ? (
+                <Link to="/distribuciones">
+                  <Button className="bg-orange-500 hover:bg-orange-600">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Asignar Distribución
+                  </Button>
+                </Link>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Contacta a tu administrador para que te asigne kilos.
+                </p>
+              )}
             </CardContent>
           </Card>
         </main>
@@ -101,7 +112,7 @@ export default function MiDistribucionPage() {
   const isCerrado = distribucion.estado === "cerrado";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+    <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">

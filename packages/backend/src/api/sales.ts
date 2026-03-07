@@ -84,6 +84,37 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
     }
   )
+  .post(
+    "/:id/cancel",
+    async ({ saleService, ctx, params, body, set }) => {
+      const sale = await saleService.cancelSale(ctx as RequestContext, params.id, {
+        reason: body.reason,
+        refundAmount: body.refundAmount,
+        refundMethod: body.refundMethod,
+        refundReference: body.refundReference,
+        refundNotes: body.refundNotes,
+      });
+      return { success: true, data: sale };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        reason: t.String({ minLength: 1 }),
+        refundAmount: t.Optional(t.Number({ minimum: 0 })),
+        refundMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+          t.Literal("saldo"),
+        ])),
+        refundReference: t.Optional(t.String()),
+        refundNotes: t.Optional(t.String()),
+      }),
+    }
+  )
   .delete(
     "/:id",
     async ({ saleService, ctx, params, set }) => {

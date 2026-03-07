@@ -139,3 +139,40 @@ export function formatPercentage(
 ): string {
   return formatNumber(value, decimals)
 }
+
+/**
+ * Parse a string/number to a normalized amount with 2 decimal places
+ * Safe for string inputs from form fields
+ *
+ * @param value - The value to parse (string or number)
+ * @returns Normalized number with 2 decimal places
+ *
+ * @example
+ * parseAmount("123.456") // 123.46
+ * parseAmount("100")    // 100
+ * parseAmount("")       // 0
+ * parseAmount(null)     // 0
+ */
+export function parseAmount(value: string | number | null | undefined): number {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+  const parsed = typeof value === "string" ? parseFloat(value) : value;
+  if (Number.isNaN(parsed) || !Number.isFinite(parsed)) {
+    return 0;
+  }
+  return Math.round(parsed * 100) / 100;
+}
+
+/**
+ * Calculate balance due: total - paid
+ * Returns 0 if result is negative
+ *
+ * @param total - Total amount
+ * @param paid - Amount already paid
+ * @returns Balance due (never negative)
+ */
+export function calculateBalanceDue(total: number, paid: number): number {
+  const result = total - paid;
+  return result < 0 ? 0 : Math.round(result * 100) / 100;
+}

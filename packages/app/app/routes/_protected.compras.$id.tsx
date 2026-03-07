@@ -101,7 +101,7 @@ export default function PurchaseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
           <ShoppingCart className="h-5 w-5 animate-pulse" />
           <p>Cargando compra...</p>
@@ -112,7 +112,7 @@ export default function PurchaseDetailPage() {
 
   if (!purchase) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-lg font-medium text-muted-foreground">
@@ -132,7 +132,7 @@ export default function PurchaseDetailPage() {
   const StatusIcon = statusIcons[purchase.status];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
+    <div className="min-h-screen bg-gray-50">
       <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
         <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-4">

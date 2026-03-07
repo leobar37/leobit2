@@ -4,6 +4,7 @@ import { ConflictError, NotFoundError, ValidationError } from "../../errors";
 import {
   normalizeAmount,
   normalizeQuantity,
+  calculateTotal,
 } from "../../lib/number-utils";
 import type {
   CreateOrderInput,
@@ -62,6 +63,12 @@ export class OrderService {
       clientId: string;
       deliveryDate: string;
       paymentIntent: "contado" | "credito";
+      paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+      advanceAmount?: number;
+      balanceDue?: number;
+      advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+      advanceReferenceNumber?: string;
+      advanceProofImageId?: string;
       totalAmount: number;
       items: Array<{
         productId: string;
@@ -77,6 +84,22 @@ export class OrderService {
     this.validateDeliveryDate(data.deliveryDate);
     this.validateItems(data.items);
 
+    const totalAmount = normalizeAmount(data.totalAmount, 2, "totalAmount");
+    const advanceAmount = data.advanceAmount 
+      ? normalizeAmount(data.advanceAmount, 2, "advanceAmount") 
+      : "0.00";
+    const balanceDue = data.balanceDue !== undefined 
+      ? normalizeAmount(data.balanceDue, 2, "balanceDue")
+      : (data.paymentIntent === "contado" && !data.advanceAmount) 
+        ? "0.00" 
+        : normalizeAmount(data.totalAmount - (data.advanceAmount || 0), 2, "balanceDue");
+    
+    const paymentStatus = data.paymentStatus || this.calculatePaymentStatus(
+      data.paymentIntent, 
+      Number(advanceAmount), 
+      Number(totalAmount)
+    );
+
     const orderDate = new Date().toISOString().slice(0, 10);
     const payload: CreateOrderInput = {
       clientId: data.clientId,
@@ -84,7 +107,13 @@ export class OrderService {
       orderDate,
       status: "draft",
       paymentIntent: data.paymentIntent,
-      totalAmount: normalizeAmount(data.totalAmount, 2, "totalAmount"),
+      paymentStatus,
+      advanceAmount,
+      balanceDue,
+      advancePaymentMethod: data.advancePaymentMethod || null,
+      advanceReferenceNumber: data.advanceReferenceNumber || null,
+      advanceProofImageId: data.advanceProofImageId || null,
+      totalAmount,
       version: 1,
       items: data.items.map((item) => ({
         productId: item.productId,
@@ -123,6 +152,12 @@ export class OrderService {
       baseVersion: number;
       deliveryDate?: string;
       paymentIntent?: "contado" | "credito";
+      paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+      advanceAmount?: number;
+      balanceDue?: number;
+      advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia";
+      advanceReferenceNumber?: string;
+      advanceProofImageId?: string;
       totalAmount?: number;
       items?: Array<{
         productId: string;
@@ -156,6 +191,16 @@ export class OrderService {
       const updatePayload: UpdateOrderInput = {
         ...(data.deliveryDate !== undefined && { deliveryDate: data.deliveryDate }),
         ...(data.paymentIntent !== undefined && { paymentIntent: data.paymentIntent }),
+        ...(data.paymentStatus !== undefined && { paymentStatus: data.paymentStatus }),
+        ...(data.advanceAmount !== undefined && {
+          advanceAmount: normalizeAmount(data.advanceAmount, 2, "advanceAmount"),
+        }),
+        ...(data.balanceDue !== undefined && {
+          balanceDue: normalizeAmount(data.balanceDue, 2, "balanceDue"),
+        }),
+        ...(data.advancePaymentMethod !== undefined && { advancePaymentMethod: data.advancePaymentMethod }),
+        ...(data.advanceReferenceNumber !== undefined && { advanceReferenceNumber: data.advanceReferenceNumber }),
+        ...(data.advanceProofImageId !== undefined && { advanceProofImageId: data.advanceProofImageId }),
         ...(data.totalAmount !== undefined && {
           totalAmount: normalizeAmount(data.totalAmount, 2, "totalAmount"),
         }),
@@ -377,7 +422,11 @@ export class OrderService {
     orderId: string,
     deliveredItems: Array<{ itemId: string; deliveredQuantity: number; unitPriceFinal?: number }>,
     baseVersion: number,
-    clientEventId?: string
+    clientEventId?: string,
+    additionalPaymentAmount?: number,
+    paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia",
+    referenceNumber?: string,
+    proofImageId?: string
   ) {
     const order = await this.repository.findById(ctx, orderId);
     if (!order) {
@@ -429,9 +478,13 @@ export class OrderService {
         return sum + (qty * price);
       }, 0);
 
-      const saleTotalAmount = calculatedTotal.toFixed(2);
-      const saleAmountPaid = refreshedOrder.paymentIntent === "contado" ? saleTotalAmount : "0.00";
-      const saleBalanceDue = refreshedOrder.paymentIntent === "credito" ? saleTotalAmount : "0.00";
+      const saleTotalAmount = normalizeAmount(calculatedTotal, 2, "saleTotalAmount");
+      const existingAdvance = Number(refreshedOrder.advanceAmount || "0");
+      const additionalPayment = additionalPaymentAmount || 0;
+      const totalPaid = existingAdvance + additionalPayment;
+      
+      const saleAmountPaid = normalizeAmount(totalPaid, 2, "saleAmountPaid");
+      const saleBalanceDue = normalizeAmount(Math.max(calculatedTotal - totalPaid, 0), 2, "saleBalanceDue");
 
       const sale = await this.saleService.createFromOrder(
         ctx,
@@ -445,15 +498,15 @@ export class OrderService {
           items: refreshedOrder.items.map((item) => {
             const qty = item.deliveredQuantity ?? item.orderedQuantity;
             const unitPrice = item.unitPriceFinal ?? item.unitPriceQuoted;
-            const subtotal = (Number(qty) * Number(unitPrice)).toFixed(2);
+            const subtotal = calculateTotal(Number(qty), Number(unitPrice));
 
             return {
               productId: item.productId,
               productName: item.productName,
               variantId: item.variantId,
               variantName: item.variantName,
-              quantity: qty,
-              unitPrice,
+              quantity: normalizeQuantity(Number(qty), "quantity"),
+              unitPrice: normalizeAmount(Number(unitPrice), 2, "unitPrice"),
               subtotal,
             };
           }),
@@ -619,5 +672,22 @@ export class OrderService {
         );
       }
     }
+  }
+
+  private calculatePaymentStatus(
+    paymentIntent: "contado" | "credito",
+    advanceAmount: number,
+    totalAmount: number
+  ): "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente" {
+    if (advanceAmount <= 0) {
+      return "sin_pago";
+    }
+    if (advanceAmount >= totalAmount) {
+      return "pagado_total";
+    }
+    if (paymentIntent === "credito") {
+      return "adelanto_parcial";
+    }
+    return "saldo_pendiente";
   }
 }

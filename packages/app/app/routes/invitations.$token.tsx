@@ -34,7 +34,7 @@ export default function AcceptInvitationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-stone-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
@@ -47,7 +47,7 @@ export default function AcceptInvitationPage() {
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-stone-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -64,7 +64,7 @@ export default function AcceptInvitationPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-stone-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">

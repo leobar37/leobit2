@@ -254,8 +254,8 @@ export function useCalculator(
 				shouldValidate: true,
 			});
 
-			// Auto-calculate, but NOT when clearing a field
-			if (!isClearingField) {
+			// Auto-calculate, but NOT when clearing a field or when value is empty
+			if (!isClearingField && value !== "") {
 				if (isKgProduct) {
 					const values = form.getValues() as KgCalculatorFields;
 					const calculated = autoCalculateKgField(

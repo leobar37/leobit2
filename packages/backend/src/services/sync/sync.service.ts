@@ -93,6 +93,12 @@ type ParsedOrderInsert = {
   orderDate: string;
   status: "draft" | "confirmed" | "cancelled" | "delivered";
   paymentIntent: "contado" | "credito";
+  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount?: string;
+  balanceDue?: string;
+  advancePaymentMethod?: string;
+  advanceReferenceNumber?: string;
+  advanceProofImageId?: string;
   totalAmount: string;
   confirmedSnapshot?: Record<string, unknown>;
   deliveredSnapshot?: Record<string, unknown>;
@@ -463,7 +469,10 @@ export class SyncService {
 
     if (operation.action === "insert") {
       const order = this.parseOrderInsert(payload);
-      await this.deps.orderRepo.create(ctx, order);
+      await this.deps.orderRepo.create(ctx, {
+        ...order,
+        advancePaymentMethod: order.advancePaymentMethod as "efectivo" | "yape" | "plin" | "transferencia" | null,
+      } as any);
       return;
     }
 
@@ -639,6 +648,12 @@ export class SyncService {
       };
     });
 
+    const paymentMethod = payload.advancePaymentMethod as string | undefined;
+    const validPaymentMethods = ["efectivo", "yape", "plin", "transferencia"];
+    const normalizedPaymentMethod = paymentMethod && validPaymentMethods.includes(paymentMethod) 
+      ? paymentMethod 
+      : undefined;
+
     return {
       clientId: this.requiredString(payload.clientId, "clientId"),
       deliveryDate: this.requiredString(payload.deliveryDate, "deliveryDate"),
@@ -646,6 +661,12 @@ export class SyncService {
         this.optionalString(payload.orderDate) ?? new Date().toISOString().slice(0, 10),
       status,
       paymentIntent: this.requiredSaleType(payload.paymentIntent),
+      paymentStatus: this.optionalOrderPaymentStatus(payload.paymentStatus),
+      advanceAmount: this.optionalNumericString(payload.advanceAmount),
+      balanceDue: this.optionalNumericString(payload.balanceDue),
+      advancePaymentMethod: normalizedPaymentMethod,
+      advanceReferenceNumber: this.optionalString(payload.advanceReferenceNumber),
+      advanceProofImageId: this.optionalString(payload.advanceProofImageId),
       totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount"),
       confirmedSnapshot:
         payload.confirmedSnapshot && typeof payload.confirmedSnapshot === "object"
@@ -665,6 +686,20 @@ export class SyncService {
       return value;
     }
     throw new ValidationError("saleType inválido");
+  }
+
+  private optionalOrderPaymentStatus(
+    value: unknown
+  ): "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente" | undefined {
+    if (
+      value === "sin_pago" ||
+      value === "adelanto_parcial" ||
+      value === "pagado_total" ||
+      value === "saldo_pendiente"
+    ) {
+      return value;
+    }
+    return undefined;
   }
 
   private requiredOrderStatus(

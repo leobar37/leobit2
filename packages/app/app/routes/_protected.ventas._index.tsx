@@ -4,7 +4,6 @@ import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useSales, useTodayStats } from "~/hooks/use-sales";
 import { SaleCard } from "~/components/sales/sale-card";
@@ -35,23 +34,21 @@ export default function SalesPage() {
     <>
       <div className="space-y-4">
         {todayStats && (
-          <Card className="border-0 shadow-md bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-sm">Ventas de hoy</p>
-                  <p className="text-2xl font-bold">S/ {formatCurrency(todayStats.total)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-orange-100 text-sm">Cantidad</p>
-                  <p className="text-2xl font-bold">{todayStats.count}</p>
-                </div>
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
+          <div className="border-l-4 border-orange-500 bg-white py-3 pl-4 pr-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Ventas de hoy</p>
+                <p className="text-2xl font-bold text-foreground">S/ {formatCurrency(todayStats.total)}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Cantidad</p>
+                <p className="text-2xl font-bold text-foreground">{todayStats.count}</p>
+              </div>
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-orange-600" />
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="relative">
@@ -97,10 +94,10 @@ export default function SalesPage() {
         </div>
       </div>
 
-      <Link to="/ventas/nueva" className="fixed bottom-20 right-4 z-50">
+      <Link to="/ventas/nueva" className="fixed right-4 bottom-28 z-50">
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-orange-500 hover:bg-orange-600"
+          className="h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600"
         >
           <Plus className="h-6 w-6" />
         </Button>

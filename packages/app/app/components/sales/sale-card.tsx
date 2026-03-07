@@ -1,8 +1,12 @@
-import { ShoppingCart, User, Calendar, Banknote } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ShoppingCart, Calendar, Banknote, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "~/lib/utils";
 import type { Sale } from "~/lib/db/schema";
+import {
+  MinimalCard,
+  MinimalCardContent,
+  MinimalCardMedia,
+} from "~/components/cards";
 
 interface SaleCardProps {
   sale: Sale;
@@ -21,6 +25,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
   const paidAmount = Number(sale.amountPaid);
   const dueAmount = Number(sale.balanceDue);
   const isCredit = sale.saleType === "credito";
+  const isCancelled = sale.status === "cancelled";
 
   const saleStatus = !isCredit
     ? "Pago total"
@@ -30,40 +35,54 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         ? "A cuenta"
         : "Sin deuda";
 
-  // Get customer name from the client relation or fallback to ID or general customer
   const customerName = sale.client?.name || (sale.clientId ? null : "Cliente general");
   const customerIdentifier = sale.clientId?.slice(-8) || "";
 
   return (
-    <Card
-      className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow"
+    <MinimalCard 
+      variant="outlined" 
+      interactive 
+      clickable 
+      radius="md"
       onClick={onClick}
+      className={isCancelled ? "opacity-60" : undefined}
     >
-      <CardContent className="p-4">
+      <MinimalCardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <ShoppingCart className="h-6 w-6 text-orange-600" />
-          </div>
+          <MinimalCardMedia 
+            icon={ShoppingCart} 
+            iconColor={isCancelled ? "text-red-400" : "text-orange-600"} 
+            size="md" 
+          />
 
           <div className="flex-1 min-w-0">
-            {/* Header row with sale ID, badges and pending amount */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground truncate">
                   Venta #{sale.id.slice(-6)}
                 </h3>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <Badge
-                    variant={isCredit ? "secondary" : "default"}
-                    className={`text-xs ${
-                      isCredit
-                        ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                        : "bg-green-100 text-green-700 hover:bg-green-100"
-                    }`}
-                  >
-                    {saleStatus}
-                  </Badge>
-                  {isCredit && (
+                  {isCancelled ? (
+                    <Badge
+                      variant="destructive"
+                      className="text-xs bg-red-100 text-red-700 hover:bg-red-100"
+                    >
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Cancelada
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant={isCredit ? "secondary" : "default"}
+                      className={`text-xs ${
+                        isCredit
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          : "bg-green-100 text-green-700 hover:bg-green-100"
+                      }`}
+                    >
+                      {saleStatus}
+                    </Badge>
+                  )}
+                  {isCredit && !isCancelled && (
                     <Badge
                       variant="outline"
                       className="text-xs bg-orange-50 text-orange-700 border-orange-200"
@@ -74,14 +93,13 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                 </div>
               </div>
 
-              {isCredit && dueAmount > 0 && (
+              {!isCancelled && isCredit && dueAmount > 0 && (
                 <Badge variant="destructive" className="shrink-0 text-xs">
                   Pendiente S/ {formatCurrency(dueAmount)}
                 </Badge>
               )}
             </div>
 
-            {/* Details row */}
             <div className="mt-2 space-y-1">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
@@ -89,7 +107,6 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
               </div>
 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">
                   {customerName || `Cliente #${customerIdentifier}`}
                 </span>
@@ -108,7 +125,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </MinimalCardContent>
+    </MinimalCard>
   );
 }

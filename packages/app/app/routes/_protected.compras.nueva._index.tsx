@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatCurrency } from "~/lib/utils";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { SupplierSelector } from "~/components/purchases/supplier-selector";
-import { SupplierQuickForm } from "~/components/purchases/supplier-quick-form";
 import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
 import { PurchaseCartSection } from "~/components/purchases/calculator";
 import { FormPage } from "~/components/layout/form-page";
@@ -28,13 +27,17 @@ function PurchaseFormInner() {
   } = usePurchaseForm();
 
   const navigate = useNavigate();
-  const [isQuickFormOpen, setIsQuickFormOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const stateSupplier = location.state?.supplier as Supplier | undefined;
+    if (stateSupplier) {
+      setSupplier(stateSupplier);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, setSupplier]);
 
   const handleSupplierSelect = (newSupplier: Supplier | null) => {
-    setSupplier(newSupplier);
-  };
-
-  const handleQuickFormSuccess = (newSupplier: Supplier) => {
     setSupplier(newSupplier);
   };
 
@@ -52,7 +55,6 @@ function PurchaseFormInner() {
             <SupplierSelector
               selectedSupplier={supplier}
               onSelectSupplier={handleSupplierSelect}
-              onCreateNew={() => setIsQuickFormOpen(true)}
             />
           </div>
 
@@ -141,12 +143,6 @@ function PurchaseFormInner() {
           </div>
         )}
       </form>
-
-      <SupplierQuickForm
-        open={isQuickFormOpen}
-        onOpenChange={setIsQuickFormOpen}
-        onSuccess={handleQuickFormSuccess}
-      />
     </>
   );
 }
