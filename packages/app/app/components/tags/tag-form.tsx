@@ -43,6 +43,7 @@ interface TagFormProps {
 export function TagForm({ tag, onClose }: TagFormProps) {
   const form = useForm<TagFormData>({
     resolver: zodResolver(tagSchema),
+    mode: "onChange",
     defaultValues: {
       name: tag?.name || "",
       color: tag?.color || "#f97316",
@@ -67,9 +68,10 @@ export function TagForm({ tag, onClose }: TagFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <FormInput
-        name="name"
+        {...form.register("name", { required: "El nombre es requerido" })}
         label="Nombre"
         placeholder="Ej: Cliente VIP"
+        error={form.formState.errors.name?.message}
         required
       />
 
@@ -102,7 +104,11 @@ export function TagForm({ tag, onClose }: TagFormProps) {
         >
           Cancelar
         </Button>
-        <Button type="submit" className="flex-1" disabled={isPending}>
+        <Button 
+          type="submit" 
+          className="flex-1" 
+          disabled={isPending || !form.formState.isValid}
+        >
           {isPending
             ? "Guardando..."
             : tag

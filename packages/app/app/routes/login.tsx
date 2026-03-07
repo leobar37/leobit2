@@ -42,10 +42,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
-        <CardHeader className="space-y-4 text-center pb-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+    <div className="min-h-screen bg-white flex flex-col items-center sm:justify-center p-0 sm:p-4">
+      <Card className="w-full h-screen sm:h-auto sm:max-w-sm border-0 shadow-none sm:shadow-sm rounded-none sm:rounded-2xl">
+        <CardHeader className="space-y-4 text-center pb-6 pt-8 sm:pt-4">
+          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center">
             <Store className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold transition-all duration-200"
               disabled={form.formState.isSubmitting || !form.formState.isValid}
             >
               {form.formState.isSubmitting ? (
