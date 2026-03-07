@@ -28,6 +28,7 @@ import { ocrRoutes } from "./api/ocr";
 import { whatsappTemplateRoutes } from "./api/whatsapp/templates";
 import { whatsAppSettingsRoutes } from "./api/whatsapp/settings";
 import { whatsAppMessageRoutes } from "./api/whatsapp/messages";
+import { tagRoutes } from "./api/tags";
 import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -78,6 +79,7 @@ export const app = new Elysia()
   .use(whatsappTemplateRoutes)
   .use(whatsAppSettingsRoutes)
   .use(whatsAppMessageRoutes)
+  .use(tagRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

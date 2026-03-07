@@ -38,6 +38,9 @@ export type Permission =
   | "whatsapp.read"
   | "whatsapp.write"
   | "whatsapp.delete"
+  // Tags
+  | "tags.read"
+  | "tags.write"
   | "*";
 
 /**
@@ -51,6 +54,7 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
     "customers.read",
     "customers.write",
     "inventory.read",
+    "tags.read", // Vendedores pueden ver etiquetas
   ],
 };
 

@@ -94,6 +94,14 @@ type Pages = {
   "/distribuciones": {
     params: {};
   };
+  "/distribuciones/:id/editar": {
+    params: {
+      "id": string;
+    };
+  };
+  "/distribuciones/nueva": {
+    params: {};
+  };
   "/pedidos": {
     params: {};
   };
@@ -288,7 +296,15 @@ type RouteFiles = {
   };
   "routes/_protected.distribuciones.tsx": {
     id: "routes/_protected.distribuciones";
-    page: "/distribuciones";
+    page: "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva";
+  };
+  "routes/_protected.distribuciones.$id.editar._index.tsx": {
+    id: "routes/_protected.distribuciones.$id.editar._index";
+    page: "/distribuciones/:id/editar";
+  };
+  "routes/_protected.distribuciones.nueva._index.tsx": {
+    id: "routes/_protected.distribuciones.nueva._index";
+    page: "/distribuciones/nueva";
   };
   "routes/_protected.pedidos._index.tsx": {
     id: "routes/_protected.pedidos._index";
@@ -461,6 +477,8 @@ type RouteModules = {
   "routes/_protected.clientes.nuevo": typeof import("./app/routes/_protected.clientes.nuevo.tsx");
   "routes/_protected.compras._index": typeof import("./app/routes/_protected.compras._index.tsx");
   "routes/_protected.distribuciones": typeof import("./app/routes/_protected.distribuciones.tsx");
+  "routes/_protected.distribuciones.$id.editar._index": typeof import("./app/routes/_protected.distribuciones.$id.editar._index.tsx");
+  "routes/_protected.distribuciones.nueva._index": typeof import("./app/routes/_protected.distribuciones.nueva._index.tsx");
   "routes/_protected.pedidos._index": typeof import("./app/routes/_protected.pedidos._index.tsx");
   "routes/_protected.business.edit": typeof import("./app/routes/_protected.business.edit.tsx");
   "routes/_protected.cobros._index": typeof import("./app/routes/_protected.cobros._index.tsx");

@@ -43,6 +43,10 @@ import { WhatsAppSettingsRepository } from "../services/repository/whatsapp-sett
 import { WhatsAppSettingsService } from "../services/business/whatsapp-settings.service";
 import { WhatsAppMessageRepository } from "../services/repository/whatsapp-message.repository";
 import { WhatsAppMessageService } from "../services/business/whatsapp-message.service";
+import { TagRepository } from "../services/repository/tag.repository";
+import { TagService } from "../services/business/tag.service";
+import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
+import { CustomerTagService } from "../services/business/customer-tag.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -69,6 +73,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const whatsAppTemplateRepo = new WhatsAppTemplateRepository();
     const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
     const whatsAppMessageRepo = new WhatsAppMessageRepository();
+    const tagRepo = new TagRepository();
+    const customerTagRepo = new CustomerTagRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo);
     const customerService = new CustomerService(customerRepo);
@@ -104,6 +110,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       customerRepo,
       whatsAppSettingsRepo
     );
+    const tagService = new TagService(tagRepo);
+    const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
 
     return {
       businessRepo,
@@ -150,5 +158,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
       whatsAppSettingsService,
       whatsAppMessageRepo,
       whatsAppMessageService,
+      tagRepo,
+      tagService,
+      customerTagRepo,
+      customerTagService,
     };
   });

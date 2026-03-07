@@ -113,6 +113,13 @@
       "when": 1772640000000,
       "tag": "0016_add_calculator_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1772896576161,
+      "tag": "0016_pretty_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }

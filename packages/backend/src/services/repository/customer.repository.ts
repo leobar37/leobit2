@@ -1,4 +1,4 @@
-import { eq, and, desc, like, sql } from "drizzle-orm";
+import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
@@ -18,13 +18,23 @@ export class CustomerRepository {
       search?: string;
       limit?: number;
       offset?: number;
+      customerIds?: string[]; // Filter by specific IDs (from tag filter)
     }
   ): Promise<Customer[]> {
+    // If customerIds provided but empty, return empty array
+    if (filters?.customerIds && filters.customerIds.length === 0) {
+      return [];
+    }
+
     const query = db.query.customers.findMany({
       where: and(
         eq(customers.businessId, ctx.businessId),
         filters?.search
           ? like(customers.name, `%${filters.search}%`)
+          : undefined,
+        // Filter by specific customer IDs if provided
+        filters?.customerIds && filters.customerIds.length > 0
+          ? inArray(customers.id, filters.customerIds)
           : undefined
       ),
       orderBy: desc(customers.createdAt),
