@@ -4,17 +4,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
-import { useCustomers } from "~/hooks/use-customers-live";
+import { useCustomers } from "~/hooks/use-customers";
 import { CustomerCard } from "~/components/customers/customer-card";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { TagFilter } from "~/components/tags/tag-filter";
 
 export default function CustomersPage() {
   useSetLayout({ title: "Clientes", actions: <SyncStatus /> });
 
   const [search, setSearch] = useState("");
-  const { data: customers, isLoading, error } = useCustomers();
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const { data: customers, isLoading, error } = useCustomers({ 
+    tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined 
+  });
   const navigate = useNavigate();
 
+  // Filter customers by search (local filter for better UX)
   const filteredCustomers = customers?.filter((customer) =>
     customer.name.toLowerCase().includes(search.toLowerCase()) ||
     customer.dni?.includes(search)
@@ -32,6 +37,11 @@ export default function CustomersPage() {
             className="pl-10 rounded-xl"
           />
         </div>
+
+        <TagFilter
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
+        />
 
         {isLoading && (
           <div className="text-center py-8">

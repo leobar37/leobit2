@@ -37,6 +37,10 @@ import { OrderService } from "../services/business/order.service";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 import { OCRService } from "../services/business/ocr.service";
+import { TagRepository } from "../services/repository/tag.repository";
+import { TagService } from "../services/business/tag.service";
+import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
+import { CustomerTagService } from "../services/business/customer-tag.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -60,6 +64,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const orderRepo = new OrderRepository();
     const orderEventsRepo = new OrderEventsRepository();
     const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
+    const tagRepo = new TagRepository();
+    const customerTagRepo = new CustomerTagRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo);
     const customerService = new CustomerService(customerRepo);
@@ -87,6 +93,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
+    const tagService = new TagService(tagRepo);
+    const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
 
     return {
       businessRepo,
@@ -127,5 +135,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,
+      tagRepo,
+      tagService,
+      customerTagRepo,
+      customerTagService,
     };
   });

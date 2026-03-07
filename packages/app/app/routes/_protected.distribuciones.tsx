@@ -1,31 +1,23 @@
-import { useState } from "react";
 import { Link } from "react-router";
 import { formatKilos } from "~/lib/utils";
 import { Plus, ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppDrawer } from "@/components/ui/app-drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { getToday } from "~/lib/date-utils";
 import { useBusiness } from "@/hooks/use-business";
 import {
   useDistribuciones,
-  useCreateDistribucion,
-  useUpdateDistribucion,
   useCloseDistribucion,
   useDeleteDistribucion,
   type Distribucion,
-  type CreateDistribucionInput,
 } from "~/hooks/use-distribuciones";
-import {
-  DistribucionTable,
-  CreateDistribucionForm,
-  EditDistribucionForm,
-} from "~/components/distribucion";
+import { DistribucionTable } from "~/components/distribucion";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormDate } from "@/components/forms/form-date";
+import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 
 const distribucionFilterSchema = z.object({
   fecha: z.string(),
@@ -34,12 +26,9 @@ const distribucionFilterSchema = z.object({
 type DistribucionFilterData = z.infer<typeof distribucionFilterSchema>;
 
 export default function DistribucionesPage() {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingDistribucion, setEditingDistribucion] = useState<Distribucion | null>(
-    null
-  );
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  const { navigateToCreate, navigateToEdit } = useDistribucionParams();
 
   const filterForm = useForm<DistribucionFilterData>({
     resolver: zodResolver(distribucionFilterSchema),
@@ -54,8 +43,6 @@ export default function DistribucionesPage() {
     fecha: selectedDate,
   });
 
-  const createMutation = useCreateDistribucion();
-  const updateMutation = useUpdateDistribucion();
   const closeMutation = useCloseDistribucion();
   const deleteMutation = useDeleteDistribucion();
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -70,14 +57,12 @@ export default function DistribucionesPage() {
     0
   );
 
-  const handleCreate = async (data: CreateDistribucionInput) => {
-    await createMutation.mutateAsync(data);
-    setIsCreateOpen(false);
+  const handleNavigateToCreate = () => {
+    navigateToCreate({ fecha: selectedDate });
   };
 
-  const handleEdit = async (data: Partial<Distribucion> & { id: string }) => {
-    await updateMutation.mutateAsync(data);
-    setEditingDistribucion(null);
+  const handleNavigateToEdit = (distribucion: Distribucion) => {
+    navigateToEdit(distribucion.id);
   };
 
   const handleClose = async (id: string) => {
@@ -121,24 +106,13 @@ export default function DistribucionesPage() {
             <h1 className="text-lg font-semibold">Distribuciones</h1>
           </div>
           {isAdmin && (
-            <>
-              <Button
-                className="bg-orange-500 hover:bg-orange-600"
-                onClick={() => setIsCreateOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva
-              </Button>
-              <AppDrawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <AppDrawer.Header
-                  title="Nueva Distribución"
-                  onClose={() => setIsCreateOpen(false)}
-                />
-                <AppDrawer.Body>
-                  <CreateDistribucionForm onSubmit={handleCreate} />
-                </AppDrawer.Body>
-              </AppDrawer>
-            </>
+            <Button
+              className="bg-orange-500 hover:bg-orange-600"
+              onClick={handleNavigateToCreate}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva
+            </Button>
           )}
         </div>
       </header>
@@ -184,30 +158,12 @@ export default function DistribucionesPage() {
 
         <DistribucionTable
           distribuciones={distribuciones}
-          onEdit={setEditingDistribucion}
+          onEdit={handleNavigateToEdit}
           onClose={handleClose}
           onDelete={handleDelete}
           isLoading={isLoading}
         />
       </main>
-
-      <AppDrawer
-        open={!!editingDistribucion}
-        onOpenChange={() => setEditingDistribucion(null)}
-      >
-        <AppDrawer.Header
-          title="Editar Distribución"
-          onClose={() => setEditingDistribucion(null)}
-        />
-        <AppDrawer.Body>
-          {editingDistribucion && (
-            <EditDistribucionForm
-              distribucion={editingDistribucion}
-              onSubmit={handleEdit}
-            />
-          )}
-        </AppDrawer.Body>
-      </AppDrawer>
 
       <ConfirmDialog />
     </div>

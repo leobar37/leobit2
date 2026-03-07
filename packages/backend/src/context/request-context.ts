@@ -34,6 +34,9 @@ export type Permission =
   | "suppliers.write"
   | "purchases.read"
   | "purchases.write"
+  // Tags
+  | "tags.read"
+  | "tags.write"
   | "*";
 
 /**
@@ -47,6 +50,7 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
     "customers.read",
     "customers.write",
     "inventory.read",
+    "tags.read", // Vendedores pueden ver etiquetas
   ],
 };
 
