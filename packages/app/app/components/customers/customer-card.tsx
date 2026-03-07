@@ -1,15 +1,19 @@
-import { User, Phone, MapPin, CreditCard, CloudOff } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, CloudOff, Tag } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import type { Customer } from "~/lib/db/schema";
 import { isOnline } from "~/lib/sync/utils";
+import { useCustomerTags } from "~/hooks/use-customer-tags";
+import { TagBadge } from "~/components/tags";
 
 interface CustomerCardProps {
   customer: Customer;
   showDebt?: boolean;
+  showTags?: boolean;
 }
 
-export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) {
+export function CustomerCard({ customer, showDebt = false, showTags = true }: CustomerCardProps) {
   const isPending = customer.syncStatus === "pending" && !isOnline();
+  const { data: customerTags } = useCustomerTags(customer.id);
 
   return (
     <div className="border-0 shadow-md rounded-2xl cursor-pointer hover:shadow-lg transition-shadow bg-card">
@@ -31,6 +35,24 @@ export function CustomerCard({ customer, showDebt = false }: CustomerCardProps) 
                 </span>
               )}
             </div>
+
+            {/* Tags */}
+            {showTags && customerTags && customerTags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {customerTags.slice(0, 3).map((ct) => (
+                  <TagBadge
+                    key={ct.tagId}
+                    tag={{ id: ct.tagId, name: ct.tagName, color: ct.tagColor }}
+                    size="sm"
+                  />
+                ))}
+                {customerTags.length > 3 && (
+                  <span className="text-xs text-muted-foreground px-1">
+                    +{customerTags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="mt-2 space-y-1">
               {customer.dni && (
