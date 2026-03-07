@@ -56,6 +56,18 @@ export class CustomerRepository {
     return customer;
   }
 
+  async findByIds(ctx: RequestContext, ids: string[]): Promise<Customer[]> {
+    if (ids.length === 0) return [];
+
+    const results = await db.query.customers.findMany({
+      where: and(
+        inArray(customers.id, ids),
+        eq(customers.businessId, ctx.businessId)
+      ),
+    });
+    return results;
+  }
+
   async findByDni(ctx: RequestContext, dni: string): Promise<Customer | undefined> {
     const customer = await db.query.customers.findFirst({
       where: and(

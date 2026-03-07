@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { api, extractData } from "~/lib/api-client";
 import { syncClient } from "~/lib/sync/client";
 import { createSyncId, isOnline } from "~/lib/sync/utils";
 
@@ -32,28 +32,18 @@ export interface UpdateCustomerInput {
 
 async function getCustomers(options?: { tagIds?: string[] }): Promise<Customer[]> {
   const query: Record<string, string> = {};
-  
+
   if (options?.tagIds && options.tagIds.length > 0) {
     query.tagIds = options.tagIds.join(",");
   }
 
-  const { data, error } = await api.customers.get({ query });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Customer[];
+  const response = await api.customers.get({ query });
+  return extractData<Customer[]>(response, "Error al cargar clientes");
 }
 
 async function getCustomer(id: string): Promise<Customer> {
-  const { data, error } = await api.customers({ id }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Customer;
+  const response = await api.customers({ id }).get();
+  return extractData<Customer>(response, "Error al cargar cliente");
 }
 
 async function createCustomer(input: CreateCustomerInput): Promise<Customer> {
@@ -82,13 +72,8 @@ async function createCustomer(input: CreateCustomerInput): Promise<Customer> {
     };
   }
 
-  const { data, error } = await api.customers.post(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Customer;
+  const response = await api.customers.post(input);
+  return extractData<Customer>(response, "Error al crear cliente");
 }
 
 async function updateCustomer({
@@ -118,13 +103,8 @@ async function updateCustomer({
     };
   }
 
-  const { data, error } = await api.customers({ id }).put(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Customer;
+  const response = await api.customers({ id }).put(input);
+  return extractData<Customer>(response, "Error al actualizar cliente");
 }
 
 async function deleteCustomer(id: string): Promise<void> {
@@ -139,10 +119,10 @@ async function deleteCustomer(id: string): Promise<void> {
     return;
   }
 
-  const { error } = await api.customers({ id }).delete();
+  const response = await api.customers({ id }).delete();
 
-  if (error) {
-    throw new Error(String(error.value));
+  if (response.error) {
+    throw new Error(String(response.error.value));
   }
 }
 

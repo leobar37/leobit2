@@ -2,7 +2,6 @@ import { Link } from "react-router";
 import {
   ShoppingCart,
   Users,
-  Package,
   FileText,
   Wallet,
   AlertCircle,
@@ -15,12 +14,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { BusinessUserRole } from "@avileo/shared";
-import {
-  MinimalCard,
-  MinimalCardTitle,
-  MinimalCardMedia,
-} from "~/components/cards";
-import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { MetricCard } from "~/components/dashboard/metric-card";
 import { WeeklySalesChart } from "~/components/dashboard/weekly-sales-chart";
@@ -135,63 +128,47 @@ export default function DashboardPage() {
         <WeeklySalesChart labels={chartData.labels} data={chartData.data} />
       )}
 
-      {/* Accesos Rápidos */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Accesos Rápidos - Minimalista */}
+      <div className="grid grid-cols-4 gap-2">
         <Link to="/ventas" className="block">
-          <MinimalCard 
-            variant="outlined" 
-            interactive 
-            clickable 
-            radius="md" 
-            className="h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <MinimalCardMedia icon={ShoppingCart} iconColor="text-orange-600" size="lg" />
-            <MinimalCardTitle className="text-sm font-medium">Nueva Venta</MinimalCardTitle>
-          </MinimalCard>
+          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+              <ShoppingCart className="h-5 w-5 text-orange-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700">Venta</span>
+          </div>
         </Link>
 
         <Link to="/clientes" className="block">
-          <MinimalCard 
-            variant="outlined" 
-            interactive 
-            clickable 
-            radius="md" 
-            className="h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <MinimalCardMedia icon={Users} iconColor="text-blue-600" size="lg" />
-            <MinimalCardTitle className="text-sm font-medium">Clientes</MinimalCardTitle>
-          </MinimalCard>
+          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700">Clientes</span>
+          </div>
         </Link>
 
-        <Link to="/cobros" className="block">
-          <MinimalCard 
-            variant="outlined" 
-            interactive 
-            clickable 
-            radius="md" 
-            className="h-32 flex flex-col items-center justify-center gap-2 relative"
-          >
-            <MinimalCardMedia icon={Wallet} iconColor="text-red-600" size="lg" />
-            <MinimalCardTitle className="text-sm font-medium">Cobros</MinimalCardTitle>
-            {debtorsCount > 0 && (
-              <Badge className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {debtorsCount}
-              </Badge>
-            )}
-          </MinimalCard>
+        <Link to="/cobros" className="block relative">
+          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center relative">
+              <Wallet className="h-5 w-5 text-red-600" />
+              {debtorsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {debtorsCount > 9 ? '9+' : debtorsCount}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-medium text-gray-700">Cobros</span>
+          </div>
         </Link>
 
         <Link to="/cierre" className="block">
-          <MinimalCard 
-            variant="outlined" 
-            interactive 
-            clickable 
-            radius="md" 
-            className="h-32 flex flex-col items-center justify-center gap-2"
-          >
-            <MinimalCardMedia icon={FileText} iconColor="text-purple-600" size="lg" />
-            <MinimalCardTitle className="text-sm font-medium">Cierre</MinimalCardTitle>
-          </MinimalCard>
+          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
+            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700">Cierre</span>
+          </div>
         </Link>
       </div>
     </div>

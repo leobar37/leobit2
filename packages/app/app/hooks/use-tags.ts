@@ -40,7 +40,7 @@ export function useTags() {
   return useQuery({
     queryKey: tagsKeys.lists(),
     queryFn: async () => {
-      const response = await api.v1.tags.get();
+      const response = await api.tags.get();
       return extractData<Tag[]>(response, "Error al cargar etiquetas");
     },
   });
@@ -53,7 +53,7 @@ export function useTag(id: string) {
   return useQuery({
     queryKey: tagsKeys.detail(id),
     queryFn: async () => {
-      const response = await api.v1.tags({ id }).get();
+      const response = await api.tags({ id }).get();
       return extractData<Tag>(response, "Error al cargar etiqueta");
     },
     enabled: !!id,
@@ -68,7 +68,7 @@ export function useCreateTag() {
 
   return useMutation({
     mutationFn: async (data: CreateTagInput) => {
-      const response = await api.v1.tags.post(data);
+      const response = await api.tags.post(data);
       return extractData<Tag>(response, "Error al crear etiqueta");
     },
     onSuccess: () => {
@@ -85,7 +85,7 @@ export function useUpdateTag() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateTagInput }) => {
-      const response = await api.v1.tags({ id }).put(data);
+      const response = await api.tags({ id }).put(data);
       return extractData<Tag>(response, "Error al actualizar etiqueta");
     },
     onSuccess: (_, { id }) => {
@@ -103,7 +103,7 @@ export function useDeleteTag() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.v1.tags({ id }).delete();
+      const response = await api.tags({ id }).delete();
       if (response.error) {
         throw new Error(String(response.error.value));
       }
