@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -8,15 +9,37 @@ import {
   Scale,
   Loader2,
   AlertCircle,
+  MessageCircle,
+  Send,
+  CheckCircle,
+  XCircle,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { useSale } from "~/hooks/use-sales";
 import { useCustomers } from "~/hooks/use-customers-live";
 import { useProducts } from "~/hooks/use-products-live";
-import { Package } from "lucide-react";
-import { formatCurrency, formatKilos } from "~/lib/utils";
+import { useWhatsAppStatus } from "~/hooks/use-whatsapp-settings";
+import { useWhatsAppTemplates, previewTemplate } from "~/hooks/use-whatsapp-templates";
+import { useSendWhatsAppMessage } from "~/hooks/use-send-whatsapp-message";
+import { formatCurrency } from "~/lib/utils";
 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,10 +47,82 @@ export default function SaleDetailPage() {
   const { data: sale, isLoading, error } = useSale(id || "");
   const { data: customers } = useCustomers();
   const { data: products } = useProducts();
+  const { data: whatsappStatus } = useWhatsAppStatus();
+  const { data: templates } = useWhatsAppTemplates();
+  const sendMessage = useSendWhatsAppMessage();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [sendStatus, setSendStatus] = useState<"idle" | "success" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState("");
 
   const customer = customers?.find((c) => c.id === sale?.clientId);
   const paidAmount = Number(sale?.amountPaid ?? 0);
   const dueAmount = Number(sale?.balanceDue ?? 0);
+
+  const isWhatsAppConnected = whatsappStatus?.isConnected ?? false;
+  const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
+
+  const getMessagePreview = () => {
+    if (!selectedTemplate || !sale || !customer) return "";
+
+    const productosText = sale.items
+      ?.map((item) => `${item.productName} x${item.quantity}`)
+      .join(", ") ?? "";
+
+    return previewTemplate(selectedTemplate.content, {
+      nombre_cliente: customer.name,
+      monto: `S/ ${formatCurrency(sale.totalAmount)}`,
+      fecha: new Date(sale.saleDate).toLocaleDateString("es-PE"),
+      productos: productosText,
+      total: `S/ ${formatCurrency(sale.totalAmount)}`,
+    });
+  };
+
+  const handleOpenModal = () => {
+    if (!isWhatsAppConnected) return;
+    setSendStatus("idle");
+    setStatusMessage("");
+    setSelectedTemplateId(templates?.find((t) => t.isDefault)?.id ?? templates?.[0]?.id ?? "");
+    setIsModalOpen(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!sale || !customer || !selectedTemplateId) return;
+
+    setSendStatus("idle");
+    setStatusMessage("");
+
+    try {
+      const productosText = sale.items
+        ?.map((item) => `${item.productName} x${item.quantity}`)
+        .join(", ") ?? "";
+
+      await sendMessage.mutateAsync({
+        customerId: customer.id,
+        templateId: selectedTemplateId,
+        saleId: sale.id,
+        variables: {
+          nombre_cliente: customer.name,
+          monto: formatCurrency(sale.totalAmount),
+          fecha: new Date(sale.saleDate).toLocaleDateString("es-PE"),
+          productos: productosText,
+          total: formatCurrency(sale.totalAmount),
+        },
+      });
+
+      setSendStatus("success");
+      setStatusMessage("Mensaje enviado correctamente");
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSendStatus("idle");
+        setStatusMessage("");
+      }, 1500);
+    } catch (err) {
+      setSendStatus("error");
+      setStatusMessage(err instanceof Error ? err.message : "Error al enviar el mensaje");
+    }
+  };
   const saleStatus = sale
     ? sale.saleType === "contado"
       ? "Pago total"
@@ -77,7 +172,18 @@ export default function SaleDetailPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/ventas")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-bold text-lg">Detalle de Venta</h1>
+          <h1 className="font-bold text-lg flex-1">Detalle de Venta</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={!isWhatsAppConnected}
+            onClick={handleOpenModal}
+            title={!isWhatsAppConnected ? "Conecta tu WhatsApp primero" : "Enviar mensaje por WhatsApp"}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Enviar WhatsApp</span>
+          </Button>
         </div>
       </header>
 
@@ -226,6 +332,90 @@ export default function SaleDetailPage() {
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Enviar mensaje por WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona una plantilla y personaliza el mensaje antes de enviarlo a {customer?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plantilla</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {selectedTemplate?.name ?? "Seleccionar plantilla"}
+                    <span className="ml-2">▼</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full min-w-[300px]">
+                  {templates?.map((template) => (
+                    <DropdownMenuItem
+                      key={template.id}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{template.name}</span>
+                      {template.isDefault && (
+                        <Badge variant="secondary" className="ml-2">Predeterminada</Badge>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vista previa del mensaje</label>
+              <Textarea
+                readOnly
+                value={getMessagePreview()}
+                className="min-h-[120px] resize-none bg-muted"
+              />
+            </div>
+
+            {sendStatus !== "idle" && (
+              <div
+                className={`flex items-center gap-2 text-sm ${
+                  sendStatus === "success" ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {sendStatus === "success" ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                {statusMessage}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendMessage}
+              disabled={!selectedTemplateId || sendMessage.isPending || sendStatus === "success"}
+              className="gap-2"
+            >
+              {sendMessage.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {sendMessage.isPending ? "Enviando..." : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

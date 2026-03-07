@@ -34,6 +34,10 @@ export type Permission =
   | "suppliers.write"
   | "purchases.read"
   | "purchases.write"
+  // WhatsApp
+  | "whatsapp.read"
+  | "whatsapp.write"
+  | "whatsapp.delete"
   | "*";
 
 /**

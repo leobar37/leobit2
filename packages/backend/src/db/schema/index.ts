@@ -215,3 +215,25 @@ export {
   type NewBusinessPaymentSettings,
   type PaymentMethodConfig,
 } from "./business-payment-settings";
+
+export {
+  businessUserWhatsAppSettings,
+  businessUserWhatsAppSettingsRelations,
+  type BusinessUserWhatsAppSettings,
+  type NewBusinessUserWhatsAppSettings,
+} from "./business-user-whatsapp-settings";
+
+export {
+  whatsAppTemplates,
+  whatsAppTemplatesRelations,
+  type WhatsAppTemplate,
+  type NewWhatsAppTemplate,
+} from "./whatsapp-templates";
+
+export {
+  whatsAppMessages,
+  whatsAppMessagesRelations,
+  messageStatusEnum,
+  type WhatsAppMessage,
+  type NewWhatsAppMessage,
+} from "./whatsapp-messages";

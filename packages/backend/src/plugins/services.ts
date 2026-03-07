@@ -37,6 +37,12 @@ import { OrderService } from "../services/business/order.service";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 import { OCRService } from "../services/business/ocr.service";
+import { WhatsAppTemplateRepository } from "../services/repository/whatsapp-template.repository";
+import { WhatsAppTemplateService } from "../services/business/whatsapp-template.service";
+import { WhatsAppSettingsRepository } from "../services/repository/whatsapp-settings.repository";
+import { WhatsAppSettingsService } from "../services/business/whatsapp-settings.service";
+import { WhatsAppMessageRepository } from "../services/repository/whatsapp-message.repository";
+import { WhatsAppMessageService } from "../services/business/whatsapp-message.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -60,6 +66,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const orderRepo = new OrderRepository();
     const orderEventsRepo = new OrderEventsRepository();
     const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
+    const whatsAppTemplateRepo = new WhatsAppTemplateRepository();
+    const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
+    const whatsAppMessageRepo = new WhatsAppMessageRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo);
     const customerService = new CustomerService(customerRepo);
@@ -87,6 +96,14 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
+    const whatsAppTemplateService = new WhatsAppTemplateService(whatsAppTemplateRepo);
+    const whatsAppSettingsService = new WhatsAppSettingsService(whatsAppSettingsRepo);
+    const whatsAppMessageService = new WhatsAppMessageService(
+      whatsAppMessageRepo,
+      whatsAppTemplateRepo,
+      customerRepo,
+      whatsAppSettingsRepo
+    );
 
     return {
       businessRepo,
@@ -127,5 +144,11 @@ export const servicesPlugin = new Elysia({ name: "services" })
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,
+      whatsAppTemplateRepo,
+      whatsAppTemplateService,
+      whatsAppSettingsRepo,
+      whatsAppSettingsService,
+      whatsAppMessageRepo,
+      whatsAppMessageService,
     };
   });

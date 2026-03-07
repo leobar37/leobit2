@@ -11,6 +11,7 @@ import {
   Truck,
   ShoppingCart,
   Flag,
+  MessageCircle,
 } from "lucide-react";
 import {
   Card,
@@ -118,6 +119,15 @@ const flagsConfigItem: ConfigItem = {
   iconBg: "bg-pink-100",
 };
 
+const whatsappConfigItem: ConfigItem = {
+  icon: MessageCircle,
+  title: "WhatsApp",
+  description: "Conecta WhatsApp para notificaciones",
+  href: "/config/whatsapp",
+  color: "text-green-600",
+  iconBg: "bg-green-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -132,6 +142,7 @@ export default function ConfigIndexPage() {
         distribucionesConfigItem,
         comprasConfigItem,
         flagsConfigItem,
+        whatsappConfigItem,
         ...baseConfigItems.slice(2),
       ]
     : baseConfigItems;
