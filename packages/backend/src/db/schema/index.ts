@@ -132,6 +132,13 @@ export {
   type NewOrderEvent,
 } from "./order-events";
 
+export {
+  orderTokens,
+  orderTokensRelations,
+  type OrderToken,
+  type NewOrderToken,
+} from "./order-tokens";
+
 // Payments (Abonos)
 export {
   abonos,
