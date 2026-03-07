@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import type { PeriodType } from "~/components/dashboard/period-selector";
 
-export interface SalesTodayStats {
-  today: {
+export interface PeriodParams {
+  type: PeriodType;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface SalesStats {
+  current: {
     amount: number;
     kilos: number;
     count: number;
   };
-  yesterday: {
+  previous: {
     amount: number;
     kilos: number;
     count: number;
@@ -24,18 +31,24 @@ export interface DebtorsSummary {
   debtorsCount: number;
 }
 
-export interface WeeklySalesData {
+export interface ChartData {
   labels: string[];
   data: number[];
 }
 
-export function useSalesTodayStats() {
+export function useSalesStats(period: PeriodParams) {
   return useQuery({
-    queryKey: ["dashboard", "sales-today"],
+    queryKey: ["dashboard", "sales-stats", period],
     queryFn: async () => {
-      const { data, error } = await api.reports["sales-today"].get();
+      const params: Record<string, string> = { type: period.type };
+      if (period.startDate) params.startDate = period.startDate;
+      if (period.endDate) params.endDate = period.endDate;
+
+      const { data, error } = await api.reports["sales-stats"].get({
+        query: params,
+      });
       if (error) throw new Error(String(error.value));
-      return (data as { data: SalesTodayStats }).data;
+      return (data as { data: SalesStats }).data;
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
@@ -53,14 +66,29 @@ export function useDebtorsSummary() {
   });
 }
 
-export function useWeeklySales() {
+export function useSalesChart(period: PeriodParams) {
   return useQuery({
-    queryKey: ["dashboard", "sales-weekly"],
+    queryKey: ["dashboard", "sales-chart", period],
     queryFn: async () => {
-      const { data, error } = await api.reports["sales-weekly"].get();
+      const params: Record<string, string> = { type: period.type };
+      if (period.startDate) params.startDate = period.startDate;
+      if (period.endDate) params.endDate = period.endDate;
+
+      const { data, error } = await api.reports["sales-chart"].get({
+        query: params,
+      });
       if (error) throw new Error(String(error.value));
-      return (data as { data: WeeklySalesData }).data;
+      return (data as { data: ChartData }).data;
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
+}
+
+// Legacy hooks for backward compatibility
+export function useSalesTodayStats() {
+  return useSalesStats({ type: "day" });
+}
+
+export function useWeeklySales() {
+  return useSalesChart({ type: "week" });
 }
