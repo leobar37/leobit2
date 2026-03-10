@@ -37,3 +37,7 @@ Thumbs.db
 /playwright/.cache/
 e2e/.auth/
 *.png-snapshots/
+
+# Embedded git repos / temp
+tanstack-db/
+tmp/
