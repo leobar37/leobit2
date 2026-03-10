@@ -354,6 +354,10 @@ export class SaleService {
     return this.repository.getTotalSalesToday(ctx);
   }
 
+  async getDrafts(ctx: RequestContext) {
+    return this.repository.findMany(ctx, { status: "draft" });
+  }
+
   async createFromOrder(
     ctx: RequestContext,
     data: {

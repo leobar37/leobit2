@@ -117,14 +117,87 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
   )
   .post(
     "/:id/confirm",
-    async ({ saleService, ctx, params }) => {
-      const result = await saleService.confirmSale(ctx as RequestContext, params.id);
+    async ({ saleService, ctx, params, body }) => {
+      const result = await saleService.confirmSale(ctx as RequestContext, params.id, body.baseVersion);
       return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({
         id: t.String(),
       }),
+      body: t.Object({
+        baseVersion: t.Number(),
+      }),
+    }
+  )
+  .post(
+    "/:id/deliver",
+    async ({ saleService, ctx, params, body }) => {
+      const result = await saleService.deliverSale(
+        ctx as RequestContext,
+        params.id,
+        body.baseVersion,
+        body.deliveredItems
+      );
+      return { success: true, data: result.data, txid: result.txid };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        baseVersion: t.Number(),
+        deliveredItems: t.Array(
+          t.Object({
+            itemId: t.String(),
+            deliveredQuantity: t.Number({ minimum: 0 }),
+            unitPriceFinal: t.Optional(t.Number({ minimum: 0 })),
+          })
+        ),
+      }),
+    }
+  )
+  .post(
+    "/:id/token",
+    async ({ saleService, ctx, params }) => {
+      const result = await saleService.generateToken(ctx as RequestContext, params.id);
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .get(
+    "/:id/token",
+    async ({ saleService, ctx, params }) => {
+      const token = await saleService.getTokenBySaleId(ctx as RequestContext, params.id);
+      if (!token) {
+        return { success: true, data: null };
+      }
+      return {
+        success: true,
+        data: {
+          id: token.id,
+          saleId: token.saleId,
+          expiresAt: token.expiresAt,
+          isActive: token.isActive,
+          createdAt: token.createdAt,
+        },
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .get(
+    "/drafts/my",
+    async ({ saleService, ctx }) => {
+      const drafts = await saleService.getDrafts(ctx as RequestContext);
+      return { success: true, data: drafts };
     }
   )
   .delete(
