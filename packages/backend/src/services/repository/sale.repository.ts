@@ -32,6 +32,7 @@ export class SaleRepository {
       startDate?: Date;
       endDate?: Date;
       saleType?: "contado" | "credito";
+      status?: "draft" | "active" | "cancelled";
       limit?: number;
       offset?: number;
     }
@@ -42,7 +43,8 @@ export class SaleRepository {
         eq(sales.sellerId, ctx.businessUserId),
         filters?.startDate ? gte(sales.saleDate, filters.startDate) : undefined,
         filters?.endDate ? lte(sales.saleDate, filters.endDate) : undefined,
-        filters?.saleType ? eq(sales.saleType, filters.saleType) : undefined
+        filters?.saleType ? eq(sales.saleType, filters.saleType) : undefined,
+        filters?.status ? eq(sales.status, filters.status) : undefined
       ),
       orderBy: desc(sales.createdAt),
       limit: filters?.limit,

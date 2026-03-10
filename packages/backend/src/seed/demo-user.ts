@@ -332,14 +332,14 @@ async function seedCustomers(ctx: RequestContext) {
 
   const customers = [];
   for (const customer of DEMO_CUSTOMERS) {
-    const created = await services.customer.createCustomer(ctx, {
+    const result = await services.customer.createCustomer(ctx, {
       name: customer.name,
       dni: customer.dni,
       phone: customer.phone,
       address: customer.address,
       notes: customer.notes,
     });
-    customers.push(created);
+    customers.push(result.data);
   }
 
   return customers;
@@ -384,7 +384,7 @@ async function seedSales(
       };
     });
 
-    const created = await services.sale.createSale(ctx, {
+    const result = await services.sale.createSale(ctx, {
       clientId: customer.id,
       saleType: saleData.saleType,
       totalAmount: saleData.totalAmount,
@@ -392,7 +392,7 @@ async function seedSales(
       items,
     });
 
-    sales.push(created);
+    sales.push(result.data);
   }
 
   return sales;

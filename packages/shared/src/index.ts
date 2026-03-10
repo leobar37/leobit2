@@ -55,6 +55,7 @@ export const ModoOperacion = {
 export type ApiResponse<T = unknown> = {
   success: boolean;
   data?: T;
+  txid?: number;
   error?: string;
 };
 

@@ -1,6 +1,9 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import type { RequestContext } from "../../context/request-context";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors";
+import type { Order, OrderItem, Sale } from "../../db/schema";
 import {
   normalizeAmount,
   normalizeQuantity,
@@ -25,6 +28,17 @@ export class OrderService {
     private distribucionRepository: DistribucionRepository,
     private distribucionItemRepository: DistribucionItemRepository
   ) {}
+
+  /**
+   * Normalize clientId to null if empty or undefined.
+   * Returns the UUID string if valid, null otherwise.
+   */
+  private normalizeClientId(clientId: string | undefined | null): string | null {
+    if (!clientId || clientId.trim() === '') {
+      return null;
+    }
+    return clientId;
+  }
 
   async getOrders(
     ctx: RequestContext,
@@ -60,7 +74,8 @@ export class OrderService {
   async createOrder(
     ctx: RequestContext,
     data: {
-      clientId: string;
+      id?: string;
+      clientId?: string | null;
       deliveryDate: string;
       paymentIntent: "contado" | "credito";
       paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
@@ -70,7 +85,7 @@ export class OrderService {
       advanceReferenceNumber?: string;
       advanceProofImageId?: string;
       totalAmount: number;
-      items: Array<{
+      items?: Array<{
         productId: string;
         variantId: string;
         productName: string;
@@ -82,7 +97,19 @@ export class OrderService {
     }
   ) {
     this.validateDeliveryDate(data.deliveryDate);
-    this.validateItems(data.items);
+
+    // Validate clientId only if provided
+    if (data.clientId && data.clientId.trim() !== "") {
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+      if (!uuidRegex.test(data.clientId)) {
+        throw new ValidationError("ID de cliente inválido");
+      }
+    }
+
+    const items = data.items ?? [];
+    if (items.length > 0) {
+      this.validateItems(items);
+    }
 
     const totalAmount = normalizeAmount(data.totalAmount, 2, "totalAmount");
     const advanceAmount = data.advanceAmount 
@@ -102,7 +129,8 @@ export class OrderService {
 
     const orderDate = new Date().toISOString().slice(0, 10);
     const payload: CreateOrderInput = {
-      clientId: data.clientId,
+      id: data.id,
+      clientId: this.normalizeClientId(data.clientId),
       deliveryDate: data.deliveryDate,
       orderDate,
       status: "draft",
@@ -115,7 +143,7 @@ export class OrderService {
       advanceProofImageId: data.advanceProofImageId || null,
       totalAmount,
       version: 1,
-      items: data.items.map((item) => ({
+      items: items.map((item) => ({
         productId: item.productId,
         variantId: item.variantId,
         productName: item.productName,
@@ -141,7 +169,10 @@ export class OrderService {
         tx
       );
 
-      return created;
+      return {
+        data: created,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -169,7 +200,7 @@ export class OrderService {
       }>;
       clientEventId?: string;
     }
-  ) {
+  ): Promise<MutationResult<Order>> {
     const order = await this.repository.findById(ctx, id);
     if (!order) {
       throw new NotFoundError("Order");
@@ -248,7 +279,10 @@ export class OrderService {
         tx
       );
 
-      return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -257,7 +291,7 @@ export class OrderService {
     id: string,
     baseVersion: number,
     clientEventId?: string
-  ) {
+  ): Promise<MutationResult<Order>> {
     const order = await this.repository.findById(ctx, id);
     if (!order) {
       throw new NotFoundError("Order");
@@ -265,6 +299,10 @@ export class OrderService {
 
     if (order.status !== "draft") {
       throw new ValidationError("Solo pedidos en borrador pueden confirmarse");
+    }
+
+    if (order.items.length === 0) {
+      throw new ValidationError("No se puede confirmar un pedido sin productos");
     }
 
     return db.transaction(async (tx) => {
@@ -294,7 +332,10 @@ export class OrderService {
         tx
       );
 
-      return confirmed;
+      return {
+        data: confirmed,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -303,7 +344,7 @@ export class OrderService {
     id: string,
     baseVersion: number,
     clientEventId?: string
-  ) {
+  ): Promise<MutationResult<Order>> {
     const order = await this.repository.findById(ctx, id);
     if (!order) {
       throw new NotFoundError("Order");
@@ -314,7 +355,7 @@ export class OrderService {
     }
 
     if (order.status === "cancelled") {
-      return order;
+      throw new ValidationError("El pedido ya fue cancelado");
     }
 
     return db.transaction(async (tx) => {
@@ -340,7 +381,57 @@ export class OrderService {
         tx
       );
 
-      return cancelled;
+      return {
+        data: cancelled,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
+  async deleteOrder(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number,
+    clientEventId?: string
+  ): Promise<MutationResult<Order>> {
+    const order = await this.repository.findById(ctx, id);
+    if (!order) {
+      throw new NotFoundError("Order");
+    }
+
+    // Only allow deletion of draft orders or orders without items
+    if (order.status !== "draft" && order.items.length > 0) {
+      throw new ValidationError("Solo se pueden eliminar pedidos en borrador o sin items");
+    }
+
+    return db.transaction(async (tx) => {
+      // Delete order items first (cascade should handle this, but being explicit)
+      for (const item of order.items) {
+        await tx.delete(require("../../db/schema").orderItems).where(
+          eq(require("../../db/schema").orderItems.id, item.id)
+        );
+      }
+
+      const deleted = await this.repository.delete(ctx, id, tx);
+      if (!deleted) {
+        throw new ConflictError("El pedido fue modificado por otro usuario");
+      }
+
+      await this.eventsRepository.create(
+        ctx,
+        {
+          orderId: id,
+          eventType: "deleted",
+          payload: { status: deleted.status },
+          clientEventId,
+        },
+        tx
+      );
+
+      return {
+        data: deleted,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -351,7 +442,7 @@ export class OrderService {
     newQuantity: number,
     baseVersion: number,
     clientEventId?: string
-  ) {
+  ): Promise<MutationResult<{ order: Order; item: OrderItem }>> {
     const order = await this.repository.findById(ctx, orderId);
     if (!order) {
       throw new NotFoundError("Order");
@@ -411,8 +502,11 @@ export class OrderService {
       );
 
       return {
-        order: updatedOrder,
-        item,
+        data: {
+          order: updatedOrder,
+          item,
+        },
+        txid: await getTxid(tx),
       };
     });
   }
@@ -427,7 +521,7 @@ export class OrderService {
     paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia",
     referenceNumber?: string,
     proofImageId?: string
-  ) {
+  ): Promise<MutationResult<{ order: Order; sale: Sale }>> {
     const order = await this.repository.findById(ctx, orderId);
     if (!order) {
       throw new NotFoundError("Order");
@@ -543,8 +637,11 @@ export class OrderService {
       );
 
       return {
-        order: delivered,
-        sale,
+        data: {
+          order: delivered,
+          sale,
+        },
+        txid: await getTxid(tx),
       };
     });
   }

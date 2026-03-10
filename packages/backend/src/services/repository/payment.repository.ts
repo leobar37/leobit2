@@ -126,9 +126,11 @@ export class PaymentRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber">>
+    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber">>,
+    tx?: DbTransaction
   ): Promise<Abono> {
-    const [abono] = await db
+    const executor = tx ?? db;
+    const [abono] = await executor
       .update(abonos)
       .set(data)
       .where(and(

@@ -9,6 +9,7 @@ export interface WhatsAppConnectionStatus {
   state: "open" | "close" | "connecting" | "unknown";
   phoneNumber: string | null;
   instanceName: string | null;
+  qrCode?: string | null;
 }
 
 export interface WhatsAppConnectResult {

@@ -5,12 +5,14 @@ import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { ElectricProvider } from "~/lib/db/electric-client";
 import { AppLayout } from "~/components/layout/app-layout";
+import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 // import { HelpButton } from "~/components/help";
 import { refreshSession } from "~/lib/auth-client";
 
 function OutletWithLog() {
   const location = useLocation();
   console.log('[ProtectedLayout] Outlet rendering, path:', location.pathname);
+  useAutoFileUploadProcessor();
   return <Outlet />;
 }
 

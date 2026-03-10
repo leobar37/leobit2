@@ -1,5 +1,6 @@
 import { BusinessRepository } from "../repository/business.repository";
 import { SupplierRepository } from "../repository/supplier.repository";
+import { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";
 import type { RequestContext } from "../../context/request-context";
 import { RequestContext as RequestContextClass } from "../../context/request-context";
 import {
@@ -12,11 +13,13 @@ import { eq } from "drizzle-orm";
 import { db, businessUsers } from "../../lib/db";
 import { businesses } from "../../db/schema/businesses";
 import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
+import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 
 export class BusinessService {
   constructor(
     private repository: BusinessRepository,
-    private supplierRepo: SupplierRepository
+    private supplierRepo: SupplierRepository,
+    private whatsAppTemplateRepo: WhatsAppTemplateRepository
   ) {}
 
   async getBusiness(ctx: RequestContext) {
@@ -90,6 +93,8 @@ export class BusinessService {
       notes: "Proveedor genérico para compras sin identificación",
       isActive: true,
     });
+
+    await this.seedDefaultTemplates(workerCtx);
 
     return business;
   }
@@ -183,6 +188,27 @@ export class BusinessService {
       .where(eq(businesses.id, ctx.businessId))
       .returning();
 
-    return updated.calculatorSettings ?? defaultCalculatorSettings;
+    return updated.calculatorSettings ?? {} as BusinessCalculatorSettings;
+  }
+
+  /**
+   * Seeds default WhatsApp templates for a new business
+   */
+  private async seedDefaultTemplates(
+    ctx: ReturnType<typeof RequestContextClass.forWorker>
+  ): Promise<void> {
+    const existing = await this.whatsAppTemplateRepo.findMany(ctx, { limit: 1 });
+
+    if (existing.length > 0) {
+      return;
+    }
+
+    for (const template of DEFAULT_WHATSAPP_TEMPLATES) {
+      await this.whatsAppTemplateRepo.create(ctx, {
+        name: template.name,
+        content: template.content,
+        isDefault: template.isDefault,
+      });
+    }
   }
 }

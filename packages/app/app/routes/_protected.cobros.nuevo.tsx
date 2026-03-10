@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { useCustomer } from "~/hooks/use-customers";
-import { useCreatePayment } from "~/hooks/use-payments";
+import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
-import { useUploadFile, validateFile } from "~/hooks/use-files";
+import { validateFile } from "~/hooks/use-files";
+import { isOnline, queueFileUpload, uploadFileNow } from "~/lib/file-queue";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { formatCurrency } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
@@ -125,7 +126,7 @@ export default function NuevoCobroPage() {
   const { data: accounts } = useAccountsReceivable();
   const { data: paymentConfig } = usePaymentMethodsConfig();
   const createPayment = useCreatePayment();
-  const uploadFile = useUploadFile();
+  const updatePayment = useUpdatePayment();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [proofImage, setProofImage] = useState<File | null>(null);
@@ -134,8 +135,8 @@ export default function NuevoCobroPage() {
 
   const currentDebt = useMemo(() => {
     if (!customerId || !accounts) return 0;
-    const account = accounts.find((a) => a.customer.id === customerId);
-    return account?.totalDebt || 0;
+    const account = accounts.find((a) => a.customerId === customerId);
+    return account?.balance || 0;
   }, [customerId, accounts]);
 
   const {
@@ -197,19 +198,27 @@ export default function NuevoCobroPage() {
       setSubmitError(null);
 
       let proofImageId: string | undefined;
-      if (proofImage) {
-        const uploadedFile = await uploadFile.mutateAsync(proofImage);
-        proofImageId = uploadedFile.id;
-      }
 
-      await createPayment.mutateAsync({
+      const paymentId = await createPayment({
         clientId: customerId,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         referenceNumber: data.referenceNumber || undefined,
         notes: data.notes || undefined,
-        proofImageId,
       });
+
+      if (proofImage) {
+        if (isOnline()) {
+          const uploadedFile = await uploadFileNow(proofImage);
+          proofImageId = uploadedFile.id;
+          await updatePayment(paymentId, { proofImageId });
+        } else {
+          await queueFileUpload(proofImage, "payment", {
+            entityId: paymentId,
+            fieldName: "proofImageId",
+          });
+        }
+      }
 
       navigate(customerId ? `/clientes/${customerId}` : "/cobros");
     } catch {

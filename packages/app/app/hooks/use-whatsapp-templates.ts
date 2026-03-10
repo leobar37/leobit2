@@ -153,6 +153,8 @@ export const TEMPLATE_VARIABLES = [
   { key: "monto", label: "Monto", example: "S/ 150.00" },
   { key: "fecha", label: "Fecha", example: "07/03/2026" },
   { key: "telefono", label: "Teléfono", example: "+51 999 888 777" },
+  { key: "productos", label: "Productos", example: "1 Pollo entero, 2 kg de alitas" },
+  { key: "total", label: "Total", example: "S/ 150.00" },
 ] as const;
 
 export function previewTemplate(

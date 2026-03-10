@@ -29,16 +29,32 @@ export class EvolutionService {
     }
   }
 
+  async instanceExists(instanceName: string): Promise<boolean> {
+    this.ensureConfigured();
+    try {
+      const response = await this.client.instances.fetchAll();
+      const instances = (response as any)?.instances || [];
+      return instances.some((instance: any) => instance.instanceName === instanceName);
+    } catch (error) {
+      console.error("[EvolutionService] Failed to fetch instances:", error);
+      return false;
+    }
+  }
+
   async createInstance(instanceName: string): Promise<void> {
     this.ensureConfigured();
     try {
       await this.client.instances.create({
         instanceName,
         integration: "WHATSAPP-BAILEYS",
-        rejectCall: true,
-        alwaysOnline: true,
+        reject_call: true,
+        always_online: true,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.statusCode === 409 || error?.statusCode === 403 || error?.message?.includes("already exists") || error?.message?.includes("is already in use")) {
+        console.log(`[EvolutionService] Instance ${instanceName} already exists, skipping creation`);
+        return;
+      }
       console.error("[EvolutionService] Failed to create instance:", error);
       throw new ServiceUnavailableError("No se pudo crear la instancia de WhatsApp. Por favor intente nuevamente.");
     }

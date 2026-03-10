@@ -51,7 +51,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
     "/",
     async ({ saleService, ctx, body, set }) => {
       set.status = 201;
-      const sale = await saleService.createSale(ctx as RequestContext, {
+      const result = await saleService.createSale(ctx as RequestContext, {
         clientId: body.clientId,
         saleType: body.saleType,
         totalAmount: body.totalAmount,
@@ -60,7 +60,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         netWeight: body.netWeight,
         items: body.items,
       });
-      return { success: true, data: sale };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -112,6 +112,18 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         ])),
         refundReference: t.Optional(t.String()),
         refundNotes: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/:id/confirm",
+    async ({ saleService, ctx, params }) => {
+      const result = await saleService.confirmSale(ctx as RequestContext, params.id);
+      return { success: true, data: result.data, txid: result.txid };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
       }),
     }
   )

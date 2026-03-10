@@ -16,6 +16,8 @@ import {
   Calendar,
   Phone,
   MessageSquare,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +69,8 @@ const VARIABLE_ICONS: Record<string, React.ReactNode> = {
   monto: <DollarSign className="h-3 w-3" />,
   fecha: <Calendar className="h-3 w-3" />,
   telefono: <Phone className="h-3 w-3" />,
+  productos: <ShoppingCart className="h-3 w-3" />,
+  total: <Receipt className="h-3 w-3" />,
 };
 
 function TemplateForm({
@@ -88,6 +92,8 @@ function TemplateForm({
     monto: "S/ 150.00",
     fecha: new Date().toLocaleDateString("es-PE"),
     telefono: "+51 999 888 777",
+    productos: "1 Pollo entero, 2 kg de alitas",
+    total: "S/ 150.00",
   });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPosition, setCursorPosition] = useState(0);

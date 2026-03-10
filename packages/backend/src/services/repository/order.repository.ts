@@ -19,7 +19,8 @@ export type OrderPaymentStatus = "sin_pago" | "adelanto_parcial" | "pagado_total
 export type PaymentMethod = "efectivo" | "yape" | "plin" | "transferencia";
 
 export interface CreateOrderInput {
-  clientId: string;
+  id?: string;
+  clientId?: string | null;
   deliveryDate: string;
   orderDate: string;
   status?: OrderStatus;
@@ -49,6 +50,7 @@ export interface CreateOrderInput {
 }
 
 export interface UpdateOrderInput {
+  clientId?: string;
   deliveryDate?: string;
   status?: OrderStatus;
   paymentIntent?: "contado" | "credito";
@@ -277,5 +279,20 @@ export class OrderRepository {
       );
 
     return result[0]?.count ?? 0;
+  }
+
+  async delete(
+    ctx: RequestContext,
+    id: string,
+    tx?: DbTransaction
+  ): Promise<Order | undefined> {
+    const executor = tx ?? db;
+
+    const [deleted] = await executor
+      .delete(orders)
+      .where(and(eq(orders.id, id), eq(orders.businessId, ctx.businessId)))
+      .returning();
+
+    return deleted;
   }
 }

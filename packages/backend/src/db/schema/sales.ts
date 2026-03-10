@@ -56,8 +56,8 @@ export const sales = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
-    // Sale status for cancellation
-    status: saleStatusEnum("status").notNull().default("active"),
+    // Sale status: draft (in progress) -> active (confirmed) -> cancelled
+    status: saleStatusEnum("status").notNull().default("draft"),
 
     // Cancellation fields
     cancelledAt: timestamp("cancelled_at"),

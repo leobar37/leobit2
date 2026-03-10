@@ -13,6 +13,7 @@ export interface WhatsAppConnectionStatus {
   state: "open" | "close" | "connecting" | "unknown";
   phoneNumber: string | null;
   instanceName: string | null;
+  qrCode?: string | null;
 }
 
 export interface WhatsAppConnectResult {
@@ -41,7 +42,11 @@ export class WhatsAppSettingsService {
       `avileo-${ctx.businessId.slice(0, 8)}-${ctx.businessUserId.slice(0, 8)}`;
 
     try {
-      await this.evolutionService.createInstance(instanceName);
+      const instanceExists = await this.evolutionService.instanceExists(instanceName);
+      
+      if (!instanceExists) {
+        await this.evolutionService.createInstance(instanceName);
+      }
 
       const { qrCode } = await this.evolutionService.connectInstance(
         instanceName
@@ -50,6 +55,8 @@ export class WhatsAppSettingsService {
       await this.repository.update(ctx, settings.id, {
         instanceName,
         isConnected: false,
+        qrCode,
+        qrCodeExpiresAt: new Date(Date.now() + 60000), // 60 seconds
       });
 
       return {
@@ -67,45 +74,90 @@ export class WhatsAppSettingsService {
   async getStatus(ctx: RequestContext): Promise<WhatsAppConnectionStatus> {
     const settings = await this.repository.getOrCreate(ctx);
 
-    if (!settings.instanceName || !settings.isConnected) {
-      return {
-        isConnected: false,
-        state: "close",
-        phoneNumber: settings.phoneNumber,
-        instanceName: settings.instanceName,
-      };
-    }
+    // If connected, just return status
+    if (settings.isConnected && settings.instanceName) {
+      try {
+        const state = await this.evolutionService.getConnectionState(
+          settings.instanceName
+        );
 
-    try {
-      const state = await this.evolutionService.getConnectionState(
-        settings.instanceName
-      );
+        const isActuallyConnected = state === "open";
 
-      const isActuallyConnected = state === "open";
+        if (isActuallyConnected !== settings.isConnected) {
+          await this.repository.updateConnection(ctx, settings.id, {
+            isConnected: isActuallyConnected,
+            phoneNumber: settings.phoneNumber,
+            instanceName: settings.instanceName,
+          });
+        }
 
-      if (isActuallyConnected !== settings.isConnected) {
-        await this.repository.updateConnection(ctx, settings.id, {
+        return {
           isConnected: isActuallyConnected,
+          state,
           phoneNumber: settings.phoneNumber,
           instanceName: settings.instanceName,
-        });
+          qrCode: null,
+        };
+      } catch (error) {
+        console.error("Failed to get WhatsApp status:", error);
+        return {
+          isConnected: false,
+          state: "unknown",
+          phoneNumber: settings.phoneNumber,
+          instanceName: settings.instanceName,
+          qrCode: null,
+        };
       }
+    }
 
-      return {
-        isConnected: isActuallyConnected,
-        state,
-        phoneNumber: settings.phoneNumber,
-        instanceName: settings.instanceName,
-      };
-    } catch (error) {
-      console.error("Failed to get WhatsApp status:", error);
+    // If we have a valid stored QR, return it
+    if (
+      settings.qrCode &&
+      settings.qrCodeExpiresAt &&
+      settings.qrCodeExpiresAt > new Date()
+    ) {
       return {
         isConnected: false,
-        state: "unknown",
+        state: "connecting",
         phoneNumber: settings.phoneNumber,
         instanceName: settings.instanceName,
+        qrCode: settings.qrCode,
       };
     }
+
+    // If we have instance name but no valid QR, try to generate one
+    if (settings.instanceName) {
+      try {
+        const { qrCode } = await this.evolutionService.connectInstance(
+          settings.instanceName
+        );
+
+        await this.repository.update(ctx, settings.id, {
+          qrCode,
+          qrCodeExpiresAt: new Date(Date.now() + 60000), // 60 seconds
+        });
+
+        return {
+          isConnected: false,
+          state: "connecting",
+          phoneNumber: settings.phoneNumber,
+          instanceName: settings.instanceName,
+          qrCode,
+        };
+      } catch (error) {
+        console.error("Failed to generate QR code:", error);
+        // Continue to return status without QR
+      }
+    }
+
+    // Not connected, no instance
+    return {
+      isConnected: false,
+      state: "close",
+      phoneNumber: settings.phoneNumber,
+      instanceName: settings.instanceName,
+      qrCode: null,
+    };
   }
 
   async disconnect(ctx: RequestContext): Promise<void> {

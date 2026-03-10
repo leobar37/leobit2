@@ -36,6 +36,7 @@ import { OrderEventsRepository } from "../services/repository/order-events.repos
 import { OrderTokenRepository } from "../services/repository/order-token.repository";
 import { OrderService } from "../services/business/order.service";
 import { OrderTokenService } from "../services/business/order-token.service";
+import { OrderDraftService } from "../services/business/order-draft.service";
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 import { OCRService } from "../services/business/ocr.service";
@@ -45,6 +46,7 @@ import { WhatsAppSettingsRepository } from "../services/repository/whatsapp-sett
 import { WhatsAppSettingsService } from "../services/business/whatsapp-settings.service";
 import { WhatsAppMessageRepository } from "../services/repository/whatsapp-message.repository";
 import { WhatsAppMessageService } from "../services/business/whatsapp-message.service";
+import { TemplateSeedService } from "../services/business/template-seed.service";
 import { TagRepository } from "../services/repository/tag.repository";
 import { TagService } from "../services/business/tag.service";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
@@ -79,7 +81,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const tagRepo = new TagRepository();
     const customerTagRepo = new CustomerTagRepository();
 
-    const businessService = new BusinessService(businessRepo, supplierRepo);
+    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo);
     const customerService = new CustomerService(customerRepo);
     const productService = new ProductService(productRepo, productVariantRepo);
     const paymentService = new PaymentService(paymentRepo);
@@ -103,6 +105,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const orderTokenService = new OrderTokenService(orderTokenRepo);
+    const orderDraftService = new OrderDraftService(orderRepo, orderEventsRepo);
     const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo, orderTokenService, customerRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
@@ -114,6 +117,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       customerRepo,
       whatsAppSettingsRepo
     );
+    const templateSeedService = new TemplateSeedService(whatsAppTemplateRepo);
     const tagService = new TagService(tagRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
 
@@ -155,6 +159,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       orderTokenRepo,
       orderService,
       orderTokenService,
+      orderDraftService,
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,
@@ -164,6 +169,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       whatsAppSettingsService,
       whatsAppMessageRepo,
       whatsAppMessageService,
+      templateSeedService,
       tagRepo,
       tagService,
       customerTagRepo,

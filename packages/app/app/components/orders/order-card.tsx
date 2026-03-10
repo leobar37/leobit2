@@ -3,7 +3,7 @@ import { formatCurrency } from "~/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "~/lib/db/schema";
 import { formatDisplayDate, isToday } from "~/lib/date-utils";
-import { isOnline } from "~/lib/sync/utils";
+
 import {
   MinimalCard,
   MinimalCardContent,
@@ -110,7 +110,7 @@ export function OrderCard({ order, onClick }: OrderCardProps) {
               </div>
             </div>
 
-            {order.syncStatus === "pending" && !isOnline() && (
+            {order.syncStatus === "pending" && (
               <div className="mt-2 text-xs text-amber-600 flex items-center gap-1" data-testid="order-card-sync-pending">
                 <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                 Pendiente de sincronización

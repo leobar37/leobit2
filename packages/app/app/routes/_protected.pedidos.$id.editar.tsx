@@ -1,13 +1,17 @@
-import { Outlet, useParams, useNavigate } from "react-router";
+import { Outlet, useParams, useNavigate, Link } from "react-router";
 import { OrderFormProvider } from "~/components/orders/order-form-context";
 import { useOrder, useUpdateOrder } from "~/hooks/use-orders";
 import { useCustomer } from "~/hooks/use-customer";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { isValidUUID } from "~/lib/uuid";
 
 export default function EditOrderLayout() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: order, isLoading: isOrderLoading } = useOrder(id || "");
+  const orderId = isValidUUID(id) ? id : "";
+  const { data: orders, isLoading: isOrderLoading } = useOrder(orderId);
+  const order = orders?.[0];
   const updateOrder = useUpdateOrder();
 
   const { data: customer, isLoading: isCustomerLoading } = useCustomer(order?.clientId || "");
@@ -26,11 +30,11 @@ export default function EditOrderLayout() {
       unitPriceQuoted: number;
     }>;
   }) => {
-    if (!id || !order) return;
+    if (!orderId || !order) return;
     
     try {
       await updateOrder.mutateAsync({
-        id,
+          id: orderId,
         input: {
           baseVersion: order.version,
           deliveryDate: data.deliveryDate,
@@ -39,7 +43,7 @@ export default function EditOrderLayout() {
           items: data.items,
         },
       });
-      navigate(`/pedidos/${id}`);
+      navigate(`/pedidos/${orderId}`);
     } catch (error) {
       console.error("Error updating order:", error);
     }
@@ -54,35 +58,20 @@ export default function EditOrderLayout() {
   }
 
   if (!order || !customer) {
-    return null;
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Pedido no encontrado</p>
+        <Button asChild className="mt-4">
+          <Link to="/pedidos">Volver a pedidos</Link>
+        </Button>
+      </div>
+    );
   }
-
-  const initialOrder = {
-    clientId: order.clientId,
-    deliveryDate: order.deliveryDate,
-    paymentIntent: order.paymentIntent,
-    paymentStatus: order.paymentStatus,
-    advanceAmount: order.advanceAmount ? Number(order.advanceAmount) : undefined,
-    balanceDue: order.balanceDue ? Number(order.balanceDue) : undefined,
-    advancePaymentMethod: order.advancePaymentMethod as "efectivo" | "yape" | "plin" | "transferencia" | undefined,
-    advanceReferenceNumber: order.advanceReferenceNumber || undefined,
-    totalAmount: Number(order.totalAmount),
-    items: order.items?.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      variantName: item.variantName,
-      orderedQuantity: Number(item.orderedQuantity),
-      unitPriceQuoted: Number(item.unitPriceQuoted),
-    })) || [],
-  };
 
   return (
     <OrderFormProvider
       onSubmit={handleSubmit}
       isSubmitting={updateOrder.isPending}
-      onNavigateToCalculadora={() => navigate(`/pedidos/${id}/editar/calculadora`)}
-      initialOrder={initialOrder}
     >
       <Outlet context={{ customer, order }} />
     </OrderFormProvider>

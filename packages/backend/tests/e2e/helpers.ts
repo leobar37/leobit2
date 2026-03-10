@@ -93,6 +93,7 @@ export const testUsers: Record<string, TestUser> = {
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
+  txid?: number;
   error?: {
     code: string;
     message: string;

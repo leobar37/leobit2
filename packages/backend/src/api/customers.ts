@@ -64,8 +64,8 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
     "/",
     async ({ customerService, ctx, body, set }) => {
       set.status = 201;
-      const customer = await customerService.createCustomer(ctx as RequestContext, body);
-      return { success: true, data: customer };
+      const result = await customerService.createCustomer(ctx as RequestContext, body);
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -80,8 +80,8 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
   .put(
     "/:id",
     async ({ customerService, ctx, params, body }) => {
-      const customer = await customerService.updateCustomer(ctx as RequestContext, params.id, body);
-      return { success: true, data: customer };
+      const result = await customerService.updateCustomer(ctx as RequestContext, params.id, body);
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({

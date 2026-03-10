@@ -1,189 +1,204 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractData, uploadFile } from "~/lib/api-client";
-import { syncClient } from "~/lib/sync/client";
-import { createSyncId, isOnline } from "~/lib/sync/utils";
+import { useLiveQuery, eq, and, gte } from "@tanstack/react-db";
+import { paymentCollection } from "~/lib/db/collections/payment.collection";
+import { customerCollection } from "~/lib/db/collections/customer.collection";
+import { useBusiness } from "./use-business";
+import { generateId } from "~/lib/utils";
+import { handleCollectionError } from "~/lib/db/error-handler";
+import type { Payment } from "~/lib/db/schema";
 
-export interface Payment {
-  id: string;
-  clientId: string;
-  sellerId: string;
-  amount: string;
-  paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
-  notes: string | null;
-  proofImageId: string | null;
-  referenceNumber: string | null;
-  syncStatus: "pending" | "synced" | "error";
-  createdAt: Date;
-}
-
-export interface CreatePaymentInput {
-  clientId: string;
-  amount: string;
-  paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
-  notes?: string;
-  referenceNumber?: string;
-  proofImageId?: string;
-}
-
-async function getPayments(clientId?: string): Promise<Payment[]> {
-  const response = await api.payments.get({
-    query: clientId ? { clientId } : undefined,
-  });
-
-  return extractData(response, "Failed to load payments");
-}
-
-async function getPayment(id: string): Promise<Payment> {
-  const response = await api.payments({ id }).get();
-  return extractData(response, "Failed to load payment");
-}
-
-async function createPayment(input: CreatePaymentInput): Promise<Payment> {
-  if (!isOnline()) {
-    const tempId = createSyncId();
-
-    await syncClient.enqueueOperation({
-      entity: "abonos",
-      operation: "insert",
-      entityId: tempId,
-      data: {
-        ...input,
-      },
-      lastError: undefined,
-    });
-
-    return {
-      id: tempId,
-      clientId: input.clientId,
-      sellerId: "",
-      amount: input.amount,
-      paymentMethod: input.paymentMethod,
-      notes: input.notes ?? null,
-      proofImageId: input.proofImageId ?? null,
-      referenceNumber: input.referenceNumber ?? null,
-      syncStatus: "pending",
-      createdAt: new Date(),
-    };
-  }
-
-  const { data, error } = await api.payments.post(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Payment;
-}
-
-async function deletePayment(id: string): Promise<void> {
-  if (!isOnline()) {
-    await syncClient.enqueueOperation({
-      entity: "abonos",
-      operation: "delete",
-      entityId: id,
-      data: {},
-      lastError: undefined,
-    });
-    return;
-  }
-
-  const { error } = await api.payments({ id }).delete();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-}
-
+// Get all payments with optional client filter
 export function usePayments(clientId?: string) {
-  return useQuery({
-    queryKey: ["payments", clientId],
-    queryFn: () => getPayments(clientId),
-    enabled: clientId !== undefined ? !!clientId : true,
-  });
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
+
+  return useLiveQuery(
+    (q) => {
+      let query = q
+        .from({ payment: paymentCollection })
+        .where(({ payment }) => eq(payment.businessId, businessId));
+
+      if (clientId) {
+        query = query.where(({ payment }) => eq(payment.clientId, clientId));
+      }
+
+      return query.orderBy(({ payment }) => payment.createdAt, "desc");
+    },
+    [businessId, clientId]
+  );
 }
 
-export function usePayment(id: string) {
-  return useQuery({
-    queryKey: ["payments", id],
-    queryFn: () => getPayment(id),
-    enabled: !!id,
-  });
+// Get payments with customer details
+export function usePaymentsWithCustomers(clientId?: string) {
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
+
+  return useLiveQuery(
+    (q) => {
+      let query = q
+        .from({ payment: paymentCollection })
+        .join(
+          { customer: customerCollection },
+          ({ payment, customer }) => eq(payment.clientId, customer.id),
+          "left"
+        )
+        .where(({ payment }) => eq(payment.businessId, businessId));
+
+      if (clientId) {
+        query = query.where(({ payment }) => eq(payment.clientId, clientId));
+      }
+
+      return query
+        .select(({ payment, customer }) => ({
+          ...payment,
+          customerName: customer?.name,
+          customerPhone: customer?.phone,
+        }))
+        .orderBy(({ payment }) => payment.createdAt, "desc");
+    },
+    [businessId, clientId]
+  );
 }
 
+// Get a single payment by ID
+export function usePayment(paymentId: string) {
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ payment: paymentCollection })
+        .where(({ payment }) => eq(payment.id, paymentId)),
+    [paymentId]
+  );
+}
+
+// Get payment with customer details
+export function usePaymentWithCustomer(paymentId: string) {
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ payment: paymentCollection })
+        .join(
+          { customer: customerCollection },
+          ({ payment, customer }) => eq(payment.clientId, customer.id),
+          "left"
+        )
+        .where(({ payment }) => eq(payment.id, paymentId))
+        .select(({ payment, customer }) => ({
+          ...payment,
+          customerName: customer?.name,
+          customerPhone: customer?.phone,
+        })),
+    [paymentId]
+  );
+}
+
+// Create a new payment
 export function useCreatePayment() {
-  const queryClient = useQueryClient();
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
 
-  return useMutation({
-    mutationFn: createPayment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-    },
-  });
+  return async (data: {
+    clientId: string;
+    amount: string;
+    paymentMethod: Payment["paymentMethod"];
+    notes?: string;
+    referenceNumber?: string;
+    relatedSaleId?: string;
+  }) => {
+    try {
+      const paymentId = generateId();
+
+      await paymentCollection.insert({
+        id: paymentId,
+        businessId: businessId || "",
+        clientId: data.clientId,
+        sellerId: "",
+        amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        notes: data.notes || null,
+        relatedSaleId: data.relatedSaleId || null,
+        proofImageId: null,
+        referenceNumber: data.referenceNumber || null,
+        syncStatus: "pending",
+        createdAt: new Date(),
+      });
+
+      return paymentId;
+    } catch (error) {
+      const handled = handleCollectionError(error);
+      throw new Error(handled.message);
+    }
+  };
 }
 
+// Delete a payment
 export function useDeletePayment() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deletePayment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-    },
-  });
+  return async (paymentId: string) => {
+    try {
+      await paymentCollection.delete(paymentId);
+    } catch (error) {
+      const handled = handleCollectionError(error);
+      throw new Error(handled.message);
+    }
+  };
 }
 
-async function uploadPaymentProof({
-  id,
-  file,
-}: {
-  id: string;
-  file: File;
-}): Promise<Payment> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const result = await uploadFile<{ data: Payment }>(`/payments/${id}/proof`, formData);
-  return result.data;
+export function useUpdatePayment() {
+  return async (
+    paymentId: string,
+    data: {
+      proofImageId?: string;
+      referenceNumber?: string;
+    }
+  ) => {
+    try {
+      await paymentCollection.update(paymentId, (draft) => {
+        if (data.proofImageId !== undefined) {
+          draft.proofImageId = data.proofImageId;
+        }
+        if (data.referenceNumber !== undefined) {
+          draft.referenceNumber = data.referenceNumber;
+        }
+      });
+    } catch (error) {
+      const handled = handleCollectionError(error);
+      throw new Error(handled.message);
+    }
+  };
 }
 
-async function updatePaymentReference({
-  id,
-  referenceNumber,
-}: {
-  id: string;
-  referenceNumber: string;
-}): Promise<Payment> {
-  const { data, error } = await api.payments({ id }).reference.put({
-    referenceNumber,
-  });
+// Get total payments for a client
+export function useClientPaymentsTotal(clientId: string) {
+  const { data: payments } = usePayments(clientId);
 
-  if (error) {
-    throw new Error(String(error.value));
-  }
+  const total = payments?.reduce((sum, payment) => {
+    return sum + Number(payment.amount);
+  }, 0) || 0;
 
-  return data as unknown as Payment;
+  return {
+    data: total.toFixed(2),
+    isLoading: !payments,
+  };
 }
 
-export function useUploadPaymentProof() {
-  const queryClient = useQueryClient();
+// Get today's payments
+export function useTodayPayments() {
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
 
-  return useMutation({
-    mutationFn: uploadPaymentProof,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["payments", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-    },
-  });
-}
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-export function useUpdatePaymentReference() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updatePaymentReference,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["payments", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-    },
-  });
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ payment: paymentCollection })
+        .where(({ payment }) =>
+          and(
+            eq(payment.businessId, businessId),
+            gte(payment.createdAt, today)
+          )
+        )
+        .orderBy(({ payment }) => payment.createdAt, "desc"),
+    [businessId]
+  );
 }

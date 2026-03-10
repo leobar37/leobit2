@@ -34,6 +34,11 @@ import { getCorsConfig, getCorsOrigin } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
 
+const inngestHandler = serve({
+  client: inngest,
+  functions: whatsAppFunctions,
+});
+
 /**
  * Elysia app instance configured with all routes and plugins.
  * Use this for testing - it does NOT start the server.
@@ -92,12 +97,7 @@ export const app = new Elysia()
     status: "healthy",
     timestamp: new Date().toISOString(),
   }))
-  .use(
-    "/api/inngest",
-    serve({
-      client: inngest,
-      functions: whatsAppFunctions,
-    })
-  );
+  .get("/api/inngest", async ({ request }) => inngestHandler(request))
+  .post("/api/inngest", async ({ request }) => inngestHandler(request));
 
 export type App = typeof app;

@@ -8,7 +8,9 @@ const isDev = process.env.NODE_ENV === "development";
 export default defineConfig({
   plugins: [
     reactRouter(),
-    tsconfigPaths(),
+    tsconfigPaths({
+      ignoreConfigErrors: true,
+    }),
     !isDev && VitePWA({
       registerType: "autoUpdate",
       workbox: {
@@ -95,6 +97,22 @@ export default defineConfig({
       },
     }),
   ].filter(Boolean),
+  optimizeDeps: {
+    exclude: ["@electric-sql/pglite"],
+    include: [
+      "react-day-picker",
+      "date-fns",
+      "@date-fns/tz",
+      "lucide-react",
+      "recharts",
+    ],
+    force: true,
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+  },
   server: {
     host: "0.0.0.0",
     port: 5173,

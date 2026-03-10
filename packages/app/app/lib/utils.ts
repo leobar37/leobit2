@@ -1,6 +1,9 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+// Re-export ID generator
+export { generateId, createSyncId } from "./utils/id-generator"
+
 /**
  * Utility for merging Tailwind CSS class names
  */

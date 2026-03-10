@@ -160,6 +160,7 @@ Use these skills when delegating tasks:
 | `frontend` | React components, forms, UI |
 | `bun-elysia` | ElysiaJS backend patterns |
 | `avileo` | Project-specific context |
+| `tanstack-db` | TanStack DB + ElectricSQL, live queries, mutations |
 
 ## Language Rules
 
@@ -268,7 +269,8 @@ Use these skills when delegating:
 | `fullstack-infrastructure` | Monorepo, routing, setup |
 | `frontend` | React components, forms, UI |
 | `bun-elysia` | ElysiaJS backend patterns |
-| `avileo` | Project-specific context (skill in `.claude/skills/`) |
+| `avileo` | Project-specific context |
+| `tanstack-db` | TanStack DB + ElectricSQL, live queries, atomic mutations |
 
 ## Decision Matrix
 

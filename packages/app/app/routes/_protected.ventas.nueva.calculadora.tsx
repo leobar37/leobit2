@@ -10,7 +10,7 @@ export default function CalculadoraPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
         <div className="flex items-center h-16 px-3 sm:px-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/ventas/nueva")}
             className="p-2 -ml-2 rounded-xl hover:bg-orange-50"
             aria-label="Volver"
           >
@@ -21,7 +21,7 @@ export default function CalculadoraPage() {
       </header>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <CalculatorContent onAddedToCart={() => navigate(-1)} />
+        <CalculatorContent returnPath="/ventas/nueva" />
       </div>
     </div>
   );

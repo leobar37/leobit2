@@ -120,6 +120,20 @@
       "when": 1772896576161,
       "tag": "0016_pretty_wilson_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1772955442097,
+      "tag": "0017_eminent_groot",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1741540800000,
+      "tag": "0020_add_replica_identity",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,6 @@ export const orders = pgTable(
       .notNull()
       .references(() => businesses.id),
     clientId: uuid("client_id")
-      .notNull()
       .references(() => customers.id),
     sellerId: uuid("seller_id")
       .notNull()
@@ -47,6 +46,7 @@ export const orders = pgTable(
     confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
     deliveredSnapshot: jsonb("delivered_snapshot").$type<Record<string, unknown>>(),
     version: integer("version").notNull().default(1),
+    allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
 
     syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
     syncAttempts: integer("sync_attempts").notNull().default(0),

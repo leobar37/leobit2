@@ -6,6 +6,8 @@ import {
   ForbiddenError,
 } from "../../errors";
 import type { Abono } from "../../db/schema";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 
 export class PaymentService {
   constructor(private repository: PaymentRepository) {}
@@ -45,8 +47,10 @@ export class PaymentService {
       amount: number;
       paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
       notes?: string;
+      proofImageId?: string;
+      referenceNumber?: string;
     }
-  ): Promise<Abono> {
+  ): Promise<MutationResult<Abono>> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para registrar abonos");
     }
@@ -55,11 +59,20 @@ export class PaymentService {
       throw new ValidationError("El monto debe ser mayor a 0");
     }
 
-    return this.repository.create(ctx, {
-      clientId: data.clientId,
-      amount: data.amount.toString(),
-      paymentMethod: data.paymentMethod,
-      notes: data.notes,
+    return db.transaction(async (tx) => {
+      const abono = await this.repository.create(ctx, {
+        clientId: data.clientId,
+        amount: data.amount.toString(),
+        paymentMethod: data.paymentMethod,
+        notes: data.notes,
+        proofImageId: data.proofImageId,
+        referenceNumber: data.referenceNumber,
+      }, tx);
+
+      return {
+        data: abono,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -91,7 +104,7 @@ export class PaymentService {
       proofImageId?: string;
       referenceNumber?: string;
     }
-  ): Promise<Abono> {
+  ): Promise<MutationResult<Abono>> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -101,6 +114,12 @@ export class PaymentService {
       throw new NotFoundError("Abono");
     }
 
-    return this.repository.update(ctx, id, data);
+    return db.transaction(async (tx) => {
+      const abono = await this.repository.update(ctx, id, data, tx);
+      return {
+        data: abono,
+        txid: await getTxid(tx),
+      };
+    });
   }
 }

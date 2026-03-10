@@ -35,11 +35,13 @@ export const paymentSchema = z.object({
   sellerId: z.string(),
   businessId: z.string(),
   amount: z.string(),
-  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia"]),
   notes: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   createdAt: z.coerce.date(),
   relatedSaleId: z.string().nullable(),
+  proofImageId: z.string().nullable(),
+  referenceNumber: z.string().nullable(),
 });
 
 export type Payment = z.infer<typeof paymentSchema>;
@@ -70,7 +72,7 @@ export const saleSchema = z.object({
   tara: z.string().nullable(),
   netWeight: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
-  status: z.enum(["active", "cancelled"]).default("active"),
+  status: z.enum(["draft", "active", "cancelled"]).default("draft"),
   cancelledAt: z.coerce.date().nullable(),
   cancelledBy: z.string().nullable(),
   cancelReason: z.string().nullable(),
@@ -110,9 +112,37 @@ export interface CreateSaleInput {
   }>;
 }
 
+export const fileSchema = z.object({
+  id: z.string(),
+  businessId: z.string().nullable(),
+  filename: z.string(),
+  storagePath: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  url: z.string().optional(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  createdAt: z.coerce.date(),
+});
+
+export type FileRecord = z.infer<typeof fileSchema>;
+
+export const assetSchema = z.object({
+  id: z.string(),
+  businessId: z.string(),
+  filename: z.string(),
+  storagePath: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  url: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  createdAt: z.coerce.date(),
+});
+
+export type Asset = z.infer<typeof assetSchema>;
+
 export const syncOperationSchema = z.object({
   id: z.string(),
-  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items"]),
+  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items", "files", "assets"]),
   operation: z.enum(["insert", "update", "delete"]),
   entityId: z.string(),
   data: z.record(z.string(), z.unknown()),

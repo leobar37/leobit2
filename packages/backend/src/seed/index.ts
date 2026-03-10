@@ -351,14 +351,14 @@ async function seedCustomers(ctx: RequestContext, customersData: typeof CUSTOMER
 
   const customers = [];
   for (const customer of customersData) {
-    const created = await services.customer.createCustomer(ctx, {
+    const result = await services.customer.createCustomer(ctx, {
       name: customer.name,
       dni: customer.dni,
       phone: customer.phone,
       address: customer.address,
       notes: customer.notes,
     });
-    customers.push(created);
+    customers.push(result.data);
   }
 
   return customers;
@@ -403,7 +403,7 @@ async function seedSales(
       };
     });
 
-    const created = await services.sale.createSale(ctx, {
+    const result = await services.sale.createSale(ctx, {
       clientId: customer.id,
       saleType: saleData.saleType,
       totalAmount: saleData.totalAmount,
@@ -413,7 +413,7 @@ async function seedSales(
       items,
     });
 
-    sales.push(created);
+    sales.push(result.data);
   }
 
   return sales;
@@ -570,13 +570,14 @@ async function seedOrders(
     // Create order based on status
     let created;
     if (orderData.status === "draft") {
-      created = await services.order.createOrder(ctx, {
+      const result = await services.order.createOrder(ctx, {
         clientId: customer.id,
         deliveryDate: orderData.deliveryDate,
         paymentIntent: orderData.paymentIntent,
         totalAmount,
         items,
       });
+      created = result.data;
     } else if (orderData.status === "confirmed") {
       const draft = await services.order.createOrder(ctx, {
         clientId: customer.id,
@@ -585,7 +586,8 @@ async function seedOrders(
         totalAmount,
         items,
       });
-      created = await services.order.confirmOrder(ctx, draft.id, draft.version);
+      const confirmed = await services.order.confirmOrder(ctx, draft.data.id, draft.data.version);
+      created = confirmed.data;
     }
 
     if (created) {

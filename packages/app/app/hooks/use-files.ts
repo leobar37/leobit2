@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, uploadFile } from "~/lib/api-client";
+import {
+  queueFileUpload,
+  uploadFileNow,
+  isOnline,
+  type PendingFileUpload,
+} from "~/lib/file-queue";
 
 export interface FileRecord {
   id: string;
@@ -61,7 +67,13 @@ export function useFile(id: string) {
   });
 }
 
-export function useUploadFile() {
+export interface UploadFileOptions {
+  entityType: PendingFileUpload["entityType"];
+  entityId?: string;
+  fieldName: string;
+}
+
+export function useUploadFile(options?: UploadFileOptions) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -71,13 +83,30 @@ export function useUploadFile() {
         throw new Error(validationError);
       }
 
-      const formData = new FormData();
-      formData.append("file", file);
+      if (!isOnline()) {
+        if (!options) {
+          throw new Error("Offline file upload requires options");
+        }
+        const tempId = await queueFileUpload(file, options.entityType, {
+          entityId: options.entityId,
+          fieldName: options.fieldName,
+        });
+        return {
+          id: tempId,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
+          createdAt: new Date().toISOString(),
+          isOffline: true,
+        } as FileUploadResponse & { isOffline: boolean };
+      }
 
-      return uploadFile<FileUploadResponse>("/files/upload", formData);
+      return uploadFileNow(file);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: fileKeys.all });
+    onSuccess: (data) => {
+      if (!(data as { isOffline?: boolean }).isOffline) {
+        queryClient.invalidateQueries({ queryKey: fileKeys.all });
+      }
     },
   });
 }

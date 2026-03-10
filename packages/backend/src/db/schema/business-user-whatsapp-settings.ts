@@ -5,6 +5,7 @@ import {
   boolean,
   timestamp,
   index,
+  text,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses, businessUsers } from "./businesses";
@@ -23,6 +24,8 @@ export const businessUserWhatsAppSettings = pgTable(
     isConnected: boolean("is_connected").notNull().default(false),
     phoneNumber: varchar("phone_number", { length: 20 }),
     instanceName: varchar("instance_name", { length: 100 }),
+    qrCode: text("qr_code"),
+    qrCodeExpiresAt: timestamp("qr_code_expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

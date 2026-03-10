@@ -2,7 +2,7 @@ import { User, Phone, MapPin, CreditCard, CloudOff, Tag, Check } from "lucide-re
 import { CardContent } from "@/components/ui/card";
 import { cn } from "~/lib/utils";
 import type { Customer } from "~/lib/db/schema";
-import { isOnline } from "~/lib/sync/utils";
+
 import { useCustomerTags } from "~/hooks/use-customer-tags";
 import { TagBadge } from "~/components/tags";
 import {
@@ -28,7 +28,7 @@ export function CustomerCard({
   selected = false,
   onSelect,
 }: CustomerCardProps) {
-  const isPending = customer.syncStatus === "pending" && !isOnline();
+  const isPending = customer.syncStatus === "pending";
   const { data: customerTags } = useCustomerTags(customer.id);
 
   const handleClick = () => {

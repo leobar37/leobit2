@@ -3,6 +3,7 @@ import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { saleStatusEnum } from "../../db/schema/enums";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface AccountsReceivableItem {
   customer: Customer;
@@ -80,9 +81,12 @@ export class CustomerRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">
+    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">,
+    tx?: DbTransaction
   ): Promise<Customer> {
-    const [customer] = await db
+    const executor = tx ?? db;
+
+    const [customer] = await executor
       .insert(customers)
       .values({
         ...data,
@@ -97,9 +101,12 @@ export class CustomerRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">>
+    data: Partial<Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">>,
+    tx?: DbTransaction
   ): Promise<Customer | undefined> {
-    const [customer] = await db
+    const executor = tx ?? db;
+
+    const [customer] = await executor
       .update(customers)
       .set({
         ...(data.name !== undefined && { name: data.name }),

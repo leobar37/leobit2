@@ -1,67 +1,69 @@
-/**
- * Customer Tags Hooks
- * TanStack Query hooks for customer-tag assignments
- */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "~/lib/api-client";
+import { useBusiness } from "./use-business";
 
-export interface CustomerTagAssignment {
-  tagId: string;
-  tagName: string;
-  tagColor: string;
-  assignedAt: string;
-}
-
-export interface AssignTagsInput {
+export interface CustomerTag {
+  id: string;
   customerId: string;
-  tagIds: string[];
+  tagId: string;
+  createdAt: string;
 }
 
-// Query key factory
-export const customerTagsKeys = {
-  all: ["customer-tags"] as const,
-  forCustomer: (customerId: string) =>
-    [...customerTagsKeys.all, "customer", customerId] as const,
-};
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  businessId: string;
+  createdAt: string;
+  updatedAt: string;
+  customerCount?: number;
+}
 
-/**
- * Hook to fetch tags assigned to a customer
- */
 export function useCustomerTags(customerId: string | undefined) {
+  const { currentBusiness } = useBusiness();
+  
   return useQuery({
-    queryKey: customerTagsKeys.forCustomer(customerId || ""),
+    queryKey: ["customer-tags", customerId],
     queryFn: async () => {
-      if (!customerId) return [];
-      const response = await api.customers({ id: customerId }).tags.get();
-      return extractData<CustomerTagAssignment[]>(
-        response,
-        "Error al cargar etiquetas del cliente"
-      );
+      if (!customerId || !currentBusiness?.id) return [];
+      const res = await api.customers({ id: customerId }).tags.get();
+      if (res.data?.success) {
+        return res.data.data as CustomerTag[];
+      }
+      return [];
     },
-    enabled: !!customerId,
+    enabled: !!customerId && !!currentBusiness?.id,
   });
 }
 
-/**
- * Hook to assign tags to a customer
- */
-export function useAssignCustomerTags() {
+export function useAddCustomerTag() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async ({ customerId, tagIds }: AssignTagsInput) => {
-      const response = await api.customers({ id: customerId }).tags.post({
-        tagIds,
-      });
-      return extractData<CustomerTagAssignment[]>(
-        response,
-        "Error al asignar etiquetas"
-      );
+    mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }) => {
+      const res = await api.customers({ id: customerId }).tags.post({ tagId });
+      if (!res.data?.success) throw new Error("Failed to add tag");
+      return res.data.data;
     },
-    onSuccess: (_, { customerId }) => {
-      queryClient.invalidateQueries({
-        queryKey: customerTagsKeys.forCustomer(customerId),
-      });
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-tags", vars.customerId] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+}
+
+export function useRemoveCustomerTag() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }) => {
+      const res = await api.customers({ id: customerId }).tags({ tagId }).delete();
+      if (!res.data?.success) throw new Error("Failed to remove tag");
+      return res.data.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-tags", vars.customerId] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 }

@@ -2,13 +2,16 @@ import type { WhatsAppTemplateRepository } from "../repository/whatsapp-template
 import type { RequestContext } from "../../context/request-context";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../errors";
 import type { WhatsAppTemplate } from "../../db/schema";
+import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 
-// Allowed template variables
+// Allowed template variables - must match whatsapp-message.service.ts
 const ALLOWED_VARIABLES = [
   "nombre_cliente",
   "monto",
   "fecha",
   "telefono",
+  "productos",
+  "total",
 ] as const;
 
 type AllowedVariable = (typeof ALLOWED_VARIABLES)[number];
@@ -18,6 +21,8 @@ interface TemplateVariables {
   monto?: string | number;
   fecha?: string;
   telefono?: string;
+  productos?: string;
+  total?: string | number;
 }
 
 export class WhatsAppTemplateService {
@@ -35,7 +40,44 @@ export class WhatsAppTemplateService {
       throw new ForbiddenError("No tiene permisos para ver plantillas");
     }
 
-    return this.repository.findMany(ctx, filters);
+    // Get or create default templates
+    const templates = await this.getOrCreateDefaultTemplates(ctx);
+
+    let result = templates;
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.name.toLowerCase().includes(searchLower) ||
+          t.content.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const offset = filters?.offset || 0;
+    const limit = filters?.limit || result.length;
+    result = result.slice(offset, offset + limit);
+
+    return result;
+  }
+
+  private async getOrCreateDefaultTemplates(
+    ctx: RequestContext
+  ): Promise<WhatsAppTemplate[]> {
+    const existing = await this.repository.findMany(ctx);
+
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    for (const template of DEFAULT_WHATSAPP_TEMPLATES) {
+      await this.repository.create(ctx, {
+        name: template.name,
+        content: template.content,
+        isDefault: template.isDefault,
+      });
+    }
+
+    return this.repository.findMany(ctx);
   }
 
   async getTemplateById(
@@ -66,7 +108,6 @@ export class WhatsAppTemplateService {
       throw new ForbiddenError("No tiene permisos para crear plantillas");
     }
 
-    // Validate name
     if (!data.name || data.name.length < 2) {
       throw new ValidationError("El nombre debe tener al menos 2 caracteres");
     }
@@ -75,19 +116,15 @@ export class WhatsAppTemplateService {
       throw new ValidationError("El nombre no puede exceder 100 caracteres");
     }
 
-    // Validate content
     if (!data.content || data.content.length < 5) {
       throw new ValidationError("El contenido debe tener al menos 5 caracteres");
     }
 
-    // Validate variables in content
     this.validateTemplateVariables(data.content);
 
-    // If setting as default, ensure only one default per business
     if (data.isDefault) {
       const existingDefault = await this.repository.findDefault(ctx);
       if (existingDefault) {
-        // Clear the existing default
         await this.repository.update(ctx, existingDefault.id, {
           isDefault: false,
         });
@@ -172,7 +209,7 @@ export class WhatsAppTemplateService {
 
   /**
    * Render a template by replacing variables with actual values
-   * Allowed variables: {nombre_cliente}, {monto}, {fecha}, {telefono}
+   * Allowed variables: {nombre_cliente}, {monto}, {fecha}, {telefono}, {productos}, {total}
    */
   renderTemplate(
     template: WhatsAppTemplate,
@@ -221,6 +258,13 @@ export class WhatsAppTemplateService {
       throw new ForbiddenError("No tiene permisos para ver plantillas");
     }
 
-    return this.repository.findDefault(ctx);
+    const defaultTemplate = await this.repository.findDefault(ctx);
+
+    if (defaultTemplate) {
+      return defaultTemplate;
+    }
+
+    const templates = await this.getOrCreateDefaultTemplates(ctx);
+    return templates.find((t) => t.isDefault);
   }
 }

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
-import { useSales, useTodayStats } from "~/hooks/use-sales";
+import { useTodaySales, useTodaySalesStats } from "~/hooks/use-sales-db";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
 
@@ -13,22 +13,23 @@ export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
 
   const [search, setSearch] = useState("");
-  const { data: sales, isLoading, error } = useSales();
-  const { data: todayStats } = useTodayStats();
+  // Use live queries from TanStack DB - updates automatically in real-time
+  const { data: sales, isLoading, error } = useTodaySales();
+  const { data: todayStats } = useTodaySalesStats();
   const navigate = useNavigate();
 
+  // Filter locally - no server call needed
   const filteredSales = sales?.filter((sale) => {
     const searchLower = search.toLowerCase();
     return (
       sale.id.toLowerCase().includes(searchLower) ||
-      (sale.clientId?.toLowerCase().includes(searchLower) ?? false) ||
+      (sale.client?.name?.toLowerCase().includes(searchLower) ?? false) ||
       sale.saleType.toLowerCase().includes(searchLower)
     );
   });
 
-  const sortedSales = filteredSales?.sort(
-    (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
-  );
+  // Already sorted by the live query
+  const sortedSales = filteredSales;
 
   return (
     <>

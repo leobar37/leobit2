@@ -1,23 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { loadProducts } from "~/lib/db/collections";
+import { api } from "~/lib/api-client";
 
-const QUERY_KEY = "products";
-
-export function useProducts() {
-  return useQuery({
-    queryKey: [QUERY_KEY],
-    queryFn: loadProducts,
-    staleTime: 1000 * 60 * 10,
-  });
+export interface Product {
+  id: string;
+  name: string;
+  type: "pollo" | "huevo" | "otro";
+  unit: "kg" | "unidad";
+  basePrice: string;
+  isActive: boolean;
 }
 
-export function useProduct(id: string) {
+export function useProductsLive() {
   return useQuery({
-    queryKey: [QUERY_KEY, id],
+    queryKey: ["products-live"],
     queryFn: async () => {
-      const products = await loadProducts();
-      return products.find((p) => p.id === id) || null;
+      const res = await api.products.get();
+      if (res.data?.success) {
+        return res.data.data as Product[];
+      }
+      return [];
     },
-    enabled: !!id,
   });
 }

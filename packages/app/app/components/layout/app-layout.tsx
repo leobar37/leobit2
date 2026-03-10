@@ -190,9 +190,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div
             ref={setToolbarPortalHost}
             className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-50 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to top, rgba(255,255,255,0.98) 16px, transparent)',
-            }}
           >
             <div className="px-3 sm:px-4 py-4" />
           </div>

@@ -35,7 +35,7 @@ export default function WhatsAppConfigPage() {
   const [isPolling, setIsPolling] = useState(false);
 
   const { data: status, isLoading: isStatusLoading } = useWhatsAppStatus(
-    isPolling ? 5000 : false
+    isPolling ? 5000 : 5000
   );
   const connectMutation = useConnectWhatsApp();
   const disconnectMutation = useDisconnectWhatsApp();
@@ -47,6 +47,17 @@ export default function WhatsAppConfigPage() {
       toast.success("¡WhatsApp conectado exitosamente!");
     }
   }, [status?.isConnected, isPolling]);
+
+  // Auto-render QR from status if available
+  useEffect(() => {
+    if (status?.qrCode && !status.isConnected && !qrData) {
+      setQrData({
+        qrCode: status.qrCode,
+        instanceName: status.instanceName || "",
+      });
+      setIsPolling(true);
+    }
+  }, [status?.qrCode, status?.isConnected, status?.instanceName, qrData]);
 
   const handleConnect = async () => {
     try {
@@ -155,7 +166,7 @@ export default function WhatsAppConfigPage() {
                 </div>
               )}
 
-              {!status?.isConnected && !qrData && (
+              {!status?.isConnected && !qrData && !status?.qrCode && (
                 <div className="text-center space-y-4">
                   <div className="p-6 bg-muted/50 rounded-2xl">
                     <QrCode className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -185,12 +196,12 @@ export default function WhatsAppConfigPage() {
                 </div>
               )}
 
-              {qrData && !status?.isConnected && (
+              {(qrData || status?.qrCode) && !status?.isConnected && (
                 <div className="space-y-4">
                   <div className="p-6 bg-white rounded-2xl border-2 border-dashed border-green-200">
                     <div className="text-center space-y-4">
                       <img
-                        src={`data:image/png;base64,${qrData.qrCode}`}
+                        src={qrData?.qrCode || status?.qrCode || ""}
                         alt="WhatsApp QR Code"
                         className="mx-auto w-64 h-64"
                       />

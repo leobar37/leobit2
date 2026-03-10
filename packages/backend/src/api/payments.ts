@@ -40,11 +40,11 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
     "/",
     async ({ paymentService, ctx, body, set }) => {
       set.status = 201;
-      const payment = await paymentService.createPayment(ctx as RequestContext, {
+      const result = await paymentService.createPayment(ctx as RequestContext, {
         ...body,
         amount: parseFloat(body.amount),
       });
-      return { success: true, data: payment };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -57,6 +57,8 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
           t.Literal("transferencia"),
         ]),
         notes: t.Optional(t.String()),
+        proofImageId: t.Optional(t.String()),
+        referenceNumber: t.Optional(t.String()),
       }),
     }
   )
@@ -121,7 +123,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
   .put(
     "/:id/reference",
     async ({ paymentService, ctx, params, body }) => {
-      const updatedPayment = await paymentService.updatePaymentProof(
+      const result = await paymentService.updatePaymentProof(
         ctx as RequestContext,
         params.id,
         { referenceNumber: body.referenceNumber }
@@ -129,7 +131,8 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
 
       return {
         success: true,
-        data: updatedPayment,
+        data: result.data,
+        txid: result.txid,
       };
     },
     {
@@ -138,6 +141,30 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       }),
       body: t.Object({
         referenceNumber: t.String({ maxLength: 50 }),
+      }),
+    }
+  )
+  .put(
+    "/:id/proof",
+    async ({ paymentService, ctx, params, body }) => {
+      const result = await paymentService.updatePaymentProof(
+        ctx as RequestContext,
+        params.id,
+        { proofImageId: body.proofImageId }
+      );
+
+      return {
+        success: true,
+        data: result.data,
+        txid: result.txid,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        proofImageId: t.String(),
       }),
     }
   );

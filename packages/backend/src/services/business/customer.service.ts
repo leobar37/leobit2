@@ -1,5 +1,7 @@
 import type { CustomerRepository, AccountsReceivableItem } from "../repository/customer.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -48,7 +50,7 @@ export class CustomerService {
       address?: string | null;
       notes?: string | null;
     }
-  ): Promise<Customer> {
+  ): Promise<MutationResult<Customer>> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para crear clientes");
     }
@@ -64,12 +66,23 @@ export class CustomerService {
       }
     }
 
-    return this.repository.create(ctx, {
-      name: data.name,
-      dni: data.dni,
-      phone: data.phone,
-      address: data.address,
-      notes: data.notes,
+    return db.transaction(async (tx) => {
+      const customer = await this.repository.create(
+        ctx,
+        {
+          name: data.name,
+          dni: data.dni,
+          phone: data.phone,
+          address: data.address,
+          notes: data.notes,
+        },
+        tx
+      );
+
+      return {
+        data: customer,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -83,7 +96,7 @@ export class CustomerService {
       address?: string | null;
       notes?: string | null;
     }
-  ): Promise<Customer> {
+  ): Promise<MutationResult<Customer>> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para editar clientes");
     }
@@ -104,12 +117,17 @@ export class CustomerService {
       }
     }
 
-    const updated = await this.repository.update(ctx, id, data);
-    if (!updated) {
-      throw new NotFoundError("Cliente");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, data, tx);
+      if (!updated) {
+        throw new NotFoundError("Cliente");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deleteCustomer(ctx: RequestContext, id: string): Promise<void> {

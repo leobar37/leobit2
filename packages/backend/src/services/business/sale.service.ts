@@ -7,6 +7,7 @@ import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale } from "../../db/schema";
 import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
 
@@ -60,7 +61,7 @@ export class SaleService {
         subtotal: number;
       }>;
     }
-  ): Promise<Sale> {
+  ): Promise<MutationResult<Sale>> {
     if (!data.items || data.items.length === 0) {
       throw new ValidationError("La venta debe tener al menos un producto");
     }
@@ -184,7 +185,10 @@ export class SaleService {
         );
       }
 
-      return sale;
+      return {
+        data: sale,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -199,6 +203,34 @@ export class SaleService {
     }
 
     await this.repository.delete(ctx, id);
+  }
+
+  async confirmSale(
+    ctx: RequestContext,
+    id: string
+  ): Promise<MutationResult<Sale>> {
+    const sale = await this.repository.findById(ctx, id);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.status !== "draft") {
+      throw new ValidationError("Solo se pueden confirmar ventas en estado borrador");
+    }
+
+    return db.transaction(async (tx) => {
+      const confirmedSale = await this.repository.update(
+        ctx,
+        id,
+        { status: "active" },
+        tx
+      );
+
+      return {
+        data: confirmedSale,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async cancelSale(

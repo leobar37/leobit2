@@ -128,13 +128,35 @@ export function useCalculator(
 		units: 0,
 	});
 
+	// Track previous product/variant to detect actual changes
+	const prevProductId = useRef<string | undefined>(undefined);
+	const prevVariantId = useRef<string | undefined>(undefined);
+	const prevInitialPrice = useRef<string>(initialPrice);
+
 	// Update form default values when product type changes
 	useEffect(() => {
 		// Skip on first render to avoid double reset
 		if (isFirstRender.current) {
 			isFirstRender.current = false;
+			prevProductId.current = product?.id;
+			prevVariantId.current = variant?.id;
+			prevInitialPrice.current = initialPrice;
 			return;
 		}
+
+		// Only reset if product or variant actually changed (not just reference)
+		const productChanged = product?.id !== prevProductId.current;
+		const variantChanged = variant?.id !== prevVariantId.current;
+		const initialPriceChanged = initialPrice !== prevInitialPrice.current;
+
+		if (!productChanged && !variantChanged && !initialPriceChanged) {
+			return;
+		}
+
+		// Update refs
+		prevProductId.current = product?.id;
+		prevVariantId.current = variant?.id;
+		prevInitialPrice.current = initialPrice;
 
 		const defaultPrice = autoFillPrice ? initialPrice : "";
 		if (isKgProduct) {
@@ -156,7 +178,7 @@ export function useCalculator(
 			packs: 0,
 			units: 0,
 		};
-	}, [form, isKgProduct, autoFillPrice, initialPrice]);
+	}, [form, isKgProduct, autoFillPrice, initialPrice, product?.id, variant?.id]);
 
 	// Calculate derived values
 	const calculation = useMemo<CalculationResult>(() => {

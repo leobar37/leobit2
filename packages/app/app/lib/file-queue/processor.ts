@@ -1,0 +1,114 @@
+import { uploadFile } from "~/lib/api-client";
+import { paymentCollection } from "~/lib/db/collections/payment.collection";
+import {
+  getUploadsReadyForRetry,
+  removePendingUpload,
+  markUploadFailed,
+  getFileFromQueue,
+  type PendingFileUpload,
+} from "./storage";
+
+export interface FileUploadResult {
+  uploadId: string;
+  fileId?: string;
+  url?: string;
+  success: boolean;
+  error?: string;
+}
+
+async function updateEntityWithFileId(
+  upload: PendingFileUpload,
+  fileId: string
+): Promise<void> {
+  if (!upload.entityId) return;
+
+  try {
+    switch (upload.entityType) {
+      case "payment":
+        await paymentCollection.update(upload.entityId, (draft) => {
+          draft.proofImageId = fileId;
+        });
+        break;
+      default:
+        console.warn(`Unhandled entity type: ${upload.entityType}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update ${upload.entityType} with file ID:`, error);
+    throw error;
+  }
+}
+
+export async function processFileUpload(upload: PendingFileUpload): Promise<FileUploadResult> {
+  try {
+    const file = await getFileFromQueue(upload.id);
+    if (!file) {
+      await removePendingUpload(upload.id);
+      return {
+        uploadId: upload.id,
+        success: false,
+        error: "File not found in queue",
+      };
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const data = await uploadFile<{
+      id: string;
+      filename: string;
+      mimeType: string;
+      sizeBytes: number;
+      createdAt: string;
+    }>("/files/upload", formData);
+
+    await updateEntityWithFileId(upload, data.id);
+    await removePendingUpload(upload.id);
+
+    return {
+      uploadId: upload.id,
+      fileId: data.id,
+      success: true,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    await markUploadFailed(upload.id, errorMessage);
+
+    return {
+      uploadId: upload.id,
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+export async function processAllPendingUploads(): Promise<FileUploadResult[]> {
+  const uploads = await getUploadsReadyForRetry();
+
+  if (uploads.length === 0) {
+    return [];
+  }
+
+  const results: FileUploadResult[] = [];
+
+  for (const upload of uploads) {
+    const result = await processFileUpload(upload);
+    results.push(result);
+  }
+
+  return results;
+}
+
+export async function uploadFileNow(file: File): Promise<{ id: string; url?: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const data = await uploadFile<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: string;
+  }>("/files/upload", formData);
+
+  return { id: data.id };
+}
