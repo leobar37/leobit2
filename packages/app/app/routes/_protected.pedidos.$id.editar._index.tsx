@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { OrderForm } from "~/components/orders/order-form";
 
 export default function EditOrderIndexPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   return (
@@ -17,7 +18,7 @@ export default function EditOrderIndexPage() {
           </button>
           <h1 className="font-bold text-xl">Editar pedido</h1>
         </div>
-        <OrderForm />
+        {id && <OrderForm orderId={id} onSubmitSuccess={() => navigate(`/pedidos/${id}`)} />}
       </main>
     </div>
   );

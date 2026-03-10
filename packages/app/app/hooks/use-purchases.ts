@@ -1,5 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { useLiveQuery, eq } from "@tanstack/react-db";
+import { useMutation } from "@tanstack/react-query";
+import { purchaseCollection } from "~/lib/db/collections/purchase.collection";
+import { supplierCollection } from "~/lib/db/collections/supplier.collection";
+import { useBusiness } from "./use-business";
+import { generateId } from "~/lib/utils";
+import type { CreatePurchaseInput } from "~/lib/db/schema";
 
 export interface PurchaseItem {
   id: string;
@@ -44,126 +49,111 @@ export interface CreatePurchaseItemInput {
   productId: string;
   variantId?: string;
   unitId?: string;
-  packs?: number;
   quantity: number;
   unitCost: number;
 }
 
-
-
-export interface CreatePurchaseInput {
-  supplierId: string;
-  purchaseDate: string;
-  invoiceNumber?: string;
-  receiptImageId?: string;
-  notes?: string;
-  items: CreatePurchaseItemInput[];
-}
-
-export interface UpdatePurchaseStatusInput {
-  id: string;
-  status: "pending" | "received" | "cancelled";
-}
-
-async function getPurchases(): Promise<Purchase[]> {
-  const { data, error } = await api.purchases.get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as any).data as Purchase[];
-}
-
-async function getPurchase(id: string): Promise<Purchase> {
-  const { data, error } = await api.purchases({ id }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as any).data as Purchase;
-}
-
-async function createPurchase(input: CreatePurchaseInput): Promise<Purchase> {
-  const { data, error } = await api.purchases.post(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Purchase;
-}
-
-async function updatePurchaseStatus({
-  id,
-  status,
-}: UpdatePurchaseStatusInput): Promise<Purchase> {
-  const { data, error } = await api.purchases({ id }).status.put({ status });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Purchase;
-}
-
-async function deletePurchase(id: string): Promise<void> {
-  const { error } = await api.purchases({ id }).delete();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-}
-
 export function usePurchases() {
-  return useQuery({
-    queryKey: ["purchases"],
-    queryFn: getPurchases,
-  });
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
+
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ purchase: purchaseCollection })
+        .join(
+          { supplier: supplierCollection },
+          ({ purchase, supplier }) => eq(purchase.supplierId, supplier.id),
+          "left"
+        )
+        .where(({ purchase }) => eq(purchase.businessId, businessId))
+        .orderBy(({ purchase }) => purchase.purchaseDate, "desc"),
+    [businessId]
+  );
 }
 
 export function usePurchase(id: string) {
-  return useQuery({
-    queryKey: ["purchases", id],
-    queryFn: () => getPurchase(id),
-    enabled: !!id,
-  });
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ purchase: purchaseCollection })
+        .join(
+          { supplier: supplierCollection },
+          ({ purchase, supplier }) => eq(purchase.supplierId, supplier.id),
+          "left"
+        )
+        .where(({ purchase }) => eq(purchase.id, id)),
+    [id]
+  );
 }
 
 export function useCreatePurchase() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: createPurchase,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchases"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    mutationFn: async (input: CreatePurchaseInput) => {
+      const id = generateId();
+      const totalAmount = input.items.reduce(
+        (sum, item) => sum + item.quantity * item.unitCost,
+        0
+      );
+
+      await purchaseCollection.insert({
+        id,
+        supplierId: input.supplierId,
+        purchaseDate: input.purchaseDate,
+        invoiceNumber: input.invoiceNumber || null,
+        receiptImageId: input.receiptImageId || null,
+        notes: input.notes || null,
+        totalAmount: totalAmount.toString(),
+        status: "pending",
+        items: input.items.map((item) => ({
+          id: generateId(),
+          purchaseId: id,
+          productId: item.productId,
+          variantId: item.variantId || null,
+          unitId: item.unitId || null,
+          quantity: item.quantity.toString(),
+          unitCost: item.unitCost.toString(),
+          totalCost: (item.quantity * item.unitCost).toString(),
+          syncStatus: "pending",
+          syncAttempts: 0,
+          createdAt: new Date(),
+        })),
+        businessId: "",
+        syncStatus: "pending",
+        syncAttempts: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return id;
     },
   });
 }
 
 export function useUpdatePurchaseStatus() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: updatePurchaseStatus,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["purchases"] });
-      queryClient.invalidateQueries({ queryKey: ["purchases", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "pending" | "received" | "cancelled";
+    }) => {
+      await purchaseCollection.update(id, (draft) => {
+        draft.status = status;
+        draft.syncStatus = "pending";
+        draft.updatedAt = new Date();
+      });
+      return id;
     },
   });
 }
 
 export function useDeletePurchase() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: deletePurchase,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchases"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    mutationFn: async (id: string) => {
+      await purchaseCollection.delete(id);
+      return id;
     },
   });
 }

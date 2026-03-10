@@ -56,6 +56,7 @@ export function useCreateOrder() {
           paymentIntent: input.paymentIntent,
           status: "draft",
           totalAmount: 0,
+          version: 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -74,10 +75,10 @@ export function useCreateOrder() {
 }
 
 /**
- * Hook to create an empty draft order
- * Used when clicking "New" button - creates draft and returns ID for navigation
+ * Hook to create an empty order with status=draft
+ * Used when clicking "New" button - creates order and returns ID for navigation
  */
-export function useCreateEmptyDraft() {
+export function useCreateEmptyOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -94,6 +95,7 @@ export function useCreateEmptyDraft() {
           paymentIntent: "contado",
           status: "draft",
           totalAmount: 0,
+          version: 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -193,9 +195,11 @@ export function useAddOrderItem() {
     mutationFn: async ({
       orderId,
       item,
+      currentTotal,
     }: {
       orderId: string;
       item: Omit<OrderItem, "id" | "orderId" | "createdAt" | "updatedAt">;
+      currentTotal: number;
     }) => {
       try {
         const newItem: OrderItem = {
@@ -206,17 +210,11 @@ export function useAddOrderItem() {
 
         orderItemCollection.insert(newItem);
 
-        // Update order total
-        const { data: items } = useOrderItems(orderId);
-        const total =
-          (items || []).reduce(
-            (sum, i) => sum + i.orderedQuantity * i.unitPriceQuoted,
-            0
-          ) ||
-          item.orderedQuantity * item.unitPriceQuoted;
+        const itemTotal = item.orderedQuantity * item.unitPriceQuoted;
+        const newTotal = currentTotal + itemTotal;
 
         orderCollection.update(orderId, (draft) => {
-          draft.totalAmount = total;
+          draft.totalAmount = newTotal;
           draft.updatedAt = new Date().toISOString();
         });
 
@@ -229,6 +227,9 @@ export function useAddOrderItem() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [ORDERS_KEY, variables.orderId, "items"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [ORDERS_KEY, variables.orderId],
       });
     },
   });
@@ -244,22 +245,21 @@ export function useRemoveOrderItem() {
     mutationFn: async ({
       orderId,
       itemId,
+      itemTotal,
+      currentTotal,
     }: {
       orderId: string;
       itemId: string;
+      itemTotal: number;
+      currentTotal: number;
     }) => {
       try {
         orderItemCollection.delete(itemId);
 
-        // Update order total
-        const { data: items } = useOrderItems(orderId);
-        const total = (items || []).reduce(
-          (sum, i) => sum + i.orderedQuantity * i.unitPriceQuoted,
-          0
-        );
+        const newTotal = currentTotal - itemTotal;
 
         orderCollection.update(orderId, (draft) => {
-          draft.totalAmount = total;
+          draft.totalAmount = Math.max(0, newTotal);
           draft.updatedAt = new Date().toISOString();
         });
 
@@ -272,6 +272,9 @@ export function useRemoveOrderItem() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [ORDERS_KEY, variables.orderId, "items"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [ORDERS_KEY, variables.orderId],
       });
     },
   });

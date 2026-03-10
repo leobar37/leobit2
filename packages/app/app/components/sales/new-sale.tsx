@@ -72,129 +72,31 @@ function useNewSaleContext() {
 // Customer Section Component
 // ============================================
 
+import { CustomerSelect } from "~/components/customers/customer-select";
+
 export function CustomerSection() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const { draftId } = useNewSaleContext();
   const { data: draft } = useDraftSale(draftId);
   const updateDraft = useUpdateDraftSale();
   
-  const { data: customers = [], isLoading } = useCustomers(searchQuery);
-  
   const calculations = useSaleCalculations(draft || null, draft?.items || []);
 
-  const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null }) => {
+  const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null } | null) => {
     if (draftId) {
       updateDraft(draftId, { 
-        clientId: customer.id,
-        client: customer
+        clientId: customer?.id ?? null,
+        client: customer ?? undefined
       });
-    }
-    setIsOpen(false);
-    setSearchQuery("");
-  };
-
-  const handleClearCustomer = () => {
-    if (draftId) {
-      updateDraft(draftId, { clientId: null, client: undefined });
     }
   };
 
   return (
-    <>
-      <Card className="border-0 rounded-2xl bg-card">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <User className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-medium truncate">
-                  {draft?.client?.name || "Seleccionar cliente"}
-                </p>
-                {draft?.client?.phone && (
-                  <p className="text-sm text-muted-foreground truncate">{draft.client.phone}</p>
-                )}
-                {!draft?.client && calculations.requiresCustomer && (
-                  <p className="text-sm text-orange-600">Requerido para venta a crédito</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {draft?.client && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearCustomer}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(true)}
-                className={cn(isOpen && "bg-orange-100")}
-              >
-                <ChevronDown className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")} />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <AppDrawer open={isOpen} onOpenChange={setIsOpen} size="large">
-        <AppDrawer.Header
-          title="Seleccionar cliente"
-          icon={<User className="h-5 w-5" />}
-          onClose={() => setIsOpen(false)}
-        />
-
-        <AppDrawer.Body className="space-y-3">
-          <Input
-            placeholder="Buscar cliente..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-xl"
-          />
-
-          <div className="space-y-2">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Cargando clientes...
-              </p>
-            ) : customers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No se encontraron clientes
-              </p>
-            ) : (
-              customers.map((customer) => (
-                <button
-                  key={customer.id}
-                  type="button"
-                  onClick={() => handleSelectCustomer(customer)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 transition-colors text-left"
-                >
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{customer.name}</p>
-                    {customer.phone && (
-                      <p className="text-sm text-muted-foreground truncate">{customer.phone}</p>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </AppDrawer.Body>
-      </AppDrawer>
-    </>
+    <CustomerSelect
+      value={draft?.clientId ?? null}
+      onChange={handleSelectCustomer}
+      placeholder="Seleccionar cliente"
+      helperText={calculations.requiresCustomer ? "Requerido para venta a crédito" : undefined}
+    />
   );
 }
 

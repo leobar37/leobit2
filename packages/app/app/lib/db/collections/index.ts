@@ -6,3 +6,5 @@ export { orderItemCollection } from "./order-item.collection";
 export { paymentCollection } from "./payment.collection";
 export { productCollection, productVariantCollection } from "./product.collection";
 export { saleCollection } from "./sale.collection";
+export { supplierCollection } from "./supplier.collection";
+export { purchaseCollection } from "./purchase.collection";

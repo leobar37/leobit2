@@ -1,11 +1,9 @@
 {
-  "active_plan": "/Users/leobar37/.supacode/repos/avileo/feature/whats-app/.sisyphus/plans/whatsapp-simple-fase1.md",
-  "started_at": "2026-03-07T16:32:53.185Z",
+  "active_plan": "/Users/leobar37/code/avileo/.sisyphus/plans/extend-sales-eliminate-orders.md",
+  "started_at": "2026-03-10T17:23:45.839Z",
   "session_ids": [
-    "ses_3373e690fffeDpIGSQIR5gnwxn"
+    "ses_32785ee18ffeu0j5qrefOe85wf"
   ],
-  "plan_name": "whatsapp-simple-fase1",
-  "agent": "atlas",
-  "worktree_path": "/Users/leobar37/.supacode/repos/avileo/feature/whats-app",
-  "mode": "ulw"
+  "plan_name": "extend-sales-eliminate-orders",
+  "agent": "atlas"
 }

@@ -1,31 +1,23 @@
 import { Link, useNavigate } from "react-router";
-import { ClipboardList, Search, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { ClipboardList, Plus, Loader2 } from "lucide-react";
+import { useAtomValue } from "jotai";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useOrders, useCreateEmptyDraft } from "~/hooks/use-orders";
+import { useOrders, useCreateEmptyOrder } from "~/hooks/use-orders";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { formatCurrency } from "~/lib/utils";
-
-type OrderStatus = "draft" | "confirmed" | "cancelled" | "delivered" | null;
-
-const statusFilters: { value: OrderStatus; label: string }[] = [
-  { value: null, label: "Todos" },
-  { value: "draft", label: "Borradores" },
-  { value: "confirmed", label: "Confirmados" },
-  { value: "delivered", label: "Entregados" },
-  { value: "cancelled", label: "Cancelados" },
-];
+import { searchTermAtom, statusFilterAtom } from "~/atoms/orders";
+import { OrderSearchInput } from "~/components/orders/order-search-input";
+import { OrderStatusFilters } from "~/components/orders/order-status-filters";
 
 export default function OrdersPage() {
   useSetLayout({ title: "Pedidos" });
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<OrderStatus>(null);
+  const search = useAtomValue(searchTermAtom);
+  const statusFilter = useAtomValue(statusFilterAtom);
   const { data: orders, isLoading } = useOrders();
   const navigate = useNavigate();
-  const createDraft = useCreateEmptyDraft();
+  const createOrder = useCreateEmptyOrder();
 
   const filteredOrders = orders?.filter((order) => {
     // Filter by status
@@ -34,7 +26,7 @@ export default function OrdersPage() {
     }
     // Filter by search (client ID since we don't have client name in Order type)
     if (search) {
-      return order.clientId.toLowerCase().includes(search.toLowerCase());
+      return order.clientId?.toLowerCase().includes(search.toLowerCase()) ?? false;
     }
     return true;
   });
@@ -48,8 +40,8 @@ export default function OrdersPage() {
 
   const handleCreateNew = async () => {
     try {
-      const draft = await createDraft.mutateAsync();
-      navigate(`/pedidos/nuevo/${draft.id}`);
+      const order = await createOrder.mutateAsync();
+      navigate(`/pedidos/nuevo/${order.id}`, { state: { order } });
     } catch {
       // Error is handled by the mutation
     }
@@ -61,10 +53,10 @@ export default function OrdersPage() {
       <div className="flex justify-end">
         <Button
           onClick={handleCreateNew}
-          disabled={createDraft.isPending}
+          disabled={createOrder.isPending}
           className="bg-orange-500 hover:bg-orange-600"
         >
-          {createDraft.isPending ? (
+          {createOrder.isPending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Creando...
@@ -79,34 +71,10 @@ export default function OrdersPage() {
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por cliente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <OrderSearchInput />
 
       {/* Status Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {statusFilters.map((filter) => (
-          <Button
-            key={filter.label}
-            variant={statusFilter === filter.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter(filter.value)}
-            className={
-              statusFilter === filter.value
-                ? "bg-orange-500 hover:bg-orange-600"
-                : ""
-            }
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
+      <OrderStatusFilters />
 
       {/* Orders List */}
       {isLoading ? (

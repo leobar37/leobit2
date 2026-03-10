@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormContext, Controller, type ControllerRenderProps, type FieldValues, type Path } from "react-hook-form";
+import { useFormContext, Controller, type Control, type ControllerRenderProps, type FieldValues, type Path } from "react-hook-form";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 
@@ -14,6 +14,7 @@ interface FormDateProps<T extends FieldValues = FieldValues> {
   placeholder?: string;
   quickActionLabels?: [string, string];
   className?: string;
+  control?: Control<T>;
 }
 
 export function FormDate<T extends FieldValues = FieldValues>({
@@ -26,13 +27,16 @@ export function FormDate<T extends FieldValues = FieldValues>({
   placeholder,
   quickActionLabels,
   className,
+  control: controlProp,
 }: FormDateProps<T>) {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext<T>();
-
-  const error = errors[name]?.message as string | undefined;
+  const formContext = useFormContext<T>();
+  const control = controlProp || formContext?.control;
+  
+  if (!control) {
+    throw new Error("FormDate must be used within a form context or with a control prop");
+  }
+  
+  const error = formContext?.formState?.errors[name]?.message as string | undefined;
 
   return (
     <div className={className}>

@@ -11,6 +11,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Get the first element of an array (for useLiveQuery results)
+ * Returns undefined if array is null/undefined/empty
+ *
+ * @param arr - Array to get first element from
+ * @returns First element or undefined
+ *
+ * @example
+ * const order = first(orders) // orders?.[0]
+ * const purchase = first(purchases) // purchases?.[0]
+ */
+export function first<T>(arr: T[] | undefined | null): T | undefined {
+  return arr?.[0]
+}
+
 // ============================================
 // Number Formatting Utilities
 // Centralized number formatting to prevent crashes from undefined values

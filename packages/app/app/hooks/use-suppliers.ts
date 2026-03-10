@@ -1,5 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { useLiveQuery, eq, ilike } from "@tanstack/react-db";
+import { useMutation } from "@tanstack/react-query";
+import { supplierCollection } from "~/lib/db/collections/supplier.collection";
+import { useBusiness } from "./use-business";
+import { generateId } from "~/lib/utils";
+import type { CreateSupplierInput, UpdateSupplierInput } from "~/lib/db/schema";
 
 export interface Supplier {
   id: string;
@@ -14,147 +18,90 @@ export interface Supplier {
   createdAt: Date;
 }
 
-export interface CreateSupplierInput {
-  name: string;
-  type?: "generic" | "regular" | "internal";
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-}
+export function useSuppliers(searchQuery?: string) {
+  const { data: business } = useBusiness();
+  const businessId = business?.id;
 
-export interface UpdateSupplierInput {
-  name?: string;
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  isActive?: boolean;
-}
+  return useLiveQuery(
+    (q) => {
+      let query = q
+        .from({ supplier: supplierCollection })
+        .where(({ supplier }) => eq(supplier.businessId, businessId));
 
-async function getSuppliers(): Promise<Supplier[]> {
-  const { data, error } = await api.suppliers.get();
+      if (searchQuery) {
+        query = query.where(({ supplier }) =>
+          ilike(supplier.name, `%${searchQuery}%`)
+        );
+      }
 
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as { success: boolean; data: Supplier[] }).data;
-}
-
-async function getSupplier(id: string): Promise<Supplier> {
-  const { data, error } = await api.suppliers({ id }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Supplier;
-}
-
-async function getGenericSupplier(): Promise<Supplier | null> {
-  const { data, error } = await api.suppliers.generic.get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as unknown as Supplier) || null;
-}
-
-async function createSupplier(input: CreateSupplierInput): Promise<Supplier> {
-  const { data, error } = await api.suppliers.post(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Supplier;
-}
-
-async function updateSupplier({
-  id,
-  ...input
-}: UpdateSupplierInput & { id: string }): Promise<Supplier> {
-  const { data, error } = await api.suppliers({ id }).put(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Supplier;
-}
-
-async function deleteSupplier(id: string): Promise<void> {
-  const { error } = await api.suppliers({ id }).delete();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-}
-
-export function useSuppliers() {
-  return useQuery({
-    queryKey: ["suppliers"],
-    queryFn: getSuppliers,
-  });
+      return query.orderBy(({ supplier }) => supplier.name, "asc");
+    },
+    [businessId, searchQuery]
+  );
 }
 
 export function useSupplier(id: string) {
-  return useQuery({
-    queryKey: ["suppliers", id],
-    queryFn: () => getSupplier(id),
-    enabled: !!id,
-  });
-}
-
-export function useGenericSupplier() {
-  return useQuery({
-    queryKey: ["suppliers", "generic"],
-    queryFn: getGenericSupplier,
-  });
+  return useLiveQuery(
+    (q) =>
+      q
+        .from({ supplier: supplierCollection })
+        .where(({ supplier }) => eq(supplier.id, id)),
+    [id]
+  );
 }
 
 export function useCreateSupplier() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: createSupplier,
-    onSuccess: (newSupplier) => {
-      // Optimistically add the new supplier to the cache immediately
-      queryClient.setQueryData<Supplier[]>(["suppliers"], (old = []) => {
-        // Avoid duplicates if the supplier is already in the cache
-        const exists = old.some((s) => s.id === newSupplier.id);
-        if (exists) return old;
-        return [...old, newSupplier];
+    mutationFn: async (input: CreateSupplierInput) => {
+      const id = generateId();
+      await supplierCollection.insert({
+        id,
+        ...input,
+        type: input.type || "regular",
+        ruc: input.ruc || null,
+        address: input.address || null,
+        phone: input.phone || null,
+        email: input.email || null,
+        notes: input.notes || null,
+        businessId: "", // Will be filled by backend
+        isActive: true,
+        syncStatus: "pending",
+        syncAttempts: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
-      // Then invalidate to ensure consistency with server
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      return id;
     },
   });
 }
 
 export function useUpdateSupplier() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: updateSupplier,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["suppliers", variables.id] });
+    mutationFn: async ({
+      id,
+      ...changes
+    }: UpdateSupplierInput & { id: string }) => {
+      await supplierCollection.update(id, (draft) => {
+        if (changes.name !== undefined) draft.name = changes.name;
+        if (changes.ruc !== undefined) draft.ruc = changes.ruc || null;
+        if (changes.address !== undefined) draft.address = changes.address || null;
+        if (changes.phone !== undefined) draft.phone = changes.phone || null;
+        if (changes.email !== undefined) draft.email = changes.email || null;
+        if (changes.notes !== undefined) draft.notes = changes.notes || null;
+        if (changes.isActive !== undefined) draft.isActive = changes.isActive;
+        draft.syncStatus = "pending";
+        draft.updatedAt = new Date();
+      });
+      return id;
     },
   });
 }
 
 export function useDeleteSupplier() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: deleteSupplier,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    mutationFn: async (id: string) => {
+      await supplierCollection.delete(id);
+      return id;
     },
   });
 }

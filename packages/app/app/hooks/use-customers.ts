@@ -6,4 +6,4 @@ export {
   useUpdateCustomer,
   useDeleteCustomer 
 } from "./use-live-customers";
-export type { Customer } from "~/lib/db/schemas/customer";
+export type { Customer } from "~/lib/db/schema";

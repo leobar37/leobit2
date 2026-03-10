@@ -52,7 +52,10 @@ export default function PurchaseDetailPage() {
     backHref: "/compras",
   });
 
-  const { data: purchase, isLoading } = usePurchase(id!);
+  const { data: purchaseData, isLoading } = usePurchase(id!);
+  const purchaseRow = purchaseData?.[0];
+  const purchase = purchaseRow?.purchase;
+  const supplier = purchaseRow?.supplier;
   const updateStatus = useUpdatePurchaseStatus();
   const deletePurchase = useDeletePurchase();
   const { confirm, ConfirmDialog } = useConfirmDialog();

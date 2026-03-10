@@ -7,9 +7,10 @@ import {
   timestamp,
   index,
   text,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { purchaseStatusEnum } from "./enums";
+import { purchaseStatusEnum, syncStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 import { suppliers } from "./suppliers";
 import { products, productVariants } from "./inventory";
@@ -40,6 +41,10 @@ export const purchases = pgTable(
     receiptImageId: uuid("receipt_image_id").references(() => files.id),
 
     notes: text("notes"),
+
+    // Sync fields for offline-first support
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -75,6 +80,10 @@ export const purchaseItems = pgTable(
     unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
 
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
+
+    // Sync fields for offline-first support
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

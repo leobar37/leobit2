@@ -68,14 +68,7 @@ export default function ProveedoresPage() {
   useSetLayout({ title: "Proveedores" });
 
   const [search, setSearch] = useState("");
-  const { data: suppliers, isLoading, error } = useSuppliers();
-
-  const filteredSuppliers = suppliers?.filter(
-    (supplier) =>
-      supplier.name.toLowerCase().includes(search.toLowerCase()) ||
-      supplier.ruc?.includes(search) ||
-      supplier.phone?.includes(search)
-  );
+  const { data: suppliers, isLoading } = useSuppliers(search);
 
   return (
     <>
@@ -96,20 +89,14 @@ export default function ProveedoresPage() {
           </div>
         )}
 
-        {error && (
-          <div className="text-center py-8">
-            <p className="text-red-500">Error al cargar proveedores</p>
-          </div>
-        )}
-
-        {filteredSuppliers?.length === 0 && !isLoading && (
+        {suppliers?.length === 0 && !isLoading && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No se encontraron proveedores</p>
           </div>
         )}
 
         <div className="space-y-3">
-          {filteredSuppliers?.map((supplier) => (
+          {suppliers?.map((supplier) => (
             <Link
               key={supplier.id}
               to={`/proveedores/${supplier.id}`}

@@ -1,15 +1,42 @@
+import { useQuery } from "@tanstack/react-query";
 import { useLiveQuery, eq, ilike } from "@tanstack/react-db";
 import { customerCollection } from "~/lib/db/collections/customer.collection";
+import { api } from "~/lib/api-client";
 import { useBusiness } from "./use-business";
 import { generateId } from "~/lib/utils";
 
-// Search customers in real-time
+const CUSTOMERS_QUERY_KEY = "customers";
+
+async function fetchCustomersFromAPI(searchQuery?: string) {
+  console.log('[fetchCustomersFromAPI] Fetching customers from API, search:', searchQuery);
+  const { data, error } = await api.customers.get({
+    query: searchQuery ? { search: searchQuery } : undefined,
+  });
+  
+  if (error) {
+    console.error('[fetchCustomersFromAPI] Error:', error);
+    throw new Error(String(error.value));
+  }
+  
+  console.log('[fetchCustomersFromAPI] Received', data?.data?.length || 0, 'customers');
+  return data?.data || [];
+}
+
 export function useCustomers(searchQuery?: string) {
   const { data: business, isLoading: isBusinessLoading } = useBusiness();
   const businessId = business?.id;
   const pendingBusinessId = "__pending_business__";
 
-  const query = useLiveQuery(
+  // First: Load from API (immediate data)
+  const apiQuery = useQuery({
+    queryKey: [CUSTOMERS_QUERY_KEY, "api", businessId, searchQuery],
+    queryFn: () => fetchCustomersFromAPI(searchQuery),
+    enabled: !!businessId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Then: Subscribe to live updates (real-time sync)
+  const liveQuery = useLiveQuery(
     (q) => {
       let query = q
         .from({ customer: customerCollection })
@@ -26,10 +53,17 @@ export function useCustomers(searchQuery?: string) {
     [businessId, searchQuery]
   );
 
+  // Use live data if available, fall back to API data
+  const data = liveQuery.data?.length ? liveQuery.data : (apiQuery.data || []);
+  const isLoading = isBusinessLoading || (apiQuery.isLoading && !liveQuery.data?.length);
+
+  console.log('[useCustomers] businessId:', businessId, 'apiData:', apiQuery.data?.length, 'liveData:', liveQuery.data?.length, 'finalData:', data?.length);
+
   return {
-    ...query,
-    data: businessId ? query.data : [],
-    isLoading: isBusinessLoading || query.isLoading,
+    data: businessId ? data : [],
+    isLoading,
+    isError: apiQuery.isError,
+    error: apiQuery.error,
   };
 }
 

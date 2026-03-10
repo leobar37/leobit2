@@ -9,13 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { usePurchases } from "~/hooks/use-purchases";
 import { useSetLayout } from "~/components/layout/app-layout";
 
-function PurchaseCard({ purchase }: { purchase: {
-  id: string;
-  purchaseDate: string;
-  totalAmount: string;
-  status: "pending" | "received" | "cancelled";
-  supplier?: { name: string };
-} }) {
+interface PurchaseWithSupplier {
+  purchase: {
+    id: string;
+    purchaseDate: string;
+    totalAmount: string;
+    status: "pending" | "received" | "cancelled";
+  };
+  supplier?: {
+    id: string;
+    name: string;
+  };
+}
+
+function PurchaseCard({ data }: { data: PurchaseWithSupplier }) {
+  const { purchase, supplier } = data;
+  
   const statusLabels = {
     pending: "Pendiente",
     received: "Recibido",
@@ -39,7 +48,7 @@ function PurchaseCard({ purchase }: { purchase: {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold">{purchase.supplier?.name || "Sin proveedor"}</h3>
+                <h3 className="font-semibold">{supplier?.name || "Sin proveedor"}</h3>
                 <p className="text-sm text-muted-foreground">
                   {new Date(purchase.purchaseDate).toLocaleDateString("es-PE")}
                 </p>
@@ -65,10 +74,12 @@ export default function ComprasPage() {
   useSetLayout({ title: "Compras" });
 
   const [search, setSearch] = useState("");
-  const { data: purchases, isLoading, error } = usePurchases();
+  const { data: purchasesWithSupplier, isLoading } = usePurchases();
 
-  const filteredPurchases = purchases?.filter((purchase) =>
-    purchase.supplier?.name.toLowerCase().includes(search.toLowerCase())
+  const filteredData = purchasesWithSupplier?.filter(
+    (row) =>
+      row.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      !search
   );
 
   return (
@@ -90,26 +101,20 @@ export default function ComprasPage() {
           </div>
         )}
 
-        {error && (
-          <div className="text-center py-8">
-            <p className="text-red-500">Error al cargar compras</p>
-          </div>
-        )}
-
-        {filteredPurchases?.length === 0 && !isLoading && (
+        {filteredData?.length === 0 && !isLoading && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No se encontraron compras</p>
           </div>
         )}
 
         <div className="space-y-3">
-          {filteredPurchases?.map((purchase) => (
+          {filteredData?.map((row) => (
             <Link
-              key={purchase.id}
-              to={`/compras/${purchase.id}`}
+              key={row.purchase.id}
+              to={`/compras/${row.purchase.id}`}
               className="block"
             >
-              <PurchaseCard purchase={purchase} />
+              <PurchaseCard data={row} />
             </Link>
           ))}
         </div>

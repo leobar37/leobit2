@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Building2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
-import { useCreateSupplier, type Supplier } from "~/hooks/use-suppliers";
+import { useCreateSupplier } from "~/hooks/use-suppliers";
 import { FormPage } from "~/components/layout/form-page";
 
 const supplierSchema = z.object({
@@ -24,7 +24,7 @@ export default function NuevoProveedorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/proveedores";
-  const { mutate: createSupplier, isPending } = useCreateSupplier();
+  const createSupplier = useCreateSupplier();
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -40,16 +40,13 @@ export default function NuevoProveedorPage() {
     },
   });
 
-  const onSubmit = form.handleSubmit((data) => {
-    createSupplier(data, {
-      onSuccess: (supplier: Supplier) => {
-        if (returnTo && returnTo !== "/proveedores") {
-          navigate(returnTo, { state: { supplier } });
-        } else {
-          navigate("/proveedores");
-        }
-      },
-    });
+  const onSubmit = form.handleSubmit(async (data) => {
+    try {
+      await createSupplier.mutateAsync(data);
+      navigate(returnTo && returnTo !== "/proveedores" ? returnTo : "/proveedores");
+    } catch (error) {
+      console.error("Error creating supplier:", error);
+    }
   });
 
   const isFormValid = form.formState.isValid;
@@ -62,10 +59,10 @@ export default function NuevoProveedorPage() {
       toolbar={
         <Button
           onClick={onSubmit}
-          disabled={isPending || !isFormValid}
+          disabled={createSupplier.isPending || !isFormValid}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
-          {isPending ? (
+          {createSupplier.isPending ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               Guardando...

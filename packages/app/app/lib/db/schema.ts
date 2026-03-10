@@ -142,7 +142,7 @@ export type Asset = z.infer<typeof assetSchema>;
 
 export const syncOperationSchema = z.object({
   id: z.string(),
-  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items", "files", "assets"]),
+  entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items", "files", "assets", "suppliers", "purchases", "purchase_items"]),
   operation: z.enum(["insert", "update", "delete"]),
   entityId: z.string(),
   data: z.record(z.string(), z.unknown()),
@@ -234,4 +234,114 @@ export interface CreateOrderItemInput {
   variantName: string;
   orderedQuantity: number;
   unitPriceQuoted: number;
+}
+
+// Supplier schemas
+export const supplierSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["generic", "regular", "internal"]),
+  ruc: z.string().nullable(),
+  address: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  notes: z.string().nullable(),
+  businessId: z.string(),
+  isActive: z.boolean().default(true),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  syncAttempts: z.number().default(0),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type Supplier = z.infer<typeof supplierSchema>;
+
+export interface CreateSupplierInput {
+  name: string;
+  type?: "generic" | "regular" | "internal";
+  ruc?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+
+export interface UpdateSupplierInput {
+  name?: string;
+  ruc?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  isActive?: boolean;
+}
+
+// Purchase item schema
+export const purchaseItemSchema = z.object({
+  id: z.string(),
+  purchaseId: z.string(),
+  productId: z.string(),
+  variantId: z.string().nullable(),
+  unitId: z.string().nullable(),
+  quantity: z.string(),
+  unitCost: z.string(),
+  totalCost: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  syncAttempts: z.number().default(0),
+  createdAt: z.coerce.date(),
+  product: z.object({
+    id: z.string(),
+    name: z.string(),
+  }).optional(),
+  variant: z.object({
+    id: z.string(),
+    name: z.string(),
+  }).optional(),
+});
+
+export type PurchaseItem = z.infer<typeof purchaseItemSchema>;
+
+// Purchase schema
+export const purchaseSchema = z.object({
+  id: z.string(),
+  businessId: z.string(),
+  supplierId: z.string(),
+  purchaseDate: z.string(),
+  totalAmount: z.string(),
+  status: z.enum(["pending", "received", "cancelled"]),
+  invoiceNumber: z.string().nullable(),
+  receiptImageId: z.string().nullable(),
+  notes: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  syncAttempts: z.number().default(0),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  items: z.array(purchaseItemSchema).optional(),
+  supplier: z.object({
+    id: z.string(),
+    name: z.string(),
+  }).optional(),
+  receiptImage: z.object({
+    id: z.string(),
+    url: z.string(),
+  }).optional(),
+});
+
+export type Purchase = z.infer<typeof purchaseSchema>;
+
+export interface CreatePurchaseItemInput {
+  productId: string;
+  variantId?: string;
+  unitId?: string;
+  quantity: number;
+  unitCost: number;
+}
+
+export interface CreatePurchaseInput {
+  supplierId: string;
+  purchaseDate: string;
+  invoiceNumber?: string;
+  receiptImageId?: string;
+  notes?: string;
+  items: CreatePurchaseItemInput[];
 }
