@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { sales } from "./sales";
 
@@ -13,6 +13,7 @@ export const saleTokens = pgTable(
     token: varchar("token", { length: 64 }).notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
     usedAt: timestamp("used_at"),
+    isActive: boolean("is_active").notNull().default(true),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

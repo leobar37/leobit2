@@ -5,6 +5,22 @@ import type { RequestContext } from "../../context/request-context";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+export interface UpdateSaleInput {
+  status?: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
+  deliveryDate?: string;
+  confirmedSnapshot?: Record<string, unknown>;
+  deliveredSnapshot?: Record<string, unknown>;
+  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
+  advanceAmount?: string;
+  advancePaymentMethod?: string;
+  advanceReferenceNumber?: string;
+  advanceProofImageId?: string;
+  totalAmount?: string;
+  amountPaid?: string;
+  balanceDue?: string;
+  allowCustomerEdit?: boolean;
+}
+
 export interface CreateSaleInput {
   clientId?: string;
   orderId?: string;
@@ -185,5 +201,84 @@ export class SaleRepository {
       .select()
       .from(saleItems)
       .where(eq(saleItems.saleId, saleId));
+  }
+
+  async findItemById(ctx: RequestContext, saleId: string, itemId: string): Promise<SaleItem | undefined> {
+    return db.query.saleItems.findFirst({
+      where: and(
+        eq(saleItems.id, itemId),
+        eq(saleItems.saleId, saleId)
+      ),
+    });
+  }
+
+  async updateItem(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string,
+    data: Partial<Pick<SaleItem, "deliveredQuantity" | "unitPriceFinal" | "isModified" | "originalQuantity" | "orderedQuantity">>,
+    tx?: DbTransaction
+  ): Promise<SaleItem | undefined> {
+    const executor = tx ?? db;
+    const [item] = await executor
+      .update(saleItems)
+      .set(data)
+      .where(and(
+        eq(saleItems.id, itemId),
+        eq(saleItems.saleId, saleId)
+      ))
+      .returning();
+    return item;
+  }
+
+  async updateVersion(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number,
+    data: UpdateSaleInput,
+    tx?: DbTransaction
+  ): Promise<Sale | undefined> {
+    const executor = tx ?? db;
+    const [sale] = await executor
+      .update(sales)
+      .set({
+        ...data,
+        version: baseVersion + 1,
+      })
+      .where(and(
+        eq(sales.id, id),
+        eq(sales.businessId, ctx.businessId),
+        eq(sales.version, baseVersion)
+      ))
+      .returning();
+    return sale;
+  }
+
+  async replaceItems(
+    ctx: RequestContext,
+    saleId: string,
+    items: Array<{
+      productId: string;
+      variantId: string;
+      productName: string;
+      variantName: string;
+      quantity: string;
+      unitPrice: string;
+      subtotal: string;
+    }>,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const executor = tx ?? db;
+    // Delete existing items
+    await executor.delete(saleItems).where(eq(saleItems.saleId, saleId));
+    // Insert new items
+    if (items.length > 0) {
+      await executor.insert(saleItems).values(
+        items.map((item) => ({
+          ...item,
+          saleId,
+        }))
+      );
+    }
   }
 }

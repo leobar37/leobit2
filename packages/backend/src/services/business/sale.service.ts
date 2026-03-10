@@ -1,15 +1,17 @@
-import type { SaleRepository, CreateSaleInput } from "../repository/sale.repository";
+import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
+import type { SaleRepository, CreateSaleInput, UpdateSaleInput } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { BusinessRepository } from "../repository/business.repository";
 import type { RequestContext } from "../../context/request-context";
-import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
-import type { Sale } from "../../db/schema";
-import { db } from "../../lib/db";
+import { ValidationError, ForbiddenError, NotFoundError, ConflictError } from "../../errors";
+import type { Sale, SaleItem, SaleToken } from "../../db/schema";
+import { db, saleTokens } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now } from "../../lib/date-utils";
-import { normalizeAmount } from "../../lib/number-utils";
+import { normalizeAmount, normalizeQuantity } from "../../lib/number-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
@@ -207,7 +209,8 @@ export class SaleService {
 
   async confirmSale(
     ctx: RequestContext,
-    id: string
+    id: string,
+    baseVersion: number
   ): Promise<MutationResult<Sale>> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
@@ -218,13 +221,27 @@ export class SaleService {
       throw new ValidationError("Solo se pueden confirmar ventas en estado borrador");
     }
 
+    if (sale.version !== baseVersion) {
+      throw new ConflictError("La venta fue modificada por otro usuario");
+    }
+
+    const newStatus = sale.deliveryDate ? "confirmed" : "active";
+
     return db.transaction(async (tx) => {
-      const confirmedSale = await this.repository.update(
+      const confirmedSale = await this.repository.updateVersion(
         ctx,
         id,
-        { status: "active" },
+        baseVersion,
+        {
+          status: newStatus,
+          confirmedSnapshot: this.buildSnapshot(sale),
+        },
         tx
       );
+
+      if (!confirmedSale) {
+        throw new ConflictError("La venta fue modificada por otro usuario");
+      }
 
       return {
         data: confirmedSale,
@@ -374,6 +391,186 @@ export class SaleService {
     };
 
     return this.repository.create(ctx, payload, tx);
+  }
+
+  async deliverSale(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number,
+    deliveredItems: Array<{ itemId: string; deliveredQuantity: number; unitPriceFinal?: number }>
+  ): Promise<MutationResult<Sale>> {
+    const sale = await this.repository.findById(ctx, id);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.status !== "confirmed") {
+      throw new ValidationError("Solo ventas confirmadas pueden entregarse");
+    }
+
+    const today = toISODateString(now());
+    if (sale.deliveryDate !== today) {
+      throw new ValidationError("Solo se puede entregar en la fecha de entrega");
+    }
+
+    return db.transaction(async (tx) => {
+      for (const delivered of deliveredItems) {
+        const item = await this.repository.findItemById(ctx, id, delivered.itemId);
+        if (!item) {
+          throw new NotFoundError("SaleItem");
+        }
+
+        await this.repository.updateItem(
+          ctx,
+          id,
+          delivered.itemId,
+          {
+            deliveredQuantity: normalizeQuantity(delivered.deliveredQuantity, "deliveredQuantity"),
+            ...(delivered.unitPriceFinal !== undefined && {
+              unitPriceFinal: normalizeAmount(delivered.unitPriceFinal, 2, "unitPriceFinal"),
+            }),
+          },
+          tx
+        );
+      }
+
+      const refreshedSale = await this.repository.findById(ctx, id);
+      if (!refreshedSale) {
+        throw new NotFoundError("Sale");
+      }
+
+      const deliveredSale = await this.repository.updateVersion(
+        ctx,
+        id,
+        baseVersion,
+        {
+          status: "delivered",
+          deliveredSnapshot: this.buildSnapshot(refreshedSale),
+        },
+        tx
+      );
+
+      if (!deliveredSale) {
+        throw new ConflictError("La venta fue modificada por otro usuario");
+      }
+
+      return {
+        data: deliveredSale,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
+  async generateToken(
+    ctx: RequestContext,
+    saleId: string
+  ): Promise<{ token: string }> {
+    const sale = await this.repository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    const existingToken = await this.getTokenBySaleId(ctx, saleId);
+    if (existingToken) {
+      throw new ConflictError("Ya existe un token para esta venta");
+    }
+
+    const token = this.generateSecureToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await db.insert(saleTokens).values({
+      saleId,
+      token,
+      expiresAt,
+    });
+
+    return { token };
+  }
+
+  async validateToken(
+    ctx: RequestContext,
+    token: string
+  ): Promise<{ valid: boolean; sale?: Sale }> {
+    const tokenRecord = await this.validateTokenFormat(token);
+    if (!tokenRecord) {
+      return { valid: false };
+    }
+
+    if (tokenRecord.isActive === false) {
+      return { valid: false };
+    }
+
+    if (new Date() > tokenRecord.expiresAt) {
+      return { valid: false };
+    }
+
+    const sale = await this.repository.findById(ctx, tokenRecord.saleId);
+    if (!sale) {
+      return { valid: false };
+    }
+
+    return { valid: true, sale };
+  }
+
+  async getTokenBySaleId(
+    ctx: RequestContext,
+    saleId: string
+  ): Promise<SaleToken | null> {
+    const tokens = await db
+      .select()
+      .from(saleTokens)
+      .where(eq(saleTokens.saleId, saleId));
+
+    if (tokens.length === 0) {
+      return null;
+    }
+
+    const validToken = tokens.find(t => t.isActive && new Date() <= t.expiresAt);
+    return validToken || null;
+  }
+
+  private buildSnapshot(sale: Sale & { items?: SaleItem[] }) {
+    return {
+      id: sale.id,
+      status: sale.status,
+      totalAmount: sale.totalAmount,
+      deliveryDate: sale.deliveryDate,
+      items: sale.items?.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        deliveredQuantity: item.deliveredQuantity,
+        unitPrice: item.unitPrice,
+        unitPriceFinal: item.unitPriceFinal,
+      })),
+    };
+  }
+
+  private generateSecureToken(): string {
+    const TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+    const TOKEN_LENGTH = 12;
+    const bytes = randomBytes(8);
+    let token = "";
+    for (let i = 0; i < TOKEN_LENGTH; i++) {
+      token += TOKEN_CHARS[bytes[i % bytes.length] % TOKEN_CHARS.length];
+    }
+    return token;
+  }
+
+  private async validateTokenFormat(token: string): Promise<SaleToken | undefined> {
+    const TOKEN_LENGTH = 12;
+    if (token.length !== TOKEN_LENGTH) {
+      return undefined;
+    }
+
+    const [tokenRecord] = await db
+      .select()
+      .from(saleTokens)
+      .where(eq(saleTokens.token, token));
+
+    return tokenRecord;
   }
 
 
