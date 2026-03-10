@@ -5,7 +5,7 @@ import type { DistribucionItemRepository } from "../repository/distribucion-item
 import type { BusinessRepository } from "../repository/business.repository";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
-import type { Sale } from "../../db/schema";
+import type { Sale, SaleItem } from "../../db/schema";
 import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now } from "../../lib/date-utils";
@@ -45,19 +45,24 @@ export class SaleService {
   async createSale(
     ctx: RequestContext,
     data: {
-      clientId?: string;
+      customerId?: string;
+      type?: "instant_sale" | "pre_order";
       saleType: "contado" | "credito";
       totalAmount: number;
       amountPaid?: number;
       tara?: number;
       netWeight?: number;
+      deliveryDate?: string;
+      orderDate?: string;
       items: Array<{
         productId: string;
         productName: string;
         variantId: string;
         variantName: string;
-        quantity: number;
-        unitPrice: number;
+        quantity?: number;
+        orderedQuantity?: number;
+        unitPrice?: number;
+        unitPriceQuoted?: number;
         subtotal: number;
       }>;
     }
@@ -96,7 +101,7 @@ export class SaleService {
 
     const balanceDue = data.saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
 
-    if (data.saleType === "credito" && !data.clientId) {
+    if (data.saleType === "credito" && !data.customerId) {
       throw new ValidationError("La venta a crédito requiere cliente");
     }
 
@@ -126,21 +131,30 @@ export class SaleService {
       }
     }
 
+    const isPreOrder = data.type === "pre_order";
+
     const salePayload: CreateSaleInput = {
-      clientId: data.clientId,
+      customerId: data.customerId,
+      type: data.type || "instant_sale",
       saleType: data.saleType,
       totalAmount: totalAmount.toFixed(2),
       amountPaid: amountPaid.toFixed(2),
       balanceDue: balanceDue.toFixed(2),
-      tara: data.tara?.toString(),
-      netWeight: data.netWeight?.toString(),
+      tara: isPreOrder ? undefined : data.tara?.toString(),
+      netWeight: isPreOrder ? undefined : data.netWeight?.toString(),
+      deliveryDate: isPreOrder ? data.deliveryDate : undefined,
+      orderDate: isPreOrder ? data.orderDate : undefined,
       items: data.items.map((item) => ({
         productId: item.productId,
         productName: item.productName,
         variantId: item.variantId,
         variantName: item.variantName,
-        quantity: item.quantity.toString(),
-        unitPrice: item.unitPrice.toString(),
+        // For instant_sales
+        quantity: item.quantity?.toString(),
+        unitPrice: item.unitPrice?.toString(),
+        // For pre_orders
+        orderedQuantity: item.orderedQuantity?.toString(),
+        unitPriceQuoted: item.unitPriceQuoted?.toString(),
         subtotal: item.subtotal.toString(),
       })),
     };
@@ -172,12 +186,12 @@ export class SaleService {
         }
       }
 
-      if (data.saleType === "credito" && data.clientId && amountPaid > 0) {
+      if (data.saleType === "credito" && data.customerId && amountPaid > 0) {
         const initialPaymentReference = `init-sale:${sale.id}`;
         await this.paymentRepository.createInitialPayment(
           ctx,
           {
-            clientId: data.clientId,
+            customerId: data.customerId,
             amount: amountPaid.toFixed(2),
             referenceNumber: initialPaymentReference,
           },
@@ -207,7 +221,8 @@ export class SaleService {
 
   async confirmSale(
     ctx: RequestContext,
-    id: string
+    id: string,
+    baseVersion?: number
   ): Promise<MutationResult<Sale>> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
@@ -218,6 +233,21 @@ export class SaleService {
       throw new ValidationError("Solo se pueden confirmar ventas en estado borrador");
     }
 
+    // For pre_orders, use versioned confirm
+    if (sale.type === "pre_order") {
+      if (baseVersion === undefined) {
+        throw new ValidationError("baseVersion es requerido para confirmar pedidos");
+      }
+      return db.transaction(async (tx) => {
+        const confirmedSale = await this.repository.confirmPreOrder(ctx, id, baseVersion, tx);
+        return {
+          data: confirmedSale,
+          txid: await getTxid(tx),
+        };
+      });
+    }
+
+    // For instant_sales
     return db.transaction(async (tx) => {
       const confirmedSale = await this.repository.update(
         ctx,
@@ -228,6 +258,33 @@ export class SaleService {
 
       return {
         data: confirmedSale,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
+  async deliverPreOrder(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number
+  ): Promise<MutationResult<Sale>> {
+    const sale = await this.repository.findById(ctx, id);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.type !== "pre_order") {
+      throw new ValidationError("Solo los pedidos pueden ser entregados");
+    }
+
+    if (sale.status !== "confirmed") {
+      throw new ValidationError("Solo se pueden entregar pedidos confirmados");
+    }
+
+    return db.transaction(async (tx) => {
+      const deliveredSale = await this.repository.deliverPreOrder(ctx, id, baseVersion, tx);
+      return {
+        data: deliveredSale,
         txid: await getTxid(tx),
       };
     });
@@ -274,11 +331,11 @@ export class SaleService {
         updateData.refundReference = data.refundReference;
         updateData.refundNotes = data.refundNotes;
 
-        if (data.refundMethod === "saldo" && sale.clientId) {
+        if (data.refundMethod === "saldo" && sale.customerId) {
           await this.paymentRepository.createReversal(
             ctx,
             {
-              clientId: sale.clientId,
+              customerId: sale.customerId,
               amount: (-data.refundAmount).toFixed(2),
               paymentMethod: "saldo",
               notes: `Saldo a favor por cancelación de venta #${sale.id}`,
@@ -286,11 +343,11 @@ export class SaleService {
             },
             tx
           );
-        } else if (sale.clientId) {
+        } else if (sale.customerId) {
           await this.paymentRepository.createReversal(
             ctx,
             {
-              clientId: sale.clientId,
+              customerId: sale.customerId,
               amount: (-data.refundAmount).toFixed(2),
               paymentMethod: data.refundMethod || "efectivo",
               referenceNumber: data.refundReference,
@@ -337,46 +394,245 @@ export class SaleService {
     return this.repository.getTotalSalesToday(ctx);
   }
 
-  async createFromOrder(
-    ctx: RequestContext,
-    data: {
-      orderId: string;
-      clientId: string;
-      saleType: "contado" | "credito";
-      totalAmount: string;
-      amountPaid: string;
-      balanceDue: string;
-      items: Array<{
-        productId: string;
-        productName: string;
-        variantId: string;
-        variantName: string;
-        quantity: string;
-        unitPrice: string;
-        subtotal: string;
-      }>;
-    },
-    tx?: DbTransaction
-  ): Promise<Sale> {
-    const existing = await this.repository.findByOrderId(ctx, data.orderId);
-    if (existing) {
-      return existing;
+  async getSaleItems(ctx: RequestContext, saleId: string): Promise<SaleItem[]> {
+    const sale = await this.repository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Sale");
     }
-
-    const payload: CreateSaleInput = {
-      clientId: data.clientId,
-      orderId: data.orderId,
-      saleType: data.saleType,
-      totalAmount: data.totalAmount,
-      amountPaid: data.amountPaid,
-      balanceDue: data.balanceDue,
-      items: data.items,
-    };
-
-    return this.repository.create(ctx, payload, tx);
+    return this.repository.findSaleItems(ctx, saleId);
   }
 
+  async addItem(
+    ctx: RequestContext,
+    saleId: string,
+    data: {
+      productId: string;
+      productName: string;
+      variantId: string;
+      variantName: string;
+      quantity?: number;
+      orderedQuantity?: number;
+      unitPrice?: number;
+      unitPriceQuoted?: number;
+      subtotal: number;
+    }
+  ): Promise<MutationResult<SaleItem>> {
+    const sale = await this.repository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
 
+    if (sale.status !== "draft") {
+      throw new ValidationError("Solo se pueden agregar items a ventas en estado borrador");
+    }
+
+    if (!data.variantId) {
+      throw new ValidationError("El variantId es requerido");
+    }
+
+    const subtotal = parseFloat(normalizeAmount(data.subtotal, 2, "subtotal"));
+
+    if (subtotal <= 0) {
+      throw new ValidationError("El subtotal debe ser mayor a 0");
+    }
+
+    // Validate quantity > 0
+    const quantity = data.quantity ?? data.orderedQuantity;
+    if (quantity !== undefined && quantity <= 0) {
+      throw new ValidationError("La cantidad debe ser mayor a 0");
+    }
+
+    // Validate subtotal matches quantity * unitPrice (for instant_sales)
+    if (data.quantity !== undefined && data.unitPrice !== undefined) {
+      const expectedSubtotal = data.quantity * data.unitPrice;
+      if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
+        throw new ValidationError(
+          `El subtotal no coincide. Esperado: S/ ${expectedSubtotal.toFixed(2)}, Recibido: S/ ${subtotal.toFixed(2)}`
+        );
+      }
+    }
+
+    // Validate subtotal matches orderedQuantity * unitPriceQuoted (for pre_orders)
+    if (data.orderedQuantity !== undefined && data.unitPriceQuoted !== undefined) {
+      const expectedSubtotal = data.orderedQuantity * data.unitPriceQuoted;
+      if (Math.abs(expectedSubtotal - subtotal) > 0.01) {
+        throw new ValidationError(
+          `El subtotal no coincide. Esperado: S/ ${expectedSubtotal.toFixed(2)}, Recibido: S/ ${subtotal.toFixed(2)}`
+        );
+      }
+    }
+
+    return db.transaction(async (tx) => {
+      const item = await this.repository.addItem(
+        ctx,
+        saleId,
+        {
+          productId: data.productId,
+          productName: data.productName,
+          variantId: data.variantId,
+          variantName: data.variantName,
+          quantity: data.quantity?.toString(),
+          orderedQuantity: data.orderedQuantity?.toString(),
+          unitPrice: data.unitPrice?.toString(),
+          unitPriceQuoted: data.unitPriceQuoted?.toString(),
+          subtotal: subtotal.toFixed(2),
+        },
+        tx
+      );
+
+      // Recalculate total
+      const existingItems = await this.repository.findSaleItems(ctx, saleId, tx);
+      const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+      await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
+
+      return {
+        data: item,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
+  async updateItem(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string,
+    data: {
+      quantity?: number;
+      orderedQuantity?: number;
+      unitPrice?: number;
+      unitPriceQuoted?: number;
+      unitPriceFinal?: number;
+      subtotal?: number;
+      deliveredQuantity?: number;
+      isModified?: boolean;
+    }
+  ): Promise<MutationResult<SaleItem>> {
+    const sale = await this.repository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    const item = await this.repository.findItemById(ctx, saleId, itemId);
+    if (!item) {
+      throw new NotFoundError("Sale item");
+    }
+
+    // Allow updates to pre_orders in confirmed status (for versioning)
+    if (sale.status !== "draft" && sale.status !== "confirmed") {
+      throw new ValidationError("No se pueden modificar items de esta venta");
+    }
+
+    // Validate quantity >= 0
+    if (data.quantity !== undefined && data.quantity < 0) {
+      throw new ValidationError("La cantidad no puede ser negativa");
+    }
+    if (data.orderedQuantity !== undefined && data.orderedQuantity < 0) {
+      throw new ValidationError("La cantidad no puede ser negativa");
+    }
+
+    // Validate unitPrice >= 0
+    if (data.unitPrice !== undefined && data.unitPrice < 0) {
+      throw new ValidationError("El precio no puede ser negativo");
+    }
+    if (data.unitPriceQuoted !== undefined && data.unitPriceQuoted < 0) {
+      throw new ValidationError("El precio no puede ser negativo");
+    }
+
+    // Validate subtotal >= 0 if provided
+    if (data.subtotal !== undefined && data.subtotal < 0) {
+      throw new ValidationError("El subtotal no puede ser negativo");
+    }
+
+    // Validate subtotal matches quantity * unitPrice if both are provided
+    if (data.quantity !== undefined && data.unitPrice !== undefined && data.subtotal !== undefined) {
+      const expectedSubtotal = data.quantity * data.unitPrice;
+      if (Math.abs(expectedSubtotal - data.subtotal) > 0.01) {
+        throw new ValidationError(
+          `El subtotal no coincide. Esperado: S/ ${expectedSubtotal.toFixed(2)}, Recibido: S/ ${data.subtotal.toFixed(2)}`
+        );
+      }
+    }
+
+    // Validate subtotal matches orderedQuantity * unitPriceQuoted for pre_orders
+    if (data.orderedQuantity !== undefined && data.unitPriceQuoted !== undefined && data.subtotal !== undefined) {
+      const expectedSubtotal = data.orderedQuantity * data.unitPriceQuoted;
+      if (Math.abs(expectedSubtotal - data.subtotal) > 0.01) {
+        throw new ValidationError(
+          `El subtotal no coincide. Esperado: S/ ${expectedSubtotal.toFixed(2)}, Recibido: S/ ${data.subtotal.toFixed(2)}`
+        );
+      }
+    }
+
+    return db.transaction(async (tx) => {
+      const updatedItem = await this.repository.updateItem(
+        ctx,
+        saleId,
+        itemId,
+        {
+          quantity: data.quantity?.toString(),
+          orderedQuantity: data.orderedQuantity?.toString(),
+          unitPrice: data.unitPrice?.toString(),
+          unitPriceQuoted: data.unitPriceQuoted?.toString(),
+          unitPriceFinal: data.unitPriceFinal?.toString(),
+          subtotal: data.subtotal?.toFixed(2),
+          deliveredQuantity: data.deliveredQuantity?.toString(),
+          isModified: data.isModified,
+        },
+        tx
+      );
+
+      // Recalculate total if subtotal changed
+      if (data.subtotal !== undefined) {
+        const existingItems = await this.repository.findSaleItems(ctx, saleId, tx);
+        const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+        await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
+      }
+
+      return {
+        data: updatedItem,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
+  async removeItem(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string
+  ): Promise<MutationResult<void>> {
+    const sale = await this.repository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.status !== "draft") {
+      throw new ValidationError("Solo se pueden eliminar items de ventas en estado borrador");
+    }
+
+    const item = await this.repository.findItemById(ctx, saleId, itemId);
+    if (!item) {
+      throw new NotFoundError("Sale item");
+    }
+
+    return db.transaction(async (tx) => {
+      await this.repository.deleteItem(ctx, saleId, itemId, tx);
+
+      // Verify at least one item remains
+      const existingItems = await this.repository.findSaleItems(ctx, saleId, tx);
+      if (existingItems.length === 0) {
+        throw new ValidationError("La venta debe tener al menos un producto");
+      }
+
+      // Recalculate total
+      const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+      await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
+
+      return {
+        data: undefined,
+        txid: await getTxid(tx),
+      };
+    });
+  }
 
   private async validarStockEstricto(
     ctx: RequestContext,

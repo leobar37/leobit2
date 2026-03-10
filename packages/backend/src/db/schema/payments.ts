@@ -29,7 +29,7 @@ export const abonos = pgTable(
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id),
-    clientId: uuid("client_id")
+    customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id),
     // sellerId apunta a business_users (quien recibe el pago dentro del negocio)
@@ -60,7 +60,7 @@ export const abonos = pgTable(
   },
   (table) => [
     index("idx_abonos_business_id").on(table.businessId),
-    index("idx_abonos_client_id").on(table.clientId),
+    index("idx_payments_customer_id").on(table.customerId),
     index("idx_abonos_seller_id").on(table.sellerId),
     index("idx_abonos_payment_method").on(table.paymentMethod),
     index("idx_abonos_proof_image_id").on(table.proofImageId),
@@ -79,8 +79,8 @@ export const abonosRelations = relations(abonos, ({ one }) => ({
     fields: [abonos.businessId],
     references: [businesses.id],
   }),
-  client: one(customers, {
-    fields: [abonos.clientId],
+  customer: one(customers, {
+    fields: [abonos.customerId],
     references: [customers.id],
   }),
   seller: one(businessUsers, {

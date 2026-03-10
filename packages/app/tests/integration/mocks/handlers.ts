@@ -88,7 +88,7 @@ export const mockVariants = [
 export let mockSales: Array<{
   id: string;
   businessId: string;
-  clientId: string | null;
+  customerId: string | null;
   sellerId: string;
   saleType: "contado" | "credito";
   totalAmount: string;
@@ -181,7 +181,7 @@ export const integrationHandlers = [
 
   http.post("/api/sales", async ({ request }) => {
     const body = (await request.json()) as {
-      clientId?: string;
+      customerId?: string;
       saleType: "contado" | "credito";
       totalAmount: number;
       amountPaid: number;
@@ -199,7 +199,7 @@ export const integrationHandlers = [
     const newSale = {
       id: `sale-${Date.now()}`,
       businessId: "biz-1",
-      clientId: body.clientId || null,
+      customerId: body.customerId || null,
       sellerId: "seller-1",
       saleType: body.saleType,
       totalAmount: body.totalAmount.toFixed(2),

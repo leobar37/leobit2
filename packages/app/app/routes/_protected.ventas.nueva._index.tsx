@@ -9,20 +9,19 @@ import {
   SubmitSaleButton,
   NewSaleProvider,
 } from "~/components/sales/new-sale";
-import { useDraftSale, useSaleItems } from "~/hooks/use-sales-db";
+import { useSale, useSaleItems } from "~/hooks/use-sales-db";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 function HeaderTotal() {
-  // TODO: Get draftId from context or URL params
-  const draftId = null; // This should come from context
-  const { data: draftData } = useDraftSale(draftId);
-  const { data: items = [] } = useSaleItems(draftId || "");
-  
-  // useDraftSale returns an array with limit(1), so we take the first element
-  const draft = draftData?.[0] || null;
-  const calculations = useSaleCalculations(draft, items);
+  // TODO: Get saleId from context or URL params
+  const saleId = null; // This should come from context
+  const { data: sales } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+
+  const sale = sales?.[0] || null;
+  const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
     return null;

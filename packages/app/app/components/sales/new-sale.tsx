@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useState, useMemo, createContext, useContext } from "react";
 import { useNavigate } from "react-router";
-import { 
-  User, 
-  X, 
-  CreditCard, 
-  Wallet, 
-  Receipt, 
-  Trash2, 
+import {
+  User,
+  X,
+  CreditCard,
+  Wallet,
+  Receipt,
+  Trash2,
   ChevronRight,
   Package,
   Check,
@@ -25,11 +25,11 @@ import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct, type ProductVariant } from "~/hooks/use-product-variants";
 import { useCalculator } from "~/hooks/use-calculator";
 import {
-  useDraftSale,
-  useCreateDraftSale,
-  useUpdateDraftSale,
-  useDeleteDraftSale,
-  useConfirmSale,
+  useSale,
+  useSales,
+  useCreateSale,
+  useUpdateSale,
+  useDeleteSale,
   useSaleItems,
   useAddSaleItem,
   useRemoveSaleItem,
@@ -44,23 +44,23 @@ import type { Product } from "~/lib/db/schema";
 // ============================================
 
 interface NewSaleContextType {
-  draftId: string | null;
-  setDraftId: (id: string | null) => void;
+  saleId: string | null;
+  setSaleId: (id: string | null) => void;
 }
 
 const NewSaleContext = createContext<NewSaleContextType | null>(null);
 
 export function NewSaleProvider({ children }: { children: React.ReactNode }) {
-  const [draftId, setDraftId] = useState<string | null>(null);
-  
+  const [saleId, setSaleId] = useState<string | null>(null);
+
   return (
-    <NewSaleContext.Provider value={{ draftId, setDraftId }}>
+    <NewSaleContext.Provider value={{ saleId, setSaleId }}>
       {children}
     </NewSaleContext.Provider>
   );
 }
 
-function useNewSaleContext() {
+export function useNewSaleContext() {
   const context = useContext(NewSaleContext);
   if (!context) {
     throw new Error("useNewSaleContext must be used within NewSaleProvider");
@@ -75,24 +75,27 @@ function useNewSaleContext() {
 import { CustomerSelect } from "~/components/customers/customer-select";
 
 export function CustomerSection() {
-  const { draftId } = useNewSaleContext();
-  const { data: draft } = useDraftSale(draftId);
-  const updateDraft = useUpdateDraftSale();
-  
-  const calculations = useSaleCalculations(draft || null, draft?.items || []);
+  const { saleId } = useNewSaleContext();
+  const { data: sales } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+  const updateSale = useUpdateSale();
+
+  const sale = sales?.[0] || null;
+  const calculations = useSaleCalculations(sale, items);
 
   const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null } | null) => {
-    if (draftId) {
-      updateDraft(draftId, { 
-        clientId: customer?.id ?? null,
-        client: customer ?? undefined
+    if (saleId) {
+      updateSale(saleId, {
+        customerId: customer?.id ?? null,
+        customer: customer ?? undefined
       });
     }
   };
 
   return (
     <CustomerSelect
-      value={draft?.clientId ?? null}
+      value={sale?.customerId ?? null}
+      selectedCustomer={sale?.customer ?? null}
       onChange={handleSelectCustomer}
       placeholder="Seleccionar cliente"
       helperText={calculations.requiresCustomer ? "Requerido para venta a crédito" : undefined}
@@ -105,43 +108,44 @@ export function CustomerSection() {
 // ============================================
 
 const paymentModes: { value: PaymentMode; label: string; icon: React.ReactNode; description: string }[] = [
-  { 
-    value: "pago_total", 
-    label: "Pago Total", 
+  {
+    value: "pago_total",
+    label: "Pago Total",
     icon: <Wallet className="h-5 w-5" />,
     description: "El cliente paga todo en efectivo"
   },
-  { 
-    value: "a_cuenta", 
-    label: "A Cuenta", 
+  {
+    value: "a_cuenta",
+    label: "A Cuenta",
     icon: <CreditCard className="h-5 w-5" />,
     description: "El cliente da un adelanto"
   },
-  { 
-    value: "debe_todo", 
-    label: "Debe Todo", 
+  {
+    value: "debe_todo",
+    label: "Debe Todo",
     icon: <Receipt className="h-5 w-5" />,
     description: "El cliente paga después"
   },
 ];
 
 export function PaymentModeSection() {
-  const { draftId } = useNewSaleContext();
-  const { data: draft } = useDraftSale(draftId);
-  const { data: items = [] } = useSaleItems(draftId);
-  const updateDraft = useUpdateDraftSale();
-  
-  const calculations = useSaleCalculations(draft || null, items);
+  const { saleId } = useNewSaleContext();
+  const { data: sales } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+  const updateSale = useUpdateSale();
+
+  const sale = sales?.[0] || null;
+  const calculations = useSaleCalculations(sale, items);
 
   const handleSetPaymentMode = (mode: PaymentMode) => {
-    if (draftId) {
-      updateDraft(draftId, { paymentMode: mode });
+    if (saleId) {
+      updateSale(saleId, { paymentMode: mode });
     }
   };
 
   const handleSetAmountPaid = (amount: string) => {
-    if (draftId) {
-      updateDraft(draftId, { amountPaid: amount });
+    if (saleId) {
+      updateSale(saleId, { amountPaid: amount });
     }
   };
 
@@ -155,24 +159,24 @@ export function PaymentModeSection() {
               onClick={() => handleSetPaymentMode(mode.value)}
               className={cn(
                 "w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left",
-                draft?.paymentMode === mode.value
+                sale?.paymentMode === mode.value
                   ? "bg-orange-100 border-2 border-orange-500"
                   : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
               )}
             >
               <div className={cn(
                 "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                draft?.paymentMode === mode.value ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-600"
+                sale?.paymentMode === mode.value ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-600"
               )}>
                 {mode.icon}
               </div>
               <div className="flex-1">
-                <p className={cn("font-medium", draft?.paymentMode === mode.value && "text-orange-900")}>
+                <p className={cn("font-medium", sale?.paymentMode === mode.value && "text-orange-900")}>
                   {mode.label}
                 </p>
                 <p className="text-sm text-muted-foreground">{mode.description}</p>
               </div>
-              {draft?.paymentMode === mode.value && (
+              {sale?.paymentMode === mode.value && (
                 <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
                   <Check className="h-4 w-4 text-white" />
                 </div>
@@ -181,7 +185,7 @@ export function PaymentModeSection() {
           ))}
         </div>
 
-        {draft?.paymentMode === "a_cuenta" && (
+        {sale?.paymentMode === "a_cuenta" && (
           <div className="space-y-3 pt-2 border-t">
             <label className="text-sm font-medium">Monto pagado (S/)</label>
             <Input
@@ -210,7 +214,7 @@ export function PaymentModeSection() {
           </div>
         )}
 
-        {draft?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
+        {sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
           <div className="pt-2 border-t">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total a deber:</span>
@@ -228,10 +232,10 @@ export function PaymentModeSection() {
 // ============================================
 
 function CartItemRow({ itemId, index }: { itemId: string; index: number }) {
-  const { draftId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(draftId);
+  const { saleId } = useNewSaleContext();
+  const { data: items = [] } = useSaleItems(saleId);
   const removeItem = useRemoveSaleItem();
-  
+
   const item = items.find(i => i.id === itemId);
   if (!item) return null;
 
@@ -266,8 +270,8 @@ function CartItemRow({ itemId, index }: { itemId: string; index: number }) {
 // ============================================
 
 export function CartSection() {
-  const { draftId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(draftId);
+  const { saleId } = useNewSaleContext();
+  const { data: items = [] } = useSaleItems(saleId);
 
   if (items.length === 0) {
     return null;
@@ -292,11 +296,12 @@ export function CartSection() {
 // ============================================
 
 export function SaleSummaryCard() {
-  const { draftId } = useNewSaleContext();
-  const { data: draft } = useDraftSale(draftId);
-  const { data: items = [] } = useSaleItems(draftId);
-  
-  const calculations = useSaleCalculations(draft || null, items);
+  const { saleId } = useNewSaleContext();
+  const { data: sales } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+
+  const sale = sales?.[0] || null;
+  const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
     return null;
@@ -309,13 +314,13 @@ export function SaleSummaryCard() {
           <span className="text-orange-100">Total productos:</span>
           <span className="font-semibold">{items.length}</span>
         </div>
-        
+
         <div className="flex justify-between items-center">
           <span className="text-orange-100">Monto total:</span>
           <span className="text-2xl font-bold">S/ {formatCurrency(calculations.totalAmount)}</span>
         </div>
 
-        {draft?.paymentMode === "a_cuenta" && (
+        {sale?.paymentMode === "a_cuenta" && (
           <>
             <div className="flex justify-between items-center">
               <span className="text-orange-100">Pagado:</span>
@@ -328,7 +333,7 @@ export function SaleSummaryCard() {
           </>
         )}
 
-        {draft?.paymentMode === "debe_todo" && (
+        {sale?.paymentMode === "debe_todo" && (
           <div className="flex justify-between items-center pt-2 border-t border-orange-400">
             <span className="text-orange-100">Total a deber:</span>
             <span className="font-bold">S/ {formatCurrency(calculations.totalAmount)}</span>
@@ -337,9 +342,9 @@ export function SaleSummaryCard() {
 
         {!calculations.canSubmit && (
           <div className="p-2 bg-white/20 rounded-lg text-sm text-center">
-            {items.length === 0 
+            {items.length === 0
               ? "Agrega productos para continuar"
-              : calculations.requiresCustomer && !draft?.client
+              : calculations.requiresCustomer && !sale?.client
               ? "Selecciona un cliente para venta a crédito"
               : "Revisa el monto pagado"
             }
@@ -356,44 +361,26 @@ export function SaleSummaryCard() {
 
 export function SubmitSaleButton() {
   const navigate = useNavigate();
-  const { draftId, setDraftId } = useNewSaleContext();
-  const { data: draft } = useDraftSale(draftId);
-  const { data: items = [] } = useSaleItems(draftId);
-  const deleteDraft = useDeleteDraftSale();
+  const { saleId, setSaleId } = useNewSaleContext();
+  const { data: sales } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+
+  const sale = sales?.[0] || null;
+  const deleteSale = useDeleteSale();
+  const updateSale = useUpdateSale();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const calculations = useSaleCalculations(draft || null, items);
+
+  const calculations = useSaleCalculations(sale, items);
 
   const handleSubmit = async () => {
-    if (!calculations.canSubmit || !draftId) return;
-    
+    if (!calculations.canSubmit || !saleId) return;
+
     setIsSubmitting(true);
-    
+
     try {
-      // TODO: Convert draft to actual sale via API
-      // const saleData = {
-      //   clientId: draft?.clientId,
-      //   saleType: calculations.saleType,
-      //   totalAmount: calculations.totalAmount,
-      //   amountPaid: calculations.amountPaidValue,
-      //   balanceDue: calculations.balanceDue,
-      //   items: items.map(item => ({
-      //     productId: item.productId,
-      //     variantId: item.variantId,
-      //     productName: item.productName,
-      //     variantName: item.variantName,
-      //     quantity: parseFloat(item.quantity),
-      //     unitPrice: parseFloat(item.unitPrice),
-      //     subtotal: parseFloat(item.subtotal),
-      //   })),
-      // };
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Delete draft and navigate
-      await deleteDraft(draftId);
-      setDraftId(null);
+      // Confirm sale - change status from draft to active
+      await updateSale(saleId, { status: "active" });
+      setSaleId(null);
       navigate("/ventas");
     } catch (error) {
       console.error("Failed to submit sale:", error);
@@ -435,19 +422,19 @@ interface CalculatorContentProps {
 
 export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorContentProps) {
   const navigate = useNavigate();
-  const { draftId, setDraftId } = useNewSaleContext();
+  const { saleId, setSaleId } = useNewSaleContext();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
-  
-  const createDraft = useCreateDraftSale();
+
+  const createSale = useCreateSale();
   const addItem = useAddSaleItem();
-  const { data: draft } = useDraftSale(draftId);
-  
+  const { data: sales } = useSale(saleId);
+
   const { data: products = [] } = useProducts();
   const selectedProduct = products.find(p => p.id === selectedProductId);
-  
-  const { data: variants = [] } = useVariantsByProduct(selectedProductId || "", { 
-    isActive: true 
+
+  const { data: variants = [] } = useVariantsByProduct(selectedProductId || "", {
+    isActive: true
   });
   const selectedVariant = variants.find(v => v.id === selectedVariantId);
 
@@ -466,21 +453,23 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
   const handleAddToCart = async () => {
     if (!selectedProduct || !selectedVariant || !calculation.isValid) return;
 
-    // Create draft if doesn't exist
-    let currentDraftId = draftId;
-    if (!currentDraftId) {
+    // Create sale with draft status if doesn't exist
+    let currentSaleId = saleId;
+    if (!currentSaleId) {
       // TODO: Get actual sellerId and businessId from auth context
-      const newDraft = await createDraft({
+      const newSaleId = await createSale({
         businessId: "temp-business-id", // TODO: Get from context
         sellerId: "temp-seller-id", // TODO: Get from context
-        paymentMode: "pago_total",
-      });
-      currentDraftId = newDraft.id;
-      setDraftId(currentDraftId);
+        saleType: "contado",
+        totalAmount: 0,
+        amountPaid: 0,
+        status: "draft",
+      } as any);
+      currentSaleId = newSaleId;
+      setSaleId(currentSaleId);
     }
 
-    await addItem({
-      draftSaleId: currentDraftId,
+    await addItem(currentSaleId, {
       productId: selectedProduct.id,
       variantId: selectedVariant.id,
       productName: selectedProduct.name,
@@ -489,7 +478,7 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
       unitPrice: calculation.unitPrice.toString(),
       subtotal: calculation.subtotal.toString(),
     });
-    
+
     if (returnPath) {
       navigate(returnPath);
     }
@@ -660,7 +649,7 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Cantidad:</span>
                   <span className="font-medium">
-                    {isKgProduct 
+                    {isKgProduct
                       ? `${formatKilos(calculation.quantity)} kg`
                       : `${Math.round(calculation.quantity)} unidades`
                     }

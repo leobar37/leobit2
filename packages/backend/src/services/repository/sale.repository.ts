@@ -6,21 +6,25 @@ import type { RequestContext } from "../../context/request-context";
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface CreateSaleInput {
-  clientId?: string;
-  orderId?: string;
+  customerId?: string;
+  type?: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   totalAmount: string;
   amountPaid: string;
   balanceDue: string;
   tara?: string;
   netWeight?: string;
+  deliveryDate?: string;
+  orderDate?: string;
   items: Array<{
     productId: string;
     productName: string;
     variantId: string;
     variantName: string;
-    quantity: string;
-    unitPrice: string;
+    quantity?: string;
+    orderedQuantity?: string;
+    unitPrice?: string;
+    unitPriceQuoted?: string;
     subtotal: string;
   }>;
 }
@@ -32,28 +36,38 @@ export class SaleRepository {
       startDate?: Date;
       endDate?: Date;
       saleType?: "contado" | "credito";
-      status?: "draft" | "active" | "cancelled";
+      type?: "instant_sale" | "pre_order";
+      status?: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
       limit?: number;
       offset?: number;
     }
   ): Promise<Sale[]> {
-    return db.query.sales.findMany({
+    const query: any = {
       where: and(
         eq(sales.businessId, ctx.businessId),
         eq(sales.sellerId, ctx.businessUserId),
         filters?.startDate ? gte(sales.saleDate, filters.startDate) : undefined,
         filters?.endDate ? lte(sales.saleDate, filters.endDate) : undefined,
         filters?.saleType ? eq(sales.saleType, filters.saleType) : undefined,
+        filters?.type ? eq(sales.type, filters.type) : undefined,
         filters?.status ? eq(sales.status, filters.status) : undefined
       ),
       orderBy: desc(sales.createdAt),
-      limit: filters?.limit,
-      offset: filters?.offset,
       with: {
         items: true,
         client: true,
       },
-    });
+    };
+
+    // Only add limit/offset if they have valid values
+    if (filters?.limit && filters.limit > 0) {
+      query.limit = filters.limit;
+    }
+    if (filters?.offset && filters.offset > 0) {
+      query.offset = filters.offset;
+    }
+
+    return db.query.sales.findMany(query);
   }
 
   async findById(ctx: RequestContext, id: string): Promise<Sale | undefined> {
@@ -69,15 +83,7 @@ export class SaleRepository {
     });
   }
 
-  async findByOrderId(ctx: RequestContext, orderId: string): Promise<Sale | undefined> {
-    return db.query.sales.findFirst({
-      where: and(eq(sales.orderId, orderId), eq(sales.businessId, ctx.businessId)),
-      with: {
-        items: true,
-        client: true,
-      },
-    });
-  }
+
 
   async create(ctx: RequestContext, data: CreateSaleInput, tx?: DbTransaction): Promise<Sale> {
     const { items, ...saleData } = data;
@@ -96,8 +102,18 @@ export class SaleRepository {
     if (items && items.length > 0) {
       await executor.insert(saleItems).values(
         items.map((item) => ({
-          ...item,
           saleId: sale.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          variantName: item.variantName,
+          // For instant_sales
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          // For pre_orders
+          orderedQuantity: item.orderedQuantity,
+          unitPriceQuoted: item.unitPriceQuoted,
+          subtotal: item.subtotal,
         }))
       );
     }
@@ -117,21 +133,129 @@ export class SaleRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Sale, "status" | "cancelledAt" | "cancelledBy" | "cancelReason" | "refundAmount" | "refundDate" | "refundMethod" | "refundReference" | "refundNotes">>,
+    data: Partial<
+      Pick<
+        Sale,
+        | "status"
+        | "cancelledAt"
+        | "cancelledBy"
+        | "cancelReason"
+        | "refundAmount"
+        | "refundDate"
+        | "refundMethod"
+        | "refundReference"
+        | "refundNotes"
+        | "version"
+        | "confirmedSnapshot"
+        | "deliveredSnapshot"
+        | "deliveryDate"
+        | "saleType"
+        | "totalAmount"
+        | "customerId"
+      >
+    >,
     tx?: DbTransaction
   ): Promise<Sale> {
     const executor = tx ?? db;
 
     const [sale] = await executor
       .update(sales)
-      .set(data)
-      .where(and(
-        eq(sales.id, id),
-        eq(sales.businessId, ctx.businessId)
-      ))
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)))
       .returning();
 
     return sale;
+  }
+
+  async confirmPreOrder(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number,
+    tx?: DbTransaction
+  ): Promise<Sale> {
+    const executor = tx ?? db;
+
+    // Get current sale with items for snapshot
+    const sale = await this.findById(ctx, id);
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+
+    if (sale.version !== baseVersion) {
+      throw new Error("Version conflict - sale was modified");
+    }
+
+    const [updated] = await executor
+      .update(sales)
+      .set({
+        status: "confirmed",
+        version: baseVersion + 1,
+        confirmedSnapshot: {
+          items: sale.items,
+          totalAmount: sale.totalAmount,
+          timestamp: new Date().toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(sales.id, id),
+          eq(sales.businessId, ctx.businessId),
+          eq(sales.version, baseVersion)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      throw new Error("Failed to confirm - version mismatch");
+    }
+
+    return updated;
+  }
+
+  async deliverPreOrder(
+    ctx: RequestContext,
+    id: string,
+    baseVersion: number,
+    tx?: DbTransaction
+  ): Promise<Sale> {
+    const executor = tx ?? db;
+
+    const sale = await this.findById(ctx, id);
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+
+    if (sale.version !== baseVersion) {
+      throw new Error("Version conflict - sale was modified");
+    }
+
+    const [updated] = await executor
+      .update(sales)
+      .set({
+        status: "delivered",
+        version: baseVersion + 1,
+        deliveredSnapshot: {
+          items: sale.items,
+          totalAmount: sale.totalAmount,
+          timestamp: new Date().toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(sales.id, id),
+          eq(sales.businessId, ctx.businessId),
+          eq(sales.version, baseVersion)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      throw new Error("Failed to deliver - version mismatch");
+    }
+
+    return updated;
   }
 
   async count(ctx: RequestContext, filters?: { startDate?: Date; endDate?: Date }): Promise<number> {
@@ -181,9 +305,145 @@ export class SaleRepository {
     tx?: DbTransaction
   ): Promise<SaleItem[]> {
     const executor = tx ?? db;
-    return executor
-      .select()
+    const results = await executor
+      .select({ item: saleItems })
       .from(saleItems)
-      .where(eq(saleItems.saleId, saleId));
+      .innerJoin(sales, eq(sales.id, saleItems.saleId))
+      .where(and(
+        eq(sales.id, saleId),
+        eq(sales.businessId, ctx.businessId)
+      ));
+    return results.map(r => r.item);
+  }
+
+  async findItemById(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string,
+    tx?: DbTransaction
+  ): Promise<SaleItem | undefined> {
+    const executor = tx ?? db;
+    const results = await executor
+      .select({ item: saleItems })
+      .from(saleItems)
+      .innerJoin(sales, eq(sales.id, saleItems.saleId))
+      .where(and(
+        eq(saleItems.id, itemId),
+        eq(sales.id, saleId),
+        eq(sales.businessId, ctx.businessId)
+      ));
+    return results[0]?.item;
+  }
+
+  async addItem(
+    ctx: RequestContext,
+    saleId: string,
+    data: {
+      productId: string;
+      productName: string;
+      variantId: string;
+      variantName: string;
+      quantity?: string;
+      orderedQuantity?: string;
+      unitPrice?: string;
+      unitPriceQuoted?: string;
+      subtotal: string;
+    },
+    tx?: DbTransaction
+  ): Promise<SaleItem> {
+    const executor = tx ?? db;
+
+    const [item] = await executor
+      .insert(saleItems)
+      .values({
+        saleId,
+        productId: data.productId,
+        productName: data.productName,
+        variantId: data.variantId,
+        variantName: data.variantName,
+        quantity: data.quantity,
+        orderedQuantity: data.orderedQuantity,
+        unitPrice: data.unitPrice,
+        unitPriceQuoted: data.unitPriceQuoted,
+        subtotal: data.subtotal,
+      })
+      .returning();
+
+    return item;
+  }
+
+  async updateItem(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string,
+    data: {
+      quantity?: string;
+      orderedQuantity?: string;
+      unitPrice?: string;
+      unitPriceQuoted?: string;
+      unitPriceFinal?: string;
+      subtotal?: string;
+      deliveredQuantity?: string;
+      isModified?: boolean;
+    },
+    tx?: DbTransaction
+  ): Promise<SaleItem> {
+    const executor = tx ?? db;
+
+    const [item] = await executor
+      .update(saleItems)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(saleItems.id, itemId),
+          eq(saleItems.saleId, saleId)
+        )
+      )
+      .returning();
+
+    return item;
+  }
+
+  async deleteItem(
+    ctx: RequestContext,
+    saleId: string,
+    itemId: string,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const executor = tx ?? db;
+
+    await executor
+      .delete(saleItems)
+      .where(
+        and(
+          eq(saleItems.id, itemId),
+          eq(saleItems.saleId, saleId)
+        )
+      );
+  }
+
+  async updateTotalAmount(
+    ctx: RequestContext,
+    saleId: string,
+    totalAmount: string,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const executor = tx ?? db;
+
+    await executor
+      .update(sales)
+      .set({
+        totalAmount,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(sales.id, saleId),
+          eq(sales.businessId, ctx.businessId)
+        )
+      );
   }
 }

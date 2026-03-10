@@ -1,50 +1,35 @@
-import { useState, useEffect } from "react";
-import { User, X, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Truck, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppDrawer } from "~/components/ui/app-drawer";
-import { useCustomers } from "~/hooks/use-customers";
+import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { cn } from "~/lib/utils";
 
-interface CustomerSelectProps {
-  value: string | null;
-  selectedCustomer?: { id: string; name: string; phone?: string | null } | null;
-  onChange: (customer: { id: string; name: string; phone?: string | null } | null) => void;
+interface SupplierSelectorProps {
+  selectedSupplier: Supplier | null;
+  onSelectSupplier: (supplier: Supplier | null) => void;
   disabled?: boolean;
-  placeholder?: string;
-  required?: boolean;
-  helperText?: string;
 }
 
-export function CustomerSelect({
-  value,
-  selectedCustomer: propSelectedCustomer,
-  onChange,
+export function SupplierSelector({
+  selectedSupplier,
+  onSelectSupplier,
   disabled = false,
-  placeholder = "Seleccionar cliente",
-  required = false,
-  helperText,
-}: CustomerSelectProps) {
+}: SupplierSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: customers = [], isLoading } = useCustomers(searchQuery);
+  const { data: suppliers = [], isLoading } = useSuppliers(searchQuery);
 
-  useEffect(() => {
-    console.log('[CustomerSelect] value:', value, 'customers.length:', customers.length, 'isLoading:', isLoading, 'searchQuery:', searchQuery);
-  }, [value, customers, isLoading, searchQuery]);
-
-  // Find selected customer - first check props, then search in loaded customers
-  const selectedCustomer = propSelectedCustomer || customers.find((c) => c.id === value);
-
-  const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null }) => {
-    onChange(customer);
+  const handleSelectSupplier = (supplier: Supplier) => {
+    onSelectSupplier(supplier);
     setIsOpen(false);
     setSearchQuery("");
   };
 
-  const handleClearCustomer = () => {
-    onChange(null);
+  const handleClearSupplier = () => {
+    onSelectSupplier(null);
   };
 
   return (
@@ -60,34 +45,34 @@ export function CustomerSelect({
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <User className="h-6 w-6 text-orange-600" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Truck className="h-6 w-6 text-blue-600" />
               </div>
               <div className="min-w-0">
                 <p className="font-medium truncate">
-                  {selectedCustomer?.name || placeholder}
+                  {selectedSupplier?.name || "Seleccionar proveedor"}
                 </p>
-                {selectedCustomer?.phone && (
+                {selectedSupplier?.phone && (
                   <p className="text-sm text-muted-foreground truncate">
-                    {selectedCustomer.phone}
+                    {selectedSupplier.phone}
                   </p>
                 )}
-                {!selectedCustomer && required && (
-                  <p className="text-sm text-orange-600">
-                    {helperText || "Seleccione un cliente"}
+                {!selectedSupplier && (
+                  <p className="text-sm text-blue-600">
+                    Opcional - puedes omitirlo
                   </p>
                 )}
               </div>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {selectedCustomer && !disabled && (
+              {selectedSupplier && !disabled && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleClearCustomer();
+                    handleClearSupplier();
                   }}
                   className="text-muted-foreground hover:text-destructive"
                 >
@@ -99,9 +84,9 @@ export function CustomerSelect({
                 variant="ghost"
                 size="icon"
                 disabled={disabled}
-                className={cn(isOpen && "bg-orange-100")}
+                className={cn(isOpen && "bg-blue-100")}
               >
-                <ChevronDown
+                <Truck
                   className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")}
                 />
               </Button>
@@ -112,14 +97,14 @@ export function CustomerSelect({
 
       <AppDrawer open={isOpen} onOpenChange={setIsOpen} size="large">
         <AppDrawer.Header
-          title="Seleccionar cliente"
-          icon={<User className="h-5 w-5" />}
+          title="Seleccionar proveedor"
+          icon={<Truck className="h-5 w-5" />}
           onClose={() => setIsOpen(false)}
         />
 
         <AppDrawer.Body className="space-y-3">
           <Input
-            placeholder="Buscar cliente..."
+            placeholder="Buscar proveedor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="rounded-xl"
@@ -128,33 +113,38 @@ export function CustomerSelect({
           <div className="space-y-2">
             {isLoading ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                Cargando clientes...
+                Cargando proveedores...
               </p>
-            ) : customers.length === 0 ? (
+            ) : suppliers.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                No se encontraron clientes
+                No se encontraron proveedores
               </p>
             ) : (
-              customers.map((customer) => (
+              suppliers.map((supplier) => (
                 <button
-                  key={customer.id}
+                  key={supplier.id}
                   type="button"
-                  onClick={() => handleSelectCustomer(customer)}
+                  onClick={() => handleSelectSupplier(supplier)}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left",
-                    value === customer.id
-                      ? "bg-orange-100 border-2 border-orange-500"
-                      : "hover:bg-orange-50 border-2 border-transparent"
+                    selectedSupplier?.id === supplier.id
+                      ? "bg-blue-100 border-2 border-blue-500"
+                      : "hover:bg-blue-50 border-2 border-transparent"
                   )}
                 >
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-orange-600" />
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Truck className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{customer.name}</p>
-                    {customer.phone && (
+                    <p className="font-medium truncate">{supplier.name}</p>
+                    {supplier.phone && (
                       <p className="text-sm text-muted-foreground truncate">
-                        {customer.phone}
+                        {supplier.phone}
+                      </p>
+                    )}
+                    {supplier.ruc && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        RUC: {supplier.ruc}
                       </p>
                     )}
                   </div>

@@ -114,7 +114,6 @@ export async function getTutorialsForRoute(
     "/ventas": ["ventas"],
     "/clientes": ["clientes"],
     "/cobros": ["cobros"],
-    "/pedidos": ["pedidos"],
     "/productos": ["productos"],
     "/distribuciones": ["distribuciones"],
     "/mi-distribucion": ["distribuciones"],

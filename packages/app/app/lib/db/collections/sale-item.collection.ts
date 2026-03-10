@@ -1,12 +1,15 @@
 import { createCollection } from "@tanstack/react-db";
 import { electricCollectionOptions } from "@tanstack/electric-db-collection";
-import { saleItemSchema } from "../schemas/sale";
+import { saleItemSchema, type SaleItem } from "../schemas/sale";
 import { api } from "~/lib/api-client";
 import { createShapeOptions } from "./utils";
 
 /**
- * Sale Item collection for atomic item management.
- * Each item is a separate entity that can be created, updated, or deleted independently.
+ * Unified Sale Item Collection
+ * Supports both instant_sales and pre_orders with atomic CRUD operations
+ *
+ * For instant_sales: uses quantity, unitPrice
+ * For pre_orders: uses orderedQuantity, deliveredQuantity, unitPriceQuoted, unitPriceFinal
  */
 export const saleItemCollection = createCollection(
   electricCollectionOptions({
@@ -15,9 +18,11 @@ export const saleItemCollection = createCollection(
     getKey: (item) => item.id,
     shapeOptions: createShapeOptions("sale_items"),
     onInsert: async ({ transaction }) => {
-      const newItem = transaction.mutations[0].modified;
-      
-      // Call API to add item to sale
+      const newItem = transaction.mutations[0].modified as SaleItem;
+
+      // Determine if this is for an instant_sale or pre_order based on available fields
+      const isPreOrder = newItem.orderedQuantity !== null && newItem.orderedQuantity !== undefined;
+
       const response = await api
         .sales({ id: newItem.saleId })
         .items.post({
@@ -25,8 +30,12 @@ export const saleItemCollection = createCollection(
           variantId: newItem.variantId,
           productName: newItem.productName,
           variantName: newItem.variantName,
-          quantity: parseFloat(newItem.quantity),
-          unitPrice: parseFloat(newItem.unitPrice),
+          // For instant_sales
+          quantity: newItem.quantity ? parseFloat(newItem.quantity) : undefined,
+          unitPrice: newItem.unitPrice ? parseFloat(newItem.unitPrice) : undefined,
+          // For pre_orders
+          orderedQuantity: isPreOrder ? parseFloat(newItem.orderedQuantity!) : undefined,
+          unitPriceQuoted: newItem.unitPriceQuoted ? parseFloat(newItem.unitPriceQuoted) : undefined,
           subtotal: parseFloat(newItem.subtotal),
         });
 
@@ -34,7 +43,7 @@ export const saleItemCollection = createCollection(
         throw new Error(String(response.error.value));
       }
 
-      const data = response.data as { data: { item: { id: string }; txid?: number } };
+      const data = response.data as unknown as { data: { item: { id: string }; txid?: number } };
       const txid = data?.data?.txid;
       if (!txid) {
         throw new Error("No txid returned from server");
@@ -42,15 +51,64 @@ export const saleItemCollection = createCollection(
       return { txid };
     },
     onUpdate: async ({ transaction }) => {
-      const { original, changes } = transaction.mutations[0];
-      
+      const { original, changes } = transaction.mutations[0] as {
+        original: SaleItem;
+        changes: Partial<SaleItem>;
+      };
+
+      // Handle quantity updates for pre_orders (with versioning)
+      if (changes.orderedQuantity !== undefined) {
+        const response = await api
+          .sales({ id: original.saleId })
+          .items({ itemId: original.id })
+          .patch({
+            orderedQuantity: changes.orderedQuantity ? parseFloat(changes.orderedQuantity) : undefined,
+          });
+
+        if (response.error) {
+          throw new Error(String(response.error.value));
+        }
+
+        const data = response.data as { data: { txid?: number } };
+        const txid = data?.data?.txid;
+        if (!txid) {
+          throw new Error("No txid returned from server");
+        }
+        return { txid };
+      }
+
+      // Handle delivered quantity updates (for pre_orders) - use regular patch endpoint
+      if (changes.deliveredQuantity !== undefined) {
+        const response = await api
+          .sales({ id: original.saleId })
+          .items({ itemId: original.id })
+          .patch({
+            deliveredQuantity: changes.deliveredQuantity ? parseFloat(changes.deliveredQuantity) : undefined,
+          });
+
+        if (response.error) {
+          throw new Error(String(response.error.value));
+        }
+
+        const data = response.data as { data: { txid?: number } };
+        const txid = data?.data?.txid;
+        if (!txid) {
+          throw new Error("No txid returned from server");
+        }
+        return { txid };
+      }
+
+      // Regular updates for instant_sales
       const response = await api
         .sales({ id: original.saleId })
         .items({ itemId: original.id })
         .patch({
           quantity: changes.quantity ? parseFloat(changes.quantity) : undefined,
           unitPrice: changes.unitPrice ? parseFloat(changes.unitPrice) : undefined,
+          unitPriceQuoted: changes.unitPriceQuoted ? parseFloat(changes.unitPriceQuoted) : undefined,
+          unitPriceFinal: changes.unitPriceFinal ? parseFloat(changes.unitPriceFinal) : undefined,
           subtotal: changes.subtotal ? parseFloat(changes.subtotal) : undefined,
+          isModified: changes.isModified,
         });
 
       if (response.error) {
@@ -65,8 +123,8 @@ export const saleItemCollection = createCollection(
       return { txid };
     },
     onDelete: async ({ transaction }) => {
-      const { original } = transaction.mutations[0];
-      
+      const { original } = transaction.mutations[0] as { original: SaleItem };
+
       const response = await api
         .sales({ id: original.saleId })
         .items({ itemId: original.id })

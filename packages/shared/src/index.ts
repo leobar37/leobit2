@@ -259,7 +259,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   businessId: string;
-  clientId: string;
+  customerId: string;
   sellerId: string;
   deliveryDate: string;
   orderDate: string;
@@ -280,7 +280,7 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items?: OrderItem[];
-  client?: {
+  customer?: {
     id: string;
     name: string;
     dni: string | null;
@@ -289,7 +289,7 @@ export interface Order {
 }
 
 export interface CreateOrderInput {
-  clientId: string;
+  customerId: string;
   deliveryDate: string;
   paymentIntent: "contado" | "credito";
   paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";

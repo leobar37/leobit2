@@ -7,15 +7,15 @@ import { whatsAppFunctions } from "./inngest/whatsapp-functions";
 import { profileRoutes } from "./api/profile";
 import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
-import { publicOrderRoutes } from "./api/public-orders";
-import { publicPedidoRoutes } from "./api/public-pedidos";
+
 import { customerRoutes } from "./api/customers";
 import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
 import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
-import { orderRoutes } from "./api/orders";
+import { publicSaleRoutes } from "./api/public-sales";
+
 import { closingRoutes } from "./api/closings";
 import { reportRoutes } from "./api/reports";
 import { syncRoutes } from "./api/sync";
@@ -64,15 +64,13 @@ export const app = new Elysia()
   .use(businessRoutes)
   .use(invitationRoutes)
   .use(publicInvitationRoutes)
-  .use(publicOrderRoutes)
-  .use(publicPedidoRoutes)
   .use(customerRoutes)
   .use(productRoutes)
   .use(paymentRoutes)
   .use(inventoryRoutes)
   .use(distribucionRoutes)
   .use(saleRoutes)
-  .use(orderRoutes)
+  .use(publicSaleRoutes)
   .use(closingRoutes)
   .use(reportRoutes)
   .use(syncRoutes)

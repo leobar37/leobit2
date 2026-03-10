@@ -20,9 +20,11 @@ export const syncStatusEnum = pgEnum("sync_status", [
   "error",
 ]);
 
-// Sales
+// Sales / Transactions
 export const saleTypeEnum = pgEnum("sale_type", ["contado", "credito"]);
-export const saleStatusEnum = pgEnum("sale_status", ["draft", "active", "cancelled"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["instant_sale", "pre_order"]);
+export const saleStatusEnum = pgEnum("sale_status", ["draft", "confirmed", "active", "delivered", "cancelled"]);
+export const paymentModeEnum = pgEnum("payment_mode", ["pago_total", "a_cuenta", "debe_todo"]);
 export const refundMethodEnum = pgEnum("refund_method", [
   "efectivo",
   "yape",

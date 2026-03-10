@@ -6,7 +6,6 @@ import type { CustomerRepository } from "../repository/customer.repository";
 import type { SaleRepository } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
-import type { OrderRepository } from "../repository/order.repository";
 import type { DistribucionService } from "../business/distribucion.service";
 import { toISODate, now, getToday } from "../../lib/date-utils";
 
@@ -14,8 +13,6 @@ export type SyncEntity =
   | "customers"
   | "sales"
   | "sale_items"
-  | "orders"
-  | "order_items"
   | "abonos"
   | "distribuciones";
 
@@ -52,24 +49,28 @@ interface SyncServiceDeps {
   paymentRepo: PaymentRepository;
   distribucionRepo: DistribucionRepository;
   distribucionService: DistribucionService;
-  orderRepo: OrderRepository;
 }
 
 type ParsedSaleInsert = {
   clientId?: string;
+  type: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   totalAmount: string;
   amountPaid: string;
   balanceDue: string;
   tara?: string;
   netWeight?: string;
+  deliveryDate?: string;
+  orderDate?: string;
   items: Array<{
     productId: string;
     variantId: string;
     productName: string;
     variantName: string;
-    quantity: string;
-    unitPrice: string;
+    quantity?: string;
+    orderedQuantity?: string;
+    unitPrice?: string;
+    unitPriceQuoted?: string;
     subtotal: string;
   }>;
 };
@@ -84,36 +85,6 @@ type ParsedDistribucionInsert = {
     variantId: string;
     cantidadAsignada: number;
     unidad: string;
-  }>;
-};
-
-type ParsedOrderInsert = {
-  clientId: string;
-  deliveryDate: string;
-  orderDate: string;
-  status: "draft" | "confirmed" | "cancelled" | "delivered";
-  paymentIntent: "contado" | "credito";
-  paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
-  advanceAmount?: string;
-  balanceDue?: string;
-  advancePaymentMethod?: string;
-  advanceReferenceNumber?: string;
-  advanceProofImageId?: string;
-  totalAmount: string;
-  confirmedSnapshot?: Record<string, unknown>;
-  deliveredSnapshot?: Record<string, unknown>;
-  version: number;
-  items: Array<{
-    productId: string;
-    variantId: string;
-    productName: string;
-    variantName: string;
-    orderedQuantity: string;
-    deliveredQuantity?: string;
-    unitPriceQuoted: string;
-    unitPriceFinal?: string;
-    isModified?: boolean;
-    originalQuantity?: string;
   }>;
 };
 
@@ -284,16 +255,13 @@ export class SyncService {
       case "abonos":
         await this.applyAbonosOperation(ctx, operation);
         return;
-      case "orders":
-        await this.applyOrdersOperation(ctx, operation);
-        return;
       case "distribuciones":
         await this.applyDistribucionOperation(ctx, operation);
         return;
       case "sale_items":
-        throw new ValidationError("sale_items no soporta sync directo en v1");
-      case "order_items":
-        throw new ValidationError("order_items no soporta sync directo en v1");
+        // sale_items are synced directly via collection callbacks (onInsert/onUpdate/onDelete)
+        // Not supported in batch sync - items should be synced as part of their parent sale
+        throw new ValidationError("sale_items no se syncroniza via batch - sync directo");
       default:
         throw new ValidationError(`Entidad no soportada: ${operation.entity}`);
     }
@@ -371,6 +339,47 @@ export class SyncService {
       return;
     }
 
+    if (operation.action === "update") {
+      const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
+      if (!existing) {
+        throw new ValidationError("Venta no encontrada");
+      }
+
+      // Handle status transitions
+      if (payload.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
+        await this.deps.saleRepo.confirm(ctx, operation.entityId);
+        return;
+      }
+
+      if (payload.status === "confirmed" && existing.status === "draft" && existing.type === "pre_order") {
+        await this.deps.saleRepo.confirmPreOrder(ctx, operation.entityId, existing.version);
+        return;
+      }
+
+      if (payload.status === "delivered" && existing.status === "confirmed" && existing.type === "pre_order") {
+        await this.deps.saleRepo.deliverPreOrder(ctx, operation.entityId, existing.version);
+        return;
+      }
+
+      if (payload.status === "cancelled") {
+        await this.deps.saleRepo.cancel(ctx, operation.entityId, {
+          reason: this.optionalString(payload.cancelReason) || "Cancelación",
+          refundAmount: this.optionalNumericString(payload.refundAmount),
+          refundMethod: payload.refundMethod as any,
+        });
+        return;
+      }
+
+      // Regular update
+      await this.deps.saleRepo.update(ctx, operation.entityId, {
+        ...(payload.clientId !== undefined && { clientId: this.optionalString(payload.clientId) }),
+        ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
+        ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
+        ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
+      });
+      return;
+    }
+
     if (operation.action === "delete") {
       const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
       if (!existing) {
@@ -381,7 +390,7 @@ export class SyncService {
       return;
     }
 
-    throw new ValidationError("Update de ventas no soportado en v1");
+    throw new ValidationError("Acción no soportada para ventas");
   }
 
   private async applyAbonosOperation(ctx: RequestContext, operation: SyncOperationInput) {
@@ -464,52 +473,8 @@ export class SyncService {
     await this.deps.distribucionRepo.delete(ctx, operation.entityId);
   }
 
-  private async applyOrdersOperation(ctx: RequestContext, operation: SyncOperationInput) {
-    const payload = operation.payload;
-
-    if (operation.action === "insert") {
-      const order = this.parseOrderInsert(payload);
-      await this.deps.orderRepo.create(ctx, {
-        ...order,
-        advancePaymentMethod: order.advancePaymentMethod as "efectivo" | "yape" | "plin" | "transferencia" | null,
-      } as any);
-      return;
-    }
-
-    if (operation.action === "update") {
-      const existing = await this.deps.orderRepo.findById(ctx, operation.entityId);
-      if (!existing) {
-        throw new ValidationError("Pedido no encontrado");
-      }
-
-      await this.deps.orderRepo.update(ctx, operation.entityId, {
-        ...(payload.deliveryDate !== undefined && {
-          deliveryDate: this.requiredString(payload.deliveryDate, "deliveryDate"),
-        }),
-        ...(payload.status !== undefined && {
-          status: this.requiredOrderStatus(payload.status),
-        }),
-        ...(payload.paymentIntent !== undefined && {
-          paymentIntent: this.requiredSaleType(payload.paymentIntent),
-        }),
-        ...(payload.totalAmount !== undefined && {
-          totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount"),
-        }),
-      });
-      return;
-    }
-
-    const existing = await this.deps.orderRepo.findById(ctx, operation.entityId);
-    if (!existing) {
-      return;
-    }
-
-    await this.deps.orderRepo.update(ctx, operation.entityId, {
-      status: "cancelled",
-    });
-  }
-
   private parseSaleInsert(payload: Record<string, unknown>): ParsedSaleInsert {
+    const type = payload.type === "pre_order" ? "pre_order" : "instant_sale";
     const saleType = this.requiredSaleType(payload.saleType);
     const total = this.normalizedAmount(
       Number(this.requiredNumericString(payload.totalAmount, "totalAmount")),
@@ -548,25 +513,34 @@ export class SyncService {
       }
 
       const safe = item as Record<string, unknown>;
+      const isPreOrder = type === "pre_order" || safe.orderedQuantity !== undefined;
+
       return {
         productId: this.requiredString(safe.productId, "productId"),
         variantId: this.requiredString(safe.variantId, "variantId"),
         productName: this.requiredString(safe.productName, "productName"),
         variantName: this.requiredString(safe.variantName, "variantName"),
-        quantity: this.requiredNumericString(safe.quantity, "quantity"),
-        unitPrice: this.requiredNumericString(safe.unitPrice, "unitPrice"),
+        // For instant_sales
+        quantity: this.optionalNumericString(safe.quantity),
+        unitPrice: this.optionalNumericString(safe.unitPrice),
+        // For pre_orders
+        orderedQuantity: isPreOrder ? this.requiredNumericString(safe.orderedQuantity ?? safe.quantity, "orderedQuantity") : undefined,
+        unitPriceQuoted: this.optionalNumericString(safe.unitPriceQuoted ?? safe.unitPrice),
         subtotal: this.requiredNumericString(safe.subtotal, "subtotal"),
       };
     });
 
     return {
       clientId,
+      type,
       saleType,
       totalAmount: total.toFixed(2),
       amountPaid: paid.toFixed(2),
       balanceDue,
       tara: this.optionalNumericString(payload.tara),
       netWeight: this.optionalNumericString(payload.netWeight),
+      deliveryDate: this.optionalString(payload.deliveryDate),
+      orderDate: this.optionalString(payload.orderDate),
       items,
     };
   }
@@ -619,102 +593,11 @@ export class SyncService {
     };
   }
 
-  private parseOrderInsert(payload: Record<string, unknown>): ParsedOrderInsert {
-    const rawItems = Array.isArray(payload.items) ? payload.items : [];
-    if (rawItems.length === 0) {
-      throw new ValidationError("El pedido requiere items");
-    }
-
-    const status =
-      payload.status !== undefined ? this.requiredOrderStatus(payload.status) : "draft";
-
-    const items = rawItems.map((item, index) => {
-      if (!item || typeof item !== "object") {
-        throw new ValidationError(`Item inválido en posición ${index}`);
-      }
-
-      const safe = item as Record<string, unknown>;
-      return {
-        productId: this.requiredString(safe.productId, "productId"),
-        variantId: this.requiredString(safe.variantId, "variantId"),
-        productName: this.requiredString(safe.productName, "productName"),
-        variantName: this.requiredString(safe.variantName, "variantName"),
-        orderedQuantity: this.requiredNumericString(safe.orderedQuantity, "orderedQuantity"),
-        deliveredQuantity: this.optionalNumericString(safe.deliveredQuantity),
-        unitPriceQuoted: this.requiredNumericString(safe.unitPriceQuoted, "unitPriceQuoted"),
-        unitPriceFinal: this.optionalNumericString(safe.unitPriceFinal),
-        isModified: safe.isModified === true,
-        originalQuantity: this.optionalNumericString(safe.originalQuantity),
-      };
-    });
-
-    const paymentMethod = payload.advancePaymentMethod as string | undefined;
-    const validPaymentMethods = ["efectivo", "yape", "plin", "transferencia"];
-    const normalizedPaymentMethod = paymentMethod && validPaymentMethods.includes(paymentMethod) 
-      ? paymentMethod 
-      : undefined;
-
-    return {
-      clientId: this.requiredString(payload.clientId, "clientId"),
-      deliveryDate: this.requiredString(payload.deliveryDate, "deliveryDate"),
-      orderDate:
-        this.optionalString(payload.orderDate) ?? new Date().toISOString().slice(0, 10),
-      status,
-      paymentIntent: this.requiredSaleType(payload.paymentIntent),
-      paymentStatus: this.optionalOrderPaymentStatus(payload.paymentStatus),
-      advanceAmount: this.optionalNumericString(payload.advanceAmount),
-      balanceDue: this.optionalNumericString(payload.balanceDue),
-      advancePaymentMethod: normalizedPaymentMethod,
-      advanceReferenceNumber: this.optionalString(payload.advanceReferenceNumber),
-      advanceProofImageId: this.optionalString(payload.advanceProofImageId),
-      totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount"),
-      confirmedSnapshot:
-        payload.confirmedSnapshot && typeof payload.confirmedSnapshot === "object"
-          ? (payload.confirmedSnapshot as Record<string, unknown>)
-          : undefined,
-      deliveredSnapshot:
-        payload.deliveredSnapshot && typeof payload.deliveredSnapshot === "object"
-          ? (payload.deliveredSnapshot as Record<string, unknown>)
-          : undefined,
-      version: payload.version ? Number(this.requiredNumericString(payload.version, "version")) : 1,
-      items,
-    };
-  }
-
   private requiredSaleType(value: unknown): "contado" | "credito" {
     if (value === "contado" || value === "credito") {
       return value;
     }
     throw new ValidationError("saleType inválido");
-  }
-
-  private optionalOrderPaymentStatus(
-    value: unknown
-  ): "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente" | undefined {
-    if (
-      value === "sin_pago" ||
-      value === "adelanto_parcial" ||
-      value === "pagado_total" ||
-      value === "saldo_pendiente"
-    ) {
-      return value;
-    }
-    return undefined;
-  }
-
-  private requiredOrderStatus(
-    value: unknown
-  ): "draft" | "confirmed" | "cancelled" | "delivered" {
-    if (
-      value === "draft" ||
-      value === "confirmed" ||
-      value === "cancelled" ||
-      value === "delivered"
-    ) {
-      return value;
-    }
-
-    throw new ValidationError("status inválido");
   }
 
   private requiredPaymentMethod(

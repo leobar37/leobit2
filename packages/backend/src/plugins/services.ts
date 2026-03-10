@@ -31,12 +31,9 @@ import { PurchaseRepository } from "../services/repository/purchase.repository";
 import { PurchaseService } from "../services/business/purchase.service";
 import { StaffInvitationRepository } from "../services/repository/staff-invitation.repository";
 import { StaffInvitationService } from "../services/business/staff-invitation.service";
-import { OrderRepository } from "../services/repository/order.repository";
-import { OrderEventsRepository } from "../services/repository/order-events.repository";
-import { OrderTokenRepository } from "../services/repository/order-token.repository";
-import { OrderService } from "../services/business/order.service";
-import { OrderTokenService } from "../services/business/order-token.service";
-import { OrderDraftService } from "../services/business/order-draft.service";
+import { SaleTokenRepository } from "../services/repository/sale-token.repository";
+import { SaleTokenService } from "../services/business/sale-token.service";
+
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
 import { OCRService } from "../services/business/ocr.service";
@@ -71,9 +68,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const supplierRepo = new SupplierRepository();
     const purchaseRepo = new PurchaseRepository();
     const staffInvitationRepo = new StaffInvitationRepository();
-    const orderRepo = new OrderRepository();
-    const orderEventsRepo = new OrderEventsRepository();
-    const orderTokenRepo = new OrderTokenRepository();
+    const saleTokenRepo = new SaleTokenRepository();
     const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
     const whatsAppTemplateRepo = new WhatsAppTemplateRepository();
     const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
@@ -95,7 +90,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       paymentRepo,
       distribucionRepo,
       distribucionService,
-      orderRepo,
     });
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
@@ -104,9 +98,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const supplierService = new SupplierService(supplierRepo);
     const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
-    const orderTokenService = new OrderTokenService(orderTokenRepo);
-    const orderDraftService = new OrderDraftService(orderRepo, orderEventsRepo);
-    const orderService = new OrderService(orderRepo, orderEventsRepo, saleService, distribucionRepo, distribucionItemRepo, orderTokenService, customerRepo);
+    const saleTokenService = new SaleTokenService(saleTokenRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
     const whatsAppTemplateService = new WhatsAppTemplateService(whatsAppTemplateRepo);
@@ -154,12 +146,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       purchaseService,
       staffInvitationRepo,
       staffInvitationService,
-      orderRepo,
-      orderEventsRepo,
-      orderTokenRepo,
-      orderService,
-      orderTokenService,
-      orderDraftService,
+      saleTokenRepo,
+      saleTokenService,
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,

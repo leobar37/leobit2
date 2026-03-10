@@ -31,6 +31,9 @@ export {
   businessUserRoleEnum,
   syncStatusEnum,
   saleTypeEnum,
+  transactionTypeEnum,
+  paymentModeEnum,
+  saleStatusEnum,
   orderStatusEnum,
   paymentMethodEnum,
   productTypeEnum,
@@ -102,7 +105,7 @@ export {
   type NewCustomerTag,
 } from "./customer-tags";
 
-// Sales
+// Sales (Unified for instant_sales and pre_orders)
 export {
   sales,
   saleItems,
@@ -114,31 +117,13 @@ export {
   type NewSaleItem,
 } from "./sales";
 
+// Sale Tokens (for sharing sales with customers)
 export {
-  orders,
-  orderItems,
-  ordersRelations,
-  orderItemsRelations,
-  type Order,
-  type NewOrder,
-  type OrderItem,
-  type NewOrderItem,
-} from "./orders";
-
-export {
-  orderEvents,
-  orderEventTypeEnum,
-  orderEventsRelations,
-  type OrderEvent,
-  type NewOrderEvent,
-} from "./order-events";
-
-export {
-  orderTokens,
-  orderTokensRelations,
-  type OrderToken,
-  type NewOrderToken,
-} from "./order-tokens";
+  saleTokens,
+  saleTokensRelations,
+  type SaleToken,
+  type NewSaleToken,
+} from "./sale-tokens";
 
 // Payments (Abonos)
 export {

@@ -137,33 +137,7 @@
         }
       ]
     },
-    {
-      "id": "pedidos",
-      "title": "Pedidos",
-      "icon": "Package",
-      "order": 5,
-      "description": "Gestión de pedidos para entrega futura",
-      "tutorials": [
-        {
-          "slug": "crear-pedido",
-          "title": "Crear un pedido",
-          "description": "Registra pedidos con fecha de entrega futura",
-          "file": "05-pedidos/01-crear-pedido.md",
-          "tags": ["pedidos", "preventa"],
-          "roles": ["vendedor", "admin"],
-          "estimatedReadTime": 6
-        },
-        {
-          "slug": "entregar-pedido",
-          "title": "Entregar un pedido",
-          "description": "Convierte un pedido en venta al momento de la entrega",
-          "file": "05-pedidos/02-entregar-pedido.md",
-          "tags": ["pedidos", "ventas"],
-          "roles": ["vendedor"],
-          "estimatedReadTime": 5
-        }
-      ]
-    },
+
     {
       "id": "productos",
       "title": "Productos",

@@ -62,7 +62,7 @@ interface SaleItem {
 interface Sale {
   id: string;
   businessId: string;
-  clientId: string | null;
+  customerId: string | null;
   sellerId: string;
   saleType: "contado" | "credito";
   totalAmount: string;
@@ -513,7 +513,7 @@ export const handlers = [
 
   http.post("/api/sales", async ({ request }) => {
     const body = (await request.json()) as {
-      clientId?: string;
+      customerId?: string;
       saleType: "contado" | "credito";
       totalAmount: number;
       amountPaid: number;
@@ -535,7 +535,7 @@ export const handlers = [
     const newSale: Sale = {
       id: `sale-${Date.now()}`,
       businessId: "biz-1",
-      clientId: body.clientId || null,
+      customerId: body.customerId || null,
       sellerId: BUSINESS_USER.id,
       saleType: body.saleType,
       totalAmount: body.totalAmount.toFixed(2),
