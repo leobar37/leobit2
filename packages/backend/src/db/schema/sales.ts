@@ -10,14 +10,18 @@ import {
   timestamp,
   integer,
   text,
+  date,
+  jsonb,
+  boolean,
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { saleTypeEnum, saleStatusEnum, refundMethodEnum, syncStatusEnum } from "./enums";
+import { saleTypeEnum, saleStatusEnum, refundMethodEnum, syncStatusEnum, salePaymentStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
 import { orders } from "./orders";
+import { files } from "./files";
 
 // Sales table
 export const sales = pgTable(
@@ -73,6 +77,25 @@ export const sales = pgTable(
 
     // Dates
     saleDate: timestamp("sale_date").notNull().defaultNow(),
+    deliveryDate: date("delivery_date"),
+
+    // Versioning for optimistic locking
+    version: integer("version").notNull().default(1),
+
+    // Snapshots for order-like functionality
+    confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
+    deliveredSnapshot: jsonb("delivered_snapshot").$type<Record<string, unknown>>(),
+
+    // Payment tracking
+    paymentStatus: salePaymentStatusEnum("payment_status").notNull().default("sin_pago"),
+    advanceAmount: decimal("advance_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    advancePaymentMethod: varchar("advance_payment_method", { length: 20 }),
+    advanceReferenceNumber: varchar("advance_reference_number", { length: 50 }),
+    advanceProofImageId: uuid("advance_proof_image_id").references(() => files.id),
+
+    // Allow customer to edit the sale
+    allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -86,6 +109,8 @@ export const sales = pgTable(
     index("idx_sales_status").on(table.status),
     index("idx_sales_cancelled_at").on(table.cancelledAt),
     index("idx_sales_sale_date").on(table.saleDate),
+    index("idx_sales_delivery_date").on(table.deliveryDate),
+    index("idx_sales_payment_status").on(table.paymentStatus),
   ]
 );
 
@@ -112,6 +137,14 @@ export const saleItems = pgTable(
     quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
     unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(), // snapshot final vendido
     subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+
+    // Order-like fields for partial delivery tracking
+    orderedQuantity: decimal("ordered_quantity", { precision: 10, scale: 3 }),
+    deliveredQuantity: decimal("delivered_quantity", { precision: 10, scale: 3 }),
+    unitPriceQuoted: decimal("unit_price_quoted", { precision: 10, scale: 2 }),
+    unitPriceFinal: decimal("unit_price_final", { precision: 10, scale: 2 }),
+    isModified: boolean("is_modified").notNull().default(false),
+    originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
   },
   (table) => [
     index("idx_sale_items_sale_id").on(table.saleId),
