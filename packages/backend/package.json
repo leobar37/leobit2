@@ -25,6 +25,7 @@
     "db:fix-corrupted-sales": "bun run src/db/fix-corrupted-sales.ts",
     "db:check-duplicates": "bun run src/db/check-duplicates.ts",
     "db:apply-migration": "bun run scripts/run-migration.ts",
+    "db:backup": "bun run scripts/backup-db.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "vitest run --config=vitest.e2e.config.ts",

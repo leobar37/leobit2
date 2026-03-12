@@ -8,6 +8,7 @@
     "build": "turbo run build",
     "db:migrate": "turbo run db:migrate",
     "db:generate": "turbo run db:generate",
+    "db:backup": "cd packages/backend && bun run db:backup",
     "test:e2e": "./scripts/test-e2e.sh"
   },
   "devDependencies": {
