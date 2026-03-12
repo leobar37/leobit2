@@ -3,12 +3,16 @@ import { electricCollectionOptions } from "@tanstack/electric-db-collection";
 import { fileSchema } from "../schema";
 import { createShapeOptions } from "./utils";
 
+// @ts-ignore - electricCollectionOptions types are not fully aligned
 export const fileCollection = createCollection(
+  // @ts-ignore
   electricCollectionOptions({
     id: "files",
     schema: fileSchema,
     getKey: (file) => file.id,
     shapeOptions: createShapeOptions("files"),
+    syncMode: "eager",
+    startSync: true,
     onInsert: async () => {
       throw new Error("File uploads must use upload queue, not collection insert");
     },

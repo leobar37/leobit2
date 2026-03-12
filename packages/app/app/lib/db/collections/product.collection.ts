@@ -30,11 +30,14 @@ export type ProductVariant = z.infer<typeof productVariantSchema>;
 // Products collection (read-only for vendors)
 // @ts-ignore - electricCollectionOptions types are not fully aligned
 export const productCollection = createCollection(
+  // @ts-ignore
   electricCollectionOptions({
     id: "products",
     schema: productSchema,
     getKey: (product) => product.id,
     shapeOptions: createShapeOptions("products"),
+    syncMode: "eager",
+    startSync: true,
     // No onInsert/onUpdate - vendors only read products
   })
 );
@@ -42,10 +45,13 @@ export const productCollection = createCollection(
 // Product variants collection (read-only)
 // @ts-ignore - electricCollectionOptions types are not fully aligned
 export const productVariantCollection = createCollection(
+  // @ts-ignore
   electricCollectionOptions({
     id: "product_variants",
     schema: productVariantSchema,
     getKey: (variant) => variant.id,
     shapeOptions: createShapeOptions("product_variants"),
+    syncMode: "eager",
+    startSync: true,
   })
 );

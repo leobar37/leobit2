@@ -1,54 +1,72 @@
-import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, User, Phone, MapPin, CreditCard, Wallet, History, Pencil, Trash2, Tag } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import {
+  ArrowLeft,
+  CreditCard,
+  MapPin,
+  Pencil,
+  Phone,
+  Trash2,
+  User,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useCustomer } from "~/hooks/use-customer";
-import { useSales } from "~/hooks/use-sales";
+import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { usePayments } from "~/hooks/use-payments";
+import { useSales } from "~/hooks/use-sales-db";
 import { useDeleteCustomer } from "~/hooks/use-customers-live";
-import { useAuth } from "~/hooks/use-auth";
-import { PaymentForm } from "~/components/payments/payment-form";
-import { PaymentList } from "~/components/payments/payment-list";
-import { SaleList } from "~/components/sales/sale-list";
-import { BalanceCard } from "~/components/payments/balance-card";
-import { CustomerTagsModal } from "~/components/customers/customer-tags-modal";
-import { TagBadge } from "~/components/tags";
-import { useCustomerTags } from "~/hooks/use-customer-tags";
+import { formatCurrency } from "~/lib/utils";
+import { formatDate } from "~/lib/formatting";
+
+function SyncBadge({ status }: { status: "pending" | "synced" | "error" }) {
+  const styles = {
+    pending: "bg-amber-100 text-amber-700",
+    synced: "bg-green-100 text-green-700",
+    error: "bg-red-100 text-red-700",
+  };
+
+  const labels = {
+    pending: "Pendiente",
+    synced: "Sincronizado",
+    error: "Error",
+  };
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+      {labels[status]}
+    </span>
+  );
+}
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showTagsModal, setShowTagsModal] = useState(false);
 
-  const { data: customer, isLoading: customerLoading } = useCustomer(id!);
-  const { data: sales, isLoading: salesLoading } = useSales();
-  const { data: payments, isLoading: paymentsLoading } = usePayments(id);
-  const { data: customerTags } = useCustomerTags(id!);
-  const { user } = useAuth();
+  const { data: customer, isLoading: customerLoading } = useCustomer(id);
+  const { data: balance, isLoading: balanceLoading } = useCustomerBalance(id ?? null);
+  const { data: sales = [], isLoading: salesLoading } = useSales();
+  const { data: payments = [], isLoading: paymentsLoading } = usePayments(id);
   const deleteCustomer = useDeleteCustomer();
 
-  const customerSales = sales?.filter((sale) => sale.clientId === id) || [];
-  const customerPayments = payments || [];
-
-  const totalDebt = customerSales
-    .filter((sale) => sale.saleType === "credito")
-    .reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0);
-
-  const totalPaid = customerPayments.reduce(
-    (sum, payment) => sum + parseFloat(payment.amount),
-    0
+  const customerSales = useMemo(
+    () =>
+      sales.filter(
+        (sale) =>
+          sale.customerId === id &&
+          sale.status !== "draft" &&
+          sale.status !== "cancelled"
+      ),
+    [id, sales]
   );
-
-  const currentBalance = totalDebt - totalPaid;
 
   if (customerLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <p>Cargando cliente...</p>
       </div>
     );
@@ -56,7 +74,7 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <p>Cliente no encontrado</p>
       </div>
     );
@@ -64,28 +82,26 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
+      <header className="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-xl">
+        <div className="flex h-16 items-center gap-3 px-3 sm:px-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-xl hover:bg-orange-50"
+            className="rounded-xl p-2 -ml-2 hover:bg-orange-50"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="font-bold text-lg truncate">{customer.name}</h1>
-          <div className="flex items-center gap-1 ml-auto">
-            {user && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="p-2 rounded-xl hover:bg-red-50 text-red-600"
-                title="Eliminar cliente"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
-            )}
+          <h1 className="truncate text-lg font-bold">{customer.name}</h1>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-xl p-2 text-red-600 hover:bg-red-50"
+              title="Eliminar cliente"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
             <Link
               to={`/clientes/${id}/edit`}
-              className="p-2 rounded-xl hover:bg-orange-50"
+              className="rounded-xl p-2 hover:bg-orange-50"
             >
               <Pencil className="h-5 w-5" />
             </Link>
@@ -93,36 +109,16 @@ export default function CustomerDetailPage() {
         </div>
       </header>
 
-      <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
-        <Card className="border-0 shadow-md rounded-2xl">
+      <main className="space-y-4 px-3 py-4 pb-32 sm:px-4">
+        <Card className="rounded-2xl border-0 shadow-md">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-100">
                 <User className="h-7 w-7 text-orange-600" />
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg">{customer.name}</h2>
-
-                {/* Tags */}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {customerTags?.map((ct) => (
-                    <TagBadge
-                      key={ct.tagId}
-                      tag={{ id: ct.tagId, name: ct.tagName, color: ct.tagColor }}
-                      size="sm"
-                    />
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowTagsModal(true)}
-                  >
-                    <Tag className="h-3.5 w-3.5 mr-1" />
-                    {customerTags?.length ? "Editar etiquetas" : "Agregar etiquetas"}
-                  </Button>
-                </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold">{customer.name}</h2>
 
                 <div className="mt-3 space-y-2">
                   {customer.dni && (
@@ -131,14 +127,12 @@ export default function CustomerDetailPage() {
                       <span>DNI: {customer.dni}</span>
                     </div>
                   )}
-
                   {customer.phone && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="h-4 w-4" />
                       <span>{customer.phone}</span>
                     </div>
                   )}
-
                   {customer.address && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
@@ -151,30 +145,53 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        <BalanceCard
-          balance={currentBalance}
-          onRegisterPayment={() => setShowPaymentForm(true)}
-        />
+        <Card className="rounded-2xl border-0 shadow-md">
+          <CardContent className="space-y-4 p-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Saldo pendiente</p>
+              <p className="text-4xl font-bold text-red-600">
+                S/ {formatCurrency(balance?.balanceDue ?? 0)}
+              </p>
+              {balanceLoading ? (
+                <p className="mt-1 text-xs text-muted-foreground">Calculando saldo...</p>
+              ) : null}
+            </div>
 
-        {showPaymentForm && (
-          <PaymentForm
-            clientId={id!}
-            onClose={() => setShowPaymentForm(false)}
-            maxAmount={currentBalance}
-          />
-        )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="text-xs text-muted-foreground">Ventas crédito</p>
+                <p className="font-semibold">
+                  S/ {formatCurrency(balance?.totalSales ?? 0)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="text-xs text-muted-foreground">Abonos</p>
+                <p className="font-semibold text-green-600">
+                  S/ {formatCurrency(balance?.totalPayments ?? 0)}
+                </p>
+              </div>
+            </div>
 
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-              <h3 className="text-lg font-semibold mb-2">¿Eliminar cliente?</h3>
-              <p className="text-muted-foreground mb-6">
-                Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar a {customer.name}?
+            <Button asChild className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600">
+              <Link to={`/cobros/nuevo?clienteId=${id}`}>
+                <Wallet className="mr-2 h-4 w-4" />
+                Registrar pago
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {showDeleteConfirm ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="mb-2 text-lg font-semibold">¿Eliminar cliente?</h3>
+              <p className="mb-6 text-muted-foreground">
+                Esta acción no se puede deshacer. ¿Eliminar a {customer.name}?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-2 px-4 rounded-xl border border-gray-200 hover:bg-gray-50"
+                  className="flex-1 rounded-xl border border-gray-200 px-4 py-2 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -182,89 +199,127 @@ export default function CustomerDetailPage() {
                   onClick={async () => {
                     try {
                       await deleteCustomer.mutateAsync(id!);
-                      navigate('/clientes');
+                      navigate("/clientes");
                     } catch (error) {
-                      console.error('Error deleting customer:', error);
-                      toast.error('Error al eliminar el cliente');
+                      console.error("Error deleting customer:", error);
+                      toast.error("Error al eliminar el cliente");
                     }
                   }}
                   disabled={deleteCustomer.isPending}
-                  className="flex-1 py-2 px-4 rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-red-500 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
                 >
-                  {deleteCustomer.isPending ? 'Eliminando...' : 'Eliminar'}
+                  {deleteCustomer.isPending ? "Eliminando..." : "Eliminar"}
                 </button>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-md">
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab("sales")}
-              className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 text-sm font-medium ${
                 activeTab === "sales"
                   ? "border-b-2 border-orange-500 text-orange-600"
                   : "text-muted-foreground"
               }`}
             >
-              <History className="h-4 w-4" />
               Ventas ({customerSales.length})
             </button>
             <button
               onClick={() => setActiveTab("payments")}
-              className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 text-sm font-medium ${
                 activeTab === "payments"
                   ? "border-b-2 border-orange-500 text-orange-600"
                   : "text-muted-foreground"
               }`}
             >
-              <Wallet className="h-4 w-4" />
-              Abonos ({customerPayments.length})
+              Abonos ({payments.length})
             </button>
           </div>
 
-          <div className="p-4">
-            {activeTab === "sales" && (
-              <>
-                {salesLoading ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    Cargando ventas...
-                  </p>
-                ) : customerSales.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    No hay ventas registradas
-                  </p>
-                ) : (
-                  <SaleList sales={customerSales} showCustomer={false} />
-                )}
-              </>
-            )}
-
-            {activeTab === "payments" && (
-              <>
-                {paymentsLoading ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    Cargando abonos...
-                  </p>
-                ) : (
-                  <PaymentList
-                    payments={customerPayments}
-                    emptyMessage="No hay abonos registrados"
-                  />
-                )}
-              </>
+          <div className="space-y-3 p-4">
+            {activeTab === "sales" ? (
+              salesLoading ? (
+                <p className="py-4 text-center text-muted-foreground">Cargando ventas...</p>
+              ) : customerSales.length === 0 ? (
+                <p className="py-4 text-center text-muted-foreground">No hay ventas registradas</p>
+              ) : (
+                customerSales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="rounded-xl border border-gray-100 bg-gray-50 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">
+                          {sale.type === "pre_order" ? "Pedido" : "Venta"} a{" "}
+                          {sale.saleType === "credito" ? "crédito" : "contado"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(sale.saleDate)}
+                        </p>
+                      </div>
+                      <SyncBadge status={sale.syncStatus} />
+                    </div>
+                    <div className="mt-3 flex justify-between text-sm">
+                      <span>Total</span>
+                      <span className="font-semibold">
+                        S/ {formatCurrency(sale.totalAmount)}
+                      </span>
+                    </div>
+                    {Number(sale.balanceDue) > 0 ? (
+                      <div className="mt-1 flex justify-between text-sm">
+                        <span>Saldo</span>
+                        <span className="font-semibold text-red-600">
+                          S/ {formatCurrency(sale.balanceDue)}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              )
+            ) : paymentsLoading ? (
+              <p className="py-4 text-center text-muted-foreground">Cargando abonos...</p>
+            ) : payments.length === 0 ? (
+              <p className="py-4 text-center text-muted-foreground">No hay abonos registrados</p>
+            ) : (
+              payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="rounded-xl border border-gray-100 bg-gray-50 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        S/ {formatCurrency(payment.amount)}
+                      </p>
+                      <p className="text-sm capitalize text-muted-foreground">
+                        {payment.paymentMethod}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(payment.createdAt)}
+                      </p>
+                    </div>
+                    <SyncBadge status={payment.syncStatus} />
+                  </div>
+                  {payment.referenceNumber ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Operación: {payment.referenceNumber}
+                    </p>
+                  ) : null}
+                  {payment.notes ? (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {payment.notes}
+                    </p>
+                  ) : null}
+                </div>
+              ))
             )}
           </div>
         </div>
       </main>
-
-      {/* Tags Modal */}
-      <CustomerTagsModal
-        customerId={id!}
-        open={showTagsModal}
-        onClose={() => setShowTagsModal(false)}
-      />
     </div>
   );
 }

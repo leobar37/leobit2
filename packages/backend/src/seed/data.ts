@@ -132,53 +132,59 @@ export const PURCHASES: PurchaseData[] = [];
 // No se seedean distribuciones para E2E
 export const DISTRIBUCIONES: DistribucionData[] = [];
 
-export interface OrderData {
-  customerIndex: number;
-  status: "draft" | "confirmed" | "delivered" | "cancelled";
-  paymentIntent: "contado" | "credito";
-  deliveryDate: string; // YYYY-MM-DD
-  items: Array<{
-    productIndex: number;
-    variantIndex: number;
-    orderedQuantity: number;
-    unitPriceQuoted: number;
-  }>;
-  totalAmount: number;
+// Nota: Orders/Pedidos fueron unificados con sales en el schema.
+// Usar transactionType: "pre_order" en la tabla sales para pedidos.
+
+// Tags para segmentación de clientes
+export interface TagData {
+  name: string;
+  color: string;
 }
 
-// Pedidos para testing E2E del flujo pedidos → ventas
-export const ORDERS: OrderData[] = [
-  // Pedido en borrador - para testear confirmación (fecha de mañana)
+export const TAGS: TagData[] = [
+  { name: "VIP", color: "#f97316" },
+  { name: "Frecuente", color: "#22c55e" },
+  { name: "Deudor", color: "#ef4444" },
+  { name: "Nuevo", color: "#3b82f6" },
+];
+
+// Relaciones customer-tags (customerIndex -> tagIndex)
+export interface CustomerTagData {
+  customerIndex: number;
+  tagIndex: number;
+}
+
+export const CUSTOMER_TAGS: CustomerTagData[] = [
+  { customerIndex: 0, tagIndex: 0 }, // Maria Garcia -> VIP
+  { customerIndex: 0, tagIndex: 1 }, // Maria Garcia -> Frecuente
+  { customerIndex: 1, tagIndex: 1 }, // Juan Perez -> Frecuente
+];
+
+// Cierres del día (closings) para testing
+export interface ClosingData {
+  closingDate: string;
+  totalSales: number;
+  totalAmount: number;
+  cashAmount: number;
+  creditAmount: number;
+  totalKilos: number;
+}
+
+export const CLOSINGS: ClosingData[] = [
   {
-    customerIndex: 0, // Maria Garcia
-    status: "draft",
-    paymentIntent: "contado",
-    deliveryDate: getLocalDate(1), // Mañana
-    items: [
-      { productIndex: 0, variantIndex: 0, orderedQuantity: 5, unitPriceQuoted: 0.8 }, // Huevos Unidad
-    ],
-    totalAmount: 4.0,
+    closingDate: getLocalDate(-1), // Ayer
+    totalSales: 5,
+    totalAmount: 150.0,
+    cashAmount: 100.0,
+    creditAmount: 50.0,
+    totalKilos: 12.5,
   },
-  // Pedido confirmado con fecha de mañana - se puede entregar mañana
   {
-    customerIndex: 1, // Juan Perez
-    status: "confirmed",
-    paymentIntent: "credito",
-    deliveryDate: getLocalDate(1), // Mañana
-    items: [
-      { productIndex: 1, variantIndex: 0, orderedQuantity: 2, unitPriceQuoted: 14.0 }, // Menudencias Mollejas
-    ],
-    totalAmount: 28.0,
-  },
-  // Pedido confirmado con fecha futura - no se puede entregar aún
-  {
-    customerIndex: 0, // Maria Garcia
-    status: "confirmed",
-    paymentIntent: "contado",
-    deliveryDate: getLocalDate(3), // En 3 días
-    items: [
-      { productIndex: 0, variantIndex: 1, orderedQuantity: 2, unitPriceQuoted: 21.0 }, // Huevos Maple
-    ],
-    totalAmount: 42.0,
+    closingDate: getLocalDate(-2), // Anteayer
+    totalSales: 3,
+    totalAmount: 89.5,
+    cashAmount: 60.0,
+    creditAmount: 29.5,
+    totalKilos: 8.2,
   },
 ];

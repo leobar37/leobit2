@@ -10,6 +10,7 @@ const client = postgres(connectionString, {
   connect_timeout: 10,
   max_lifetime: 60 * 30,
   ssl: true,
+  prepare: false,
   onnotice: (notice) => {
     console.debug("[PostgreSQL Notice]", notice);
   },

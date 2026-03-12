@@ -166,6 +166,13 @@ import { CustomerCard } from "@/components/customers/customer-card";
 | **Types/Interfaces** | PascalCase | `Customer`, `CreateCustomerInput` |
 | **Zod Schemas** | camelCase with Schema suffix | `customerSchema`, `loginSchema` |
 
+### Mutation And Money Rules
+
+- Server writes must use a mutation hook (`useMutation` or a project wrapper such as `useCreateSale`, `useFinalizeSale`, etc.). Do not model submit/loading state with local `useState` when the action is a mutation.
+- Buttons that trigger writes must read their pending/disabled state from the mutation (`isPending` / `mutateAsync`) instead of duplicating request state locally.
+- Monetary values that are persisted as strings must use shared formatting/parsing utilities from `~/lib/utils` (`formatCurrency`, `parseAmount`, `calculateBalanceDue`) instead of ad-hoc `toFixed(2)` in components.
+- If a component needs a new write flow, create or extend a dedicated hook rather than embedding persistence orchestration directly in the component.
+
 ### Component Patterns
 
 #### UI Primitive Pattern (shadcn/ui style)

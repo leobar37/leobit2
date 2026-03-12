@@ -93,15 +93,24 @@ export function useSaleCalculations(
 ): SaleCalculations {
   return useMemo(() => {
     const totalAmount = calculateTotalAmount(items);
-    const saleType = sale?.saleType || "contado";
-    const amountPaidValue = parseFloat(sale?.amountPaid || "0");
+    const paymentMode = sale?.paymentMode || "pago_total";
+    const saleType = sale?.saleType || getSaleType(paymentMode);
+    const amountPaidValue = getAmountPaidValue(
+      paymentMode,
+      totalAmount,
+      sale?.amountPaid || "0"
+    );
     const balanceDue = getBalanceDue(saleType, totalAmount, amountPaidValue);
     const requiresCustomer = getRequiresCustomer(saleType);
-    const hasValidPartial = true;
+    const hasValidPartial = getHasValidPartialAmount(
+      paymentMode,
+      amountPaidValue,
+      totalAmount
+    );
     const canSubmit = getCanSubmit(
       items.length,
       requiresCustomer,
-      sale?.clientId ? { id: sale.clientId } : null,
+      sale?.customerId ? { id: sale.customerId } : null,
       hasValidPartial
     );
 

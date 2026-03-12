@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { PGlite } from "@electric-sql/pglite";
+import { initAutoSync, forceSyncNow } from "./sync-manager";
 
 interface ElectricContextType {
   isConnected: boolean;
@@ -8,6 +9,7 @@ interface ElectricContextType {
   isReady: boolean;
   error: Error | null;
   pg: PGlite | null;
+  forceSync: () => void;
 }
 
 const ElectricContext = createContext<ElectricContextType>({
@@ -16,6 +18,7 @@ const ElectricContext = createContext<ElectricContextType>({
   isReady: false,
   error: null,
   pg: null,
+  forceSync: () => {},
 });
 
 // Singleton PGlite promise to prevent concurrent initialization race conditions.
@@ -53,8 +56,7 @@ export function ElectricProvider({ children }: { children: ReactNode }) {
         setIsReady(true);
         setIsConnected(true);
 
-        // Note: ElectricSQL sync will be handled by TanStack DB collections
-        // PGlite provides the local PostgreSQL database for offline-first storage
+        initAutoSync();
         
       } catch (err) {
         if (mounted) {
@@ -72,7 +74,7 @@ export function ElectricProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ElectricContext.Provider value={{ isConnected, isSyncing, isReady, error, pg }}>
+    <ElectricContext.Provider value={{ isConnected, isSyncing, isReady, error, pg, forceSync: forceSyncNow }}>
       {children}
     </ElectricContext.Provider>
   );

@@ -1,5 +1,6 @@
 export { assetCollection } from "./asset.collection";
 export { customerCollection } from "./customer.collection";
+export { distribucionCollection } from "./distribucion.collection";
 export { fileCollection } from "./file.collection";
 export { paymentCollection } from "./payment.collection";
 export { productCollection, productVariantCollection } from "./product.collection";

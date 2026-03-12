@@ -162,14 +162,14 @@ export class CustomerRepository {
     
     const minBalanceFilter = filters?.minBalance !== undefined && filters.minBalance > 0
       ? sql`${customers.id} IN (
-        SELECT s.client_id 
+        SELECT s.customer_id 
         FROM ${sales} s 
         WHERE s.business_id = ${ctx.businessId} 
-        GROUP BY s.client_id 
+        GROUP BY s.customer_id 
         HAVING COALESCE(SUM(CASE WHEN s.sale_type = 'credito' THEN s.total_amount ELSE 0 END), 0) - COALESCE((
           SELECT SUM(a.amount) 
           FROM abonos a
-          WHERE a.client_id = s.client_id AND a.business_id = ${ctx.businessId}
+          WHERE a.customer_id = s.customer_id AND a.business_id = ${ctx.businessId}
         ), 0) >= ${filters.minBalance}
       )`
       : undefined;
@@ -181,7 +181,7 @@ export class CustomerRepository {
           COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
             SELECT SUM(${abonos.amount}) 
             FROM ${abonos} 
-            WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+            WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
           ), 0)
         `,
         totalSales: sql<number>`COALESCE(SUM(${sales.totalAmount}), 0)`,
@@ -189,7 +189,7 @@ export class CustomerRepository {
       })
       .from(customers)
       .leftJoin(sales, and(
-        eq(sales.clientId, customers.id),
+        eq(sales.customerId, customers.id),
         eq(sales.businessId, ctx.businessId)
       ))
       .where(and(
@@ -201,12 +201,12 @@ export class CustomerRepository {
       .having(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
         SELECT SUM(${abonos.amount}) 
         FROM ${abonos} 
-        WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+        WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
       ), 0) > 0`)
       .orderBy(desc(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
         SELECT SUM(${abonos.amount}) 
         FROM ${abonos} 
-        WHERE ${abonos.clientId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
+        WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
       ), 0)`))
       .limit(filters?.limit ?? 100)
       .offset(filters?.offset ?? 0);
@@ -218,7 +218,7 @@ export class CustomerRepository {
         .select({ total: sql<number>`COALESCE(SUM(${abonos.amount}), 0)` })
         .from(abonos)
         .where(and(
-          eq(abonos.clientId, row.customer.id),
+          eq(abonos.customerId, row.customer.id),
           eq(abonos.businessId, ctx.businessId)
         ));
       
@@ -243,12 +243,12 @@ export class CustomerRepository {
           COALESCE((
             SELECT SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END) 
             FROM ${sales} 
-            WHERE ${sales.clientId} = ${customers.id} 
+            WHERE ${sales.customerId} = ${customers.id} 
             AND ${sales.businessId} = ${ctx.businessId}
           ), 0) - COALESCE((
             SELECT SUM(${abonos.amount}) 
             FROM ${abonos} 
-            WHERE ${abonos.clientId} = ${customers.id} 
+            WHERE ${abonos.customerId} = ${customers.id} 
             AND ${abonos.businessId} = ${ctx.businessId}
           ), 0)
         )`,
@@ -265,7 +265,7 @@ export class CustomerRepository {
       .from(sales)
       .where(and(
         eq(sales.businessId, ctx.businessId),
-        eq(sales.clientId, customerId),
+        eq(sales.customerId, customerId),
         eq(sales.status, "active")
       ));
 
@@ -274,7 +274,7 @@ export class CustomerRepository {
       .from(abonos)
       .where(and(
         eq(abonos.businessId, ctx.businessId),
-        eq(abonos.clientId, customerId)
+        eq(abonos.customerId, customerId)
       ));
 
     const totalSales = Number(salesResult[0]?.total ?? 0);

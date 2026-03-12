@@ -143,7 +143,7 @@ export class ReportService {
     // Get total credit sales per customer
     const creditSalesByCustomer = await db
       .select({
-        clientId: sales.clientId,
+        customerId: sales.customerId,
         totalCredit: sql<string>`sum(${sales.totalAmount})`,
       })
       .from(sales)
@@ -151,25 +151,25 @@ export class ReportService {
         and(
           eq(sales.businessId, ctx.businessId),
           eq(sales.saleType, "credito"),
-          sql`${sales.clientId} is not null`
+          sql`${sales.customerId} is not null`
         )
       )
-      .groupBy(sales.clientId);
+      .groupBy(sales.customerId);
 
     // Get total payments per customer
     const paymentsByCustomer = await db
       .select({
-        clientId: abonos.clientId,
+        customerId: abonos.customerId,
         totalPayments: sql<string>`sum(${abonos.amount})`,
       })
       .from(abonos)
       .where(eq(abonos.businessId, ctx.businessId))
-      .groupBy(abonos.clientId);
+      .groupBy(abonos.customerId);
 
     // Calculate debt per customer
     const customerDebts = creditSalesByCustomer.map((cs) => {
       const payments = paymentsByCustomer.find(
-        (p) => p.clientId === cs.clientId
+        (p) => p.customerId === cs.customerId
       );
       const credit = parseFloat(cs.totalCredit ?? "0");
       const paid = parseFloat(payments?.totalPayments ?? "0");

@@ -9,6 +9,7 @@ let signUpEmailMock: ReturnType<typeof vi.fn>;
 let signOutMock: ReturnType<typeof vi.fn>;
 let changePasswordMock: ReturnType<typeof vi.fn>;
 let getBusinessMock: ReturnType<typeof vi.fn>;
+let refreshSessionMock: ReturnType<typeof vi.fn>;
 
 vi.mock("react-router", () => ({
   useNavigate: () => {
@@ -22,6 +23,7 @@ vi.mock("../lib/auth-client", () => {
   signUpEmailMock = vi.fn();
   signOutMock = vi.fn();
   changePasswordMock = vi.fn();
+  refreshSessionMock = vi.fn();
 
   return {
     authClient: {
@@ -44,6 +46,7 @@ vi.mock("../lib/auth-client", () => {
       isPending: false,
     }),
     changePassword: changePasswordMock,
+    refreshSession: refreshSessionMock,
   };
 });
 
@@ -102,6 +105,16 @@ describe("useAuth", () => {
     });
     signOutMock.mockResolvedValue(undefined);
     changePasswordMock.mockResolvedValue({ error: null, data: null });
+    refreshSessionMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        email: "test@example.com",
+        name: "Test User",
+      },
+      session: {
+        id: "session-1",
+      },
+    });
     getBusinessMock.mockResolvedValue({
       error: null,
       data: {
@@ -126,6 +139,7 @@ describe("useAuth", () => {
       email: "nuevo@example.com",
       password: "secret",
     });
+    expect(refreshSessionMock).toHaveBeenCalledTimes(1);
     expect(getBusinessMock).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem("current_business_id")).toBe("biz-new");
   });
@@ -143,7 +157,20 @@ describe("useAuth", () => {
       await result.current.login("nuevo@example.com", "secret");
     });
 
+    expect(refreshSessionMock).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem("current_business_id")).toBeNull();
+  });
+
+  it("fails login when the session cannot be restored", async () => {
+    refreshSessionMock.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAuth());
+
+    await expect(result.current.login("nuevo@example.com", "secret")).rejects.toThrow(
+      "No se pudo restaurar la sesión"
+    );
+
+    expect(getBusinessMock).not.toHaveBeenCalled();
   });
 
   it("clears auth and business storage on logout", async () => {

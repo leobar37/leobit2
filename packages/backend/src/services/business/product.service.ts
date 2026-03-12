@@ -1,6 +1,8 @@
 import type { ProductRepository } from "../repository/product.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -62,7 +64,7 @@ export class ProductService {
       isActive?: boolean;
       imageId?: string;
     }
-  ): Promise<Product> {
+  ): Promise<MutationResult<Product>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear productos");
     }
@@ -75,24 +77,29 @@ export class ProductService {
       throw new ValidationError("El precio no puede ser negativo");
     }
 
-    const product = await this.repository.create(ctx, {
-      name: data.name,
-      type: data.type,
-      unit: data.unit,
-      basePrice: data.basePrice.toString(),
-      isActive: data.isActive ?? true,
-      imageId: data.imageId,
-    });
+    return db.transaction(async (tx) => {
+      const product = await this.repository.create(ctx, {
+        name: data.name,
+        type: data.type,
+        unit: data.unit,
+        basePrice: data.basePrice.toString(),
+        isActive: data.isActive ?? true,
+        imageId: data.imageId,
+      }, tx);
 
-    await this.variantRepo.create(ctx, {
-      productId: product.id,
-      name: "Estándar",
-      unitQuantity: "1",
-      price: data.basePrice.toString(),
-      isActive: true,
-    });
+      await this.variantRepo.create(ctx, {
+        productId: product.id,
+        name: "Estándar",
+        unitQuantity: "1",
+        price: data.basePrice.toString(),
+        isActive: true,
+      }, tx);
 
-    return product;
+      return {
+        data: product,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async updateProduct(
@@ -107,7 +114,7 @@ export class ProductService {
       imageId?: string | null;
       syncPriceToVariants?: boolean;
     }
-  ): Promise<Product> {
+  ): Promise<MutationResult<Product>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar productos");
     }
@@ -125,30 +132,35 @@ export class ProductService {
       throw new ValidationError("El precio no puede ser negativo");
     }
 
-    const updated = await this.repository.update(ctx, id, {
-      name: data.name,
-      type: data.type,
-      unit: data.unit,
-      basePrice: data.basePrice?.toString(),
-      isActive: data.isActive,
-      imageId: data.imageId,
-    });
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, {
+        name: data.name,
+        type: data.type,
+        unit: data.unit,
+        basePrice: data.basePrice?.toString(),
+        isActive: data.isActive,
+        imageId: data.imageId,
+      }, tx);
 
-    if (!updated) {
-      throw new NotFoundError("Producto");
-    }
-
-    // Sync basePrice to all active variants if requested
-    if (data.basePrice !== undefined && data.syncPriceToVariants && existing.hasVariants) {
-      const variants = await this.variantRepo.findByProduct(ctx, id, { includeInactive: false });
-      for (const variant of variants) {
-        await this.variantRepo.update(ctx, variant.id, {
-          price: data.basePrice.toString(),
-        });
+      if (!updated) {
+        throw new NotFoundError("Producto");
       }
-    }
 
-    return updated;
+      // Sync basePrice to all active variants if requested
+      if (data.basePrice !== undefined && data.syncPriceToVariants && existing.hasVariants) {
+        const variants = await this.variantRepo.findByProduct(ctx, id, { includeInactive: false });
+        for (const variant of variants) {
+          await this.variantRepo.update(ctx, variant.id, {
+            price: data.basePrice.toString(),
+          }, tx);
+        }
+      }
+
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deleteProduct(ctx: RequestContext, id: string): Promise<void> {

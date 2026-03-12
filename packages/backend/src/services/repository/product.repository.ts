@@ -2,6 +2,7 @@ import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { products, productVariants, type Product, type NewProduct } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface ProductWithVariants extends Product {
   hasVariants: boolean;
@@ -86,9 +87,11 @@ export class ProductRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewProduct, "id" | "createdAt" | "businessId">
+    data: Omit<NewProduct, "id" | "createdAt" | "businessId">,
+    tx?: DbTransaction
   ): Promise<Product> {
-    const [product] = await db
+    const dbOrTx = tx || db;
+    const [product] = await dbOrTx
       .insert(products)
       .values({
         ...data,
@@ -102,9 +105,11 @@ export class ProductRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewProduct, "id" | "createdAt" | "businessId">>
+    data: Partial<Omit<NewProduct, "id" | "createdAt" | "businessId">>,
+    tx?: DbTransaction
   ): Promise<Product | undefined> {
-    const [product] = await db
+    const dbOrTx = tx || db;
+    const [product] = await dbOrTx
       .update(products)
       .set({
         ...(data.name !== undefined && { name: data.name }),

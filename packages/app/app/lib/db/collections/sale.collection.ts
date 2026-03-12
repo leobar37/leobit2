@@ -4,6 +4,10 @@ import { saleSchema, type Sale } from "../schemas/sale";
 import { api } from "~/lib/api-client";
 import { createShapeOptions } from "./utils";
 
+function isOnline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine;
+}
+
 /**
  * Unified Sale Collection
  * Supports both instant_sales and pre_orders with offline-first patterns
@@ -21,14 +25,8 @@ export const saleCollection = createCollection(
     onInsert: async ({ transaction }) => {
       const newSale = transaction.mutations[0].modified as Sale;
 
-      // Skip server sync for drafts without a client (incomplete drafts stay local only)
-      // This is the offline-first pattern from orders
-      if (!newSale.clientId) {
-        return { txid: Date.now() };
-      }
-
       const payload = {
-        clientId: newSale.clientId,
+        customerId: newSale.customerId ?? undefined,
         type: newSale.type || "instant_sale",
         saleType: newSale.saleType,
         totalAmount: parseFloat(newSale.totalAmount),
@@ -37,9 +35,12 @@ export const saleCollection = createCollection(
         netWeight: newSale.netWeight ? parseFloat(newSale.netWeight) : undefined,
         deliveryDate: newSale.deliveryDate?.toISOString(),
         orderDate: newSale.orderDate?.toISOString(),
-        // Items are synced independently via saleItemCollection (offline-first pattern)
         items: [],
       };
+
+      if (!isOnline()) {
+        return { txid: Date.now() };
+      }
 
       const response = await api.sales.post(payload);
 
@@ -60,32 +61,10 @@ export const saleCollection = createCollection(
         changes: Partial<Sale>;
       };
 
-      // If this was a local-only draft and now has a client, create it on the server
-      if (changes.clientId && !original.clientId) {
-        const payload = {
-          clientId: changes.clientId,
-          type: original.type || "instant_sale",
-          saleType: original.saleType,
-          totalAmount: parseFloat(original.totalAmount),
-          amountPaid: parseFloat(original.amountPaid),
-          tara: original.tara ? parseFloat(original.tara) : undefined,
-          netWeight: original.netWeight ? parseFloat(original.netWeight) : undefined,
-          deliveryDate: original.deliveryDate?.toISOString(),
-          orderDate: original.orderDate?.toISOString(),
-          items: [],
-        };
-
-        const response = await api.sales.post(payload);
-
-        if (response.error) {
-          throw new Error(String(response.error.value));
-        }
-
-        const data = response.data as { txid?: number };
-        return { txid: data?.txid || Date.now() };
+      if (!isOnline()) {
+        return { txid: Date.now() };
       }
 
-      // Handle instant_sale: draft → active transition
       if (changes.status === "active" && original.status === "draft" && original.type === "instant_sale") {
         const response = await api.sales({ id: original.id }).confirm.post();
 
@@ -101,7 +80,6 @@ export const saleCollection = createCollection(
         return { txid };
       }
 
-      // Handle pre_order: draft → confirmed transition
       if (changes.status === "confirmed" && original.status === "draft" && original.type === "pre_order") {
         const response = await api.sales({ id: original.id }).confirm.post({
           baseVersion: original.version,
@@ -119,7 +97,6 @@ export const saleCollection = createCollection(
         return { txid };
       }
 
-      // Handle pre_order: confirmed → delivered transition
       if (changes.status === "delivered" && original.status === "confirmed" && original.type === "pre_order") {
         const response = await api.sales({ id: original.id }).deliver.post({
           baseVersion: original.version,
@@ -137,7 +114,6 @@ export const saleCollection = createCollection(
         return { txid };
       }
 
-      // Handle cancelled status (works for both types)
       if (changes.status === "cancelled") {
         const response = await api.sales({ id: original.id }).cancel.post({
           reason: changes.cancelReason || "Cancelación",
@@ -157,9 +133,8 @@ export const saleCollection = createCollection(
         return { txid };
       }
 
-      // Regular update for other changes
       const response = await api.sales({ id: original.id }).patch({
-        clientId: changes.clientId,
+        customerId: changes.customerId,
         deliveryDate: changes.deliveryDate?.toISOString(),
         saleType: changes.saleType,
         totalAmount: changes.totalAmount ? parseFloat(changes.totalAmount) : undefined,
@@ -175,9 +150,12 @@ export const saleCollection = createCollection(
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0] as { original: Sale };
 
-      // Only allow deletion of drafts
       if (original.status !== "draft") {
         throw new Error("Solo se pueden eliminar ventas en estado draft");
+      }
+
+      if (!isOnline()) {
+        return { txid: Date.now() };
       }
 
       const response = await api.sales({ id: original.id }).delete();

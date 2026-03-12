@@ -14,6 +14,7 @@
 | [technical/offline-analysis.md](./technical/offline-analysis.md) | Offline functionality analysis |
 | [technical/offline-plan.md](./technical/offline-plan.md) | Offline-first architecture plan |
 | [technical/tanstack-db.md](./technical/tanstack-db.md) | TanStack DB implementation |
+| [technical/electric-sales-sync-considerations.md](./technical/electric-sales-sync-considerations.md) | Lessons learned for Electric sync and `/ventas` |
 
 ### 🎨 UI/UX Documentation
 

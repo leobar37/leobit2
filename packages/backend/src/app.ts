@@ -30,7 +30,8 @@ import { whatsappTemplateRoutes } from "./api/whatsapp/templates";
 import { whatsAppSettingsRoutes } from "./api/whatsapp/settings";
 import { whatsAppMessageRoutes } from "./api/whatsapp/messages";
 import { tagRoutes } from "./api/tags";
-import { getCorsConfig, getCorsOrigin } from "./lib/cors";
+import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
+import { electricRoutes } from "./api/electric";
 
 const corsConfig = getCorsConfig();
 
@@ -59,6 +60,13 @@ export const app = new Elysia()
     const requestOrigin = request.headers.get("origin");
     set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
     set.headers["access-control-allow-credentials"] = corsConfig.credentials;
+    const existingExposeHeaders =
+      set.headers["access-control-expose-headers"] ??
+      set.headers["Access-Control-Expose-Headers"];
+    set.headers["access-control-expose-headers"] = mergeExposeHeaders(
+      existingExposeHeaders,
+      corsConfig.exposeHeaders
+    );
   })
   .use(profileRoutes)
   .use(businessRoutes)
@@ -85,6 +93,7 @@ export const app = new Elysia()
   .use(whatsAppSettingsRoutes)
   .use(whatsAppMessageRoutes)
   .use(tagRoutes)
+  .use(electricRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

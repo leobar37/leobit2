@@ -19,8 +19,10 @@ import {
   User,
   ArrowLeft,
   Wallet,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useClearSyncStorage } from "@/hooks/use-clear-sync-storage";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -84,6 +86,43 @@ export function useSetLayout(config: LayoutConfig) {
       actions: actionsRef.current,
     });
   }, [stableConfig, setConfig]);
+}
+
+function ClearSyncButton() {
+  const clearSync = useClearSyncStorage();
+
+  const handleClear = async () => {
+    if (!confirm("¿Estás seguro? Esto limpiará solo los datos locales de sincronización y conservará tu sesión.")) {
+      return;
+    }
+
+    try {
+      await clearSync.mutateAsync({ preserveSession: true });
+    } catch (error) {
+      console.error("Failed to clear storage:", error);
+      // If automatic cleanup fails, show manual instructions
+      alert(
+        "No se pudo reiniciar automáticamente.\n\n" +
+        "Para limpiar manualmente:\n" +
+        "1. Abre las Developer Tools (F12)\n" +
+        "2. Ve a Application > Storage\n" +
+        "3. Haz clic en 'Clear site data'\n" +
+        "4. Recarga la página (F5)"
+      );
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      className="w-full rounded-xl text-muted-foreground hover:text-orange-600"
+      onClick={handleClear}
+      disabled={clearSync.isPending}
+    >
+      <RefreshCw className={`mr-2 h-4 w-4 ${clearSync.isPending ? "animate-spin" : ""}`} />
+      {clearSync.isPending ? "Reiniciando..." : "Reiniciar sincronización"}
+    </Button>
+  );
 }
 
 interface AppLayoutProps {
@@ -174,6 +213,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                       <LogOut className="mr-2 h-4 w-4" />
                       Cerrar sesion
                     </Button>
+
+                    <ClearSyncButton />
                   </div>
                 </SheetContent>
               </Sheet>

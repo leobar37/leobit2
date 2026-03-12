@@ -1,5 +1,7 @@
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -60,7 +62,7 @@ export class ProductVariantService {
       price: number;
       isActive?: boolean;
     }
-  ): Promise<ProductVariant & { inventory: VariantInventory }> {
+  ): Promise<MutationResult<ProductVariant>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear variantes");
     }
@@ -79,22 +81,27 @@ export class ProductVariantService {
       throw new ValidationError(`Ya existe una variante con el nombre "${data.name}"`);
     }
 
-    const variant = await this.repository.create(ctx, {
-      productId: data.productId,
-      name: data.name,
-      sku: data.sku ?? null,
-      unitQuantity: data.unitQuantity.toString(),
-      price: data.price.toString(),
-      isActive: data.isActive ?? true,
-      sortOrder: currentCount,
-    });
+    return db.transaction(async (tx) => {
+      const variant = await this.repository.create(ctx, {
+        productId: data.productId,
+        name: data.name,
+        sku: data.sku ?? null,
+        unitQuantity: data.unitQuantity.toString(),
+        price: data.price.toString(),
+        isActive: data.isActive ?? true,
+        sortOrder: currentCount,
+      }, tx);
 
-    const inventory = await this.repository.createInventory(ctx, {
-      variantId: variant.id,
-      quantity: "0",
-    });
+      const inventory = await this.repository.createInventory(ctx, {
+        variantId: variant.id,
+        quantity: "0",
+      }, tx);
 
-    return { ...variant, inventory };
+      return {
+        data: variant,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async updateVariant(
@@ -107,7 +114,7 @@ export class ProductVariantService {
       price?: number;
       isActive?: boolean;
     }
-  ): Promise<ProductVariant> {
+  ): Promise<MutationResult<ProductVariant>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar variantes");
     }
@@ -132,22 +139,27 @@ export class ProductVariantService {
       });
     }
 
-    const updated = await this.repository.update(ctx, id, {
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.sku !== undefined && { sku: data.sku }),
-      ...(data.unitQuantity !== undefined && { unitQuantity: data.unitQuantity.toString() }),
-      ...(data.price !== undefined && { price: data.price.toString() }),
-      ...(data.isActive !== undefined && { isActive: data.isActive }),
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.sku !== undefined && { sku: data.sku }),
+        ...(data.unitQuantity !== undefined && { unitQuantity: data.unitQuantity.toString() }),
+        ...(data.price !== undefined && { price: data.price.toString() }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      }, tx);
+
+      if (!updated) {
+        throw new NotFoundError("Variante");
+      }
+
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
     });
-
-    if (!updated) {
-      throw new NotFoundError("Variante");
-    }
-
-    return updated;
   }
 
-  async deactivateVariant(ctx: RequestContext, id: string): Promise<ProductVariant> {
+  async deactivateVariant(ctx: RequestContext, id: string): Promise<MutationResult<ProductVariant>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para desactivar variantes");
     }
@@ -157,12 +169,17 @@ export class ProductVariantService {
       throw new NotFoundError("Variante");
     }
 
-    const updated = await this.repository.update(ctx, id, { isActive: false });
-    if (!updated) {
-      throw new NotFoundError("Variante");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, { isActive: false }, tx);
+      if (!updated) {
+        throw new NotFoundError("Variante");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async reorderVariants(
@@ -207,7 +224,7 @@ export class ProductVariantService {
     ctx: RequestContext,
     variantId: string,
     quantity: number
-  ): Promise<VariantInventory> {
+  ): Promise<MutationResult<VariantInventory>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para actualizar inventario");
     }
@@ -221,19 +238,24 @@ export class ProductVariantService {
       throw new NotFoundError("Variante");
     }
 
-    const inventory = await this.repository.updateInventory(ctx, variantId, quantity.toString());
-    if (!inventory) {
-      throw new NotFoundError("Inventario de variante");
-    }
+    return db.transaction(async (tx) => {
+      const inventory = await this.repository.updateInventory(ctx, variantId, quantity.toString(), tx);
+      if (!inventory) {
+        throw new NotFoundError("Inventario de variante");
+      }
 
-    return inventory;
+      return {
+        data: inventory,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async adjustVariantInventory(
     ctx: RequestContext,
     variantId: string,
     adjustment: number
-  ): Promise<VariantInventory> {
+  ): Promise<MutationResult<VariantInventory>> {
     if (!ctx.hasPermission("products.manage") && !ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para ajustar inventario");
     }
@@ -243,12 +265,17 @@ export class ProductVariantService {
       throw new NotFoundError("Variante");
     }
 
-    const inventory = await this.repository.adjustInventory(ctx, variantId, adjustment);
-    if (!inventory) {
-      throw new NotFoundError("Inventario de variante");
-    }
+    return db.transaction(async (tx) => {
+      const inventory = await this.repository.adjustInventory(ctx, variantId, adjustment, tx);
+      if (!inventory) {
+        throw new NotFoundError("Inventario de variante");
+      }
 
-    return inventory;
+      return {
+        data: inventory,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   private validateVariantData(data: {

@@ -45,6 +45,7 @@ export class SaleService {
   async createSale(
     ctx: RequestContext,
     data: {
+      id?: string;
       customerId?: string;
       type?: "instant_sale" | "pre_order";
       saleType: "contado" | "credito";
@@ -52,6 +53,7 @@ export class SaleService {
       amountPaid?: number;
       tara?: number;
       netWeight?: number;
+      saleDate?: string;
       deliveryDate?: string;
       orderDate?: string;
       items: Array<{
@@ -67,34 +69,42 @@ export class SaleService {
       }>;
     }
   ): Promise<MutationResult<Sale>> {
-    if (!data.items || data.items.length === 0) {
+    const items = data.items || [];
+    const isEmptyDraft =
+      items.length === 0 &&
+      data.totalAmount === 0 &&
+      (data.amountPaid ?? 0) === 0;
+
+    if (!isEmptyDraft && items.length === 0) {
       throw new ValidationError("La venta debe tener al menos un producto");
     }
 
     // Validate that all items have variant
-    for (const item of data.items) {
+    for (const item of items) {
       if (!item.variantId) {
         throw new ValidationError("Todos los productos deben tener una variante seleccionada");
       }
     }
 
-    if (data.totalAmount <= 0) {
+    if (!isEmptyDraft && data.totalAmount <= 0) {
       throw new ValidationError("El monto total debe ser mayor a 0");
     }
 
     // Calculate total from items - this is the authoritative value
-    const calculatedTotal = data.items.reduce((sum, item) => sum + item.subtotal, 0);
+    const calculatedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
     const submittedTotal = data.totalAmount;
 
     // Validate that submitted total matches calculated total
-    if (Math.abs(calculatedTotal - submittedTotal) > 0.01) {
+    if (!isEmptyDraft && Math.abs(calculatedTotal - submittedTotal) > 0.01) {
       throw new ValidationError(
         `El total no coincide con la suma de productos. Calculado: S/ ${calculatedTotal.toFixed(2)}, Enviado: S/ ${submittedTotal.toFixed(2)}`
       );
     }
 
     // Use calculated total (not submitted) - ensures data integrity
-    const totalAmount = parseFloat(normalizeAmount(calculatedTotal, 2, "totalAmount"));
+    const totalAmount = parseFloat(
+      normalizeAmount(isEmptyDraft ? 0 : calculatedTotal, 2, "totalAmount")
+    );
     const amountPaidInput =
       data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
     const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));
@@ -105,11 +115,11 @@ export class SaleService {
       throw new ValidationError("La venta a crédito requiere cliente");
     }
 
-    if (data.saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
+    if (!isEmptyDraft && data.saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
       throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
     }
 
-    if (data.saleType === "credito" && amountPaid > totalAmount) {
+    if (!isEmptyDraft && data.saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
@@ -120,11 +130,11 @@ export class SaleService {
       today
     );
 
-    if (distribucion) {
+    if (!isEmptyDraft && distribucion) {
       if (distribucion.modo === "estricto") {
-        await this.validarStockEstricto(ctx, distribucion.id, data.items);
+        await this.validarStockEstricto(ctx, distribucion.id, items);
       }
-    } else {
+    } else if (!isEmptyDraft) {
       const business = await this.businessRepository.findById(ctx, ctx.businessId);
       if (!ctx.isAdmin() && business?.modoDistribucion !== "libre") {
         throw new ValidationError("No tiene distribución asignada para hoy");
@@ -144,7 +154,7 @@ export class SaleService {
       netWeight: isPreOrder ? undefined : data.netWeight?.toString(),
       deliveryDate: isPreOrder ? data.deliveryDate : undefined,
       orderDate: isPreOrder ? data.orderDate : undefined,
-      items: data.items.map((item) => ({
+      items: items.map((item) => ({
         productId: item.productId,
         productName: item.productName,
         variantId: item.variantId,
@@ -162,13 +172,13 @@ export class SaleService {
     return db.transaction(async (tx) => {
       const sale = await this.repository.create(ctx, salePayload, tx);
 
-      if (distribucion && distribucion.modo !== "libre") {
+      if (!isEmptyDraft && distribucion && distribucion.modo !== "libre") {
         const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
           ctx,
           distribucion.id
         );
 
-        for (const saleItem of data.items) {
+        for (const saleItem of items) {
           const distItem = distribucionItems.find(
             (di) => di.variantId === saleItem.variantId
           );
@@ -206,6 +216,89 @@ export class SaleService {
     });
   }
 
+  async updateSale(
+    ctx: RequestContext,
+    id: string,
+    data: {
+      customerId?: string | null;
+      deliveryDate?: string | null;
+      saleType?: "contado" | "credito";
+      paymentMode?: "pago_total" | "a_cuenta" | "debe_todo" | null;
+      totalAmount?: number;
+      amountPaid?: number;
+    }
+  ): Promise<MutationResult<Sale>> {
+    const sale = await this.repository.findById(ctx, id);
+    if (!sale) {
+      throw new NotFoundError("Sale");
+    }
+
+    if (sale.status !== "draft") {
+      throw new ValidationError("Solo se pueden editar ventas en borrador");
+    }
+
+    const totalAmount = parseFloat(
+      normalizeAmount(
+        data.totalAmount ?? Number(sale.totalAmount),
+        2,
+        "totalAmount"
+      )
+    );
+    const amountPaid = parseFloat(
+      normalizeAmount(
+        data.amountPaid ?? Number(sale.amountPaid),
+        2,
+        "amountPaid"
+      )
+    );
+    const saleType = data.saleType ?? sale.saleType;
+    const customerId =
+      data.customerId !== undefined ? data.customerId : sale.customerId;
+
+    if (saleType === "credito" && !customerId) {
+      throw new ValidationError("La venta a crédito requiere cliente");
+    }
+
+    if (saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
+      throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
+    }
+
+    if (saleType === "credito" && amountPaid > totalAmount) {
+      throw new ValidationError("El monto pagado no puede ser mayor al total");
+    }
+
+    const balanceDue =
+      saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
+    const paymentMode =
+      data.paymentMode !== undefined
+        ? data.paymentMode
+        : this.derivePaymentMode(saleType, totalAmount, amountPaid);
+
+    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
+
+    return db.transaction(async (tx) => {
+      const updatedSale = await this.repository.update(
+        ctx,
+        id,
+        {
+          customerId,
+          deliveryDate: data.deliveryDate !== undefined ? data.deliveryDate : sale.deliveryDate,
+          saleType,
+          paymentMode,
+          totalAmount: totalAmount.toFixed(2),
+          amountPaid: amountPaid.toFixed(2),
+          balanceDue: balanceDue.toFixed(2),
+        },
+        tx
+      );
+
+      return {
+        data: updatedSale,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
   async deleteSale(ctx: RequestContext, id: string): Promise<void> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
@@ -217,6 +310,57 @@ export class SaleService {
     }
 
     await this.repository.delete(ctx, id);
+  }
+
+  private derivePaymentMode(
+    saleType: "contado" | "credito",
+    totalAmount: number,
+    amountPaid: number
+  ): "pago_total" | "a_cuenta" | "debe_todo" {
+    if (saleType === "contado") {
+      return "pago_total";
+    }
+
+    if (amountPaid <= 0) {
+      return "debe_todo";
+    }
+
+    if (amountPaid >= totalAmount) {
+      return "pago_total";
+    }
+
+    return "a_cuenta";
+  }
+
+  private validatePaymentMode(
+    paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null,
+    saleType: "contado" | "credito",
+    totalAmount: number,
+    amountPaid: number
+  ) {
+    if (!paymentMode) {
+      return;
+    }
+
+    if (saleType === "contado" && paymentMode !== "pago_total") {
+      throw new ValidationError("La venta al contado debe usar pago total");
+    }
+
+    if (saleType === "credito" && paymentMode === "pago_total" && amountPaid < totalAmount) {
+      throw new ValidationError("paymentMode no coincide con el estado de pago");
+    }
+
+    if (paymentMode === "debe_todo" && amountPaid > 0) {
+      throw new ValidationError("Debe todo no puede tener monto pagado");
+    }
+
+    if (paymentMode === "a_cuenta" && (amountPaid <= 0 || amountPaid > totalAmount)) {
+      throw new ValidationError("A cuenta requiere un monto pagado válido");
+    }
+
+    if (paymentMode === "pago_total" && Math.abs(amountPaid - totalAmount) > 0.01) {
+      throw new ValidationError("Pago total requiere cubrir el monto completo");
+    }
   }
 
   async confirmSale(

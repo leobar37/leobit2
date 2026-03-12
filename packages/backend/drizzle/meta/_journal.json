@@ -33,106 +33,190 @@
     {
       "idx": 4,
       "version": "7",
+      "when": 1771300000000,
+      "tag": "0004_payment_proof",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771350000000,
+      "tag": "0005_assets_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771400000000,
+      "tag": "0006_product_variants",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
       "when": 1771432800000,
       "tag": "0007_complete_schema",
       "breakpoints": true
     },
     {
-      "idx": 5,
+      "idx": 8,
       "version": "7",
       "when": 1771432900000,
       "tag": "0008_fix_proof_image",
       "breakpoints": true
     },
     {
-      "idx": 6,
+      "idx": 9,
       "version": "7",
       "when": 1771440000000,
       "tag": "0009_add_payment_method_settings",
       "breakpoints": true
     },
     {
-      "idx": 7,
+      "idx": 10,
       "version": "7",
       "when": 1771450000000,
       "tag": "0010_add_modo_distribucion",
       "breakpoints": true
     },
     {
-      "idx": 8,
+      "idx": 11,
       "version": "7",
       "when": 1771460000000,
       "tag": "0011_add_distribuciones_columns",
       "breakpoints": true
     },
     {
-      "idx": 9,
+      "idx": 12,
       "version": "7",
       "when": 1771470000000,
       "tag": "0012_add_distribucion_items_table",
       "breakpoints": true
     },
     {
-      "idx": 10,
-      "version": "7",
-      "when": 1771480000000,
-      "tag": "0013_add_products_business_id",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1771490000000,
-      "tag": "0014_add_orders_system",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
+      "idx": 13,
       "version": "7",
       "when": 1772086559327,
       "tag": "0012_perfect_chimera",
       "breakpoints": true
     },
     {
-      "idx": 13,
+      "idx": 14,
       "version": "7",
-      "when": 1772420000000,
-      "tag": "0015_controlled_closing_backdate",
+      "when": 1771480000000,
+      "tag": "0013_add_products_business_id",
       "breakpoints": true
     },
     {
-      "idx": 14,
+      "idx": 15,
+      "version": "7",
+      "when": 1771490000000,
+      "tag": "0014_add_orders_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
       "version": "7",
       "when": 1772555696124,
       "tag": "0014_thankful_adam_destine",
       "breakpoints": true
     },
     {
-      "idx": 15,
+      "idx": 17,
+      "version": "7",
+      "when": 1772420000000,
+      "tag": "0015_controlled_closing_backdate",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
       "version": "7",
       "when": 1772640000000,
       "tag": "0016_add_calculator_settings",
       "breakpoints": true
     },
     {
-      "idx": 16,
+      "idx": 19,
       "version": "7",
       "when": 1772896576161,
       "tag": "0016_pretty_wilson_fisk",
       "breakpoints": true
     },
     {
-      "idx": 17,
+      "idx": 20,
+      "version": "7",
+      "when": 1772900000000,
+      "tag": "0017_add_order_payment_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1772930000000,
+      "tag": "0017_cold_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
       "version": "7",
       "when": 1772955442097,
       "tag": "0017_eminent_groot",
       "breakpoints": true
     },
     {
-      "idx": 18,
+      "idx": 23,
+      "version": "7",
+      "when": 1773000000000,
+      "tag": "0018_add_whatsapp_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1773100000000,
+      "tag": "0019_add_allow_customer_edit",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
       "version": "7",
       "when": 1741540800000,
       "tag": "0020_add_replica_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1741600000000,
+      "tag": "0021_make_client_id_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1741650000000,
+      "tag": "0022_add_suppliers_purchases_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1741700000000,
+      "tag": "0023_unify_sales_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1741750000000,
+      "tag": "0024_add_sale_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1741800000000,
+      "tag": "0025_rename_client_to_customer",
       "breakpoints": true
     }
   ]

@@ -46,7 +46,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
     "/",
     async ({ purchaseService, ctx, body, set }) => {
       set.status = 201;
-      const purchase = await purchaseService.createPurchase(ctx as RequestContext, {
+      const result = await purchaseService.createPurchase(ctx as RequestContext, {
         supplierId: body.supplierId,
         purchaseDate: body.purchaseDate,
         invoiceNumber: body.invoiceNumber,
@@ -54,7 +54,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         notes: body.notes,
         items: body.items,
       });
-      return { success: true, data: purchase };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -79,12 +79,12 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
   .put(
     "/:id/status",
     async ({ purchaseService, ctx, params, body }) => {
-      const purchase = await purchaseService.updatePurchaseStatus(
+      const result = await purchaseService.updatePurchaseStatus(
         ctx as RequestContext,
         params.id,
         body.status
       );
-      return { success: true, data: purchase };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({

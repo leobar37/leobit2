@@ -47,7 +47,7 @@ export function SmartCalculatorForm({
   const handleAdd = () => {
     if (calculation.isValid) {
       onAddToCart({
-        quantity: calculation.netQuantity,
+        quantity: calculation.quantity,
         unitPrice: calculation.unitPrice,
         subtotal: calculation.subtotal,
       });
@@ -60,7 +60,7 @@ export function SmartCalculatorForm({
     switch (unitType) {
       case "kg":
         return field === "price" ? "Precio/kg" : field === "quantity" ? "Kilos" : "Total";
-      case "paquete":
+      case "unidad":
         return field === "price" ? "Precio/pack" : field === "quantity" ? "Packs" : "Total";
       default:
         return field === "price" ? "Precio/unidad" : field === "quantity" ? "Unidades" : "Total";
@@ -102,7 +102,7 @@ export function SmartCalculatorForm({
           onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
           decimals={unitType === "kg" ? 3 : 0}
           helperText={
-            unitType === "paquete" && variant?.unitQuantity
+            unitType === "unidad" && variant?.unitQuantity
               ? `${variant.unitQuantity} unidades por pack`
               : undefined
           }
@@ -145,8 +145,8 @@ export function SmartCalculatorForm({
               </span>
               <span className="font-semibold text-orange-700">
                 {unitType === "kg"
-                  ? `${formatWeight(calculation.netQuantity)} kg`
-                  : `${Math.round(calculation.netQuantity)} unidades`}
+                  ? `${formatWeight(calculation.quantity)} kg`
+                  : `${Math.round(calculation.quantity)} unidades`}
               </span>
             </div>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-orange-200">

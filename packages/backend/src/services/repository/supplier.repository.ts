@@ -2,6 +2,7 @@ import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { suppliers, type Supplier, type NewSupplier } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export class SupplierRepository {
   async findMany(
@@ -58,9 +59,11 @@ export class SupplierRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt">
+    data: Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt">,
+    tx?: DbTransaction
   ): Promise<Supplier> {
-    const [supplier] = await db
+    const dbOrTx = tx || db;
+    const [supplier] = await dbOrTx
       .insert(suppliers)
       .values({
         ...data,
@@ -74,9 +77,11 @@ export class SupplierRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt">>
+    data: Partial<Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt">>,
+    tx?: DbTransaction
   ): Promise<Supplier | undefined> {
-    const [supplier] = await db
+    const dbOrTx = tx || db;
+    const [supplier] = await dbOrTx
       .update(suppliers)
       .set({
         ...(data.name !== undefined && { name: data.name }),

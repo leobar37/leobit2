@@ -4,6 +4,8 @@
  */
 import type { TagRepository } from "../repository/tag.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -25,7 +27,6 @@ export class TagService {
 
     const tags = await this.repository.findAll(ctx);
     
-    // Get customer count for each tag
     const tagsWithCount = await Promise.all(
       tags.map(async (tag) => ({
         ...tag,
@@ -55,12 +56,11 @@ export class TagService {
       name: string;
       color?: string;
     }
-  ): Promise<Tag> {
+  ): Promise<MutationResult<Tag>> {
     if (!ctx.hasPermission("tags.write")) {
       throw new ForbiddenError("No tiene permisos para crear etiquetas");
     }
 
-    // Validate name
     if (!data.name || data.name.length < 1) {
       throw new ValidationError("El nombre es requerido");
     }
@@ -69,15 +69,21 @@ export class TagService {
       throw new ValidationError("El nombre no puede tener más de 100 caracteres");
     }
 
-    // Validate color (hex format)
     const color = data.color || "#f97316";
     if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
       throw new ValidationError("Color inválido");
     }
 
-    return this.repository.create(ctx, {
-      name: data.name,
-      color,
+    return db.transaction(async (tx) => {
+      const tag = await this.repository.create(ctx, {
+        name: data.name,
+        color,
+      }, tx);
+
+      return {
+        data: tag,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -88,7 +94,7 @@ export class TagService {
       name?: string;
       color?: string;
     }
-  ): Promise<Tag> {
+  ): Promise<MutationResult<Tag>> {
     if (!ctx.hasPermission("tags.write")) {
       throw new ForbiddenError("No tiene permisos para editar etiquetas");
     }
@@ -98,7 +104,6 @@ export class TagService {
       throw new NotFoundError("Etiqueta");
     }
 
-    // Validate name if provided
     if (data.name !== undefined) {
       if (data.name.length < 1) {
         throw new ValidationError("El nombre es requerido");
@@ -108,17 +113,21 @@ export class TagService {
       }
     }
 
-    // Validate color if provided
     if (data.color !== undefined && !/^#[0-9A-Fa-f]{6}$/.test(data.color)) {
       throw new ValidationError("Color inválido");
     }
 
-    const updated = await this.repository.update(ctx, id, data);
-    if (!updated) {
-      throw new NotFoundError("Etiqueta");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, data, tx);
+      if (!updated) {
+        throw new NotFoundError("Etiqueta");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deleteTag(ctx: RequestContext, id: string): Promise<void> {

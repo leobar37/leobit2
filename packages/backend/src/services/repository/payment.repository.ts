@@ -9,7 +9,7 @@ export class PaymentRepository {
   async findMany(
     ctx: RequestContext,
     filters?: {
-      clientId?: string;
+      customerId?: string;
       limit?: number;
       offset?: number;
     }
@@ -17,7 +17,7 @@ export class PaymentRepository {
     return db.query.abonos.findMany({
       where: and(
         eq(abonos.businessId, ctx.businessId),
-        filters?.clientId ? eq(abonos.clientId, filters.clientId) : undefined
+        filters?.customerId ? eq(abonos.customerId, filters.customerId) : undefined
       ),
       orderBy: desc(abonos.createdAt),
       limit: filters?.limit,
@@ -65,7 +65,7 @@ export class PaymentRepository {
   async createInitialPayment(
     ctx: RequestContext,
     data: {
-      clientId: string;
+      customerId: string;
       amount: string;
       referenceNumber: string;
     },
@@ -76,7 +76,7 @@ export class PaymentRepository {
     const [abono] = await executor
       .insert(abonos)
       .values({
-        clientId: data.clientId,
+        customerId: data.customerId,
         businessId: ctx.businessId,
         sellerId: ctx.businessUserId,
         amount: data.amount,
@@ -99,25 +99,25 @@ export class PaymentRepository {
       ));
   }
 
-  async count(ctx: RequestContext, filters?: { clientId?: string }): Promise<number> {
+  async count(ctx: RequestContext, filters?: { customerId?: string }): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(abonos)
       .where(and(
         eq(abonos.businessId, ctx.businessId),
-        filters?.clientId ? eq(abonos.clientId, filters.clientId) : undefined
+        filters?.customerId ? eq(abonos.customerId, filters.customerId) : undefined
       ));
 
     return result[0]?.count ?? 0;
   }
 
-  async getTotalByClient(ctx: RequestContext, clientId: string): Promise<number> {
+  async getTotalByCustomer(ctx: RequestContext, customerId: string): Promise<number> {
     const result = await db
       .select({ total: sql<number>`coalesce(sum(${abonos.amount}), 0)` })
       .from(abonos)
       .where(and(
         eq(abonos.businessId, ctx.businessId),
-        eq(abonos.clientId, clientId)
+        eq(abonos.customerId, customerId)
       ));
 
     return result[0]?.total ?? 0;
@@ -154,7 +154,7 @@ export class PaymentRepository {
   async createReversal(
     ctx: RequestContext,
     data: {
-      clientId: string;
+      customerId: string;
       amount: string;
       paymentMethod: "saldo" | "efectivo" | "yape" | "plin" | "transferencia";
       referenceNumber?: string;
@@ -168,7 +168,7 @@ export class PaymentRepository {
     const [abono] = await executor
       .insert(abonos)
       .values({
-        clientId: data.clientId,
+        customerId: data.customerId,
         businessId: ctx.businessId,
         sellerId: ctx.businessUserId,
         amount: data.amount,

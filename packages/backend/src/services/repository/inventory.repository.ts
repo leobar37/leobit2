@@ -2,6 +2,7 @@ import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { inventory, variantInventory, type Inventory, type NewInventory, sales, saleItems, products, productVariants } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export class InventoryRepository {
   async findMany(ctx: RequestContext): Promise<Inventory[]> {
@@ -39,18 +40,22 @@ export class InventoryRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewInventory, "id" | "updatedAt">
+    data: Omit<NewInventory, "id" | "updatedAt">,
+    tx?: DbTransaction
   ): Promise<Inventory> {
-    const [item] = await db.insert(inventory).values(data).returning();
+    const dbOrTx = tx || db;
+    const [item] = await dbOrTx.insert(inventory).values(data).returning();
     return item;
   }
 
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewInventory, "id" | "updatedAt">>
+    data: Partial<Omit<NewInventory, "id" | "updatedAt">>,
+    tx?: DbTransaction
   ): Promise<Inventory | undefined> {
-    const [item] = await db
+    const dbOrTx = tx || db;
+    const [item] = await dbOrTx
       .update(inventory)
       .set({
         ...(data.productId !== undefined && { productId: data.productId }),
@@ -66,12 +71,14 @@ export class InventoryRepository {
   async updateQuantity(
     ctx: RequestContext,
     productId: string,
-    quantity: string
+    quantity: string,
+    tx?: DbTransaction
   ): Promise<Inventory | undefined> {
+    const dbOrTx = tx || db;
     const existing = await this.findByProductId(ctx, productId);
 
     if (existing) {
-      const [item] = await db
+      const [item] = await dbOrTx
         .update(inventory)
         .set({
           quantity,
@@ -85,7 +92,7 @@ export class InventoryRepository {
     return this.create(ctx, {
       productId,
       quantity,
-    });
+    }, tx);
   }
 
   async delete(ctx: RequestContext, id: string): Promise<void> {

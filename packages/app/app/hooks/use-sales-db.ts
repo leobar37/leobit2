@@ -1,6 +1,6 @@
 /**
  * Sales Hooks - Clean, Scalable Pattern
- * 
+ *
  * Principle: "Draft" is just a status, not a separate feature.
  * All operations work with any sale status.
  */
@@ -32,9 +32,9 @@ interface SaleFilters {
  */
 export function useSales(filters?: SaleFilters) {
   const { data: business } = useBusiness();
-  
+
   // Memoize the effective business ID to prevent unnecessary re-renders
-  const effectiveBusinessId = useMemo(() => 
+  const effectiveBusinessId = useMemo(() =>
     filters?.businessId || business?.id,
     [filters?.businessId, business?.id]
   );
@@ -58,19 +58,10 @@ export function useSales(filters?: SaleFilters) {
           ({ sale, customer }) => eq(sale.customerId, customer.id),
           "left"
         )
-        .where(({ sale }) =>
-          and(
-            filterDeps.businessId ? eq(sale.businessId, filterDeps.businessId) : undefined,
-            filterDeps.sellerId ? eq(sale.sellerId, filterDeps.sellerId) : undefined,
-            filterDeps.status ? eq(sale.status, filterDeps.status) : undefined,
-            filterDeps.startDate ? gte(sale.saleDate, new Date(filterDeps.startDate)) : undefined,
-            filterDeps.endDate ? gte(sale.saleDate, new Date(filterDeps.endDate)) : undefined
-          )
-        )
         .orderBy(({ sale }) => sale.createdAt, "desc"),
     [filterDeps]
   );
-
+  console.log("result", result.data)
   // Map the joined customer to the customer property
   return {
     ...result,
@@ -273,7 +264,7 @@ export function useConfirmSale() {
 /** @deprecated Use useUpdateSale() with { status: "cancelled" } instead */
 export function useCancelSale() {
   const updateSale = useUpdateSale();
-  return async (saleId: string, reason?: string) => 
+  return async (saleId: string, reason?: string) =>
     updateSale(saleId, { status: "cancelled", cancelReason: reason });
 }
 

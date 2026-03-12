@@ -13,7 +13,9 @@ import {
   DISTRIBUCIONES,
   SUPPLIERS,
   PURCHASES,
-  ORDERS,
+  TAGS,
+  CUSTOMER_TAGS,
+  CLOSINGS,
 } from "./data";
 import {
   CLIENT_USER,
@@ -26,9 +28,24 @@ import {
   DISTRIBUCIONES as CLIENT_DISTRIBUCIONES,
   SUPPLIERS as CLIENT_SUPPLIERS,
   PURCHASES as CLIENT_PURCHASES,
-  ORDERS as CLIENT_ORDERS,
+  TAGS as CLIENT_TAGS,
+  CUSTOMER_TAGS as CLIENT_CUSTOMER_TAGS,
+  CLOSINGS as CLIENT_CLOSINGS,
 } from "./client-data";
-import { inventory, saleItems, sales, abonos, distribuciones, customers, products, suppliers as suppliersSchema, purchaseItems, purchases, productVariants, businessPaymentSettings } from "../db/schema";
+import { 
+  inventory, 
+  saleItems as saleItemsSchema, 
+  sales as salesSchema, 
+  abonos as abonosSchema, 
+  distribuciones, 
+  customers as customersSchema, 
+  products as productsSchema, 
+  productVariants as productVariantsSchema,
+  suppliers as suppliersSchema, 
+  purchaseItems, 
+  purchases, 
+  businessPaymentSettings 
+} from "../db/schema";
 
 const FORCE_MODE = process.argv.includes("--force");
 const CLIENT_MODE = process.argv.includes("--client");
@@ -53,6 +70,14 @@ interface SeedResult {
   suppliersCount: number;
   purchasesCount: number;
   paymentMethodsConfigured: boolean;
+  tagsCount: number;
+  customerTagsCount: number;
+  closingsCount: number;
+}
+
+// Detectar si los datos del cliente son datos reales del JSON
+function isRealClientData(): boolean {
+  return CLIENT_MODE && CLIENT_CUSTOMERS.length > 0 && 'id' in CLIENT_CUSTOMERS[0];
 }
 
 export async function seedDatabase(): Promise<SeedResult> {
@@ -62,19 +87,28 @@ export async function seedDatabase(): Promise<SeedResult> {
     throw new Error("Seed cannot run in production environment");
   }
 
+  // Detectar si usamos datos reales
+  const useRealData = isRealClientData();
+  
+  if (useRealData) {
+    console.log("📦 Modo DATOS REALES: Usando exportación de cliente@avileo.com\n");
+  }
+
   // Select data based on mode
   const isClient = CLIENT_MODE;
   const currentUser = isClient ? CLIENT_USER : { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
   const currentBusiness = isClient ? CLIENT_BUSINESS : TEST_BUSINESS;
-  const currentProducts = isClient ? CLIENT_PRODUCTS : PRODUCTS;
-  const currentProductVariants = isClient ? CLIENT_PRODUCT_VARIANTS : PRODUCT_VARIANTS;
-  const currentCustomers = isClient ? CLIENT_CUSTOMERS : CUSTOMERS;
-  const currentSales = isClient ? CLIENT_SALES : SALES;
-  const currentAbonos = isClient ? CLIENT_ABONOS : ABONOS;
-  const currentDistribuciones = isClient ? CLIENT_DISTRIBUCIONES : DISTRIBUCIONES;
-  const currentSuppliers = isClient ? CLIENT_SUPPLIERS : SUPPLIERS;
-  const currentPurchases = isClient ? CLIENT_PURCHASES : PURCHASES;
-  const currentOrders = isClient ? CLIENT_ORDERS : ORDERS;
+  const currentProducts: any[] = isClient ? CLIENT_PRODUCTS : PRODUCTS;
+  const currentProductVariants: any[][] = isClient ? CLIENT_PRODUCT_VARIANTS : PRODUCT_VARIANTS;
+  const currentCustomers: any[] = isClient ? CLIENT_CUSTOMERS : CUSTOMERS;
+  const currentSales: any[] = isClient ? CLIENT_SALES : SALES;
+  const currentAbonos: any[] = isClient ? CLIENT_ABONOS : ABONOS;
+  const currentDistribuciones: any[] = isClient ? CLIENT_DISTRIBUCIONES : DISTRIBUCIONES;
+  const currentSuppliers: any[] = isClient ? CLIENT_SUPPLIERS : SUPPLIERS;
+  const currentPurchases: any[] = isClient ? CLIENT_PURCHASES : PURCHASES;
+  const currentTags: any[] = isClient ? CLIENT_TAGS : TAGS;
+  const currentCustomerTags: any[] = isClient ? CLIENT_CUSTOMER_TAGS : CUSTOMER_TAGS;
+  const currentClosings: any[] = isClient ? CLIENT_CLOSINGS : CLOSINGS;
 
   if (FORCE_MODE && !isClient) {
     console.log("⚠️ FORCE MODE: Clearing existing seeded data...\n");
@@ -96,56 +130,354 @@ export async function seedDatabase(): Promise<SeedResult> {
   const paymentMethods = await seedPaymentMethods(ctx);
   console.log(`✓ Payment methods configured\n`);
 
-  const seededProducts = await seedProducts(ctx, currentProducts, currentProductVariants);
-  console.log(`✓ Seeded ${seededProducts.length} products with variants\n`);
+  let seededProducts: SeedProduct[];
+  let seededCustomers: any[];
+  let seededSales: any[];
+  let seededAbonos: any[];
 
-  const suppliers = await seedSuppliers(ctx, currentSuppliers);
-  console.log(`✓ Seeded ${suppliers.length} suppliers\n`);
+  if (useRealData) {
+    // Modo datos reales - usar funciones especiales con IDs preservados
+    seededProducts = await seedRealProducts(ctx, currentProducts, currentProductVariants);
+    console.log(`✓ Seeded ${seededProducts.length} products with variants (IDs preservados)\n`);
 
-  const purchases = await seedPurchases(ctx, suppliers, seededProducts, currentPurchases);
-  console.log(`✓ Seeded ${purchases.length} purchases\n`);
+    // Saltar suppliers, purchases, inventory en modo datos reales
+    const suppliers: any[] = [];
+    const purchases: any[] = [];
+    const inventoryItems: any[] = [];
+    console.log(`ℹ Skipping suppliers, purchases, inventory in real data mode\n`);
 
-  const inventoryItems = await seedInventory(ctx, seededProducts);
-  console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
+    seededCustomers = await seedRealCustomers(ctx, currentCustomers);
+    console.log(`✓ Seeded ${seededCustomers.length} customers (IDs preservados)\n`);
 
-  const seededCustomers = await seedCustomers(ctx, currentCustomers);
-  console.log(`✓ Seeded ${seededCustomers.length} customers\n`);
+    seededSales = await seedRealSales(ctx, currentSales);
+    console.log(`✓ Seeded ${seededSales.length} sales with items (IDs preservados)\n`);
 
-  const seededSales = await seedSales(ctx, seededCustomers, seededProducts, currentSales);
-  console.log(`✓ Seeded ${seededSales.length} sales\n`);
+    seededAbonos = await seedRealAbonos(ctx, currentAbonos);
+    console.log(`✓ Seeded ${seededAbonos.length} abonos (IDs preservados)\n`);
 
-  const seededAbonos = await seedAbonos(ctx, seededCustomers, currentAbonos);
-  console.log(`✓ Seeded ${seededAbonos.length} abonos\n`);
+    // Saltar distribuciones, tags, closings en modo datos reales
+    const distribuciones: any[] = [];
+    const seededTags: any[] = [];
+    const customerTagsCount = 0;
+    const closingsCount = 0;
+    console.log(`ℹ Skipping distribuciones, tags, closings in real data mode\n`);
 
-  const distribuciones = await seedDistribuciones(ctx, businessUserId, seededProducts, currentDistribuciones);
-  console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
+    console.log("✅ Seed completed successfully with REAL DATA!\n");
+    console.log("Login credentials:");
+    console.log(`  Email: ${currentUser.email}`);
+    console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
+    console.log();
 
-  const seededOrders = await seedOrders(ctx, seededCustomers, seededProducts, currentOrders);
-  console.log(`✓ Seeded ${seededOrders.length} orders\n`);
+    return {
+      userId: user.userId,
+      businessId: business.id,
+      businessUserId,
+      productsCount: seededProducts.length,
+      variantsCount: seededProducts.reduce((acc, p) => acc + p.variants.length, 0),
+      inventoryCount: 0,
+      customersCount: seededCustomers.length,
+      salesCount: seededSales.length,
+      abonosCount: seededAbonos.length,
+      distribucionesCount: 0,
+      suppliersCount: 0,
+      purchasesCount: 0,
+      paymentMethodsConfigured: !!paymentMethods,
+      tagsCount: 0,
+      customerTagsCount: 0,
+      closingsCount: 0,
+    };
+  } else {
+    // Modo normal (E2E o Client demo básico)
+    seededProducts = await seedProducts(ctx, currentProducts, currentProductVariants);
+    console.log(`✓ Seeded ${seededProducts.length} products with variants\n`);
 
-  console.log("✅ Seed completed successfully!\n");
-  console.log("Login credentials:");
-  console.log(`  Email: ${currentUser.email}`);
-  console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
-  console.log();
+    const suppliers = await seedSuppliers(ctx, currentSuppliers);
+    console.log(`✓ Seeded ${suppliers.length} suppliers\n`);
 
-  return {
-    userId: user.userId,
-    businessId: business.id,
-    businessUserId,
-    productsCount: seededProducts.length,
-    variantsCount: seededProducts.reduce((acc, p) => acc + p.variants.length, 0),
-    inventoryCount: inventoryItems.length,
-    customersCount: seededCustomers.length,
-    salesCount: seededSales.length,
-    abonosCount: seededAbonos.length,
-    distribucionesCount: distribuciones.length,
-    suppliersCount: suppliers.length,
-    purchasesCount: purchases.length,
-    ordersCount: seededOrders.length,
-    paymentMethodsConfigured: !!paymentMethods,
-  };
+    const purchases = await seedPurchases(ctx, suppliers, seededProducts, currentPurchases);
+    console.log(`✓ Seeded ${purchases.length} purchases\n`);
+
+    const inventoryItems = await seedInventory(ctx, seededProducts);
+    console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
+
+    seededCustomers = await seedCustomers(ctx, currentCustomers);
+    console.log(`✓ Seeded ${seededCustomers.length} customers\n`);
+
+    seededSales = await seedSales(ctx, seededCustomers, seededProducts, currentSales);
+    console.log(`✓ Seeded ${seededSales.length} sales\n`);
+
+    seededAbonos = await seedAbonos(ctx, seededCustomers, currentAbonos);
+    console.log(`✓ Seeded ${seededAbonos.length} abonos\n`);
+
+    const distribuciones = await seedDistribuciones(ctx, businessUserId, seededProducts, currentDistribuciones);
+    console.log(`✓ Seeded ${distribuciones.length} distribuciones\n`);
+
+    const seededTags = await seedTags(ctx, currentTags);
+    console.log(`✓ Seeded ${seededTags.length} tags\n`);
+
+    const customerTagsCount = await seedCustomerTags(ctx, seededCustomers, seededTags, currentCustomerTags);
+    console.log(`✓ Seeded ${customerTagsCount} customer tags\n`);
+
+    const closingsCount = await seedClosings(ctx, businessUserId, currentClosings);
+    console.log(`✓ Seeded ${closingsCount} closings\n`);
+
+    console.log("✅ Seed completed successfully!\n");
+    console.log("Login credentials:");
+    console.log(`  Email: ${currentUser.email}`);
+    console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
+    console.log();
+
+    return {
+      userId: user.userId,
+      businessId: business.id,
+      businessUserId,
+      productsCount: seededProducts.length,
+      variantsCount: seededProducts.reduce((acc, p) => acc + p.variants.length, 0),
+      inventoryCount: inventoryItems.length,
+      customersCount: seededCustomers.length,
+      salesCount: seededSales.length,
+      abonosCount: seededAbonos.length,
+      distribucionesCount: distribuciones.length,
+      suppliersCount: suppliers.length,
+      purchasesCount: purchases.length,
+      paymentMethodsConfigured: !!paymentMethods,
+      tagsCount: seededTags.length,
+      customerTagsCount: customerTagsCount,
+      closingsCount: closingsCount,
+    };
+  }
 }
+
+// Funciones para datos reales (IDs preservados)
+
+async function seedRealProducts(
+  ctx: RequestContext,
+  productsData: any[],
+  variantsData: any[][]
+): Promise<SeedProduct[]> {
+  const existing = await db.query.products.findMany({
+    where: (p, { eq }) => eq(p.businessId, ctx.businessId),
+  });
+
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} products already exist, loading with variants`);
+    const seedProducts: SeedProduct[] = [];
+    for (const product of existing) {
+      const variants = await db.query.productVariants.findMany({
+        where: (v, { eq }) => eq(v.productId, product.id),
+      });
+      seedProducts.push({
+        id: product.id,
+        name: product.name,
+        variants: variants.map(v => ({ id: v.id, name: v.name })),
+      });
+    }
+    return seedProducts;
+  }
+
+  const seedProducts: SeedProduct[] = [];
+
+  for (let i = 0; i < productsData.length; i++) {
+    const productDef = productsData[i];
+    const variantsDef = variantsData[i];
+
+    // Insertar producto con ID preservado usando SQL directo
+    await db.execute(`
+      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at)
+      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW())
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    console.log(`   ✓ Product: ${productDef.name} (ID: ${productDef.id.slice(-8)})`);
+
+    const seedProduct: SeedProduct = {
+      id: productDef.id,
+      name: productDef.name,
+      variants: [],
+    };
+
+    for (const variantDef of variantsDef) {
+      // Insertar variante con ID preservado
+      await db.execute(`
+        INSERT INTO product_variants (id, product_id, name, sku, unit_quantity, price, is_active, created_at, updated_at)
+        VALUES ('${variantDef.id}', '${productDef.id}', '${variantDef.name.replace(/'/g, "''")}', '${variantDef.sku}', ${variantDef.unitQuantity}, ${variantDef.price}, true, NOW(), NOW())
+        ON CONFLICT (id) DO NOTHING
+      `);
+
+      console.log(`     ↳ Variant: ${variantDef.name} (ID: ${variantDef.id.slice(-8)})`);
+
+      seedProduct.variants.push({
+        id: variantDef.id,
+        name: variantDef.name,
+      });
+    }
+
+    seedProducts.push(seedProduct);
+  }
+
+  return seedProducts;
+}
+
+async function seedRealCustomers(ctx: RequestContext, customersData: any[]) {
+  if (customersData.length === 0) {
+    console.log(`⚠ No customers to seed (empty array)`);
+    return [];
+  }
+
+  const existing = await db.query.customers.findMany({
+    where: (c, { eq }) => eq(c.businessId, ctx.businessId),
+  });
+
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} customers already exist, skipping`);
+    return existing;
+  }
+
+  const inserted = [];
+  for (const customer of customersData) {
+    await db.insert(customersSchema).values({
+      id: customer.id,
+      businessId: ctx.businessId,
+      name: customer.name,
+      dni: customer.dni,
+      phone: customer.phone,
+      address: customer.address,
+      notes: customer.notes,
+      syncStatus: customer.syncStatus || "pending",
+      syncAttempts: customer.syncAttempts || 0,
+      createdBy: customer.createdBy,
+      createdAt: new Date(customer.createdAt),
+      updatedAt: new Date(customer.updatedAt),
+    });
+    inserted.push(customer);
+  }
+
+  return inserted;
+}
+
+async function seedRealSales(ctx: RequestContext, salesData: any[]) {
+  if (salesData.length === 0) {
+    console.log(`⚠ No sales to seed (empty array)`);
+    return [];
+  }
+
+  const existing = await db.query.sales.findMany({
+    where: (s, { eq }) => eq(s.businessId, ctx.businessId),
+  });
+
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} sales already exist, skipping`);
+    return existing;
+  }
+
+  let totalItems = 0;
+
+  for (const sale of salesData) {
+    // Insertar venta con ID preservado
+    await db.insert(salesSchema).values({
+      id: sale.id,
+      businessId: ctx.businessId,
+      customerId: sale.customerId,
+      sellerId: ctx.userId,
+      distribucionId: sale.distribucionId,
+      type: sale.type,
+      saleType: sale.saleType,
+      paymentMode: sale.paymentMode,
+      totalAmount: sale.totalAmount,
+      amountPaid: sale.amountPaid,
+      balanceDue: sale.balanceDue,
+      tara: sale.tara,
+      netWeight: sale.netWeight,
+      saleDate: new Date(sale.saleDate),
+      deliveryDate: sale.deliveryDate,
+      orderDate: sale.orderDate,
+      status: sale.status,
+      version: sale.version,
+      confirmedSnapshot: sale.confirmedSnapshot,
+      deliveredSnapshot: sale.deliveredSnapshot,
+      allowCustomerEdit: sale.allowCustomerEdit,
+      syncStatus: sale.syncStatus || "pending",
+      syncAttempts: sale.syncAttempts || 0,
+      cancelledAt: sale.cancelledAt,
+      cancelledBy: sale.cancelledBy,
+      cancelReason: sale.cancelReason,
+      refundAmount: sale.refundAmount,
+      refundDate: sale.refundDate,
+      refundMethod: sale.refundMethod,
+      refundReference: sale.refundReference,
+      refundNotes: sale.refundNotes,
+      advancePaymentMethod: sale.advancePaymentMethod,
+      advanceReferenceNumber: sale.advanceReferenceNumber,
+      advanceProofImageId: sale.advanceProofImageId,
+      createdAt: new Date(sale.createdAt),
+      updatedAt: new Date(sale.updatedAt),
+    });
+
+    // Insertar items de la venta con IDs preservados
+    for (const item of sale.items) {
+      await db.insert(saleItemsSchema).values({
+        id: item.id,
+        saleId: sale.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        variantName: item.variantName,
+        quantity: item.quantity,
+        orderedQuantity: item.orderedQuantity,
+        deliveredQuantity: item.deliveredQuantity,
+        unitPrice: item.unitPrice,
+        unitPriceQuoted: item.unitPriceQuoted,
+        unitPriceFinal: item.unitPriceFinal,
+        subtotal: item.subtotal,
+        isModified: item.isModified,
+        originalQuantity: item.originalQuantity,
+      });
+      totalItems++;
+    }
+  }
+
+  console.log(`   ✅ ${salesData.length} sales with ${totalItems} items inserted`);
+
+  return salesData;
+}
+
+async function seedRealAbonos(ctx: RequestContext, abonosData: any[]) {
+  if (abonosData.length === 0) {
+    console.log(`⚠ No abonos to seed (empty array)`);
+    return [];
+  }
+
+  const existing = await db.query.abonos.findMany({
+    where: (a, { eq }) => eq(a.businessId, ctx.businessId),
+  });
+
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} abonos already exist, skipping`);
+    return existing;
+  }
+
+  for (const abono of abonosData) {
+    await db.insert(abonosSchema).values({
+      id: abono.id,
+      businessId: ctx.businessId,
+      customerId: abono.customerId,
+      sellerId: ctx.userId,
+      amount: abono.amount,
+      paymentMethod: abono.paymentMethod,
+      notes: abono.notes,
+      proofImageId: abono.proofImageId,
+      referenceNumber: abono.referenceNumber,
+      relatedSaleId: abono.relatedSaleId,
+      syncStatus: abono.syncStatus || "pending",
+      syncAttempts: abono.syncAttempts || 0,
+      createdAt: new Date(abono.createdAt),
+    });
+  }
+
+  return abonosData;
+}
+
+// Funciones originales (modo E2E)
 
 async function createBusinessAndLinkUser(userId: string, businessData: typeof TEST_BUSINESS): Promise<{ business: { id: string; name: string }; businessUserId: string }> {
   const tempCtx = RequestContext.forWorker("temp", "temp");
@@ -175,7 +507,22 @@ async function createBusinessAndLinkUser(userId: string, businessData: typeof TE
   return { business, businessUserId: businessUser.id };
 }
 
-async function seedProducts(ctx: RequestContext, productsData: typeof PRODUCTS, variantsData: typeof PRODUCT_VARIANTS): Promise<SeedProduct[]> {
+async function seedProducts(
+  ctx: RequestContext,
+  productsData: Array<{
+    name: string;
+    type: "pollo" | "huevo" | "otro";
+    unit: "kg" | "unidad";
+    basePrice: string;
+    isActive: boolean;
+  }>,
+  variantsData: Array<Array<{
+    name: string;
+    sku: string;
+    unitQuantity: number;
+    price: number;
+  }>>
+): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} products already exist, loading with variants`);
@@ -404,7 +751,7 @@ async function seedSales(
     });
 
     const result = await services.sale.createSale(ctx, {
-      clientId: customer.id,
+      customerId: customer.id,
       saleType: saleData.saleType,
       totalAmount: saleData.totalAmount,
       amountPaid: saleData.amountPaid,
@@ -437,7 +784,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>,
     if (!customer) continue;
 
     const created = await services.payment.createPayment(ctx, {
-      clientId: customer.id,
+      customerId: customer.id,
       amount: abonoData.amount,
       paymentMethod: abonoData.paymentMethod,
       notes: abonoData.notes,
@@ -527,93 +874,140 @@ async function seedPaymentMethods(ctx: RequestContext) {
   return config;
 }
 
-async function seedOrders(
+async function seedTags(
   ctx: RequestContext,
-  customers: Array<{ id: string }>,
-  products: SeedProduct[],
-  ordersData: typeof ORDERS
-) {
-  if (ordersData.length === 0) {
-    console.log(`⚠ No orders to seed (empty array)`);
+  tagsData: Array<{ name: string; color: string }>
+): Promise<Array<{ id: string; name: string }>> {
+  if (tagsData.length === 0) {
+    console.log(`⚠ No tags to seed (empty array)`);
     return [];
   }
 
-  const existing = await services.order.getOrders(ctx);
+  const existing = await services.tag.listTags(ctx);
   if (existing.length > 0) {
-    console.log(`⚠ ${existing.length} orders already exist, skipping`);
-    return existing;
+    console.log(`⚠ ${existing.length} tags already exist, skipping`);
+    return existing.map((t) => ({ id: t.id, name: t.name }));
   }
 
-  const orders = [];
-  for (const orderData of ordersData) {
-    const customer = customers[orderData.customerIndex];
-    if (!customer) continue;
-
-    const items = orderData.items.map((item) => {
-      const product = products[item.productIndex];
-      const variant = product.variants[item.variantIndex];
-      return {
-        productId: product.id,
-        productName: product.name,
-        variantId: variant.id,
-        variantName: variant.name,
-        orderedQuantity: item.orderedQuantity,
-        unitPriceQuoted: item.unitPriceQuoted,
-      };
+  const seededTags = [];
+  for (const tagDef of tagsData) {
+    const created = await services.tag.createTag(ctx, {
+      name: tagDef.name,
+      color: tagDef.color,
     });
+    seededTags.push({ id: created.id, name: created.name });
+    console.log(`   ✓ Tag: ${created.name} (${created.color})`);
+  }
 
-    // Calculate total amount
-    const totalAmount = items.reduce((sum, item) => 
-      sum + (item.orderedQuantity * item.unitPriceQuoted), 0
-    );
+  return seededTags;
+}
 
-    // Create order based on status
-    let created;
-    if (orderData.status === "draft") {
-      const result = await services.order.createOrder(ctx, {
-        clientId: customer.id,
-        deliveryDate: orderData.deliveryDate,
-        paymentIntent: orderData.paymentIntent,
-        totalAmount,
-        items,
-      });
-      created = result.data;
-    } else if (orderData.status === "confirmed") {
-      const draft = await services.order.createOrder(ctx, {
-        clientId: customer.id,
-        deliveryDate: orderData.deliveryDate,
-        paymentIntent: orderData.paymentIntent,
-        totalAmount,
-        items,
-      });
-      const confirmed = await services.order.confirmOrder(ctx, draft.data.id, draft.data.version);
-      created = confirmed.data;
+async function seedCustomerTags(
+  ctx: RequestContext,
+  customers: Array<{ id: string }>,
+  tags: Array<{ id: string; name: string }>,
+  customerTagsData: Array<{ customerIndex: number; tagIndex: number }>
+): Promise<number> {
+  if (customerTagsData.length === 0) {
+    console.log(`⚠ No customer tags to seed (empty array)`);
+    return 0;
+  }
+
+  if (customers.length === 0 || tags.length === 0) {
+    console.log(`⚠ No customers or tags available for customer-tags`);
+    return 0;
+  }
+
+  let count = 0;
+  for (const ctData of customerTagsData) {
+    const customer = customers[ctData.customerIndex];
+    const tag = tags[ctData.tagIndex];
+
+    if (!customer || !tag) {
+      console.log(`   ⚠ Skipping customer-tag: invalid index`);
+      continue;
     }
 
-    if (created) {
-      orders.push(created);
-      console.log(`   ✓ Order: ${created.id.slice(-8)} - ${orderData.status} - S/ ${orderData.totalAmount}`);
+    try {
+      await services.customerTag.addTagToCustomer(ctx, customer.id, tag.id);
+      count++;
+      console.log(`   ✓ Customer-Tag: ${customer.id.slice(-8)} -> ${tag.name}`);
+    } catch (error) {
+      // Tag might already be assigned, ignore
+      console.log(`   ℹ Customer-Tag already exists: ${customer.id.slice(-8)} -> ${tag.name}`);
     }
   }
 
-  return orders;
+  return count;
+}
+
+async function seedClosings(
+  ctx: RequestContext,
+  businessUserId: string,
+  closingsData: Array<{
+    closingDate: string;
+    totalSales: number;
+    totalAmount: number;
+    cashAmount: number;
+    creditAmount: number;
+    totalKilos: number;
+  }>
+): Promise<number> {
+  if (closingsData.length === 0) {
+    console.log(`⚠ No closings to seed (empty array)`);
+    return 0;
+  }
+
+  const existing = await services.closing.getClosings(ctx);
+  if (existing.length > 0) {
+    console.log(`⚠ ${existing.length} closings already exist, skipping`);
+    return existing.length;
+  }
+
+  let count = 0;
+  for (const closingDef of closingsData) {
+    try {
+      const closingDate = new Date(closingDef.closingDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const isBackdated = closingDate < today;
+      
+      await services.closing.createClosing(ctx, {
+        closingDate: closingDef.closingDate,
+        totalSales: closingDef.totalSales,
+        totalAmount: closingDef.totalAmount,
+        cashAmount: closingDef.cashAmount,
+        creditAmount: closingDef.creditAmount,
+        totalKilos: closingDef.totalKilos,
+        ...(isBackdated && { backdateReason: "Seed data initialization" }),
+      });
+      count++;
+      console.log(`   ✓ Closing: ${closingDef.closingDate} - S/ ${closingDef.totalAmount}`);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("already exists")) {
+        console.log(`   ℹ Closing already exists: ${closingDef.closingDate}`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return count;
 }
 
 async function clearExistingData() {
-  const { orderItems, orders } = await import("../db/schema/orders");
-  await db.delete(orderItems);
-  await db.delete(orders);
-  await db.delete(saleItems);
-  await db.delete(sales);
-  await db.delete(abonos);
+  await db.delete(saleItemsSchema);
+  await db.delete(salesSchema);
+  await db.delete(abonosSchema);
   await db.delete(distribuciones);
-  await db.delete(customers);
+  await db.delete(customersSchema);
   await db.delete(purchaseItems);
   await db.delete(purchases);
   await db.delete(suppliersSchema);
   await db.delete(inventory);
-  await db.delete(productVariants);
-  await db.delete(products);
+  await db.delete(productVariantsSchema);
+  await db.delete(productsSchema);
   await db.delete(businessPaymentSettings);
   console.log("✓ Cleared existing data\n");
 }
@@ -633,7 +1027,6 @@ if (import.meta.main) {
       console.log(`  Sales: ${result.salesCount}`);
       console.log(`  Abonos: ${result.abonosCount}`);
       console.log(`  Distribuciones: ${result.distribucionesCount}`);
-      console.log(`  Orders: ${result.ordersCount}`);
       console.log(`  Payment Methods: ${result.paymentMethodsConfigured ? "✓ Configured" : "✗ Not Configured"}`);
       process.exit(0);
     })

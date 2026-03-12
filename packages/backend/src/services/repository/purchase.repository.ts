@@ -9,6 +9,7 @@ import {
   type NewPurchaseItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface PurchaseWithItems extends Purchase {
   items: PurchaseItem[];
@@ -118,9 +119,11 @@ export class PurchaseRepository {
   async updateStatus(
     ctx: RequestContext,
     id: string,
-    status: "pending" | "received" | "cancelled"
+    status: "pending" | "received" | "cancelled",
+    tx?: DbTransaction
   ): Promise<Purchase | undefined> {
-    const [purchase] = await db
+    const dbOrTx = tx || db;
+    const [purchase] = await dbOrTx
       .update(purchases)
       .set({
         status,

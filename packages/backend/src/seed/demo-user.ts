@@ -235,6 +235,7 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
     console.log(`⚠ ${existing.length} products already exist, loading with variants`);
     const seedProducts: SeedProduct[] = [];
     for (const product of existing) {
+      if (!product.id) continue;
       const variants = await services.productVariant.getVariantsByProduct(ctx, product.id);
       seedProducts.push({
         id: product.id,
@@ -251,13 +252,15 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
     const productDef = DEMO_PRODUCTS[i];
     const variantsDef = DEMO_PRODUCT_VARIANTS[i];
 
-    const product = await services.product.createProduct(ctx, {
+    const result = await services.product.createProduct(ctx, {
       name: productDef.name,
       type: productDef.type,
       unit: productDef.unit,
       basePrice: parseFloat(productDef.basePrice),
       isActive: productDef.isActive,
     });
+
+    const product = result.data;
 
     const seedProduct: SeedProduct = {
       id: product.id,
@@ -266,7 +269,7 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
     };
 
     for (const variantDef of variantsDef) {
-      const variant = await services.productVariant.createVariant(ctx, {
+      const variantResult = await services.productVariant.createVariant(ctx, {
         productId: product.id,
         name: variantDef.name,
         sku: variantDef.sku,
@@ -274,6 +277,8 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
         price: variantDef.price,
         isActive: true,
       });
+
+      const variant = variantResult.data;
 
       seedProduct.variants.push({
         id: variant.id,
@@ -385,7 +390,7 @@ async function seedSales(
     });
 
     const result = await services.sale.createSale(ctx, {
-      clientId: customer.id,
+      customerId: customer.id,
       saleType: saleData.saleType,
       totalAmount: saleData.totalAmount,
       amountPaid: saleData.amountPaid,
@@ -409,7 +414,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   // Create sample abono for the credit sale customer
   if (customers.length > 1) {
     const created = await services.payment.createPayment(ctx, {
-      clientId: customers[1].id,
+      customerId: customers[1].id,
       amount: 20.0,
       paymentMethod: "efectivo",
       notes: "Primer abono",

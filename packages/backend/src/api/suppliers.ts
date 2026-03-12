@@ -51,8 +51,8 @@ export const supplierRoutes = new Elysia({ prefix: "/suppliers" })
     "/",
     async ({ supplierService, ctx, body, set }) => {
       set.status = 201;
-      const supplier = await supplierService.createSupplier(ctx as RequestContext, body);
-      return { success: true, data: supplier };
+      const result = await supplierService.createSupplier(ctx as RequestContext, body);
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -69,8 +69,8 @@ export const supplierRoutes = new Elysia({ prefix: "/suppliers" })
   .put(
     "/:id",
     async ({ supplierService, ctx, params, body }) => {
-      const supplier = await supplierService.updateSupplier(ctx as RequestContext, params.id, body);
-      return { success: true, data: supplier };
+      const result = await supplierService.updateSupplier(ctx as RequestContext, params.id, body);
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({

@@ -47,7 +47,7 @@ export const closingRoutes = new Elysia({ prefix: "/closings" })
     "/",
     async ({ closingService, ctx, body, set }) => {
       set.status = 201;
-      const closing = await closingService.createClosing(ctx as RequestContext, {
+      const result = await closingService.createClosing(ctx as RequestContext, {
         closingDate: body.closingDate,
         totalSales: body.totalSales,
         totalAmount: parseFloat(body.totalAmount),
@@ -56,7 +56,7 @@ export const closingRoutes = new Elysia({ prefix: "/closings" })
         totalKilos: body.totalKilos ? parseFloat(body.totalKilos) : undefined,
         backdateReason: body.backdateReason,
       });
-      return { success: true, data: closing };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -73,14 +73,14 @@ export const closingRoutes = new Elysia({ prefix: "/closings" })
   .put(
     "/:id",
     async ({ closingService, ctx, params, body }) => {
-      const closing = await closingService.updateClosing(ctx as RequestContext, params.id, {
+      const result = await closingService.updateClosing(ctx as RequestContext, params.id, {
         totalSales: body.totalSales,
         totalAmount: body.totalAmount ? parseFloat(body.totalAmount) : undefined,
         cashAmount: body.cashAmount ? parseFloat(body.cashAmount) : undefined,
         creditAmount: body.creditAmount ? parseFloat(body.creditAmount) : undefined,
         totalKilos: body.totalKilos ? parseFloat(body.totalKilos) : undefined,
       });
-      return { success: true, data: closing };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({

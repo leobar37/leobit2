@@ -1,35 +1,30 @@
-import * as React from "react";
-import { useState, useMemo, createContext, useContext } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  User,
-  X,
   CreditCard,
   Wallet,
   Receipt,
   Trash2,
-  ChevronRight,
   Package,
   Check,
-  ChevronDown,
   Calculator as CalculatorIcon,
-  Plus
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AppDrawer } from "~/components/ui/app-drawer";
-import { useCustomers } from "~/hooks/use-customers";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CustomerSelect } from "~/components/customers/customer-select";
+import { CalculatorInput } from "~/components/calculator/calculator-input";
 import { useProducts } from "~/hooks/use-products";
-import { useVariantsByProduct, type ProductVariant } from "~/hooks/use-product-variants";
-import { useCalculator } from "~/hooks/use-calculator";
+import { useVariantsByProduct } from "~/hooks/use-product-variants";
+import { useSmartCalculator } from "~/hooks/use-smart-calculator";
 import {
   useSale,
-  useSales,
-  useCreateSale,
   useUpdateSale,
-  useDeleteSale,
+  useFinalizeSale,
   useSaleItems,
   useAddSaleItem,
   useRemoveSaleItem,
@@ -37,42 +32,22 @@ import {
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { formatCurrency, formatKilos, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
-import type { Product } from "~/lib/db/schema";
+import { useBusinessSettings } from "~/hooks/use-business-settings";
+import { getSaleEditorPath } from "~/lib/sales/navigation";
+import { useNewSaleContext } from "./new-sale-context";
 
-// ============================================
-// Context for Selected Draft
-// ============================================
+const isSaleEditorDebugEnabled = import.meta.env.DEV;
 
-interface NewSaleContextType {
-  saleId: string | null;
-  setSaleId: (id: string | null) => void;
-}
+function debugSaleEditor(message: string, payload?: unknown) {
+  if (!isSaleEditorDebugEnabled) return;
 
-const NewSaleContext = createContext<NewSaleContextType | null>(null);
-
-export function NewSaleProvider({ children }: { children: React.ReactNode }) {
-  const [saleId, setSaleId] = useState<string | null>(null);
-
-  return (
-    <NewSaleContext.Provider value={{ saleId, setSaleId }}>
-      {children}
-    </NewSaleContext.Provider>
-  );
-}
-
-export function useNewSaleContext() {
-  const context = useContext(NewSaleContext);
-  if (!context) {
-    throw new Error("useNewSaleContext must be used within NewSaleProvider");
+  if (payload === undefined) {
+    console.log(`[SaleEditorDebug] ${message}`);
+    return;
   }
-  return context;
+
+  console.log(`[SaleEditorDebug] ${message}`, payload);
 }
-
-// ============================================
-// Customer Section Component
-// ============================================
-
-import { CustomerSelect } from "~/components/customers/customer-select";
 
 export function CustomerSection() {
   const { saleId } = useNewSaleContext();
@@ -84,12 +59,27 @@ export function CustomerSection() {
   const calculations = useSaleCalculations(sale, items);
 
   const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null } | null) => {
-    if (saleId) {
-      updateSale(saleId, {
-        customerId: customer?.id ?? null,
-        customer: customer ?? undefined
-      });
+    if (!saleId) {
+      debugSaleEditor("Skipped customer selection because saleId is missing");
+      return;
     }
+
+    debugSaleEditor("Selecting customer for sale", {
+      saleId,
+      customerId: customer?.id ?? null,
+      hasLocalSale: Boolean(sale),
+    });
+
+    void updateSale(saleId, {
+      customerId: customer?.id ?? null,
+    }).catch((error) => {
+      debugSaleEditor("Failed to update sale customer", {
+        saleId,
+        customerId: customer?.id ?? null,
+        error,
+      });
+      console.error(error);
+    });
   };
 
   return (
@@ -137,15 +127,36 @@ export function PaymentModeSection() {
   const sale = sales?.[0] || null;
   const calculations = useSaleCalculations(sale, items);
 
+  if (items.length === 0) {
+    return null;
+  }
+
   const handleSetPaymentMode = (mode: PaymentMode) => {
     if (saleId) {
-      updateSale(saleId, { paymentMode: mode });
+      const totalAmount = calculations.totalAmount.toFixed(2);
+      const amountPaid =
+        mode === "pago_total"
+          ? totalAmount
+          : mode === "debe_todo"
+            ? "0.00"
+            : sale?.amountPaid || "0.00";
+
+      updateSale(saleId, {
+        paymentMode: mode,
+        saleType: mode === "pago_total" ? "contado" : "credito",
+        totalAmount,
+        amountPaid,
+        balanceDue: calculations.balanceDue.toFixed(2),
+      });
     }
   };
 
   const handleSetAmountPaid = (amount: string) => {
     if (saleId) {
-      updateSale(saleId, { amountPaid: amount });
+      updateSale(saleId, {
+        amountPaid: amount,
+        balanceDue: calculations.balanceDue.toFixed(2),
+      });
     }
   };
 
@@ -191,14 +202,16 @@ export function PaymentModeSection() {
             <Input
               type="number"
               placeholder="0.00"
-              value={draft?.amountPaid || ""}
+              value={sale?.amountPaid || ""}
               onChange={(e) => handleSetAmountPaid(e.target.value)}
               className={cn(
                 "text-lg rounded-xl",
-                !calculations.hasValidPartial && draft?.amountPaid && "border-red-500 focus-visible:ring-red-500"
+                !calculations.hasValidPartial &&
+                  sale?.amountPaid &&
+                  "border-red-500 focus-visible:ring-red-500"
               )}
             />
-            {!calculations.hasValidPartial && draft?.amountPaid && (
+            {!calculations.hasValidPartial && sale?.amountPaid && (
               <p className="text-sm text-red-500">
                 El monto debe ser mayor a 0 y menor o igual al total
               </p>
@@ -231,7 +244,7 @@ export function PaymentModeSection() {
 // Cart Item Component
 // ============================================
 
-function CartItemRow({ itemId, index }: { itemId: string; index: number }) {
+function CartItemRow({ itemId }: { itemId: string }) {
   const { saleId } = useNewSaleContext();
   const { data: items = [] } = useSaleItems(saleId);
   const removeItem = useRemoveSaleItem();
@@ -247,7 +260,8 @@ function CartItemRow({ itemId, index }: { itemId: string; index: number }) {
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{item.productName}</p>
         <p className="text-sm text-muted-foreground">
-          {item.variantName} · {formatKilos(parseFloat(item.quantity))} kg × S/ {formatCurrency(parseFloat(item.unitPrice))}
+          {item.variantName} · {formatKilos(parseFloat(item.quantity ?? "0"))} kg × S/{" "}
+          {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
         </p>
       </div>
       <div className="text-right">
@@ -283,8 +297,8 @@ export function CartSection() {
         <CardTitle className="text-base">Productos ({items.length})</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {items.map((item, index) => (
-          <CartItemRow key={item.id} itemId={item.id} index={index} />
+        {items.map((item) => (
+          <CartItemRow key={item.id} itemId={item.id} />
         ))}
       </CardContent>
     </Card>
@@ -344,7 +358,7 @@ export function SaleSummaryCard() {
           <div className="p-2 bg-white/20 rounded-lg text-sm text-center">
             {items.length === 0
               ? "Agrega productos para continuar"
-              : calculations.requiresCustomer && !sale?.client
+              : calculations.requiresCustomer && !sale?.customerId
               ? "Selecciona un cliente para venta a crédito"
               : "Revisa el monto pagado"
             }
@@ -361,31 +375,34 @@ export function SaleSummaryCard() {
 
 export function SubmitSaleButton() {
   const navigate = useNavigate();
-  const { saleId, setSaleId } = useNewSaleContext();
+  const { saleId } = useNewSaleContext();
   const { data: sales } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
 
   const sale = sales?.[0] || null;
-  const deleteSale = useDeleteSale();
-  const updateSale = useUpdateSale();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const finalizeSale = useFinalizeSale();
 
   const calculations = useSaleCalculations(sale, items);
 
   const handleSubmit = async () => {
     if (!calculations.canSubmit || !saleId) return;
 
-    setIsSubmitting(true);
-
     try {
-      // Confirm sale - change status from draft to active
-      await updateSale(saleId, { status: "active" });
-      setSaleId(null);
+      const nextStatus = sale?.type === "pre_order" ? "confirmed" : "active";
+
+      await finalizeSale.mutateAsync({
+        saleId,
+        changes: {
+          totalAmount: formatCurrency(calculations.totalAmount),
+          saleType: calculations.saleType,
+          amountPaid: formatCurrency(calculations.amountPaidValue),
+          balanceDue: formatCurrency(calculations.balanceDue),
+          status: nextStatus,
+        },
+      });
       navigate("/ventas");
     } catch (error) {
       console.error("Failed to submit sale:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -397,10 +414,10 @@ export function SubmitSaleButton() {
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-100 p-4 pb-safe">
       <Button
         onClick={handleSubmit}
-        disabled={!calculations.canSubmit || isSubmitting}
+        disabled={!calculations.canSubmit || finalizeSale.isPending}
         className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300"
       >
-        {isSubmitting ? (
+        {finalizeSale.isPending ? (
           "Procesando..."
         ) : (
           <>
@@ -420,56 +437,58 @@ interface CalculatorContentProps {
   returnPath?: string;
 }
 
-export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorContentProps) {
+export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const navigate = useNavigate();
-  const { saleId, setSaleId } = useNewSaleContext();
+  const { saleId } = useNewSaleContext();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
-  const createSale = useCreateSale();
   const addItem = useAddSaleItem();
-  const { data: sales } = useSale(saleId);
+  const { settings } = useBusinessSettings();
 
-  const { data: products = [] } = useProducts();
+  const {
+    data: products = [],
+    isLoading: isProductsLoading,
+    isFetching: isProductsFetching,
+  } = useProducts();
   const selectedProduct = products.find(p => p.id === selectedProductId);
 
-  const { data: variants = [] } = useVariantsByProduct(selectedProductId || "", {
+  const {
+    data: variants = [],
+    isLoading: isVariantsLoading,
+    isFetching: isVariantsFetching,
+  } = useVariantsByProduct(selectedProductId || "", {
     isActive: true
   });
   const selectedVariant = variants.find(v => v.id === selectedVariantId);
+
+  const calculatorSettings = settings?.calculators?.sales;
+  const hideTara = calculatorSettings?.hideTara ?? true;
+  const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
 
   const {
     form,
     isValid,
     isKgProduct,
+    values,
+    toggleAutoCalculateField,
+    isFieldAutoCalculated,
+    setFieldValue,
     calculation,
     handleClear,
-  } = useCalculator({
+  } = useSmartCalculator({
     product: selectedProduct,
     variant: selectedVariant,
-    autoFillPrice: true,
+    autoFillPrice,
+    hideTara,
   });
 
   const handleAddToCart = async () => {
-    if (!selectedProduct || !selectedVariant || !calculation.isValid) return;
-
-    // Create sale with draft status if doesn't exist
-    let currentSaleId = saleId;
-    if (!currentSaleId) {
-      // TODO: Get actual sellerId and businessId from auth context
-      const newSaleId = await createSale({
-        businessId: "temp-business-id", // TODO: Get from context
-        sellerId: "temp-seller-id", // TODO: Get from context
-        saleType: "contado",
-        totalAmount: 0,
-        amountPaid: 0,
-        status: "draft",
-      } as any);
-      currentSaleId = newSaleId;
-      setSaleId(currentSaleId);
+    if (!selectedProduct || !selectedVariant || !calculation.isValid || !saleId) {
+      return;
     }
 
-    await addItem(currentSaleId, {
+    await addItem(saleId, {
       productId: selectedProduct.id,
       variantId: selectedVariant.id,
       productName: selectedProduct.name,
@@ -477,11 +496,10 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
       quantity: calculation.quantity.toString(),
       unitPrice: calculation.unitPrice.toString(),
       subtotal: calculation.subtotal.toString(),
+      isModified: false,
     });
 
-    if (returnPath) {
-      navigate(returnPath);
-    }
+    navigate(returnPath || getSaleEditorPath(saleId));
   };
 
   return (
@@ -491,57 +509,107 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
         {/* Product Selector */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Producto</label>
-          <div className="grid grid-cols-2 gap-2">
-            {products.filter(p => p.isActive).map((product) => (
-              <button
-                key={product.id}
-                onClick={() => {
-                  setSelectedProductId(product.id);
-                  setSelectedVariantId(null);
-                  handleClear();
-                }}
-                className={cn(
-                  "p-3 rounded-xl border-2 text-left transition-colors",
-                  selectedProductId === product.id
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-orange-200"
-                )}
-              >
-                <p className="font-medium text-sm">{product.name}</p>
-                <Badge variant="secondary" className="mt-1">
-                  {product.unit === "kg" ? "Por kilo" : "Por unidad"}
-                </Badge>
-              </button>
-            ))}
-          </div>
+          {isProductsLoading ? (
+            <div className="grid grid-cols-2 gap-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : products.filter((product) => product.isActive).length === 0 ? (
+            <Card className="border-0 rounded-2xl bg-card">
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                No hay productos activos para vender.
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {products.filter(p => p.isActive).map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      setSelectedProductId(product.id);
+                      setSelectedVariantId(null);
+                      handleClear();
+                    }}
+                    className={cn(
+                      "p-3 rounded-xl border-2 text-left transition-colors",
+                      selectedProductId === product.id
+                        ? "border-orange-500 bg-orange-50"
+                        : "border-gray-200 hover:border-orange-200"
+                    )}
+                  >
+                    <p className="font-medium text-sm">{product.name}</p>
+                    <Badge variant="secondary" className="mt-1">
+                      {product.unit === "kg" ? "Por kilo" : "Por unidad"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              {isProductsFetching && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Actualizando productos...
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Variant Selector */}
-        {selectedProduct && variants.length > 0 && (
+        {selectedProduct && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Presentación</label>
-            <div className="grid grid-cols-2 gap-2">
-              {variants.map((variant) => (
-                <button
-                  key={variant.id}
-                  onClick={() => {
-                    setSelectedVariantId(variant.id);
-                    handleClear();
-                  }}
-                  className={cn(
-                    "p-3 rounded-xl border-2 text-left transition-colors",
-                    selectedVariantId === variant.id
-                      ? "border-orange-500 bg-orange-50"
-                      : "border-gray-200 hover:border-orange-200"
-                  )}
-                >
-                  <p className="font-medium text-sm">{variant.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    S/ {formatCurrency(variant.price)}
-                  </p>
-                </button>
-              ))}
-            </div>
+            {isVariantsLoading ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-14" />
+                  </div>
+                ))}
+              </div>
+            ) : variants.length === 0 ? (
+              <Card className="border-0 rounded-2xl bg-card">
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                  Este producto no tiene presentaciones activas.
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => {
+                        setSelectedVariantId(variant.id);
+                        handleClear();
+                      }}
+                      className={cn(
+                        "p-3 rounded-xl border-2 text-left transition-colors",
+                        selectedVariantId === variant.id
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-gray-200 hover:border-orange-200"
+                      )}
+                    >
+                      <p className="font-medium text-sm">{variant.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        S/ {formatCurrency(variant.price)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {isVariantsFetching && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Actualizando presentaciones...
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -556,90 +624,91 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
             {isKgProduct ? (
               // KG Product Calculator
               <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-muted-foreground">Tara (kg)</label>
-                  <Input
-                    {...form.register("tara")}
-                    type="number"
-                    step="0.001"
+                {!hideTara && (
+                  <CalculatorInput
+                    name="tara"
+                    label="Tara (kg)"
+                    value={values.tara}
                     placeholder="0.000"
-                    className="rounded-xl"
+                    onChange={(value) => setFieldValue("tara", value)}
+                    fieldType="quantity"
+                    isAutoCalculateTarget={false}
+                    onToggleAutoCalculate={() => {}}
+                    decimals={3}
                   />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Kilos netos</label>
-                  <Input
-                    {...form.register("kilos")}
-                    type="number"
-                    step="0.001"
-                    placeholder="0.000"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Precio por kg (S/)</label>
-                  <Input
-                    {...form.register("pricePerKg")}
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Total (S/)</label>
-                  <Input
-                    {...form.register("totalAmount")}
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="rounded-xl"
-                  />
-                </div>
+                )}
+                <CalculatorInput
+                  name="kilos"
+                  label="Kilos netos"
+                  value={values.quantity}
+                  placeholder="0.000"
+                  onChange={(value) => setFieldValue("kilos", value)}
+                  fieldType="quantity"
+                  isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
+                  decimals={3}
+                />
+                <CalculatorInput
+                  name="pricePerKg"
+                  label="Precio por kg (S/)"
+                  value={values.price}
+                  placeholder={selectedVariant?.price || "0.00"}
+                  onChange={(value) => setFieldValue("pricePerKg", value)}
+                  fieldType="price"
+                  isAutoCalculateTarget={isFieldAutoCalculated("price")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
+                  decimals={2}
+                  helperText={selectedVariant?.price ? `Precio base: S/ ${selectedVariant.price}` : undefined}
+                />
+                <CalculatorInput
+                  name="totalAmount"
+                  label="Total (S/)"
+                  value={values.total}
+                  placeholder="0.00"
+                  onChange={(value) => setFieldValue("totalAmount", value)}
+                  fieldType="total"
+                  isAutoCalculateTarget={isFieldAutoCalculated("total")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("total")}
+                  decimals={2}
+                />
               </div>
             ) : (
               // Unit Product Calculator
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Packs</label>
-                    <Input
-                      {...form.register("packs")}
-                      type="number"
-                      placeholder="0"
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Unidades sueltas</label>
-                    <Input
-                      {...form.register("units")}
-                      type="number"
-                      placeholder="0"
-                      className="rounded-xl"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Precio por pack (S/)</label>
-                  <Input
-                    {...form.register("pricePerPack")}
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Total (S/)</label>
-                  <Input
-                    {...form.register("totalAmount")}
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="rounded-xl"
-                  />
-                </div>
+                <CalculatorInput
+                  name="packs"
+                  label="Packs"
+                  value={values.quantity}
+                  placeholder="0"
+                  onChange={(value) => setFieldValue("packs", value)}
+                  fieldType="quantity"
+                  isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
+                  decimals={0}
+                />
+                <CalculatorInput
+                  name="pricePerPack"
+                  label="Precio por pack (S/)"
+                  value={values.price}
+                  placeholder={selectedVariant?.price || "0.00"}
+                  onChange={(value) => setFieldValue("pricePerPack", value)}
+                  fieldType="price"
+                  isAutoCalculateTarget={isFieldAutoCalculated("price")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
+                  decimals={2}
+                  helperText={selectedVariant?.price ? `Precio base: S/ ${selectedVariant.price}` : undefined}
+                />
+                <CalculatorInput
+                  name="totalAmount"
+                  label="Total (S/)"
+                  value={values.total}
+                  placeholder="0.00"
+                  onChange={(value) => setFieldValue("totalAmount", value)}
+                  fieldType="total"
+                  isAutoCalculateTarget={isFieldAutoCalculated("total")}
+                  onToggleAutoCalculate={() => toggleAutoCalculateField("total")}
+                  decimals={2}
+                />
               </div>
             )}
 
@@ -681,7 +750,7 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate(returnPath)}
+            onClick={() => navigate(returnPath || "/ventas")}
             className="w-full h-12 rounded-xl"
           >
             Cancelar
@@ -690,12 +759,4 @@ export function CalculatorContent({ returnPath = "/ventas/nueva" }: CalculatorCo
       )}
     </div>
   );
-}
-
-// ============================================
-// Main New Sale Component (Legacy export)
-// ============================================
-
-export function NewSale() {
-  return null;
 }

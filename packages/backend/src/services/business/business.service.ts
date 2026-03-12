@@ -31,6 +31,7 @@ export class BusinessService {
 
     return {
       id: membership.business.id,
+      businessUserId: membership.id,
       name: membership.business.name,
       ruc: membership.business.ruc,
       address: membership.business.address,

@@ -17,6 +17,19 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
 import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 
+const isAuthDebugEnabled = import.meta.env.DEV;
+
+function debugLogin(message: string, payload?: unknown) {
+  if (!isAuthDebugEnabled) return;
+
+  if (payload === undefined) {
+    console.log(`[LoginPage] ${message}`);
+    return;
+  }
+
+  console.log(`[LoginPage] ${message}`, payload);
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -31,10 +44,15 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginInput) => {
+    debugLogin("Submit started", { email: data.email });
     try {
       await login(data.email, data.password);
+      debugLogin("Login resolved, navigating to dashboard");
       navigate("/dashboard");
     } catch (error) {
+      debugLogin("Login submit failed", {
+        message: error instanceof Error ? error.message : String(error),
+      });
       form.setError("root", {
         message: error instanceof Error ? error.message : "Error al iniciar sesión",
       });

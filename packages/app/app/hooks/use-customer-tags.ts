@@ -3,10 +3,10 @@ import { api } from "~/lib/api-client";
 import { useBusiness } from "./use-business";
 
 export interface CustomerTag {
-  id: string;
-  customerId: string;
   tagId: string;
-  createdAt: string;
+  tagName: string;
+  tagColor: string;
+  assignedAt: string;
 }
 
 export interface Tag {
@@ -20,19 +20,19 @@ export interface Tag {
 }
 
 export function useCustomerTags(customerId: string | undefined) {
-  const { currentBusiness } = useBusiness();
+  const { data: business } = useBusiness();
   
   return useQuery({
     queryKey: ["customer-tags", customerId],
     queryFn: async () => {
-      if (!customerId || !currentBusiness?.id) return [];
+      if (!customerId || !business?.id) return [];
       const res = await api.customers({ id: customerId }).tags.get();
       if (res.data?.success) {
         return res.data.data as CustomerTag[];
       }
       return [];
     },
-    enabled: !!customerId && !!currentBusiness?.id,
+    enabled: !!customerId && !!business?.id,
   });
 }
 

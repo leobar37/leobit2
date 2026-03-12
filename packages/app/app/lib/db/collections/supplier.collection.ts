@@ -6,11 +6,14 @@ import { createShapeOptions } from "./utils";
 
 // @ts-ignore - electricCollectionOptions types are not fully aligned
 export const supplierCollection = createCollection(
+  // @ts-ignore
   electricCollectionOptions({
     id: "suppliers",
     schema: supplierSchema,
     getKey: (supplier) => supplier.id,
     shapeOptions: createShapeOptions("suppliers"),
+    syncMode: "eager",
+    startSync: true,
     onInsert: async ({ transaction }) => {
       const newSupplier = transaction.mutations[0].modified;
       const response = await api.suppliers.post({
@@ -32,6 +35,7 @@ export const supplierCollection = createCollection(
       if (!txid) {
         throw new Error("No txid returned from server");
       }
+
       return { txid };
     },
     onUpdate: async ({ transaction }) => {
@@ -50,11 +54,21 @@ export const supplierCollection = createCollection(
         throw new Error(String(response.error.value));
       }
 
-      return { txid: Date.now() };
+      const data = response.data as { txid?: number };
+      const txid = data?.txid;
+      if (!txid) {
+        throw new Error("No txid returned from server");
+      }
+
+      return { txid };
     },
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0];
-      await api.suppliers({ id: original.id }).delete();
+      const response = await api.suppliers({ id: original.id }).delete();
+
+      if (response.error) {
+        throw new Error(String(response.error.value));
+      }
     },
   })
 );

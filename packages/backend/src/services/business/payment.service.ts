@@ -15,7 +15,7 @@ export class PaymentService {
   async getPayments(
     ctx: RequestContext,
     filters?: {
-      clientId?: string;
+      customerId?: string;
       limit?: number;
       offset?: number;
     }
@@ -43,7 +43,7 @@ export class PaymentService {
   async createPayment(
     ctx: RequestContext,
     data: {
-      clientId: string;
+      customerId: string;
       amount: number;
       paymentMethod: "efectivo" | "yape" | "plin" | "transferencia";
       notes?: string;
@@ -61,7 +61,7 @@ export class PaymentService {
 
     return db.transaction(async (tx) => {
       const abono = await this.repository.create(ctx, {
-        clientId: data.clientId,
+        customerId: data.customerId,
         amount: data.amount.toString(),
         paymentMethod: data.paymentMethod,
         notes: data.notes,
@@ -89,12 +89,12 @@ export class PaymentService {
     await this.repository.delete(ctx, id);
   }
 
-  async getTotalPaymentsByClient(ctx: RequestContext, clientId: string): Promise<number> {
+  async getTotalPaymentsByCustomer(ctx: RequestContext, customerId: string): Promise<number> {
     if (!ctx.hasPermission("customers.read")) {
       throw new ForbiddenError("No tiene permisos para ver abonos");
     }
 
-    return this.repository.getTotalByClient(ctx, clientId);
+    return this.repository.getTotalByCustomer(ctx, customerId);
   }
 
   async updatePaymentProof(

@@ -2,6 +2,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { productVariants, variantInventory, type ProductVariant, type NewProductVariant, type VariantInventory, type NewVariantInventory } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface CreateVariantInput {
   productId: string;
@@ -67,9 +68,11 @@ export class ProductVariantRepository {
 
   async create(
     ctx: RequestContext,
-    data: CreateVariantInput
+    data: CreateVariantInput,
+    tx?: DbTransaction
   ): Promise<ProductVariant> {
-    const [variant] = await db
+    const dbOrTx = tx || db;
+    const [variant] = await dbOrTx
       .insert(productVariants)
       .values({
         ...data,
@@ -84,9 +87,11 @@ export class ProductVariantRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: UpdateVariantInput
+    data: UpdateVariantInput,
+    tx?: DbTransaction
   ): Promise<ProductVariant | undefined> {
-    const [variant] = await db
+    const dbOrTx = tx || db;
+    const [variant] = await dbOrTx
       .update(productVariants)
       .set({
         ...(data.name !== undefined && { name: data.name }),
@@ -159,9 +164,11 @@ export class ProductVariantRepository {
 
   async createInventory(
     ctx: RequestContext,
-    data: { variantId: string; quantity?: string }
+    data: { variantId: string; quantity?: string },
+    tx?: DbTransaction
   ): Promise<VariantInventory> {
-    const [inventory] = await db
+    const dbOrTx = tx || db;
+    const [inventory] = await dbOrTx
       .insert(variantInventory)
       .values({
         variantId: data.variantId,
@@ -175,9 +182,11 @@ export class ProductVariantRepository {
   async updateInventory(
     ctx: RequestContext,
     variantId: string,
-    quantity: string
+    quantity: string,
+    tx?: DbTransaction
   ): Promise<VariantInventory | undefined> {
-    const [inventory] = await db
+    const dbOrTx = tx || db;
+    const [inventory] = await dbOrTx
       .update(variantInventory)
       .set({
         quantity,
@@ -192,14 +201,16 @@ export class ProductVariantRepository {
   async adjustInventory(
     ctx: RequestContext,
     variantId: string,
-    adjustment: number
+    adjustment: number,
+    tx?: DbTransaction
   ): Promise<VariantInventory | undefined> {
+    const dbOrTx = tx || db;
     const current = await this.getInventory(ctx, variantId);
     if (!current) return undefined;
 
     const currentQty = parseFloat(current.quantity);
     const newQty = Math.max(0, currentQty + adjustment);
 
-    return this.updateInventory(ctx, variantId, newQty.toString());
+    return this.updateInventory(ctx, variantId, newQty.toString(), tx);
   }
 }

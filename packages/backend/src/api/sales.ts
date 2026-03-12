@@ -52,6 +52,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
     async ({ saleService, ctx, body, set }) => {
       set.status = 201;
       const result = await saleService.createSale(ctx as RequestContext, {
+        id: body.id,
         customerId: body.customerId,
         type: body.type,
         saleType: body.saleType,
@@ -61,12 +62,14 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         netWeight: body.netWeight,
         deliveryDate: body.deliveryDate,
         orderDate: body.orderDate,
+        saleDate: body.saleDate,
         items: body.items,
       });
       return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
+        id: t.Optional(t.String()),
         customerId: t.Optional(t.String()),
         type: t.Optional(t.Union([t.Literal("instant_sale"), t.Literal("pre_order")])),
         saleType: t.Union([t.Literal("contado"), t.Literal("credito")]),
@@ -74,6 +77,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         amountPaid: t.Optional(t.Number()),
         tara: t.Optional(t.Number()),
         netWeight: t.Optional(t.Number()),
+        saleDate: t.Optional(t.String()),
         deliveryDate: t.Optional(t.String()),
         orderDate: t.Optional(t.String()),
         items: t.Array(
@@ -89,6 +93,40 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
             subtotal: t.Number(),
           })
         ),
+      }),
+    }
+  )
+  .patch(
+    "/:id",
+    async ({ saleService, ctx, params, body }) => {
+      const result = await saleService.updateSale(ctx as RequestContext, params.id, {
+        customerId: body.customerId,
+        deliveryDate: body.deliveryDate,
+        saleType: body.saleType,
+        paymentMode: body.paymentMode,
+        totalAmount: body.totalAmount,
+        amountPaid: body.amountPaid,
+      });
+      return { success: true, data: result.data, txid: result.txid };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        customerId: t.Optional(t.Union([t.String(), t.Null()])),
+        deliveryDate: t.Optional(t.Union([t.String(), t.Null()])),
+        saleType: t.Optional(t.Union([t.Literal("contado"), t.Literal("credito")])),
+        paymentMode: t.Optional(
+          t.Union([
+            t.Literal("pago_total"),
+            t.Literal("a_cuenta"),
+            t.Literal("debe_todo"),
+            t.Null(),
+          ])
+        ),
+        totalAmount: t.Optional(t.Number({ minimum: 0 })),
+        amountPaid: t.Optional(t.Number({ minimum: 0 })),
       }),
     }
   )

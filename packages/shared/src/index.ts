@@ -61,6 +61,7 @@ export type ApiResponse<T = unknown> = {
 
 export interface Business {
   id: string;
+  businessUserId: string;
   name: string;
   ruc: string | null;
   address: string | null;

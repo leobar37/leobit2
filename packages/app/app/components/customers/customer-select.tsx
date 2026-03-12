@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { User, X, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,6 @@ export function CustomerSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { data: customers = [], isLoading } = useCustomers(searchQuery);
-
-  useEffect(() => {
-    console.log('[CustomerSelect] value:', value, 'customers.length:', customers.length, 'isLoading:', isLoading, 'searchQuery:', searchQuery);
-  }, [value, customers, isLoading, searchQuery]);
 
   // Find selected customer - first check props, then search in loaded customers
   const selectedCustomer = propSelectedCustomer || customers.find((c) => c.id === value);

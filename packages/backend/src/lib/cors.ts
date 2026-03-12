@@ -11,6 +11,7 @@ export interface CorsConfig {
   credentials: string;
   methods: string;
   headers: string;
+  exposeHeaders: string;
   maxAge: string;
 }
 
@@ -28,6 +29,15 @@ function getAllowedOrigins(): string[] {
   ) as string[];
 }
 
+const defaultExposeHeaders = [
+  "electric-offset",
+  "electric-handle",
+  "electric-schema",
+  "electric-cursor",
+  "electric-up-to-date",
+  "set-auth-token",
+];
+
 export function getCorsConfig(): CorsConfig {
   const allowedOrigins = getAllowedOrigins();
 
@@ -37,8 +47,31 @@ export function getCorsConfig(): CorsConfig {
     credentials: "true",
     methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
     headers: "Content-Type, Authorization, Cache-Control, Accept, Accept-Language, x-business-id",
+    exposeHeaders: defaultExposeHeaders.join(", "),
     maxAge: "86400",
   };
+}
+
+export function mergeExposeHeaders(...headerValues: Array<string | null | undefined>) {
+  const mergedHeaders = new Map<string, string>();
+
+  for (const headerValue of headerValues) {
+    if (!headerValue) continue;
+
+    for (const header of headerValue.split(",")) {
+      const normalizedHeader = header.trim();
+
+      if (!normalizedHeader) continue;
+
+      const headerKey = normalizedHeader.toLowerCase();
+
+      if (!mergedHeaders.has(headerKey)) {
+        mergedHeaders.set(headerKey, normalizedHeader);
+      }
+    }
+  }
+
+  return Array.from(mergedHeaders.values()).join(", ");
 }
 
 export function getCorsOrigin(requestOrigin: string | null): string {

@@ -44,11 +44,11 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     "/",
     async ({ productService, ctx, body, set }) => {
       set.status = 201;
-      const product = await productService.createProduct(ctx as RequestContext, {
+      const result = await productService.createProduct(ctx as RequestContext, {
         ...body,
         basePrice: parseFloat(body.basePrice),
       });
-      return { success: true, data: product };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       body: t.Object({
@@ -64,12 +64,12 @@ export const productRoutes = new Elysia({ prefix: "/products" })
   .put(
     "/:id",
     async ({ productService, ctx, params, body }) => {
-      const product = await productService.updateProduct(ctx as RequestContext, params.id, {
+      const result = await productService.updateProduct(ctx as RequestContext, params.id, {
         ...body,
         basePrice: body.basePrice ? parseFloat(body.basePrice) : undefined,
         syncPriceToVariants: body.syncPriceToVariants,
       });
-      return { success: true, data: product };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({
@@ -127,7 +127,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     "/:id/variants",
     async ({ productVariantService, ctx, params, body, set }) => {
       set.status = 201;
-      const variant = await productVariantService.createVariant(
+      const result = await productVariantService.createVariant(
         ctx as RequestContext,
         {
           productId: params.id,
@@ -138,7 +138,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
           isActive: body.isActive,
         }
       );
-      return { success: true, data: variant };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({
@@ -219,7 +219,7 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
   .put(
     "/:id",
     async ({ productVariantService, ctx, params, body }) => {
-      const variant = await productVariantService.updateVariant(
+      const result = await productVariantService.updateVariant(
         ctx as RequestContext,
         params.id,
         {
@@ -230,7 +230,7 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
           isActive: body.isActive,
         }
       );
-      return { success: true, data: variant };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({
@@ -277,12 +277,12 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
   .put(
     "/:id/inventory",
     async ({ productVariantService, ctx, params, body }) => {
-      const inventory = await productVariantService.updateVariantInventory(
+      const result = await productVariantService.updateVariantInventory(
         ctx as RequestContext,
         params.id,
         body.quantity
       );
-      return { success: true, data: inventory };
+      return { success: true, data: result.data, txid: result.txid };
     },
     {
       params: t.Object({

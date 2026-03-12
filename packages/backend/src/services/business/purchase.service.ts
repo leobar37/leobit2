@@ -5,6 +5,8 @@ import type { ProductVariantRepository } from "../repository/product-variant.rep
 import type { ProductUnitRepository } from "../repository/product-unit.repository";
 import type { FileRepository } from "../repository/file.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -74,7 +76,7 @@ export class PurchaseService {
   async createPurchase(
     ctx: RequestContext,
     data: CreatePurchaseInput
-  ): Promise<PurchaseWithItems> {
+  ): Promise<MutationResult<PurchaseWithItems>> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para crear compras");
     }
@@ -88,7 +90,6 @@ export class PurchaseService {
       throw new NotFoundError("Proveedor");
     }
 
-    // Validate receipt image if provided
     if (data.receiptImageId) {
       const file = await this.fileRepo.findById(ctx, data.receiptImageId);
       if (!file) {
@@ -104,20 +105,16 @@ export class PurchaseService {
       let finalVariantId: string | null = item.variantId || null;
       let finalUnitCost = item.unitCost;
 
-      // If unit is configured, perform conversion
       if (item.unitId) {
         const unit = await this.unitRepo.findById(ctx, item.unitId);
         if (!unit) {
           throw new NotFoundError("Unidad configurada");
         }
 
-        // Calculate final quantity: packs × baseUnitQuantity
         finalQuantity = (item.packs || 1) * parseFloat(unit.baseUnitQuantity);
-        finalVariantId = unit.variantId; // Use unit's variant
-        // Cost per unit in baseUnit
+        finalVariantId = unit.variantId;
         finalUnitCost = item.unitCost / parseFloat(unit.baseUnitQuantity);
       } else {
-        // Legacy mode: use quantity directly
         finalQuantity = item.quantity;
       }
 
@@ -154,29 +151,19 @@ export class PurchaseService {
       validatedItems
     );
 
-    // Update inventory using processed data from validation loop
     for (let i = 0; i < data.items.length; i++) {
       const item = data.items[i];
       const validatedItem = validatedItems[i];
 
-      // Get final quantity and variant from validated items (already converted)
       const finalQuantity = parseFloat(validatedItem.quantity);
       const finalVariantId = validatedItem.variantId;
 
-      // Update general inventory
-      const existingInventory = await this.inventoryRepo.findByProductId(
-        ctx,
-        item.productId
-      );
+      const existingInventory = await this.inventoryRepo.findByProductId(ctx, item.productId);
 
       if (existingInventory) {
         const currentQty = parseFloat(existingInventory.quantity);
         const newQty = currentQty + finalQuantity;
-        await this.inventoryRepo.updateQuantity(
-          ctx,
-          item.productId,
-          newQty.toString()
-        );
+        await this.inventoryRepo.updateQuantity(ctx, item.productId, newQty.toString());
       } else {
         await this.inventoryRepo.create(ctx, {
           productId: item.productId,
@@ -184,20 +171,22 @@ export class PurchaseService {
         });
       }
 
-      // Update variant inventory if applicable
       if (finalVariantId) {
         await this.updateVariantInventory(ctx, finalVariantId, finalQuantity);
       }
     }
 
-    return purchase;
+    return {
+      data: purchase,
+      txid: Date.now(),
+    };
   }
 
   async updatePurchaseStatus(
     ctx: RequestContext,
     id: string,
     status: "pending" | "received" | "cancelled"
-  ): Promise<Purchase> {
+  ): Promise<MutationResult<Purchase>> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para modificar compras");
     }
@@ -229,7 +218,6 @@ export class PurchaseService {
           );
         }
 
-        // Revert variant inventory if applicable
         if (item.variantId) {
           const existingVariantInventory = await this.variantRepo.getInventory(
             ctx,
@@ -249,12 +237,17 @@ export class PurchaseService {
       }
     }
 
-    const updated = await this.repository.updateStatus(ctx, id, status);
-    if (!updated) {
-      throw new NotFoundError("Compra");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.updateStatus(ctx, id, status, tx);
+      if (!updated) {
+        throw new NotFoundError("Compra");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deletePurchase(ctx: RequestContext, id: string): Promise<void> {

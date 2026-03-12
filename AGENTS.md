@@ -145,6 +145,7 @@ async findById(id: string, ctx: RequestContext)
 | Architecture overview | `docs/ARCHITECTURE.md` |
 | Database schema | `docs/technical/database.md` |
 | Offline sync plan | `docs/technical/offline-plan.md` |
+| Electric/sales sync lessons | `docs/technical/electric-sales-sync-considerations.md` |
 | Development phases | `docs/development/readme.md` |
 | UI mockups | `docs/screens/readme.md` |
 
@@ -253,6 +254,7 @@ File-based routing in `packages/app/app/routes/` using flatRoutes convention:
 | **Architecture** | `docs/ARCHITECTURE.md` |
 | **Technical Plan** | `docs/technical/readme.md` |
 | **Database Schema** | `docs/technical/database.md` |
+| **Electric/Sales Sync Lessons** | `docs/technical/electric-sales-sync-considerations.md` |
 | **Development Phases** | `docs/development/readme.md` |
 | **UI Mockups** | `docs/screens/readme.md` |
 | **UI Components** | `docs/screens/componentes-ui.md` |

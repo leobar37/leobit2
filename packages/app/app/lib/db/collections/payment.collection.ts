@@ -4,16 +4,27 @@ import { paymentSchema } from "../schema";
 import { api } from "~/lib/api-client";
 import { createShapeOptions } from "./utils";
 
+function isOnline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine;
+}
+
 export const paymentCollection = createCollection(
   electricCollectionOptions({
     id: "payments",
     schema: paymentSchema,
     getKey: (payment) => payment.id,
     shapeOptions: createShapeOptions("abonos"),
+    syncMode: "eager",
+    startSync: true,
     onInsert: async ({ transaction }) => {
       const newPayment = transaction.mutations[0].modified;
+
+      if (!isOnline()) {
+        return { txid: Date.now() };
+      }
+
       const response = await api.payments.post({
-        clientId: newPayment.clientId,
+        customerId: newPayment.customerId,
         amount: newPayment.amount,
         paymentMethod: newPayment.paymentMethod as "efectivo" | "yape" | "plin" | "transferencia",
         notes: newPayment.notes || undefined,
@@ -30,10 +41,15 @@ export const paymentCollection = createCollection(
       if (!txid) {
         throw new Error("No txid returned from server");
       }
+
       return { txid };
     },
     onUpdate: async ({ transaction }) => {
       const { original, changes } = transaction.mutations[0];
+
+      if (!isOnline()) {
+        return { txid: Date.now() };
+      }
 
       if (changes.proofImageId) {
         const response = await api.payments({ id: original.id }).proof.put({
@@ -45,7 +61,12 @@ export const paymentCollection = createCollection(
         }
 
         const data = response.data as { txid?: number };
-        return { txid: data?.txid ?? Date.now() };
+        const txid = data?.txid;
+        if (!txid) {
+          throw new Error("No txid returned from server");
+        }
+
+        return { txid };
       }
 
       if (changes.referenceNumber) {
@@ -58,13 +79,23 @@ export const paymentCollection = createCollection(
         }
 
         const data = response.data as { txid?: number };
-        return { txid: data?.txid ?? Date.now() };
+        const txid = data?.txid;
+        if (!txid) {
+          throw new Error("No txid returned from server");
+        }
+
+        return { txid };
       }
 
-      return { txid: Date.now() };
+      throw new Error("No valid changes to process");
     },
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0];
+
+      if (!isOnline()) {
+        return { txid: Date.now() };
+      }
+
       const response = await api.payments({ id: original.id }).delete();
 
       if (response.error) {

@@ -46,14 +46,15 @@ export const inventoryRoutes = new Elysia({ prefix: "/inventory" })
   .put(
     "/:productId",
     async ({ ctx, params, body, inventoryService }) => {
-      const item = await inventoryService.updateStock(
+      const result = await inventoryService.updateStock(
         ctx,
         params.productId,
         body.quantity
       );
       return {
         success: true,
-        data: item,
+        data: result.data,
+        txid: result.txid,
       };
     },
     {

@@ -6,6 +6,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { tags, customerTags, type Tag, type NewTag } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export class TagRepository {
   async findAll(ctx: RequestContext): Promise<Tag[]> {
@@ -26,9 +27,11 @@ export class TagRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">
+    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">,
+    tx?: DbTransaction
   ): Promise<Tag> {
-    const [tag] = await db
+    const dbOrTx = tx || db;
+    const [tag] = await dbOrTx
       .insert(tags)
       .values({
         ...data,
@@ -42,9 +45,11 @@ export class TagRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">>
+    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">>,
+    tx?: DbTransaction
   ): Promise<Tag | undefined> {
-    const [tag] = await db
+    const dbOrTx = tx || db;
+    const [tag] = await dbOrTx
       .update(tags)
       .set({
         ...(data.name !== undefined && { name: data.name }),

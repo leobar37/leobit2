@@ -1,6 +1,9 @@
-// Datos para seed de cuenta de cliente (Pollos La Granja)
-// NO sobreescribe cuentas existentes - agrega nueva cuenta
+// Datos reales de cliente@avileo.com exportados desde producción
+// Este seed recrea exactamente el estado de la cuenta para poder resetear a este estado
 
+import exportedData from "../../scripts/exported/cliente@avileo.com-data.json";
+
+// User y Business config
 export const CLIENT_USER = {
   email: "cliente@avileo.com",
   password: "Cliente112345",
@@ -19,70 +22,68 @@ export const CLIENT_BUSINESS = {
   permitirVentaSinStock: false,
 };
 
-// Productos: Pollo, Huevo, Arroz, Aceituna
-export const PRODUCTS = [
-  {
-    name: "Pollo",
-    type: "pollo" as const,
-    unit: "kg" as const,
-    basePrice: "8.00",
-    isActive: true,
-  },
-  {
-    name: "Huevo",
-    type: "huevo" as const,
-    unit: "unidad" as const,
-    basePrice: "0.80",
-    isActive: true,
-  },
-  {
-    name: "Arroz",
-    type: "otro" as const,
-    unit: "kg" as const,
-    basePrice: "5.00",
-    isActive: true,
-  },
-  {
-    name: "Aceituna",
-    type: "otro" as const,
-    unit: "kg" as const,
-    basePrice: "12.00",
-    isActive: true,
-  },
-];
+// Extraer productos únicos de las ventas
+const productMap = new Map();
+const variantMap = new Map();
 
-export const PRODUCT_VARIANTS = [
-  // Pollo
-  [
-    { name: "Entero", sku: "POL-ENT", unitQuantity: 1, price: 8.0 },
-    { name: "Pechuga", sku: "POL-PEC", unitQuantity: 1, price: 12.0 },
-    { name: "Alas", sku: "POL-ALA", unitQuantity: 1, price: 7.0 },
-    { name: "Piernas", sku: "POL-PIE", unitQuantity: 1, price: 7.0 },
-  ],
-  // Huevo
-  [
-    { name: "Casillero (30un)", sku: "HUE-CAS", unitQuantity: 30, price: 24.0 },
-    { name: "Medio Casillero (15un)", sku: "HUE-MED", unitQuantity: 15, price: 12.0 },
-  ],
-  // Arroz
-  [
-    { name: "1kg", sku: "ARR-001", unitQuantity: 1, price: 5.0 },
-    { name: "5kg", sku: "ARR-005", unitQuantity: 5, price: 24.0 },
-    { name: "25kg", sku: "ARR-025", unitQuantity: 25, price: 110.0 },
-  ],
-  // Aceituna
-  [
-    { name: "1kg", sku: "ACE-001", unitQuantity: 1, price: 12.0 },
-    { name: "500g", sku: "ACE-500", unitQuantity: 0.5, price: 6.5 },
-    { name: "Lata (400g)", sku: "ACE-LAT", unitQuantity: 0.4, price: 5.0 },
-  ],
-];
+for (const sale of exportedData.sales) {
+  for (const item of sale.items) {
+    // Agrupar por productId
+    if (!productMap.has(item.productId)) {
+      productMap.set(item.productId, {
+        id: item.productId,
+        name: item.productName,
+        // Determinar tipo basado en nombre
+        type: item.productName.toLowerCase() === "pollo" ? "pollo" :
+              item.productName.toLowerCase() === "huevo" ? "huevo" : "otro",
+        // Determinar unidad basada en variante
+        unit: item.productName.toLowerCase() === "huevo" ? "unidad" : "kg",
+        isActive: true,
+      });
+    }
+    
+    // Agrupar variantes por variantId
+    if (!variantMap.has(item.variantId)) {
+      variantMap.set(item.variantId, {
+        id: item.variantId,
+        productId: item.productId,
+        name: item.variantName,
+        sku: `${item.productName.substring(0, 3).toUpperCase()}-${item.variantName.substring(0, 3).toUpperCase()}`,
+        unitQuantity: 1,
+        price: parseFloat(item.unitPrice),
+      });
+    }
+  }
+}
 
-// Sin clientes, proveedores ni ventas para cuenta demo
-export const CUSTOMERS: never[] = [];
+// Exportar productos y variantes con IDs preservados
+export const PRODUCTS = Array.from(productMap.values());
+
+// Agrupar variantes por producto para mantener estructura
+export const PRODUCT_VARIANTS = PRODUCTS.map(product => {
+  return Array.from(variantMap.values())
+    .filter(v => v.productId === product.id)
+    .map(({ id, name, sku, unitQuantity, price }) => ({ id, name, sku, unitQuantity, price }));
+});
+
+// Exportar datos reales directamente del JSON
+export const CUSTOMERS = exportedData.customers;
+export const SALES = exportedData.sales;
+export const ABONOS = exportedData.abonos;
+
+// Metadata útil
+export const EXPORT_METADATA = {
+  exportedAt: exportedData.metadata.exportedAt,
+  originalUserId: exportedData.metadata.userId,
+  originalBusinessId: exportedData.metadata.businessId,
+};
+
+// Sin proveedores, distribuciones ni compras para este seed
 export const SUPPLIERS: never[] = [];
-export const SALES: never[] = [];
-export const ABONOS: never[] = [];
 export const DISTRIBUCIONES: never[] = [];
 export const PURCHASES: never[] = [];
-export const ORDERS: never[] = [];
+
+// Tags vacíos (no hay en el export original)
+export const TAGS: never[] = [];
+export const CUSTOMER_TAGS: never[] = [];
+export const CLOSINGS: never[] = [];

@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ArrowLeft, Package, TrendingUp, AlertCircle, ShoppingBag, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,15 +6,63 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
-import { formatKilos, formatCurrency } from "~/lib/utils";
+import { useCreateSale } from "~/hooks/use-sales-db";
+import { getSaleEditorPath } from "~/lib/sales/navigation";
+import { formatKilos, formatCurrency, generateId } from "~/lib/utils";
 import { BusinessUserRole } from "@avileo/shared";
+import { saleCollection } from "~/lib/db/collections/sale.collection";
 
 export default function MiDistribucionPage() {
+  const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
+  const createSale = useCreateSale();
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
+
+  const handleNewSale = async () => {
+    if (!business?.id || !business.businessUserId || createSale.isPending) {
+      return;
+    }
+
+    try {
+      const tempId = generateId();
+      
+      const result = saleCollection.insert({
+        id: tempId,
+        businessId: business.id,
+        sellerId: business.businessUserId,
+        customerId: null,
+        type: "instant_sale",
+        saleType: "contado",
+        totalAmount: "0",
+        amountPaid: "0",
+        balanceDue: "0",
+        tara: null,
+        netWeight: null,
+        status: "draft",
+        syncStatus: "pending",
+        saleDate: new Date(),
+        createdAt: new Date(),
+      });
+
+      // Get sale ID from mutations[0].key - this is the actual sale ID!
+      const saleId = result.mutations[0]?.key;
+      
+      if (!saleId) {
+        console.error("Could not get saleId from mutations!");
+        return;
+      }
+
+      // Small delay to allow PGlite to persist
+      setTimeout(() => {
+        navigate(getSaleEditorPath(saleId));
+      }, 200);
+    } catch (error) {
+      console.error("Failed to create draft sale:", error);
+    }
+  };
 
   if (!usarDistribucion) {
     return (
@@ -219,12 +267,14 @@ export default function MiDistribucionPage() {
         </Card>
 
         {!isCerrado && (
-          <Link to="/ventas/nueva">
-            <Button className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600">
-              <Package className="mr-2 h-5 w-5" />
-              Nueva Venta
-            </Button>
-          </Link>
+          <Button
+            onClick={handleNewSale}
+            disabled={createSale.isPending}
+            className="h-14 w-full rounded-2xl bg-orange-500 hover:bg-orange-600"
+          >
+            <Package className="mr-2 h-5 w-5" />
+            Nueva Venta
+          </Button>
         )}
       </main>
     </div>

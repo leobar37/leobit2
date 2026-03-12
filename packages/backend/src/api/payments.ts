@@ -10,7 +10,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
     "/",
     async ({ paymentService, ctx, query }) => {
       const payments = await paymentService.getPayments(ctx as RequestContext, {
-        clientId: query.clientId,
+        customerId: query.customerId,
         limit: query.limit ? parseInt(query.limit) : undefined,
         offset: query.offset ? parseInt(query.offset) : undefined,
       });
@@ -18,7 +18,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
     },
     {
       query: t.Object({
-        clientId: t.Optional(t.String()),
+        customerId: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
       }),
@@ -48,7 +48,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
     },
     {
       body: t.Object({
-        clientId: t.String(),
+        customerId: t.String(),
         amount: t.String(),
         paymentMethod: t.Union([
           t.Literal("efectivo"),

@@ -1,5 +1,7 @@
 import type { ClosingRepository } from "../repository/closing.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -54,7 +56,7 @@ export class ClosingService {
       totalKilos?: number;
       backdateReason?: string;
     }
-  ): Promise<Closing> {
+  ): Promise<MutationResult<Closing>> {
     if (!ctx.hasPermission("sales.write")) {
       throw new ForbiddenError("No tiene permisos para crear cierres");
     }
@@ -109,17 +111,24 @@ export class ClosingService {
     }
 
     try {
-      return await this.repository.create(ctx, {
-        closingDate: normalizedDate,
-        totalSales: data.totalSales,
-        totalAmount: normalizeAmount(data.totalAmount, 2, "El monto total"),
-        cashAmount: normalizeAmount(data.cashAmount, 2, "El monto al contado"),
-        creditAmount: normalizeAmount(data.creditAmount, 2, "El monto a crédito"),
-        totalKilos:
-          data.totalKilos !== undefined
-            ? normalizeQuantity(data.totalKilos, "Los kilos totales")
-            : undefined,
-        backdateReason: isBackdated ? backdateReason : undefined,
+      return db.transaction(async (tx) => {
+        const closing = await this.repository.create(ctx, {
+          closingDate: normalizedDate,
+          totalSales: data.totalSales,
+          totalAmount: normalizeAmount(data.totalAmount, 2, "El monto total"),
+          cashAmount: normalizeAmount(data.cashAmount, 2, "El monto al contado"),
+          creditAmount: normalizeAmount(data.creditAmount, 2, "El monto a crédito"),
+          totalKilos:
+            data.totalKilos !== undefined
+              ? normalizeQuantity(data.totalKilos, "Los kilos totales")
+              : undefined,
+          backdateReason: isBackdated ? backdateReason : undefined,
+        }, tx);
+
+        return {
+          data: closing,
+          txid: await getTxid(tx),
+        };
       });
     } catch (error) {
       if (this.isUniqueViolation(error)) {
@@ -140,7 +149,7 @@ export class ClosingService {
       creditAmount: number;
       totalKilos?: number;
     }>
-  ): Promise<Closing> {
+  ): Promise<MutationResult<Closing>> {
     if (!ctx.hasPermission("sales.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar cierres");
     }
@@ -168,12 +177,17 @@ export class ClosingService {
       updateData.totalKilos = data.totalKilos.toString();
     }
 
-    const updated = await this.repository.update(ctx, id, updateData);
-    if (!updated) {
-      throw new NotFoundError("Cierre");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, updateData, tx);
+      if (!updated) {
+        throw new NotFoundError("Cierre");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deleteClosing(ctx: RequestContext, id: string): Promise<void> {

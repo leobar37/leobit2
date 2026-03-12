@@ -1,5 +1,5 @@
 const DB_NAME = "avileo-file-queue";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incrementado para recrear object stores
 const STORE_NAME = "pending-uploads";
 
 export interface PendingFileUpload {
@@ -33,11 +33,16 @@ async function getDb(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const database = (event.target as IDBOpenDBRequest).result;
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: "id" });
-        store.createIndex("entityType", "entityType", { unique: false });
-        store.createIndex("createdAt", "createdAt", { unique: false });
+      
+      // Delete existing store if it exists (to handle schema changes)
+      if (database.objectStoreNames.contains(STORE_NAME)) {
+        database.deleteObjectStore(STORE_NAME);
       }
+      
+      // Create fresh store
+      const store = database.createObjectStore(STORE_NAME, { keyPath: "id" });
+      store.createIndex("entityType", "entityType", { unique: false });
+      store.createIndex("createdAt", "createdAt", { unique: false });
     };
   });
 }

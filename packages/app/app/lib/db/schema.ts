@@ -31,7 +31,7 @@ export type Product = z.infer<typeof productSchema>;
 
 export const paymentSchema = z.object({
   id: z.string(),
-  clientId: z.string(),
+  customerId: z.string(),
   sellerId: z.string(),
   businessId: z.string(),
   amount: z.string(),
@@ -111,6 +111,39 @@ export interface CreateSaleInput {
     subtotal: number;
   }>;
 }
+
+export const distribucionItemSchema = z.object({
+  id: z.string(),
+  distribucionId: z.string(),
+  variantId: z.string(),
+  cantidadAsignada: z.string(),
+  cantidadVendida: z.string().default("0"),
+  unidad: z.string().default("kg"),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  createdAt: z.coerce.date(),
+});
+
+export type DistribucionItem = z.infer<typeof distribucionItemSchema>;
+
+export const distribucionSchema = z.object({
+  id: z.string(),
+  businessId: z.string(),
+  vendedorId: z.string(),
+  puntoVenta: z.string(),
+  kilosAsignados: z.string(),
+  kilosVendidos: z.string().default("0"),
+  montoRecaudado: z.string().default("0"),
+  fecha: z.string(),
+  estado: z.enum(["activo", "cerrado", "en_ruta"]).default("activo"),
+  modo: z.string().default("estricto"),
+  confiarEnVendedor: z.boolean().default(false),
+  pesoConfirmado: z.boolean().default(true),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  createdAt: z.coerce.date(),
+  items: z.array(distribucionItemSchema).optional(),
+});
+
+export type Distribucion = z.infer<typeof distribucionSchema>;
 
 export const fileSchema = z.object({
   id: z.string(),

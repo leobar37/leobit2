@@ -6,6 +6,7 @@ import type { RequestContext } from "../../context/request-context";
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface CreateSaleInput {
+  id?: string;
   customerId?: string;
   type?: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
@@ -14,6 +15,7 @@ export interface CreateSaleInput {
   balanceDue: string;
   tara?: string;
   netWeight?: string;
+  saleDate?: string;
   deliveryDate?: string;
   orderDate?: string;
   items: Array<{
@@ -55,7 +57,7 @@ export class SaleRepository {
       orderBy: desc(sales.createdAt),
       with: {
         items: true,
-        client: true,
+        customer: true,
       },
     };
 
@@ -71,33 +73,53 @@ export class SaleRepository {
   }
 
   async findById(ctx: RequestContext, id: string): Promise<Sale | undefined> {
-    return db.query.sales.findFirst({
+    console.log("[SaleRepository] findById called", { id, businessId: ctx.businessId });
+    const result = await db.query.sales.findFirst({
       where: and(
         eq(sales.id, id),
         eq(sales.businessId, ctx.businessId)
       ),
       with: {
         items: true,
-        client: true,
+        customer: true,
       },
     });
+    console.log("[SaleRepository] findById result", { id, found: !!result });
+    return result;
   }
 
 
 
   async create(ctx: RequestContext, data: CreateSaleInput, tx?: DbTransaction): Promise<Sale> {
-    const { items, ...saleData } = data;
+    console.log("[SaleRepository] create called", { id: data.id, businessId: ctx.businessId, saleDate: data.saleDate });
+
+    const { items, id, customerId, type, saleType, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate } = data;
 
     const executor = tx ?? db;
 
+    const saleValues = {
+      customerId: customerId ?? null,
+      type: type ?? "instant_sale",
+      saleType,
+      totalAmount,
+      amountPaid,
+      balanceDue,
+      tara: tara ?? null,
+      netWeight: netWeight ?? null,
+      saleDate: saleDate ? new Date(saleDate) : new Date(),
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+      orderDate: orderDate ? new Date(orderDate) : null,
+      businessId: ctx.businessId,
+      sellerId: ctx.businessUserId,
+      ...(id ? { id } : {}),
+    } as typeof sales.$inferInsert;
+
     const [sale] = await executor
       .insert(sales)
-      .values({
-        ...saleData,
-        businessId: ctx.businessId,
-        sellerId: ctx.businessUserId,
-      })
+      .values(saleValues)
       .returning();
+
+    console.log("[SaleRepository] Sale created successfully", { id: sale.id });
 
     if (items && items.length > 0) {
       await executor.insert(saleItems).values(
@@ -150,7 +172,10 @@ export class SaleRepository {
         | "deliveredSnapshot"
         | "deliveryDate"
         | "saleType"
+        | "paymentMode"
         | "totalAmount"
+        | "amountPaid"
+        | "balanceDue"
         | "customerId"
       >
     >,

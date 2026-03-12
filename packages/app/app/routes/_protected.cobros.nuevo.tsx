@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { useCustomer } from "~/hooks/use-customers";
+import { useCustomer } from "~/hooks/use-customer";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
-import { useAccountsReceivable } from "~/hooks/use-accounts-receivable";
+import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { validateFile } from "~/hooks/use-files";
 import { isOnline, queueFileUpload, uploadFileNow } from "~/lib/file-queue";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
@@ -123,7 +123,7 @@ export default function NuevoCobroPage() {
   const customerId = searchParams.get("clienteId");
 
   const { data: customer } = useCustomer(customerId || "");
-  const { data: accounts } = useAccountsReceivable();
+  const { data: customerBalance } = useCustomerBalance(customerId);
   const { data: paymentConfig } = usePaymentMethodsConfig();
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
@@ -134,10 +134,9 @@ export default function NuevoCobroPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentDebt = useMemo(() => {
-    if (!customerId || !accounts) return 0;
-    const account = accounts.find((a) => a.customerId === customerId);
-    return account?.balance || 0;
-  }, [customerId, accounts]);
+    if (!customerId || !customerBalance) return 0;
+    return customerBalance.balanceDue || 0;
+  }, [customerBalance, customerId]);
 
   const {
     register,
@@ -200,7 +199,7 @@ export default function NuevoCobroPage() {
       let proofImageId: string | undefined;
 
       const paymentId = await createPayment({
-        clientId: customerId,
+        customerId,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         referenceNumber: data.referenceNumber || undefined,

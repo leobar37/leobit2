@@ -3,6 +3,7 @@ import { db } from "../../lib/db";
 import { closings, type Closing, type NewClosing } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { getToday } from "../../lib/date-utils";
+import type { DbTransaction } from "../../lib/txid";
 
 export class ClosingRepository {
   async findMany(
@@ -51,9 +52,11 @@ export class ClosingRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewClosing, "businessId" | "sellerId" | "id" | "createdAt">
+    data: Omit<NewClosing, "businessId" | "sellerId" | "id" | "createdAt">,
+    tx?: DbTransaction
   ): Promise<Closing> {
-    const [closing] = await db
+    const dbOrTx = tx || db;
+    const [closing] = await dbOrTx
       .insert(closings)
       .values({
         ...data,
@@ -68,9 +71,11 @@ export class ClosingRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewClosing, "businessId" | "sellerId" | "id" | "createdAt">>
+    data: Partial<Omit<NewClosing, "businessId" | "sellerId" | "id" | "createdAt">>,
+    tx?: DbTransaction
   ): Promise<Closing | undefined> {
-    const [closing] = await db
+    const dbOrTx = tx || db;
+    const [closing] = await dbOrTx
       .update(closings)
       .set(data)
       .where(and(

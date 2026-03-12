@@ -52,7 +52,7 @@ interface SyncServiceDeps {
 }
 
 type ParsedSaleInsert = {
-  clientId?: string;
+  customerId?: string;
   type: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   totalAmount: string;
@@ -323,12 +323,12 @@ export class SyncService {
       await db.transaction(async (tx) => {
         const createdSale = await this.deps.saleRepo.create(ctx, sale, tx);
 
-        if (sale.saleType === "credito" && sale.clientId && Number(sale.amountPaid) > 0) {
+        if (sale.saleType === "credito" && sale.customerId && Number(sale.amountPaid) > 0) {
           const initialPaymentReference = `init-sale:${createdSale.id}`;
           await this.deps.paymentRepo.createInitialPayment(
             ctx,
             {
-              clientId: sale.clientId,
+              customerId: sale.customerId,
               amount: Number(sale.amountPaid).toFixed(2),
               referenceNumber: initialPaymentReference,
             },
@@ -347,7 +347,9 @@ export class SyncService {
 
       // Handle status transitions
       if (payload.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
-        await this.deps.saleRepo.confirm(ctx, operation.entityId);
+        await this.deps.saleRepo.update(ctx, operation.entityId, {
+          status: "active",
+        });
         return;
       }
 
@@ -362,8 +364,11 @@ export class SyncService {
       }
 
       if (payload.status === "cancelled") {
-        await this.deps.saleRepo.cancel(ctx, operation.entityId, {
-          reason: this.optionalString(payload.cancelReason) || "Cancelación",
+        await this.deps.saleRepo.update(ctx, operation.entityId, {
+          status: "cancelled",
+          cancelledAt: now(),
+          cancelledBy: ctx.businessUserId,
+          cancelReason: this.optionalString(payload.cancelReason) || "Cancelación",
           refundAmount: this.optionalNumericString(payload.refundAmount),
           refundMethod: payload.refundMethod as any,
         });
@@ -372,7 +377,7 @@ export class SyncService {
 
       // Regular update
       await this.deps.saleRepo.update(ctx, operation.entityId, {
-        ...(payload.clientId !== undefined && { clientId: this.optionalString(payload.clientId) }),
+        ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
         ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
         ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
         ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
@@ -398,7 +403,7 @@ export class SyncService {
 
     if (operation.action === "insert") {
       await this.deps.paymentRepo.create(ctx, {
-        clientId: this.requiredString(payload.clientId, "clientId"),
+        customerId: this.requiredString(payload.customerId, "customerId"),
         amount: this.requiredNumericString(payload.amount, "amount"),
         paymentMethod: this.requiredPaymentMethod(payload.paymentMethod),
         notes: this.optionalString(payload.notes),
@@ -485,9 +490,9 @@ export class SyncService {
       Number(amountPaidRaw ?? (saleType === "contado" ? total.toFixed(2) : "0")),
       "amountPaid"
     );
-    const clientId = this.optionalString(payload.clientId);
+    const customerId = this.optionalString(payload.customerId);
 
-    if (saleType === "credito" && !clientId) {
+    if (saleType === "credito" && !customerId) {
       throw new ValidationError("La venta a crédito requiere cliente");
     }
 
@@ -531,7 +536,7 @@ export class SyncService {
     });
 
     return {
-      clientId,
+      customerId,
       type,
       saleType,
       totalAmount: total.toFixed(2),

@@ -12,15 +12,17 @@ import { createShapeOptions } from "./utils";
  * For pre_orders: uses orderedQuantity, deliveredQuantity, unitPriceQuoted, unitPriceFinal
  */
 export const saleItemCollection = createCollection(
+  // @ts-ignore - electricCollectionOptions types are not fully aligned across TanStack DB versions
   electricCollectionOptions({
     id: "sale_items",
     schema: saleItemSchema,
     getKey: (item) => item.id,
     shapeOptions: createShapeOptions("sale_items"),
+    syncMode: "eager",
+    startSync: true,
     onInsert: async ({ transaction }) => {
       const newItem = transaction.mutations[0].modified as SaleItem;
 
-      // Determine if this is for an instant_sale or pre_order based on available fields
       const isPreOrder = newItem.orderedQuantity !== null && newItem.orderedQuantity !== undefined;
 
       const response = await api
@@ -30,10 +32,8 @@ export const saleItemCollection = createCollection(
           variantId: newItem.variantId,
           productName: newItem.productName,
           variantName: newItem.variantName,
-          // For instant_sales
           quantity: newItem.quantity ? parseFloat(newItem.quantity) : undefined,
           unitPrice: newItem.unitPrice ? parseFloat(newItem.unitPrice) : undefined,
-          // For pre_orders
           orderedQuantity: isPreOrder ? parseFloat(newItem.orderedQuantity!) : undefined,
           unitPriceQuoted: newItem.unitPriceQuoted ? parseFloat(newItem.unitPriceQuoted) : undefined,
           subtotal: parseFloat(newItem.subtotal),
@@ -48,6 +48,7 @@ export const saleItemCollection = createCollection(
       if (!txid) {
         throw new Error("No txid returned from server");
       }
+
       return { txid };
     },
     onUpdate: async ({ transaction }) => {

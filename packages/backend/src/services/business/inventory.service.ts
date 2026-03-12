@@ -1,5 +1,7 @@
 import type { InventoryRepository } from "../repository/inventory.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -38,7 +40,7 @@ export class InventoryService {
     ctx: RequestContext,
     productId: string,
     quantity: number
-  ): Promise<Inventory> {
+  ): Promise<MutationResult<Inventory>> {
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para modificar inventario");
     }
@@ -47,17 +49,23 @@ export class InventoryService {
       throw new ValidationError("La cantidad no puede ser negativa");
     }
 
-    const item = await this.repository.updateQuantity(
-      ctx,
-      productId,
-      quantity.toString()
-    );
+    return db.transaction(async (tx) => {
+      const item = await this.repository.updateQuantity(
+        ctx,
+        productId,
+        quantity.toString(),
+        tx
+      );
 
-    if (!item) {
-      throw new NotFoundError("Item de inventario");
-    }
+      if (!item) {
+        throw new NotFoundError("Item de inventario");
+      }
 
-    return item;
+      return {
+        data: item,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async validateStockAvailability(

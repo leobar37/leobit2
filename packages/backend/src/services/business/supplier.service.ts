@@ -1,5 +1,7 @@
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
+import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -59,7 +61,7 @@ export class SupplierService {
       email?: string;
       notes?: string;
     }
-  ): Promise<Supplier> {
+  ): Promise<MutationResult<Supplier>> {
     if (!ctx.hasPermission("suppliers.write")) {
       throw new ForbiddenError("No tiene permisos para crear proveedores");
     }
@@ -75,15 +77,22 @@ export class SupplierService {
       }
     }
 
-    return this.repository.create(ctx, {
-      name: data.name,
-      type: data.type ?? "regular",
-      ruc: data.ruc,
-      address: data.address,
-      phone: data.phone,
-      email: data.email,
-      notes: data.notes,
-      isActive: true,
+    return db.transaction(async (tx) => {
+      const supplier = await this.repository.create(ctx, {
+        name: data.name,
+        type: data.type ?? "regular",
+        ruc: data.ruc,
+        address: data.address,
+        phone: data.phone,
+        email: data.email,
+        notes: data.notes,
+        isActive: true,
+      }, tx);
+
+      return {
+        data: supplier,
+        txid: await getTxid(tx),
+      };
     });
   }
 
@@ -117,7 +126,7 @@ export class SupplierService {
       notes?: string;
       isActive?: boolean;
     }
-  ): Promise<Supplier> {
+  ): Promise<MutationResult<Supplier>> {
     if (!ctx.hasPermission("suppliers.write")) {
       throw new ForbiddenError("No tiene permisos para editar proveedores");
     }
@@ -135,12 +144,17 @@ export class SupplierService {
       throw new ValidationError("El nombre debe tener al menos 2 caracteres");
     }
 
-    const updated = await this.repository.update(ctx, id, data);
-    if (!updated) {
-      throw new NotFoundError("Proveedor");
-    }
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(ctx, id, data, tx);
+      if (!updated) {
+        throw new NotFoundError("Proveedor");
+      }
 
-    return updated;
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
   }
 
   async deleteSupplier(ctx: RequestContext, id: string): Promise<void> {

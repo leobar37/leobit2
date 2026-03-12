@@ -6,11 +6,14 @@ import { createShapeOptions } from "./utils";
 
 // @ts-ignore - electricCollectionOptions types are not fully aligned
 export const purchaseCollection = createCollection(
+  // @ts-ignore
   electricCollectionOptions({
     id: "purchases",
     schema: purchaseSchema,
     getKey: (purchase) => purchase.id,
     shapeOptions: createShapeOptions("purchases"),
+    syncMode: "eager",
+    startSync: true,
     onInsert: async ({ transaction }) => {
       const newPurchase = transaction.mutations[0].modified;
       const response = await api.purchases.post({
@@ -37,6 +40,7 @@ export const purchaseCollection = createCollection(
       if (!txid) {
         throw new Error("No txid returned from server");
       }
+
       return { txid };
     },
     onUpdate: async ({ transaction }) => {
@@ -55,16 +59,21 @@ export const purchaseCollection = createCollection(
         const data = response.data as { data?: { txid?: number } };
         const txid = data?.data?.txid;
         if (!txid) {
-          return { txid: Date.now() };
+          throw new Error("No txid returned from server");
         }
+
         return { txid };
       }
 
-      return { txid: Date.now() };
+      throw new Error("No valid changes to process");
     },
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0];
-      await api.purchases({ id: original.id }).delete();
+      const response = await api.purchases({ id: original.id }).delete();
+
+      if (response.error) {
+        throw new Error(String(response.error.value));
+      }
     },
   })
 );

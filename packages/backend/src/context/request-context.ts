@@ -153,9 +153,6 @@ export class RequestContext {
 
     if (targetBusinessId) {
       // Look for specific business membership
-      console.log("[DEBUG] Looking for membership with targetBusinessId:", targetBusinessId);
-      console.log("[DEBUG] User ID:", user.id);
-      
       membership = await db.query.businessUsers.findFirst({
         where: and(
           eq(businessUsers.userId, user.id),
@@ -164,11 +161,7 @@ export class RequestContext {
         with: { business: true },
       });
 
-      console.log("[DEBUG] Membership found:", membership ? "YES" : "NO");
-      console.log("[DEBUG] Membership details:", membership);
-
       if (!membership) {
-        console.log("[DEBUG] Throwing ForbiddenError - membership not found");
         throw new ForbiddenError("No perteneces a este negocio");
       }
     } else {

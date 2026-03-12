@@ -4,33 +4,39 @@ import { customerCollection } from "~/lib/db/collections/customer.collection";
 import { useBusiness } from "./use-business";
 import { generateId } from "~/lib/utils";
 import { handleCollectionError } from "~/lib/db/error-handler";
+import { getStoredBusinessId } from "~/lib/session-storage";
 import type { Payment } from "~/lib/db/schema";
 
-// Get all payments with optional client filter
-export function usePayments(clientId?: string) {
+// Get all payments with optional customer filter
+export function usePayments(customerId?: string) {
   const { data: business } = useBusiness();
-  const businessId = business?.id;
+  const businessId = business?.id || getStoredBusinessId();
 
-  return useLiveQuery(
+  const result = useLiveQuery(
     (q) => {
       let query = q
         .from({ payment: paymentCollection })
         .where(({ payment }) => eq(payment.businessId, businessId));
 
-      if (clientId) {
-        query = query.where(({ payment }) => eq(payment.clientId, clientId));
+      if (customerId) {
+        query = query.where(({ payment }) => eq(payment.customerId, customerId));
       }
 
       return query.orderBy(({ payment }) => payment.createdAt, "desc");
     },
-    [businessId, clientId]
+    [businessId, customerId]
   );
+
+  return {
+    ...result,
+    data: (result.data ?? []) as Payment[],
+  };
 }
 
 // Get payments with customer details
-export function usePaymentsWithCustomers(clientId?: string) {
+export function usePaymentsWithCustomers(customerId?: string) {
   const { data: business } = useBusiness();
-  const businessId = business?.id;
+  const businessId = business?.id || getStoredBusinessId();
 
   return useLiveQuery(
     (q) => {
@@ -38,13 +44,13 @@ export function usePaymentsWithCustomers(clientId?: string) {
         .from({ payment: paymentCollection })
         .join(
           { customer: customerCollection },
-          ({ payment, customer }) => eq(payment.clientId, customer.id),
+          ({ payment, customer }) => eq(payment.customerId, customer.id),
           "left"
         )
         .where(({ payment }) => eq(payment.businessId, businessId));
 
-      if (clientId) {
-        query = query.where(({ payment }) => eq(payment.clientId, clientId));
+      if (customerId) {
+        query = query.where(({ payment }) => eq(payment.customerId, customerId));
       }
 
       return query
@@ -55,7 +61,7 @@ export function usePaymentsWithCustomers(clientId?: string) {
         }))
         .orderBy(({ payment }) => payment.createdAt, "desc");
     },
-    [businessId, clientId]
+    [businessId, customerId]
   );
 }
 
@@ -78,7 +84,7 @@ export function usePaymentWithCustomer(paymentId: string) {
         .from({ payment: paymentCollection })
         .join(
           { customer: customerCollection },
-          ({ payment, customer }) => eq(payment.clientId, customer.id),
+          ({ payment, customer }) => eq(payment.customerId, customer.id),
           "left"
         )
         .where(({ payment }) => eq(payment.id, paymentId))
@@ -94,10 +100,10 @@ export function usePaymentWithCustomer(paymentId: string) {
 // Create a new payment
 export function useCreatePayment() {
   const { data: business } = useBusiness();
-  const businessId = business?.id;
+  const businessId = business?.id || getStoredBusinessId();
 
   return async (data: {
-    clientId: string;
+    customerId: string;
     amount: string;
     paymentMethod: Payment["paymentMethod"];
     notes?: string;
@@ -110,7 +116,7 @@ export function useCreatePayment() {
       await paymentCollection.insert({
         id: paymentId,
         businessId: businessId || "",
-        clientId: data.clientId,
+        customerId: data.customerId,
         sellerId: "",
         amount: data.amount,
         paymentMethod: data.paymentMethod,
@@ -167,8 +173,8 @@ export function useUpdatePayment() {
 }
 
 // Get total payments for a client
-export function useClientPaymentsTotal(clientId: string) {
-  const { data: payments } = usePayments(clientId);
+export function useClientPaymentsTotal(customerId: string) {
+  const { data: payments } = usePayments(customerId);
 
   const total = payments?.reduce((sum, payment) => {
     return sum + Number(payment.amount);
@@ -183,7 +189,7 @@ export function useClientPaymentsTotal(clientId: string) {
 // Get today's payments
 export function useTodayPayments() {
   const { data: business } = useBusiness();
-  const businessId = business?.id;
+  const businessId = business?.id || getStoredBusinessId();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
