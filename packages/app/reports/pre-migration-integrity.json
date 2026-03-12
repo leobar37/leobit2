@@ -1,0 +1,214 @@
+{
+  "timestamp": "2026-03-12T14:11:08.755Z",
+  "backupFile": "../../backups/pre-migration-2026-03-12T14-07-08.json",
+  "summary": {
+    "totalTables": 28,
+    "totalRecords": 56,
+    "criticalErrors": 0,
+    "warnings": 0,
+    "passed": true
+  },
+  "tableResults": [
+    {
+      "table": "businesses",
+      "totalRecords": 3,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "businessUsers",
+      "totalRecords": 3,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "userProfiles",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "customers",
+      "totalRecords": 6,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "tags",
+      "totalRecords": 4,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "customerTags",
+      "totalRecords": 3,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "sales",
+      "totalRecords": 14,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "saleItems",
+      "totalRecords": 1,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "abonos",
+      "totalRecords": 1,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "closings",
+      "totalRecords": 2,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "saleTokens",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "products",
+      "totalRecords": 3,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "productVariants",
+      "totalRecords": 9,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "productUnits",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "assets",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "files",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "distribuciones",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "distribucionItems",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "suppliers",
+      "totalRecords": 4,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "purchases",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "purchaseItems",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "syncOperations",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "staffInvitations",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "systemConfig",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "businessPaymentSettings",
+      "totalRecords": 3,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "businessUserWhatsAppSettings",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "whatsAppTemplates",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    },
+    {
+      "table": "whatsAppMessages",
+      "totalRecords": 0,
+      "errors": 0,
+      "warnings": 0,
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "metadata": {
+    "validationVersion": "1.0.0",
+    "dataSource": "postgresql"
+  }
+}
