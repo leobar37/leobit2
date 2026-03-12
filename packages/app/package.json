@@ -16,7 +16,12 @@
     "test:e2e:report": "playwright show-report",
     "test:e2e:with-server": "WEB_SERVER=1 playwright test --config=playwright.config.ts",
     "test:e2e:msw": "playwright test --config=playwright.msw.config.ts",
-    "test:e2e:msw:headed": "HEADED=1 playwright test --config=playwright.msw.config.ts"
+    "test:e2e:msw:headed": "HEADED=1 playwright test --config=playwright.msw.config.ts",
+    "db:migrate": "bun scripts/migrate-to-pglite.ts",
+    "db:rollback": "bun scripts/rollback-migration.ts",
+    "db:rollback:verify": "bun scripts/rollback-migration.ts --verify-only",
+    "db:rollback:clear": "bun scripts/rollback-migration.ts --clear-only",
+    "db:rollback:test": "bun scripts/rollback-migration.ts --file-based"
   },
   "dependencies": {
     "@avileo/shared": "workspace:*",
