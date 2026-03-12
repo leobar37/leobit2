@@ -15,6 +15,7 @@
         "@avileo/shared": "workspace:*",
         "@date-fns/tz": "^1.4.1",
         "@electric-sql/pglite": "^0.3.15",
+        "@electric-sql/pglite-sync": "^0.4.2",
         "@electric-sql/react": "^1.0.41",
         "@elysiajs/eden": "^1.4.8",
         "@hookform/resolvers": "^5.2.2",
@@ -113,6 +114,9 @@
     "packages/shared": {
       "name": "@avileo/shared",
       "version": "0.0.1",
+      "dependencies": {
+        "drizzle-orm": "^0.45.1",
+      },
       "devDependencies": {
         "tsup": "^8.0.2",
         "typescript": "^5",
@@ -458,7 +462,11 @@
 
     "@electric-sql/client": ["@electric-sql/client@1.5.12", "", { "dependencies": { "@microsoft/fetch-event-source": "^2.0.1" }, "optionalDependencies": { "@rollup/rollup-darwin-arm64": "^4.18.1" }, "bin": { "intent": "bin/intent.mjs" } }, "sha512-mWDEpKog0Zo4WOjReW4x9ELaHsjTthpziLVJkjmSdh/4Y/ZHw5EoY5e9dJX9itPSKVk9GNFz3YfHFv5EAyCOmw=="],
 
+    "@electric-sql/experimental": ["@electric-sql/experimental@1.0.14", "", { "optionalDependencies": { "@rollup/rollup-darwin-arm64": "^4.18.1" }, "peerDependencies": { "@electric-sql/client": "1.0.14" } }, "sha512-Wpv9UC7r4JYnQO4GbtQve7SVIX/VcBwAP12Xx11ObK2TBI+NJHtDRimUEKKQorq9Kr6yTAJ3BYOKCINxFsbDIg=="],
+
     "@electric-sql/pglite": ["@electric-sql/pglite@0.3.15", "", {}, "sha512-Cj++n1Mekf9ETfdc16TlDi+cDDQF0W7EcbyRHYOAeZdsAe8M/FJg18itDTSwyHfar2WIezawM9o0EKaRGVKygQ=="],
+
+    "@electric-sql/pglite-sync": ["@electric-sql/pglite-sync@0.4.2", "", { "dependencies": { "@electric-sql/client": "^1.0.9", "@electric-sql/experimental": "^1.0.9" }, "peerDependencies": { "@electric-sql/pglite": "0.3.16" } }, "sha512-tZNl1zfJ8bSG/1RAvDkww6Y8x0L1Oum+IdOqWdxbAKNQqMVfqJ9Pvt5L1pSc1zdUG0eKu3F3QM8UJjhEstoaqw=="],
 
     "@electric-sql/react": ["@electric-sql/react@1.0.41", "", { "dependencies": { "@electric-sql/client": "1.5.12", "use-sync-external-store": "^1.2.2" }, "peerDependencies": { "react": ">=18.3.1 <20.0.0" }, "optionalPeers": ["react"] }, "sha512-5pDPp5eitWW7xSGnFwrWgPksAjD5/EplT7pFLUPoz5yCKiHw06FlrDvYJLZghSfVY+CfB3grQiIAm4TLwC5qsA=="],
 

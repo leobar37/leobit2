@@ -1,0 +1,541 @@
+/**
+ * Shared Drizzle Schema
+ * Schema compartido entre frontend (PGlite) y backend (PostgreSQL)
+ * Usa text en lugar de enum para compatibilidad con PGlite
+ */
+
+import {
+  pgTable,
+  text,
+  timestamp,
+  integer,
+  decimal,
+  boolean,
+  date,
+  jsonb,
+  index,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+
+// ============================================================================
+// Enums como const para type safety
+// ============================================================================
+
+export const SyncStatus = {
+  PENDING: "pending",
+  SYNCED: "synced",
+  ERROR: "error",
+} as const;
+
+export const SaleType = {
+  CONTADO: "contado",
+  CREDITO: "credito",
+} as const;
+
+export const TransactionType = {
+  INSTANT_SALE: "instant_sale",
+  PRE_ORDER: "pre_order",
+} as const;
+
+export const SaleStatus = {
+  DRAFT: "draft",
+  CONFIRMED: "confirmed",
+  ACTIVE: "active",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+} as const;
+
+export const PaymentMode = {
+  PAGO_TOTAL: "pago_total",
+  A_CUENTA: "a_cuenta",
+  DEBE_TODO: "debe_todo",
+} as const;
+
+export const PaymentMethod = {
+  EFECTIVO: "efectivo",
+  YAPE: "yape",
+  PLIN: "plin",
+  TRANSFERENCIA: "transferencia",
+  SALDO: "saldo",
+} as const;
+
+export const RefundMethod = {
+  EFECTIVO: "efectivo",
+  YAPE: "yape",
+  PLIN: "plin",
+  TRANSFERENCIA: "transferencia",
+  SALDO: "saldo",
+} as const;
+
+export const ProductType = {
+  POLLO: "pollo",
+  HUEVO: "huevo",
+  OTRO: "otro",
+} as const;
+
+export const ProductUnit = {
+  KG: "kg",
+  UNIDAD: "unidad",
+} as const;
+
+export const DistribucionStatus = {
+  ACTIVO: "activo",
+  CERRADO: "cerrado",
+  EN_RUTA: "en_ruta",
+} as const;
+
+export const SupplierType = {
+  GENERIC: "generic",
+  REGULAR: "regular",
+  INTERNAL: "internal",
+} as const;
+
+export const PurchaseStatus = {
+  PENDING: "pending",
+  RECEIVED: "received",
+  CANCELLED: "cancelled",
+} as const;
+
+export const OrderPaymentStatus = {
+  SIN_PAGO: "sin_pago",
+  ADELANTO_PARCIAL: "adelanto_parcial",
+  PAGADO_TOTAL: "pagado_total",
+  SALDO_PENDIENTE: "saldo_pendiente",
+} as const;
+
+// ============================================================================
+// Customers
+// ============================================================================
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    dni: varchar("dni", { length: 20 }),
+    phone: varchar("phone", { length: 50 }),
+    address: text("address"),
+    notes: text("notes"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    businessId: uuid("business_id").notNull(),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_customers_name").on(table.name),
+    index("idx_customers_dni").on(table.dni),
+    index("idx_customers_business_id").on(table.businessId),
+    index("idx_customers_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Customer = typeof customers.$inferSelect;
+export type NewCustomer = typeof customers.$inferInsert;
+
+// ============================================================================
+// Sales
+// ============================================================================
+
+export const sales = pgTable(
+  "sales",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    customerId: uuid("customer_id"),
+    sellerId: uuid("seller_id").notNull(),
+    distribucionId: uuid("distribucion_id"),
+    type: text("type").notNull().default(TransactionType.INSTANT_SALE),
+    saleType: text("sale_type").notNull().default(SaleType.CONTADO),
+    paymentMode: text("payment_mode"),
+    totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+    amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    balanceDue: decimal("balance_due", { precision: 12, scale: 2 }).notNull().default("0"),
+    tara: decimal("tara", { precision: 10, scale: 3 }).default("0"),
+    netWeight: decimal("net_weight", { precision: 10, scale: 3 }),
+    saleDate: timestamp("sale_date").notNull().defaultNow(),
+    deliveryDate: date("delivery_date"),
+    orderDate: date("order_date"),
+    status: text("status").notNull().default(SaleStatus.DRAFT),
+    version: integer("version").notNull().default(1),
+    confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
+    deliveredSnapshot: jsonb("delivered_snapshot").$type<Record<string, unknown>>(),
+    allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    cancelledAt: timestamp("cancelled_at"),
+    cancelledBy: uuid("cancelled_by"),
+    cancelReason: text("cancel_reason"),
+    refundAmount: decimal("refund_amount", { precision: 12, scale: 2 }),
+    refundDate: timestamp("refund_date"),
+    refundMethod: text("refund_method"),
+    refundReference: varchar("refund_reference", { length: 100 }),
+    refundNotes: text("refund_notes"),
+    advancePaymentMethod: varchar("advance_payment_method", { length: 20 }),
+    advanceReferenceNumber: varchar("advance_reference_number", { length: 50 }),
+    advanceProofImageId: uuid("advance_proof_image_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_sales_business_id").on(table.businessId),
+    index("idx_sales_customer_id").on(table.customerId),
+    index("idx_sales_seller_id").on(table.sellerId),
+    index("idx_sales_sync_status").on(table.syncStatus),
+    index("idx_sales_status").on(table.status),
+    index("idx_sales_sale_date").on(table.saleDate),
+  ]
+);
+
+export type Sale = typeof sales.$inferSelect;
+export type NewSale = typeof sales.$inferInsert;
+
+// ============================================================================
+// Sale Items
+// ============================================================================
+
+export const saleItems = pgTable(
+  "sale_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    saleId: uuid("sale_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    variantId: uuid("variant_id").notNull(),
+    productName: varchar("product_name", { length: 255 }).notNull(),
+    variantName: varchar("variant_name", { length: 50 }).notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 3 }),
+    orderedQuantity: decimal("ordered_quantity", { precision: 10, scale: 3 }),
+    deliveredQuantity: decimal("delivered_quantity", { precision: 10, scale: 3 }),
+    unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
+    unitPriceQuoted: decimal("unit_price_quoted", { precision: 10, scale: 2 }),
+    unitPriceFinal: decimal("unit_price_final", { precision: 10, scale: 2 }),
+    subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+    isModified: boolean("is_modified").notNull().default(false),
+    originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
+  },
+  (table) => [
+    index("idx_sale_items_sale_id").on(table.saleId),
+    index("idx_sale_items_product_id").on(table.productId),
+  ]
+);
+
+export type SaleItem = typeof saleItems.$inferSelect;
+export type NewSaleItem = typeof saleItems.$inferInsert;
+
+// ============================================================================
+// Payments (Abonos)
+// ============================================================================
+
+export const abonos = pgTable(
+  "abonos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id").notNull(),
+    sellerId: uuid("seller_id").notNull(),
+    businessId: uuid("business_id").notNull(),
+    relatedSaleId: uuid("related_sale_id"),
+    amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+    paymentMethod: text("payment_method").notNull().default(PaymentMethod.EFECTIVO),
+    referenceNumber: varchar("reference_number", { length: 50 }),
+    proofImageId: uuid("proof_image_id"),
+    notes: text("notes"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_abonos_customer_id").on(table.customerId),
+    index("idx_abonos_business_id").on(table.businessId),
+    index("idx_abonos_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Abono = typeof abonos.$inferSelect;
+export type NewAbono = typeof abonos.$inferInsert;
+
+// ============================================================================
+// Products
+// ============================================================================
+
+export const products = pgTable(
+  "products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    type: text("type").notNull().default(ProductType.POLLO),
+    unit: text("unit").notNull().default(ProductUnit.KG),
+    basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    hasVariants: boolean("has_variants").notNull().default(false),
+    imageId: uuid("image_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_products_business_id").on(table.businessId),
+    index("idx_products_type").on(table.type),
+  ]
+);
+
+export type Product = typeof products.$inferSelect;
+export type NewProduct = typeof products.$inferInsert;
+
+// ============================================================================
+// Product Variants
+// ============================================================================
+
+export const productVariants = pgTable(
+  "product_variants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id").notNull(),
+    name: varchar("name", { length: 50 }).notNull(),
+    sku: varchar("sku", { length: 50 }),
+    unitQuantity: decimal("unit_quantity", { precision: 10, scale: 3 }).notNull(),
+    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_product_variants_product_id").on(table.productId),
+  ]
+);
+
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type NewProductVariant = typeof productVariants.$inferInsert;
+
+// ============================================================================
+// Suppliers
+// ============================================================================
+
+export const suppliers = pgTable(
+  "suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    type: text("type").notNull().default(SupplierType.GENERIC),
+    ruc: varchar("ruc", { length: 20 }),
+    address: text("address"),
+    phone: varchar("phone", { length: 50 }),
+    email: varchar("email", { length: 255 }),
+    notes: text("notes"),
+    isActive: boolean("is_active").notNull().default(true),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_suppliers_business_id").on(table.businessId),
+    index("idx_suppliers_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Supplier = typeof suppliers.$inferSelect;
+export type NewSupplier = typeof suppliers.$inferInsert;
+
+// ============================================================================
+// Purchases
+// ============================================================================
+
+export const purchases = pgTable(
+  "purchases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    supplierId: uuid("supplier_id").notNull(),
+    purchaseDate: date("purchase_date").notNull(),
+    totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+    status: text("status").notNull().default(PurchaseStatus.PENDING),
+    invoiceNumber: varchar("invoice_number", { length: 50 }),
+    receiptImageId: uuid("receipt_image_id"),
+    notes: text("notes"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_purchases_business_id").on(table.businessId),
+    index("idx_purchases_supplier_id").on(table.supplierId),
+    index("idx_purchases_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Purchase = typeof purchases.$inferSelect;
+export type NewPurchase = typeof purchases.$inferInsert;
+
+// ============================================================================
+// Purchase Items
+// ============================================================================
+
+export const purchaseItems = pgTable(
+  "purchase_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    purchaseId: uuid("purchase_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    variantId: uuid("variant_id"),
+    unitId: uuid("unit_id"),
+    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
+    unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
+    totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_purchase_items_purchase_id").on(table.purchaseId),
+  ]
+);
+
+export type PurchaseItem = typeof purchaseItems.$inferSelect;
+export type NewPurchaseItem = typeof purchaseItems.$inferInsert;
+
+// ============================================================================
+// Distribuciones
+// ============================================================================
+
+export const distribuciones = pgTable(
+  "distribuciones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    vendedorId: uuid("vendedor_id").notNull(),
+    puntoVenta: varchar("punto_venta", { length: 100 }).notNull(),
+    kilosAsignados: decimal("kilos_asignados", { precision: 10, scale: 3 }).notNull(),
+    kilosVendidos: decimal("kilos_vendidos", { precision: 10, scale: 3 }).notNull().default("0"),
+    montoRecaudado: decimal("monto_recaudado", { precision: 12, scale: 2 }).notNull().default("0"),
+    fecha: date("fecha").notNull(),
+    estado: text("estado").notNull().default(DistribucionStatus.ACTIVO),
+    modo: text("modo").notNull().default("estricto"),
+    confiarEnVendedor: boolean("confiar_en_vendedor").notNull().default(false),
+    pesoConfirmado: boolean("peso_confirmado").notNull().default(true),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_distribuciones_business_id").on(table.businessId),
+    index("idx_distribuciones_vendedor_id").on(table.vendedorId),
+    index("idx_distribuciones_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Distribucion = typeof distribuciones.$inferSelect;
+export type NewDistribucion = typeof distribuciones.$inferInsert;
+
+// ============================================================================
+// Distribucion Items
+// ============================================================================
+
+export const distribucionItems = pgTable(
+  "distribucion_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    distribucionId: uuid("distribucion_id").notNull(),
+    variantId: uuid("variant_id").notNull(),
+    cantidadAsignada: decimal("cantidad_asignada", { precision: 10, scale: 3 }).notNull(),
+    cantidadVendida: decimal("cantidad_vendida", { precision: 10, scale: 3 }).notNull().default("0"),
+    unidad: text("unidad").notNull().default(ProductUnit.KG),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_distribucion_items_distribucion_id").on(table.distribucionId),
+  ]
+);
+
+export type DistribucionItem = typeof distribucionItems.$inferSelect;
+export type NewDistribucionItem = typeof distribucionItems.$inferInsert;
+
+// ============================================================================
+// Relations
+// ============================================================================
+
+export const customersRelations = relations(customers, ({ many }) => ({
+  sales: many(sales),
+  abonos: many(abonos),
+}));
+
+export const salesRelations = relations(sales, ({ one, many }) => ({
+  items: many(saleItems),
+  customer: one(customers, {
+    fields: [sales.customerId],
+    references: [customers.id],
+  }),
+  abonos: many(abonos),
+}));
+
+export const saleItemsRelations = relations(saleItems, ({ one }) => ({
+  sale: one(sales, {
+    fields: [saleItems.saleId],
+    references: [sales.id],
+  }),
+}));
+
+export const abonosRelations = relations(abonos, ({ one }) => ({
+  customer: one(customers, {
+    fields: [abonos.customerId],
+    references: [customers.id],
+  }),
+  sale: one(sales, {
+    fields: [abonos.relatedSaleId],
+    references: [sales.id],
+  }),
+}));
+
+export const productsRelations = relations(products, ({ many }) => ({
+  variants: many(productVariants),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one }) => ({
+  product: one(products, {
+    fields: [productVariants.productId],
+    references: [products.id],
+  }),
+}));
+
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  purchases: many(purchases),
+}));
+
+export const purchasesRelations = relations(purchases, ({ one, many }) => ({
+  supplier: one(suppliers, {
+    fields: [purchases.supplierId],
+    references: [suppliers.id],
+  }),
+  items: many(purchaseItems),
+}));
+
+export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
+  purchase: one(purchases, {
+    fields: [purchaseItems.purchaseId],
+    references: [purchases.id],
+  }),
+}));
+
+export const distribucionesRelations = relations(distribuciones, ({ many }) => ({
+  items: many(distribucionItems),
+  sales: many(sales),
+}));
+
+export const distribucionItemsRelations = relations(distribucionItems, ({ one }) => ({
+  distribucion: one(distribuciones, {
+    fields: [distribucionItems.distribucionId],
+    references: [distribuciones.id],
+  }),
+}));

@@ -695,6 +695,45 @@ onInsert: async ({ transaction }) => {
 
 ---
 
+### 9. Early Return en onInsert
+
+**❌ Error:** Retornar temprano sin sincronizar cuando hay datos incompletos.
+
+**✅ Ver referencia:** [SYNC_PATTERNS.md](references/SYNC_PATTERNS.md) - Patrón: Siempre Sincronizar
+
+---
+
+### 10. onUpdate asume que el registro ya existe
+
+**❌ Error:** Hacer POST (crear) cuando se actualiza un campo que antes era null.
+
+**✅ Ver referencia:** [SYNC_PATTERNS.md](references/SYNC_PATTERNS.md) - Patrón: PATCH con Fallback
+
+---
+
+### 11. LIMIT sin ORDER BY
+
+**❌ Error:** Usar `.limit()` sin `.orderBy()` causa error en TanStack DB.
+
+**Error:** `QueryCompilationError: LIMIT and OFFSET require an ORDER BY clause to ensure deterministic results`
+
+**✅ Correcto:** Siempre agregar `orderBy` antes de `limit`:
+
+```typescript
+// ❌ WRONG - causa error
+return query.where(...).limit(1);
+
+// ✅ CORRECT - con orderBy
+return query
+  .where(...)
+  .orderBy(({ d }) => d.fecha, "desc")
+  .limit(1);
+```
+
+**Nota:** Esto aplica también para queries con offset.
+
+---
+
 ## Checklist Pre-Implementación
 
 Antes de empezar, verificar:
@@ -754,6 +793,7 @@ app/lib/db/
 - **[ELECTRIC_SQL.md](references/ELECTRIC_SQL.md)** - Configuración completa de ElectricSQL
 - **[QUERY_OPERATORS.md](references/QUERY_OPERATORS.md)** - Todos los operadores de query
 - **[EXAMPLES.md](references/EXAMPLES.md)** - Ejemplos completos
+- **[SYNC_PATTERNS.md](references/SYNC_PATTERNS.md)** - Patrones de sincronización: awaitMatch, race conditions, fallback
 
 ---
 

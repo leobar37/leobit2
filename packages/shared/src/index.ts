@@ -1,3 +1,32 @@
+// Drizzle Schema (shared between frontend and backend)
+export * from "./schema";
+
+// Re-export types with 'Type' suffix to avoid conflicts
+export type {
+  Customer,
+  NewCustomer,
+  Sale,
+  NewSale,
+  SaleItem,
+  NewSaleItem,
+  Abono,
+  NewAbono,
+  Product,
+  NewProduct,
+  ProductVariant,
+  NewProductVariant,
+  Supplier,
+  NewSupplier,
+  Purchase,
+  NewPurchase,
+  PurchaseItem,
+  NewPurchaseItem,
+  Distribucion,
+  NewDistribucion,
+  DistribucionItem,
+  NewDistribucionItem,
+} from "./schema";
+
 // Enums as const objects for frontend usage
 export const UserRole = {
   ADMIN: "ADMIN",
@@ -128,8 +157,8 @@ export interface PublicInvitation {
   salesPoint: string | null;
 }
 
-// Product Variants
-export interface ProductVariant {
+// Product Variants (API types - different from Drizzle schema)
+export interface ProductVariantDTO {
   id: string;
   productId: string;
   name: string;
@@ -144,7 +173,7 @@ export interface ProductVariant {
   updatedAt: string;
 }
 
-export interface VariantInventory {
+export interface VariantInventoryDTO {
   id: string;
   variantId: string;
   quantity: string;

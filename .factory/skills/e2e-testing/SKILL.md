@@ -1,15 +1,10 @@
 ---
 name: e2e-testing
-description: E2E testing with Playwright for Avileo. Use when creating, updating, or debugging end-to-end tests. Covers page objects, selectors, seed data, and test execution patterns.
-triggers:
-  - e2e test
-  - playwright
-  - page object
-  - test selector
-  - data-testid
-  - flujo test
-  - test case
-  - seed e2e
+description: E2E testing with Playwright for Avileo. Use when creating,
+  updating, or debugging end-to-end tests. Covers page objects, selectors, seed
+  data, and test execution patterns.
+user-invocable: true
+disable-model-invocation: false
 ---
 
 # E2E Testing Skill

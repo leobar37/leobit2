@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
-import { ElectricProvider } from "~/lib/db/electric-client";
+import { EngineProvider } from "~/engine";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 // import { HelpButton } from "~/components/help";
@@ -71,8 +71,13 @@ export default function ProtectedLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Get businessId and token from user session
+  // These would come from your auth context
+  const businessId = user.businessId || "";
+  const token = user.token || "";
+
   return (
-    <ElectricProvider>
+    <EngineProvider businessId={businessId} token={token}>
       <SyncProvider>
         <AppLayout>
           <SyncErrorMonitor />
@@ -80,6 +85,6 @@ export default function ProtectedLayout() {
           {/* <HelpButton /> */}
         </AppLayout>
       </SyncProvider>
-    </ElectricProvider>
+    </EngineProvider>
   );
 }
