@@ -1,0 +1,42 @@
+{
+  "milestone": "foundation",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "typecheck": {
+      "passed": false,
+      "command": "cd packages/app && npm run typecheck",
+      "exitCode": 2,
+      "errorSummary": "Multiple TypeScript errors found in app and backend packages. Key issues include: missing exports (useAssignCustomerTags, CancelSaleInput, Sale, SaleItem, useFinalizeSale), type mismatches (vendedorName, variant, where clauses), and export issues (DbTransaction, BusinessCalculatorSettings)."
+    },
+    "test": {
+      "passed": false,
+      "command": "cd packages/app && npm test -- --run",
+      "exitCode": 1,
+      "errorSummary": "47 failed tests, 40 passed. Test failures include: localStorage issues in use-chicken-calculator tests, mock handler issues in integration tests, and unhandled rejections in use-sales-db tests."
+    }
+  },
+  "reviewsSummary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [
+    {
+      "featureId": "foundation-validators",
+      "severity": "blocking",
+      "description": "TypeScript typecheck failed with 100+ errors across app and backend packages. Critical issues: missing exports from hooks, type mismatches in PGlite queries, missing DbTransaction export."
+    },
+    {
+      "featureId": "foundation-validators",
+      "severity": "blocking",
+      "description": "Test suite failed: 47 tests failing. Root causes include: localStorage mock missing in jsdom environment, incorrect mock handlers in integration tests, and unhandled promise rejections."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [],
+  "previousRound": null,
+  "notes": "Validators failed before feature review could begin. The foundation milestone features (data-backup-creation, data-integrity-validation, tanstack-to-pglite-migration, rollback-capability) were implemented but validation could not proceed due to build/test failures that predate the migration work."
+}
