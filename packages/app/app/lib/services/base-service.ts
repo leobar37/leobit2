@@ -23,7 +23,9 @@ export type EntityType =
   | "distribuciones"
   | "distribucion_items"
   | "tags"
-  | "customer_tags";
+  | "customer_tags"
+  | "inventory"
+  | "variant_inventory";
 
 /** Valid table names that can be used in SQL queries */
 const VALID_TABLE_NAMES: readonly string[] = [
@@ -40,6 +42,8 @@ const VALID_TABLE_NAMES: readonly string[] = [
   "distribucion_items",
   "tags",
   "customer_tags",
+  "inventory",
+  "variant_inventory",
 ] as const;
 
 /** Sync action types */

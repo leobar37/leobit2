@@ -76,7 +76,7 @@ export default function EditCustomerPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
@@ -84,8 +84,8 @@ export default function EditCustomerPage() {
 
   if (!customer) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+      <div className="app-shell flex min-h-screen items-center justify-center p-4">
+        <Card className="shell-card-flat w-full max-w-sm rounded-[28px]">
           <CardHeader className="text-center">
             <CardTitle>Cliente no encontrado</CardTitle>
             <CardDescription>
@@ -135,10 +135,10 @@ export default function EditCustomerPage() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
-        <Card className="border-0 shadow-lg rounded-3xl">
+        <Card className="shell-card-flat rounded-[30px]">
           <CardHeader className="text-center">
             <div className="relative inline-block">
-              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg">
+              <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
                 <User className="h-10 w-10 text-white" />
               </div>
             </div>

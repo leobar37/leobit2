@@ -33,7 +33,7 @@ export default function SaleDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
@@ -41,7 +41,7 @@ export default function SaleDetailPage() {
 
   if (!sale) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="app-shell min-h-screen p-4">
         <div className="max-w-md mx-auto mt-20 text-center">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Venta no encontrada</h2>
@@ -58,7 +58,7 @@ export default function SaleDetailPage() {
 
   return (
     <CancelSaleProvider sale={sale}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen app-shell">
         <SaleDetailHeader canCancel={canCancel} onBack={() => navigate("/ventas")} />
 
         <main className="space-y-4 p-4 pb-24">

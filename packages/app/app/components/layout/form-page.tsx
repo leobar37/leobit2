@@ -48,12 +48,12 @@ export function FormPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200">
+    <div className="min-h-screen app-shell">
+      <header className="sticky top-0 z-50 border-b shell-surface">
         <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
           <Link
             to={backHref}
-            className="p-2 -ml-2 rounded-xl hover:bg-gray-100"
+            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>

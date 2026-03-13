@@ -33,6 +33,12 @@ export async function initDatabase(): Promise<{
         extensions: {
           electric: electricSync(),
         },
+        locateFile: (file: string) => {
+          if (file === "pglite.data") {
+            return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
+          }
+          return file;
+        },
       });
 
       // Test if we can query - if not, reset
@@ -55,11 +61,52 @@ export async function initDatabase(): Promise<{
         extensions: {
           electric: electricSync(),
         },
+        locateFile: (file: string) => {
+          if (file === "pglite.data") {
+            return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
+          }
+          return file;
+        },
       });
     }
 
     // Create tables (CREATE TABLE IF NOT EXISTS will not fail if tables exist)
     await createTables(pgInstance);
+
+    // Run migrations to update existing tables
+    // If schema errors occur (e.g., old DB without business_id), reset and recreate
+    try {
+      await runMigrations(pgInstance);
+    } catch (err) {
+      const errorMessage = String(err);
+      if (
+        errorMessage.includes("column") &&
+        (errorMessage.includes("does not exist") || errorMessage.includes("no existe"))
+      ) {
+        console.warn("[DB] Schema mismatch detected, resetting database...", err);
+        const request = indexedDB.deleteDatabase("avileo-pg");
+        await new Promise<void>((resolve, reject) => {
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+        pgInstance = await PGlite.create({
+          dataDir: "idb://avileo-pg",
+          extensions: {
+            electric: electricSync(),
+          },
+          locateFile: (file: string) => {
+            if (file === "pglite.data") {
+              return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
+            }
+            return file;
+          },
+        });
+        await createTables(pgInstance);
+        await runMigrations(pgInstance);
+      } else {
+        throw err;
+      }
+    }
 
     // Initialize Drizzle AFTER tables are created
     const dbInstance = drizzle(pgInstance, { schema });
@@ -389,6 +436,61 @@ async function createTables(pg: import("@electric-sql/pglite").PGlite): Promise<
     CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(sync_group_id);
     CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
     CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
+  `);
+
+  // Tags table (customer segmentation)
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(100) NOT NULL,
+      color VARCHAR(20) NOT NULL DEFAULT '#f97316',
+      business_id UUID NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'pending',
+      sync_attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tags_business_id ON tags(business_id);
+    CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+    CREATE INDEX IF NOT EXISTS idx_tags_sync_status ON tags(sync_status);
+  `);
+
+  // Customer Tags junction table (many-to-many)
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS customer_tags (
+      customer_id UUID NOT NULL,
+      tag_id UUID NOT NULL,
+      assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      assigned_by UUID,
+      sync_status TEXT NOT NULL DEFAULT 'pending',
+      sync_attempts INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (customer_id, tag_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_tags_customer_id ON customer_tags(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_tags_tag_id ON customer_tags(tag_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_tags_sync_status ON customer_tags(sync_status);
+  `);
+
+  // Inventory table (product stock)
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS inventory (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      product_id UUID NOT NULL,
+      quantity DECIMAL(10,3) NOT NULL DEFAULT '0',
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_inventory_product_id ON inventory(product_id);
+  `);
+
+  // Variant Inventory table (variant stock)
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS variant_inventory (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      variant_id UUID NOT NULL,
+      quantity DECIMAL(10,3) NOT NULL DEFAULT '0',
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_variant_inventory_variant_id ON variant_inventory(variant_id);
   `);
 
   // Run migrations to update existing tables

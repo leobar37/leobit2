@@ -38,9 +38,9 @@ export function SyncErrorMonitor() {
     <Drawer open={true} onOpenChange={(open) => !open && dismissSyncIssue()}>
       <DrawerContent className="bg-background">
         {/* Drag handle indicator */}
-        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted-foreground/20" />
+        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-muted-foreground/30" />
 
-        <DrawerHeader className="pb-2">
+        <DrawerHeader className="space-y-3 px-5 pt-4 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Icon container with orange theme */}
@@ -51,25 +51,20 @@ export function SyncErrorMonitor() {
                 Problema de sincronización
               </DrawerTitle>
             </div>
-            <DrawerClose asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleContinue}
-                className="rounded-xl -mr-2"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Cerrar</span>
-              </Button>
+            <DrawerClose
+              onClick={handleContinue}
+              className="inline-flex items-center justify-center rounded-lg h-8 w-8 hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+              <span className="sr-only">Cerrar</span>
             </DrawerClose>
           </div>
-          <DrawerDescription className="pt-3 text-left text-sm text-muted-foreground leading-relaxed">
+          <DrawerDescription className="text-left text-sm text-muted-foreground leading-relaxed">
             {issueDescription}
           </DrawerDescription>
         </DrawerHeader>
 
-        <DrawerFooter className={cn("flex-col gap-3 pt-2 pb-6")}>
+        <DrawerFooter className="flex-col gap-2 px-5 pt-2 pb-6 mt-auto">
           <Button
             onClick={handleRestartSync}
             className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium"

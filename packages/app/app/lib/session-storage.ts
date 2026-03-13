@@ -116,18 +116,18 @@ async function deleteDatabaseWithTimeout(dbName: string): Promise<boolean> {
 
 /**
  * Clear sync-related local storage and IndexedDB state.
- * By default this preserves auth and business context so the user stays signed in.
+ * By default this logs out the user (preserveSession: false) for a complete reset.
  */
 export async function clearSyncStorage(
   options: ClearSyncStorageOptions = {}
 ): Promise<void> {
-  const { preserveSession = true } = options;
+  const { preserveSession = false } = options;
 
   if (!canUseStorage()) {
     return;
   }
 
-  // Clear session only when explicitly requested.
+  // Clear session only when not preserving (default now logs out)
   if (!preserveSession) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(CURRENT_BUSINESS_ID_KEY);
@@ -141,4 +141,6 @@ export async function clearSyncStorage(
     const success = await deleteDatabaseWithTimeout(dbName);
     results.push({ name: dbName, success });
   }
+
+  console.log("[clearSyncStorage] Cleanup completed:", results);
 }

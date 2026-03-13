@@ -25,29 +25,33 @@ export function TagFilter({ selectedTagIds, onChange }: TagFilterProps) {
 
   const selectedTags = tags?.filter((tag) => selectedTagIds.includes(tag.id));
 
+  const triggerContent = (
+    <div className="flex items-center gap-2 overflow-hidden flex-1">
+      <Filter className="h-4 w-4 shrink-0" />
+      {selectedTags && selectedTags.length > 0 ? (
+        <div className="flex items-center gap-1 overflow-hidden">
+          {selectedTags.slice(0, 2).map((tag) => (
+            <TagBadge key={tag.id} tag={tag} size="sm" />
+          ))}
+          {selectedTags.length > 2 && (
+            <span className="text-xs text-muted-foreground">
+              +{selectedTags.length - 2}
+            </span>
+          )}
+        </div>
+      ) : (
+        <span className="text-muted-foreground">Filtrar por etiquetas</span>
+      )}
+    </div>
+  );
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between rounded-xl">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <Filter className="h-4 w-4 shrink-0" />
-            {selectedTags && selectedTags.length > 0 ? (
-              <div className="flex items-center gap-1 overflow-hidden">
-                {selectedTags.slice(0, 2).map((tag) => (
-                  <TagBadge key={tag.id} tag={tag} size="sm" />
-                ))}
-                {selectedTags.length > 2 && (
-                  <span className="text-xs text-muted-foreground">
-                    +{selectedTags.length - 2}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span className="text-muted-foreground">Filtrar por etiquetas</span>
-            )}
-          </div>
-          <ChevronDown className="h-4 w-4 shrink-0" />
-        </Button>
+      <PopoverTrigger
+        className="inline-flex items-center justify-between w-full rounded-xl border border-input bg-background px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+      >
+        {triggerContent}
+        <ChevronDown className="h-4 w-4 shrink-0 ml-2" />
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4" align="start">
         <div className="space-y-4">

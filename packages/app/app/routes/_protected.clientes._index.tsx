@@ -1,22 +1,24 @@
 import { Link, useNavigate } from "react-router";
 import { ChevronRight, Plus, Search, User } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCustomers } from "~/hooks/use-customers";
+import { useListSearch } from "~/hooks/use-list-search";
 import { useSetLayout } from "~/components/layout/app-layout";
 
 export default function CustomersPage() {
-  const [search, setSearch] = useState("");
-  
-  const { data: customers, isLoading } = useCustomers(search ? { search } : undefined);
+  const { data: customers, isLoading } = useCustomers();
   const navigate = useNavigate();
 
-  // Filter customers by search
-  const filteredCustomers = customers?.filter((customer) =>
-    customer.name.toLowerCase().includes(search.toLowerCase()) ||
-    customer.dni?.includes(search)
-  );
+  // Use centralized search hook
+  const { filteredItems, search, setSearch } = useListSearch({
+    items: customers,
+    searchFields: [
+      (customer) => customer.name,
+      (customer) => customer.dni ?? undefined,
+      (customer) => customer.phone ?? undefined,
+    ],
+  });
 
   useSetLayout({ title: "Clientes" });
 
@@ -38,7 +40,7 @@ export default function CustomersPage() {
             <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">Cargando clientes...</p>
           </div>
-        ) : filteredCustomers?.length === 0 ? (
+        ) : filteredItems?.length === 0 ? (
           <div className="py-8 text-center">
             <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="mb-4 text-muted-foreground">No hay clientes</p>
@@ -46,7 +48,7 @@ export default function CustomersPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredCustomers?.map((customer) => (
+            {filteredItems?.map((customer) => (
               <Link
                 key={customer.id}
                 to={`/clientes/${customer.id}`}

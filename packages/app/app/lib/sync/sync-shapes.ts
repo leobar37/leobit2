@@ -105,6 +105,20 @@ function formatSyncError(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Check if error is a 409 Conflict (expired handle)
+ */
+function isExpiredHandleError(error: unknown): boolean {
+  const errorMessage = formatSyncError(error);
+  // Check for 409, expired_handle, handle conflict
+  return (
+    errorMessage.includes("409") ||
+    errorMessage.includes("expired_handle") ||
+    errorMessage.includes("handle") && errorMessage.includes("conflict") ||
+    errorMessage.includes("must-refetch")
+  );
+}
+
 export async function syncTable(
   pg: PGliteWithElectric,
   config: ShapeConfig,
@@ -134,10 +148,20 @@ export async function syncTable(
       onError: (error) => {
         const errorMessage = formatSyncError(error);
 
+        // Handle 409 Conflict (expired handle) - this is recoverable
+        // Silent - these are expected and handled automatically
+        if (isExpiredHandleError(error)) {
+          reportRecoverableSyncError(config.table, "expired-handle", errorMessage);
+          return;
+        }
+
         if (errorMessage.includes("duplicate key value violates unique constraint")) {
           reportRecoverableSyncError(config.table, "duplicate-key", errorMessage);
           return;
         }
+
+        // Log unexpected errors
+        console.warn(`[Sync] Error for table ${config.table}:`, errorMessage);
       },
       onMustRefetch: async (tx) => {
         reportMustRefetch(config.table);
@@ -153,6 +177,17 @@ export async function syncTable(
   } catch (error) {
     const errorMessage = formatSyncError(error);
 
+    // Handle 409 Conflict (expired handle) - treat as recoverable
+    // Silent - these are expected and handled automatically
+    if (isExpiredHandleError(error)) {
+      reportRecoverableSyncError(config.table, "expired-handle", errorMessage);
+      return {
+        table: config.table,
+        success: true,
+        unsubscribe: () => {},
+      };
+    }
+
     // Ignore duplicate key errors - these are expected when data already exists
     if (errorMessage.includes("duplicate key value violates unique constraint")) {
       reportRecoverableSyncError(config.table, "duplicate-key", errorMessage);
@@ -163,6 +198,8 @@ export async function syncTable(
       };
     }
 
+    // Log unexpected errors
+    console.warn(`[Sync] Failed to sync table ${config.table}:`, errorMessage);
     return {
       table: config.table,
       success: false,

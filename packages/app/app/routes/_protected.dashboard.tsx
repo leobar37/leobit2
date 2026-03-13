@@ -125,7 +125,11 @@ export default function DashboardPage() {
 
       {/* Gráfico de Ventas */}
       {!isLoadingChart && chartData && (
-        <WeeklySalesChart labels={chartData.labels} data={chartData.data} />
+        <WeeklySalesChart
+          labels={chartData.labels}
+          data={chartData.data}
+          periodType={period.type}
+        />
       )}
 
       {/* Accesos Rápidos - Minimalista */}

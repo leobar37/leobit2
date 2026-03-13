@@ -1,5 +1,6 @@
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
+import { logger } from "../../lib/logger";
 import { sales, saleItems, type Sale, type NewSale, type SaleItem, type NewSaleItem } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
@@ -73,7 +74,9 @@ export class SaleRepository {
   }
 
   async findById(ctx: RequestContext, id: string): Promise<Sale | undefined> {
-    console.log("[SaleRepository] findById called", { id, businessId: ctx.businessId });
+    const start = Date.now();
+    logger.debug({ id, businessId: ctx.businessId }, "🔍 SaleRepository.findById");
+
     const result = await db.query.sales.findFirst({
       where: and(
         eq(sales.id, id),
@@ -84,14 +87,21 @@ export class SaleRepository {
         customer: true,
       },
     });
-    console.log("[SaleRepository] findById result", { id, found: !!result });
+
+    const duration = Date.now() - start;
+    if (duration > 1000) {
+      logger.warn({ id, duration, hasItems: !!result?.items?.length, hasCustomer: !!result?.customer }, "⚠️ Slow query: findById");
+    } else {
+      logger.debug({ id, duration, found: !!result }, "✅ SaleRepository.findById");
+    }
     return result;
   }
 
 
 
   async create(ctx: RequestContext, data: CreateSaleInput, tx?: DbTransaction): Promise<Sale> {
-    console.log("[SaleRepository] create called", { id: data.id, businessId: ctx.businessId, saleDate: data.saleDate });
+    const start = Date.now();
+    logger.info({ id: data.id, businessId: ctx.businessId, saleType: data.saleType, totalAmount: data.totalAmount }, "📝 SaleRepository.create");
 
     const { items, id, customerId, type, saleType, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate } = data;
 
@@ -119,7 +129,8 @@ export class SaleRepository {
       .values(saleValues)
       .returning();
 
-    console.log("[SaleRepository] Sale created successfully", { id: sale.id });
+    const duration = Date.now() - start;
+    logger.info({ id: sale.id, duration }, "✅ SaleRepository.create completed");
 
     if (items && items.length > 0) {
       await executor.insert(saleItems).values(
@@ -310,7 +321,7 @@ export class SaleRepository {
       ));
 
     const totalResult = await db
-      .select({ total: sql<string>`coalesce(sum(${sales.totalAmount}), '0')` })
+      .select({ total: sql<string>`coalesce(sum(${sales.totalAmount}::numeric), '0')` })
       .from(sales)
       .where(and(
         eq(sales.businessId, ctx.businessId),

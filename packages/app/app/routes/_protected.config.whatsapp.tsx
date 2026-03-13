@@ -13,6 +13,7 @@ import {
   History,
   FileText,
   ChevronRight,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +24,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   useWhatsAppStatus,
   useConnectWhatsApp,
   useDisconnectWhatsApp,
   type WhatsAppConnectResult,
 } from "~/hooks/use-whatsapp-settings";
+import { useSync } from "~/components/sync/sync-status";
 
 export default function WhatsAppConfigPage() {
   const [qrData, setQrData] = useState<WhatsAppConnectResult | null>(null);
@@ -39,6 +42,7 @@ export default function WhatsAppConfigPage() {
   );
   const connectMutation = useConnectWhatsApp();
   const disconnectMutation = useDisconnectWhatsApp();
+  const { isOnline } = useSync();
 
   useEffect(() => {
     if (status?.isConnected && isPolling) {
@@ -176,10 +180,19 @@ export default function WhatsAppConfigPage() {
                     </p>
                   </div>
 
+                  {!isOnline && (
+                    <Alert variant="destructive" className="text-left">
+                      <WifiOff className="h-4 w-4" />
+                      <AlertDescription>
+                        Conéctate a internet para vincular WhatsApp
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Button
                     onClick={handleConnect}
-                    disabled={connectMutation.isPending}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg shadow-green-500/25 transition-all duration-200"
+                    disabled={connectMutation.isPending || !isOnline}
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg shadow-green-500/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {connectMutation.isPending ? (
                       <>
@@ -220,9 +233,9 @@ export default function WhatsAppConfigPage() {
 
                   <Button
                     onClick={handleConnect}
-                    disabled={connectMutation.isPending}
+                    disabled={connectMutation.isPending || !isOnline}
                     variant="outline"
-                    className="w-full h-12 rounded-xl"
+                    className="w-full h-12 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {connectMutation.isPending ? (
                       <>
@@ -240,24 +253,34 @@ export default function WhatsAppConfigPage() {
               )}
 
               {status?.isConnected && (
-                <Button
-                  onClick={handleDisconnect}
-                  disabled={disconnectMutation.isPending}
-                  variant="destructive"
-                  className="w-full h-12 rounded-xl"
-                >
-                  {disconnectMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Desconectando...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Desconectar WhatsApp
-                    </>
+                <>
+                  {!isOnline && (
+                    <Alert variant="destructive" className="text-left">
+                      <WifiOff className="h-4 w-4" />
+                      <AlertDescription>
+                        Conéctate a internet para desvincular WhatsApp
+                      </AlertDescription>
+                    </Alert>
                   )}
-                </Button>
+                  <Button
+                    onClick={handleDisconnect}
+                    disabled={disconnectMutation.isPending || !isOnline}
+                    variant="destructive"
+                    className="w-full h-12 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {disconnectMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Desconectando...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Desconectar WhatsApp
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </CardContent>
           </Card>

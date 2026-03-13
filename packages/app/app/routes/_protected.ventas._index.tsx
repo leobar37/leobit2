@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router";
 import { formatCurrency } from "~/lib/utils";
 import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useCreateDraftSale, useSales } from "~/hooks/use-sales";
+import { useListSearch } from "~/hooks/use-list-search";
 import { useBusiness } from "~/hooks/use-business";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
@@ -13,7 +14,6 @@ import { useSetLayout } from "~/components/layout/app-layout";
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
 
-  const [search, setSearch] = useState("");
   const { data: allSales, isLoading, error } = useSales();
   const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
@@ -38,32 +38,23 @@ export default function SalesPage() {
     }
   };
 
-  // Show all sales (not just today's or active ones) for now
-  const todaySales = useMemo(() => {
-    if (!allSales) return [];
-    // Show all sales, not filtering by date or status
-    return allSales;
-  }, [allSales]);
-
-  const stats = useMemo(() => {
-    if (!todaySales.length) return null;
-    const total = todaySales.reduce((sum, sale) => {
-      return sum + Number(sale.totalAmount || 0);
-    }, 0);
-    return { count: todaySales.length, total: total.toFixed(2) };
-  }, [todaySales]);
-
-  const filteredSales = todaySales?.filter((sale) => {
-    const searchLower = search.toLowerCase();
-    return (
-      (sale.id?.toLowerCase().includes(searchLower) ?? false) ||
-      (sale.customerId?.toLowerCase().includes(searchLower) ?? false) ||
-      (sale.saleType?.toLowerCase().includes(searchLower) ?? false)
-    );
+  // Use centralized search hook with customer name support
+  const { filteredItems: sortedSales, search, setSearch } = useListSearch({
+    items: allSales,
+    searchFields: [
+      (sale) => sale.id,
+      (sale) => sale.customer?.name ?? undefined,
+      (sale) => sale.saleType,
+    ],
   });
 
-  // Already sorted by the live query
-  const sortedSales = filteredSales;
+  const stats = useMemo(() => {
+    if (!allSales?.length) return null;
+    const total = allSales.reduce((sum, sale) => {
+      return sum + Number(sale.totalAmount || 0);
+    }, 0);
+    return { count: allSales.length, total: total.toFixed(2) };
+  }, [allSales]);
 
   return (
     <>

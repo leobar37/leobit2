@@ -18,7 +18,7 @@ export function SaleDetailInfoCard({ hideTara, sale }: SaleDetailInfoCardProps) 
   });
 
   return (
-    <Card className="border-0 shadow-md">
+    <Card className="shell-card-flat rounded-[28px]">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Informacion General</CardTitle>
       </CardHeader>

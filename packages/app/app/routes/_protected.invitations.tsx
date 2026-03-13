@@ -204,11 +204,11 @@ export default function InvitationsPage() {
             Invitaciones
           </span>
           <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DrawerTrigger asChild>
-              <Button size="sm" className="rounded-xl">
-                <Plus className="h-4 w-4 mr-1" />
-                Invitar
-              </Button>
+            <DrawerTrigger
+              className="inline-flex items-center justify-center h-8 px-3 text-sm font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Invitar
             </DrawerTrigger>
             <DrawerContent className="max-h-[85vh]">
               <DrawerHeader className="px-4 pb-3 pt-2">

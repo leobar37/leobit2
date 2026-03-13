@@ -34,6 +34,10 @@ export interface Product {
   createdAt: string;
   /** Derived field - true if product has variants */
   hasVariants?: boolean;
+  /** Sync fields - may be present when data comes from certain sources */
+  syncStatus?: SyncStatusValue;
+  syncAttempts?: number;
+  updatedAt?: string;
 }
 
 /**
@@ -52,6 +56,13 @@ export interface ProductVariant {
   syncAttempts: number;
   createdAt: string;
   updatedAt: string;
+  /** Optional inventory info - populated when joined with variant_inventory */
+  inventory?: {
+    id: string;
+    variantId: string;
+    quantity: string;
+    updatedAt: string;
+  };
 }
 
 /** Input for creating a product (admin only) */

@@ -125,6 +125,51 @@ _protected.ventas.$id.editar.calculadora.tsx  # Calculator child
 
 ## Common Route Patterns
 
+### Online-Only Feature Pattern
+
+For routes that require internet connection (e.g., WhatsApp configuration), use this pattern:
+
+```typescript
+// routes/_protected.config.whatsapp.tsx
+import { useSync } from "~/components/sync/sync-status";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WifiOff } from "lucide-react";
+
+export default function WhatsAppConfigPage() {
+  const { isOnline } = useSync();
+  const connectMutation = useConnectWhatsApp();
+
+  return (
+    <div>
+      {/* Show alert when offline */}
+      {!isOnline && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            Conéctate a internet para vincular WhatsApp
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Disable button when offline */}
+      <Button
+        onClick={handleConnect}
+        disabled={connectMutation.isPending || !isOnline}
+      >
+        {isOnline ? "Conectar WhatsApp" : "Sin conexión"}
+      </Button>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- Use `useSync()` to get `isOnline` state
+- Use `useOfflineAwareMutation()` in mutation hooks
+- Disable buttons with `disabled={!isOnline}`
+- Show `Alert` with `WifiOff` icon when offline
+- Message format: `"Conéctate a internet para [acción]"`
+
 ### List + Detail Pattern
 
 ```
@@ -168,6 +213,7 @@ export default function Component({ loaderData }: Route.ComponentProps) { }
 - Don't forget `._index.tsx` when adding child routes
 - Don't use relative imports for navigation - use `Link`
 - Don't skip loading states - mobile users need feedback
+- Don't forget to handle offline state for online-only features (WhatsApp, etc.)
 
 ---
 

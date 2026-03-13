@@ -53,17 +53,12 @@ function AppDrawerHeader({
           {title}
         </DrawerTitle>
         {showCloseButton && (
-          <DrawerClose asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-xl -mr-2"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Cerrar</span>
-            </Button>
+          <DrawerClose
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-xl h-9 w-9 -mr-2 hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
           </DrawerClose>
         )}
       </div>

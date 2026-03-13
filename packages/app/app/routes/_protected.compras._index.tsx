@@ -1,12 +1,12 @@
 import { Link } from "react-router";
 import { formatCurrency } from "~/lib/utils";
 import { Search, Plus, ShoppingCart } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePurchases } from "~/hooks/use-purchases";
+import { useListSearch } from "~/hooks/use-list-search";
 import { useSetLayout } from "~/components/layout/app-layout";
 
 import type { Purchase } from "~/lib/services/purchase-service";
@@ -25,10 +25,10 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
   };
 
   return (
-    <Card className="border-0 shadow-md rounded-2xl hover:shadow-lg transition-shadow">
+    <Card className="rounded-[24px] border border-stone-200/80 bg-white/80 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[18px] bg-orange-100/90 ring-1 ring-orange-100">
             <ShoppingCart className="h-6 w-6 text-orange-600" />
           </div>
 
@@ -60,24 +60,27 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
 export default function ComprasPage() {
   useSetLayout({ title: "Compras" });
 
-  const [search, setSearch] = useState("");
   const { data: purchases, isLoading } = usePurchases();
 
-  const filteredData = purchases?.filter(
-    (purchase) =>
-      !search
-  );
+  const { filteredItems, search, setSearch } = useListSearch({
+    items: purchases,
+    searchFields: [
+      (purchase) => purchase.id,
+      (purchase) => purchase.invoice_number ?? undefined,
+      (purchase) => purchase.status,
+    ],
+  });
 
   return (
     <>
       <div className="space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar compra..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-xl"
+            className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
           />
         </div>
 
@@ -87,14 +90,14 @@ export default function ComprasPage() {
           </div>
         )}
 
-        {filteredData?.length === 0 && !isLoading && (
+        {filteredItems?.length === 0 && !isLoading && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No se encontraron compras</p>
           </div>
         )}
 
         <div className="space-y-3">
-          {filteredData?.map((purchase) => (
+          {filteredItems?.map((purchase) => (
             <Link
               key={purchase.id}
               to={`/compras/${purchase.id}`}
@@ -108,11 +111,11 @@ export default function ComprasPage() {
 
       <Link
         to="/compras/nueva"
-        className="fixed bottom-20 right-4 z-50"
+        className="fixed bottom-28 right-4 z-50"
       >
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-orange-500 hover:bg-orange-600"
+          className="h-14 w-14 rounded-full bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
         >
           <Plus className="h-6 w-6" />
         </Button>

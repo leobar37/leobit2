@@ -1,136 +1,90 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+/**
+ * Products Hook (Service-based)
+ * Reactively fetch and mutate products using PGlite services (offline-first)
+ * @deprecated This file will be replaced. Use exports from use-products directly.
+ */
 
-export interface Product {
-  id: string;
-  name: string;
-  type: "pollo" | "huevo" | "otro";
-  unit: "kg" | "unidad";
-  basePrice: string;
-  isActive: boolean;
-  imageId: string | null;
-  createdAt: Date;
-  hasVariants?: boolean;
-}
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useProductService } from "~/lib/sync/service-provider";
+import type { Product, CreateProductInput, UpdateProductInput } from "~/lib/services/product-service";
 
-export interface CreateProductInput {
-  name: string;
-  type: "pollo" | "huevo" | "otro";
-  unit: "kg" | "unidad";
-  basePrice: string;
-  isActive?: boolean;
-  imageId?: string;
-}
+const QUERY_KEYS = {
+  products: ["products"],
+  product: (id: string) => ["products", id],
+} as const;
 
-export interface UpdateProductInput {
-  name?: string;
-  type?: "pollo" | "huevo" | "otro";
-  unit?: "kg" | "unidad";
-  basePrice?: string;
-  isActive?: boolean;
-  imageId?: string;
-  syncPriceToVariants?: boolean;
-}
-
-async function getProducts(): Promise<Product[]> {
-  const { data, error } = await api.products.get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as { success: boolean; data: Product[] }).data;
-}
-
-async function getProduct(id: string): Promise<Product> {
-  const { data, error } = await api.products({ id }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Product;
-}
-
-async function createProduct(input: CreateProductInput): Promise<Product> {
-  const { data, error } = await api.products.post(input);
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Product;
-}
-
-async function updateProduct({
-  id,
-  ...input
-}: UpdateProductInput & { id: string }): Promise<Product> {
-  const { data, error } = await api.products({ id }).put({
-    ...input,
-    syncPriceToVariants: input.syncPriceToVariants,
-  });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as Product;
-}
-
-async function deleteProduct(id: string): Promise<void> {
-  const { error } = await api.products({ id }).delete();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-}
-
+/**
+ * Get all products for the current business
+ */
 export function useProducts() {
+  const productService = useProductService();
+
   return useQuery({
-    queryKey: ["products"],
-    queryFn: getProducts,
+    queryKey: QUERY_KEYS.products,
+    queryFn: async () => {
+      return productService.findByBusiness();
+    },
   });
 }
 
-export function useProduct(id: string) {
+/**
+ * Get a single product by ID
+ */
+export function useProduct(id: string | null) {
+  const productService = useProductService();
+
   return useQuery({
-    queryKey: ["products", id],
-    queryFn: () => getProduct(id),
+    queryKey: id ? QUERY_KEYS.product(id) : ["products", "detail"],
+    queryFn: async () => {
+      if (!id) return null;
+      return productService.findById(id);
+    },
     enabled: !!id,
   });
 }
 
+/**
+ * Create a new product (admin only)
+ * Queues sync operation when offline
+ */
 export function useCreateProduct() {
+  const productService = useProductService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createProduct,
+    mutationFn: async (input: CreateProductInput): Promise<Product> => {
+      return productService.create(input);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
     },
   });
 }
 
+/**
+ * Update an existing product (admin only)
+ * Queues sync operation when offline
+ */
 export function useUpdateProduct() {
+  const productService = useProductService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: updateProduct,
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateProductInput;
+    }): Promise<void> => {
+      return productService.update(id, input);
+    },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["products", variables.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.product(variables.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
     },
   });
 }
 
-export function useDeleteProduct() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    },
-  });
-}
+// Re-export types for convenience
+export type { Product, CreateProductInput, UpdateProductInput };

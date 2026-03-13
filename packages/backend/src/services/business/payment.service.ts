@@ -67,6 +67,11 @@ export class PaymentService {
     const customerBalance = await this.customerRepository.getBalance(ctx, data.customerId);
     const remainingDebt = customerBalance.balanceDue;
 
+    // Validate that customer has debt to pay
+    if (remainingDebt <= 0) {
+      throw new ValidationError("El cliente no tiene deuda pendiente");
+    }
+
     // Allow small tolerance for floating point comparison (0.01)
     const OVERPAYMENT_TOLERANCE = 0.01;
     if (data.amount > remainingDebt + OVERPAYMENT_TOLERANCE) {

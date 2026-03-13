@@ -109,12 +109,9 @@ export function AssetGallery({
                   variant="outline"
                   className="rounded-xl"
                   disabled={uploading}
-                  asChild
                 >
-                  <span>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {uploading ? "Subiendo..." : "Subir imagen"}
-                  </span>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {uploading ? "Subiendo..." : "Subir imagen"}
                 </Button>
               </label>
             </div>

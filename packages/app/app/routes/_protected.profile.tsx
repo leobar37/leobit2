@@ -1,9 +1,8 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link } from "react-router";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Loader2, User } from "lucide-react";
+import { Camera, Loader2, User } from "lucide-react";
 import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/use-profile";
 import { useFile } from "~/hooks/use-files";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,8 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
 import { useRef, useState } from "react";
+import { useSetLayout } from "~/components/layout/app-layout";
+import { DatabaseResetButton } from "~/components/sync/database-reset-button";
 
 const profileSchema = z.object({
   dni: z.string().max(20).optional(),
@@ -86,28 +87,23 @@ export default function ProfilePage() {
     }
   };
 
+  useSetLayout({
+    title: "Mi Perfil",
+    showBottomNav: true,
+    showBackButton: true,
+    backHref: "/config",
+  });
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Mi Perfil</span>
-        </div>
-      </header>
-
-      <main className="p-4 pb-24">
+    <div className="py-4">
         <div className="max-w-md mx-auto space-y-4">
           <Card className="border-0 shadow-lg rounded-3xl">
             <CardHeader className="text-center">
@@ -187,8 +183,20 @@ export default function ProfilePage() {
               </FormProvider>
             </CardContent>
           </Card>
+
+          {/* Database Reset Section */}
+          <Card className="border-0 shadow-lg rounded-3xl">
+            <CardHeader>
+              <CardTitle className="text-base">Datos locales</CardTitle>
+              <CardDescription>
+                Administra los datos almacenados localmente en este dispositivo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DatabaseResetButton />
+            </CardContent>
+          </Card>
         </div>
-      </main>
     </div>
   );
 }

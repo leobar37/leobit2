@@ -30,10 +30,10 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
           : "Sin deuda";
 
   return (
-    <Card className="border-0 shadow-md">
+    <Card className="shell-card-flat rounded-[28px]">
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100">
             <ShoppingCart className="h-7 w-7 text-orange-600" />
           </div>
           <div className="flex-1">

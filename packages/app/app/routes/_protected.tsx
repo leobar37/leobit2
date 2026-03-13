@@ -25,23 +25,26 @@ function OutletWithLog() {
 function ServicesProviderWrapper({
   businessId,
   token,
+  children,
 }: {
   businessId: string;
   token: string;
+  children: React.ReactNode;
 }) {
-  const { pg, isInitialized } = useEngine();
+  const { pg, isInitialized, error } = useEngine();
 
   if (!isInitialized || !pg) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Inicializando base de datos local...</p>
       </div>
     );
   }
 
   return (
     <ServicesProvider pg={pg} businessId={businessId} authToken={token}>
-      <OutletWithLog />
+      {children}
     </ServicesProvider>
   );
 }
@@ -89,20 +92,22 @@ export default function ProtectedLayout() {
   return (
     <EngineProvider businessId={businessId} token={token}>
       <SyncProvider>
-        <AppLayout
-          headerAccessory={
-            <SyncDevToolsDrawer triggerClassName="text-muted-foreground hover:text-foreground" />
-          }
-        >
-          <SyncErrorMonitor />
-          <ServicesProviderWrapper businessId={businessId} token={token} />
-        </AppLayout>
-        <ConflictResolver
-          conflict={activeConflict}
-          isOpen={!!activeConflict}
-          onClose={() => setActiveConflict(null)}
-          onResolve={handleResolveConflict}
-        />
+        <ServicesProviderWrapper businessId={businessId} token={token}>
+          <AppLayout
+            headerAccessory={
+              <SyncDevToolsDrawer triggerClassName="text-muted-foreground hover:text-foreground" />
+            }
+          >
+            <SyncErrorMonitor />
+            <OutletWithLog />
+            <ConflictResolver
+              conflict={activeConflict}
+              isOpen={!!activeConflict}
+              onClose={() => setActiveConflict(null)}
+              onResolve={handleResolveConflict}
+            />
+          </AppLayout>
+        </ServicesProviderWrapper>
       </SyncProvider>
     </EngineProvider>
   );

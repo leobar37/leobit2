@@ -413,13 +413,22 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
   const abonos = [];
   // Create sample abono for the credit sale customer
   if (customers.length > 1) {
-    const created = await services.payment.createPayment(ctx, {
-      customerId: customers[1].id,
-      amount: 20.0,
-      paymentMethod: "efectivo",
-      notes: "Primer abono",
-    });
-    abonos.push(created);
+    try {
+      const created = await services.payment.createPayment(ctx, {
+        customerId: customers[1].id,
+        amount: 20.0,
+        paymentMethod: "efectivo",
+        notes: "Primer abono",
+      });
+      abonos.push(created);
+    } catch (error: any) {
+      // Skip if customer has no debt (contado sale or already paid)
+      if (error?.message?.includes("no tiene deuda") || error?.statusCode === 400) {
+        console.log(`⚠ No pending debt for customer, skipping abono`);
+      } else {
+        throw error;
+      }
+    }
   }
 
   return abonos;

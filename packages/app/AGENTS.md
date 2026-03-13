@@ -179,6 +179,8 @@ import { CustomerCard } from "@/components/customers/customer-card";
 - Prefer the structure `summary (optional) -> search -> list -> FAB` instead of ad-hoc top action bars.
 - Use a fixed FAB for the primary create action on mobile when the screen's main CTA is creating a new entity.
 - Keep cards compact and sober: visible soft border, restrained shadow, `p-4` density, and no oversized hero treatments.
+- On protected mobile screens, prefer `app-shell` for the page background, `shell-surface` for sticky headers/toolbars, `shell-card-flat` for primary cards, `shell-card-soft` for nested items, `shell-block-muted` for supporting metric blocks, and `shell-field` for form fields.
+- Avoid `bg-gray-50` as the default page background and avoid `border-0 shadow-lg` / `shadow-xl` as the default operational card treatment.
 - Reuse existing route patterns from `packages/app/app/routes/_protected.ventas._index.tsx` and `packages/app/app/routes/_protected.clientes._index.tsx` before inventing a new layout.
 
 ### Component Patterns
@@ -614,7 +616,63 @@ if (isLoading) return <LoadingSpinner />;
 if (!data?.length) return <EmptyState />;
 ```
 
-#### 4. Form Error Handling
+#### 4. Online-Only Features Pattern
+
+Features that require internet (e.g., WhatsApp, external APIs) must check connectivity and provide user feedback:
+
+```typescript
+// 1. Use useOfflineAwareMutation in hooks
+import { useOfflineAwareMutation } from "~/hooks/use-offline-aware-mutation";
+
+export function useSendWhatsAppMessage() {
+  return useOfflineAwareMutation({
+    mutationFn: sendWhatsAppMessage,
+    offlineMessage: "Se requiere conexión a internet para enviar mensajes de WhatsApp",
+    onSuccess: () => {
+      // Invalidate queries
+    },
+  });
+}
+
+// 2. Use useSync in components for UI feedback
+import { useSync } from "~/components/sync/sync-status";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WifiOff } from "lucide-react";
+
+export function WhatsAppConfigPage() {
+  const { isOnline } = useSync();
+  const connectMutation = useConnectWhatsApp();
+
+  return (
+    <div>
+      {!isOnline && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            Conéctate a internet para vincular WhatsApp
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Button
+        onClick={handleConnect}
+        disabled={connectMutation.isPending || !isOnline}
+      >
+        {isOnline ? "Conectar WhatsApp" : "Sin conexión"}
+      </Button>
+    </div>
+  );
+}
+```
+
+**Checklist for online-only features:**
+- Use `useOfflineAwareMutation` in mutation hooks
+- Use `useSync()` to get `isOnline` state in components
+- Disable buttons when offline: `disabled={!isOnline}`
+- Show `Alert` with `WifiOff` icon when offline
+- Message format: `"Se requiere conexión a internet para [acción]"`
+
+#### 5. Form Error Handling
 
 ```typescript
 // Display field errors
@@ -658,6 +716,7 @@ className={cn(
 - Don't use `as any` or `@ts-ignore` without justification
 - Don't forget to handle error states
 - Don't use `alert()` or `confirm()` - use Dialog component
+- Don't forget offline state handling for online-only features (WhatsApp, external APIs)
 
 ### Route Naming Conventions
 

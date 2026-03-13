@@ -64,7 +64,7 @@ export const services = {
     repositories.distribucionItem,
     repositories.business
   ),
-  payment: new PaymentService(repositories.payment),
+  payment: new PaymentService(repositories.payment, repositories.customer),
   distribucion: new DistribucionService(
     repositories.distribucion,
     repositories.distribucionItem,

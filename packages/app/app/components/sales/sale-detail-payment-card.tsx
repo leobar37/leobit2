@@ -12,7 +12,7 @@ export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
   const dueAmount = Number(sale.balanceDue ?? 0);
 
   return (
-    <Card className="border-0 shadow-md">
+    <Card className="shell-card-flat rounded-[28px]">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Resumen de Pago</CardTitle>
       </CardHeader>
@@ -28,12 +28,12 @@ export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
         </div>
 
         {dueAmount > 0 ? (
-          <div className="flex items-center justify-between border-t pt-3">
+          <div className="flex items-center justify-between border-t shell-divider pt-3">
             <span className="font-medium text-red-600">Pendiente</span>
             <span className="font-semibold text-red-600">S/ {formatCurrency(dueAmount)}</span>
           </div>
         ) : (
-          <div className="flex items-center justify-between border-t pt-3">
+          <div className="flex items-center justify-between border-t shell-divider pt-3">
             <span className="font-medium text-green-600">Estado</span>
             <Badge className="bg-green-100 text-green-700">Sin deuda</Badge>
           </div>

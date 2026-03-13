@@ -71,11 +71,16 @@ export class PaymentService extends BaseService {
    * Find a payment by ID
    */
   async findById(id: string): Promise<Abono | null> {
-    const result = await this.pg.query<Abono>(
-      "SELECT * FROM abonos WHERE id = $1",
-      [id]
-    );
-    return result.rows[0] || null;
+    try {
+      const result = await this.pg.query<Abono>(
+        "SELECT * FROM abonos WHERE id = $1",
+        [id]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("[PaymentService.findById] Error:", error);
+      throw new Error(`Failed to find payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -108,51 +113,60 @@ export class PaymentService extends BaseService {
    * Create a new payment (abono)
    */
   async create(input: CreateAbonoInput): Promise<Abono> {
-    const id = this.generateId();
-    const now = this.now();
+    try {
+      const id = this.generateId();
+      const now = this.now();
 
-    // Format amount as decimal string using project utility
-    const amount = formatCurrency(input.amount);
+      // Format amount as decimal string using project utility
+      const amount = formatCurrency(input.amount);
 
-    await this.pg.exec(
-      `INSERT INTO abonos (
-        id, business_id, customer_id, seller_id, amount, payment_method,
-        notes, proof_image_id, reference_number, related_sale_id,
-        sync_status, sync_attempts, created_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-      )`,
-      [
-        id,
-        this.businessId,
-        input.customer_id,
-        input.seller_id,
+      await this.pg.exec(
+        `INSERT INTO abonos (
+          id, business_id, customer_id, seller_id, amount, payment_method,
+          notes, proof_image_id, reference_number, related_sale_id,
+          sync_status, sync_attempts, created_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+        )`,
+        [
+          id,
+          this.businessId,
+          input.customer_id,
+          input.seller_id,
+          amount,
+          input.payment_method,
+          input.notes ?? null,
+          input.proof_image_id ?? null,
+          input.reference_number ?? null,
+          input.related_sale_id ?? null,
+          "pending",
+          0,
+          now,
+        ]
+      );
+
+      // Queue sync operation
+      await this.queueSync("insert", id, {
+        customer_id: input.customer_id,
+        seller_id: input.seller_id,
         amount,
-        input.payment_method,
-        input.notes ?? null,
-        input.proof_image_id ?? null,
-        input.reference_number ?? null,
-        input.related_sale_id ?? null,
-        "pending",
-        0,
-        now,
-      ]
-    );
+        payment_method: input.payment_method,
+        notes: input.notes,
+        proof_image_id: input.proof_image_id,
+        reference_number: input.reference_number,
+        related_sale_id: input.related_sale_id,
+      } as Record<string, unknown>);
 
-    // Queue sync operation
-    await this.queueSync("insert", id, {
-      customer_id: input.customer_id,
-      seller_id: input.seller_id,
-      amount,
-      payment_method: input.payment_method,
-      notes: input.notes,
-      proof_image_id: input.proof_image_id,
-      reference_number: input.reference_number,
-      related_sale_id: input.related_sale_id,
-    } as Record<string, unknown>);
-
-    // Return the created payment
-    return (await this.findById(id)) as Abono;
+      // Return the created payment
+      const payment = await this.findById(id);
+      if (!payment) {
+        throw new Error("Payment was created but could not be retrieved");
+      }
+      return payment;
+    } catch (error) {
+      console.error("[PaymentService.create] Error:", error);
+      throw new Error(`Failed to create payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**

@@ -455,6 +455,39 @@ export class SyncService {
     return status;
   }
 
+  async deleteOperation(operationId: string): Promise<boolean> {
+    try {
+      await this.pg.exec(`
+        DELETE FROM sync_operations WHERE id = '${escapeSqlString(operationId)}'
+      `);
+      return true;
+    } catch (error) {
+      console.error("Failed to delete operation:", error);
+      return false;
+    }
+  }
+
+  async deleteOperations(operationIds: string[]): Promise<number> {
+    if (operationIds.length === 0) {
+      return 0;
+    }
+
+    try {
+      const idsSql = operationIds
+        .map((id) => escapeSqlString(id))
+        .join("', '");
+
+      await this.pg.exec(`
+        DELETE FROM sync_operations WHERE id IN ('${idsSql}')
+      `);
+
+      return operationIds.length;
+    } catch (error) {
+      console.error("Failed to delete operations:", error);
+      return 0;
+    }
+  }
+
   startAutoSync(): void {
     if (this.syncIntervalId) {
       return;
@@ -619,7 +652,7 @@ export class SyncService {
   ): Promise<BatchSyncResponse> {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
-    const response = await fetch(`${apiUrl}/api/sync/batch`, {
+    const response = await fetch(`${apiUrl}/sync/batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

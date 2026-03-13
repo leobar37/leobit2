@@ -1,20 +1,22 @@
 import { Package, Search, Plus } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
+import { useListSearch } from "~/hooks/use-list-search";
 import { ProductCard } from "~/components/products/product-card";
 
 export default function ProductsPage() {
-  const [search, setSearch] = useState("");
   const { data: products, isLoading, error } = useProducts();
 
-  const filteredProducts = products?.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase()) ||
-    product.type.includes(search.toLowerCase())
-  );
+  const { filteredItems: filteredProducts, search, setSearch } = useListSearch({
+    items: products,
+    searchFields: [
+      (product) => product.name,
+      (product) => product.type,
+    ],
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">

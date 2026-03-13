@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { Share2, Copy, RefreshCw, MessageCircle, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Drawer,
   DrawerContent,
@@ -23,6 +24,7 @@ import {
   useShareSale,
 } from "~/hooks/use-sale-token";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
+import { useSync } from "~/components/sync/sync-status";
 
 interface SaleShareDrawerProps {
   saleId: string;
@@ -44,15 +46,25 @@ export function SaleShareDrawer({
   const toggleToken = useToggleSaleToken();
   const { buildUrl, buildMessage, copyToClipboard } = useShareSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { isOnline } = useSync();
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
 
   const handleGenerate = () => {
+    if (!isOnline) {
+      toast.error("Se requiere conexión a internet para generar el enlace de compartir");
+      return;
+    }
     generateToken.mutate(saleId);
   };
 
   const handleRegenerate = async () => {
+    if (!isOnline) {
+      toast.error("Se requiere conexión a internet para regenerar el enlace");
+      return;
+    }
+
     const confirmed = await confirm({
       title: "Regenerar enlace",
       description: "¿Estás seguro? El enlace anterior dejará de funcionar.",
@@ -67,6 +79,10 @@ export function SaleShareDrawer({
   };
 
   const handleToggle = (checked: boolean) => {
+    if (!isOnline) {
+      toast.error("Se requiere conexión a internet para cambiar el estado del enlace");
+      return;
+    }
     toggleToken.mutate({ saleId, isActive: checked });
   };
 
@@ -82,15 +98,17 @@ export function SaleShareDrawer({
 
   const canShare = saleStatus === "draft" || saleStatus === "confirmed";
 
+  const triggerElement = trigger || (
+    <span className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-2">
+      <Share2 className="h-4 w-4" />
+      Compartir
+    </span>
+  );
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <Share2 className="h-4 w-4" />
-            Compartir
-          </Button>
-        )}
+      <DrawerTrigger className="inline-flex cursor-pointer">
+        {triggerElement}
       </DrawerTrigger>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="border-b">

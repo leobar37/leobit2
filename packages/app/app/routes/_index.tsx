@@ -22,7 +22,7 @@ export default function Index() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/landing" replace />;
   }
 
   return <Navigate to="/dashboard" replace />;

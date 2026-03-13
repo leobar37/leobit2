@@ -49,11 +49,11 @@ export default function NotificationsConfigPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
+    <div className="min-h-screen app-shell">
+      <header className="sticky top-0 z-50 border-b shell-surface">
         <div className="flex items-center h-16 px-4">
           <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
+            <Button variant="ghost" size="icon" className="mr-3 rounded-2xl">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
@@ -63,7 +63,7 @@ export default function NotificationsConfigPage() {
 
       <main className="p-4 pb-24">
         <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+          <Card className="shell-card-flat rounded-[30px]">
             <CardHeader>
               <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4">
                 <Bell className="h-8 w-8 text-yellow-600" />

@@ -22,9 +22,15 @@ export const TEST_BUSINESS = {
   permitirVentaSinStock: false,
 };
 
-// Nota: "Pollo" NO se incluye en el seed para E2E.
-// El test de producto lo crea desde cero para validar el flujo completo.
+// Productos para Peru: Pollo, Huevos, Menudencias
 export const PRODUCTS = [
+  {
+    name: "Pollo Entero",
+    type: "pollo" as const,
+    unit: "kg" as const,
+    basePrice: "12.50",
+    isActive: true,
+  },
   {
     name: "Huevos",
     type: "huevo" as const,
@@ -42,6 +48,12 @@ export const PRODUCTS = [
 ];
 
 export const PRODUCT_VARIANTS = [
+  // Pollo Entero
+  [
+    { name: "Entero (kg)", sku: "POL-ENT", unitQuantity: 1, price: 12.5 },
+    { name: "Medio Pollo", sku: "POL-MED", unitQuantity: 0.5, price: 6.5 },
+    { name: "Cuarto Pollo", sku: "POL-CUA", unitQuantity: 0.25, price: 3.25 },
+  ],
   // Huevos
   [
     { name: "Unidad", sku: "HUE-UNI", unitQuantity: 1, price: 0.8 },

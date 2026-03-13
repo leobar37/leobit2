@@ -27,7 +27,10 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useSync } from "~/components/sync/sync-status";
+import { useSyncService } from "~/lib/sync/service-provider";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { runManualSync } from "~/lib/sync/manual-sync";
+import { useToast } from "~/hooks/use-toast";
 
 interface SyncStatus {
   pending: number;
@@ -82,7 +85,10 @@ export function SyncDevToolsDrawer({
     setSimulatedOffline,
     syncIssue,
   } = useSync();
+  const syncService = useSyncService();
+  const { confirm, ConfirmDialog: DeleteConfirmDialog } = useConfirmDialog();
   const clearSync = useClearSyncStorage();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<SyncStatus>({
     pending: 0,
@@ -194,12 +200,87 @@ export function SyncDevToolsDrawer({
   const handleClearStorage = async () => {
     if (
       !confirm(
-        "¿Estás seguro? Esto limpiará todos los datos locales de sincronización.",
+        "⚠️ ¿Estás seguro?\n\nEsto eliminará todos los datos locales, cerrará la sesión y recargará la página.\n\nEsta acción no se puede deshacer.",
       )
     ) {
       return;
     }
-    await clearSync.mutateAsync({ preserveSession: true });
+    await clearSync.mutateAsync({ preserveSession: false });
+  };
+
+  const handleDeleteOperation = async (operationId: string) => {
+    if (!syncService) {
+      toast.error("Servicio no disponible", {
+        description: "El servicio de sincronización aún no está listo. Intenta de nuevo en unos segundos.",
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Eliminar operación",
+      description: "¿Estás seguro de eliminar esta operación de sincronización?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const success = await syncService.deleteOperation(operationId);
+    if (success) {
+      // Refresh the list
+      setOperations((prev) => prev.filter((op) => op.id !== operationId));
+      setStatus((prev) => ({
+        ...prev,
+        total: prev.total - 1,
+        [operationId]: (prev[operationId as keyof SyncStatus] as number) - 1,
+      }));
+    }
+  };
+
+  const handleDeleteAllOperations = async () => {
+    if (!syncService) {
+      toast.error("Servicio no disponible", {
+        description: "El servicio de sincronización aún no está listo. Intenta de nuevo en unos segundos.",
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Eliminar todas las operaciones",
+      description: `¿Estás seguro de eliminar las ${operations.length} operaciones de sincronización? Esta acción no se puede deshacer.`,
+      confirmText: "Eliminar todas",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const operationIds = operations.map((op) => op.id);
+    const deletedCount = await syncService.deleteOperations(operationIds);
+
+    if (deletedCount > 0) {
+      toast.success("Operaciones eliminadas", {
+        description: `${deletedCount} operaciones eliminadas correctamente.`,
+      });
+      // Refresh the list - the operations state will be updated on next fetch
+      setOperations([]);
+      setStatus((prev) => ({
+        ...prev,
+        pending: 0,
+        failed: 0,
+        conflict: 0,
+        total: 0,
+      }));
+    } else {
+      toast.error("Error", {
+        description: "No se pudieron eliminar las operaciones.",
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -259,33 +340,30 @@ export function SyncDevToolsDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "relative rounded-2xl transition-colors",
-            triggerClassName,
-            triggerTone,
-          )}
-          disabled={!isInitialized}
-          title={
-            syncIssue
-              ? `Error de sincronización en ${syncIssue.table}`
-              : status.pending > 0
-                ? `Hay ${status.pending} cambios pendientes`
-                : isOnline
-                  ? "Sincronización al día"
-                  : "Sin conexión"
-          }
-        >
-          <Database className={cn("h-5 w-5", isSyncing && "animate-pulse")} />
-          {status.pending > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 rounded-full text-[10px] text-white flex items-center justify-center">
-              {status.pending}
-            </span>
-          )}
-        </Button>
+      <SheetTrigger
+        className={cn(
+          "inline-flex items-center justify-center relative rounded-2xl transition-colors h-9 w-9",
+          triggerClassName,
+          triggerTone,
+          !isInitialized && "opacity-50 cursor-not-allowed"
+        )}
+        title={
+          syncIssue
+            ? `Error de sincronización en ${syncIssue.table}`
+            : status.pending > 0
+              ? `Hay ${status.pending} cambios pendientes`
+              : isOnline
+                ? "Sincronización al día"
+                : "Sin conexión"
+        }
+        disabled={!isInitialized}
+      >
+        <Database className={cn("h-5 w-5", isSyncing && "animate-pulse")} />
+        {status.pending > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 bg-orange-500 rounded-full text-[10px] text-white flex items-center justify-center">
+            {status.pending}
+          </span>
+        )}
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[80vh] flex flex-col">
         <SheetHeader className="pb-4 border-b">
@@ -493,9 +571,22 @@ export function SyncDevToolsDrawer({
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold mb-2">
-                  Operaciones con problema
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">
+                    Operaciones con problema
+                  </h3>
+                  {operations.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
+                      onClick={handleDeleteAllOperations}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Eliminar todas
+                    </Button>
+                  )}
+                </div>
                 <ScrollArea className="min-h-[140px] max-h-[40vh] border rounded-xl">
                   {operations.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
@@ -519,9 +610,26 @@ export function SyncDevToolsDrawer({
                                 {op.operation}
                               </Badge>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(op.created_at).toLocaleTimeString()}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(op.created_at).toLocaleTimeString()}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-6 w-6",
+                                  syncService
+                                    ? "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    : "text-muted-foreground cursor-not-allowed"
+                                )}
+                                onClick={() => handleDeleteOperation(op.id)}
+                                title={syncService ? "Eliminar operación" : "Servicio no disponible"}
+                                disabled={!syncService}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="mt-1 text-xs text-muted-foreground">
                             <span className="font-mono">{op.entity_id}</span>
@@ -545,6 +653,7 @@ export function SyncDevToolsDrawer({
             </div>
           </ScrollArea>
         )}
+        <DeleteConfirmDialog />
       </SheetContent>
     </Sheet>
   );

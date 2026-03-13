@@ -86,7 +86,7 @@ export default function CustomerDetailPage() {
 
   if (customerLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <p>Cargando cliente...</p>
       </div>
     );
@@ -94,19 +94,19 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <p>Cliente no encontrado</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-xl">
+    <div className="min-h-screen app-shell">
+      <header className="sticky top-0 z-50 border-b shell-surface">
         <div className="flex h-16 items-center gap-3 px-3 sm:px-4">
           <button
             onClick={() => navigate(-1)}
-            className="rounded-xl p-2 -ml-2 hover:bg-orange-50"
+            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -114,14 +114,14 @@ export default function CustomerDetailPage() {
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={handleDelete}
-              className="rounded-xl p-2 text-red-600 hover:bg-red-50"
+              className="rounded-2xl p-2 text-red-600 transition-colors hover:bg-white/70"
               title="Eliminar cliente"
             >
               <Trash2 className="h-5 w-5" />
             </button>
             <Link
               to={`/clientes/${id}/edit`}
-              className="rounded-xl p-2 hover:bg-orange-50"
+              className="rounded-2xl p-2 transition-colors hover:bg-white/70"
             >
               <Pencil className="h-5 w-5" />
             </Link>
@@ -130,10 +130,10 @@ export default function CustomerDetailPage() {
       </header>
 
       <main className="space-y-4 px-3 py-4 pb-32 sm:px-4">
-        <Card className="rounded-2xl border-0 shadow-md">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-100">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100">
                 <User className="h-7 w-7 text-orange-600" />
               </div>
 
@@ -165,7 +165,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-md">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="space-y-4 p-4">
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Saldo pendiente</p>
@@ -178,13 +178,13 @@ export default function CustomerDetailPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-gray-50 p-3">
+              <div className="shell-block-muted rounded-[20px] p-3">
                 <p className="text-xs text-muted-foreground">Ventas crédito</p>
                 <p className="font-semibold">
                   S/ {formatCurrency(balance?.totalSales ?? 0)}
                 </p>
               </div>
-              <div className="rounded-xl bg-gray-50 p-3">
+              <div className="shell-block-muted rounded-[20px] p-3">
                 <p className="text-xs text-muted-foreground">Abonos</p>
                 <p className="font-semibold text-green-600">
                   S/ {formatCurrency(balance?.totalPayments ?? 0)}
@@ -203,8 +203,8 @@ export default function CustomerDetailPage() {
 
         <ConfirmDialog />
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-md">
-          <div className="flex border-b">
+        <div className="shell-card-flat overflow-hidden rounded-[28px]">
+          <div className="flex border-b shell-divider">
             <button
               onClick={() => setActiveTab("sales")}
               className={`flex-1 py-3 text-sm font-medium ${
@@ -237,7 +237,7 @@ export default function CustomerDetailPage() {
                 customerSales.map((sale) => (
                   <div
                     key={sale.id}
-                    className="rounded-xl border border-gray-100 bg-gray-50 p-3"
+                    className="shell-card-soft rounded-[20px] p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -276,7 +276,7 @@ export default function CustomerDetailPage() {
               payments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="rounded-xl border border-gray-100 bg-gray-50 p-3"
+                  className="shell-card-soft rounded-[20px] p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>

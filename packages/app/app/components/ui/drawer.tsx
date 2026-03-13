@@ -19,22 +19,22 @@ const DrawerOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
+    ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80",
+      "fixed inset-0 z-50 bg-black/40 backdrop-blur-sm",
       className
     )}
     {...props}
-    ref={ref}
   />
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 const drawerVariants = cva(
-  "fixed z-50 gap-4 bg-background shadow-lg transition ease-in-out",
+  "fixed z-50 flex flex-col bg-background shadow-lg outline-none",
   {
     variants: {
       side: {
-        bottom: "inset-x-0 bottom-0 border-t rounded-t-[20px] max-h-[60vh] sm:max-h-[85vh]",
+        bottom: "inset-x-0 bottom-0 border-t rounded-t-[20px] max-h-[85vh]",
       },
     },
     defaultVariants: {

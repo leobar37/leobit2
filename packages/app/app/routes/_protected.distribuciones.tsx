@@ -1,6 +1,5 @@
-import { Link } from "react-router";
 import { formatKilos } from "~/lib/utils";
-import { Plus, ArrowLeft, Calendar } from "lucide-react";
+import { Plus, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
@@ -18,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormDate } from "@/components/forms/form-date";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
+import { useSetLayout } from "~/components/layout/app-layout";
 
 const distribucionFilterSchema = z.object({
   fecha: z.string(),
@@ -93,31 +93,24 @@ export default function DistribucionesPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-3 sm:px-4">
-          <div className="flex items-center">
-            <Link to="/config">
-              <Button variant="ghost" size="icon" className="mr-2">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-lg font-semibold">Distribuciones</h1>
-          </div>
-          {isAdmin && (
-            <Button
-              className="bg-orange-500 hover:bg-orange-600"
-              onClick={handleNavigateToCreate}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva
-            </Button>
-          )}
-        </div>
-      </header>
+  useSetLayout({
+    title: "Distribuciones",
+    showBottomNav: true,
+    showBackButton: true,
+    backHref: "/config",
+    actions: isAdmin ? (
+      <Button
+        className="bg-orange-500 hover:bg-orange-600"
+        onClick={handleNavigateToCreate}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Nueva
+      </Button>
+    ) : undefined,
+  });
 
-      <main className="px-3 py-4 sm:px-4 pb-24 space-y-4">
+  return (
+    <div className="space-y-4">
         <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/5">
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -157,13 +150,12 @@ export default function DistribucionesPage() {
         </Card>
 
         <DistribucionTable
-          distribuciones={distribuciones}
-          onEdit={handleNavigateToEdit}
-          onClose={handleClose}
-          onDelete={handleDelete}
-          isLoading={isLoading}
-        />
-      </main>
+        distribuciones={distribuciones}
+        onEdit={handleNavigateToEdit}
+        onClose={handleClose}
+        onDelete={handleDelete}
+        isLoading={isLoading}
+      />
 
       <ConfirmDialog />
     </div>

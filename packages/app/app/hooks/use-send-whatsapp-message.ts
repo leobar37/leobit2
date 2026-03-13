@@ -1,5 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 
 const WHATSAPP_MESSAGES_KEY = ["whatsapp", "messages"];
 const WHATSAPP_STATS_KEY = ["whatsapp", "stats"];
@@ -43,8 +44,9 @@ async function sendWhatsAppMessage(
 export function useSendWhatsAppMessage() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: sendWhatsAppMessage,
+    offlineMessage: "Se requiere conexión a internet para enviar mensajes de WhatsApp",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WHATSAPP_MESSAGES_KEY });
       queryClient.invalidateQueries({ queryKey: WHATSAPP_STATS_KEY });

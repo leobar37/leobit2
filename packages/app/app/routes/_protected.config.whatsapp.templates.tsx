@@ -425,14 +425,10 @@ export default function WhatsAppTemplatesPage() {
                           </div>
                         </div>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="rounded-xl h-8 w-8"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                          <DropdownMenuTrigger
+                            className="inline-flex items-center justify-center rounded-xl h-8 w-8 hover:bg-accent"
+                          >
+                            <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl">
                             <DropdownMenuItem

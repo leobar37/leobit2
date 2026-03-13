@@ -104,7 +104,7 @@ export default function PurchaseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
           <ShoppingCart className="h-5 w-5 animate-pulse" />
           <p>Cargando compra...</p>
@@ -115,7 +115,7 @@ export default function PurchaseDetailPage() {
 
   if (!purchase) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="app-shell flex min-h-screen items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-lg font-medium text-muted-foreground">
@@ -135,16 +135,16 @@ export default function PurchaseDetailPage() {
   const StatusIcon = statusIcons[purchase.status];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen app-shell">
       <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
-        <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-4">
+        <Card className="shell-card-flat overflow-hidden rounded-[30px]">
+          <div className="border-b shell-divider bg-orange-50/80 p-4">
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <StatusIcon className="h-7 w-7 text-white" />
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100">
+                <StatusIcon className="h-7 w-7 text-orange-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg text-white truncate">
+                <h2 className="truncate text-lg font-bold text-foreground">
                   {purchase.supplier?.name || "Sin proveedor"}
                 </h2>
                 <Badge
@@ -179,7 +179,7 @@ export default function PurchaseDetailPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl">
+            <div className="shell-block-muted flex items-center justify-between rounded-[20px] p-4">
               <span className="font-medium">Total:</span>
               <span className="text-xl font-bold text-orange-600">
                 S/ {formatCurrency(purchase.totalAmount)}
@@ -223,7 +223,7 @@ export default function PurchaseDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
+        <Card className="shell-card-flat overflow-hidden rounded-[30px]">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-orange-600" />
@@ -235,7 +235,7 @@ export default function PurchaseDetailPage() {
               {purchase.items?.map((item, index) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                  className="shell-card-soft flex items-center justify-between rounded-[20px] p-3"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">

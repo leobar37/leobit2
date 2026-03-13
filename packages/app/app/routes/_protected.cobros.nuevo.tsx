@@ -68,7 +68,7 @@ function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
   if (!methodConfig) return null;
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+    <div className="shell-card-soft rounded-[20px] p-4 space-y-3">
       <div className="flex items-center gap-2 text-blue-800 font-medium">
         <QrCode className="h-4 w-4" />
         <span>Datos para el pago</span>
@@ -77,7 +77,7 @@ function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
       {methodConfig.qrImageUrl ? (
         <div className="space-y-2">
           <p className="text-sm text-blue-700">Escanea el código QR para pagar:</p>
-          <div className="bg-white p-3 rounded-lg inline-block">
+          <div className="shell-field inline-block rounded-[18px] p-3">
             <img
               src={methodConfig.qrImageUrl}
               alt={`Código QR ${method}`}
@@ -255,9 +255,9 @@ export default function NuevoCobroPage() {
       toolbar={
         <Button
           onClick={handleSubmit(onSubmit)}
-          disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0}
+          disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0 || currentDebt === 0}
           data-testid="save-abono-button"
-          className="w-full h-14 text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+          className="h-14 w-full rounded-2xl bg-orange-500 text-lg font-semibold hover:bg-orange-600 disabled:bg-orange-300 disabled:text-white disabled:opacity-100"
         >
           {isSubmitting ? (
             "Registrando..."
@@ -271,10 +271,10 @@ export default function NuevoCobroPage() {
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-orange-100/90 ring-1 ring-orange-100">
                 <User className="h-6 w-6 text-orange-600" />
               </div>
               <div>
@@ -287,7 +287,7 @@ export default function NuevoCobroPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4">
             <div className="text-center py-4">
               <p className="text-sm text-muted-foreground mb-1">Deuda actual</p>
@@ -298,7 +298,7 @@ export default function NuevoCobroPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="amount">Monto a pagar</Label>
@@ -326,7 +326,7 @@ export default function NuevoCobroPage() {
                 type="button"
                 size="sm"
                 onClick={() => setValue("amount", currentDebt.toFixed(2))}
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="rounded-full bg-red-500 text-white hover:bg-red-600"
               >
                 Todo (liquidar)
               </Button>
@@ -341,7 +341,7 @@ export default function NuevoCobroPage() {
             </div>
 
             {parsedAmount > 0 && (
-              <div className="p-3 bg-gray-50 rounded-lg space-y-1">
+              <div className="shell-block-muted space-y-1 rounded-[18px] p-3">
                 <div className="flex justify-between text-sm">
                   <span>Deuda:</span>
                   <span className="font-medium">S/ {formatCurrency(currentDebt)}</span>
@@ -350,7 +350,7 @@ export default function NuevoCobroPage() {
                   <span>Abono:</span>
                   <span className="font-medium text-green-600">-S/ {formatCurrency(parsedAmount)}</span>
                 </div>
-                <div className="border-t pt-1 flex justify-between font-semibold">
+                <div className="flex justify-between border-t shell-divider pt-1 font-semibold">
                   <span>Queda:</span>
                   <span className={remainingDebt > 0 ? "text-red-600" : "text-green-600"}>
                     S/ {formatCurrency(remainingDebt)}
@@ -362,12 +362,12 @@ export default function NuevoCobroPage() {
         </Card>
 
         {submitError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          <p className="rounded-[18px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {submitError}
           </p>
         )}
 
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4 space-y-4">
             <Label>Método de pago</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -380,7 +380,7 @@ export default function NuevoCobroPage() {
                     type="button"
                     variant={isSelected ? "default" : "outline"}
                     onClick={() => setValue("paymentMethod", method.id)}
-                    className={`h-auto py-3 flex flex-col items-center gap-1 ${
+                    className={`h-auto rounded-[18px] py-3 flex flex-col items-center gap-1 ${
                       isSelected ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
                     }`}
                   >
@@ -406,6 +406,7 @@ export default function NuevoCobroPage() {
                 <Input
                   id="reference"
                   placeholder="Ej: 123456"
+                  className="shell-field rounded-[20px]"
                   {...register("referenceNumber")}
                 />
               </div>
@@ -428,7 +429,7 @@ export default function NuevoCobroPage() {
                     <img
                       src={proofPreview}
                       alt="Comprobante"
-                      className="w-full h-32 object-cover rounded-xl"
+                      className="h-32 w-full rounded-[20px] object-cover"
                     />
                     <Button
                       type="button"
@@ -445,7 +446,7 @@ export default function NuevoCobroPage() {
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full rounded-xl h-20 border-dashed"
+                    className="shell-field h-20 w-full rounded-[20px] border-dashed"
                   >
                     <Camera className="h-5 w-5 mr-2" />
                     Adjuntar captura de pantalla
@@ -460,7 +461,7 @@ export default function NuevoCobroPage() {
                 id="notes"
                 placeholder="Observaciones del pago..."
                 rows={2}
-                className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="shell-field flex min-h-[80px] w-full rounded-[20px] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
                 {...register("notes")}
               />
             </div>

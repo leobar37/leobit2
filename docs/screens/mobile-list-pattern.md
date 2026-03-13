@@ -126,6 +126,49 @@ Evitar:
 
 ---
 
+## Fondo, bordes y superficies
+
+Este criterio no aplica solo a listas. Tambien debe mantenerse en detalles, formularios y bloques internos.
+
+Reglas globales:
+
+- usar el fondo del shell (`app-shell`) como base de las pantallas mobile protegidas
+- evitar `bg-gray-50` plano como fondo dominante en modulos operativos
+- evitar cards con `border-0` + `shadow-lg` por defecto
+- preferir borde suave visible y sombra corta
+- si un bloque es secundario dentro de una card, usar una superficie muteda en vez de otro blanco puro
+
+Utilidades recomendadas:
+
+- `shell-surface` para headers y barras pegadas
+- `shell-card-flat` para cards principales sobrias
+- `shell-card-soft` para items internos o filas secundarias
+- `shell-block-muted` para metricas internas o bloques de apoyo
+- `shell-field` para inputs y campos de formulario
+
+Referencia visual:
+
+```tsx
+<div className="min-h-screen app-shell">
+  <header className="border-b shell-surface" />
+
+  <Card className="shell-card-flat rounded-[28px]" />
+
+  <div className="shell-card-soft rounded-[20px] p-3" />
+
+  <div className="shell-block-muted rounded-[20px] p-3" />
+</div>
+```
+
+Evitar:
+
+- `bg-gray-50` en toda la pagina si ya estas dentro del shell
+- `shadow-xl`, `shadow-lg` y blur pesados para cards operativas
+- `border-0` en formularios y detalles, salvo casos muy justificados
+- mezclar demasiados tonos de gris frios con el shell calido actual
+
+---
+
 ## FAB (Floating Action Button)
 
 Si la accion principal de la pantalla es "crear nuevo", usar FAB fijo en mobile en vez de depender solo de un boton inline en el header del contenido.

@@ -2,6 +2,7 @@ import { and, asc, eq, gte } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ConflictError } from "../../errors";
 import { db, syncOperations } from "../../lib/db";
+import { logger } from "../../lib/logger";
 import type { DbTransaction } from "../../lib/txid";
 import type { CustomerRepository } from "../repository/customer.repository";
 import type { SaleRepository } from "../repository/sale.repository";
@@ -103,6 +104,8 @@ export class SyncService {
     ctx: RequestContext,
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
+    logger.info({ operations: operations.length, businessId: ctx.businessId }, "📥 Sync batch received");
+
     const results: SyncOperationResult[] = [];
     const nowIso = toISODate(now());
 
@@ -110,9 +113,14 @@ export class SyncService {
     const groupedOperations = this.groupOperationsBySyncGroup(operations);
     const groupIds = Object.keys(groupedOperations);
 
+    logger.debug({ groups: groupIds.length, operationsByGroup: Object.fromEntries(
+      Object.entries(groupedOperations).map(([k, v]) => [k, v.length])
+    ) }, "Grouped operations");
+
     for (const groupId of groupIds) {
       const groupOps = groupedOperations[groupId];
 
+      logger.debug({ groupId, operations: groupOps.length }, "Processing sync group");
       // Process all operations in the group atomically
       const groupResult = await this.processGroupAtomically(
         ctx,
@@ -125,6 +133,11 @@ export class SyncService {
     const succeeded = results.filter((item) => item.success && !item.conflict).length;
     const conflicts = results.filter((item) => item.conflict !== undefined).length;
     const failed = results.length - succeeded - conflicts;
+
+    logger.info(
+      { summary: { total: results.length, succeeded, failed, conflicts } },
+      "📤 Sync batch completed"
+    );
 
     return {
       results,
@@ -226,6 +239,10 @@ export class SyncService {
             });
 
             // Apply the operation
+            logger.debug(
+              { entityType: operation.entityType, operation: operation.operation, entityId: operation.entityId },
+              "⚡ Applying operation"
+            );
             await this.applyOperation(ctx, operation, tx);
 
             // Mark as processed
@@ -250,6 +267,10 @@ export class SyncService {
             });
           } catch (error) {
             const message = error instanceof Error ? error.message : "Unknown error";
+            logger.error(
+              { entityType: operation.entityType, operation: operation.operation, entityId: operation.entityId, error: message },
+              "❌ Operation failed"
+            );
 
             await tx
               .update(syncOperations)

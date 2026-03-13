@@ -72,6 +72,29 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
     ],
     priority: 20,
   },
+  // Inventory tables (sync after products/variants)
+  {
+    table: "inventory",
+    primaryKey: ["id"],
+    foreignKeys: [
+      {
+        column: "product_id",
+        references: { table: "products", column: "id" },
+      },
+    ],
+    priority: 25,
+  },
+  {
+    table: "variant_inventory",
+    primaryKey: ["id"],
+    foreignKeys: [
+      {
+        column: "variant_id",
+        references: { table: "product_variants", column: "id" },
+      },
+    ],
+    priority: 30,
+  },
   {
     table: "sales",
     primaryKey: ["id"],
@@ -133,6 +156,7 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "purchase_items",
     primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "purchase_id",
@@ -162,6 +186,7 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "distribucion_items",
     primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "distribucion_id",

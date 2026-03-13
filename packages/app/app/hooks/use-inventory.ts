@@ -1,106 +1,135 @@
+/**
+ * Inventory Hook (Service-based)
+ * Reactively fetch and validate inventory using PGlite services (offline-first)
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { useInventoryService, useProductService } from "~/lib/sync/service-provider";
+import type {
+  InventoryItem,
+  VariantInventoryItem,
+  StockValidationResult,
+} from "~/lib/services/inventory-service";
 
-export interface InventoryItem {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  updatedAt: Date;
-}
+const QUERY_KEYS = {
+  inventory: ["inventory"],
+  inventoryItem: (productId: string) => ["inventory", productId],
+  variantInventory: (variantId: string) => ["variant-inventory", variantId],
+  allVariantInventory: ["variant-inventory"],
+} as const;
 
-export interface StockValidationResult {
-  available: boolean;
-  requestedQty: number;
-  availableQty: number;
-  productId: string;
-}
-
-async function getInventory(): Promise<InventoryItem[]> {
-  const { data, error } = await api.inventory.get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as InventoryItem[];
-}
-
-async function getInventoryItem(productId: string): Promise<InventoryItem> {
-  const { data, error } = await api.inventory({ productId }).get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as InventoryItem;
-}
-
-async function updateStock({
-  productId,
-  quantity,
-}: {
-  productId: string;
-  quantity: number;
-}): Promise<InventoryItem> {
-  const { data, error } = await api.inventory({ productId }).put({ quantity });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as InventoryItem;
-}
-
-async function validateStockAvailability({
-  productId,
-  requestedQty,
-}: {
-  productId: string;
-  requestedQty: number;
-}): Promise<StockValidationResult> {
-  const { data, error } = await api
-    .inventory({ productId })
-    .validate.post({ requestedQty });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return data as unknown as StockValidationResult;
-}
-
+/**
+ * Get all inventory items for the business
+ */
 export function useInventory() {
+  const inventoryService = useInventoryService();
+
   return useQuery({
-    queryKey: ["inventory"],
-    queryFn: getInventory,
-  });
-}
-
-export function useInventoryItem(productId: string) {
-  return useQuery({
-    queryKey: ["inventory", productId],
-    queryFn: () => getInventoryItem(productId),
-    enabled: !!productId,
-  });
-}
-
-export function useUpdateStock() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateStock,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      queryClient.invalidateQueries({
-        queryKey: ["inventory", variables.productId],
-      });
+    queryKey: QUERY_KEYS.inventory,
+    queryFn: async () => {
+      return inventoryService.getAllInventory();
     },
   });
 }
 
-export function useValidateStock() {
-  return useMutation({
-    mutationFn: validateStockAvailability,
+/**
+ * Get inventory for a specific product
+ */
+export function useInventoryItem(productId: string | null) {
+  const inventoryService = useInventoryService();
+
+  return useQuery({
+    queryKey: productId ? QUERY_KEYS.inventoryItem(productId) : ["inventory", "detail"],
+    queryFn: async () => {
+      if (!productId) return null;
+      return inventoryService.getInventoryForProduct(productId);
+    },
+    enabled: !!productId,
   });
 }
+
+/**
+ * Get all variant inventory items for the business
+ */
+export function useVariantInventory() {
+  const inventoryService = useInventoryService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.allVariantInventory,
+    queryFn: async () => {
+      return inventoryService.getAllVariantInventory();
+    },
+  });
+}
+
+/**
+ * Get inventory for a specific variant
+ */
+export function useVariantInventoryItem(variantId: string | null) {
+  const inventoryService = useInventoryService();
+
+  return useQuery({
+    queryKey: variantId ? QUERY_KEYS.variantInventory(variantId) : ["variant-inventory", "detail"],
+    queryFn: async () => {
+      if (!variantId) return null;
+      return inventoryService.getInventoryForVariant(variantId);
+    },
+    enabled: !!variantId,
+  });
+}
+
+/**
+ * Validate stock availability for a variant (for sales)
+ */
+export function useValidateVariantStock() {
+  const inventoryService = useInventoryService();
+
+  return useMutation({
+    mutationFn: async ({
+      variantId,
+      requestedQty,
+    }: {
+      variantId: string;
+      requestedQty: number;
+    }): Promise<StockValidationResult> => {
+      return inventoryService.validateVariantStock(variantId, requestedQty);
+    },
+  });
+}
+
+/**
+ * Validate stock availability for a product
+ */
+export function useValidateProductStock() {
+  const inventoryService = useInventoryService();
+
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      requestedQty,
+    }: {
+      productId: string;
+      requestedQty: number;
+    }): Promise<StockValidationResult> => {
+      return inventoryService.validateProductStock(productId, requestedQty);
+    },
+  });
+}
+
+/**
+ * Batch validate stock for multiple items (cart validation)
+ */
+export function useValidateBatchStock() {
+  const inventoryService = useInventoryService();
+
+  return useMutation({
+    mutationFn: async (
+      items: Array<{ variantId: string; requestedQty: number }>
+    ): Promise<StockValidationResult[]> => {
+      return inventoryService.validateBatchStock(items);
+    },
+  });
+}
+
+// Re-export types for convenience
+export type { InventoryItem, VariantInventoryItem, StockValidationResult };

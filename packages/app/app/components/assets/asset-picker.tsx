@@ -56,14 +56,11 @@ export function AssetPicker({
         </div>
       ) : (
         <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-32 h-32 rounded-xl border-dashed flex flex-col gap-2"
-            >
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{placeholder}</span>
-            </Button>
+          <DrawerTrigger
+            className="inline-flex flex-col items-center justify-center w-32 h-32 rounded-xl border border-dashed border-input bg-background hover:bg-accent hover:text-accent-foreground gap-2 cursor-pointer"
+          >
+            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{placeholder}</span>
           </DrawerTrigger>
           <DrawerContent className="max-h-[85vh]">
             <DrawerHeader className="px-4 pb-3 pt-2">

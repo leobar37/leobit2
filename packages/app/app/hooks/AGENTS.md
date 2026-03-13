@@ -37,6 +37,13 @@ hooks/
 └── use-calculator.ts        # Chicken calculator state
 ```
 
+### Online-Only Feature Hooks
+
+```
+hooks/
+└── use-offline-aware-mutation.ts  # Wrapper for mutations requiring internet
+```
+
 ## Data Fetching Pattern
 
 ### Query Hook
@@ -187,6 +194,93 @@ export function useCustomers() {
 }
 ```
 
+## Online-Only Feature Pattern
+
+For features that **require internet connection** (e.g., WhatsApp, external API calls), use the `useOfflineAwareMutation` hook. This wrapper checks for connectivity before executing the mutation and shows a user-friendly error message when offline.
+
+### Hook: useOfflineAwareMutation
+
+```typescript
+// hooks/use-offline-aware-mutation.ts
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+
+export function useSendWhatsAppMessage() {
+  const queryClient = useQueryClient();
+
+  return useOfflineAwareMutation({
+    mutationFn: sendWhatsAppMessage,
+    offlineMessage: "Se requiere conexión a internet para enviar mensajes de WhatsApp",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+    },
+  });
+}
+```
+
+### UI Integration Pattern
+
+Components should also disable UI elements and show visual feedback when offline:
+
+```typescript
+// In your component
+import { useSync } from "~/components/sync/sync-status";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WifiOff } from "lucide-react";
+
+export function WhatsAppConfigPage() {
+  const { isOnline } = useSync();
+  const connectMutation = useConnectWhatsApp();
+
+  return (
+    <div>
+      {/* Show alert when offline */}
+      {!isOnline && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            Conéctate a internet para vincular WhatsApp
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Disable button when offline */}
+      <Button
+        onClick={handleConnect}
+        disabled={connectMutation.isPending || !isOnline}
+      >
+        {isOnline ? "Conectar WhatsApp" : "Sin conexión"}
+      </Button>
+    </div>
+  );
+}
+```
+
+### Checklist for Online-Only Features
+
+When implementing features that require internet:
+
+1. **Use `useOfflineAwareMutation`** in mutation hooks
+   - Provides automatic toast error when offline
+   - Prevents API calls without connectivity
+   - Customizable error message per feature
+
+2. **Use `useSync()` in components** for UI feedback
+   - Access `isOnline` state for reactive UI
+   - Disable buttons when offline
+   - Show alert banners with context
+
+3. **Message Guidelines** (Spanish - Peru locale)
+   - Format: `"Se requiere conexión a internet para [acción]"`
+   - Examples:
+     - `"Se requiere conexión a internet para enviar mensajes de WhatsApp"`
+     - `"Se requiere conexión a internet para vincular WhatsApp"`
+     - `"Se requiere conexión a internet para generar el enlace de compartir"`
+
+4. **Visual Indicators**
+   - Use `WifiOff` icon from lucide-react
+   - Alert variant: `destructive` for warnings
+   - Button states: `disabled` with opacity reduction
+
 ## Hook Naming Conventions
 
 | Type | Pattern | Example |
@@ -205,6 +299,7 @@ export function useCustomers() {
 | `use-customers.ts` | Customer data with offline support |
 | `use-sales.ts` | Sales data and POS operations |
 | `use-modal.ts` | Jotai modal state factory |
+| `use-offline-aware-mutation.ts` | Wrapper for online-only mutations |
 
 ## Testing Hooks
 

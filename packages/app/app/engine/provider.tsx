@@ -70,17 +70,24 @@ export function EngineProvider({
         pgRef.current = pg as PGliteWithElectric;
         dbRef.current = db;
 
-        const cleanupSync = await startSync({
-          pg: pg as PGliteWithElectric,
-          businessId,
-          token,
-        });
+        // Start sync but don't let sync failures block app initialization
+        try {
+          const cleanupSync = await startSync({
+            pg: pg as PGliteWithElectric,
+            businessId,
+            token,
+          });
+          cleanupSyncRef.current = cleanupSync;
+        } catch (syncError) {
+          // Sync failures should not block the app from loading
+          // The app will work with local data and can retry sync later
+          console.warn("[Engine] Sync failed, app will continue with local data:", syncError);
+        }
 
-        cleanupSyncRef.current = cleanupSync;
         setIsInitialized(true);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to initialize engine";
-        setError(new Error(message));
+        console.error("[Engine] Initialization error:", message);
         // Allow app to load even with error
         setIsInitialized(true);
       } finally {
@@ -96,6 +103,8 @@ export function EngineProvider({
           setError(new Error("Initialization timeout. Please check your connection and reload."));
           setIsSyncing(false);
           isInitializingRef.current = false;
+          // Allow app to load even on timeout
+          setIsInitialized(true);
         }
       }, INITIALIZATION_TIMEOUT);
 
@@ -152,7 +161,10 @@ export function EngineProvider({
 export function useEngine() {
   const context = useContext(EngineContext);
   if (!context) {
-    throw new Error("useEngine must be used within an EngineProvider");
+    throw new Error(
+      "useEngine must be used within an EngineProvider. " +
+      "Make sure ProtectedLayout is rendering EngineProvider correctly."
+    );
   }
   return context;
 }

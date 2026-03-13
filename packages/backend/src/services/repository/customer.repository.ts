@@ -260,8 +260,9 @@ export class CustomerRepository {
   }
 
   async getBalance(ctx: RequestContext, customerId: string): Promise<{ totalSales: number; totalPayments: number; balanceDue: number }> {
+    // Use explicit numeric casting to avoid "no parameter $1" error with decimal columns in aggregations
     const salesResult = await db
-      .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END), '0')` })
+      .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount}::numeric ELSE 0 END), '0')` })
       .from(sales)
       .where(and(
         eq(sales.businessId, ctx.businessId),
@@ -270,7 +271,7 @@ export class CustomerRepository {
       ));
 
     const paymentsResult = await db
-      .select({ total: sql<string>`COALESCE(SUM(${abonos.amount}), '0')` })
+      .select({ total: sql<string>`COALESCE(SUM(${abonos.amount}::numeric), '0')` })
       .from(abonos)
       .where(and(
         eq(abonos.businessId, ctx.businessId),

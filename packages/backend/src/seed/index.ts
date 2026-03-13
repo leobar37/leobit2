@@ -283,8 +283,8 @@ async function seedRealProducts(
 
     // Insertar producto con ID preservado usando SQL directo
     await db.execute(`
-      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at)
-      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW())
+      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at, sync_status, sync_attempts)
+      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW(), 'synced', 0)
       ON CONFLICT (id) DO NOTHING
     `);
 
@@ -299,8 +299,8 @@ async function seedRealProducts(
     for (const variantDef of variantsDef) {
       // Insertar variante con ID preservado
       await db.execute(`
-        INSERT INTO product_variants (id, product_id, name, sku, unit_quantity, price, is_active, created_at, updated_at)
-        VALUES ('${variantDef.id}', '${productDef.id}', '${variantDef.name.replace(/'/g, "''")}', '${variantDef.sku}', ${variantDef.unitQuantity}, ${variantDef.price}, true, NOW(), NOW())
+        INSERT INTO product_variants (id, product_id, business_id, name, sku, unit_quantity, price, is_active, created_at, updated_at, sync_status, sync_attempts)
+        VALUES ('${variantDef.id}', '${productDef.id}', '${ctx.businessId}', '${variantDef.name.replace(/'/g, "''")}', '${variantDef.sku}', ${variantDef.unitQuantity}, ${variantDef.price}, true, NOW(), NOW(), 'synced', 0)
         ON CONFLICT (id) DO NOTHING
       `);
 
@@ -544,13 +544,15 @@ async function seedProducts(
     const productDef = productsData[i];
     const variantsDef = variantsData[i];
 
-    const product = await services.product.createProduct(ctx, {
+    const result = await services.product.createProduct(ctx, {
       name: productDef.name,
       type: productDef.type,
       unit: productDef.unit,
       basePrice: parseFloat(productDef.basePrice),
       isActive: productDef.isActive,
     });
+
+    const product = result.data;
 
     console.log(`   ✓ Product: ${product.name}`);
 
@@ -561,7 +563,7 @@ async function seedProducts(
     };
 
     for (const variantDef of variantsDef) {
-      const variant = await services.productVariant.createVariant(ctx, {
+      const variantResult = await services.productVariant.createVariant(ctx, {
         productId: product.id,
         name: variantDef.name,
         sku: variantDef.sku,
@@ -569,6 +571,8 @@ async function seedProducts(
         price: variantDef.price,
         isActive: true,
       });
+
+      const variant = variantResult.data;
 
       console.log(`     ↳ Variant: ${variant.name}`);
 

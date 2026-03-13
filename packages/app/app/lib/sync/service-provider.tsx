@@ -6,6 +6,7 @@ import { SaleService } from "../services/sale-service";
 import { PaymentService } from "../services/payment-service";
 import { PurchaseService } from "../services/purchase-service";
 import { ProductService } from "../services/product-service";
+import { InventoryService } from "../services/inventory-service";
 import { TagService } from "../services/tag-service";
 import { CustomerTagService } from "../services/customer-tag-service";
 import type { ConflictStrategy } from "../sync/config";
@@ -18,6 +19,7 @@ export interface ServicesContextValue {
   paymentService: PaymentService;
   purchaseService: PurchaseService;
   productService: ProductService;
+  inventoryService: InventoryService;
   tagService: TagService;
   customerTagService: CustomerTagService;
   businessId: string;
@@ -46,6 +48,7 @@ export function ServicesProvider({
     const paymentService = new PaymentService(pg, syncService, businessId);
     const purchaseService = new PurchaseService(pg, syncService, businessId);
     const productService = new ProductService(pg, syncService, businessId);
+    const inventoryService = new InventoryService(pg, syncService, businessId);
     const tagService = new TagService(pg, syncService, businessId);
     const customerTagService = new CustomerTagService(pg, syncService, businessId);
 
@@ -57,6 +60,7 @@ export function ServicesProvider({
       paymentService,
       purchaseService,
       productService,
+      inventoryService,
       tagService,
       customerTagService,
       businessId,
@@ -81,9 +85,12 @@ export function useServices(): ServicesContextValue {
   return context;
 }
 
-export function useSyncService(): SyncService {
-  const { syncService } = useServices();
-  return syncService;
+export function useSyncService(): SyncService | null {
+  const context = useContext(ServicesContext);
+  if (!context) {
+    return null;
+  }
+  return context.syncService;
 }
 
 export function useCustomerService(): CustomerService {
@@ -109,6 +116,11 @@ export function usePurchaseService(): PurchaseService {
 export function useProductService(): ProductService {
   const { productService } = useServices();
   return productService;
+}
+
+export function useInventoryService(): InventoryService {
+  const { inventoryService } = useServices();
+  return inventoryService;
 }
 
 export function useTagService(): TagService {
