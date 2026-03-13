@@ -105,6 +105,72 @@ export class EvolutionService {
     }
   }
 
+  async sendImage(
+    instanceName: string,
+    phone: string,
+    imageUrl: string,
+    caption?: string
+  ): Promise<void> {
+    this.ensureConfigured();
+    try {
+      await this.client.messages.sendImage(
+        {
+          number: phone,
+          image: imageUrl,
+          caption: caption,
+        },
+        { instance: instanceName }
+      );
+    } catch (error: any) {
+      console.error("[EvolutionService] Failed to send image:", error);
+      throw new ServiceUnavailableError("No se pudo enviar la imagen. Por favor intente nuevamente.");
+    }
+  }
+
+  async sendVideo(
+    instanceName: string,
+    phone: string,
+    videoUrl: string,
+    caption?: string
+  ): Promise<void> {
+    this.ensureConfigured();
+    try {
+      await this.client.messages.sendVideo(
+        {
+          number: phone,
+          video: videoUrl,
+          caption: caption,
+        },
+        { instance: instanceName }
+      );
+    } catch (error: any) {
+      console.error("[EvolutionService] Failed to send video:", error);
+      throw new ServiceUnavailableError("No se pudo enviar el video. Por favor intente nuevamente.");
+    }
+  }
+
+  async sendDocument(
+    instanceName: string,
+    phone: string,
+    documentUrl: string,
+    fileName?: string
+  ): Promise<void> {
+    this.ensureConfigured();
+    try {
+      await this.client.messages.sendDocument(
+        {
+          number: phone,
+          document: documentUrl,
+          fileName: fileName,
+        },
+        { instance: instanceName }
+      );
+    } catch (error: any) {
+      console.error("[EvolutionService] Failed to send document:", error);
+      throw new ServiceUnavailableError("No se pudo enviar el documento. Por favor intente nuevamente.");
+    }
+  }
+
   async logoutInstance(instanceName: string): Promise<void> {
     this.ensureConfigured();
     try {

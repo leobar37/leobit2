@@ -11,7 +11,7 @@ import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { whatsAppTemplates } from "./whatsapp-templates";
 
-export const messageStatusEnum = ["enviado", "fallido"] as const;
+export const messageStatusEnum = ["enviado", "entregado", "fallido"] as const;
 
 export const whatsAppMessages = pgTable(
   "whatsapp_messages",

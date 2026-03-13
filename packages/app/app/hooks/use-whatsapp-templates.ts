@@ -5,12 +5,23 @@ const WHATSAPP_TEMPLATES_KEY = ["whatsapp", "templates"];
 const WHATSAPP_TEMPLATE_KEY = (id: string) => ["whatsapp", "templates", id];
 const WHATSAPP_DEFAULT_TEMPLATE_KEY = ["whatsapp", "templates", "default"];
 
+export type TemplateCategory = "cobranza" | "ventas" | "agradecimiento" | "entrega" | "otros";
+
+export const TEMPLATE_CATEGORIES: { value: TemplateCategory; label: string }[] = [
+  { value: "cobranza", label: "Cobranza" },
+  { value: "ventas", label: "Ventas" },
+  { value: "agradecimiento", label: "Agradecimiento" },
+  { value: "entrega", label: "Entrega" },
+  { value: "otros", label: "Otros" },
+];
+
 export interface WhatsAppTemplate {
   id: string;
   businessUserId: string;
   businessId: string;
   name: string;
   content: string;
+  category: TemplateCategory;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -19,17 +30,20 @@ export interface WhatsAppTemplate {
 export interface CreateTemplateInput {
   name: string;
   content: string;
+  category?: TemplateCategory;
   isDefault?: boolean;
 }
 
 export interface UpdateTemplateInput {
   name?: string;
   content?: string;
+  category?: TemplateCategory;
   isDefault?: boolean;
 }
 
 export interface TemplateFilters {
   search?: string;
+  category?: TemplateCategory;
   limit?: number;
   offset?: number;
 }
@@ -38,6 +52,7 @@ async function fetchTemplates(filters?: TemplateFilters): Promise<WhatsAppTempla
   const { data, error } = await api.whatsapp.templates.get({
     query: {
       search: filters?.search,
+      category: filters?.category,
       limit: filters?.limit?.toString(),
       offset: filters?.offset?.toString(),
     },
