@@ -3,6 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Building2, Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { useCreateSupplier } from "~/hooks/use-suppliers";
@@ -43,9 +44,11 @@ export default function NuevoProveedorPage() {
   const onSubmit = form.handleSubmit(async (data) => {
     try {
       await createSupplier.mutateAsync(data);
+      toast.success("Proveedor guardado");
       navigate(returnTo && returnTo !== "/proveedores" ? returnTo : "/proveedores");
     } catch (error) {
       console.error("Error creating supplier:", error);
+      toast.error("Error al guardar el proveedor");
     }
   });
 

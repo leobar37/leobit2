@@ -1,66 +1,44 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { eq, and, ilike } from "drizzle-orm";
-import { getDatabase } from "~/engine";
-import { suppliers, type Supplier, SupplierType } from "~/engine/schema";
-import { api } from "~/lib/api-client";
+import type { Supplier } from "@avileo/shared";
+import { useSupplierService, useBusinessId } from "~/lib/sync/service-provider";
+import type {
+  CreateSupplierInput,
+  UpdateSupplierInput,
+  SupplierSearchFilters,
+} from "~/lib/services/supplier-service";
 
-export type { Supplier };
+export type { Supplier, CreateSupplierInput, UpdateSupplierInput };
 
 const SUPPLIERS_QUERY_KEY = "suppliers";
 
 /**
  * Get all suppliers for a business
  */
-export function useSuppliers(businessId: string) {
+export function useSuppliers(filters?: SupplierSearchFilters) {
+  const supplierService = useSupplierService();
+
   return useQuery({
-    queryKey: [SUPPLIERS_QUERY_KEY, businessId],
+    queryKey: [SUPPLIERS_QUERY_KEY, filters],
     queryFn: async () => {
-      const { db } = getDatabase();
-      return db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.businessId, businessId))
-        .orderBy(suppliers.name);
+      return supplierService.findByBusiness(filters);
     },
-    enabled: !!businessId,
   });
 }
 
 /**
  * Search suppliers by name
  */
-export function useSearchSuppliers(
-  businessId: string,
-  searchTerm: string | null
-) {
+export function useSearchSuppliers(searchTerm: string | null) {
+  const supplierService = useSupplierService();
+
   return useQuery({
-    queryKey: [SUPPLIERS_QUERY_KEY, "search", businessId, searchTerm],
+    queryKey: [SUPPLIERS_QUERY_KEY, "search", searchTerm],
     queryFn: async () => {
-      const { db } = getDatabase();
-
-      if (!searchTerm || searchTerm.length < 2) {
-        return db
-          .select()
-          .from(suppliers)
-          .where(eq(suppliers.businessId, businessId))
-          .orderBy(suppliers.name)
-          .limit(20);
-      }
-
-      const term = `%${searchTerm}%`;
-      return db
-        .select()
-        .from(suppliers)
-        .where(
-          and(
-            eq(suppliers.businessId, businessId),
-            ilike(suppliers.name, term)
-          )
-        )
-        .orderBy(suppliers.name)
-        .limit(20);
+      return supplierService.findByBusiness({
+        search: searchTerm || undefined,
+      });
     },
-    enabled: !!businessId,
+    enabled: !!searchTerm,
   });
 }
 
@@ -68,30 +46,16 @@ export function useSearchSuppliers(
  * Get a single supplier
  */
 export function useSupplier(id: string | null) {
+  const supplierService = useSupplierService();
+
   return useQuery({
     queryKey: [SUPPLIERS_QUERY_KEY, id],
     queryFn: async () => {
       if (!id) return null;
-      const { db } = getDatabase();
-      const result = await db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.id, id))
-        .limit(1);
-      return result[0] || null;
+      return supplierService.findById(id);
     },
     enabled: !!id,
   });
-}
-
-interface CreateSupplierInput {
-  name: string;
-  type?: "generic" | "regular" | "internal";
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
 }
 
 /**
@@ -99,12 +63,11 @@ interface CreateSupplierInput {
  */
 export function useCreateSupplier() {
   const queryClient = useQueryClient();
+  const supplierService = useSupplierService();
 
   return useMutation({
     mutationFn: async (input: CreateSupplierInput) => {
-      const { data, error } = await api.suppliers.post(input);
-      if (error) throw new Error(String(error));
-      return data;
+      return supplierService.create(input);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });
@@ -112,29 +75,22 @@ export function useCreateSupplier() {
   });
 }
 
-interface UpdateSupplierInput {
-  id: string;
-  name?: string;
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  isActive?: boolean;
-}
-
 /**
  * Update a supplier
  */
 export function useUpdateSupplier() {
   const queryClient = useQueryClient();
+  const supplierService = useSupplierService();
 
   return useMutation({
-    mutationFn: async (input: UpdateSupplierInput) => {
-      const { id, ...data } = input;
-      const { data: result, error } = await api.suppliers({ id }).put(data);
-      if (error) throw new Error(String(error));
-      return result;
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateSupplierInput;
+    }) => {
+      return supplierService.update(id, input);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -150,12 +106,11 @@ export function useUpdateSupplier() {
  */
 export function useDeleteSupplier() {
   const queryClient = useQueryClient();
+  const supplierService = useSupplierService();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.suppliers({ id }).delete();
-      if (error) throw new Error(String(error));
-      return data;
+      return supplierService.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });

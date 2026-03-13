@@ -8,6 +8,7 @@ import { PurchaseService } from "../services/purchase-service";
 import { ProductService } from "../services/product-service";
 import { TagService } from "../services/tag-service";
 import { CustomerTagService } from "../services/customer-tag-service";
+import { SupplierService } from "../services/supplier-service";
 import type { ConflictStrategy } from "../sync/config";
 
 export interface ServicesContextValue {
@@ -20,6 +21,7 @@ export interface ServicesContextValue {
   productService: ProductService;
   tagService: TagService;
   customerTagService: CustomerTagService;
+  supplierService: SupplierService;
   businessId: string;
   authToken: string;
 }
@@ -48,6 +50,7 @@ export function ServicesProvider({
     const productService = new ProductService(pg, syncService, businessId);
     const tagService = new TagService(pg, syncService, businessId);
     const customerTagService = new CustomerTagService(pg, syncService, businessId);
+    const supplierService = new SupplierService(pg, syncService, businessId);
 
     return {
       pg,
@@ -59,6 +62,7 @@ export function ServicesProvider({
       productService,
       tagService,
       customerTagService,
+      supplierService,
       businessId,
       authToken,
     };
@@ -119,6 +123,11 @@ export function useTagService(): TagService {
 export function useCustomerTagService(): CustomerTagService {
   const { customerTagService } = useServices();
   return customerTagService;
+}
+
+export function useSupplierService(): SupplierService {
+  const { supplierService } = useServices();
+  return supplierService;
 }
 
 export function usePGlite(): PGlite {

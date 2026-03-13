@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers } from "~/hooks/use-suppliers";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { useBusinessId } from "~/lib/sync/service-provider";
 
 function SupplierCard({ supplier }: { supplier: {
   id: string;
@@ -68,7 +69,8 @@ export default function ProveedoresPage() {
   useSetLayout({ title: "Proveedores" });
 
   const [search, setSearch] = useState("");
-  const { data: suppliers, isLoading } = useSuppliers(search);
+  const businessId = useBusinessId();
+  const { data: suppliers, isLoading } = useSuppliers({ search: search || undefined });
 
   return (
     <>
