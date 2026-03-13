@@ -9,22 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { usePurchases } from "~/hooks/use-purchases";
 import { useSetLayout } from "~/components/layout/app-layout";
 
-interface PurchaseWithSupplier {
-  purchase: {
-    id: string;
-    purchaseDate: string;
-    totalAmount: string;
-    status: "pending" | "received" | "cancelled";
-  };
-  supplier?: {
-    id: string;
-    name: string;
-  };
-}
+import type { Purchase } from "~/lib/services/purchase-service";
 
-function PurchaseCard({ data }: { data: PurchaseWithSupplier }) {
-  const { purchase, supplier } = data;
-  
+function PurchaseCard({ purchase }: { purchase: Purchase }) {
   const statusLabels = {
     pending: "Pendiente",
     received: "Recibido",
@@ -48,9 +35,9 @@ function PurchaseCard({ data }: { data: PurchaseWithSupplier }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold">{supplier?.name || "Sin proveedor"}</h3>
+                <h3 className="font-semibold">{"Sin proveedor"}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(purchase.purchaseDate).toLocaleDateString("es-PE")}
+                  {new Date(purchase.purchase_date).toLocaleDateString("es-PE")}
                 </p>
               </div>
               <Badge variant="secondary" className={statusColors[purchase.status]}>
@@ -60,7 +47,7 @@ function PurchaseCard({ data }: { data: PurchaseWithSupplier }) {
 
             <div className="mt-2">
               <span className="font-medium">
-                S/ {formatCurrency(purchase.totalAmount)}
+                S/ {formatCurrency(purchase.total_amount)}
               </span>
             </div>
           </div>
@@ -74,11 +61,10 @@ export default function ComprasPage() {
   useSetLayout({ title: "Compras" });
 
   const [search, setSearch] = useState("");
-  const { data: purchasesWithSupplier, isLoading } = usePurchases();
+  const { data: purchases, isLoading } = usePurchases();
 
-  const filteredData = purchasesWithSupplier?.filter(
-    (row) =>
-      row.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
+  const filteredData = purchases?.filter(
+    (purchase) =>
       !search
   );
 
@@ -108,13 +94,13 @@ export default function ComprasPage() {
         )}
 
         <div className="space-y-3">
-          {filteredData?.map((row) => (
+          {filteredData?.map((purchase) => (
             <Link
-              key={row.purchase.id}
-              to={`/compras/${row.purchase.id}`}
+              key={purchase.id}
+              to={`/compras/${purchase.id}`}
               className="block"
             >
-              <PurchaseCard data={row} />
+              <PurchaseCard purchase={purchase} />
             </Link>
           ))}
         </div>

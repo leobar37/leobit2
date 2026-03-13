@@ -19,11 +19,10 @@ import {
   User,
   ArrowLeft,
   Wallet,
-  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useClearSyncStorage } from "@/hooks/use-clear-sync-storage";
 import { Button } from "@/components/ui/button";
+import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
 import {
   Sheet,
   SheetContent,
@@ -74,7 +73,12 @@ export function useSetLayout(config: LayoutConfig) {
       showBackButton: config.showBackButton,
       backHref: config.backHref,
     }),
-    [config.title, config.showBottomNav, config.showBackButton, config.backHref]
+    [
+      config.title,
+      config.showBottomNav,
+      config.showBackButton,
+      config.backHref,
+    ],
   );
 
   const actionsRef = useRef(config.actions);
@@ -88,51 +92,16 @@ export function useSetLayout(config: LayoutConfig) {
   }, [stableConfig, setConfig]);
 }
 
-function ClearSyncButton() {
-  const clearSync = useClearSyncStorage();
-
-  const handleClear = async () => {
-    if (!confirm("¿Estás seguro? Esto limpiará solo los datos locales de sincronización y conservará tu sesión.")) {
-      return;
-    }
-
-    try {
-      await clearSync.mutateAsync({ preserveSession: true });
-    } catch (error) {
-      console.error("Failed to clear storage:", error);
-      // If automatic cleanup fails, show manual instructions
-      alert(
-        "No se pudo reiniciar automáticamente.\n\n" +
-        "Para limpiar manualmente:\n" +
-        "1. Abre las Developer Tools (F12)\n" +
-        "2. Ve a Application > Storage\n" +
-        "3. Haz clic en 'Clear site data'\n" +
-        "4. Recarga la página (F5)"
-      );
-    }
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      className="w-full rounded-xl text-muted-foreground hover:text-orange-600"
-      onClick={handleClear}
-      disabled={clearSync.isPending}
-    >
-      <RefreshCw className={`mr-2 h-4 w-4 ${clearSync.isPending ? "animate-spin" : ""}`} />
-      {clearSync.isPending ? "Reiniciando..." : "Reiniciar sincronización"}
-    </Button>
-  );
-}
-
 interface AppLayoutProps {
   children: ReactNode;
+  headerAccessory?: ReactNode;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [toolbarPortalHost, setToolbarPortalHost] = useState<HTMLDivElement | null>(null);
+  const [toolbarPortalHost, setToolbarPortalHost] =
+    useState<HTMLDivElement | null>(null);
   const [config, setConfig] = useState<LayoutConfig>({
     title: "Avileo",
     showBottomNav: true,
@@ -157,34 +126,46 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ config, setConfig, toolbarPortalHost }}>
-      <div className="min-h-screen bg-gray-50">
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200">
+      <div className="min-h-screen app-shell">
+        <header className="sticky top-0 z-50 border-b shell-surface">
           <div className="flex items-center justify-between h-16 px-3 sm:px-4">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               {showBackButton && (
-                <Link to={backHref} className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
+                <Link
+                  to={backHref}
+                  className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+                >
                   <ArrowLeft className="h-5 w-5 pointer-events-none" />
                 </Link>
               )}
 
               {title === "Avileo" && !showBackButton ? (
                 <>
-                  <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 shadow-sm">
                     <span className="text-white font-bold text-lg">A</span>
                   </div>
-                  <span className="font-bold text-lg text-foreground">Avileo</span>
+                  <span className="truncate font-bold text-lg tracking-tight text-foreground">
+                    Avileo
+                  </span>
                 </>
               ) : (
-                <h1 className="font-bold text-lg">{title}</h1>
+                <h1 className="truncate font-bold text-lg tracking-tight">
+                  {title}
+                </h1>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {actions}
+              {headerAccessory}
 
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-xl">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shell-toolbar-button rounded-2xl text-muted-foreground hover:text-foreground"
+                  >
                     <User className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
@@ -201,7 +182,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </div>
                       <div>
                         <p className="font-semibold">{user?.name}</p>
-                        <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user?.email}
+                        </p>
                       </div>
                     </div>
 
@@ -214,7 +197,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                       Cerrar sesion
                     </Button>
 
-                    <ClearSyncButton />
+                    <SyncDevToolsDrawer />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -222,7 +205,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        <main className={`px-3 py-4 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}>
+        <main
+          className={`px-3 py-5 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}
+        >
           {children}
         </main>
 
@@ -236,7 +221,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
 
         {showBottomNav && (
-          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 px-3 sm:px-4 py-2">
+          <nav className="fixed bottom-0 left-0 right-0 border-t shell-surface px-3 sm:px-4 py-2.5">
             <div className="flex items-center justify-around max-w-md mx-auto">
               {menuItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.href);
@@ -244,14 +229,18 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <Link
                     key={item.href}
                     to={item.href}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${
+                    className={`shell-nav-item flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-colors ${
                       isActive
-                        ? "bg-orange-100 text-orange-600"
-                        : "hover:bg-orange-50"
+                        ? "shell-nav-active text-orange-700"
+                        : "text-muted-foreground"
                     }`}
                   >
-                    <item.icon className={`h-5 w-5 ${isActive ? "text-orange-600" : "text-muted-foreground"}`} />
-                    <span className={`text-xs ${isActive ? "text-orange-600 font-medium" : "text-muted-foreground"}`}>
+                    <item.icon
+                      className={`h-5 w-5 ${isActive ? "text-orange-600" : "text-muted-foreground"}`}
+                    />
+                    <span
+                      className={`text-xs ${isActive ? "font-semibold text-orange-700" : "text-muted-foreground"}`}
+                    >
                       {item.label}
                     </span>
                   </Link>

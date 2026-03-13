@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   CreditCard,
@@ -10,6 +10,7 @@ import {
   Calculator as CalculatorIcon,
   Plus,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,72 +24,69 @@ import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSmartCalculator } from "~/hooks/use-smart-calculator";
 import {
   useSale,
-  useUpdateSale,
   useFinalizeSale,
   useSaleItems,
   useAddSaleItem,
   useRemoveSaleItem,
+  useUpdateSaleItem,
 } from "~/hooks/use-sales-db";
+import { useUpdateSale } from "~/hooks/use-sales";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { formatCurrency, formatKilos, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { useNewSaleContext } from "./new-sale-context";
-
-const isSaleEditorDebugEnabled = import.meta.env.DEV;
-
-function debugSaleEditor(message: string, payload?: unknown) {
-  if (!isSaleEditorDebugEnabled) return;
-
-  if (payload === undefined) {
-    console.log(`[SaleEditorDebug] ${message}`);
-    return;
-  }
-
-  console.log(`[SaleEditorDebug] ${message}`, payload);
-}
+import { useToast } from "~/hooks/use-toast";
 
 export function CustomerSection() {
   const { saleId } = useNewSaleContext();
-  const { data: sales } = useSale(saleId);
+  const { data: sales, refetch } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const updateSale = useUpdateSale();
+  const { toast } = useToast();
 
   const sale = sales?.[0] || null;
   const calculations = useSaleCalculations(sale, items);
 
-  const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null } | null) => {
-    if (!saleId) {
-      debugSaleEditor("Skipped customer selection because saleId is missing");
+  const handleSelectCustomer = async (
+    customer: { id: string; name: string; phone?: string | null } | null,
+  ) => {
+    if (!saleId || !updateSale) {
       return;
     }
 
-    debugSaleEditor("Selecting customer for sale", {
-      saleId,
-      customerId: customer?.id ?? null,
-      hasLocalSale: Boolean(sale),
-    });
-
-    void updateSale(saleId, {
-      customerId: customer?.id ?? null,
-    }).catch((error) => {
-      debugSaleEditor("Failed to update sale customer", {
-        saleId,
-        customerId: customer?.id ?? null,
-        error,
+    try {
+      await updateSale.mutateAsync({
+        id: saleId,
+        input: {
+          customerId: customer?.id ?? null,
+        },
       });
-      console.error(error);
-    });
+      await refetch();
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      toast.error("Error al seleccionar cliente", {
+        description: "No se pudo actualizar el cliente de la venta",
+      });
+    }
   };
+
+  // Handle both camelCase and snake_case from DB
+  const customerId = sale?.customerId ?? (sale as any)?.customer_id ?? null;
+  const customer = sale?.customer ?? (sale as any)?.customer ?? null;
 
   return (
     <CustomerSelect
-      value={sale?.customerId ?? null}
-      selectedCustomer={sale?.customer ?? null}
+      value={customerId}
+      selectedCustomer={customer}
       onChange={handleSelectCustomer}
       placeholder="Seleccionar cliente"
-      helperText={calculations.requiresCustomer ? "Requerido para venta a crédito" : undefined}
+      helperText={
+        calculations.requiresCustomer
+          ? "Requerido para venta a crédito"
+          : undefined
+      }
     />
   );
 }
@@ -97,24 +95,29 @@ export function CustomerSection() {
 // Payment Mode Section Component
 // ============================================
 
-const paymentModes: { value: PaymentMode; label: string; icon: React.ReactNode; description: string }[] = [
+const paymentModes: {
+  value: PaymentMode;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}[] = [
   {
     value: "pago_total",
     label: "Pago Total",
     icon: <Wallet className="h-5 w-5" />,
-    description: "El cliente paga todo en efectivo"
+    description: "El cliente paga todo en efectivo",
   },
   {
     value: "a_cuenta",
     label: "A Cuenta",
     icon: <CreditCard className="h-5 w-5" />,
-    description: "El cliente da un adelanto"
+    description: "El cliente da un adelanto",
   },
   {
     value: "debe_todo",
     label: "Debe Todo",
     icon: <Receipt className="h-5 w-5" />,
-    description: "El cliente paga después"
+    description: "El cliente paga después",
   },
 ];
 
@@ -123,6 +126,7 @@ export function PaymentModeSection() {
   const { data: sales } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const updateSale = useUpdateSale();
+  const { toast } = useToast();
 
   const sale = sales?.[0] || null;
   const calculations = useSaleCalculations(sale, items);
@@ -131,37 +135,53 @@ export function PaymentModeSection() {
     return null;
   }
 
-  const handleSetPaymentMode = (mode: PaymentMode) => {
-    if (saleId) {
-      const totalAmount = calculations.totalAmount.toFixed(2);
-      const amountPaid =
-        mode === "pago_total"
-          ? totalAmount
-          : mode === "debe_todo"
-            ? "0.00"
-            : sale?.amountPaid || "0.00";
+  const handleSetPaymentMode = async (mode: PaymentMode) => {
+    if (!saleId) return;
 
-      updateSale(saleId, {
-        paymentMode: mode,
-        saleType: mode === "pago_total" ? "contado" : "credito",
-        totalAmount,
-        amountPaid,
-        balanceDue: calculations.balanceDue.toFixed(2),
+    const totalAmount = calculations.totalAmount.toFixed(2);
+    const amountPaid =
+      mode === "pago_total"
+        ? totalAmount
+        : mode === "debe_todo"
+          ? "0.00"
+          : sale?.amountPaid || "0.00";
+
+    try {
+      await updateSale.mutateAsync({
+        id: saleId,
+        input: {
+          paymentMode: mode,
+          saleType: mode === "pago_total" ? "contado" : "credito",
+          totalAmount,
+          amountPaid,
+          balanceDue: calculations.balanceDue.toFixed(2),
+        },
+      });
+    } catch {
+      toast.error("Error al cambiar modo de pago", {
+        description: "No se pudo actualizar el modo de pago",
       });
     }
   };
 
-  const handleSetAmountPaid = (amount: string) => {
-    if (saleId) {
-      updateSale(saleId, {
-        amountPaid: amount,
-        balanceDue: calculations.balanceDue.toFixed(2),
+  const handleSetAmountPaid = async (amount: string) => {
+    if (!saleId) return;
+
+    try {
+      await updateSale.mutateAsync({
+        id: saleId,
+        input: {
+          amountPaid: amount,
+          balanceDue: calculations.balanceDue.toFixed(2),
+        },
       });
+    } catch {
+      toast.error("Error al actualizar monto", {});
     }
   };
 
   return (
-    <Card className="border-0 rounded-2xl bg-card">
+    <Card className="shell-card rounded-3xl border-0">
       <CardContent className="p-4 space-y-4">
         <div className="space-y-2">
           {paymentModes.map((mode) => (
@@ -169,23 +189,34 @@ export function PaymentModeSection() {
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left",
+                "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                 sale?.paymentMode === mode.value
-                  ? "bg-orange-100 border-2 border-orange-500"
-                  : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+                  ? "shell-card-muted border-orange-300 bg-orange-50/90"
+                  : "border-white/70 bg-white/60 hover:bg-white/82",
               )}
             >
-              <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                sale?.paymentMode === mode.value ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-600"
-              )}>
+              <div
+                className={cn(
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
+                  sale?.paymentMode === mode.value
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "shell-card-muted bg-white/72 text-gray-600",
+                )}
+              >
                 {mode.icon}
               </div>
               <div className="flex-1">
-                <p className={cn("font-medium", sale?.paymentMode === mode.value && "text-orange-900")}>
+                <p
+                  className={cn(
+                    "font-medium",
+                    sale?.paymentMode === mode.value && "text-orange-900",
+                  )}
+                >
                   {mode.label}
                 </p>
-                <p className="text-sm text-muted-foreground">{mode.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {mode.description}
+                </p>
               </div>
               {sale?.paymentMode === mode.value && (
                 <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
@@ -197,7 +228,7 @@ export function PaymentModeSection() {
         </div>
 
         {sale?.paymentMode === "a_cuenta" && (
-          <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-3 border-t pt-3 shell-divider">
             <label className="text-sm font-medium">Monto pagado (S/)</label>
             <Input
               type="number"
@@ -205,10 +236,10 @@ export function PaymentModeSection() {
               value={sale?.amountPaid || ""}
               onChange={(e) => handleSetAmountPaid(e.target.value)}
               className={cn(
-                "text-lg rounded-xl",
+                "rounded-2xl border-white/70 bg-white/72 text-lg shadow-sm",
                 !calculations.hasValidPartial &&
                   sale?.amountPaid &&
-                  "border-red-500 focus-visible:ring-red-500"
+                  "border-red-500 focus-visible:ring-red-500",
               )}
             />
             {!calculations.hasValidPartial && sale?.amountPaid && (
@@ -218,20 +249,26 @@ export function PaymentModeSection() {
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total:</span>
-              <span className="font-medium">S/ {formatCurrency(calculations.totalAmount)}</span>
+              <span className="font-medium">
+                S/ {formatCurrency(calculations.totalAmount)}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Saldo pendiente:</span>
-              <span className="font-medium text-orange-600">S/ {formatCurrency(calculations.balanceDue)}</span>
+              <span className="font-medium text-orange-600">
+                S/ {formatCurrency(calculations.balanceDue)}
+              </span>
             </div>
           </div>
         )}
 
         {sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
-          <div className="pt-2 border-t">
+          <div className="border-t pt-3 shell-divider">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total a deber:</span>
-              <span className="font-medium text-orange-600">S/ {formatCurrency(calculations.totalAmount)}</span>
+              <span className="font-medium text-orange-600">
+                S/ {formatCurrency(calculations.totalAmount)}
+              </span>
             </div>
           </div>
         )}
@@ -245,33 +282,58 @@ export function PaymentModeSection() {
 // ============================================
 
 function CartItemRow({ itemId }: { itemId: string }) {
-  const { saleId } = useNewSaleContext();
+  const navigate = useNavigate();
+  const { saleId, setEditingItem } = useNewSaleContext();
   const { data: items = [] } = useSaleItems(saleId);
   const removeItem = useRemoveSaleItem();
 
-  const item = items.find(i => i.id === itemId);
+  const item = items.find((i) => i.id === itemId);
   if (!item) return null;
 
+  const handleEdit = () => {
+    setEditingItem({
+      itemId: item.id,
+      productId: item.productId,
+      variantId: item.variantId,
+      productName: item.productName,
+      variantName: item.variantName,
+      quantity: parseFloat(item.quantity ?? "0"),
+      unitPrice: parseFloat(item.unitPrice ?? "0"),
+      subtotal: parseFloat(item.subtotal),
+    });
+    navigate(`/ventas/${saleId}/editar/calculadora`);
+  };
+
   return (
-    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+    <div className="shell-card-muted flex items-center gap-3 rounded-2xl p-3.5">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/80">
         <Package className="h-5 w-5 text-orange-600" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{item.productName}</p>
         <p className="text-sm text-muted-foreground">
-          {item.variantName} · {formatKilos(parseFloat(item.quantity ?? "0"))} kg × S/{" "}
-          {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
+          {item.variantName} · {formatKilos(parseFloat(item.quantity ?? "0"))}{" "}
+          kg × S/ {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
         </p>
       </div>
       <div className="text-right">
-        <p className="font-semibold">S/ {formatCurrency(parseFloat(item.subtotal))}</p>
+        <p className="font-semibold">
+          S/ {formatCurrency(parseFloat(item.subtotal))}
+        </p>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => removeItem(item.id)}
-        className="text-muted-foreground hover:text-destructive flex-shrink-0"
+        onClick={handleEdit}
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-orange-600"
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => removeItem.mutate({ saleId: saleId!, itemId: item.id })}
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -292,7 +354,7 @@ export function CartSection() {
   }
 
   return (
-    <Card className="border-0 rounded-2xl bg-card">
+    <Card className="shell-card rounded-3xl border-0">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Productos ({items.length})</CardTitle>
       </CardHeader>
@@ -322,7 +384,7 @@ export function SaleSummaryCard() {
   }
 
   return (
-    <Card className="border-0 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+    <Card className="rounded-3xl border border-orange-300/50 bg-gradient-to-br from-orange-500 via-orange-500 to-amber-500 text-white shadow-[0_22px_48px_rgba(249,115,22,0.24)]">
       <CardContent className="p-4 space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-orange-100">Total productos:</span>
@@ -331,37 +393,44 @@ export function SaleSummaryCard() {
 
         <div className="flex justify-between items-center">
           <span className="text-orange-100">Monto total:</span>
-          <span className="text-2xl font-bold">S/ {formatCurrency(calculations.totalAmount)}</span>
+          <span className="text-2xl font-bold">
+            S/ {formatCurrency(calculations.totalAmount)}
+          </span>
         </div>
 
         {sale?.paymentMode === "a_cuenta" && (
           <>
             <div className="flex justify-between items-center">
               <span className="text-orange-100">Pagado:</span>
-              <span className="font-semibold">S/ {formatCurrency(calculations.amountPaidValue)}</span>
+              <span className="font-semibold">
+                S/ {formatCurrency(calculations.amountPaidValue)}
+              </span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-orange-400">
+            <div className="flex justify-between items-center pt-2 border-t border-orange-300/70">
               <span className="text-orange-100">Saldo:</span>
-              <span className="font-bold">S/ {formatCurrency(calculations.balanceDue)}</span>
+              <span className="font-bold">
+                S/ {formatCurrency(calculations.balanceDue)}
+              </span>
             </div>
           </>
         )}
 
         {sale?.paymentMode === "debe_todo" && (
-          <div className="flex justify-between items-center pt-2 border-t border-orange-400">
+          <div className="flex justify-between items-center pt-2 border-t border-orange-300/70">
             <span className="text-orange-100">Total a deber:</span>
-            <span className="font-bold">S/ {formatCurrency(calculations.totalAmount)}</span>
+            <span className="font-bold">
+              S/ {formatCurrency(calculations.totalAmount)}
+            </span>
           </div>
         )}
 
         {!calculations.canSubmit && (
-          <div className="p-2 bg-white/20 rounded-lg text-sm text-center">
+          <div className="rounded-2xl bg-white/18 p-3 text-center text-sm backdrop-blur-sm">
             {items.length === 0
               ? "Agrega productos para continuar"
               : calculations.requiresCustomer && !sale?.customerId
-              ? "Selecciona un cliente para venta a crédito"
-              : "Revisa el monto pagado"
-            }
+                ? "Selecciona un cliente para venta a crédito"
+                : "Revisa el monto pagado"}
           </div>
         )}
       </CardContent>
@@ -401,8 +470,8 @@ export function SubmitSaleButton() {
         },
       });
       navigate("/ventas");
-    } catch (error) {
-      console.error("Failed to submit sale:", error);
+    } catch {
+      // Error is handled by mutate's onError
     }
   };
 
@@ -411,18 +480,16 @@ export function SubmitSaleButton() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-100 p-4 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 border-t shell-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
       <Button
         onClick={handleSubmit}
         disabled={!calculations.canSubmit || finalizeSale.isPending}
-        className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300"
+        className="h-14 w-full rounded-2xl bg-orange-500 text-lg font-semibold shadow-[0_16px_32px_rgba(249,115,22,0.24)] hover:bg-orange-600 disabled:bg-orange-300 disabled:opacity-100"
       >
         {finalizeSale.isPending ? (
           "Procesando..."
         ) : (
-          <>
-            Finalizar Venta · S/ {formatCurrency(calculations.totalAmount)}
-          </>
+          <>Finalizar Venta · S/ {formatCurrency(calculations.totalAmount)}</>
         )}
       </Button>
     </div>
@@ -439,11 +506,16 @@ interface CalculatorContentProps {
 
 export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const navigate = useNavigate();
-  const { saleId } = useNewSaleContext();
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const { saleId, editingItem, setEditingItem } = useNewSaleContext();
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null,
+  );
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
 
   const addItem = useAddSaleItem();
+  const updateItem = useUpdateSaleItem();
   const { settings } = useBusinessSettings();
 
   const {
@@ -451,20 +523,23 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     isLoading: isProductsLoading,
     isFetching: isProductsFetching,
   } = useProducts();
-  const selectedProduct = products.find(p => p.id === selectedProductId);
+  const selectedProduct = products.find((p) => p.id === selectedProductId);
 
   const {
     data: variants = [],
     isLoading: isVariantsLoading,
     isFetching: isVariantsFetching,
   } = useVariantsByProduct(selectedProductId || "", {
-    isActive: true
+    isActive: true,
   });
-  const selectedVariant = variants.find(v => v.id === selectedVariantId);
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId);
 
   const calculatorSettings = settings?.calculators?.sales;
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
+
+  const isEditMode = !!editingItem;
+  const initializedRef = useRef(false);
 
   const {
     form,
@@ -483,23 +558,64 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     hideTara,
   });
 
-  const handleAddToCart = async () => {
-    if (!selectedProduct || !selectedVariant || !calculation.isValid || !saleId) {
+  // Initialize edit mode - pre-select product, variant and fill calculator
+  useEffect(() => {
+    // Reset when editing a different item
+    initializedRef.current = false;
+
+    if (editingItem && variants.length > 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      setSelectedProductId(editingItem.productId);
+      setSelectedVariantId(editingItem.variantId);
+      // Set calculator values after variants are loaded
+      setFieldValue("quantity", editingItem.quantity.toString());
+      setFieldValue("unitPrice", editingItem.unitPrice.toString());
+      setFieldValue("subtotal", editingItem.subtotal.toString());
+    }
+  }, [editingItem, variants, setFieldValue, setSelectedProductId, setSelectedVariantId]);
+
+  const handleSave = async () => {
+    if (
+      !selectedProduct ||
+      !selectedVariant ||
+      !calculation.isValid ||
+      !saleId
+    ) {
       return;
     }
 
-    await addItem(saleId, {
-      productId: selectedProduct.id,
-      variantId: selectedVariant.id,
-      productName: selectedProduct.name,
-      variantName: selectedVariant.name,
-      quantity: calculation.quantity.toString(),
-      unitPrice: calculation.unitPrice.toString(),
-      subtotal: calculation.subtotal.toString(),
-      isModified: false,
-    });
+    if (isEditMode && editingItem) {
+      // Update existing item
+      await updateItem.mutateAsync({
+        saleId,
+        itemId: editingItem.itemId,
+        data: {
+          quantity: calculation.quantity,
+          unitPrice: calculation.unitPrice,
+          subtotal: calculation.subtotal,
+        },
+      });
+      setEditingItem(null);
+    } else {
+      // Add new item
+      await addItem.mutateAsync({
+        saleId,
+        item: {
+          productId: selectedProduct.id,
+          variantId: selectedVariant.id,
+          quantity: Number(calculation.quantity),
+          price: Number(calculation.unitPrice),
+          subtotal: Number(calculation.subtotal),
+        },
+      });
+    }
 
-    navigate(returnPath || getSaleEditorPath(saleId));
+    navigate(returnPath ?? getSaleEditorPath(saleId));
+  };
+
+  const handleCancel = () => {
+    setEditingItem(null);
+    navigate(returnPath || getSaleEditorPath(saleId!));
   };
 
   return (
@@ -512,14 +628,17 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
           {isProductsLoading ? (
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                <div
+                  key={index}
+                  className="shell-card rounded-2xl p-3 space-y-2"
+                >
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
               ))}
             </div>
           ) : products.filter((product) => product.isActive).length === 0 ? (
-            <Card className="border-0 rounded-2xl bg-card">
+            <Card className="shell-card rounded-3xl border-0">
               <CardContent className="p-4 text-sm text-muted-foreground">
                 No hay productos activos para vender.
               </CardContent>
@@ -527,27 +646,29 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
-                {products.filter(p => p.isActive).map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => {
-                      setSelectedProductId(product.id);
-                      setSelectedVariantId(null);
-                      handleClear();
-                    }}
-                    className={cn(
-                      "p-3 rounded-xl border-2 text-left transition-colors",
-                      selectedProductId === product.id
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-orange-200"
-                    )}
-                  >
-                    <p className="font-medium text-sm">{product.name}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {product.unit === "kg" ? "Por kilo" : "Por unidad"}
-                    </Badge>
-                  </button>
-                ))}
+                {products
+                  .filter((p) => p.isActive)
+                  .map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => {
+                        setSelectedProductId(product.id);
+                        setSelectedVariantId(null);
+                        handleClear();
+                      }}
+                      className={cn(
+                        "rounded-2xl border p-3 text-left transition-colors",
+                        selectedProductId === product.id
+                          ? "shell-card-muted border-orange-300 bg-orange-50/90"
+                          : "border-white/70 bg-white/60 hover:bg-white/82",
+                      )}
+                    >
+                      <p className="font-medium text-sm">{product.name}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {product.unit === "kg" ? "Por kilo" : "Por unidad"}
+                      </Badge>
+                    </button>
+                  ))}
               </div>
               {isProductsFetching && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -566,14 +687,17 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
             {isVariantsLoading ? (
               <div className="grid grid-cols-2 gap-2">
                 {Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                  <div
+                    key={index}
+                    className="shell-card rounded-2xl p-3 space-y-2"
+                  >
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-4 w-14" />
                   </div>
                 ))}
               </div>
             ) : variants.length === 0 ? (
-              <Card className="border-0 rounded-2xl bg-card">
+              <Card className="shell-card rounded-3xl border-0">
                 <CardContent className="p-4 text-sm text-muted-foreground">
                   Este producto no tiene presentaciones activas.
                 </CardContent>
@@ -589,10 +713,10 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                         handleClear();
                       }}
                       className={cn(
-                        "p-3 rounded-xl border-2 text-left transition-colors",
+                        "rounded-2xl border p-3 text-left transition-colors",
                         selectedVariantId === variant.id
-                          ? "border-orange-500 bg-orange-50"
-                          : "border-gray-200 hover:border-orange-200"
+                          ? "shell-card-muted border-orange-300 bg-orange-50/90"
+                          : "border-white/70 bg-white/60 hover:bg-white/82",
                       )}
                     >
                       <p className="font-medium text-sm">{variant.name}</p>
@@ -615,7 +739,7 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
 
         {/* Calculator Form */}
         {selectedVariant && (
-          <div className="space-y-4 pt-4 border-t">
+          <div className="space-y-4 border-t pt-4 shell-divider">
             <div className="flex items-center gap-2">
               <CalculatorIcon className="h-5 w-5 text-orange-600" />
               <span className="font-medium">Calculadora</span>
@@ -645,7 +769,9 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("kilos", value)}
                   fieldType="quantity"
                   isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("quantity")
+                  }
                   decimals={3}
                 />
                 <CalculatorInput
@@ -656,9 +782,15 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("pricePerKg", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("price")
+                  }
                   decimals={2}
-                  helperText={selectedVariant?.price ? `Precio base: S/ ${selectedVariant.price}` : undefined}
+                  helperText={
+                    selectedVariant?.price
+                      ? `Precio base: S/ ${selectedVariant.price}`
+                      : undefined
+                  }
                 />
                 <CalculatorInput
                   name="totalAmount"
@@ -668,7 +800,9 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("totalAmount", value)}
                   fieldType="total"
                   isAutoCalculateTarget={isFieldAutoCalculated("total")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("total")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("total")
+                  }
                   decimals={2}
                 />
               </div>
@@ -683,7 +817,9 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("packs", value)}
                   fieldType="quantity"
                   isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("quantity")
+                  }
                   decimals={0}
                 />
                 <CalculatorInput
@@ -694,9 +830,15 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("pricePerPack", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("price")
+                  }
                   decimals={2}
-                  helperText={selectedVariant?.price ? `Precio base: S/ ${selectedVariant.price}` : undefined}
+                  helperText={
+                    selectedVariant?.price
+                      ? `Precio base: S/ ${selectedVariant.price}`
+                      : undefined
+                  }
                 />
                 <CalculatorInput
                   name="totalAmount"
@@ -706,7 +848,9 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                   onChange={(value) => setFieldValue("totalAmount", value)}
                   fieldType="total"
                   isAutoCalculateTarget={isFieldAutoCalculated("total")}
-                  onToggleAutoCalculate={() => toggleAutoCalculateField("total")}
+                  onToggleAutoCalculate={() =>
+                    toggleAutoCalculateField("total")
+                  }
                   decimals={2}
                 />
               </div>
@@ -714,23 +858,30 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
 
             {/* Calculation Summary */}
             {calculation.isValid && (
-              <div className="p-4 bg-orange-50 rounded-xl space-y-2">
+              <div className="shell-card-muted space-y-2 rounded-2xl p-4">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Cantidad:</span>
+                  <span className="text-sm text-muted-foreground">
+                    Cantidad:
+                  </span>
                   <span className="font-medium">
                     {isKgProduct
                       ? `${formatKilos(calculation.quantity)} kg`
-                      : `${Math.round(calculation.quantity)} unidades`
-                    }
+                      : `${Math.round(calculation.quantity)} unidades`}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Precio unitario:</span>
-                  <span className="font-medium">S/ {formatCurrency(calculation.unitPrice)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Precio unitario:
+                  </span>
+                  <span className="font-medium">
+                    S/ {formatCurrency(calculation.unitPrice)}
+                  </span>
                 </div>
-                <div className="flex justify-between pt-2 border-t border-orange-200">
+                <div className="flex justify-between border-t border-orange-200/70 pt-2">
                   <span className="font-medium">Subtotal:</span>
-                  <span className="font-bold text-lg">S/ {formatCurrency(calculation.subtotal)}</span>
+                  <span className="font-bold text-lg">
+                    S/ {formatCurrency(calculation.subtotal)}
+                  </span>
                 </div>
               </div>
             )}
@@ -740,18 +891,20 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
 
       {/* Action Buttons */}
       {selectedVariant && (
-        <div className="p-4 border-t border-gray-200 space-y-2">
+        <div className="space-y-2 border-t px-4 py-4 shell-surface shell-divider">
           <Button
-            onClick={handleAddToCart}
-            disabled={!isValid}
-            className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300"
+            onClick={handleSave}
+            disabled={!isValid || updateItem.isPending || addItem.isPending}
+            className="h-12 w-full rounded-2xl bg-orange-500 shadow-[0_14px_28px_rgba(249,115,22,0.2)] hover:bg-orange-600 disabled:bg-orange-300"
           >
-            Agregar al carrito · S/ {formatCurrency(calculation.subtotal)}
+            {isEditMode
+              ? `Actualizar · S/ ${formatCurrency(calculation.subtotal)}`
+              : `Agregar al carrito · S/ ${formatCurrency(calculation.subtotal)}`}
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate(returnPath || "/ventas")}
-            className="w-full h-12 rounded-xl"
+            onClick={handleCancel}
+            className="h-12 w-full rounded-2xl border-white/70 bg-white/76 shadow-sm hover:bg-white"
           >
             Cancelar
           </Button>

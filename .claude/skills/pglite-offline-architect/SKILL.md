@@ -35,7 +35,9 @@ These documents contain:
 - Troubleshooting sync issues
 - Making architecture decisions
 
-> **Architecture pattern: Electric for reads, API for writes, Drizzle everywhere**
+> **Architecture pattern: PGlite local-first, Custom Sync Queue for writes**
+
+> **IMPORTANT:** Avileo uses a **custom sync service** instead of ElectricSQL for writes. See REFERENCE.md for the actual implementation patterns.
 
 ## When to Use This Pattern
 
@@ -151,6 +153,8 @@ pg.electric.syncShapeToTable({
 - [ ] Create schema in PGlite (tables + indexes)
 - [ ] Configure sync shapes for your entities
 - [ ] Implement live queries with `useLiveQuery`
+- [ ] When adding a new synced table, update all sync layers:
+  `shape-config` or shape registration, local PGlite table creation, backend tenant filter/proxy logic, and `REPLICA IDENTITY FULL` on Postgres
 
 ### Phase 3: Write Path
 - [ ] Create API endpoints for writes
@@ -210,6 +214,16 @@ pg.electric.syncShapeToTable({
 ### 4. Not handling shape errors
 ❌ **Don't:** Ignore `onError` callback
 ✅ **Do:** Log errors and show user-friendly messages
+
+### 5. Adding only the shape definition
+❌ **Don't:** Assume adding one `syncShapeToTable` config is enough
+✅ **Do:** Treat new synced tables as a full-stack change:
+- frontend shape registration
+- local PGlite table/schema creation
+- backend tenant-filter logic for Electric
+- database `REPLICA IDENTITY FULL`
+
+For the full checklist and examples, see `REFERENCE.md` in this skill.
 
 ## Resources
 

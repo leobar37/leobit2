@@ -23,8 +23,11 @@ export const productSchema = z.object({
   basePrice: z.string(),
   isActive: z.boolean().default(true),
   imageId: z.string().nullable(),
-  createdAt: z.coerce.date(),
   hasVariants: z.boolean().optional(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("synced"),
+  syncAttempts: z.number().default(0),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
 export type Product = z.infer<typeof productSchema>;
@@ -48,6 +51,7 @@ export type Payment = z.infer<typeof paymentSchema>;
 
 export const saleItemSchema = z.object({
   id: z.string(),
+  businessId: z.string(),
   saleId: z.string(),
   productId: z.string(),
   variantId: z.string(),

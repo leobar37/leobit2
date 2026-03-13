@@ -4,11 +4,13 @@
 
 ## Table of Contents
 1. [Core Patterns](#core-patterns)
-2. [Anti-Patterns (DON'T DO THIS)](#anti-patterns)
-3. [Schema Design Patterns](#schema-design-patterns)
-4. [Sync Patterns](#sync-patterns)
-5. [Write Patterns](#write-patterns)
-6. [Error Handling Patterns](#error-handling-patterns)
+2. [Engine Architecture](#engine-architecture)
+3. [Entity Creation Flow (Local-First)](#pattern-entity-creation-flow-local-first)
+4. [Anti-Patterns (DON'T DO THIS)](#anti-patterns)
+5. [Schema Design Patterns](#schema-design-patterns)
+6. [Sync Patterns](#sync-patterns)
+7. [Write Patterns](#write-patterns)
+8. [Error Handling Patterns](#error-handling-patterns)
 
 ---
 
@@ -98,6 +100,456 @@ Online Event
 Process Queue
     ↓
 Clear from IndexedDB
+```
+
+---
+
+## PATTERN: Entity Creation Flow (Local-First)
+
+**This is how Avileo implements entity creation with offline support:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           FRONTEND                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Component (Form) ──▶ Hook (useMutation) ──▶ Service Layer            │
+│                                                        │               │
+│                                                        ▼               │
+│                              ┌──────────────────────────────────────┐  │
+│                              │          PGLite (IndexedDB)          │  │
+│                              │                                      │  │
+│                              │  1. INSERT entity (sync_status=pending)│  │
+│                              │  2. INSERT sync_operation (queued)    │  │
+│                              └──────────────────────────────────────┘  │
+│                                                        │               │
+│                                    AUTO SYNC (every 30s)              │
+│                                                        │               │
+│                                                        ▼               │
+│                              ┌──────────────────────────────────────┐  │
+│                              │        SyncService                    │  │
+│                              │  - Fetch pending ops                 │  │
+│                              │  - POST /api/sync/batch              │  │
+│                              │  - Update status                    │  │
+│                              └──────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ HTTP POST
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           BACKEND                                       │
+│  POST /api/sync/batch ──▶ Validate ──▶ Process ops ──▶ Return results │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step-by-Step Implementation
+
+#### 1. Service Layer (BaseService)
+
+Every entity service extends BaseService which provides:
+
+```typescript
+// packages/app/app/lib/services/base-service.ts
+class BaseService {
+  async create(input: CreateCustomerInput): Promise<Customer> {
+    // 1. Generate ID and timestamp
+    const id = this.generateId();
+    const now = this.now();
+
+    // 2. Create entity with PENDING sync status
+    const customer: Customer = {
+      id,
+      name: input.name,
+      syncStatus: SyncStatus.PENDING,  // Key: starts as pending
+      syncAttempts: 0,
+      businessId: this.businessId,
+      // ...
+    };
+
+    // 3. Insert into PGlite
+    await this.pg.exec(`INSERT INTO customers (...) VALUES (...)`);
+
+    // 4. Queue for server sync
+    await this.queueSync("insert", id, { name: input.name, ... });
+
+    return customer;
+  }
+}
+```
+
+#### 2. Queue Sync Operation
+
+```typescript
+// In BaseService
+async queueSync(
+  operation: "insert" | "update" | "delete",
+  entityId: string,
+  payload: Record<string, unknown>,
+  syncGroupId?: string
+): Promise<void> {
+  await this.syncService.enqueue({
+    entityType: this.entityType,  // e.g., "customers"
+    entityId,
+    operation,
+    payload,
+    idempotencyKey: crypto.randomUUID(),
+    syncGroupId,
+  });
+}
+```
+
+#### 3. Sync Service (Write Queue)
+
+```typescript
+// packages/app/app/lib/sync/sync-service.ts
+async enqueue(params: EnqueueParams): Promise<string> {
+  const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
+
+  // Check for existing pending operation (idempotency)
+  const existing = await this.pg.query(`
+    SELECT id FROM sync_operations
+    WHERE idempotency_key = ? AND status != 'completed'
+  `);
+
+  if (existing.rows.length > 0) {
+    return existing.rows[0].id;  // Return existing, don't duplicate
+  }
+
+  // Insert new operation
+  await this.pg.exec(`
+    INSERT INTO sync_operations (id, entity_type, operation, ...)
+    VALUES (?, ?, ?, ...)
+  `);
+
+  return id;
+}
+```
+
+#### 4. React Hook Integration
+
+```typescript
+// packages/app/app/hooks/use-customers.ts
+export function useCreateCustomer() {
+  const customerService = useCustomerService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input) => customerService.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+    },
+  });
+}
+```
+
+---
+
+### PATTERN: Complex Entities with Transactions
+
+For entities with related items (like Sales + SaleItems), use transactions:
+
+```typescript
+// packages/app/app/lib/services/sale-service.ts
+async createWithItems(saleInput, items): Promise<Sale> {
+  const syncGroupId = this.generateSyncGroup();  // Group related ops
+
+  await this.pg.exec("BEGIN");
+  try {
+    // Insert sale
+    await this.pg.query(`INSERT INTO sales (...)`, [...]);
+
+    // Insert all items
+    for (const item of items) {
+      await this.pg.query(`INSERT INTO sale_items (...)`, [...]);
+    }
+
+    await this.pg.exec("COMMIT");
+
+    // Queue sync with same group ID (atomic operation)
+    await this.queueSync("insert", saleId, saleData, syncGroupId);
+    for (const item of items) {
+      await this.queueSync("insert", itemId, itemData, syncGroupId);
+    }
+  } catch (error) {
+    await this.pg.exec("ROLLBACK");
+    throw error;
+  }
+}
+```
+
+**Key points:**
+- Uses `syncGroupId` to group related operations
+- All operations succeed or fail together
+- Backend can process as a transaction
+
+---
+
+### PATTERN: Sync Status Values
+
+```typescript
+// packages/app/app/lib/sync/config.ts
+export const OPERATION_STATUS = {
+  PENDING: "pending",        // Ready to sync
+  PROCESSING: "processing",   // Currently being processed
+  SYNCING: "syncing",        // In-flight to server
+  COMPLETED: "completed",    // Successfully synced
+  FAILED: "failed",         // Sync failed (will retry)
+  CONFLICT: "conflict",     // Version conflict detected
+  DEAD_LETTER: "dead_letter" // Max retries exceeded
+};
+
+export const SYNC_CONFIG = {
+  MAX_RETRIES: 5,
+  BATCH_SIZE: 50,
+  SYNC_INTERVAL_MS: 30000,  // 30 seconds
+  BACKOFF_BASE_MS: 1000    // Exponential backoff
+};
+```
+
+---
+
+### PATTERN: Soft Delete (Status Change)
+
+For processed sales that need deletion, use soft delete:
+
+```typescript
+// Backend - sale.service.ts
+async deleteSale(ctx, id): Promise<void> {
+  const sale = await this.repository.findById(ctx, id);
+
+  if (sale.status === "draft") {
+    // Hard delete for drafts
+    await this.repository.delete(ctx, id);
+  } else {
+    // Soft delete for processed sales
+    await this.repository.update(ctx, id, {
+      status: "cancelled",
+      cancelledAt: new Date(),
+      cancelledBy: ctx.businessUserId,
+    });
+  }
+}
+```
+
+Frontend hook handles both cases:
+
+```typescript
+// packages/app/app/hooks/use-sales.ts
+export function useDeleteSale() {
+  const saleService = useSaleService();
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const sale = await saleService.findById(id);
+
+      if (sale.status === "draft") {
+        // Hard delete locally
+        return saleService.delete(id);
+      } else {
+        // Soft delete via API
+        const { error } = await api.sales({ id }).delete();
+        if (error) throw new Error(String(error.value));
+      }
+    },
+    // ... invalidation
+  });
+}
+```
+
+---
+
+## Engine Architecture
+
+This section describes how Avileo's local-first engine works.
+
+### Directory Structure
+
+```
+packages/app/app/engine/
+├── index.ts      # Exports (initDatabase, startSync, provider)
+├── db.ts         # PGlite initialization + table creation
+├── schema.ts     # Re-exports from @avileo/shared
+└── electric.ts   # ElectricSQL sync manager
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `db.ts` | Initialize PGlite with IndexedDB, create tables, run migrations |
+| `electric.ts` | Manage ElectricSQL sync shapes from server to client |
+| `schema.ts` | Re-export Drizzle schema from shared package |
+| `provider.tsx` | React context provider for engine |
+
+### Database Initialization (db.ts)
+
+```typescript
+// packages/app/app/engine/db.ts
+export async function initDatabase() {
+  const [{ PGlite }, { electricSync }] = await Promise.all([
+    import("@electric-sql/pglite"),
+    import("@electric-sql/pglite-sync"),
+  ]);
+
+  // Create PGlite with IndexedDB persistence
+  const pg = await PGlite.create({
+    dataDir: "idb://avileo-pg",  // IndexedDB storage
+    extensions: {
+      electric: electricSync(),  // ElectricSQL extension
+    },
+  });
+
+  // Create tables
+  await createTables(pg);
+
+  // Wrap with Drizzle
+  const db = drizzle(pg, { schema });
+
+  return { pg, db };
+}
+```
+
+### Tables Created
+
+Every table includes these sync fields:
+
+```sql
+sync_status TEXT DEFAULT 'pending'
+sync_attempts INTEGER DEFAULT 0
+business_id UUID NOT NULL
+created_at TIMESTAMP
+updated_at TIMESTAMP
+```
+
+**Main tables:**
+- `customers` - Customer data
+- `sales` - Sales with status (draft/active/delivered/cancelled)
+- `sale_items` - Line items for sales
+- `abonos` - Payments received
+- `products` - Product catalog
+- `product_variants` - Product variants (sizes, etc.)
+- `suppliers` - Supplier data
+- `purchases` - Purchase orders
+- `distribuciones` - Distribution assignments
+- `sync_operations` - Write queue for server sync
+- `schema_migrations` - Track applied migrations
+
+### Migrations System
+
+The engine runs migrations on startup:
+
+```typescript
+async function runMigrations(pg: PGlite) {
+  const migrations = [
+    { version: 1, description: "Add sync_attempts to products", sql: "..." },
+    { version: 2, description: "Add business_id to product_variants", sql: "..." },
+    // ... more migrations
+  ];
+
+  for (const migration of migrations) {
+    if (!appliedVersions.has(migration.version)) {
+      await pg.exec(migration.sql);
+      await pg.exec(`INSERT INTO schema_migrations ...`);
+    }
+  }
+}
+```
+
+### ElectricSQL Sync (electric.ts)
+
+The sync manager handles server-to-client data replication:
+
+```typescript
+// packages/app/app/engine/electric.ts
+class ElectricSyncManager {
+  async startSync(config: ElectricSyncConfig) {
+    const shapes = getShapesByPriority();
+
+    // Retry up to 3 times with exponential backoff
+    for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        const result = await syncTables(pg, businessId, token, shapes);
+        // Handle success/failure callbacks
+      } catch (error) {
+        if (attempt < MAX_RETRY_ATTEMPTS) {
+          await delay(RETRY_BASE_DELAY * Math.pow(2, attempt - 1));
+        }
+      }
+    }
+  }
+}
+```
+
+### Sync Shapes Configuration
+
+Shapes define which tables sync from server to client:
+
+```typescript
+// packages/app/app/lib/sync/shape-config.ts
+export const SHAPES = [
+  { table: "customers", priority: 10 },
+  { table: "products", priority: 15 },
+  { table: "product_variants", priority: 16 },
+  { table: "sales", priority: 20 },
+  { table: "sale_items", priority: 21 },
+  { table: "abonos", priority: 25 },
+  { table: "distribuciones", priority: 30 },
+];
+```
+
+### Complete Sync Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        INITIALIZATION                            │
+├─────────────────────────────────────────────────────────────────┤
+│  1. App starts                                                  │
+│  2. initDatabase() - Create PGlite + tables + migrations        │
+│  3. User logs in (get businessId + token)                       │
+│  4. startSync() - Configure Electric shapes                     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     READ SYNC (Server → Client)                 │
+├─────────────────────────────────────────────────────────────────┤
+│  ElectricSQL                                                     │
+│  PostgreSQL → Electric Proxy → PGlite → UI                     │
+│                                                                  │
+│  - Automatic on startup                                          │
+│  - Filtered by business_id                                      │
+│  - Real-time updates via WebSocket                              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     WRITE SYNC (Client → Server)                │
+├─────────────────────────────────────────────────────────────────┤
+│  User Action → Service.create() → PGlite + queueSync()         │
+│                              ↓                                  │
+│                    sync_operations table                         │
+│                              ↓                                  │
+│              SyncService.processPending() (every 30s)           │
+│                              ↓                                  │
+│                    POST /api/sync/batch                         │
+│                              ↓                                  │
+│                    Backend processes ops                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Provider Setup
+
+```typescript
+// packages/app/app/engine/provider.tsx
+export function EngineProvider({ children, businessId, token }) {
+  const { pg, db } = useEngine();  // From initDatabase
+
+  useEffect(() => {
+    // Start Electric sync
+    const cleanup = await startSync({ pg, businessId, token });
+    return cleanup;
+  }, [businessId, token]);
+
+  return <ServicesProvider pg={pg}>{children}</ServicesProvider>;
+}
 ```
 
 ---
@@ -333,6 +785,84 @@ pg.electric.syncShapesToTables({
   key: 'sale-transaction'
 })
 ```
+
+---
+
+### PATTERN: Adding a New Synced Table
+
+Adding a table to Electric sync is a cross-layer change, not just a new shape entry.
+
+**Checklist:**
+1. Add the table to your frontend shape registry/config.
+2. Ensure the local PGlite database creates the table and indexes.
+3. Add or verify tenant filtering in the backend Electric proxy.
+4. Add `REPLICA IDENTITY FULL` for the Postgres table.
+5. If the table is queried in the UI, export the schema/types from the shared schema package.
+
+**Simple case: table has `business_id`**
+
+```typescript
+// Frontend shape config
+{
+  table: "distribuciones",
+  primaryKey: ["id"],
+  where: "business_id = '{businessId}'",
+  priority: 20,
+}
+```
+
+Backend tenant filter can usually be a direct rule:
+
+```typescript
+if (DIRECT_BUSINESS_TABLES.has(table)) {
+  return `business_id = ${quoteSqlString(businessId)}`;
+}
+```
+
+Database requirement:
+
+```sql
+ALTER TABLE distribuciones REPLICA IDENTITY FULL;
+```
+
+**FK case: table does not have `business_id`**
+
+Example: `sale_items`, `product_variants`, `distribucion_items`.
+
+In this case, a frontend shape entry alone is not enough. The backend must construct the tenant filter through the parent table.
+
+```typescript
+if (table === "distribucion_items") {
+  const rows = await db
+    .select({ id: distribuciones.id })
+    .from(distribuciones)
+    .where(eq(distribuciones.businessId, businessId));
+
+  if (rows.length === 0) {
+    return "1 = 0";
+  }
+
+  return `distribucion_id IN (${rows.map((row) => quoteSqlString(row.id)).join(", ")})`;
+}
+```
+
+**Important note:**
+- `foreignKeys` metadata in the frontend shape config is helpful for documentation and dependency ordering.
+- It does **not** automatically generate tenant filters unless your backend/proxy explicitly implements that logic.
+
+**Recommended implementation order:**
+1. Shared/backend schema
+2. Postgres migration with `REPLICA IDENTITY FULL`
+3. Local PGlite table creation
+4. Backend Electric proxy tenant filter
+5. Frontend shape registration
+6. UI queries/hooks
+
+**Common failure modes when adding a table:**
+- Shape exists but local PGlite table does not
+- Table syncs globally because tenant filtering was not added
+- Child table has no `business_id`, but no FK-based backend filter exists
+- Replication works for inserts but breaks on updates/deletes because `REPLICA IDENTITY FULL` is missing
 
 ---
 

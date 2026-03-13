@@ -1,12 +1,27 @@
 import { reactRouter } from "@react-router/dev/vite";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
 
 const isDev = process.env.NODE_ENV === "development";
 
+// Suppress React DevTools warning
+function suppressReactDevToolsWarning(): Plugin {
+  return {
+    name: "suppress-react-devtools-warning",
+    apply: "client",
+    transformCode(code) {
+      return code.replace(
+        /console\.warn\("Download the React DevTools[^"]*"\);?/g,
+        "// React DevTools warning suppressed"
+      );
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    isDev && suppressReactDevToolsWarning(),
     reactRouter(),
     tsconfigPaths({
       ignoreConfigErrors: true,
@@ -98,7 +113,7 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   optimizeDeps: {
-    exclude: ["@electric-sql/pglite"],
+    exclude: ["@electric-sql/pglite", "@electric-sql/pglite-sync"],
     include: [
       "react-day-picker",
       "date-fns",
@@ -106,15 +121,31 @@ export default defineConfig({
       "lucide-react",
       "recharts",
     ],
-    force: true,
+    esbuildOptions: {
+      target: "esnext",
+    },
   },
   build: {
+    target: "esnext",
     commonjsOptions: {
       transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      external: ["@electric-sql/pglite/dist/fs/nodefs.js"],
     },
   },
   server: {
     host: "0.0.0.0",
     port: 5173,
+    fs: {
+      allow: ["..", "/Users/leobar37/code/avileo/node_modules/.bun"],
+    },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      clearScreen: () => {},
+    },
   },
+  assetsInclude: ["**/*.md"],
 });

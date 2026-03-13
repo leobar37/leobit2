@@ -42,7 +42,6 @@ export default function InventoryConfigPage() {
 
   const onSubmit = async (data: InventoryConfigFormData) => {
     setIsSaving(true);
-    console.log("Inventory config:", data);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setIsSaving(false);
   };

@@ -25,6 +25,12 @@ export type {
   NewDistribucion,
   DistribucionItem,
   NewDistribucionItem,
+  Closing,
+  NewClosing,
+  Tag,
+  NewTag,
+  CustomerTag,
+  NewCustomerTag,
 } from "./schema";
 
 // Enums as const objects for frontend usage

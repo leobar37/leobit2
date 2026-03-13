@@ -22,6 +22,7 @@ import {
   useToggleSaleToken,
   useShareSale,
 } from "~/hooks/use-sale-token";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 interface SaleShareDrawerProps {
   saleId: string;
@@ -42,6 +43,7 @@ export function SaleShareDrawer({
   const regenerateToken = useRegenerateSaleToken();
   const toggleToken = useToggleSaleToken();
   const { buildUrl, buildMessage, copyToClipboard } = useShareSale();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
@@ -50,8 +52,16 @@ export function SaleShareDrawer({
     generateToken.mutate(saleId);
   };
 
-  const handleRegenerate = () => {
-    if (confirm("¿Estás seguro? El enlace anterior dejará de funcionar.")) {
+  const handleRegenerate = async () => {
+    const confirmed = await confirm({
+      title: "Regenerar enlace",
+      description: "¿Estás seguro? El enlace anterior dejará de funcionar.",
+      confirmText: "Regenerar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       regenerateToken.mutate(saleId);
     }
   };
@@ -217,6 +227,8 @@ export function SaleShareDrawer({
           )}
         </div>
       </DrawerContent>
+
+      <ConfirmDialog />
     </Drawer>
   );
 }

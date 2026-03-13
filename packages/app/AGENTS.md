@@ -173,6 +173,14 @@ import { CustomerCard } from "@/components/customers/customer-card";
 - Monetary values that are persisted as strings must use shared formatting/parsing utilities from `~/lib/utils` (`formatCurrency`, `parseAmount`, `calculateBalanceDue`) instead of ad-hoc `toFixed(2)` in components.
 - If a component needs a new write flow, create or extend a dedicated hook rather than embedding persistence orchestration directly in the component.
 
+### Mobile List Screen Pattern
+
+- For operational mobile list screens such as `ventas`, `clientes`, `cobros`, and similar entity indexes, follow the shared pattern documented in `docs/screens/mobile-list-pattern.md`.
+- Prefer the structure `summary (optional) -> search -> list -> FAB` instead of ad-hoc top action bars.
+- Use a fixed FAB for the primary create action on mobile when the screen's main CTA is creating a new entity.
+- Keep cards compact and sober: visible soft border, restrained shadow, `p-4` density, and no oversized hero treatments.
+- Reuse existing route patterns from `packages/app/app/routes/_protected.ventas._index.tsx` and `packages/app/app/routes/_protected.clientes._index.tsx` before inventing a new layout.
+
 ### Component Patterns
 
 #### UI Primitive Pattern (shadcn/ui style)
@@ -511,6 +519,7 @@ export default function Page() {
 | `app/lib/db/schema.ts` | Zod schemas for domain entities |
 | `app/lib/db/collections.ts` | Data operation functions |
 | `app/lib/db/electric-client.tsx` | Sync state provider (placeholder) |
+| `../docs/screens/mobile-list-pattern.md` | Shared mobile list + FAB UI pattern |
 
 ### Component Categories
 
@@ -674,6 +683,7 @@ Tables with sync capability have these fields:
 
 - [Components AGENTS.md](./app/components/AGENTS.md) - Detailed component patterns
 - [Root AGENTS.md](../../AGENTS.md) - Project-wide context
+- [Mobile List Pattern](../docs/screens/mobile-list-pattern.md) - Shared mobile list screen pattern with FAB
 - `/docs/` - Full project documentation
 
 ## Dependencies

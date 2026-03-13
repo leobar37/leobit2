@@ -156,9 +156,8 @@ export function useShareNative() {
     if (navigator.share) {
       try {
         await navigator.share(data);
-      } catch (error) {
-        // User cancelled or error
-        console.log("Share cancelled");
+      } catch {
+        // User cancelled or error - ignore silently
       }
     } else {
       toast({

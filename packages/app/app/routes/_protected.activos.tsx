@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { useAssets, useUploadAsset, useDeleteAsset, type Asset } from "~/hooks/use-assets";
 import { useFileUpload } from "~/hooks/use-file-upload";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 export default function ActivosPage() {
   const [search, setSearch] = useState("");
@@ -17,6 +18,7 @@ export default function ActivosPage() {
   const uploadAsset = useUploadAsset();
   const deleteAsset = useDeleteAsset();
   const fileUpload = useFileUpload({ endpoint: "/assets/upload" });
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const filteredAssets = assets?.filter((asset) =>
     asset.filename.toLowerCase().includes(search.toLowerCase())
@@ -39,15 +41,23 @@ export default function ActivosPage() {
     if (!selectedFile) return;
 
     const result = await fileUpload.upload(selectedFile);
-    
+
     if (result.status === "synced") {
       handleClear();
       setShowUploader(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("¿Eliminar esta imagen?")) {
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar imagen",
+      description: "¿Estás seguro de que deseas eliminar esta imagen? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       deleteAsset.mutate(id);
     }
   };
@@ -201,6 +211,8 @@ export default function ActivosPage() {
           </div>
         </div>
       </main>
+
+      <ConfirmDialog />
     </div>
   );
 }

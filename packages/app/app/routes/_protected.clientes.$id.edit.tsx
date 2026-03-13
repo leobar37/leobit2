@@ -58,12 +58,12 @@ export default function EditCustomerPage() {
     try {
       await updateCustomer.mutateAsync({
         id,
-        data: {
+        input: {
           name: data.name,
-          dni: data.dni || null,
-          phone: data.phone || null,
-          address: data.address || null,
-          notes: data.notes || null,
+          dni: data.dni || undefined,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
+          notes: data.notes || undefined,
         },
       });
       navigate(`/clientes/${id}`);

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -108,6 +109,7 @@ export default function PublicSalePage() {
   const updateItem = useUpdatePublicSaleItem();
   const deleteItem = useDeletePublicSaleItem();
   const cancelSale = useCancelPublicSale();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const { data: products } = useProducts();
   const { data: variants } = useVariantsByProduct(selectedProductId);
@@ -181,16 +183,32 @@ export default function PublicSalePage() {
     });
   };
 
-  const handleDeleteItem = (itemId: string) => {
+  const handleDeleteItem = async (itemId: string) => {
     if (!token) return;
-    if (confirm("¿Eliminar este producto?")) {
+    const confirmed = await confirm({
+      title: "Eliminar producto",
+      description: "¿Eliminar este producto?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       deleteItem.mutate({ token, itemId, baseVersion: sale.version });
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!token) return;
-    if (confirm("¿Cancelar este pedido? Esta acción no se puede deshacer.")) {
+    const confirmed = await confirm({
+      title: "Cancelar pedido",
+      description: "¿Cancelar este pedido? Esta acción no se puede deshacer.",
+      confirmText: "Cancelar pedido",
+      cancelText: "Volver",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       cancelSale.mutate({ token });
     }
   };
@@ -505,6 +523,8 @@ export default function PublicSalePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog />
     </div>
   );
 }

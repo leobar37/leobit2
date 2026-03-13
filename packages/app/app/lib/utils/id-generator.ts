@@ -1,18 +1,14 @@
 /**
  * Centralized ID generation utility.
  * Ensures consistent ID format across the application.
- * 
+ *
  * Backend expects: UUID v4 format (PostgreSQL uuid type)
  * Used for: orders, customers, sales, items, payments, etc.
  */
 export function generateId(): string {
-  // Use crypto.randomUUID() for proper UUID v4
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  // Fallback for environments without crypto.randomUUID
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  // Always use crypto.randomUUID() for proper UUID v4
+  // This is available in all modern browsers and Node.js 19+
+  return crypto.randomUUID();
 }
 
 /**

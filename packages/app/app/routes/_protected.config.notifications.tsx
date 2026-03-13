@@ -44,7 +44,6 @@ export default function NotificationsConfigPage() {
 
   const onSubmit = async (data: NotificationsConfigFormData) => {
     setIsSaving(true);
-    console.log("Notifications config:", data);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setIsSaving(false);
   };

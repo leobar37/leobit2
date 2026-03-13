@@ -7,7 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormInput } from "~/components/forms/form-input";
 import { Button } from "@/components/ui/button";
-import { useCreateTag, useUpdateTag, type Tag } from "~/hooks/use-tags";
+import { useCreateTag, useUpdateTag } from "~/hooks/use-tags";
+import type { Tag } from "@avileo/shared";
 
 const tagSchema = z.object({
   name: z
@@ -53,11 +54,11 @@ export function TagForm({ tag, onClose }: TagFormProps) {
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
 
-  const onSubmit = form.handleSubmit(async (data) => {
+  const onSubmit = form.handleSubmit(async (formData) => {
     if (tag) {
-      await updateTag.mutateAsync({ id: tag.id, data });
+      await updateTag.mutateAsync({ id: tag.id, input: formData });
     } else {
-      await createTag.mutateAsync(data);
+      await createTag.mutateAsync(formData);
     }
     onClose();
   });

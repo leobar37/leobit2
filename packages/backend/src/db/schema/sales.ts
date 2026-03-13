@@ -120,6 +120,10 @@ export const saleItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy - for Electric sync filtering (nullable for existing data)
+    businessId: uuid("business_id")
+      .references(() => businesses.id),
+
     // Relations
     saleId: uuid("sale_id")
       .notNull()
@@ -152,6 +156,7 @@ export const saleItems = pgTable(
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
   },
   (table) => [
+    index("idx_sale_items_business_id").on(table.businessId),
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
     index("idx_sale_items_variant_id").on(table.variantId),
@@ -189,6 +194,10 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
 }));
 
 export const saleItemsRelations = relations(saleItems, ({ one }) => ({
+  business: one(businesses, {
+    fields: [saleItems.businessId],
+    references: [businesses.id],
+  }),
   sale: one(sales, {
     fields: [saleItems.saleId],
     references: [sales.id],

@@ -32,11 +32,14 @@ packages/
 | `@avileo/backend` | `packages/backend/AGENTS.md` | ElysiaJS, Drizzle, RequestContext |
 | `@avileo/app` | `packages/app/AGENTS.md` | React Router v7, TanStack, offline-first |
 | `app/components` | `packages/app/app/components/AGENTS.md` | UI primitives, forms, shadcn/ui |
-| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer, sync engine |
 | `app/routes` | `packages/app/app/routes/AGENTS.md` | File-based routing conventions |
 | `app/hooks` | `packages/app/app/hooks/AGENTS.md` | Custom React hooks patterns |
+| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer |
+| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | ElectricSQL sync engine |
 | `app/e2e` | `packages/app/e2e/AGENTS.md` | E2E testing patterns |
 | `backend/services` | `packages/backend/src/services/AGENTS.md` | Repository/service layer |
+| `backend/api` | `packages/backend/src/api/AGENTS.md` | Elysia route modules |
+| `backend/db/schema` | `packages/backend/src/db/schema/AGENTS.md` | Drizzle table definitions |
 
 ## Quick Commands
 

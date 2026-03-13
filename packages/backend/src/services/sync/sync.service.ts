@@ -1,7 +1,8 @@
 import { and, asc, eq, gte } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
-import { ValidationError } from "../../errors";
+import { ValidationError, ConflictError } from "../../errors";
 import { db, syncOperations } from "../../lib/db";
+import type { DbTransaction } from "../../lib/txid";
 import type { CustomerRepository } from "../repository/customer.repository";
 import type { SaleRepository } from "../repository/sale.repository";
 import type { PaymentRepository } from "../repository/payment.repository";
@@ -16,21 +17,27 @@ export type SyncEntity =
   | "abonos"
   | "distribuciones";
 
-export type SyncAction = "insert" | "update" | "delete";
+export type SyncOperationType = "create" | "update" | "delete";
 
 export interface SyncOperationInput {
-  operationId: string;
-  entity: SyncEntity;
-  action: SyncAction;
+  idempotencyKey: string;
+  entityType: SyncEntity;
   entityId: string;
+  operation: SyncOperationType;
   payload: Record<string, unknown>;
-  clientTimestamp: string;
+  localVersion: number;
+  localTimestamp: string;
+  syncGroupId?: string;
 }
 
 export interface SyncOperationResult {
-  operationId: string;
+  idempotencyKey: string;
   success: boolean;
   error?: string;
+  conflict?: {
+    serverVersion: number;
+    serverData: Record<string, unknown>;
+  };
   serverTimestamp: string;
 }
 
@@ -40,6 +47,7 @@ export interface SyncBatchResult {
     total: number;
     succeeded: number;
     failed: number;
+    conflicts: number;
   };
 }
 
@@ -96,90 +104,27 @@ export class SyncService {
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
     const results: SyncOperationResult[] = [];
+    const nowIso = toISODate(now());
 
-    for (const operation of operations) {
-      this.validateOperation(operation);
-      const nowIso = toISODate(now());
+    // Group operations by syncGroupId
+    const groupedOperations = this.groupOperationsBySyncGroup(operations);
+    const groupIds = Object.keys(groupedOperations);
 
-      const existing = await db.query.syncOperations.findFirst({
-        where: and(
-          eq(syncOperations.businessId, ctx.businessId),
-          eq(syncOperations.operationId, operation.operationId)
-        ),
-      });
+    for (const groupId of groupIds) {
+      const groupOps = groupedOperations[groupId];
 
-      if (existing?.status === "processed") {
-        results.push({
-          operationId: operation.operationId,
-          success: true,
-          serverTimestamp: existing.processedAt?.toISOString() ?? nowIso,
-        });
-        continue;
-      }
-
-      if (!existing) {
-        await db.insert(syncOperations).values({
-          businessId: ctx.businessId,
-          operationId: operation.operationId,
-          entity: operation.entity,
-          action: operation.action,
-          entityId: operation.entityId,
-          payload: operation.payload,
-          status: "pending",
-          clientTimestamp: new Date(operation.clientTimestamp),
-        });
-      }
-
-      try {
-        await this.applyOperation(ctx, operation);
-        const processedAt = now();
-
-        await db
-          .update(syncOperations)
-          .set({
-            status: "processed",
-            error: null,
-            processedAt,
-          })
-          .where(
-            and(
-              eq(syncOperations.businessId, ctx.businessId),
-              eq(syncOperations.operationId, operation.operationId)
-            )
-          );
-
-        results.push({
-          operationId: operation.operationId,
-          success: true,
-          serverTimestamp: toISODate(processedAt),
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-
-        await db
-          .update(syncOperations)
-          .set({
-            status: "failed",
-            error: message,
-          })
-          .where(
-            and(
-              eq(syncOperations.businessId, ctx.businessId),
-              eq(syncOperations.operationId, operation.operationId)
-            )
-          );
-
-        results.push({
-          operationId: operation.operationId,
-          success: false,
-          error: message,
-          serverTimestamp: nowIso,
-        });
-      }
+      // Process all operations in the group atomically
+      const groupResult = await this.processGroupAtomically(
+        ctx,
+        groupOps,
+        nowIso
+      );
+      results.push(...groupResult);
     }
 
-    const succeeded = results.filter((item) => item.success).length;
-    const failed = results.length - succeeded;
+    const succeeded = results.filter((item) => item.success && !item.conflict).length;
+    const conflicts = results.filter((item) => item.conflict !== undefined).length;
+    const failed = results.length - succeeded - conflicts;
 
     return {
       results,
@@ -187,8 +132,317 @@ export class SyncService {
         total: results.length,
         succeeded,
         failed,
+        conflicts,
       },
     };
+  }
+
+  private groupOperationsBySyncGroup(
+    operations: SyncOperationInput[]
+  ): Record<string, SyncOperationInput[]> {
+    const groups: Record<string, SyncOperationInput[]> = {};
+
+    for (const op of operations) {
+      const groupId = op.syncGroupId || op.idempotencyKey;
+      if (!groups[groupId]) {
+        groups[groupId] = [];
+      }
+      groups[groupId].push(op);
+    }
+
+    return groups;
+  }
+
+  private async processGroupAtomically(
+    ctx: RequestContext,
+    operations: SyncOperationInput[],
+    nowIso: string
+  ): Promise<SyncOperationResult[]> {
+    const results: SyncOperationResult[] = [];
+
+    // Check idempotency for all operations first
+    const idempotencyResults = await this.checkIdempotency(ctx, operations);
+    
+    // If any operation was already processed, return success for those
+    for (const [key, result] of Object.entries(idempotencyResults)) {
+      if (result.alreadyProcessed) {
+        results.push({
+          idempotencyKey: key,
+          success: true,
+          serverTimestamp: result.serverTimestamp || nowIso,
+        });
+      }
+    }
+
+    // Get operations that need processing
+    const pendingOps = operations.filter(
+      (op) => !idempotencyResults[op.idempotencyKey]?.alreadyProcessed
+    );
+
+    if (pendingOps.length === 0) {
+      return results;
+    }
+
+    // Check for conflicts in update operations
+    const conflictResults = await this.checkConflicts(ctx, pendingOps);
+    for (const [key, conflict] of Object.entries(conflictResults)) {
+      if (conflict.hasConflict) {
+        results.push({
+          idempotencyKey: key,
+          success: false,
+          conflict: {
+            serverVersion: conflict.serverVersion!,
+            serverData: conflict.serverData!,
+          },
+          serverTimestamp: nowIso,
+        });
+      }
+    }
+
+    // Get operations without conflicts
+    const opsToProcess = pendingOps.filter(
+      (op) => !conflictResults[op.idempotencyKey]?.hasConflict
+    );
+
+    if (opsToProcess.length === 0) {
+      return results;
+    }
+
+    // Process all operations in a transaction (atomic)
+    try {
+      await db.transaction(async (tx) => {
+        for (const operation of opsToProcess) {
+          try {
+            // Insert sync operation record
+            await tx.insert(syncOperations).values({
+              businessId: ctx.businessId,
+              operationId: operation.idempotencyKey,
+              entity: operation.entityType,
+              action: operation.operation,
+              entityId: operation.entityId,
+              payload: operation.payload,
+              status: "pending",
+              clientTimestamp: new Date(operation.localTimestamp),
+            });
+
+            // Apply the operation
+            await this.applyOperation(ctx, operation, tx);
+
+            // Mark as processed
+            await tx
+              .update(syncOperations)
+              .set({
+                status: "processed",
+                error: null,
+                processedAt: now(),
+              })
+              .where(
+                and(
+                  eq(syncOperations.businessId, ctx.businessId),
+                  eq(syncOperations.operationId, operation.idempotencyKey)
+                )
+              );
+
+            results.push({
+              idempotencyKey: operation.idempotencyKey,
+              success: true,
+              serverTimestamp: nowIso,
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+
+            await tx
+              .update(syncOperations)
+              .set({
+                status: "failed",
+                error: message,
+              })
+              .where(
+                and(
+                  eq(syncOperations.businessId, ctx.businessId),
+                  eq(syncOperations.operationId, operation.idempotencyKey)
+                )
+              );
+
+            results.push({
+              idempotencyKey: operation.idempotencyKey,
+              success: false,
+              error: message,
+              serverTimestamp: nowIso,
+            });
+          }
+        }
+      });
+    } catch (error) {
+      // Transaction failed - mark all as failed
+      for (const operation of opsToProcess) {
+        const alreadyHasResult = results.find(
+          (r) => r.idempotencyKey === operation.idempotencyKey
+        );
+        if (!alreadyHasResult) {
+          results.push({
+            idempotencyKey: operation.idempotencyKey,
+            success: false,
+            error: error instanceof Error ? error.message : "Transaction failed",
+            serverTimestamp: nowIso,
+          });
+        }
+      }
+    }
+
+    return results;
+  }
+
+  private async checkIdempotency(
+    ctx: RequestContext,
+    operations: SyncOperationInput[]
+  ): Promise<Record<string, { alreadyProcessed: boolean; serverTimestamp?: string }>> {
+    const results: Record<string, { alreadyProcessed: boolean; serverTimestamp?: string }> = {};
+
+    for (const operation of operations) {
+      const existing = await db.query.syncOperations.findFirst({
+        where: and(
+          eq(syncOperations.businessId, ctx.businessId),
+          eq(syncOperations.operationId, operation.idempotencyKey)
+        ),
+      });
+
+      results[operation.idempotencyKey] = {
+        alreadyProcessed: existing?.status === "processed",
+        serverTimestamp: existing?.processedAt?.toISOString(),
+      };
+    }
+
+    return results;
+  }
+
+  private async checkConflicts(
+    ctx: RequestContext,
+    operations: SyncOperationInput[]
+  ): Promise<
+    Record<
+      string,
+      { hasConflict: boolean; serverVersion?: number; serverData?: Record<string, unknown> }
+    >
+  > {
+    const results: Record<
+      string,
+      { hasConflict: boolean; serverVersion?: number; serverData?: Record<string, unknown> }
+    > = {};
+
+    for (const operation of operations) {
+      // Only check conflicts for updates
+      if (operation.operation !== "update") {
+        results[operation.idempotencyKey] = { hasConflict: false };
+        continue;
+      }
+
+      try {
+        const conflictCheck = await this.checkEntityConflict(ctx, operation);
+        results[operation.idempotencyKey] = conflictCheck;
+      } catch {
+        // If we can't check (entity doesn't exist), it's not a conflict
+        results[operation.idempotencyKey] = { hasConflict: false };
+      }
+    }
+
+    return results;
+  }
+
+  private async checkEntityConflict(
+    ctx: RequestContext,
+    operation: SyncOperationInput
+  ): Promise<{ hasConflict: boolean; serverVersion?: number; serverData?: Record<string, unknown> }> {
+    switch (operation.entityType) {
+      case "customers": {
+        const customer = await this.deps.customerRepo.findById(ctx, operation.entityId);
+        if (!customer) {
+          return { hasConflict: false };
+        }
+        // Use updatedAt as version for customers
+        const serverTimestamp = customer.updatedAt.getTime();
+        const localTimestamp = new Date(operation.localTimestamp).getTime();
+        if (serverTimestamp > localTimestamp) {
+          return {
+            hasConflict: true,
+            serverVersion: Math.floor(serverTimestamp / 1000),
+            serverData: {
+              name: customer.name,
+              dni: customer.dni,
+              phone: customer.phone,
+              address: customer.address,
+              notes: customer.notes,
+              updatedAt: customer.updatedAt.toISOString(),
+            },
+          };
+        }
+        return { hasConflict: false };
+      }
+      case "sales": {
+        const sale = await this.deps.saleRepo.findById(ctx, operation.entityId);
+        if (!sale) {
+          return { hasConflict: false };
+        }
+        // Sales have explicit version field
+        if (sale.version > operation.localVersion) {
+          return {
+            hasConflict: true,
+            serverVersion: sale.version,
+            serverData: {
+              status: sale.status,
+              totalAmount: sale.totalAmount,
+              amountPaid: sale.amountPaid,
+              balanceDue: sale.balanceDue,
+              version: sale.version,
+              updatedAt: sale.updatedAt.toISOString(),
+            },
+          };
+        }
+        return { hasConflict: false };
+      }
+      case "abonos": {
+        const payment = await this.deps.paymentRepo.findById(ctx, operation.entityId);
+        if (!payment) {
+          return { hasConflict: false };
+        }
+        const serverTimestamp = payment.createdAt.getTime();
+        const localTimestamp = new Date(operation.localTimestamp).getTime();
+        if (serverTimestamp > localTimestamp) {
+          return {
+            hasConflict: true,
+            serverVersion: Math.floor(serverTimestamp / 1000),
+            serverData: {
+              amount: payment.amount,
+              paymentMethod: payment.paymentMethod,
+              createdAt: payment.createdAt.toISOString(),
+            },
+          };
+        }
+        return { hasConflict: false };
+      }
+      case "distribuciones": {
+        const distribucion = await this.deps.distribucionRepo.findById(ctx, operation.entityId);
+        if (!distribucion) {
+          return { hasConflict: false };
+        }
+        const serverTimestamp = distribucion.createdAt.getTime();
+        const localTimestamp = new Date(operation.localTimestamp).getTime();
+        if (serverTimestamp > localTimestamp) {
+          return {
+            hasConflict: true,
+            serverVersion: Math.floor(serverTimestamp / 1000),
+            serverData: {
+              puntoVenta: distribucion.puntoVenta,
+              estado: distribucion.estado,
+              createdAt: distribucion.createdAt.toISOString(),
+            },
+          };
+        }
+        return { hasConflict: false };
+      }
+      default:
+        return { hasConflict: false };
+    }
   }
 
   async getChanges(ctx: RequestContext, since?: Date, limit = 100) {
@@ -213,12 +467,12 @@ export class SyncService {
 
     return {
       changes: operations.map((item) => ({
-        operationId: item.operationId,
-        entity: item.entity,
-        action: item.action,
+        idempotencyKey: item.operationId,
+        entityType: item.entity,
+        operation: item.action,
         entityId: item.entityId,
         payload: item.payload,
-        clientTimestamp: item.clientTimestamp.toISOString(),
+        localTimestamp: item.clientTimestamp.toISOString(),
         processedAt: item.processedAt?.toISOString() ?? item.createdAt.toISOString(),
       })),
       nextSince:
@@ -227,53 +481,56 @@ export class SyncService {
   }
 
   private validateOperation(operation: SyncOperationInput) {
-    if (!operation.operationId) {
-      throw new ValidationError("operationId es requerido");
+    if (!operation.idempotencyKey) {
+      throw new ValidationError("idempotencyKey es requerido");
     }
 
     if (!operation.entityId) {
       throw new ValidationError("entityId es requerido");
     }
 
-    if (!operation.clientTimestamp) {
-      throw new ValidationError("clientTimestamp es requerido");
+    if (!operation.localTimestamp) {
+      throw new ValidationError("localTimestamp es requerido");
     }
 
-    if (!Number.isFinite(new Date(operation.clientTimestamp).getTime())) {
-      throw new ValidationError("clientTimestamp inválido");
+    if (!Number.isFinite(new Date(operation.localTimestamp).getTime())) {
+      throw new ValidationError("localTimestamp inválido");
     }
   }
 
-  private async applyOperation(ctx: RequestContext, operation: SyncOperationInput) {
-    switch (operation.entity) {
+  private async applyOperation(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ) {
+    switch (operation.entityType) {
       case "customers":
-        await this.applyCustomerOperation(ctx, operation);
+        await this.applyCustomerOperation(ctx, operation, tx);
         return;
       case "sales":
-        await this.applySalesOperation(ctx, operation);
+        await this.applySalesOperation(ctx, operation, tx);
         return;
       case "abonos":
-        await this.applyAbonosOperation(ctx, operation);
+        await this.applyAbonosOperation(ctx, operation, tx);
         return;
       case "distribuciones":
-        await this.applyDistribucionOperation(ctx, operation);
+        await this.applyDistribucionOperation(ctx, operation, tx);
         return;
       case "sale_items":
-        // sale_items are synced directly via collection callbacks (onInsert/onUpdate/onDelete)
-        // Not supported in batch sync - items should be synced as part of their parent sale
         throw new ValidationError("sale_items no se syncroniza via batch - sync directo");
       default:
-        throw new ValidationError(`Entidad no soportada: ${operation.entity}`);
+        throw new ValidationError(`Entidad no soportada: ${operation.entityType}`);
     }
   }
 
   private async applyCustomerOperation(
     ctx: RequestContext,
-    operation: SyncOperationInput
+    operation: SyncOperationInput,
+    tx?: DbTransaction
   ) {
     const payload = operation.payload;
 
-    if (operation.action === "insert") {
+    if (operation.operation === "create") {
       await this.deps.customerRepo.create(ctx, {
         name: this.requiredString(payload.name, "name"),
         dni: this.optionalString(payload.dni),
@@ -284,7 +541,7 @@ export class SyncService {
       return;
     }
 
-    if (operation.action === "update") {
+    if (operation.operation === "update") {
       const updated = await this.deps.customerRepo.update(ctx, operation.entityId, {
         ...(payload.name !== undefined && {
           name: this.requiredString(payload.name, "name"),
@@ -315,13 +572,18 @@ export class SyncService {
     await this.deps.customerRepo.delete(ctx, operation.entityId);
   }
 
-  private async applySalesOperation(ctx: RequestContext, operation: SyncOperationInput) {
+  private async applySalesOperation(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ) {
     const payload = operation.payload;
+    const dbOrTx = tx || db;
 
-    if (operation.action === "insert") {
+    if (operation.operation === "create") {
       const sale = this.parseSaleInsert(payload);
-      await db.transaction(async (tx) => {
-        const createdSale = await this.deps.saleRepo.create(ctx, sale, tx);
+      await dbOrTx.transaction(async (innerTx) => {
+        const createdSale = await this.deps.saleRepo.create(ctx, sale, innerTx);
 
         if (sale.saleType === "credito" && sale.customerId && Number(sale.amountPaid) > 0) {
           const initialPaymentReference = `init-sale:${createdSale.id}`;
@@ -332,20 +594,19 @@ export class SyncService {
               amount: Number(sale.amountPaid).toFixed(2),
               referenceNumber: initialPaymentReference,
             },
-            tx
+            innerTx
           );
         }
       });
       return;
     }
 
-    if (operation.action === "update") {
+    if (operation.operation === "update") {
       const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
       if (!existing) {
         throw new ValidationError("Venta no encontrada");
       }
 
-      // Handle status transitions
       if (payload.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
         await this.deps.saleRepo.update(ctx, operation.entityId, {
           status: "active",
@@ -375,7 +636,6 @@ export class SyncService {
         return;
       }
 
-      // Regular update
       await this.deps.saleRepo.update(ctx, operation.entityId, {
         ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
         ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
@@ -385,7 +645,7 @@ export class SyncService {
       return;
     }
 
-    if (operation.action === "delete") {
+    if (operation.operation === "delete") {
       const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
       if (!existing) {
         return;
@@ -398,10 +658,14 @@ export class SyncService {
     throw new ValidationError("Acción no soportada para ventas");
   }
 
-  private async applyAbonosOperation(ctx: RequestContext, operation: SyncOperationInput) {
+  private async applyAbonosOperation(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ) {
     const payload = operation.payload;
 
-    if (operation.action === "insert") {
+    if (operation.operation === "create") {
       await this.deps.paymentRepo.create(ctx, {
         customerId: this.requiredString(payload.customerId, "customerId"),
         amount: this.requiredNumericString(payload.amount, "amount"),
@@ -411,7 +675,7 @@ export class SyncService {
       return;
     }
 
-    if (operation.action === "delete") {
+    if (operation.operation === "delete") {
       const existing = await this.deps.paymentRepo.findById(ctx, operation.entityId);
       if (!existing) {
         return;
@@ -426,17 +690,18 @@ export class SyncService {
 
   private async applyDistribucionOperation(
     ctx: RequestContext,
-    operation: SyncOperationInput
+    operation: SyncOperationInput,
+    tx?: DbTransaction
   ) {
     const payload = operation.payload;
 
-    if (operation.action === "insert") {
+    if (operation.operation === "create") {
       const parsed = this.parseDistribucionInsert(payload);
       await this.deps.distribucionService.createDistribucion(ctx, parsed);
       return;
     }
 
-    if (operation.action === "update") {
+    if (operation.operation === "update") {
       const updated = await this.deps.distribucionRepo.update(ctx, operation.entityId, {
         ...(payload.puntoVenta !== undefined && {
           puntoVenta: this.requiredString(payload.puntoVenta, "puntoVenta"),

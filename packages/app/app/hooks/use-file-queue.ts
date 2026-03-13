@@ -13,15 +13,6 @@ export function useProcessPendingUploads() {
   return useMutation({
     mutationFn: async () => {
       const results = await processAllPendingUploads();
-
-      for (const result of results) {
-        if (result.success && result.fileId) {
-          console.log(`File uploaded: ${result.fileId}`);
-        } else if (!result.success) {
-          console.error(`Upload failed: ${result.error}`);
-        }
-      }
-
       return results;
     },
     onSuccess: () => {

@@ -1,19 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { clearStoredAuthState, getStoredAuthToken } from "./session-storage";
 
-const isAuthDebugEnabled = import.meta.env.DEV;
-
-function debugAuthClient(message: string, payload?: unknown) {
-  if (!isAuthDebugEnabled) return;
-
-  if (payload === undefined) {
-    console.log(`[AuthClient] ${message}`);
-    return;
-  }
-
-  console.log(`[AuthClient] ${message}`, payload);
-}
-
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5201",
 
@@ -23,40 +10,11 @@ export const authClient = createAuthClient({
       type: "Bearer",
       token: () => getStoredAuthToken() || "",
     },
-    onRequest: (ctx) => {
-      debugAuthClient("Request started", {
-        url: ctx.url?.toString?.() ?? String(ctx.url),
-        method: ctx.method,
-        hasStoredToken: Boolean(getStoredAuthToken()),
-        authHeader: ctx.headers instanceof Headers
-          ? ctx.headers.get("authorization")
-          : new Headers(ctx.headers).get("authorization"),
-      });
-    },
-
     onSuccess: (ctx) => {
       const authToken = ctx.response.headers.get("set-auth-token");
-      debugAuthClient("Request succeeded", {
-        url: ctx.request.url?.toString?.() ?? String(ctx.request.url),
-        method: ctx.request.method,
-        status: ctx.response.status,
-        hasSetAuthToken: Boolean(authToken),
-        responseData: ctx.data,
-      });
       if (authToken) {
-        debugAuthClient("Persisting bearer token", {
-          tokenLength: authToken.length,
-        });
         localStorage.setItem("bearer_token", authToken);
       }
-    },
-    onError: (ctx) => {
-      debugAuthClient("Request failed", {
-        url: ctx.request.url?.toString?.() ?? String(ctx.request.url),
-        method: ctx.request.method,
-        status: ctx.response?.status ?? null,
-        error: ctx.error,
-      });
     },
   },
 });

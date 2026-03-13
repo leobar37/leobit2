@@ -1,7 +1,11 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { reportMustRefetch, reportShapeUpToDate } from "../../lib/db/electric-sync-events";
+import {
+  reportMustRefetch,
+  reportRecoverableSyncError,
+  reportShapeUpToDate,
+} from "../../lib/db/electric-sync-events";
 import { SyncErrorMonitor } from "./sync-error-monitor";
 import { SyncProvider } from "./sync-status";
 
@@ -58,5 +62,30 @@ describe("SyncErrorMonitor", () => {
     expect(
       screen.queryByText("Problema de sincronización detectado")
     ).toBeNull();
+  });
+
+  it("shows the recovery dialog for duplicate key errors", () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SyncProvider>
+          <SyncErrorMonitor />
+        </SyncProvider>
+      </QueryClientProvider>
+    );
+
+    act(() => {
+      reportRecoverableSyncError(
+        "sales",
+        "duplicate-key",
+        'duplicate key value violates unique constraint "sales_pkey"'
+      );
+    });
+
+    expect(screen.getByText("Problema de sincronización detectado")).toBeTruthy();
+    expect(
+      screen.getByText(/conflicto local de sincronización en sales/i)
+    ).toBeTruthy();
   });
 });

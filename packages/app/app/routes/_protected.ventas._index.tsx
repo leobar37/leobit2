@@ -1,11 +1,12 @@
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { formatCurrency } from "~/lib/utils";
 import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
-import { useTodaySales, useTodaySalesStats } from "~/hooks/use-sales-db";
+import { useCreateDraftSale, useSales } from "~/hooks/use-sales";
+import { useBusiness } from "~/hooks/use-business";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
 
@@ -13,18 +14,51 @@ export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
 
   const [search, setSearch] = useState("");
-  // Use live queries from TanStack DB - updates automatically in real-time
-  const { data: sales, isLoading, error } = useTodaySales();
-  const { data: todayStats } = useTodaySalesStats();
+  const { data: allSales, isLoading, error } = useSales();
+  const { data: business, isLoading: businessLoading } = useBusiness();
+  const createDraftSale = useCreateDraftSale();
   const navigate = useNavigate();
 
-  // Filter locally - no server call needed
-  const filteredSales = sales?.filter((sale) => {
+  const handleCreateSale = async () => {
+    // Prevent duplicate clicks while mutation is pending
+    if (createDraftSale.isPending) return;
+
+    // Prevent if business is not ready
+    if (!business?.businessUserId) {
+      console.error("Business not ready, cannot create sale");
+      return;
+    }
+
+    try {
+      const sale = await createDraftSale.mutateAsync();
+      navigate(`/ventas/${sale.id}/editar`);
+    } catch (err) {
+      console.error("Failed to create sale:", err);
+      // TODO: Show toast notification for error
+    }
+  };
+
+  // Show all sales (not just today's or active ones) for now
+  const todaySales = useMemo(() => {
+    if (!allSales) return [];
+    // Show all sales, not filtering by date or status
+    return allSales;
+  }, [allSales]);
+
+  const stats = useMemo(() => {
+    if (!todaySales.length) return null;
+    const total = todaySales.reduce((sum, sale) => {
+      return sum + Number(sale.totalAmount || 0);
+    }, 0);
+    return { count: todaySales.length, total: total.toFixed(2) };
+  }, [todaySales]);
+
+  const filteredSales = todaySales?.filter((sale) => {
     const searchLower = search.toLowerCase();
     return (
-      sale.id.toLowerCase().includes(searchLower) ||
-      (sale.client?.name?.toLowerCase().includes(searchLower) ?? false) ||
-      sale.saleType.toLowerCase().includes(searchLower)
+      (sale.id?.toLowerCase().includes(searchLower) ?? false) ||
+      (sale.customerId?.toLowerCase().includes(searchLower) ?? false) ||
+      (sale.saleType?.toLowerCase().includes(searchLower) ?? false)
     );
   });
 
@@ -34,31 +68,37 @@ export default function SalesPage() {
   return (
     <>
       <div className="space-y-4">
-        {todayStats && (
-          <div className="border-l-4 border-orange-500 bg-white py-3 pl-4 pr-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ventas de hoy</p>
-                <p className="text-2xl font-bold text-foreground">S/ {formatCurrency(todayStats.total)}</p>
+        {stats && (
+          <div className="rounded-[26px] border border-stone-200/80 bg-white/70 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">Total de ventas</p>
+                <p className="mt-1 text-2xl font-bold tracking-[-0.03em] text-foreground">
+                  S/ {formatCurrency(stats.total)}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Cantidad</p>
-                <p className="text-2xl font-bold text-foreground">{todayStats.count}</p>
-              </div>
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-orange-600" />
+
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Cantidad</p>
+                  <p className="text-2xl font-bold leading-none text-foreground">{stats.count}</p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-orange-100 text-orange-600">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
               </div>
             </div>
           </div>
         )}
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar venta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-xl"
+            className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
           />
         </div>
 
@@ -88,21 +128,25 @@ export default function SalesPage() {
           {sortedSales?.map((sale) => (
             <SaleCard
               key={sale.id}
-              sale={sale}
+              sale={sale as unknown as { id: string; businessId: string; customerId: string | null; sellerId: string; type: "instant_sale" | "pre_order"; saleType: "contado" | "credito"; totalAmount: string; amountPaid: string; balanceDue: string; tara: string | null; netWeight: string | null; saleDate: Date; deliveryDate: Date | null; orderDate: Date | null; status: "draft" | "confirmed" | "active" | "delivered" | "cancelled"; version: number; confirmedSnapshot: Record<string, unknown> | null; deliveredSnapshot: Record<string, unknown> | null; allowCustomerEdit: boolean; syncStatus: "pending" | "synced" | "error"; syncAttempts: number; cancelledAt: Date | null; cancelledBy: string | null; cancelReason: string | null; refundAmount: string | null; refundDate: Date | null; refundMethod: "efectivo" | "yape" | "plin" | "transferencia" | "saldo" | null; refundReference: string | null; refundNotes: string | null; advancePaymentMethod: string | null; advanceReferenceNumber: string | null; advanceProofImageId: string | null; createdAt: Date; updatedAt: Date; }}
               onClick={() => navigate(`/ventas/${sale.id}`)}
             />
           ))}
         </div>
       </div>
 
-      <Link to="/ventas/nueva" className="fixed right-4 bottom-28 z-50">
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full bg-orange-500 hover:bg-orange-600"
-        >
+      <Button
+        size="icon"
+        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+        onClick={handleCreateSale}
+        disabled={createDraftSale.isPending || businessLoading || !business?.businessUserId}
+      >
+        {createDraftSale.isPending ? (
+          <ShoppingCart className="h-6 w-6 animate-spin" />
+        ) : (
           <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+        )}
+      </Button>
     </>
   );
 }

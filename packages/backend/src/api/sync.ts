@@ -19,22 +19,24 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       body: t.Object({
         operations: t.Array(
           t.Object({
-            operationId: t.String(),
-            entity: t.Union([
+            idempotencyKey: t.String(),
+            entityType: t.Union([
               t.Literal("customers"),
               t.Literal("sales"),
               t.Literal("sale_items"),
               t.Literal("abonos"),
               t.Literal("distribuciones"),
             ]),
-            action: t.Union([
-              t.Literal("insert"),
+            entityId: t.String(),
+            operation: t.Union([
+              t.Literal("create"),
               t.Literal("update"),
               t.Literal("delete"),
             ]),
-            entityId: t.String(),
             payload: t.Record(t.String(), t.Unknown()),
-            clientTimestamp: t.String(),
+            localVersion: t.Number(),
+            localTimestamp: t.String(),
+            syncGroupId: t.Optional(t.String()),
           })
         ),
       }),

@@ -1,7 +1,7 @@
 import { Navigate, useNavigate, useParams } from "react-router";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSale, useSaleItems } from "~/hooks/use-sales";
+import { useSale } from "~/hooks/use-sales";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { useBusiness } from "~/hooks/use-business";
 import { BusinessUserRole } from "@avileo/shared";
@@ -21,11 +21,10 @@ import {
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: sales, isLoading } = useSale(id || "");
-  const { data: items = [] } = useSaleItems(id || "");
+  const { data: sale, isLoading } = useSale(id || null);
   const { settings } = useBusinessSettings();
   const { data: business } = useBusiness();
-  const sale = sales?.[0] ?? null;
+  const items = sale?.items ?? [];
 
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
   const isCancelled = sale?.status === "cancelled";

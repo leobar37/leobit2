@@ -201,6 +201,7 @@ export const saleItems = pgTable(
   "sale_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id"),
     saleId: uuid("sale_id").notNull(),
     productId: uuid("product_id").notNull(),
     variantId: uuid("variant_id").notNull(),
@@ -217,6 +218,7 @@ export const saleItems = pgTable(
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
   },
   (table) => [
+    index("idx_sale_items_business_id").on(table.businessId),
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
   ]
@@ -273,12 +275,15 @@ export const products = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     hasVariants: boolean("has_variants").notNull().default(false),
     imageId: uuid("image_id"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
+    index("idx_products_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -294,6 +299,7 @@ export const productVariants = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     productId: uuid("product_id").notNull(),
+    businessId: uuid("business_id"),
     name: varchar("name", { length: 50 }).notNull(),
     sku: varchar("sku", { length: 50 }),
     unitQuantity: decimal("unit_quantity", { precision: 10, scale: 3 }).notNull(),
@@ -306,6 +312,7 @@ export const productVariants = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_product_variants_business_id").on(table.businessId),
     index("idx_product_variants_product_id").on(table.productId),
   ]
 );
@@ -463,6 +470,38 @@ export type DistribucionItem = typeof distribucionItems.$inferSelect;
 export type NewDistribucionItem = typeof distribucionItems.$inferInsert;
 
 // ============================================================================
+// Closings
+// ============================================================================
+
+export const closings = pgTable(
+  "closings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    sellerId: uuid("seller_id").notNull(),
+    closingDate: date("closing_date").notNull(),
+    totalSales: integer("total_sales").notNull().default(0),
+    totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    cashAmount: decimal("cash_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    creditAmount: decimal("credit_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    totalKilos: decimal("total_kilos", { precision: 10, scale: 3 }),
+    backdateReason: text("backdate_reason"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_closings_business_id").on(table.businessId),
+    index("idx_closings_seller_id").on(table.sellerId),
+    index("idx_closings_date").on(table.closingDate),
+    index("idx_closings_sync_status").on(table.syncStatus),
+  ]
+);
+
+export type Closing = typeof closings.$inferSelect;
+export type NewClosing = typeof closings.$inferInsert;
+
+// ============================================================================
 // Relations
 // ============================================================================
 
@@ -537,5 +576,72 @@ export const distribucionItemsRelations = relations(distribucionItems, ({ one })
   distribucion: one(distribuciones, {
     fields: [distribucionItems.distribucionId],
     references: [distribuciones.id],
+  }),
+}));
+
+// ============================================================================
+// Tags
+// ============================================================================
+
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 100 }).notNull(),
+    color: varchar("color", { length: 20 }).notNull().default("#f97316"),
+    businessId: uuid("business_id").notNull(),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_tags_business_id").on(table.businessId),
+    index("idx_tags_name").on(table.name),
+  ]
+);
+
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+
+// ============================================================================
+// Customer Tags (Junction Table)
+// ============================================================================
+
+export const customerTags = pgTable(
+  "customer_tags",
+  {
+    customerId: uuid("customer_id").notNull(),
+    tagId: uuid("tag_id").notNull(),
+    assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+    assignedBy: uuid("assigned_by"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+  },
+  (table) => [
+    index("idx_customer_tags_customer_id").on(table.customerId),
+    index("idx_customer_tags_tag_id").on(table.tagId),
+  ]
+);
+
+export type CustomerTag = typeof customerTags.$inferSelect;
+export type NewCustomerTag = typeof customerTags.$inferInsert;
+
+// ============================================================================
+// Tag Relations
+// ============================================================================
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  customerTags: many(customerTags),
+}));
+
+export const customerTagsRelations = relations(customerTags, ({ one }) => ({
+  customer: one(customers, {
+    fields: [customerTags.customerId],
+    references: [customers.id],
+  }),
+  tag: one(tags, {
+    fields: [customerTags.tagId],
+    references: [tags.id],
   }),
 }));

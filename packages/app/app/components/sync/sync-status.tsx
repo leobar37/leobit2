@@ -8,19 +8,30 @@ import {
   type ReactNode,
 } from "react";
 import { subscribeToElectricSyncEvents } from "~/lib/db/electric-sync-events";
+import {
+  getEffectiveOnlineStatus,
+  getSimulatedOffline,
+  setSimulatedOffline,
+  subscribeToSimulatedOffline,
+} from "~/lib/sync/dev-network-override";
 
 const MUST_REFETCH_WINDOW_MS = 30_000;
 const MUST_REFETCH_GRACE_MS = 8_000;
 
 export interface SyncIssue {
-  type: "must-refetch";
+  type: "must-refetch" | "recoverable-error";
   table: string;
   detectedAt: Date;
   count: number;
+  reason?: "duplicate-key";
+  error?: string;
 }
 
 interface SyncContextValue {
   isOnline: boolean;
+  actualIsOnline: boolean;
+  isSimulatedOffline: boolean;
+  setSimulatedOffline: (value: boolean) => void;
   lastSync: Date | null;
   syncIssue: SyncIssue | null;
   dismissSyncIssue: () => void;
@@ -28,17 +39,22 @@ interface SyncContextValue {
 
 const SyncContext = createContext<SyncContextValue>({
   isOnline: true,
+  actualIsOnline: true,
+  isSimulatedOffline: false,
+  setSimulatedOffline: () => {},
   lastSync: null,
   syncIssue: null,
   dismissSyncIssue: () => {},
 });
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [actualIsOnline, setActualIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [isSimulatedOffline, setIsSimulatedOfflineState] = useState(getSimulatedOffline());
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncIssue, setSyncIssue] = useState<SyncIssue | null>(null);
   const mustRefetchEvents = useRef(new Map<string, number[]>());
   const pendingTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const isOnline = getEffectiveOnlineStatus(actualIsOnline);
 
   const clearPendingTable = useCallback((table: string) => {
     const timer = pendingTimers.current.get(table);
@@ -55,8 +71,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => setActualIsOnline(true);
+    const handleOffline = () => setActualIsOnline(false);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -65,6 +81,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    return subscribeToSimulatedOffline(setIsSimulatedOfflineState);
   }, []);
 
   useEffect(() => {
@@ -110,6 +130,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           count: recentEvents.length,
         });
       }
+
+      if (event.type === "recoverable-error") {
+        clearPendingTable(event.table);
+        setSyncIssue({
+          type: "recoverable-error",
+          table: event.table,
+          detectedAt: new Date(event.occurredAt),
+          count: 1,
+          reason: event.reason,
+          error: event.error,
+        });
+      }
     });
   }, [clearPendingTable]);
 
@@ -124,7 +156,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   return (
     <SyncContext.Provider
-      value={{ isOnline, lastSync, syncIssue, dismissSyncIssue }}
+      value={{
+        isOnline,
+        actualIsOnline,
+        isSimulatedOffline,
+        setSimulatedOffline,
+        lastSync,
+        syncIssue,
+        dismissSyncIssue,
+      }}
     >
       {children}
     </SyncContext.Provider>

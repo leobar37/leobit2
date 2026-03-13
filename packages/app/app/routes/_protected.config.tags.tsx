@@ -17,19 +17,31 @@ import {
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { TagForm, TagBadge } from "~/components/tags";
 import { useTags, useDeleteTag, type Tag } from "~/hooks/use-tags";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 export default function TagsConfigPage() {
   const { data: tags, isLoading } = useTags();
   const deleteTag = useDeleteTag();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteTag.mutateAsync(id);
-      toast.success("Etiqueta eliminada");
-    } catch (error) {
-      toast.error("Error al eliminar la etiqueta");
+    const confirmed = await confirm({
+      title: "Eliminar etiqueta",
+      description: "¿Estás seguro de que deseas eliminar esta etiqueta? Esta acción no se puede deshacer.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      try {
+        await deleteTag.mutateAsync(id);
+        toast.success("Etiqueta eliminada");
+      } catch (error) {
+        toast.error("Error al eliminar la etiqueta");
+      }
     }
   };
 
@@ -168,6 +180,8 @@ export default function TagsConfigPage() {
           <TagForm tag={editingTag} onClose={closeModal} />
         </AppDrawer.Body>
       </AppDrawer>
+
+      <ConfirmDialog />
     </div>
   );
 }

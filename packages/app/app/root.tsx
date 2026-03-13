@@ -72,6 +72,23 @@ export default function App() {
     }
   }, []);
 
+  // Suppress known ElectricSQL/PGlite duplicate key errors
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const errorMessage = String(event.reason);
+      if (
+        errorMessage.includes("duplicate key value violates unique constraint") ||
+        errorMessage.includes("_pkey")
+      ) {
+        // Silently ignore - these are expected during Electric sync
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

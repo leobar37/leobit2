@@ -36,11 +36,14 @@ packages/
 | `@avileo/backend` | `packages/backend/AGENTS.md` | ElysiaJS, Drizzle, RequestContext |
 | `@avileo/app` | `packages/app/AGENTS.md` | React Router v7, TanStack, offline-first |
 | `app/components` | `packages/app/app/components/AGENTS.md` | UI primitives, forms, shadcn/ui |
-| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer, sync engine |
 | `app/routes` | `packages/app/app/routes/AGENTS.md` | File-based routing conventions |
 | `app/hooks` | `packages/app/app/hooks/AGENTS.md` | Custom React hooks patterns |
+| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer |
+| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | ElectricSQL sync engine |
 | `app/e2e` | `packages/app/e2e/AGENTS.md` | E2E testing patterns |
 | `backend/services` | `packages/backend/src/services/AGENTS.md` | Repository/service layer |
+| `backend/api` | `packages/backend/src/api/AGENTS.md` | Elysia route modules |
+| `backend/db/schema` | `packages/backend/src/db/schema/AGENTS.md` | Drizzle table definitions |
 
 ## Quick Commands
 
@@ -149,6 +152,7 @@ async findById(id: string, ctx: RequestContext)
 | Architecture overview | `docs/ARCHITECTURE.md` |
 | Database schema | `docs/technical/database.md` |
 | Offline sync plan | `docs/technical/offline-plan.md` |
+| Electric/sales sync lessons | `docs/technical/electric-sales-sync-considerations.md` |
 | Development phases | `docs/development/readme.md` |
 | UI mockups | `docs/screens/readme.md` |
 
@@ -257,6 +261,7 @@ File-based routing in `packages/app/app/routes/` using flatRoutes convention:
 | **Architecture** | `docs/ARCHITECTURE.md` |
 | **Technical Plan** | `docs/technical/readme.md` |
 | **Database Schema** | `docs/technical/database.md` |
+| **Electric/Sales Sync Lessons** | `docs/technical/electric-sales-sync-considerations.md` |
 | **Development Phases** | `docs/development/readme.md` |
 | **UI Mockups** | `docs/screens/readme.md` |
 | **UI Components** | `docs/screens/componentes-ui.md` |

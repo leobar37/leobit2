@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-03-12T14:29:19.424Z",
+  "backupFile": "/Users/leobar37/code/avileo/backups/pre-migration-2026-03-12T14-07-08.json",
+  "status": "success",
+  "summary": {
+    "tablesCleared": 13,
+    "recordsCleared": 0,
+    "recordsRestored": 44,
+    "durationMs": 727
+  },
+  "tableResults": [
+    {
+      "table": "distribucionItems",
+      "recordsCleared": 0,
+      "recordsRestored": 0,
+      "status": "empty"
+    },
+    {
+      "table": "distribuciones",
+      "recordsCleared": 0,
+      "recordsRestored": 0,
+      "status": "empty"
+    },
+    {
+      "table": "abonos",
+      "recordsCleared": 0,
+      "recordsRestored": 1,
+      "status": "restored"
+    },
+    {
+      "table": "saleItems",
+      "recordsCleared": 0,
+      "recordsRestored": 1,
+      "status": "restored"
+    },
+    {
+      "table": "sales",
+      "recordsCleared": 0,
+      "recordsRestored": 14,
+      "status": "restored"
+    },
+    {
+      "table": "purchaseItems",
+      "recordsCleared": 0,
+      "recordsRestored": 0,
+      "status": "empty"
+    },
+    {
+      "table": "purchases",
+      "recordsCleared": 0,
+      "recordsRestored": 0,
+      "status": "empty"
+    },
+    {
+      "table": "productVariants",
+      "recordsCleared": 0,
+      "recordsRestored": 9,
+      "status": "restored"
+    },
+    {
+      "table": "products",
+      "recordsCleared": 0,
+      "recordsRestored": 3,
+      "status": "restored"
+    },
+    {
+      "table": "suppliers",
+      "recordsCleared": 0,
+      "recordsRestored": 4,
+      "status": "restored"
+    },
+    {
+      "table": "customers",
+      "recordsCleared": 0,
+      "recordsRestored": 6,
+      "status": "restored"
+    },
+    {
+      "table": "businessUsers",
+      "recordsCleared": 0,
+      "recordsRestored": 3,
+      "status": "restored"
+    },
+    {
+      "table": "businesses",
+      "recordsCleared": 0,
+      "recordsRestored": 3,
+      "status": "restored"
+    }
+  ],
+  "errors": [],
+  "metadata": {
+    "rollbackVersion": "1.0.0",
+    "startTime": "2026-03-12T14:29:19.424Z",
+    "endTime": "2026-03-12T14:29:20.151Z"
+  }
+}

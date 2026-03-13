@@ -1,34 +1,28 @@
-export type ElectricSyncEvent =
-  | {
-      type: "must-refetch";
-      table: string;
-      status: number;
-      occurredAt: number;
-    }
-  | {
-      type: "up-to-date";
-      table: string;
-      occurredAt: number;
-    };
+type ElectricSyncEvent = {
+  type: "must-refetch" | "up-to-date" | "recoverable-error";
+  table: string;
+  reason?: "duplicate-key";
+  error?: string;
+  status?: number;
+  occurredAt: number;
+};
 
-type ElectricSyncListener = (event: ElectricSyncEvent) => void;
+type ElectricSyncCallback = (event: ElectricSyncEvent) => void;
 
-const listeners = new Set<ElectricSyncListener>();
+const listeners = new Set<ElectricSyncCallback>();
 
-function emitElectricSyncEvent(event: ElectricSyncEvent) {
-  for (const listener of listeners) {
-    listener(event);
-  }
-}
-
-export function subscribeToElectricSyncEvents(listener: ElectricSyncListener) {
-  listeners.add(listener);
+export function subscribeToElectricSyncEvents(callback: ElectricSyncCallback): () => void {
+  listeners.add(callback);
   return () => {
-    listeners.delete(listener);
+    listeners.delete(callback);
   };
 }
 
-export function reportMustRefetch(table: string, status: number) {
+function emitElectricSyncEvent(event: ElectricSyncEvent): void {
+  listeners.forEach((callback) => callback(event));
+}
+
+export function reportMustRefetch(table: string, status?: number): void {
   emitElectricSyncEvent({
     type: "must-refetch",
     table,
@@ -37,7 +31,7 @@ export function reportMustRefetch(table: string, status: number) {
   });
 }
 
-export function reportShapeUpToDate(table: string) {
+export function reportShapeUpToDate(table: string): void {
   emitElectricSyncEvent({
     type: "up-to-date",
     table,
@@ -45,30 +39,47 @@ export function reportShapeUpToDate(table: string) {
   });
 }
 
-function isElectricControlMessage(payload: string, control: "must-refetch" | "up-to-date") {
-  return payload.includes(`"control":"${control}"`);
+export function reportRecoverableSyncError(
+  table: string,
+  reason: "duplicate-key",
+  error: string
+): void {
+  emitElectricSyncEvent({
+    type: "recoverable-error",
+    table,
+    reason,
+    error,
+    occurredAt: Date.now(),
+  });
 }
 
-export function createElectricFetchClient(table: string): typeof fetch {
-  const electricFetchClient = async (input: URL | RequestInfo, init?: RequestInit) => {
+export function createElectricFetchClient(table: string) {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const response = await fetch(input, init);
 
-    try {
-      const bodyText = await response.clone().text();
+    const responseText = await response.text();
+    const contentType = response.headers.get("content-type") || "";
 
-      if (isElectricControlMessage(bodyText, "must-refetch")) {
-        reportMustRefetch(table, response.status);
-      }
+    if (contentType.includes("application/json")) {
+      try {
+        const json = JSON.parse(responseText);
+        const headers = json?.[0]?.headers;
+        const control = headers?.control;
 
-      if (isElectricControlMessage(bodyText, "up-to-date")) {
-        reportShapeUpToDate(table);
+        if (control === "must-refetch") {
+          reportMustRefetch(table, response.status);
+        } else if (control === "up-to-date") {
+          reportShapeUpToDate(table);
+        }
+      } catch {
+        // Not valid Electric response, ignore
       }
-    } catch (error) {
-      console.warn(`[ElectricSyncEvents] Failed to inspect response for ${table}`, error);
     }
 
-    return response;
+    return new Response(responseText, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
   };
-
-  return electricFetchClient as typeof fetch;
 }

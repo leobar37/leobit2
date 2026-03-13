@@ -1,62 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
-import { EngineProvider } from "~/engine";
+import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
+import {
+  ConflictResolver,
+  type ConflictData,
+  type ConflictResolution,
+} from "~/components/sync/conflict-resolver";
+import { EngineProvider, useEngine } from "~/engine";
+import { ServicesProvider } from "~/lib/sync/service-provider";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
-// import { HelpButton } from "~/components/help";
 import { refreshSession } from "~/lib/auth-client";
-
-const isAuthDebugEnabled = import.meta.env.DEV;
-
-function debugProtected(message: string, payload?: unknown) {
-  if (!isAuthDebugEnabled) return;
-
-  if (payload === undefined) {
-    console.log(`[ProtectedLayout] ${message}`);
-    return;
-  }
-
-  console.log(`[ProtectedLayout] ${message}`, payload);
-}
+import { getStoredBusinessId, getStoredAuthToken } from "~/lib/session-storage";
 
 function OutletWithLog() {
-  const location = useLocation();
-  debugProtected("Outlet rendering", { path: location.pathname });
   useAutoFileUploadProcessor();
   return <Outlet />;
 }
 
+function ServicesProviderWrapper({
+  businessId,
+  token,
+}: {
+  businessId: string;
+  token: string;
+}) {
+  const { pg, isInitialized } = useEngine();
 
-
-export default function ProtectedLayout() {
-  const { user, isLoading } = useAuth();
-  const location = useLocation();
-
-  useEffect(() => {
-    debugProtected("Auth guard snapshot", {
-      path: location.pathname,
-      isLoading,
-      hasUser: Boolean(user),
-      userId: user?.id ?? null,
-    });
-  }, [isLoading, location.pathname, user]);
-
-  // Keep session alive by refreshing every 15 minutes
-  // This prevents JWT token expiration issues
-  useEffect(() => {
-    const interval = setInterval(() => {
-      debugProtected("Refreshing session from keep-alive interval");
-      void refreshSession();
-    }, 15 * 60 * 1000); // 15 minutes
-
-    return () => clearInterval(interval);
-  }, []);
-
-  if (isLoading) {
+  if (!isInitialized || !pg) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -64,26 +39,70 @@ export default function ProtectedLayout() {
     );
   }
 
-  if (!user) {
-    debugProtected("Redirecting to login because user is missing", {
-      path: location.pathname,
-    });
+  return (
+    <ServicesProvider pg={pg} businessId={businessId} authToken={token}>
+      <OutletWithLog />
+    </ServicesProvider>
+  );
+}
+
+export default function ProtectedLayout() {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+  const [activeConflict, setActiveConflict] = useState<ConflictData | null>(
+    null,
+  );
+
+  // Keep session alive by refreshing every 15 minutes
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        void refreshSession();
+      },
+      15 * 60 * 1000,
+    );
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleResolveConflict = async (resolution: ConflictResolution) => {
+    setActiveConflict(null);
+  };
+
+  const hasToken = !!getStoredAuthToken();
+
+  if (!hasToken) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Get businessId and token from user session
-  // These would come from your auth context
-  const businessId = user.businessId || "";
-  const token = user.token || "";
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  const businessId = getStoredBusinessId() || "";
+  const token = getStoredAuthToken() || "";
 
   return (
     <EngineProvider businessId={businessId} token={token}>
       <SyncProvider>
-        <AppLayout>
+        <AppLayout
+          headerAccessory={
+            <SyncDevToolsDrawer triggerClassName="text-muted-foreground hover:text-foreground" />
+          }
+        >
           <SyncErrorMonitor />
-          <OutletWithLog />
-          {/* <HelpButton /> */}
+          <ServicesProviderWrapper businessId={businessId} token={token} />
         </AppLayout>
+        <ConflictResolver
+          conflict={activeConflict}
+          isOpen={!!activeConflict}
+          onClose={() => setActiveConflict(null)}
+          onResolve={handleResolveConflict}
+        />
       </SyncProvider>
     </EngineProvider>
   );

@@ -3,7 +3,7 @@
  * Multi-select component for tags with visual feedback
  */
 import { Check } from "lucide-react";
-import { useTags, type Tag } from "~/hooks/use-tags";
+import { useTags } from "~/hooks/use-tags";
 
 interface TagSelectProps {
   selectedTagIds: string[];
@@ -55,8 +55,8 @@ export function TagSelect({ selectedTagIds, onChange, className = "" }: TagSelec
             style={{
               backgroundColor: `${tag.color}20`,
               color: tag.color,
-              ringColor: tag.color,
-            }}
+              "--tw-ring-color": tag.color,
+            } as React.CSSProperties}
           >
             {isSelected && <Check className="h-3.5 w-3.5" />}
             {tag.name}

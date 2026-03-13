@@ -309,7 +309,18 @@ export class SaleService {
       throw new ForbiddenError("Solo los administradores pueden eliminar ventas");
     }
 
-    await this.repository.delete(ctx, id);
+    // Draft sales: hard delete
+    // Processed sales: soft delete (change to cancelled)
+    if (sale.status === "draft") {
+      await this.repository.delete(ctx, id);
+    } else {
+      // Soft delete - change status to cancelled
+      await this.repository.update(ctx, id, {
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancelledBy: ctx.businessUserId,
+      });
+    }
   }
 
   private derivePaymentMode(

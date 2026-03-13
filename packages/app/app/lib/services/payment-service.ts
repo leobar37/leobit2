@@ -1,0 +1,243 @@
+/**
+ * Payment Service (Abonos)
+ * Local-first service for managing customer debt payments
+ */
+
+import type { PGlite } from "@electric-sql/pglite";
+import { BaseService, type EntityType } from "./base-service";
+import { SyncService } from "../sync/sync-service";
+import { formatCurrency } from "~/lib/utils";
+
+/** Payment (Abono) entity type */
+export interface Abono {
+  id: string;
+  business_id: string;
+  customer_id: string;
+  seller_id: string;
+  amount: string;
+  payment_method: string;
+  notes: string | null;
+  proof_image_id: string | null;
+  reference_number: string | null;
+  related_sale_id: string | null;
+  sync_status: "pending" | "synced" | "error";
+  sync_attempts: number;
+  created_at: string;
+}
+
+/** Input for creating a new payment */
+export interface CreateAbonoInput {
+  customer_id: string;
+  seller_id: string;
+  amount: number;
+  payment_method: string;
+  notes?: string;
+  related_sale_id?: string;
+  proof_image_id?: string;
+  reference_number?: string;
+}
+
+/** Input for updating a payment */
+export interface UpdateAbonoInput {
+  notes?: string;
+  proof_image_id?: string | null;
+  reference_number?: string | null;
+}
+
+/**
+ * Payment Service for managing debt payments (abonos)
+ * Extends BaseService for local-first operations with sync integration
+ */
+export class PaymentService extends BaseService {
+  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
+    super(pg, syncService, businessId);
+  }
+
+  /**
+   * Returns the entity type for this service
+   */
+  getEntityType(): EntityType {
+    return "abonos";
+  }
+
+  /**
+   * Returns the ID prefix for this entity
+   */
+  getEntityPrefix(): string {
+    return "pay";
+  }
+
+  /**
+   * Find a payment by ID
+   */
+  async findById(id: string): Promise<Abono | null> {
+    const result = await this.pg.query<Abono>(
+      "SELECT * FROM abonos WHERE id = $1",
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Find all payments for a specific customer
+   */
+  async findByCustomer(customerId: string): Promise<Abono[]> {
+    const result = await this.pg.query<Abono>(
+      `SELECT * FROM abonos
+       WHERE customer_id = $1 AND business_id = $2
+       ORDER BY created_at DESC`,
+      [customerId, this.businessId]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Find all payments for the current business
+   */
+  async findByBusiness(): Promise<Abono[]> {
+    const result = await this.pg.query<Abono>(
+      `SELECT * FROM abonos
+       WHERE business_id = $1
+       ORDER BY created_at DESC`,
+      [this.businessId]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Create a new payment (abono)
+   */
+  async create(input: CreateAbonoInput): Promise<Abono> {
+    const id = this.generateId();
+    const now = this.now();
+
+    // Format amount as decimal string using project utility
+    const amount = formatCurrency(input.amount);
+
+    await this.pg.exec(
+      `INSERT INTO abonos (
+        id, business_id, customer_id, seller_id, amount, payment_method,
+        notes, proof_image_id, reference_number, related_sale_id,
+        sync_status, sync_attempts, created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+      )`,
+      [
+        id,
+        this.businessId,
+        input.customer_id,
+        input.seller_id,
+        amount,
+        input.payment_method,
+        input.notes ?? null,
+        input.proof_image_id ?? null,
+        input.reference_number ?? null,
+        input.related_sale_id ?? null,
+        "pending",
+        0,
+        now,
+      ]
+    );
+
+    // Queue sync operation
+    await this.queueSync("insert", id, {
+      customer_id: input.customer_id,
+      seller_id: input.seller_id,
+      amount,
+      payment_method: input.payment_method,
+      notes: input.notes,
+      proof_image_id: input.proof_image_id,
+      reference_number: input.reference_number,
+      related_sale_id: input.related_sale_id,
+    } as Record<string, unknown>);
+
+    // Return the created payment
+    return (await this.findById(id)) as Abono;
+  }
+
+  /**
+   * Update a payment's editable fields
+   * Only notes, proof_image_id, and reference_number can be updated
+   * Amount cannot be changed - delete and recreate instead
+   */
+  async update(id: string, input: UpdateAbonoInput): Promise<Abono | null> {
+    const now = this.now();
+
+    // Build dynamic update based on provided fields
+    const updates: string[] = [];
+    const params: (string | null)[] = [];
+    let paramIndex = 1;
+
+    if (input.notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      params.push(input.notes ?? null);
+    }
+
+    if (input.proof_image_id !== undefined) {
+      updates.push(`proof_image_id = $${paramIndex++}`);
+      params.push(input.proof_image_id ?? null);
+    }
+
+    if (input.reference_number !== undefined) {
+      updates.push(`reference_number = $${paramIndex++}`);
+      params.push(input.reference_number ?? null);
+    }
+
+    if (updates.length === 0) {
+      // Nothing to update
+      return this.findById(id);
+    }
+
+    // Add sync_status and updated_at
+    updates.push(`sync_status = $${paramIndex++}`);
+    params.push("pending");
+
+    updates.push(`updated_at = $${paramIndex++}`);
+    params.push(now);
+
+    // Add id as last parameter
+    params.push(id);
+
+    await this.pg.exec(
+      `UPDATE abonos SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
+      params
+    );
+
+    // Queue sync operation
+    await this.queueSync("update", id, {
+      notes: input.notes,
+      proof_image_id: input.proof_image_id,
+      reference_number: input.reference_number,
+    } as Record<string, unknown>);
+
+    return this.findById(id);
+  }
+
+  /**
+   * Delete a payment
+   */
+  async delete(id: string): Promise<void> {
+    // Get the payment data before deletion for sync
+    const payment = await this.findById(id);
+    if (!payment) {
+      return;
+    }
+
+    // Delete from local database
+    await this.pg.exec("DELETE FROM abonos WHERE id = $1", [id]);
+
+    // Queue sync operation
+    await this.queueSync("delete", id, {});
+  }
+}
+
+/**
+ * Factory function to create a PaymentService instance
+ */
+export function createPaymentService(
+  pg: PGlite,
+  syncService: SyncService,
+  businessId: string
+): PaymentService {
+  return new PaymentService(pg, null, syncService, businessId);
+}

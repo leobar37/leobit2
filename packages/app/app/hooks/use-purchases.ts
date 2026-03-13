@@ -1,159 +1,150 @@
-import { useLiveQuery, eq } from "@tanstack/react-db";
-import { useMutation } from "@tanstack/react-query";
-import { purchaseCollection } from "~/lib/db/collections/purchase.collection";
-import { supplierCollection } from "~/lib/db/collections/supplier.collection";
-import { useBusiness } from "./use-business";
-import { generateId } from "~/lib/utils";
-import type { CreatePurchaseInput } from "~/lib/db/schema";
+/**
+ * Purchases Hook - Service-based
+ * Reactively fetch and mutate purchases using PGlite services
+ */
 
-export interface PurchaseItem {
-  id: string;
-  productId: string;
-  variantId: string | null;
-  quantity: string;
-  unitCost: string;
-  totalCost: string;
-  product?: {
-    id: string;
-    name: string;
-  };
-  variant?: {
-    id: string;
-    name: string;
-  } | null;
-}
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePurchaseService } from "~/lib/sync/service-provider";
+import type {
+  Purchase,
+  PurchaseStatus,
+  CreatePurchaseInput,
+} from "~/lib/services/purchase-service";
 
-export interface Purchase {
-  id: string;
-  supplierId: string;
-  purchaseDate: string;
-  totalAmount: string;
-  status: "pending" | "received" | "cancelled";
-  invoiceNumber: string | null;
-  receiptImageId: string | null;
-  notes: string | null;
-  supplier?: {
-    id: string;
-    name: string;
-  };
-  receiptImage?: {
-    id: string;
-    filename: string;
-    url?: string;
-  } | null;
-  items: PurchaseItem[];
-  createdAt: Date;
-}
+const QUERY_KEYS = {
+  purchases: ["purchases-new"],
+  purchase: (id: string) => ["purchases-new", id],
+  bySupplier: (supplierId: string) => ["purchases-new", "supplier", supplierId],
+  byStatus: (status: PurchaseStatus) => ["purchases-new", "status", status],
+} as const;
 
-export interface CreatePurchaseItemInput {
-  productId: string;
-  variantId?: string;
-  unitId?: string;
-  quantity: number;
-  unitCost: number;
-}
-
+/**
+ * Get all purchases for the current business
+ */
 export function usePurchases() {
-  const { data: business } = useBusiness();
-  const businessId = business?.id;
+  const purchaseService = usePurchaseService();
 
-  return useLiveQuery(
-    (q) =>
-      q
-        .from({ purchase: purchaseCollection })
-        .join(
-          { supplier: supplierCollection },
-          ({ purchase, supplier }) => eq(purchase.supplierId, supplier.id),
-          "left"
-        )
-        .where(({ purchase }) => eq(purchase.businessId, businessId))
-        .orderBy(({ purchase }) => purchase.purchaseDate, "desc"),
-    [businessId]
-  );
-}
-
-export function usePurchase(id: string) {
-  return useLiveQuery(
-    (q) =>
-      q
-        .from({ purchase: purchaseCollection })
-        .join(
-          { supplier: supplierCollection },
-          ({ purchase, supplier }) => eq(purchase.supplierId, supplier.id),
-          "left"
-        )
-        .where(({ purchase }) => eq(purchase.id, id)),
-    [id]
-  );
-}
-
-export function useCreatePurchase() {
-  return useMutation({
-    mutationFn: async (input: CreatePurchaseInput) => {
-      const id = generateId();
-      const totalAmount = input.items.reduce(
-        (sum, item) => sum + item.quantity * item.unitCost,
-        0
-      );
-
-      await purchaseCollection.insert({
-        id,
-        supplierId: input.supplierId,
-        purchaseDate: input.purchaseDate,
-        invoiceNumber: input.invoiceNumber || null,
-        receiptImageId: input.receiptImageId || null,
-        notes: input.notes || null,
-        totalAmount: totalAmount.toString(),
-        status: "pending",
-        items: input.items.map((item) => ({
-          id: generateId(),
-          purchaseId: id,
-          productId: item.productId,
-          variantId: item.variantId || null,
-          unitId: item.unitId || null,
-          quantity: item.quantity.toString(),
-          unitCost: item.unitCost.toString(),
-          totalCost: (item.quantity * item.unitCost).toString(),
-          syncStatus: "pending",
-          syncAttempts: 0,
-          createdAt: new Date(),
-        })),
-        businessId: "",
-        syncStatus: "pending",
-        syncAttempts: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      return id;
+  return useQuery({
+    queryKey: QUERY_KEYS.purchases,
+    queryFn: async (): Promise<Purchase[]> => {
+      return purchaseService.findByBusiness();
     },
   });
 }
 
+/**
+ * Get a single purchase by ID
+ */
+export function usePurchase(id: string | null) {
+  const purchaseService = usePurchaseService();
+
+  return useQuery({
+    queryKey: id ? QUERY_KEYS.purchase(id) : ["purchases-new", "detail"],
+    queryFn: async (): Promise<Purchase | null> => {
+      if (!id) return null;
+      return purchaseService.findById(id);
+    },
+    enabled: !!id,
+  });
+}
+
+/**
+ * Get purchases by supplier
+ */
+export function usePurchasesBySupplier(supplierId: string) {
+  const purchaseService = usePurchaseService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.bySupplier(supplierId),
+    queryFn: async (): Promise<Purchase[]> => {
+      return purchaseService.findBySupplier(supplierId);
+    },
+    enabled: !!supplierId,
+  });
+}
+
+/**
+ * Get purchases by status
+ */
+export function usePurchasesByStatus(status: PurchaseStatus) {
+  const purchaseService = usePurchaseService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.byStatus(status),
+    queryFn: async (): Promise<Purchase[]> => {
+      return purchaseService.findByBusiness();
+    },
+    select: (data: Purchase[]) => data.filter((p) => p.status === status),
+  });
+}
+
+/**
+ * Create a new purchase
+ */
+export function useCreatePurchase() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreatePurchaseInput): Promise<Purchase> => {
+      return purchaseService.create(input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: ["purchases-new", "supplier"] });
+    },
+  });
+}
+
+/**
+ * Update purchase status
+ */
 export function useUpdatePurchaseStatus() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({
       id,
       status,
     }: {
       id: string;
-      status: "pending" | "received" | "cancelled";
-    }) => {
-      await purchaseCollection.update(id, (draft) => {
-        draft.status = status;
-        draft.syncStatus = "pending";
-        draft.updatedAt = new Date();
+      status: PurchaseStatus;
+    }): Promise<void> => {
+      return purchaseService.updateStatus(id, status);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.id),
       });
-      return id;
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({
+        queryKey: ["purchases-new", "status"],
+      });
     },
   });
 }
 
+/**
+ * Delete a purchase
+ */
 export function useDeletePurchase() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (id: string) => {
-      await purchaseCollection.delete(id);
-      return id;
+    mutationFn: async (id: string): Promise<void> => {
+      return purchaseService.delete(id);
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchase(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({
+        queryKey: ["purchases-new", "supplier"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["purchases-new", "status"],
+      });
     },
   });
 }

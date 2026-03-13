@@ -46,7 +46,6 @@ export default function AppearanceConfigPage() {
 
   const onSubmit = async (data: AppearanceConfigFormData) => {
     setIsSaving(true);
-    console.log("Appearance config:", data);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setIsSaving(false);
   };

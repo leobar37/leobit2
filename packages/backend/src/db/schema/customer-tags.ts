@@ -8,11 +8,16 @@ import {
   timestamp,
   primaryKey,
   index,
+  integer,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { customers } from "./customers";
 import { tags } from "./tags";
 import { businessUsers } from "./businesses";
+
+// Sync status enum
+const syncStatusEnum = pgEnum("sync_status", ["pending", "synced", "error"]);
 
 // Table definition (junction table)
 export const customerTags = pgTable(
@@ -28,6 +33,10 @@ export const customerTags = pgTable(
     // Assignment metadata
     assignedAt: timestamp("assigned_at").notNull().defaultNow(),
     assignedBy: uuid("assigned_by").references(() => businessUsers.id),
+
+    // Sync status for offline support
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.customerId, table.tagId] }),

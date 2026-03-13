@@ -1,6 +1,10 @@
 ---
 name: avileo
-description: Avileo (PollosPro) - Offline-first chicken sales management system. Use when working on the Avileo project, implementing sales features, offline sync, database schema, or any code related to this chicken business management app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7 frontend, Drizzle ORM, TanStack DB, and offline-first architecture.
+description: Avileo (PollosPro) - Offline-first chicken sales management system.
+  Use when working on the Avileo project, implementing sales features, offline
+  sync, database schema, or any code related to this chicken business management
+  app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7
+  frontend, Drizzle ORM, TanStack DB, and offline-first architecture.
 ---
 
 # Avileo Project Reference
@@ -48,7 +52,7 @@ avileo/
 ├── docs/
 │   ├── technical/        # Architecture & database docs
 │   └── development/      # Development phases (01-10)
-├── .Codex/
+├── .claude/
 │   └── skills/avileo/    # This skill
 └── package.json          # Turborepo root
 ```

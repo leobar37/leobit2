@@ -6,6 +6,7 @@ import { z } from "zod";
  */
 export const saleItemSchema = z.object({
   id: z.string(),
+  businessId: z.string(),
   saleId: z.string(),
   productId: z.string(),
   variantId: z.string(),

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { useProductService } from "~/lib/sync/service-provider";
 
 export interface Product {
   id: string;
@@ -10,15 +10,26 @@ export interface Product {
   isActive: boolean;
 }
 
-export function useProductsLive() {
+export function useProducts() {
+  const productService = useProductService();
+
   return useQuery({
-    queryKey: ["products-live"],
+    queryKey: ["products"],
     queryFn: async () => {
-      const res = await api.products.get();
-      if (res.data?.success) {
-        return res.data.data as Product[];
-      }
-      return [];
+      return productService.findByBusiness();
     },
+  });
+}
+
+export function useProduct(id: string | null) {
+  const productService = useProductService();
+
+  return useQuery({
+    queryKey: ["product", id],
+    queryFn: async () => {
+      if (!id) return null;
+      return productService.findById(id);
+    },
+    enabled: !!id,
   });
 }

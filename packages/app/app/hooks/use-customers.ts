@@ -1,69 +1,34 @@
 /**
- * Customers Hook
- * Reactively fetch and mutate customers using PGlite + ElectricSQL
+ * Customers Hook (Service-based)
+ * Reactively fetch and mutate customers using PGlite services
  */
-import { useCallback, useEffect, useState } from "react";
-import { eq, ilike, and } from "drizzle-orm";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDatabase } from "~/engine";
-import { customers, type Customer, type NewCustomer } from "~/engine/schema";
-import { pushWrite } from "~/engine/write-engine";
 
-const CUSTOMERS_QUERY_KEY = "customers";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCustomerService } from "~/lib/sync/service-provider";
+import type { Customer } from "@avileo/shared";
+import type {
+  CreateCustomerInput,
+  UpdateCustomerInput,
+  CustomerSearchFilters,
+} from "~/lib/services/customer-service";
+
+const QUERY_KEYS = {
+  customers: ["customers-new"],
+  customer: (id: string) => ["customers-new", id],
+  search: (filters: CustomerSearchFilters) => ["customers-new", "search", filters],
+} as const;
 
 /**
  * Get all customers for the current business
  */
-export function useCustomers(businessId: string) {
+export function useCustomers(filters?: CustomerSearchFilters) {
+  const customerService = useCustomerService();
+
   return useQuery({
-    queryKey: [CUSTOMERS_QUERY_KEY, businessId],
+    queryKey: filters ? QUERY_KEYS.search(filters) : QUERY_KEYS.customers,
     queryFn: async () => {
-      const { db } = getDatabase();
-      return db
-        .select()
-        .from(customers)
-        .where(eq(customers.businessId, businessId))
-        .orderBy(customers.name);
+      return customerService.findByBusiness(filters);
     },
-    enabled: !!businessId,
-  });
-}
-
-/**
- * Search customers by name or DNI
- */
-export function useSearchCustomers(
-  businessId: string,
-  searchTerm: string | null
-) {
-  return useQuery({
-    queryKey: [CUSTOMERS_QUERY_KEY, "search", businessId, searchTerm],
-    queryFn: async () => {
-      const { db } = getDatabase();
-
-      if (!searchTerm || searchTerm.length < 2) {
-        return db
-          .select()
-          .from(customers)
-          .where(eq(customers.businessId, businessId))
-          .orderBy(customers.name)
-          .limit(20);
-      }
-
-      const term = `%${searchTerm}%`;
-      return db
-        .select()
-        .from(customers)
-        .where(
-          and(
-            eq(customers.businessId, businessId),
-            ilike(customers.name, term)
-          )
-        )
-        .orderBy(customers.name)
-        .limit(20);
-    },
-    enabled: !!businessId,
   });
 }
 
@@ -71,74 +36,76 @@ export function useSearchCustomers(
  * Get a single customer by ID
  */
 export function useCustomer(id: string | null) {
+  const customerService = useCustomerService();
+
   return useQuery({
-    queryKey: [CUSTOMERS_QUERY_KEY, id],
+    queryKey: id ? QUERY_KEYS.customer(id) : ["customers-new", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      const { db } = getDatabase();
-      const result = await db
-        .select()
-        .from(customers)
-        .where(eq(customers.id, id))
-        .limit(1);
-      return result[0] || null;
+      return customerService.findById(id);
     },
     enabled: !!id,
   });
 }
 
-interface CreateCustomerInput {
-  name: string;
-  dni?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  notes?: string | null;
+/**
+ * Search customers by name, DNI, or phone
+ */
+export function useSearchCustomers(searchTerm: string | null) {
+  const customerService = useCustomerService();
+
+  return useQuery({
+    queryKey: ["customers-new", "search", searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) {
+        return customerService.findByBusiness({});
+      }
+      return customerService.findByBusiness({ search: searchTerm });
+    },
+  });
 }
 
 /**
  * Create a new customer
  */
 export function useCreateCustomer() {
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateCustomerInput) => {
-      const result = await pushWrite("/api/customers", "POST", input);
-      return result;
+    mutationFn: async (input: CreateCustomerInput): Promise<Customer> => {
+      return customerService.create(input);
     },
     onSuccess: () => {
-      // Invalidate customers query to trigger refetch
-      queryClient.invalidateQueries({ queryKey: [CUSTOMERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
+      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
     },
   });
-}
-
-interface UpdateCustomerInput {
-  id: string;
-  name?: string;
-  dni?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  notes?: string | null;
 }
 
 /**
  * Update an existing customer
  */
 export function useUpdateCustomer() {
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateCustomerInput) => {
-      const { id, ...data } = input;
-      const result = await pushWrite(`/api/customers/${id}`, "PUT", data);
-      return result;
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateCustomerInput;
+    }): Promise<void> => {
+      return customerService.update(id, input);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: [CUSTOMERS_QUERY_KEY, variables.id],
+        queryKey: QUERY_KEYS.customer(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: [CUSTOMERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
+      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
     },
   });
 }
@@ -147,51 +114,17 @@ export function useUpdateCustomer() {
  * Delete a customer
  */
 export function useDeleteCustomer() {
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const result = await pushWrite(`/api/customers/${id}`, "DELETE", null);
-      return result;
+    mutationFn: async (id: string): Promise<void> => {
+      return customerService.delete(id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CUSTOMERS_QUERY_KEY] });
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customer(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
+      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
     },
   });
 }
-
-/**
- * Hook for reactive customer count
- */
-export function useCustomersCount(businessId: string) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (!businessId) return;
-
-    const { db } = getDatabase();
-
-    // Subscribe to changes
-    const unsubscribe = db
-      .select({ count: sql`count(*)` })
-      .from(customers)
-      .where(eq(customers.businessId, businessId))
-      .subscribe({
-        next: (result) => {
-          setCount(Number(result[0]?.count || 0));
-        },
-        error: (err) => {
-          console.error("Error subscribing to customers count:", err);
-        },
-      });
-
-    return () => {
-      unsubscribe.unsubscribe();
-    };
-  }, [businessId]);
-
-  return count;
-}
-
-// Import sql for count query
-import { sql } from "drizzle-orm";

@@ -1,6 +1,6 @@
 /**
  * Engine Provider
- * Integrates PGlite, Electric sync, and WriteEngine into the app
+ * Integrates PGlite, Electric sync, and SyncService into the app
  */
 import {
   createContext,
@@ -10,17 +10,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { initDatabase, getDatabase } from "./db";
-import { startSync, stopSync } from "./electric";
-import { setupNetworkListeners, getQueueStatus } from "./write-engine";
+import { initDatabase } from "./db";
+import { startSync } from "./electric";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import type { PGliteWithElectric } from "~/lib/sync/sync-shapes";
 
 interface EngineContextValue {
   isInitialized: boolean;
   isSyncing: boolean;
   isOnline: boolean;
-  queueStatus: { pending: number; failed: number };
   pg: PGlite | null;
   db: ReturnType<typeof drizzle> | null;
   error: Error | null;
@@ -44,13 +43,15 @@ export function EngineProvider({
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
-  const [queueStatus, setQueueStatus] = useState({ pending: 0, failed: 0 });
   const [error, setError] = useState<Error | null>(null);
 
-  const pgRef = useRef<PGlite | null>(null);
+  const pgRef = useRef<PGliteWithElectric | null>(null);
   const dbRef = useRef<ReturnType<typeof drizzle> | null>(null);
   const cleanupSyncRef = useRef<(() => void) | null>(null);
-  const cleanupNetworkRef = useRef<(() => void) | null>(null);
+  const isInitializingRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const INITIALIZATION_TIMEOUT = 30000;
 
   // Initialize database and sync
   useEffect(() => {
@@ -59,73 +60,85 @@ export function EngineProvider({
     async function initialize() {
       try {
         setIsSyncing(true);
+        setError(null);
+        cleanupSyncRef.current?.();
+        cleanupSyncRef.current = null;
 
-        // Initialize PGlite
         const { pg, db } = await initDatabase();
 
-        if (!isMounted) return;
-
-        pgRef.current = pg;
+        // Store in refs immediately so they're available even if component re-renders
+        pgRef.current = pg as PGliteWithElectric;
         dbRef.current = db;
-        setIsInitialized(true);
 
-        // Start Electric sync
-        const cleanupSync = await startSync({ pg, businessId, token });
+        const cleanupSync = await startSync({
+          pg: pg as PGliteWithElectric,
+          businessId,
+          token,
+        });
+
         cleanupSyncRef.current = cleanupSync;
-
-        // Setup network listeners
-        const cleanupNetwork = setupNetworkListeners(
-          () => {
-            setIsOnline(true);
-            // Queue will be processed automatically by the listener
-          },
-          () => setIsOnline(false)
-        );
-        cleanupNetworkRef.current = cleanupNetwork;
-
-        // Initial queue status
-        const status = await getQueueStatus();
-        setQueueStatus(status);
+        setIsInitialized(true);
       } catch (err) {
-        if (!isMounted) return;
-        setError(
-          err instanceof Error ? err : new Error("Failed to initialize engine")
-        );
+        const message = err instanceof Error ? err.message : "Failed to initialize engine";
+        setError(new Error(message));
+        // Allow app to load even with error
+        setIsInitialized(true);
       } finally {
-        if (isMounted) {
-          setIsSyncing(false);
-        }
+        setIsSyncing(false);
       }
     }
 
-    if (businessId && token) {
-      initialize();
+    if (businessId && token && !isInitializingRef.current && !isInitialized) {
+      isInitializingRef.current = true;
+
+      timeoutRef.current = setTimeout(() => {
+        if (isMounted && !isInitialized) {
+          setError(new Error("Initialization timeout. Please check your connection and reload."));
+          setIsSyncing(false);
+          isInitializingRef.current = false;
+        }
+      }, INITIALIZATION_TIMEOUT);
+
+      initialize().finally(() => {
+        isInitializingRef.current = false;
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      });
     }
 
     return () => {
       isMounted = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       cleanupSyncRef.current?.();
-      cleanupNetworkRef.current?.();
+      cleanupSyncRef.current = null;
+      pgRef.current = null;
+      dbRef.current = null;
     };
   }, [businessId, token]);
 
-  // Poll queue status periodically
+  // Setup network listeners
   useEffect(() => {
-    if (!isInitialized) return;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
 
-    const interval = setInterval(async () => {
-      const status = await getQueueStatus();
-      setQueueStatus(status);
-    }, 5000);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
-    return () => clearInterval(interval);
-  }, [isInitialized]);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const value: EngineContextValue = {
     isInitialized,
     isSyncing,
     isOnline,
-    queueStatus,
     pg: pgRef.current,
     db: dbRef.current,
     error,
@@ -156,6 +169,6 @@ export function useEngineReady() {
  * Hook to get sync status
  */
 export function useSyncStatus() {
-  const { isSyncing, isOnline, queueStatus } = useEngine();
-  return { isSyncing, isOnline, queueStatus };
+  const { isSyncing, isOnline } = useEngine();
+  return { isSyncing, isOnline };
 }

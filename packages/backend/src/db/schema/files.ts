@@ -13,6 +13,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { syncStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 import { user } from "./auth";
 
@@ -34,11 +35,16 @@ export const files = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
     deletedBy: text("deleted_by").references(() => user.id),
+
+    // Sync status for offline-first (for payment proofs, etc.)
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
   },
   (table) => [
     index("idx_files_business_id").on(table.businessId),
     index("idx_files_created_at").on(table.createdAt),
     index("idx_files_deleted_at").on(table.deletedAt),
+    index("idx_files_sync_status").on(table.syncStatus),
   ]
 );
 

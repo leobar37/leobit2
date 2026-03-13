@@ -1,115 +1,108 @@
 /**
- * Tags Hooks
- * TanStack Query hooks for tag management
+ * Tags Hook (Service-based)
+ * Reactively fetch and mutate tags using PGlite services
  */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
 
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  customerCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTagService } from "~/lib/sync/service-provider";
+import type { Tag } from "@avileo/shared";
+import type { CreateTagInput, UpdateTagInput } from "~/lib/services/tag-service";
 
-export interface CreateTagInput {
-  name: string;
-  color?: string;
-}
+// Re-export Tag type for backward compatibility
+export type { Tag };
 
-export interface UpdateTagInput {
-  name?: string;
-  color?: string;
-}
-
-// Query key factory
-const tagsKeys = {
-  all: ["tags"] as const,
-  lists: () => [...tagsKeys.all, "list"] as const,
-  list: (filters: { search?: string }) => [...tagsKeys.lists(), filters] as const,
-  details: () => [...tagsKeys.all, "detail"] as const,
-  detail: (id: string) => [...tagsKeys.details(), id] as const,
-};
+const QUERY_KEYS = {
+  tags: ["tags"],
+  tag: (id: string) => ["tags", id],
+} as const;
 
 /**
- * Hook to fetch all tags
+ * Get all tags for the current business
  */
 export function useTags() {
+  const tagService = useTagService();
+
   return useQuery({
-    queryKey: tagsKeys.lists(),
+    queryKey: QUERY_KEYS.tags,
     queryFn: async () => {
-      const response = await api.tags.get();
-      return extractData<Tag[]>(response, "Error al cargar etiquetas");
+      return tagService.findByBusiness();
     },
   });
 }
 
 /**
- * Hook to fetch a single tag
+ * Get a single tag by ID
  */
-export function useTag(id: string) {
+export function useTag(id: string | null) {
+  const tagService = useTagService();
+
   return useQuery({
-    queryKey: tagsKeys.detail(id),
+    queryKey: id ? QUERY_KEYS.tag(id) : ["tags", "detail"],
     queryFn: async () => {
-      const response = await api.tags({ id }).get();
-      return extractData<Tag>(response, "Error al cargar etiqueta");
+      if (!id) return null;
+      return tagService.findById(id);
     },
     enabled: !!id,
   });
 }
 
 /**
- * Hook to create a new tag
+ * Create a new tag
  */
 export function useCreateTag() {
+  const tagService = useTagService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateTagInput) => {
-      const response = await api.tags.post(data);
-      return extractData<Tag>(response, "Error al crear etiqueta");
+    mutationFn: async (input: CreateTagInput): Promise<Tag> => {
+      return tagService.create(input);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
     },
   });
 }
 
 /**
- * Hook to update a tag
+ * Update an existing tag
  */
 export function useUpdateTag() {
+  const tagService = useTagService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateTagInput }) => {
-      const response = await api.tags({ id }).put(data);
-      return extractData<Tag>(response, "Error al actualizar etiqueta");
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateTagInput;
+    }): Promise<void> => {
+      return tagService.update(id, input);
     },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: tagsKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: tagsKeys.detail(id) });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.tag(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
     },
   });
 }
 
 /**
- * Hook to delete a tag
+ * Delete a tag
  */
 export function useDeleteTag() {
+  const tagService = useTagService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.tags({ id }).delete();
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
+    mutationFn: async (id: string): Promise<void> => {
+      return tagService.delete(id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagsKeys.lists() });
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tag(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
     },
   });
 }

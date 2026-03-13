@@ -1,9 +1,10 @@
 /**
- * Bulk Assign Tags Hook
- * TanStack Query hook for bulk customer-tag assignments
+ * Bulk Assign Tags Hook (Service-based)
+ * Reactively assign tags to multiple customers using PGlite services
  */
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
+import { useCustomerTagService } from "~/lib/sync/service-provider";
 import { customerTagsKeys } from "./use-customer-tags";
 
 export interface BulkAssignTagsInput {
@@ -15,25 +16,17 @@ export interface BulkAssignTagsInput {
  * Hook to assign tags to multiple customers at once
  */
 export function useBulkAssignTags() {
+  const customerTagService = useCustomerTagService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ customerIds, tagIds }: BulkAssignTagsInput) => {
-      const response = await api.customers.bulk.tags.post({
-        customerIds,
-        tagIds,
-      });
-      return extractData<{ success: boolean; message: string }>(
-        response,
-        "Error al asignar etiquetas"
-      );
+    mutationFn: async ({ customerIds, tagIds }: BulkAssignTagsInput): Promise<void> => {
+      return customerTagService.bulkAssignTags(customerIds, tagIds);
     },
     onSuccess: (_, { customerIds }) => {
       // Invalidate tags for all affected customers
       for (const customerId of customerIds) {
-        queryClient.invalidateQueries({
-          queryKey: customerTagsKeys.forCustomer(customerId),
-        });
+        queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(customerId) });
       }
     },
   });

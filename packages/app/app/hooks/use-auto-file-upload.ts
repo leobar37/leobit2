@@ -14,8 +14,8 @@ export function useAutoFileUploadProcessor() {
       isProcessingRef.current = true;
       try {
         await processAllPendingUploads();
-      } catch (error) {
-        console.error("Error processing file upload queue:", error);
+      } catch {
+        // Silently ignore upload errors
       } finally {
         isProcessingRef.current = false;
       }
@@ -24,7 +24,6 @@ export function useAutoFileUploadProcessor() {
     processQueue();
 
     const handleOnline = () => {
-      console.log("Network is online, processing pending uploads...");
       processQueue();
     };
 

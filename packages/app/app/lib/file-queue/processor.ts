@@ -1,5 +1,7 @@
 import { uploadFile } from "~/lib/api-client";
-import { paymentCollection } from "~/lib/db/collections/payment.collection";
+import { getDatabase } from "~/engine";
+import { abonos } from "~/engine/schema";
+import { eq, sql } from "drizzle-orm";
 import {
   getUploadsReadyForRetry,
   removePendingUpload,
@@ -22,13 +24,49 @@ async function updateEntityWithFileId(
 ): Promise<void> {
   if (!upload.entityId) return;
 
+  const { pg } = getDatabase();
+  const escapedFileId = fileId.replace(/'/g, "''");
+  const escapedEntityId = upload.entityId.replace(/'/g, "''");
+
   try {
     switch (upload.entityType) {
-      case "payment":
-        await paymentCollection.update(upload.entityId, (draft) => {
-          draft.proofImageId = fileId;
-        });
+      case "payment": {
+        const { db } = getDatabase();
+        await db
+          .update(abonos)
+          .set({ 
+            proofImageId: sql`${fileId}`,
+          })
+          .where(eq(abonos.id, upload.entityId));
         break;
+      }
+      case "order": {
+        await pg.exec(`
+          UPDATE purchases 
+          SET receipt_image_id = '${escapedFileId}',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = '${escapedEntityId}'
+        `);
+        break;
+      }
+      case "business": {
+        await pg.exec(`
+          UPDATE businesses 
+          SET image_id = '${escapedFileId}',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = '${escapedEntityId}'
+        `);
+        break;
+      }
+      case "profile": {
+        await pg.exec(`
+          UPDATE user_profiles 
+          SET image_id = '${escapedFileId}',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = '${escapedEntityId}'
+        `);
+        break;
+      }
       default:
         console.warn(`Unhandled entity type: ${upload.entityType}`);
     }

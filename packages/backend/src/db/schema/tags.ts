@@ -8,9 +8,14 @@ import {
   varchar,
   timestamp,
   index,
+  integer,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
+
+// Sync status enum
+export const syncStatusEnum = pgEnum("sync_status", ["pending", "synced", "error"]);
 
 // Table definition
 export const tags = pgTable(
@@ -26,6 +31,10 @@ export const tags = pgTable(
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
+
+    // Sync status for offline support
+    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),

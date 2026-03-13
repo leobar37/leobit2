@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { AlertTriangle } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -8,6 +9,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { cn } from "~/lib/utils";
 
 interface ConfirmOptions {
   title: string;
@@ -60,29 +62,49 @@ export function useConfirmDialog() {
   }, [state.resolve]);
 
   const ConfirmDialog = useCallback(() => {
+    const isDestructive = state.variant === "destructive";
+
     return (
       <Drawer open={state.isOpen} onOpenChange={(open) => !open && handleCancel()}>
-        <DrawerContent>
-          <DrawerHeader className="px-4 pb-3 pt-2">
-            <DrawerTitle>{state.title}</DrawerTitle>
-            {state.description && (
-              <DrawerDescription>{state.description}</DrawerDescription>
-            )}
+        <DrawerContent className="px-4 pb-6 pt-2">
+          <DrawerHeader className="space-y-4 pb-2">
+            {/* Icon indicator for destructive actions */}
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-100">
+              <AlertTriangle className={cn(
+                "h-6 w-6",
+                isDestructive ? "text-red-600" : "text-orange-500"
+              )} />
+            </div>
+
+            <div className="space-y-2 text-center">
+              <DrawerTitle className="text-lg font-semibold text-foreground">
+                {state.title}
+              </DrawerTitle>
+              {state.description && (
+                <DrawerDescription className="text-sm leading-relaxed text-muted-foreground">
+                  {state.description}
+                </DrawerDescription>
+              )}
+            </div>
           </DrawerHeader>
-          <DrawerFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCancel}>
-              {state.cancelText}
-            </Button>
+
+          <DrawerFooter className="mt-4 gap-3 sm:flex-col">
             <Button
-              variant={state.variant === "destructive" ? "destructive" : "default"}
+              variant={isDestructive ? "destructive" : "default"}
               onClick={handleConfirm}
-              className={
-                state.variant !== "destructive"
-                  ? "bg-orange-500 hover:bg-orange-600"
-                  : undefined
-              }
+              className={cn(
+                "h-12 w-full rounded-xl text-base font-semibold",
+                !isDestructive && "bg-orange-500 hover:bg-orange-600"
+              )}
             >
               {state.confirmText}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="h-12 w-full rounded-xl text-base font-medium"
+            >
+              {state.cancelText}
             </Button>
           </DrawerFooter>
         </DrawerContent>

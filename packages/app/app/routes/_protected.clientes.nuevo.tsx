@@ -3,7 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCreateCustomer } from "~/hooks/use-customers-live";
+import { useCreateCustomer } from "~/hooks/use-customers";
 import { FormPage } from "~/components/layout/form-page";
 import {
   CustomerFormContent,
@@ -29,7 +29,15 @@ export default function NewCustomerPage() {
 
   const handleSubmit = async (data: CustomerFormData) => {
     try {
-      await createCustomer.mutateAsync(data);
+      // Transform null values to undefined for the new API
+      const input = {
+        name: data.name,
+        dni: data.dni ?? undefined,
+        phone: data.phone ?? undefined,
+        address: data.address ?? undefined,
+        notes: data.notes ?? undefined,
+      };
+      await createCustomer.mutateAsync(input);
       navigate("/clientes");
     } catch (error) {
       console.error("Error al crear cliente", error);

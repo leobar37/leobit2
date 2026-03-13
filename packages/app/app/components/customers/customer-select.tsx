@@ -10,7 +10,9 @@ import { cn } from "~/lib/utils";
 interface CustomerSelectProps {
   value: string | null;
   selectedCustomer?: { id: string; name: string; phone?: string | null } | null;
-  onChange: (customer: { id: string; name: string; phone?: string | null } | null) => void;
+  onChange: (
+    customer: { id: string; name: string; phone?: string | null } | null,
+  ) => void;
   disabled?: boolean;
   placeholder?: string;
   required?: boolean;
@@ -28,12 +30,19 @@ export function CustomerSelect({
 }: CustomerSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: customers = [], isLoading } = useCustomers(searchQuery);
+  const { data: customers = [], isLoading } = useCustomers(
+    searchQuery ? { search: searchQuery } : undefined,
+  );
 
   // Find selected customer - first check props, then search in loaded customers
-  const selectedCustomer = propSelectedCustomer || customers.find((c) => c.id === value);
+  const selectedCustomer =
+    propSelectedCustomer || customers.find((c) => c.id === value);
 
-  const handleSelectCustomer = (customer: { id: string; name: string; phone?: string | null }) => {
+  const handleSelectCustomer = (customer: {
+    id: string;
+    name: string;
+    phone?: string | null;
+  }) => {
     onChange(customer);
     setIsOpen(false);
     setSearchQuery("");
@@ -47,20 +56,20 @@ export function CustomerSelect({
     <>
       <Card
         className={cn(
-          "border-0 rounded-2xl bg-card cursor-pointer transition-colors",
-          !disabled && "hover:bg-accent",
-          disabled && "opacity-50 cursor-not-allowed"
+          "shell-card cursor-pointer rounded-3xl border-0 transition-colors",
+          !disabled && "hover:bg-white/90",
+          disabled && "opacity-50 cursor-not-allowed",
         )}
         onClick={() => !disabled && setIsOpen(true)}
       >
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="shell-card-muted flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-100/80">
                 <User className="h-6 w-6 text-orange-600" />
               </div>
               <div className="min-w-0">
-                <p className="font-medium truncate">
+                <p className="truncate font-semibold">
                   {selectedCustomer?.name || placeholder}
                 </p>
                 {selectedCustomer?.phone && (
@@ -85,7 +94,7 @@ export function CustomerSelect({
                     e.stopPropagation();
                     handleClearCustomer();
                   }}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -95,10 +104,16 @@ export function CustomerSelect({
                 variant="ghost"
                 size="icon"
                 disabled={disabled}
-                className={cn(isOpen && "bg-orange-100")}
+                className={cn(
+                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground",
+                  isOpen && "bg-orange-100 text-orange-700",
+                )}
               >
                 <ChevronDown
-                  className={cn("h-5 w-5 transition-transform", isOpen && "rotate-180")}
+                  className={cn(
+                    "h-5 w-5 transition-transform",
+                    isOpen && "rotate-180",
+                  )}
                 />
               </Button>
             </div>
@@ -137,13 +152,13 @@ export function CustomerSelect({
                   type="button"
                   onClick={() => handleSelectCustomer(customer)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left",
+                    "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                     value === customer.id
-                      ? "bg-orange-100 border-2 border-orange-500"
-                      : "hover:bg-orange-50 border-2 border-transparent"
+                      ? "shell-card-muted border-orange-300 bg-orange-50/90"
+                      : "border-white/70 bg-white/60 hover:bg-white/82",
                   )}
                 >
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
                     <User className="h-5 w-5 text-orange-600" />
                   </div>
                   <div className="flex-1 min-w-0">

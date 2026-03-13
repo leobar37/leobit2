@@ -13,11 +13,11 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCustomer } from "~/hooks/use-customer";
+import { useCustomer, useDeleteCustomer } from "~/hooks/use-customers";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
-import { usePayments } from "~/hooks/use-payments";
-import { useSales } from "~/hooks/use-sales-db";
-import { useDeleteCustomer } from "~/hooks/use-customers-live";
+import { useCustomerPayments } from "~/hooks/use-payments";
+import { useSales } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 
@@ -45,13 +45,33 @@ export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const { data: customer, isLoading: customerLoading } = useCustomer(id);
+  const { data: customer, isLoading: customerLoading } = useCustomer(id ?? null);
   const { data: balance, isLoading: balanceLoading } = useCustomerBalance(id ?? null);
   const { data: sales = [], isLoading: salesLoading } = useSales();
-  const { data: payments = [], isLoading: paymentsLoading } = usePayments(id);
+  const { data: payments = [], isLoading: paymentsLoading } = useCustomerPayments(id ?? null);
   const deleteCustomer = useDeleteCustomer();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: "Eliminar cliente",
+      description: `¿Estás seguro de eliminar a ${customer?.name}? Esta acción no se puede deshacer.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      try {
+        await deleteCustomer.mutateAsync(id!);
+        navigate("/clientes");
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        toast.error("Error al eliminar el cliente");
+      }
+    }
+  };
 
   const customerSales = useMemo(
     () =>
@@ -93,7 +113,7 @@ export default function CustomerDetailPage() {
           <h1 className="truncate text-lg font-bold">{customer.name}</h1>
           <div className="ml-auto flex items-center gap-1">
             <button
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={handleDelete}
               className="rounded-xl p-2 text-red-600 hover:bg-red-50"
               title="Eliminar cliente"
             >
@@ -181,39 +201,7 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {showDeleteConfirm ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-              <h3 className="mb-2 text-lg font-semibold">¿Eliminar cliente?</h3>
-              <p className="mb-6 text-muted-foreground">
-                Esta acción no se puede deshacer. ¿Eliminar a {customer.name}?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 rounded-xl border border-gray-200 px-4 py-2 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await deleteCustomer.mutateAsync(id!);
-                      navigate("/clientes");
-                    } catch (error) {
-                      console.error("Error deleting customer:", error);
-                      toast.error("Error al eliminar el cliente");
-                    }
-                  }}
-                  disabled={deleteCustomer.isPending}
-                  className="flex-1 rounded-xl bg-red-500 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
-                >
-                  {deleteCustomer.isPending ? "Eliminando..." : "Eliminar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <ConfirmDialog />
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-md">
           <div className="flex border-b">
@@ -296,17 +284,17 @@ export default function CustomerDetailPage() {
                         S/ {formatCurrency(payment.amount)}
                       </p>
                       <p className="text-sm capitalize text-muted-foreground">
-                        {payment.paymentMethod}
+                        {payment.payment_method}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(payment.createdAt)}
+                        {formatDate(payment.created_at)}
                       </p>
                     </div>
-                    <SyncBadge status={payment.syncStatus} />
+                    <SyncBadge status={payment.sync_status} />
                   </div>
-                  {payment.referenceNumber ? (
+                  {payment.reference_number ? (
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Operación: {payment.referenceNumber}
+                      Operación: {payment.reference_number}
                     </p>
                   ) : null}
                   {payment.notes ? (

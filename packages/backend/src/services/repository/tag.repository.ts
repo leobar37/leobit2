@@ -27,7 +27,7 @@ export class TagRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">,
+    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">,
     tx?: DbTransaction
   ): Promise<Tag> {
     const dbOrTx = tx || db;
@@ -36,6 +36,8 @@ export class TagRepository {
       .values({
         ...data,
         businessId: ctx.businessId,
+        syncStatus: "pending",
+        syncAttempts: 0,
       })
       .returning();
 
@@ -45,7 +47,7 @@ export class TagRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">>,
+    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">>,
     tx?: DbTransaction
   ): Promise<Tag | undefined> {
     const dbOrTx = tx || db;
@@ -55,6 +57,7 @@ export class TagRepository {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.color !== undefined && { color: data.color }),
         updatedAt: new Date(),
+        syncStatus: "pending",
       })
       .where(and(
         eq(tags.id, id),

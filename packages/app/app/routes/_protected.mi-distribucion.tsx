@@ -6,11 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
-import { useCreateSale } from "~/hooks/use-sales-db";
+import { useCreateSale } from "~/hooks/use-sales";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency, generateId } from "~/lib/utils";
 import { BusinessUserRole } from "@avileo/shared";
-import { saleCollection } from "~/lib/db/collections/sale.collection";
 
 export default function MiDistribucionPage() {
   const navigate = useNavigate();
@@ -27,31 +26,19 @@ export default function MiDistribucionPage() {
     }
 
     try {
-      const tempId = generateId();
-      
-      const result = saleCollection.insert({
-        id: tempId,
+      const saleId = await createSale.mutateAsync({
         businessId: business.id,
         sellerId: business.businessUserId,
-        customerId: null,
+        customerId: undefined,
         type: "instant_sale",
         saleType: "contado",
-        totalAmount: "0",
-        amountPaid: "0",
-        balanceDue: "0",
-        tara: null,
-        netWeight: null,
-        status: "draft",
-        syncStatus: "pending",
-        saleDate: new Date(),
-        createdAt: new Date(),
+        totalAmount: 0,
+        amountPaid: 0,
+        items: [],
       });
 
-      // Get sale ID from mutations[0].key - this is the actual sale ID!
-      const saleId = result.mutations[0]?.key;
-      
       if (!saleId) {
-        console.error("Could not get saleId from mutations!");
+        console.error("Could not get saleId from result!");
         return;
       }
 

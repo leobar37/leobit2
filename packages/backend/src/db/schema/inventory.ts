@@ -48,12 +48,17 @@ export const products = pgTable(
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
+
+    // Sync status for offline-first
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
   },
   (table) => [
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
     index("idx_products_is_active").on(table.isActive),
     index("idx_products_image_id").on(table.imageId),
+    index("idx_products_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -164,6 +169,10 @@ export const productVariants = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
 
+    // Multi-tenancy - for Electric sync filtering (nullable for existing data)
+    businessId: uuid("business_id")
+      .references(() => businesses.id),
+
     // Variant info
     name: varchar("name", { length: 50 }).notNull(),
     sku: varchar("sku", { length: 50 }),
@@ -183,6 +192,7 @@ export const productVariants = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_variants_business_id").on(table.businessId),
     index("idx_variants_product_id").on(table.productId),
     index("idx_variants_is_active").on(table.isActive),
     index("idx_variants_sync_status").on(table.syncStatus),
@@ -263,6 +273,10 @@ export const distribucionItemsRelations = relations(distribucionItems, ({ one })
 }));
 
 export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [productVariants.businessId],
+    references: [businesses.id],
+  }),
   product: one(products, {
     fields: [productVariants.productId],
     references: [products.id],

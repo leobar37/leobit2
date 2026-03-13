@@ -8,10 +8,9 @@ export const api = treaty<App>(API_URL, {
   fetch: {
     credentials: "omit",
   },
-  headers: (path) => {
+  headers: () => {
     const token = getStoredAuthToken();
     const businessId = getStoredBusinessId();
-    console.log("[API]", path, "- token:", token ? "YES" : "NO");
     const headers: Record<string, string> = {};
 
     if (token) {

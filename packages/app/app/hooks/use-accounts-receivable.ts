@@ -1,12 +1,9 @@
 import { useMemo } from "react";
-import { useLiveQuery, eq } from "@tanstack/react-db";
-import { customerCollection } from "~/lib/db/collections/customer.collection";
-import { paymentCollection } from "~/lib/db/collections/payment.collection";
-import { saleCollection } from "~/lib/db/collections/sale.collection";
-import { getStoredBusinessId } from "~/lib/session-storage";
-import { useBusiness } from "./use-business";
-import type { Customer, Payment } from "~/lib/db/schema";
-import type { Sale } from "~/lib/db/schemas/sale";
+import { useQuery } from "@tanstack/react-query";
+import { useSaleService } from "~/lib/sync/service-provider";
+import { useCustomerService } from "~/lib/sync/service-provider";
+import { usePaymentService } from "~/lib/sync/service-provider";
+import type { Customer } from "@avileo/shared";
 
 export interface AccountsReceivableItem {
   customer: Customer;
@@ -23,7 +20,24 @@ export interface AccountsReceivableFilters {
   customerId?: string;
 }
 
-function saleCountsTowardDebt(sale: Pick<Sale, "saleType" | "status">) {
+// Sale interface for local calculations
+interface SaleData {
+  id: string;
+  customerId: string | null;
+  saleType: string;
+  status: string;
+  totalAmount: string;
+  saleDate: string | null;
+}
+
+// Payment interface for local calculations (matches Abono from service)
+interface PaymentData {
+  id: string;
+  customer_id: string;
+  amount: string;
+}
+
+function saleCountsTowardDebt(sale: Pick<SaleData, "saleType" | "status">) {
   return (
     sale.saleType === "credito" &&
     sale.status !== "draft" &&
@@ -32,46 +46,26 @@ function saleCountsTowardDebt(sale: Pick<Sale, "saleType" | "status">) {
 }
 
 export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
-  const { data: business } = useBusiness();
-  const businessId = business?.id || getStoredBusinessId();
+  const saleService = useSaleService();
+  const customerService = useCustomerService();
+  const paymentService = usePaymentService();
 
-  const customersQuery = useLiveQuery(
-    (q) =>
-      q
-        .from({ customer: customerCollection })
-        .where(({ customer }) =>
-          businessId ? eq(customer.businessId, businessId) : eq(customer.businessId, "__pending_business__")
-        )
-        .orderBy(({ customer }) => customer.name, "asc"),
-    [businessId]
-  );
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ["accounts-receivable", "customers"],
+    queryFn: () => customerService.findByBusiness(),
+  });
 
-  const salesQuery = useLiveQuery(
-    (q) =>
-      q
-        .from({ sale: saleCollection })
-        .where(({ sale }) =>
-          businessId ? eq(sale.businessId, businessId) : eq(sale.businessId, "__pending_business__")
-        )
-        .orderBy(({ sale }) => sale.createdAt, "desc"),
-    [businessId]
-  );
+  const { data: sales = [], isLoading: isLoadingSales } = useQuery({
+    queryKey: ["accounts-receivable", "sales"],
+    queryFn: () => saleService.findByBusiness(),
+  });
 
-  const paymentsQuery = useLiveQuery(
-    (q) =>
-      q
-        .from({ payment: paymentCollection })
-        .where(({ payment }) =>
-          businessId ? eq(payment.businessId, businessId) : eq(payment.businessId, "__pending_business__")
-        )
-        .orderBy(({ payment }) => payment.createdAt, "desc"),
-    [businessId]
-  );
+  const { data: payments = [], isLoading: isLoadingPayments } = useQuery({
+    queryKey: ["accounts-receivable", "payments"],
+    queryFn: () => paymentService.findByBusiness(),
+  });
 
   const data = useMemo(() => {
-    const customers = (customersQuery.data ?? []) as Customer[];
-    const sales = (salesQuery.data ?? []) as Sale[];
-    const payments = (paymentsQuery.data ?? []) as Payment[];
     const normalizedSearch = filters.search?.trim().toLowerCase();
 
     const salesByCustomer = new Map<
@@ -80,7 +74,7 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
     >();
     const paymentsByCustomer = new Map<string, number>();
 
-    for (const sale of sales) {
+    for (const sale of sales as SaleData[]) {
       if (!sale.customerId || !saleCountsTowardDebt(sale)) {
         continue;
       }
@@ -106,19 +100,19 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
       });
     }
 
-    for (const payment of payments) {
-      if (filters.customerId && payment.customerId !== filters.customerId) {
+    for (const payment of payments as PaymentData[]) {
+      if (filters.customerId && payment.customer_id !== filters.customerId) {
         continue;
       }
 
       paymentsByCustomer.set(
-        payment.customerId,
-        (paymentsByCustomer.get(payment.customerId) ?? 0) +
+        payment.customer_id,
+        (paymentsByCustomer.get(payment.customer_id) ?? 0) +
           Number(payment.amount ?? 0)
       );
     }
 
-    const accounts = customers
+    const accounts = (customers as Customer[])
       .filter((customer) => {
         if (filters.customerId) {
           return customer.id === filters.customerId;
@@ -170,26 +164,17 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
     }
 
     return accounts;
-  }, [
-    customersQuery.data,
-    salesQuery.data,
-    paymentsQuery.data,
-    filters.customerId,
-    filters.limit,
-    filters.minBalance,
-    filters.search,
-  ]);
+  }, [customers, sales, payments, filters]);
 
   return {
     data,
-    isLoading:
-      customersQuery.data === undefined ||
-      salesQuery.data === undefined ||
-      paymentsQuery.data === undefined,
+    isLoading: isLoadingCustomers || isLoadingSales || isLoadingPayments,
   };
 }
 
-export function useTotalAccountsReceivable(filters: AccountsReceivableFilters = {}) {
+export function useTotalAccountsReceivable(
+  filters: AccountsReceivableFilters = {}
+) {
   const { data: accounts, isLoading } = useAccountsReceivable(filters);
 
   const totalDebt = useMemo(

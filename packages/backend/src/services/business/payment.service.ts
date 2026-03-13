@@ -1,4 +1,5 @@
 import type { PaymentRepository } from "../repository/payment.repository";
+import type { CustomerRepository } from "../repository/customer.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -10,7 +11,10 @@ import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 
 export class PaymentService {
-  constructor(private repository: PaymentRepository) {}
+  constructor(
+    private repository: PaymentRepository,
+    private customerRepository: CustomerRepository
+  ) {}
 
   async getPayments(
     ctx: RequestContext,
@@ -57,6 +61,18 @@ export class PaymentService {
 
     if (data.amount <= 0) {
       throw new ValidationError("El monto debe ser mayor a 0");
+    }
+
+    // Validate that payment amount does not exceed customer's debt
+    const customerBalance = await this.customerRepository.getBalance(ctx, data.customerId);
+    const remainingDebt = customerBalance.balanceDue;
+
+    // Allow small tolerance for floating point comparison (0.01)
+    const OVERPAYMENT_TOLERANCE = 0.01;
+    if (data.amount > remainingDebt + OVERPAYMENT_TOLERANCE) {
+      throw new ValidationError(
+        `El monto del abono (S/ ${data.amount.toFixed(2)}) excede la deuda pendiente (S/ ${remainingDebt.toFixed(2)})`
+      );
     }
 
     return db.transaction(async (tx) => {

@@ -15,17 +15,17 @@ export default function SaleEditorCalculatorPage() {
   const returnPath = getSaleEditorPath(saleId);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      <header className="sticky top-0 z-50 border-b border-orange-100 bg-white/80 backdrop-blur-xl">
+    <div className="app-shell flex min-h-screen flex-col">
+      <header className="sticky top-0 z-50 border-b shell-surface">
         <div className="flex h-16 items-center px-3 sm:px-4">
           <button
             onClick={() => navigate(returnPath)}
-            className="rounded-xl p-2 -ml-2 hover:bg-orange-50"
+            className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
             aria-label="Volver"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="ml-1 text-lg font-bold">Calculadora</h1>
+          <h1 className="ml-1 text-lg font-bold tracking-tight">Calculadora</h1>
         </div>
       </header>
 

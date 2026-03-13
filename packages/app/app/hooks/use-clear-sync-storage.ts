@@ -23,15 +23,11 @@ export function useClearSyncStorage() {
         preserveSession = true,
       } = input;
 
-      console.log("[useClearSyncStorage] Starting storage cleanup...");
-
       try {
         await clearSyncStorage({ preserveSession });
-        console.log("[useClearSyncStorage] Storage cleared successfully");
 
         // Reload page to restart sync from offset 0_0
         if (reload && typeof window !== "undefined") {
-          console.log(`[useClearSyncStorage] Reloading in ${reloadDelay}ms...`);
           setTimeout(() => {
             window.location.reload();
           }, reloadDelay);
@@ -39,7 +35,6 @@ export function useClearSyncStorage() {
 
         return { success: true };
       } catch (error) {
-        console.error("[useClearSyncStorage] Error:", error);
         throw error;
       }
     },

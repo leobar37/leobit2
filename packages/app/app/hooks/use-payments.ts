@@ -1,210 +1,146 @@
-import { useLiveQuery, eq, and, gte } from "@tanstack/react-db";
-import { paymentCollection } from "~/lib/db/collections/payment.collection";
-import { customerCollection } from "~/lib/db/collections/customer.collection";
-import { useBusiness } from "./use-business";
-import { generateId } from "~/lib/utils";
-import { handleCollectionError } from "~/lib/db/error-handler";
-import { getStoredBusinessId } from "~/lib/session-storage";
-import type { Payment } from "~/lib/db/schema";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePaymentService } from "~/lib/sync/service-provider";
+import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/payment-service";
 
-// Get all payments with optional customer filter
-export function usePayments(customerId?: string) {
-  const { data: business } = useBusiness();
-  const businessId = business?.id || getStoredBusinessId();
+const QUERY_KEYS = {
+  payments: ["payments-new"],
+  customerPayments: (customerId: string) => ["payments-new", "customer", customerId],
+  businessPayments: ["payments-new", "business"],
+} as const;
 
-  const result = useLiveQuery(
-    (q) => {
-      let query = q
-        .from({ payment: paymentCollection })
-        .where(({ payment }) => eq(payment.businessId, businessId));
+export function usePayments() {
+  const paymentService = usePaymentService();
 
-      if (customerId) {
-        query = query.where(({ payment }) => eq(payment.customerId, customerId));
-      }
-
-      return query.orderBy(({ payment }) => payment.createdAt, "desc");
+  return useQuery({
+    queryKey: QUERY_KEYS.businessPayments,
+    queryFn: async (): Promise<Abono[]> => {
+      return paymentService.findByBusiness();
     },
-    [businessId, customerId]
-  );
-
-  return {
-    ...result,
-    data: (result.data ?? []) as Payment[],
-  };
+  });
 }
 
-// Get payments with customer details
-export function usePaymentsWithCustomers(customerId?: string) {
-  const { data: business } = useBusiness();
-  const businessId = business?.id || getStoredBusinessId();
+export function useCustomerPayments(customerId: string | null) {
+  const paymentService = usePaymentService();
 
-  return useLiveQuery(
-    (q) => {
-      let query = q
-        .from({ payment: paymentCollection })
-        .join(
-          { customer: customerCollection },
-          ({ payment, customer }) => eq(payment.customerId, customer.id),
-          "left"
-        )
-        .where(({ payment }) => eq(payment.businessId, businessId));
-
-      if (customerId) {
-        query = query.where(({ payment }) => eq(payment.customerId, customerId));
-      }
-
-      return query
-        .select(({ payment, customer }) => ({
-          ...payment,
-          customerName: customer?.name,
-          customerPhone: customer?.phone,
-        }))
-        .orderBy(({ payment }) => payment.createdAt, "desc");
+  return useQuery({
+    queryKey: customerId
+      ? QUERY_KEYS.customerPayments(customerId)
+      : ["payments-new", "customer"],
+    queryFn: async (): Promise<Abono[]> => {
+      if (!customerId) return [];
+      return paymentService.findByCustomer(customerId);
     },
-    [businessId, customerId]
-  );
+    enabled: !!customerId,
+  });
 }
 
-// Get a single payment by ID
-export function usePayment(paymentId: string) {
-  return useLiveQuery(
-    (q) =>
-      q
-        .from({ payment: paymentCollection })
-        .where(({ payment }) => eq(payment.id, paymentId)),
-    [paymentId]
-  );
+export function usePayment(id: string | null) {
+  const paymentService = usePaymentService();
+
+  return useQuery({
+    queryKey: ["payments-new", "detail", id],
+    queryFn: async (): Promise<Abono | null> => {
+      if (!id) return null;
+      return paymentService.findById(id);
+    },
+    enabled: !!id,
+  });
 }
 
-// Get payment with customer details
-export function usePaymentWithCustomer(paymentId: string) {
-  return useLiveQuery(
-    (q) =>
-      q
-        .from({ payment: paymentCollection })
-        .join(
-          { customer: customerCollection },
-          ({ payment, customer }) => eq(payment.customerId, customer.id),
-          "left"
-        )
-        .where(({ payment }) => eq(payment.id, paymentId))
-        .select(({ payment, customer }) => ({
-          ...payment,
-          customerName: customer?.name,
-          customerPhone: customer?.phone,
-        })),
-    [paymentId]
-  );
-}
-
-// Create a new payment
+/**
+ * Hook to create a payment
+ * Returns an async function that creates a payment and returns the payment ID
+ */
 export function useCreatePayment() {
-  const { data: business } = useBusiness();
-  const businessId = business?.id || getStoredBusinessId();
+  const paymentService = usePaymentService();
+  const queryClient = useQueryClient();
 
+  const mutation = useMutation({
+    mutationFn: async (input: CreateAbonoInput): Promise<Abono> => {
+      return paymentService.create(input);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.customerPayments(variables.customer_id),
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+    },
+  });
+
+  // Return a wrapper function that matches the expected API
   return async (data: {
     customerId: string;
     amount: string;
-    paymentMethod: Payment["paymentMethod"];
-    notes?: string;
+    paymentMethod: string;
     referenceNumber?: string;
-    relatedSaleId?: string;
+    notes?: string;
   }) => {
-    try {
-      const paymentId = generateId();
-
-      await paymentCollection.insert({
-        id: paymentId,
-        businessId: businessId || "",
-        customerId: data.customerId,
-        sellerId: "",
-        amount: data.amount,
-        paymentMethod: data.paymentMethod,
-        notes: data.notes || null,
-        relatedSaleId: data.relatedSaleId || null,
-        proofImageId: null,
-        referenceNumber: data.referenceNumber || null,
-        syncStatus: "pending",
-        createdAt: new Date(),
-      });
-
-      return paymentId;
-    } catch (error) {
-      const handled = handleCollectionError(error);
-      throw new Error(handled.message);
-    }
+    // Note: This is a simplified version - you may need to get sellerId from context
+    const result = await mutation.mutateAsync({
+      customer_id: data.customerId,
+      seller_id: "", // TODO: Get from auth context
+      amount: parseFloat(data.amount) || 0,
+      payment_method: data.paymentMethod,
+      reference_number: data.referenceNumber,
+      notes: data.notes,
+    });
+    return result.id;
   };
 }
 
-// Delete a payment
 export function useDeletePayment() {
-  return async (paymentId: string) => {
-    try {
-      await paymentCollection.delete(paymentId);
-    } catch (error) {
-      const handled = handleCollectionError(error);
-      throw new Error(handled.message);
-    }
-  };
+  const paymentService = usePaymentService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      return paymentService.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
+      queryClient.invalidateQueries({
+        queryKey: ["payments-new", "customer"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+    },
+  });
 }
 
+/**
+ * Hook to update a payment
+ * Returns an async function that takes paymentId and data
+ */
 export function useUpdatePayment() {
+  const paymentService = usePaymentService();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: UpdateAbonoInput }): Promise<Abono | null> => {
+      return paymentService.update(id, input);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["payments-new", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
+      if (data?.customer_id) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.customerPayments(data.customer_id),
+        });
+      }
+    },
+  });
+
+  // Return a wrapper function that matches the expected API: (paymentId, data)
   return async (
     paymentId: string,
-    data: {
-      proofImageId?: string;
-      referenceNumber?: string;
-    }
+    data: { proofImageId?: string; referenceNumber?: string }
   ) => {
-    try {
-      await paymentCollection.update(paymentId, (draft) => {
-        if (data.proofImageId !== undefined) {
-          draft.proofImageId = data.proofImageId;
-        }
-        if (data.referenceNumber !== undefined) {
-          draft.referenceNumber = data.referenceNumber;
-        }
-      });
-    } catch (error) {
-      const handled = handleCollectionError(error);
-      throw new Error(handled.message);
-    }
+    await mutation.mutateAsync({
+      id: paymentId,
+      input: {
+        proof_image_id: data.proofImageId,
+        reference_number: data.referenceNumber,
+      },
+    });
   };
-}
-
-// Get total payments for a client
-export function useClientPaymentsTotal(customerId: string) {
-  const { data: payments } = usePayments(customerId);
-
-  const total = payments?.reduce((sum, payment) => {
-    return sum + Number(payment.amount);
-  }, 0) || 0;
-
-  return {
-    data: total.toFixed(2),
-    isLoading: !payments,
-  };
-}
-
-// Get today's payments
-export function useTodayPayments() {
-  const { data: business } = useBusiness();
-  const businessId = business?.id || getStoredBusinessId();
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return useLiveQuery(
-    (q) =>
-      q
-        .from({ payment: paymentCollection })
-        .where(({ payment }) =>
-          and(
-            eq(payment.businessId, businessId),
-            gte(payment.createdAt, today)
-          )
-        )
-        .orderBy(({ payment }) => payment.createdAt, "desc"),
-    [businessId]
-  );
 }
