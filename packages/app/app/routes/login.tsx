@@ -103,15 +103,6 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <p className="text-sm text-muted-foreground text-center">
-              ¿No tienes una cuenta?{" "}
-              <Link
-                to="/register"
-                className="text-orange-600 hover:text-orange-700 font-medium underline-offset-4 hover:underline"
-              >
-                Regístrate
-              </Link>
-            </p>
           </CardFooter>
         </form>
       </Card>

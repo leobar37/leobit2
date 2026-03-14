@@ -618,6 +618,15 @@ export class SaleService {
     }
 
     return db.transaction(async (tx) => {
+      const existingItemsInSale = await this.repository.findSaleItems(ctx, saleId, tx);
+      const existingItem = existingItemsInSale.find(
+        (item) => item.productId === data.productId && item.variantId === data.variantId
+      );
+
+      if (existingItem) {
+        throw new ValidationError("El producto ya está en la venta. Edita la cantidad desde el carrito.");
+      }
+
       const item = await this.repository.addItem(
         ctx,
         saleId,
@@ -636,8 +645,8 @@ export class SaleService {
       );
 
       // Recalculate total
-      const existingItems = await this.repository.findSaleItems(ctx, saleId, tx);
-      const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+      const newItemsList = await this.repository.findSaleItems(ctx, saleId, tx);
+      const newTotal = newItemsList.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
       await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
 
       return {

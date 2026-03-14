@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { SyncService } from "../sync/sync-service";
 import { CustomerService } from "../services/customer-service";
 import { SaleService } from "../services/sale-service";
@@ -13,6 +14,7 @@ import type { ConflictStrategy } from "../sync/config";
 
 export interface ServicesContextValue {
   pg: PGlite;
+  db: ReturnType<typeof drizzle>;
   syncService: SyncService;
   customerService: CustomerService;
   saleService: SaleService;
@@ -30,6 +32,7 @@ const ServicesContext = createContext<ServicesContextValue | null>(null);
 
 interface ServicesProviderProps {
   pg: PGlite;
+  db: ReturnType<typeof drizzle>;
   businessId: string;
   authToken: string;
   children: ReactNode;
@@ -37,23 +40,25 @@ interface ServicesProviderProps {
 
 export function ServicesProvider({
   pg,
+  db,
   businessId,
   authToken,
   children,
 }: ServicesProviderProps) {
   const services = useMemo(() => {
     const syncService = new SyncService(pg, businessId, authToken);
-    const customerService = new CustomerService(pg, syncService, businessId);
-    const saleService = new SaleService(pg, syncService, businessId);
-    const paymentService = new PaymentService(pg, syncService, businessId);
-    const purchaseService = new PurchaseService(pg, syncService, businessId);
-    const productService = new ProductService(pg, syncService, businessId);
-    const inventoryService = new InventoryService(pg, syncService, businessId);
-    const tagService = new TagService(pg, syncService, businessId);
-    const customerTagService = new CustomerTagService(pg, syncService, businessId);
+    const customerService = new CustomerService(pg, db, syncService, businessId);
+    const saleService = new SaleService(pg, db, syncService, businessId);
+    const paymentService = new PaymentService(pg, db, syncService, businessId);
+    const purchaseService = new PurchaseService(pg, db, syncService, businessId);
+    const productService = new ProductService(pg, db, syncService, businessId);
+    const inventoryService = new InventoryService(pg, db, syncService, businessId);
+    const tagService = new TagService(pg, db, syncService, businessId);
+    const customerTagService = new CustomerTagService(pg, db, syncService, businessId);
 
     return {
       pg,
+      db,
       syncService,
       customerService,
       saleService,
@@ -66,7 +71,7 @@ export function ServicesProvider({
       businessId,
       authToken,
     };
-  }, [pg, businessId, authToken]);
+  }, [pg, db, businessId, authToken]);
 
   return (
     <ServicesContext.Provider value={services}>
@@ -136,6 +141,11 @@ export function useCustomerTagService(): CustomerTagService {
 export function usePGlite(): PGlite {
   const { pg } = useServices();
   return pg;
+}
+
+export function useDrizzle(): ReturnType<typeof drizzle> {
+  const { db } = useServices();
+  return db;
 }
 
 

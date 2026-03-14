@@ -27,7 +27,7 @@ function HeaderTotal() {
   const { data: sales } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
 
-  const sale = sales?.[0] || null;
+  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -49,6 +49,8 @@ export default function SaleEditorPage() {
   const { saleId } = useNewSaleContext();
 
   const { data: sales, isLoading } = useSale(saleId);
+  const { data: items = [] } = useSaleItems(saleId);
+  
   const sale = sales?.[0] ?? null;
 
   if (!saleId) {

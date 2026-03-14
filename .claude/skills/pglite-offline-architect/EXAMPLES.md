@@ -66,7 +66,7 @@ User creates a sale with 3 items and makes a partial payment while online.
 ### User Story
 User creates a sale while on the road with no connection.
 
-### Data Flow
+### Data Flow (PGlite sync_operations table - NOT IndexedDB)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -75,40 +75,39 @@ User creates a sale while on the road with no connection.
 │                                                                 │
 │  T+0s    User clicks "Create Sale"                             │
 │          ↓                                                      │
-│          Check: navigator.onLine?                               │
-│          Result: false (offline)                                │
+│          Write to PGlite sales table:                           │
+│          INSERT INTO sales (id, total, sync_status, ...)       │
+│          VALUES ('uuid-...', 150.00, 'pending', ...)           │
 │          ↓                                                      │
-│          Show "Creating..." state                               │
+│          Queue in sync_operations table (PGlite):              │
+│          INSERT INTO sync_operations (                         │
+│            id, entity_type, operation, entity_id, payload      │
+│          ) VALUES (                                             │
+│            'uuid-op-...',                                       │
+│            'sales',                                             │
+│            'insert',                                            │
+│            'uuid-...',                                          │
+│            '{"total": 150.00, ...}'                             │
+│          )                                                      │
 │          ↓                                                      │
-│          POST /api/sales { ... }                               │
-│          ↓                                                      │
-│          fetch() fails with "Network Error"                     │
-│          ↓                                                      │
-│          Save to IndexedDB:                                     │
-│          {                                                      │
-│            id: "pending-789",                                   │
-│            endpoint: "/api/sales",                              │
-│            method: "POST",                                      │
-│            body: { customerId, items, total },                  │
-│            attempts: 0,                                         │
-│            createdAt: Date.now()                                │
-│          }                                                      │
-│          ↓                                                      │
-│          UI shows "Pending - Will sync when online"             │
+│          UI shows "Pending - Se sincronizará"                   │
 │          Sale appears in list with "pending" badge              │
 │                                                                 │
-│  +5min   Connection restored (user enters wifi zone)            │
+│  +30s    Auto-sync runs (SyncService.processPending)           │
 │          ↓                                                      │
-│          window 'online' event fires                            │
+│          Check: navigator.onLine? → true                        │
 │          ↓                                                      │
-│          Process queue:                                         │
-│          - Read pending writes from IndexedDB                   │
-│          - POST /api/sales (retry)                              │
-│          - Success! Remove from IndexedDB                       │
+│          POST /api/sync/batch                                   │
+│          [ { entityType: 'sales', operation: 'insert', ... } ] │
 │          ↓                                                      │
-│          Electric detects change in Postgres                    │
+│          Backend processes, inserts into Postgres               │
 │          ↓                                                      │
-│          Syncs to client, UI updates                            │
+│          Electric detects change → syncs to client             │
+│          ↓                                                      │
+│          UPDATE sync_operations SET status = 'completed'       │
+│          UPDATE sales SET sync_status = 'synced'               │
+│          ↓                                                      │
+│          UI updates via useLiveQuery                            │
 │          Badge changes from "pending" to synced                 │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -119,22 +118,34 @@ User creates a sale while on the road with no connection.
 ```
 User Action (Create/Update/Delete)
     ↓
-Is Online?
-    ↓ Yes                    ↓ No
-    ↓                        ↓
-Call API                   Queue in IndexedDB
-    ↓                        ↓
-Success?                   Show "Pending" UI
-    ↓                        ↓
-Yes → Done                 Wait for connection
-    ↓                        ↓
-No → Queue it              On 'online' event:
-    ↓                        Process queue
-Show retry UI              ↓
-                           Sync via Electric
-                           ↓
-                           UI updates
+Write to local PGlite table
+(sync_status = 'pending')
+    ↓
+Queue in sync_operations table
+    ↓
+Show "Pending" UI immediately
+    ↓
+┌─────────────────────────────────────┐
+│  Auto-sync every 30s (if online)   │
+│  POST /api/sync/batch              │
+│  ↓                                  │
+│  Success → status = 'completed'    │
+│  ↓                                  │
+│  Electric syncs change back        │
+│  ↓                                  │
+│  UI updates automatically          │
+└─────────────────────────────────────┘
 ```
+
+### Why PGlite Table Instead of IndexedDB?
+
+| Aspect | IndexedDB Queue | PGlite sync_operations Table |
+|--------|-----------------|------------------------------|
+| Transactions | No ACID | Full ACID compliance |
+| Query | Complex API | Simple SQL |
+| Debug | Hard to inspect | Query with SQL |
+| Consistency | Separate storage | Same DB as entities |
+| Rollback | Manual | Automatic with transactions |
 
 ---
 

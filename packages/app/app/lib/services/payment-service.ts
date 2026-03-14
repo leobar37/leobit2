@@ -4,6 +4,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { formatCurrency } from "~/lib/utils";
@@ -49,8 +50,13 @@ export interface UpdateAbonoInput {
  * Extends BaseService for local-first operations with sync integration
  */
 export class PaymentService extends BaseService {
-  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
-    super(pg, syncService, businessId);
+  constructor(
+    pg: PGlite,
+    db: ReturnType<typeof drizzle>,
+    syncService: SyncService,
+    businessId: string
+  ) {
+    super(pg, db, syncService, businessId);
   }
 
   /**
@@ -110,6 +116,62 @@ export class PaymentService extends BaseService {
   }
 
   /**
+   * Get customer debt balance (sales - payments)
+   * Only counts credit sales that count toward debt
+   */
+  async getCustomerDebtBalance(customerId: string): Promise<number> {
+    const salesResult = await this.pg.query<{ total: string }>(
+      `SELECT COALESCE(SUM(total_amount), 0) as total FROM sales
+       WHERE customer_id = $1 AND business_id = $2
+       AND status = 'credit' AND count_toward_debt = true`,
+      [customerId, this.businessId]
+    );
+
+    const paymentsResult = await this.pg.query<{ total: string }>(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM abonos
+       WHERE customer_id = $1 AND business_id = $2`,
+      [customerId, this.businessId]
+    );
+
+    const totalSales = parseFloat(salesResult.rows[0]?.total || "0");
+    const totalPayments = parseFloat(paymentsResult.rows[0]?.total || "0");
+
+    return Math.max(totalSales - totalPayments, 0);
+  }
+
+  /**
+   * Validate payment amount against customer debt
+   */
+  private async validatePaymentAmount(customerId: string, amount: number): Promise<void> {
+    const OVERPAYMENT_TOLERANCE = 0.01;
+    const debt = await this.getCustomerDebtBalance(customerId);
+    
+    if (debt <= 0) {
+      throw new Error("El cliente no tiene deuda pendiente");
+    }
+
+    if (amount > debt + OVERPAYMENT_TOLERANCE) {
+      throw new Error(
+        `El monto del abono (S/ ${amount.toFixed(2)}) excede la deuda pendiente (S/ ${debt.toFixed(2)})`
+      );
+    }
+  }
+
+  /**
+   * Validate that customer belongs to the same business
+   */
+  private async validateCustomerBusiness(customerId: string): Promise<void> {
+    const result = await this.pg.query<{ id: string }>(
+      `SELECT id FROM customers WHERE id = $1 AND business_id = $2`,
+      [customerId, this.businessId]
+    );
+
+    if (!result.rows[0]) {
+      throw new Error("El cliente no pertenece a este negocio");
+    }
+  }
+
+  /**
    * Create a new payment (abono)
    */
   async create(input: CreateAbonoInput): Promise<Abono> {
@@ -119,6 +181,12 @@ export class PaymentService extends BaseService {
 
       // Format amount as decimal string using project utility
       const amount = formatCurrency(input.amount);
+
+      // Validate customer belongs to this business
+      await this.validateCustomerBusiness(input.customer_id);
+
+      // Validate payment amount against customer debt (offline validation)
+      await this.validatePaymentAmount(input.customer_id, input.amount);
 
       await this.pg.exec(
         `INSERT INTO abonos (

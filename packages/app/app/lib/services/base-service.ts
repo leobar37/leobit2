@@ -5,6 +5,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { SyncService, type EnqueueParams } from "../sync/sync-service";
 import { SyncStatus } from "@avileo/shared";
 import { generateId } from "~/lib/utils/id-generator";
@@ -76,11 +77,18 @@ function validateTableName(tableName: string): string {
  */
 export abstract class BaseService {
   protected readonly pg: PGlite;
+  protected readonly db: ReturnType<typeof drizzle>;
   protected readonly syncService: SyncService;
   protected readonly businessId: string;
 
-  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
+  constructor(
+    pg: PGlite,
+    db: ReturnType<typeof drizzle>,
+    syncService: SyncService,
+    businessId: string
+  ) {
     this.pg = pg;
+    this.db = db;
     this.syncService = syncService;
     this.businessId = businessId;
   }

@@ -12,8 +12,19 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
     const incomingUrl = new URL(request.url);
     const table = incomingUrl.searchParams.get("table");
 
+    // Always set default electric headers for all responses
+    const defaultHeaders = {
+      "electric-offset": "0_0",
+      "electric-schema": "",
+      "electric-handle": "",
+    };
+
     if (!table) {
       set.status = 400;
+      // Set headers even for error responses
+      for (const [header, value] of Object.entries(defaultHeaders)) {
+        set.headers[header] = value;
+      }
       return {
         success: false,
         error: {
@@ -25,6 +36,10 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
 
     if (!ALLOWED_TABLES.has(table)) {
       set.status = 400;
+      // Set headers even for error responses
+      for (const [header, value] of Object.entries(defaultHeaders)) {
+        set.headers[header] = value;
+      }
       return {
         success: false,
         error: {
@@ -42,12 +57,11 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
 
     set.status = result.status;
 
-    for (const [header, value] of Object.entries(result.headers)) {
+    // Merge service headers with defaults to ensure all required headers are present
+    const mergedHeaders = { ...defaultHeaders, ...result.headers };
+    for (const [header, value] of Object.entries(mergedHeaders)) {
       set.headers[header] = value;
     }
 
-    return new Response(result.body, {
-      status: result.status,
-      headers: result.headers,
-    });
+    return result.body;
   });

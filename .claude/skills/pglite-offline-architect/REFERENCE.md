@@ -80,27 +80,33 @@ UI Action → API Call → Backend Validation → Postgres
 
 ---
 
-### PATTERN 4: Offline Queue
+### PATTERN 4: Offline Queue (PGlite Table - NOT IndexedDB)
+
+**CRITICAL:** The write queue is stored in a PGlite table (`sync_operations`), NOT IndexedDB.
 
 **DO THIS for offline support:**
 
 ```
 User Action
     ↓
-Try API Call
+Write to local PGlite table (sync_status='pending')
     ↓
-Success? → Done
-    ↓ No
-Save to IndexedDB
+Queue operation in sync_operations table
     ↓
 Show "Pending" UI
     ↓
-Online Event
+Auto-sync every 30s (if online)
     ↓
-Process Queue
+POST /api/sync/batch
     ↓
-Clear from IndexedDB
+Update status to 'completed'
 ```
+
+**Why PGlite table instead of IndexedDB:**
+- Single source of truth (all data in PGlite)
+- ACID transactions (queue + entity updates atomic)
+- Query with SQL (filter by status, count pending, etc.)
+- Easier debugging (inspect with SQL queries)
 
 ---
 
@@ -1018,6 +1024,364 @@ Mark as failed (manual retry)
 2. Add Electric for automatic sync
 3. Keep API calls for writes
 4. Add offline queue
+
+---
+
+## CRITICAL: UUID Requirements
+
+**ALL IDs must be valid UUIDs.** PostgreSQL columns defined as `UUID` type will reject non-UUID strings.
+
+### Error You'll See
+```
+invalid input syntax for type uuid: "insert-..."
+```
+
+### Correct ID Generation
+```typescript
+// ✅ CORRECT - Always use crypto.randomUUID()
+const id = crypto.randomUUID();
+
+// ❌ INCORRECT - Never use these patterns
+const id = `insert-${Date.now()}`;
+const id = `${entityType}-${Date.now()}-${Math.random()}`;
+const id = `${baseId}-var`;
+const id = `action-${entityId}-${timestamp}`;
+```
+
+### Where This Matters
+- Entity IDs (customers, sales, products, etc.)
+- Operation IDs in sync_operations table
+- Idempotency keys
+- Sync group IDs
+
+---
+
+## CRITICAL: Database Initialization Order
+
+**The order of operations matters.** Drizzle must be initialized AFTER tables are created.
+
+### Error You'll See
+```
+column "business_id" does not exist
+```
+
+This happens when Drizzle is initialized before tables are created.
+
+### Correct Order
+```typescript
+// ✅ CORRECT
+const pg = await PGlite.create({...});
+await createTables(pg);        // 1. Create tables FIRST
+const db = drizzle(pg, {...}); // 2. Then initialize Drizzle
+
+// ❌ WRONG - Will cause schema errors
+const db = drizzle(pg, {...}); // Too early!
+await createTables(pg);        // Tables created too late
+```
+
+### createTables Function
+```typescript
+async function createTables(pg: PGlite): Promise<void> {
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'pending',
+      business_id UUID NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_customers_business_id ON customers(business_id);
+    CREATE INDEX IF NOT EXISTS idx_customers_sync_status ON customers(sync_status);
+  `);
+  // ... more tables
+}
+```
+
+---
+
+## BaseService Pattern
+
+**Abstract base class providing common functionality for all entity services.**
+
+```typescript
+// packages/app/app/lib/services/base-service.ts
+export abstract class BaseService {
+  protected readonly pg: PGlite;
+  protected readonly syncService: SyncService;
+  protected readonly businessId: string;
+
+  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
+    this.pg = pg;
+    this.syncService = syncService;
+    this.businessId = businessId;
+  }
+
+  abstract getEntityType(): EntityType;
+  abstract getEntityPrefix(): string;
+
+  /**
+   * Generates a pure UUID v4 - NO prefixes, NO fallbacks
+   */
+  protected generateId(): string {
+    return crypto.randomUUID();
+  }
+
+  protected now(): string {
+    return new Date().toISOString();
+  }
+
+  /**
+   * Generates a group ID for atomic operations
+   */
+  protected generateSyncGroup(): string {
+    return crypto.randomUUID();
+  }
+
+  /**
+   * Queues a sync operation
+   */
+  protected async queueSync(
+    action: SyncAction,
+    entityId: string,
+    payload: Record<string, unknown>,
+    syncGroupId?: string
+  ): Promise<void> {
+    await this.syncService.enqueue({
+      entity_type: this.getEntityType(),
+      operation: action,
+      entityId,
+      data: payload,
+      idempotencyKey: crypto.randomUUID(), // Always UUID
+      syncGroupId,
+    });
+  }
+}
+```
+
+### Extending BaseService
+```typescript
+export class CustomerService extends BaseService {
+  getEntityType(): EntityType {
+    return "customers";
+  }
+
+  getEntityPrefix(): string {
+    return "cust";
+  }
+
+  async create(input: CreateCustomerInput): Promise<Customer> {
+    const id = this.generateId(); // UUID
+    const now = this.now();
+
+    await this.pg.exec(`
+      INSERT INTO customers (id, name, business_id, sync_status, created_at, updated_at)
+      VALUES ($1, $2, $3, 'pending', $4, $5)
+    `, [id, input.name, this.businessId, now, now]);
+
+    // Queue for server sync
+    await this.queueSync("insert", id, { name: input.name });
+
+    return { id, name: input.name, syncStatus: "pending" };
+  }
+}
+```
+
+---
+
+## SyncGroup Pattern (Multi-Table Transactions)
+
+**For atomic operations involving multiple tables (e.g., Sale + SaleItems).**
+
+```typescript
+async createWithItems(saleInput: CreateSaleInput, items: SaleItemInput[]): Promise<Sale> {
+  const syncGroupId = this.generateSyncGroup(); // Same UUID for all ops
+
+  await this.pg.exec("BEGIN");
+  try {
+    // 1. Insert sale
+    const saleId = this.generateId();
+    await this.pg.query(`
+      INSERT INTO sales (id, business_id, total, sync_status, ...)
+      VALUES ($1, $2, $3, 'pending', ...)
+    `, [saleId, this.businessId, saleInput.total]);
+
+    // 2. Insert all items
+    for (const item of items) {
+      const itemId = this.generateId();
+      await this.pg.query(`
+        INSERT INTO sale_items (id, sale_id, ...)
+        VALUES ($1, $2, ...)
+      `, [itemId, saleId]);
+
+      // Queue with same syncGroupId
+      await this.queueSync("insert", itemId, item, syncGroupId);
+    }
+
+    await this.pg.exec("COMMIT");
+
+    // Queue sale with same syncGroupId
+    await this.queueSync("insert", saleId, saleInput, syncGroupId);
+
+    return { id: saleId, ... };
+  } catch (error) {
+    await this.pg.exec("ROLLBACK");
+    throw error;
+  }
+}
+```
+
+**Key points:**
+- All operations share the same `syncGroupId`
+- Backend processes them as a single transaction
+- All succeed or all fail together
+
+---
+
+## Entity Mapper Pattern
+
+**Convert snake_case (PGlite) to camelCase (TypeScript).**
+
+```typescript
+// packages/app/app/lib/utils/entity-mappers.ts
+export function mapToCamelCase<T>(row: Record<string, unknown>): T {
+  const mapped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    mapped[camelKey] = value;
+  }
+  return mapped as T;
+}
+
+// Usage in service
+async findById(id: string): Promise<Sale | null> {
+  const result = await this.pg.query<DbSale>(`
+    SELECT * FROM sales WHERE id = $1 AND business_id = $2
+  `, [id, this.businessId]);
+
+  if (result.rows.length === 0) return null;
+
+  return mapToCamelCase<Sale>(result.rows[0]);
+}
+```
+
+---
+
+## PGlite Migrations
+
+**Track and apply schema migrations.**
+
+```typescript
+async function runMigrations(pg: PGlite): Promise<void> {
+  // Migration tracking table
+  await pg.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INTEGER PRIMARY KEY,
+      applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      description TEXT
+    );
+  `);
+
+  const result = await pg.query<{ version: number }>(
+    `SELECT version FROM schema_migrations ORDER BY version`
+  );
+  const appliedVersions = new Set(result.rows.map(r => r.version));
+
+  const migrations = [
+    {
+      version: 1,
+      description: "Add sync_attempts to products",
+      sql: `
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS sync_attempts INTEGER DEFAULT 0;
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'pending';
+      `
+    },
+    {
+      version: 2,
+      description: "Add business_id to product_variants",
+      sql: `
+        ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS business_id UUID;
+        CREATE INDEX IF NOT EXISTS idx_product_variants_business_id ON product_variants(business_id);
+      `
+    },
+    // ... more migrations
+  ];
+
+  for (const migration of migrations) {
+    if (!appliedVersions.has(migration.version)) {
+      await pg.exec(migration.sql);
+      await pg.exec(`
+        INSERT INTO schema_migrations (version, description)
+        VALUES (${migration.version}, '${migration.description}');
+      `);
+    }
+  }
+}
+```
+
+---
+
+## Dead Letter Queue Pattern
+
+**Handle operations that fail after max retries.**
+
+```typescript
+// In SyncService
+private async moveToDeadLetter(operationId: string, originalError: string): Promise<void> {
+  const op = await this.getOperation(operationId);
+  if (!op) return;
+
+  const dlqId = crypto.randomUUID();
+
+  await this.pg.exec(`
+    INSERT INTO sync_dead_letter (
+      id, operation_id, entity_type, operation, entity_id,
+      data, error, sync_attempts, original_error, created_at
+    ) VALUES (
+      '${dlqId}',
+      '${op.id}',
+      '${op.entity_type}',
+      '${op.operation}',
+      '${op.entity_id}',
+      '${JSON.stringify(op.payload)}',
+      'Max retries exceeded',
+      ${op.sync_attempts},
+      '${originalError}',
+      ${Date.now()}
+    )
+  `);
+
+  await this.pg.exec(`
+    UPDATE sync_operations
+    SET status = 'dead_letter'
+    WHERE id = '${operationId}'
+  `);
+}
+```
+
+---
+
+## Lessons Learned: Common Errors
+
+### Error 1: "column business_id does not exist"
+- **Symptom:** Infinite loading after login
+- **Cause:** Drizzle initialized before creating tables
+- **Fix:** Reorder: `createTables()` → then `drizzle()`
+
+### Error 2: "invalid input syntax for type uuid"
+- **Symptom:** Cannot create entities
+- **Cause:** Using non-UUID ID formats
+- **Fix:** Use ONLY `crypto.randomUUID()`, remove all fallbacks
+
+### Error 3: Loading Infinite in ProtectedLayout
+- **Symptom:** Spinner never disappears
+- **Cause:** `isMounted` checks blocking state updates on re-render
+- **Fix:** Remove problematic `isMounted` guards in React 18+
+
+### Error 4: "Business seller is not available"
+- **Symptom:** Error creating sales
+- **Cause:** Accessing `business?.businessUserId` before loaded
+- **Fix:** Disable buttons until data is loaded
 
 ---
 

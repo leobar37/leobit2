@@ -40,8 +40,7 @@ export function useSales(filters?: SaleFilters) {
     queryFn: async () => {
       if (filters?.customerId) {
         return saleService.findByCustomerId(filters.customerId);
-      }
-      if (filters?.status) {
+      } else if (filters?.status) {
         return saleService.findByStatus(filters.status);
       }
       return saleService.findByBusiness();
@@ -174,10 +173,10 @@ export function useConfirmPreOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      return saleService.confirmPreOrder(id);
+    mutationFn: async ({ id, baseVersion }: { id: string; baseVersion: number }): Promise<void> => {
+      return saleService.confirmPreOrder(id, baseVersion);
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
@@ -255,10 +254,11 @@ export function useUpdateSale() {
     }): Promise<void> => {
       return saleService.update(id, input);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.sale(variables.id),
-      });
+    onSuccess: async (_, variables) => {
+      console.log("[useUpdateSale] Sale updated:", variables.id);
+      // Invalidate the specific sale query to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(variables.id) });
+      // Also invalidate the sales list
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
     },
   });

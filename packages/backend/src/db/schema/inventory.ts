@@ -68,6 +68,11 @@ export const inventory = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy - required for Electric sync filtering
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
+
     // Relations
     productId: uuid("product_id")
       .notNull()
@@ -80,6 +85,7 @@ export const inventory = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_inventory_business_id").on(table.businessId),
     index("idx_inventory_product_id").on(table.productId),
   ]
 );
@@ -205,6 +211,10 @@ export const variantInventory = pgTable(
   "variant_inventory",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Multi-tenancy - required for Electric sync filtering
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
     variantId: uuid("variant_id")
       .notNull()
       .references(() => productVariants.id, { onDelete: "cascade" }),
@@ -212,6 +222,7 @@ export const variantInventory = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_variant_inventory_business_id").on(table.businessId),
     index("idx_variant_inventory_variant_id").on(table.variantId),
     uniqueIndex("idx_variant_inventory_unique").on(table.variantId),
   ]
@@ -232,6 +243,10 @@ export type VariantInventory = typeof variantInventory.$inferSelect;
 export type NewVariantInventory = typeof variantInventory.$inferInsert;
 
 export const inventoryRelations = relations(inventory, ({ one }) => ({
+  business: one(businesses, {
+    fields: [inventory.businessId],
+    references: [businesses.id],
+  }),
   product: one(products, {
     fields: [inventory.productId],
     references: [products.id],
@@ -289,6 +304,10 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
 }));
 
 export const variantInventoryRelations = relations(variantInventory, ({ one }) => ({
+  business: one(businesses, {
+    fields: [variantInventory.businessId],
+    references: [businesses.id],
+  }),
   variant: one(productVariants, {
     fields: [variantInventory.variantId],
     references: [productVariants.id],

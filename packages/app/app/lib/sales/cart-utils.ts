@@ -6,29 +6,16 @@ function parseNumber(value: string): number {
   return parseFloat(value) || 0;
 }
 
-function upsertCartItem(cartItems: CartItem[], nextItem: CartItem): CartItem[] {
+function upsertCartItem(cartItems: CartItem[], nextItem: CartItem): { success: true; items: CartItem[] } | { success: false; error: string } {
   const existingIndex = cartItems.findIndex(
     (item) => item.productId === nextItem.productId && item.variantId === nextItem.variantId,
   );
 
-  if (existingIndex < 0) {
-    return [...cartItems, nextItem];
+  if (existingIndex >= 0) {
+    return { success: false, error: "El producto ya está en el carrito" };
   }
 
-  return cartItems.map((item, index) => {
-    if (index !== existingIndex) {
-      return item;
-    }
-
-    const quantity = item.quantity + nextItem.quantity;
-    const unitPrice = nextItem.unitPrice;
-    return {
-      ...item,
-      quantity,
-      unitPrice,
-      subtotal: parseFloat((quantity * unitPrice).toFixed(2)),
-    };
-  });
+  return { success: true, items: [...cartItems, nextItem] };
 }
 
 function parseVariantUnitQuantity(variant: ProductVariant): number {
@@ -123,7 +110,13 @@ export function isNumericText(value: string): boolean {
   return !value || /^\d*\.?\d*$/.test(value);
 }
 
-export function addFromCalculator(params: AddFromCalculatorParams): CartItem[] {
+export function isInCart(cartItems: CartItem[], productId: string, variantId: string): boolean {
+  return cartItems.some((item) => item.productId === productId && item.variantId === variantId);
+}
+
+export type AddFromCalculatorResult = { success: true; items: CartItem[] } | { success: false; error: string };
+
+export function addFromCalculator(params: AddFromCalculatorParams): AddFromCalculatorResult {
   const {
     cartItems,
     selectedProduct,
@@ -142,7 +135,7 @@ export function addFromCalculator(params: AddFromCalculatorParams): CartItem[] {
       packsInput,
       unitsInput,
     );
-    return nextItem ? upsertCartItem(cartItems, nextItem) : cartItems;
+    return nextItem ? upsertCartItem(cartItems, nextItem) : { success: true, items: cartItems };
   }
 
   const unitPrice = parseNumber(values.pricePerKg || selectedVariant.price || "0");
@@ -154,7 +147,7 @@ export function addFromCalculator(params: AddFromCalculatorParams): CartItem[] {
     values.totalAmount,
   );
 
-  return nextItem ? upsertCartItem(cartItems, nextItem) : cartItems;
+  return nextItem ? upsertCartItem(cartItems, nextItem) : { success: true, items: cartItems };
 }
 
 export function removeFromCart(cartItems: CartItem[], index: number): CartItem[] {

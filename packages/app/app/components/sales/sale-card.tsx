@@ -86,11 +86,11 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         onClick={onClick}
         className="cursor-pointer"
       >
-        <Card className="w-full rounded-[26px] border border-stone-200/80 bg-white/80 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90">
+        <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[18px] bg-orange-50 ring-1 ring-orange-100/80">
-                <ShoppingCart className="h-5 w-5 text-orange-600" />
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-50 ring-1 ring-orange-100/80">
+                <ShoppingCart className="h-[18px] w-[18px] text-orange-600" />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -110,23 +110,23 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="h-7 w-7 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600"
                         onClick={handleDelete}
                         disabled={deleteSale.isPending}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
 
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90">
-                      <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90">
+                      <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold leading-none tracking-[-0.03em] text-foreground">
+                  <div className="min-w-0 flex-1">
+                    <p className="max-w-full whitespace-nowrap text-[clamp(1.8rem,7.2vw,2.1rem)] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
                       S/ {formatCurrency(sale.totalAmount)}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -134,11 +134,11 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap justify-end gap-2">
+                  <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
                     <Badge
                       variant="outline"
                       className={cn(
-                        "rounded-full border-0 px-3 py-1 text-xs font-semibold",
+                        "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
                         isDraft
                           ? "bg-amber-100 text-amber-700"
                           : "bg-green-100 text-green-700"
@@ -150,7 +150,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "rounded-full border-0 px-3 py-1 text-xs font-semibold",
+                        "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
                         sale.syncStatus === "error"
                           ? "bg-red-100 text-red-700"
                           : sale.syncStatus === "pending"
@@ -164,7 +164,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     {hasBalanceDue && (
                       <Badge
                         variant="outline"
-                        className="rounded-full border-0 bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700"
+                        className="rounded-full border-0 bg-orange-100 px-2.5 py-1 text-[11px] font-semibold leading-none text-orange-700"
                       >
                         Debe S/ {formatCurrency(sale.balanceDue)}
                       </Badge>
@@ -172,17 +172,17 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                   </div>
                 </div>
 
-                <div className="mt-3 grid gap-2 border-t border-stone-200/80 pt-3 text-sm text-muted-foreground sm:grid-cols-2">
+                <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-                      <User className="h-4 w-4" />
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                      <User className="h-3.5 w-3.5" />
                     </div>
                     <span className="truncate">{customerName}</span>
                   </div>
 
                   <div className="flex min-w-0 items-center gap-2 sm:justify-end">
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-                      <CalendarDays className="h-4 w-4" />
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                      <CalendarDays className="h-3.5 w-3.5" />
                     </div>
                     <span className="truncate">{formatSaleDate(sale.saleDate)}</span>
                   </div>

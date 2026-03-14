@@ -19,9 +19,24 @@ function suppressReactDevToolsWarning(): Plugin {
   };
 }
 
+// Add COOP/COEP headers for WASM support in Firefox
+function crossOriginIsolation(): Plugin {
+  return {
+    name: "cross-origin-isolation",
+    configureServer(server) {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     isDev && suppressReactDevToolsWarning(),
+    crossOriginIsolation(),
     reactRouter(),
     tsconfigPaths({
       ignoreConfigErrors: true,

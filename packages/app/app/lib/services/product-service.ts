@@ -5,6 +5,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType, type BaseCreateInput, type BaseUpdateInput } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { SyncStatus } from "@avileo/shared";
@@ -112,8 +113,13 @@ export interface UpdateVariantInput extends BaseUpdateInput {
  * Admin operations queue sync to server
  */
 export class ProductService extends BaseService {
-  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
-    super(pg, syncService, businessId);
+  constructor(
+    pg: PGlite,
+    db: ReturnType<typeof drizzle>,
+    syncService: SyncService,
+    businessId: string
+  ) {
+    super(pg, db, syncService, businessId);
   }
 
   /**

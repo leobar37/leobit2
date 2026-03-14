@@ -4,6 +4,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { SyncStatus, type CustomerTag } from "@avileo/shared";
@@ -17,8 +18,13 @@ export class CustomerTagService extends BaseService {
   private static readonly TABLE_NAME = "customer_tags";
   private static readonly ENTITY_TYPE: EntityType = "customer_tags";
 
-  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
-    super(pg, syncService, businessId);
+  constructor(
+    pg: PGlite,
+    db: ReturnType<typeof drizzle>,
+    syncService: SyncService,
+    businessId: string
+  ) {
+    super(pg, db, syncService, businessId);
   }
 
   getEntityType(): EntityType {

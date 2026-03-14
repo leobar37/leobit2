@@ -56,11 +56,12 @@ export function CalculatorInput({
           onChange={handleChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          disabled={isAutoCalculateTarget}
           className={cn(
             "w-full h-11 px-3 pr-10 text-base rounded-xl border bg-white transition-all",
             "focus:outline-none focus:ring-2",
             isAutoCalculateTarget
-              ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30"
+              ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30 cursor-not-allowed"
               : "border-gray-200 focus:border-blue-500 focus:ring-blue-200",
             value && !isAutoCalculateTarget && "bg-blue-50/30"
           )}
@@ -122,11 +123,12 @@ export function CalculatorInputCompact({
         placeholder={placeholder}
         value={value}
         onChange={handleChange}
+        disabled={isAutoCalculateTarget}
         className={cn(
           "w-full h-10 px-3 pr-8 text-sm rounded-lg border transition-all",
           "focus:outline-none focus:ring-2",
           isAutoCalculateTarget
-            ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30"
+            ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30 cursor-not-allowed"
             : "border-gray-200 focus:border-blue-500 focus:ring-blue-200"
         )}
       />

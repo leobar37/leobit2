@@ -5,11 +5,13 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus } from "@avileo/shared";
+import { SyncStatus, sales, saleItems } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
-import { mapToCamelCase, normalizeRow } from "../mappers/entity-mapper";
+import { mapToCamelCase, mapToCamelCaseWithDates, normalizeRow } from "../mappers/entity-mapper";
+import { eq } from "drizzle-orm";
 
 /**
  * Sale status types
@@ -75,9 +77,9 @@ export interface Sale {
   balanceDue: string;
   tara: string | null;
   netWeight: string | null;
-  saleDate: string;
-  deliveryDate: string | null;
-  orderDate: string | null;
+  saleDate: Date;
+  deliveryDate: Date | null;
+  orderDate: Date | null;
   status: SaleStatus;
   version: number;
   confirmedSnapshot: Record<string, unknown> | null;
@@ -85,19 +87,19 @@ export interface Sale {
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  cancelledAt: string | null;
+  cancelledAt: Date | null;
   cancelledBy: string | null;
   cancelReason: string | null;
   refundAmount: string | null;
-  refundDate: string | null;
+  refundDate: Date | null;
   refundMethod: string | null;
   refundReference: string | null;
   refundNotes: string | null;
   advancePaymentMethod: string | null;
   advanceReferenceNumber: string | null;
   advanceProofImageId: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
@@ -159,8 +161,13 @@ export interface UpdateSaleInput {
  * Provides atomic CRUD operations for sales with their items
  */
 export class SaleService extends BaseService {
-  constructor(pg: PGlite, syncService: SyncService, businessId: string) {
-    super(pg, syncService, businessId);
+  constructor(
+    pg: PGlite,
+    db: ReturnType<typeof drizzle>,
+    syncService: SyncService,
+    businessId: string
+  ) {
+    super(pg, db, syncService, businessId);
   }
 
   /**
@@ -190,7 +197,7 @@ export class SaleService extends BaseService {
       return null;
     }
 
-    const sale = mapToCamelCase<Sale>(saleResult.rows[0]);
+    const sale = mapToCamelCaseWithDates<Sale>(saleResult.rows[0]);
 
     // Fetch customer data if customerId exists
     let customer: SaleCustomer | null = null;
@@ -205,14 +212,16 @@ export class SaleService extends BaseService {
     }
 
     const itemsResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE sale_id = $1`,
-      [id]
+      `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+      [id, this.businessId]
     );
+
+    const items = itemsResult.rows.map((row) => mapToCamelCase<SaleItem>(row));
 
     return {
       ...sale,
       customer,
-      items: itemsResult.rows.map((row) => mapToCamelCase<SaleItem>(row)),
+      items,
     };
   }
 
@@ -220,15 +229,19 @@ export class SaleService extends BaseService {
    * Find all sales for the business
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
+    console.log("[SaleService] findByBusiness called, businessId:", this.businessId);
+
     const salesResult = await this.pg.query<Record<string, unknown>>(
       `SELECT * FROM sales WHERE business_id = $1 ORDER BY sale_date DESC`,
       [this.businessId]
     );
 
+    console.log("[SaleService] findByBusiness - sales found:", salesResult.rows.length);
+
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCase<Sale>(row);
+      const sale = mapToCamelCaseWithDates<Sale>(row);
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -243,8 +256,8 @@ export class SaleService extends BaseService {
       }
 
       const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1`,
-        [sale.id]
+        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+        [sale.id, this.businessId]
       );
 
       sales.push({
@@ -269,7 +282,7 @@ export class SaleService extends BaseService {
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCase<Sale>(row);
+      const sale = mapToCamelCaseWithDates<Sale>(row);
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -284,8 +297,8 @@ export class SaleService extends BaseService {
       }
 
       const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1`,
-        [sale.id]
+        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+        [sale.id, this.businessId]
       );
 
       sales.push({
@@ -310,7 +323,7 @@ export class SaleService extends BaseService {
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCase<Sale>(row);
+      const sale = mapToCamelCaseWithDates<Sale>(row);
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -325,8 +338,8 @@ export class SaleService extends BaseService {
       }
 
       const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1`,
-        [sale.id]
+        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+        [sale.id, this.businessId]
       );
 
       sales.push({
@@ -490,33 +503,33 @@ export class SaleService extends BaseService {
         ]
       );
 
-      // Insert all sale items with pre-generated IDs
+      // Insert all sale items with Drizzle
+      console.log("[SaleService] About to insert", items.length, "items for sale:", saleId);
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemId = itemIds[i];
 
-        await this.pg.query(
-          `INSERT INTO sale_items (
-            id, sale_id, product_id, variant_id, product_name, variant_name,
-            quantity, ordered_quantity, unit_price, unit_price_quoted, subtotal,
-            is_modified
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-          [
-            itemId,
-            saleId,
-            item.productId,
-            item.variantId,
-            item.productName,
-            item.variantName,
-            item.quantity || null,
-            item.orderedQuantity || null,
-            item.unitPrice || null,
-            item.unitPriceQuoted || null,
-            item.subtotal,
-            false,
-          ]
-        );
+        console.log("[SaleService] Inserting item:", itemId, "product:", item.productName);
+
+        await this.db.insert(saleItems).values({
+          id: itemId,
+          businessId: this.businessId,
+          saleId: saleId,
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          variantName: item.variantName,
+          quantity: item.quantity?.toString() ?? null,
+          orderedQuantity: item.orderedQuantity?.toString() ?? null,
+          unitPrice: item.unitPrice?.toString() ?? null,
+          unitPriceQuoted: item.unitPriceQuoted?.toString() ?? null,
+          subtotal: item.subtotal.toString(),
+          isModified: false,
+        });
+
+        console.log("[SaleService] Item inserted:", itemId);
       }
+      console.log("[SaleService] All items inserted successfully");
 
       // Commit transaction
       await this.pg.exec("COMMIT");
@@ -568,10 +581,12 @@ export class SaleService extends BaseService {
       }
 
       // Return the created sale
+      console.log("[SaleService] createWithItems - fetching created sale:", saleId);
       const createdSale = await this.findById(saleId);
       if (!createdSale) {
         throw new Error("Failed to retrieve created sale");
       }
+      console.log("[SaleService] createWithItems - created sale items count:", createdSale.items?.length ?? 0);
 
       return createdSale;
     } catch (error) {
@@ -620,7 +635,7 @@ export class SaleService extends BaseService {
    * Confirm a pre_order (change status from draft to confirmed)
    * For pre_orders
    */
-  async confirmPreOrder(id: string): Promise<void> {
+  async confirmPreOrder(id: string, baseVersion: number): Promise<void> {
     const sale = await this.findById(id);
 
     if (!sale) {
@@ -635,11 +650,15 @@ export class SaleService extends BaseService {
       throw new Error("Only pre_orders use confirmPreOrder");
     }
 
+    if (sale.version !== baseVersion) {
+      throw new Error("La venta fue modificada por otro usuario. Por favor, intenta de nuevo.");
+    }
+
     const now = this.now();
 
     await this.pg.query(
-      `UPDATE sales SET status = 'confirmed', updated_at = $1, sync_status = $2 WHERE id = $3`,
-      [now, SyncStatus.PENDING, id]
+      `UPDATE sales SET status = 'confirmed', version = version + 1, updated_at = $1, sync_status = $2 WHERE id = $3 AND version = $4`,
+      [now, SyncStatus.PENDING, id, baseVersion]
     );
 
     await this.queueSync(
@@ -844,13 +863,13 @@ export class SaleService extends BaseService {
 
     // Capture item IDs BEFORE deleting them
     const itemsResult = await this.pg.query<{ id: string }>(
-      `SELECT id FROM sale_items WHERE sale_id = $1`,
-      [id]
+      `SELECT id FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+      [id, this.businessId]
     );
     const itemIds = itemsResult.rows.map((row) => row.id);
 
-    // Delete sale items first
-    await this.pg.query(`DELETE FROM sale_items WHERE sale_id = $1`, [id]);
+    // Delete sale items first using Drizzle
+    await this.db.delete(saleItems).where(eq(saleItems.saleId, id));
 
     // Delete the sale
     await this.pg.query(`DELETE FROM sales WHERE id = $1`, [id]);
@@ -872,7 +891,10 @@ export class SaleService extends BaseService {
    * Add an item to an existing sale
    */
   async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
+    console.log("[SaleService] addItem called for sale:", saleId, "item:", item);
+
     const sale = await this.findById(saleId);
+    console.log("[SaleService] addItem - sale found:", sale?.id, "status:", sale?.status);
 
     if (!sale) {
       throw new Error("Sale not found");
@@ -882,30 +904,41 @@ export class SaleService extends BaseService {
       throw new Error("Only draft sales can have items added");
     }
 
+    // Check for existing item with same product + variant
+    const existingItemsResult = await this.pg.query<Record<string, unknown>>(
+      `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+      [saleId, this.businessId]
+    );
+    const existingItems = existingItemsResult.rows.map((row) => mapToCamelCase<SaleItem>(row));
+    const existingItem = existingItems.find(
+      (i) => i.productId === item.productId && i.variantId === item.variantId
+    );
+    
+    if (existingItem) {
+      throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
+    }
+
     const itemId = this.generateId();
     const now = this.now();
 
-    await this.pg.query(
-      `INSERT INTO sale_items (
-        id, sale_id, product_id, variant_id, product_name, variant_name,
-        quantity, ordered_quantity, unit_price, unit_price_quoted, subtotal,
-        is_modified
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [
-        itemId,
-        saleId,
-        item.productId,
-        item.variantId,
-        item.productName,
-        item.variantName,
-        item.quantity || null,
-        item.orderedQuantity || null,
-        item.unitPrice || null,
-        item.unitPriceQuoted || null,
-        item.subtotal,
-        false,
-      ]
-    );
+    console.log("[SaleService] addItem - inserting item:", itemId, "product:", item.productName);
+
+    // Use Drizzle to insert the item
+    await this.db.insert(saleItems).values({
+      id: itemId,
+      businessId: this.businessId,
+      saleId: saleId,
+      productId: item.productId,
+      variantId: item.variantId,
+      productName: item.productName,
+      variantName: item.variantName,
+      quantity: item.quantity?.toString() ?? null,
+      orderedQuantity: item.orderedQuantity?.toString() ?? null,
+      unitPrice: item.unitPrice?.toString() ?? null,
+      unitPriceQuoted: item.unitPriceQuoted?.toString() ?? null,
+      subtotal: item.subtotal.toString(),
+      isModified: false,
+    });
 
     // Update sale total atomically to prevent race conditions
     await this.pg.query(
@@ -936,10 +969,12 @@ export class SaleService extends BaseService {
     );
 
     // Return the created item
+    console.log("[SaleService] addItem - querying created item:", itemId);
     const itemResult = await this.pg.query<Record<string, unknown>>(
       `SELECT * FROM sale_items WHERE id = $1`,
       [itemId]
     );
+    console.log("[SaleService] addItem - item found:", itemResult.rows.length);
 
     return mapToCamelCase<SaleItem>(itemResult.rows[0]);
   }
@@ -982,24 +1017,15 @@ export class SaleService extends BaseService {
     const subtotalDiff = newSubtotal - oldSubtotal;
     const now = this.now();
 
-    // Update the item
-    await this.pg.query(
-      `UPDATE sale_items SET
-        quantity = COALESCE($1, quantity),
-        unit_price = COALESCE($2, unit_price),
-        subtotal = COALESCE($3, subtotal),
-        is_modified = true,
-        updated_at = $4
-      WHERE id = $5 AND sale_id = $6`,
-      [
-        data.quantity?.toString() ?? null,
-        data.unitPrice?.toString() ?? null,
-        data.subtotal?.toString() ?? null,
-        now,
-        itemId,
-        saleId,
-      ]
-    );
+    // Update the item using Drizzle
+    await this.db.update(saleItems)
+      .set({
+        quantity: data.quantity?.toString() ?? existingItem.quantity,
+        unitPrice: data.unitPrice?.toString() ?? existingItem.unitPrice,
+        subtotal: data.subtotal?.toString() ?? existingItem.subtotal,
+        isModified: true,
+      })
+      .where(eq(saleItems.id, itemId));
 
     // Update sale total if subtotal changed
     if (Math.abs(subtotalDiff) > 0.01) {
@@ -1062,8 +1088,8 @@ export class SaleService extends BaseService {
     const subtotal = parseFloat(itemResult.rows[0].subtotal);
     const now = this.now();
 
-    // Delete the item
-    await this.pg.query(`DELETE FROM sale_items WHERE id = $1`, [itemId]);
+    // Delete the item using Drizzle
+    await this.db.delete(saleItems).where(eq(saleItems.id, itemId));
 
     // Update sale total atomically to prevent race conditions
     await this.pg.query(

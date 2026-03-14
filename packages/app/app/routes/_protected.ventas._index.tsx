@@ -10,6 +10,7 @@ import { useListSearch } from "~/hooks/use-list-search";
 import { useBusiness } from "~/hooks/use-business";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { useToast } from "~/hooks/use-toast";
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
@@ -18,6 +19,7 @@ export default function SalesPage() {
   const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleCreateSale = async () => {
     // Prevent duplicate clicks while mutation is pending
@@ -25,7 +27,9 @@ export default function SalesPage() {
 
     // Prevent if business is not ready
     if (!business?.businessUserId) {
-      console.error("Business not ready, cannot create sale");
+      toast.error("Error al crear venta", {
+        description: "No se pudo iniciar la venta. Intenta de nuevo.",
+      });
       return;
     }
 
@@ -34,7 +38,9 @@ export default function SalesPage() {
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       console.error("Failed to create sale:", err);
-      // TODO: Show toast notification for error
+      toast.error("Error al crear venta", {
+        description: "No se pudo crear la venta. Intenta de nuevo.",
+      });
     }
   };
 
@@ -60,11 +66,11 @@ export default function SalesPage() {
     <>
       <div className="space-y-4">
         {stats && (
-          <div className="rounded-[26px] border border-stone-200/80 bg-white/70 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]">
+          <div className="shell-card-flat rounded-[24px] p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Total de ventas</p>
-                <p className="mt-1 text-2xl font-bold tracking-[-0.03em] text-foreground">
+                <p className="mt-1 whitespace-nowrap text-[clamp(1.7rem,6.8vw,2rem)] font-bold tracking-[-0.04em] text-foreground">
                   S/ {formatCurrency(stats.total)}
                 </p>
               </div>
@@ -72,11 +78,11 @@ export default function SalesPage() {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Cantidad</p>
-                  <p className="text-2xl font-bold leading-none text-foreground">{stats.count}</p>
+                  <p className="text-xl font-bold leading-none text-foreground">{stats.count}</p>
                 </div>
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-orange-100 text-orange-600">
-                  <TrendingUp className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-orange-100 text-orange-600">
+                  <TrendingUp className="h-[18px] w-[18px]" />
                 </div>
               </div>
             </div>

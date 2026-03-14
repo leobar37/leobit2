@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   CreditCard,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerSelect } from "~/components/customers/customer-select";
 import { CalculatorInput } from "~/components/calculator/calculator-input";
+import { AmountPaidInput } from "~/components/sales/amount-paid-input";
 import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSmartCalculator } from "~/hooks/use-smart-calculator";
@@ -46,15 +47,13 @@ export function CustomerSection() {
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const sale = sales?.[0] || null;
+  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   const handleSelectCustomer = async (
     customer: { id: string; name: string; phone?: string | null } | null,
   ) => {
-    if (!saleId || !updateSale) {
-      return;
-    }
+    if (!saleId || !updateSale) return;
 
     try {
       await updateSale.mutateAsync({
@@ -63,9 +62,8 @@ export function CustomerSection() {
           customerId: customer?.id ?? null,
         },
       });
-      await refetch();
     } catch (error) {
-      console.error("Error updating customer:", error);
+      console.error("[CustomerSection] Error updating customer:", error);
       toast.error("Error al seleccionar cliente", {
         description: "No se pudo actualizar el cliente de la venta",
       });
@@ -128,7 +126,7 @@ export function PaymentModeSection() {
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const sale = sales?.[0] || null;
+  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -164,21 +162,16 @@ export function PaymentModeSection() {
     }
   };
 
-  const handleSetAmountPaid = async (amount: string) => {
-    if (!saleId) return;
-
-    try {
+  const handleUpdateAmountPaid = useCallback(
+    async (amount: string, balanceDue: string) => {
+      if (!saleId) return;
       await updateSale.mutateAsync({
         id: saleId,
-        input: {
-          amountPaid: amount,
-          balanceDue: calculations.balanceDue.toFixed(2),
-        },
+        input: { amountPaid: amount, balanceDue },
       });
-    } catch {
-      toast.error("Error al actualizar monto", {});
-    }
-  };
+    },
+    [saleId, updateSale]
+  );
 
   return (
     <Card className="shell-card rounded-3xl border-0">
@@ -227,39 +220,13 @@ export function PaymentModeSection() {
           ))}
         </div>
 
-        {sale?.paymentMode === "a_cuenta" && (
-          <div className="space-y-3 border-t pt-3 shell-divider">
-            <label className="text-sm font-medium">Monto pagado (S/)</label>
-            <Input
-              type="number"
-              placeholder="0.00"
-              value={sale?.amountPaid || ""}
-              onChange={(e) => handleSetAmountPaid(e.target.value)}
-              className={cn(
-                "rounded-2xl border-white/70 bg-white/72 text-lg shadow-sm",
-                !calculations.hasValidPartial &&
-                  sale?.amountPaid &&
-                  "border-red-500 focus-visible:ring-red-500",
-              )}
-            />
-            {!calculations.hasValidPartial && sale?.amountPaid && (
-              <p className="text-sm text-red-500">
-                El monto debe ser mayor a 0 y menor o igual al total
-              </p>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total:</span>
-              <span className="font-medium">
-                S/ {formatCurrency(calculations.totalAmount)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Saldo pendiente:</span>
-              <span className="font-medium text-orange-600">
-                S/ {formatCurrency(calculations.balanceDue)}
-              </span>
-            </div>
-          </div>
+        {sale?.paymentMode === "a_cuenta" && saleId && (
+          <AmountPaidInput
+            saleId={saleId}
+            totalAmount={calculations.totalAmount}
+            initialAmount={sale?.amountPaid || ""}
+            onUpdate={handleUpdateAmountPaid}
+          />
         )}
 
         {sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
@@ -376,7 +343,7 @@ export function SaleSummaryCard() {
   const { data: sales } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
 
-  const sale = sales?.[0] || null;
+  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -447,8 +414,9 @@ export function SubmitSaleButton() {
   const { saleId } = useNewSaleContext();
   const { data: sales } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
+  const { toast } = useToast();
 
-  const sale = sales?.[0] || null;
+  const sale = sales?.[0] ?? null;
   const finalizeSale = useFinalizeSale();
 
   const calculations = useSaleCalculations(sale, items);
@@ -457,21 +425,12 @@ export function SubmitSaleButton() {
     if (!calculations.canSubmit || !saleId) return;
 
     try {
-      const nextStatus = sale?.type === "pre_order" ? "confirmed" : "active";
-
-      await finalizeSale.mutateAsync({
-        saleId,
-        changes: {
-          totalAmount: formatCurrency(calculations.totalAmount),
-          saleType: calculations.saleType,
-          amountPaid: formatCurrency(calculations.amountPaidValue),
-          balanceDue: formatCurrency(calculations.balanceDue),
-          status: nextStatus,
-        },
-      });
+      await finalizeSale.mutateAsync(saleId);
       navigate("/ventas");
     } catch {
-      // Error is handled by mutate's onError
+      toast.error("Error al finalizar venta", {
+        description: "No se pudo completar la venta",
+      });
     }
   };
 
@@ -480,7 +439,7 @@ export function SubmitSaleButton() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t shell-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 border-t shell-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50">
       <Button
         onClick={handleSubmit}
         disabled={!calculations.canSubmit || finalizeSale.isPending}
@@ -514,6 +473,7 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     null,
   );
 
+  const { toast } = useToast();
   const addItem = useAddSaleItem();
   const updateItem = useUpdateSaleItem();
   const { settings } = useBusinessSettings();
@@ -533,6 +493,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     isActive: true,
   });
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
+
+  const { data: saleItems = [] } = useSaleItems(saleId);
 
   const calculatorSettings = settings?.calculators?.sales;
   const hideTara = calculatorSettings?.hideTara ?? true;
@@ -584,33 +546,41 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
       return;
     }
 
-    if (isEditMode && editingItem) {
-      // Update existing item
-      await updateItem.mutateAsync({
-        saleId,
-        itemId: editingItem.itemId,
-        data: {
-          quantity: calculation.quantity,
-          unitPrice: calculation.unitPrice,
-          subtotal: calculation.subtotal,
-        },
-      });
-      setEditingItem(null);
-    } else {
-      // Add new item
-      await addItem.mutateAsync({
-        saleId,
-        item: {
-          productId: selectedProduct.id,
-          variantId: selectedVariant.id,
-          quantity: Number(calculation.quantity),
-          price: Number(calculation.unitPrice),
-          subtotal: Number(calculation.subtotal),
-        },
+    try {
+      if (isEditMode && editingItem) {
+        // Update existing item
+        await updateItem.mutateAsync({
+          saleId,
+          itemId: editingItem.itemId,
+          data: {
+            quantity: calculation.quantity,
+            unitPrice: calculation.unitPrice,
+            subtotal: calculation.subtotal,
+          },
+        });
+        setEditingItem(null);
+      } else {
+        // Add new item
+        await addItem.mutateAsync({
+          saleId,
+          item: {
+            productId: selectedProduct.id,
+            variantId: selectedVariant.id,
+            quantity: Number(calculation.quantity),
+            price: Number(calculation.unitPrice),
+            subtotal: Number(calculation.subtotal),
+          },
+        });
+      }
+
+      navigate(returnPath ?? getSaleEditorPath(saleId));
+    } catch (error) {
+      console.error("[CalculatorContent] Error saving item:", error);
+      const message = error instanceof Error ? error.message : "No se pudo agregar el producto";
+      toast.error("Error al agregar producto", {
+        description: message,
       });
     }
-
-    navigate(returnPath ?? getSaleEditorPath(saleId));
   };
 
   const handleCancel = () => {
@@ -648,27 +618,38 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
               <div className="grid grid-cols-2 gap-2">
                 {products
                   .filter((p) => p.isActive)
-                  .map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => {
-                        setSelectedProductId(product.id);
-                        setSelectedVariantId(null);
-                        handleClear();
-                      }}
-                      className={cn(
-                        "rounded-2xl border p-3 text-left transition-colors",
-                        selectedProductId === product.id
-                          ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                          : "border-white/70 bg-white/60 hover:bg-white/82",
-                      )}
-                    >
-                      <p className="font-medium text-sm">{product.name}</p>
-                      <Badge variant="secondary" className="mt-1">
-                        {product.unit === "kg" ? "Por kilo" : "Por unidad"}
-                      </Badge>
-                    </button>
-                  ))}
+                  .map((product) => {
+                    const isInCart = saleItems.some((item) => item.productId === product.id);
+                    return (
+                      <button
+                        key={product.id}
+                        onClick={() => {
+                          setSelectedProductId(product.id);
+                          setSelectedVariantId(null);
+                          handleClear();
+                        }}
+                        disabled={isInCart}
+                        className={cn(
+                          "rounded-2xl border p-3 text-left transition-colors",
+                          isInCart
+                            ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                            : selectedProductId === product.id
+                              ? "shell-card-muted border-orange-300 bg-orange-50/90"
+                              : "border-white/70 bg-white/60 hover:bg-white/82",
+                        )}
+                      >
+                        <p className="font-medium text-sm">{product.name}</p>
+                        <Badge variant="secondary" className="mt-1">
+                          {product.unit === "kg" ? "Por kilo" : "Por unidad"}
+                        </Badge>
+                        {isInCart && (
+                          <Badge variant="outline" className="mt-1 ml-1 text-xs">
+                            Agregado
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  })}
               </div>
               {isProductsFetching && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">

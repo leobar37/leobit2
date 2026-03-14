@@ -31,9 +31,9 @@ function ServicesProviderWrapper({
   token: string;
   children: React.ReactNode;
 }) {
-  const { pg, isInitialized, error } = useEngine();
+  const { pg, db, isInitialized, error } = useEngine();
 
-  if (!isInitialized || !pg) {
+  if (!isInitialized || !pg || !db) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -43,7 +43,7 @@ function ServicesProviderWrapper({
   }
 
   return (
-    <ServicesProvider pg={pg} businessId={businessId} authToken={token}>
+    <ServicesProvider pg={pg} db={db} businessId={businessId} authToken={token}>
       {children}
     </ServicesProvider>
   );

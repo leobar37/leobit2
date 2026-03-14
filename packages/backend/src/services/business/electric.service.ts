@@ -32,6 +32,7 @@ export const PASSTHROUGH_HEADERS = [
   "electric-schema",
   "electric-cursor",
   "electric-up-to-date",
+  "electric-control",
 ] as const;
 
 const DIRECT_BUSINESS_TABLES = new Set([
@@ -47,6 +48,9 @@ const DIRECT_BUSINESS_TABLES = new Set([
   "product_variants",
   "sale_items",
   "tags",
+  "distribuciones",
+  "variant_inventory",
+  "inventory",
 ]);
 
 export const ALLOWED_TABLES = new Set([
@@ -137,6 +141,22 @@ function sanitizeHandle(handle: string | null): string | null {
   return handle;
 }
 
+/**
+ * Sleep utility for retry backoff
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry configuration
+ */
+const RETRY_CONFIG = {
+  maxRetries: 2,
+  baseDelayMs: 1000,
+  maxDelayMs: 5000,
+};
+
 export function mergeWhere(
   existingWhere: string | null,
   tenantWhere: string | null,
@@ -184,13 +204,61 @@ export class ElectricService {
       businessId: ctx.businessId,
     });
 
-    const response = await fetch(electricUrl.toString(), {
-      method: "GET",
-      headers: {
-        Accept: input.accept || "*/*",
-        Authorization: `Bearer ${electricToken}`,
-      },
-    });
+    // Retry logic for transient 502 errors
+    const fetchWithRetry = async (): Promise<Response> => {
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          const response = await fetch(electricUrl.toString(), {
+            method: "GET",
+            headers: {
+              Accept: input.accept || "*/*",
+              Authorization: `Bearer ${electricToken}`,
+            },
+          });
+
+          // Retry on 502 Bad Gateway
+          if (response.status === 502 && attempt < RETRY_CONFIG.maxRetries) {
+            const delay = Math.min(
+              RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt),
+              RETRY_CONFIG.maxDelayMs
+            );
+            logger.warn({
+              msg: "Electric proxy returned 502 - retrying",
+              table,
+              attempt: attempt + 1,
+              maxRetries: RETRY_CONFIG.maxRetries,
+              delayMs: delay,
+            });
+            await sleep(delay);
+            continue;
+          }
+
+          return response;
+        } catch (error) {
+          lastError = error as Error;
+          if (attempt < RETRY_CONFIG.maxRetries) {
+            const delay = Math.min(
+              RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt),
+              RETRY_CONFIG.maxDelayMs
+            );
+            logger.warn({
+              msg: "Electric proxy request error - retrying",
+              table,
+              error: lastError.message,
+              attempt: attempt + 1,
+              delayMs: delay,
+            });
+            await sleep(delay);
+          }
+        }
+      }
+
+      throw lastError || new Error("Max retries exceeded");
+    };
+
+    const response = await fetchWithRetry();
 
     const body = await response.text();
     const duration = Date.now() - startTime;
@@ -298,10 +366,31 @@ export class ElectricService {
       };
     }
 
+    // For all other responses (including errors), always include electric headers
+    // The client expects these headers even in error cases
+    const passthroughHeaders = this.extractPassthroughHeaders(response.headers);
+    
+    // Ensure required headers are always present with fallback values
+    const headers: Record<string, string> = {
+      ...passthroughHeaders,
+    };
+    
+    // Add required headers with fallback values if not present
+    if (!headers["electric-offset"]) {
+      // Use the offset from request if available, otherwise use fallback
+      headers["electric-offset"] = offset || "0_0";
+    }
+    if (!headers["electric-schema"]) {
+      headers["electric-schema"] = "";
+    }
+    if (!headers["electric-handle"]) {
+      headers["electric-handle"] = handle || "";
+    }
+
     return {
       status: response.status,
       body,
-      headers: this.extractPassthroughHeaders(response.headers),
+      headers,
     };
   }
 

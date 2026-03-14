@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePaymentService } from "~/lib/sync/service-provider";
 import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/payment-service";
+import { useBusiness } from "~/hooks/use-business";
 
 const QUERY_KEYS = {
   payments: ["payments-new"],
@@ -54,6 +55,7 @@ export function usePayment(id: string | null) {
 export function useCreatePayment() {
   const paymentService = usePaymentService();
   const queryClient = useQueryClient();
+  const { data: business } = useBusiness();
 
   const mutation = useMutation({
     mutationFn: async (input: CreateAbonoInput): Promise<Abono> => {
@@ -68,7 +70,6 @@ export function useCreatePayment() {
     },
   });
 
-  // Return a wrapper function that matches the expected API
   return async (data: {
     customerId: string;
     amount: string;
@@ -76,10 +77,13 @@ export function useCreatePayment() {
     referenceNumber?: string;
     notes?: string;
   }) => {
-    // Note: This is a simplified version - you may need to get sellerId from context
+    const sellerId = business?.businessUserId;
+    if (!sellerId) {
+      throw new Error("Business seller is not available");
+    }
     const result = await mutation.mutateAsync({
       customer_id: data.customerId,
-      seller_id: "", // TODO: Get from auth context
+      seller_id: sellerId,
       amount: parseFloat(data.amount) || 0,
       payment_method: data.paymentMethod,
       reference_number: data.referenceNumber,

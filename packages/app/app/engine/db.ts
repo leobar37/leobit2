@@ -35,6 +35,9 @@ export async function initDatabase(): Promise<{
         },
         locateFile: (file: string) => {
           if (file === "pglite.data") {
+            return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.data";
+          }
+          if (file === "pglite.wasm") {
             return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
           }
           return file;
@@ -63,6 +66,9 @@ export async function initDatabase(): Promise<{
         },
         locateFile: (file: string) => {
           if (file === "pglite.data") {
+            return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.data";
+          }
+          if (file === "pglite.wasm") {
             return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
           }
           return file;

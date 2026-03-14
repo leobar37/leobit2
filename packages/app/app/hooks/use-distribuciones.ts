@@ -4,7 +4,7 @@
  * 
  * Migration from TanStack DB to PGlite
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, gte, desc, like, or } from "drizzle-orm";
 import { getDatabase } from "~/engine";
 import {
@@ -17,6 +17,7 @@ import {
 import { api, extractData } from "~/lib/api-client";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 
 const DISTRIBUCIONES_QUERY_KEY = "distribuciones";
 
@@ -185,12 +186,12 @@ interface CreateDistribucionInput {
 
 /**
  * Create a new distribucion
+ * Requires internet connection
  */
 export function useCreateDistribucion() {
   const queryClient = useQueryClient();
-  const { data: business } = useBusiness();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async (input: CreateDistribucionInput) => {
       const today = input.fecha || new Date().toISOString().split("T")[0];
       const payload = {
@@ -204,6 +205,7 @@ export function useCreateDistribucion() {
       const result = await extractData(api.distribuciones.post(payload));
       return result;
     },
+    offlineMessage: "Se requiere conexión a internet para crear una distribución",
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
@@ -214,15 +216,17 @@ export function useCreateDistribucion() {
 
 /**
  * Close a distribucion
+ * Requires internet connection
  */
 export function useCloseDistribucion() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
       const result = await extractData(api.distribuciones({ id }).close.post());
       return result;
     },
+    offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
@@ -236,11 +240,12 @@ export function useCloseDistribucion() {
 
 /**
  * Update distribucion items
+ * Requires internet connection
  */
 export function useUpdateDistribucionItems() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async ({
       id,
       items,
@@ -256,6 +261,7 @@ export function useUpdateDistribucionItems() {
       );
       return result;
     },
+    offlineMessage: "Se requiere conexión a internet para actualizar los items de distribución",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.id],
@@ -266,16 +272,18 @@ export function useUpdateDistribucionItems() {
 
 /**
  * Update distribucion
+ * Requires internet connection
  */
 export function useUpdateDistribucion() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async (data: { id: string; [key: string]: unknown }) => {
       const { id, ...changes } = data;
       const result = await extractData(api.distribuciones({ id }).put(changes));
       return result;
     },
+    offlineMessage: "Se requiere conexión a internet para actualizar la distribución",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.id],
@@ -289,15 +297,17 @@ export function useUpdateDistribucion() {
 
 /**
  * Delete a distribucion
+ * Requires internet connection
  */
 export function useDeleteDistribucion() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
       const result = await extractData(api.distribuciones({ id }).delete());
       return result;
     },
+    offlineMessage: "Se requiere conexión a internet para eliminar la distribución",
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],

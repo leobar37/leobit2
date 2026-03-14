@@ -37,7 +37,9 @@ These documents contain:
 
 > **Architecture pattern: PGlite local-first, Custom Sync Queue for writes**
 
-> **IMPORTANT:** Avileo uses a **custom sync service** instead of ElectricSQL for writes. See REFERENCE.md for the actual implementation patterns.
+> **IMPORTANT:** Avileo uses a **custom sync service** with a **PGlite table** (`sync_operations`) for the write queue - NOT IndexedDB. See REFERENCE.md for the actual implementation patterns.
+
+> **CRITICAL:** All IDs MUST be valid UUIDs. PostgreSQL will reject non-UUID strings.
 
 ## When to Use This Pattern
 
