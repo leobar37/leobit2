@@ -40,6 +40,26 @@ export class WhatsAppMessageRepository {
     return message;
   }
 
+  async createMany(
+    ctx: RequestContext,
+    data: Omit<NewWhatsAppMessage, "businessId" | "businessUserId" | "id" | "createdAt">[],
+    tx?: DbTransaction
+  ): Promise<WhatsAppMessage[]> {
+    const dbOrTx = tx || db;
+    const messages = await dbOrTx
+      .insert(whatsAppMessages)
+      .values(
+        data.map((item) => ({
+          ...item,
+          businessId: ctx.businessId,
+          businessUserId: ctx.businessUserId,
+        }))
+      )
+      .returning();
+
+    return messages;
+  }
+
   async findById(
     ctx: RequestContext,
     id: string,

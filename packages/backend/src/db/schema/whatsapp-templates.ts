@@ -6,9 +6,18 @@ import {
   boolean,
   timestamp,
   index,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses, businessUsers } from "./businesses";
+
+export const templateCategoryEnum = pgEnum("template_category", [
+  "cobranza",
+  "ventas",
+  "agradecimiento",
+  "entrega",
+  "otros",
+]);
 
 export const whatsAppTemplates = pgTable(
   "whatsapp_templates",
@@ -22,6 +31,9 @@ export const whatsAppTemplates = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 100 }).notNull(),
     content: text("content").notNull(),
+    category: varchar("category", { length: 20, enum: templateCategoryEnum })
+      .notNull()
+      .default("otros"),
     isDefault: boolean("is_default").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

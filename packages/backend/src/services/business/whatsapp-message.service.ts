@@ -10,7 +10,7 @@ import {
   ServiceUnavailableError,
 } from "../../errors";
 import { inngest } from "../../lib/inngest";
-import type { WhatsAppMessage, WhatsAppTemplate } from "../../db/schema";
+import type { WhatsAppMessage, WhatsAppTemplate, NewWhatsAppMessage } from "../../db/schema";
 
 const ALLOWED_VARIABLES = [
   "nombre_cliente",
@@ -137,57 +137,77 @@ export class WhatsAppMessageService {
       throw new NotFoundError("Plantilla de WhatsApp");
     }
 
-    const messages: WhatsAppMessage[] = [];
-
-    for (const customerId of input.customerIds) {
-      try {
-        const customer = await this.customerRepo.findById(ctx, customerId);
-        if (!customer) {
-          console.warn(`Customer ${customerId} not found, skipping...`);
-          continue;
+    // Fetch all customers in parallel
+    const customerResults = await Promise.all(
+      input.customerIds.map(async (customerId) => {
+        try {
+          const customer = await this.customerRepo.findById(ctx, customerId);
+          return { customerId, customer, error: null };
+        } catch (error) {
+          return { customerId, customer: null, error };
         }
+      })
+    );
 
-        const phoneNumber = this.formatPhoneNumber(customer.phone);
-        if (!phoneNumber) {
-          console.warn(`Customer ${customer.name} has no valid phone, skipping...`);
-          continue;
-        }
+    // Filter valid customers and prepare message data
+    const validMessages: Omit<NewWhatsAppMessage, "businessId" | "businessUserId" | "id" | "createdAt">[] = [];
+    const inngestTasks: Array<{ phone: string; messageContent: string; messageLogId: string }> = [];
 
-        const variables: TemplateVariables = {
-          nombre_cliente: customer.name,
-          telefono: customer.phone || "",
-          ...input.variables?.[customerId],
-        };
-
-        const messageContent = this.renderTemplate(template, variables);
-
-        const message = await this.messageRepo.create(ctx, {
-          customerId,
-          templateId: input.templateId,
-          phoneNumber,
-          messageContent,
-          status: "enviado",
-        });
-
-        messages.push(message);
-
-        await inngest.send({
-          name: "whatsapp/message.send",
-          data: {
-            instanceName: settings.instanceName,
-            phone: phoneNumber,
-            message: messageContent,
-            businessUserId: ctx.businessUserId,
-            businessId: ctx.businessId,
-            messageLogId: message.id,
-          },
-        });
-      } catch (error) {
-        console.error(`Failed to send message to customer ${customerId}:`, error);
+    for (const result of customerResults) {
+      if (!result.customer) {
+        console.warn(`Customer ${result.customerId} not found, skipping...`);
+        continue;
       }
+
+      const phoneNumber = this.formatPhoneNumber(result.customer.phone);
+      if (!phoneNumber) {
+        console.warn(`Customer ${result.customer.name} has no valid phone, skipping...`);
+        continue;
+      }
+
+      const variables: TemplateVariables = {
+        nombre_cliente: result.customer.name,
+        telefono: result.customer.phone || "",
+        ...input.variables?.[result.customerId],
+      };
+
+      const messageContent = this.renderTemplate(template, variables);
+
+      validMessages.push({
+        customerId: result.customerId,
+        templateId: input.templateId,
+        phoneNumber,
+        messageContent,
+        status: "enviado",
+        saleId: null,
+      });
     }
 
-    return messages;
+    // Batch insert all messages at once
+    if (validMessages.length > 0) {
+      const createdMessages = await this.messageRepo.createMany(ctx, validMessages);
+
+      // Send all inngest events in parallel
+      await Promise.all(
+        createdMessages.map((message) =>
+          inngest.send({
+            name: "whatsapp/message.send",
+            data: {
+              instanceName: settings.instanceName,
+              phone: message.phoneNumber,
+              message: message.messageContent,
+              businessUserId: ctx.businessUserId,
+              businessId: ctx.businessId,
+              messageLogId: message.id,
+            },
+          })
+        )
+      );
+
+      return createdMessages;
+    }
+
+    return [];
   }
 
   async getMessages(

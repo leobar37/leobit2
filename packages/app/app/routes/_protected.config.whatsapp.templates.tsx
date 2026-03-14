@@ -52,15 +52,18 @@ import {
   useUpdateWhatsAppTemplate,
   useDeleteWhatsAppTemplate,
   TEMPLATE_VARIABLES,
+  TEMPLATE_CATEGORIES,
   previewTemplate,
   insertVariable,
   type WhatsAppTemplate,
   type CreateTemplateInput,
+  type TemplateCategory,
 } from "~/hooks/use-whatsapp-templates";
 
 interface TemplateFormData {
   name: string;
   content: string;
+  category: TemplateCategory;
   isDefault: boolean;
 }
 
@@ -86,6 +89,7 @@ function TemplateForm({
 }) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [content, setContent] = useState(initialData?.content ?? "");
+  const [category, setCategory] = useState<TemplateCategory>(initialData?.category ?? "otros");
   const [isDefault, setIsDefault] = useState(initialData?.isDefault ?? false);
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({
     nombre_cliente: "Juan Pérez",
@@ -119,7 +123,7 @@ function TemplateForm({
       toast.error("Nombre y contenido son requeridos");
       return;
     }
-    onSubmit({ name: name.trim(), content: content.trim(), isDefault });
+    onSubmit({ name: name.trim(), content: content.trim(), category, isDefault });
   };
 
   return (
@@ -133,6 +137,23 @@ function TemplateForm({
           onChange={(e) => setName(e.target.value)}
           disabled={isSubmitting}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category">Categoría</Label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as TemplateCategory)}
+          disabled={isSubmitting}
+          className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        >
+          {TEMPLATE_CATEGORIES.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
@@ -260,9 +281,20 @@ function TemplateForm({
 }
 
 import { Save } from "lucide-react";
+import type { TemplateFilters } from "~/hooks/use-whatsapp-templates";
+
+const CATEGORY_COLORS: Record<string, string> = {
+  cobranza: "bg-blue-100 text-blue-700",
+  ventas: "bg-green-100 text-green-700",
+  agradecimiento: "bg-purple-100 text-purple-700",
+  entrega: "bg-orange-100 text-orange-700",
+  otros: "bg-gray-100 text-gray-700",
+};
 
 export default function WhatsAppTemplatesPage() {
-  const { data: templates, isLoading } = useWhatsAppTemplates();
+  const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | "all">("all");
+  const filters: TemplateFilters = categoryFilter !== "all" ? { category: categoryFilter } : {};
+  const { data: templates, isLoading } = useWhatsAppTemplates(filters);
   const createMutation = useCreateWhatsAppTemplate();
   const updateMutation = useUpdateWhatsAppTemplate();
   const deleteMutation = useDeleteWhatsAppTemplate();
@@ -380,22 +412,53 @@ export default function WhatsAppTemplatesPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className={`p-4 rounded-2xl border-2 transition-all hover:shadow-md ${
-                        template.isDefault
-                          ? "border-orange-200 bg-orange-50/50"
-                          : "border-gray-100 bg-white"
+                <div className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    <button
+                      onClick={() => setCategoryFilter("all")}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                        categoryFilter === "all"
+                          ? "bg-orange-500 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
+                      Todas
+                    </button>
+                    {TEMPLATE_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => setCategoryFilter(cat.value)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                          categoryFilter === cat.value
+                            ? "bg-orange-500 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    {templates.map((template) => (
+                      <div
+                        key={template.id}
+                        className={`p-4 rounded-2xl border-2 transition-all hover:shadow-md ${
+                          template.isDefault
+                            ? "border-orange-200 bg-orange-50/50"
+                            : "border-gray-100 bg-white"
+                        }`}
+                      >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold truncate">
                               {template.name}
                             </h3>
+                            <Badge
+                              className={`rounded-full text-xs ${CATEGORY_COLORS[template.category] || CATEGORY_COLORS.otros}`}
+                            >
+                              {TEMPLATE_CATEGORIES.find((c) => c.value === template.category)?.label || "Otros"}
+                            </Badge>
                             {template.isDefault && (
                               <Badge
                                 variant="default"
@@ -450,6 +513,7 @@ export default function WhatsAppTemplatesPage() {
                       </div>
                     </div>
                   ))}
+                </div>
                 </div>
               )}
             </CardContent>
@@ -520,6 +584,7 @@ export default function WhatsAppTemplatesPage() {
               initialData={{
                 name: editingTemplate.name,
                 content: editingTemplate.content,
+                category: editingTemplate.category || "otros",
                 isDefault: editingTemplate.isDefault,
               }}
               onSubmit={handleUpdate}
