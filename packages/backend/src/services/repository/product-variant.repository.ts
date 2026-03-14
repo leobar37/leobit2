@@ -10,6 +10,7 @@ export interface CreateVariantInput {
   sku?: string | null;
   unitQuantity: string;
   price: string;
+  costPrice?: string;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -19,6 +20,7 @@ export interface UpdateVariantInput {
   sku?: string | null;
   unitQuantity?: string;
   price?: string;
+  costPrice?: string;
   sortOrder?: number;
   isActive?: boolean;
   syncStatus?: "pending" | "synced" | "error";
@@ -98,6 +100,7 @@ export class ProductVariantRepository {
         ...(data.sku !== undefined && { sku: data.sku }),
         ...(data.unitQuantity !== undefined && { unitQuantity: data.unitQuantity }),
         ...(data.price !== undefined && { price: data.price }),
+        ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),

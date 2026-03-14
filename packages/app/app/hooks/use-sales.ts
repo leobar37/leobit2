@@ -255,7 +255,6 @@ export function useUpdateSale() {
       return saleService.update(id, input);
     },
     onSuccess: async (_, variables) => {
-      console.log("[useUpdateSale] Sale updated:", variables.id);
       // Invalidate the specific sale query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(variables.id) });
       // Also invalidate the sales list

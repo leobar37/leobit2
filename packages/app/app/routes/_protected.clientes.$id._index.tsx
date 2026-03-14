@@ -6,6 +6,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Tags,
   Trash2,
   User,
   Wallet,
@@ -20,6 +21,7 @@ import { useCustomerPayments } from "~/hooks/use-payments";
 import { useSales } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
+import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
 
 function SyncBadge({ status }: { status: "pending" | "synced" | "error" }) {
   const styles = {
@@ -52,6 +54,7 @@ export default function CustomerDetailPage() {
   const { data: payments = [], isLoading: paymentsLoading } = useCustomerPayments(id ?? null);
   const deleteCustomer = useDeleteCustomer();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const tagsModal = useCustomerTagsModal();
 
   const handleDelete = async () => {
     const confirmed = await confirm({
@@ -125,6 +128,13 @@ export default function CustomerDetailPage() {
             >
               <Pencil className="h-5 w-5" />
             </Link>
+            <button
+              onClick={() => tagsModal.open({ customerId: id! })}
+              className="rounded-2xl p-2 transition-colors hover:bg-white/70"
+              title="Asignar etiquetas"
+            >
+              <Tags className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -201,6 +211,8 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
+        <CustomerTagsModal />
+
         <ConfirmDialog />
 
         <div className="shell-card-flat overflow-hidden rounded-[28px]">
@@ -235,9 +247,10 @@ export default function CustomerDetailPage() {
                 <p className="py-4 text-center text-muted-foreground">No hay ventas registradas</p>
               ) : (
                 customerSales.map((sale) => (
-                  <div
+                  <Link
                     key={sale.id}
-                    className="shell-card-soft rounded-[20px] p-3"
+                    to={`/ventas/${sale.id}`}
+                    className="shell-card-soft block rounded-[20px] p-3 transition-colors hover:bg-accent/50"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -265,7 +278,7 @@ export default function CustomerDetailPage() {
                         </span>
                       </div>
                     ) : null}
-                  </div>
+                  </Link>
                 ))
               )
             ) : paymentsLoading ? (

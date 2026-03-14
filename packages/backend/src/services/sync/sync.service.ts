@@ -10,6 +10,7 @@ import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionService } from "../business/distribucion.service";
 import { toISODate, now, getToday } from "../../lib/date-utils";
+import { sales, customers } from "../../db/schema";
 
 export type SyncEntity =
   | "customers"
@@ -259,6 +260,35 @@ export class SyncService {
                   eq(syncOperations.operationId, operation.idempotencyKey)
                 )
               );
+
+            // Update entity sync_status to synced for offline tables
+            if (operation.entityType === "sales") {
+              await tx
+                .update(sales)
+                .set({
+                  syncStatus: "synced",
+                  syncAttempts: 0,
+                })
+                .where(
+                  and(
+                    eq(sales.id, operation.entityId),
+                    eq(sales.businessId, ctx.businessId)
+                  )
+                );
+            } else if (operation.entityType === "customers") {
+              await tx
+                .update(customers)
+                .set({
+                  syncStatus: "synced",
+                  syncAttempts: 0,
+                })
+                .where(
+                  and(
+                    eq(customers.id, operation.entityId),
+                    eq(customers.businessId, ctx.businessId)
+                  )
+                );
+            }
 
             results.push({
               idempotencyKey: operation.idempotencyKey,

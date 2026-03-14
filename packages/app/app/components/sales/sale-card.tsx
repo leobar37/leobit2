@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatRecentDateTime } from "~/lib/date-utils";
 import { cn, formatCurrency } from "~/lib/utils";
 import { useDeleteSale } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
@@ -31,25 +32,6 @@ const saleStatusLabel: Record<Sale["status"], string> = {
   delivered: "Entregada",
   cancelled: "Cancelada",
 };
-
-function formatSaleDate(value: Date | string | null | undefined) {
-  if (!value) {
-    return "Sin fecha";
-  }
-
-  const date = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Sin fecha";
-  }
-
-  return date.toLocaleString("es-PE", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export function SaleCard({ sale, onClick }: SaleCardProps) {
   const customerName = sale.customer?.name || "Cliente general";
@@ -126,7 +108,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="max-w-full whitespace-nowrap text-[clamp(1.8rem,7.2vw,2.1rem)] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
+                    <p className="max-w-full whitespace-nowrap text-[clamp(1.5rem,6vw,1.8rem)] font-bold leading-tight tracking-[-0.035em] text-foreground">
                       S/ {formatCurrency(sale.totalAmount)}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -184,7 +166,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
                       <CalendarDays className="h-3.5 w-3.5" />
                     </div>
-                    <span className="truncate">{formatSaleDate(sale.saleDate)}</span>
+                    <span className="truncate">{formatRecentDateTime(sale.saleDate)}</span>
                   </div>
                 </div>
               </div>

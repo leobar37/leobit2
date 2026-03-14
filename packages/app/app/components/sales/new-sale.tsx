@@ -42,12 +42,11 @@ import { useToast } from "~/hooks/use-toast";
 
 export function CustomerSection() {
   const { saleId } = useNewSaleContext();
-  const { data: sales, refetch } = useSale(saleId);
+  const { data: sale, refetch } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   const handleSelectCustomer = async (
@@ -121,12 +120,11 @@ const paymentModes: {
 
 export function PaymentModeSection() {
   const { saleId } = useNewSaleContext();
-  const { data: sales } = useSale(saleId);
+  const { data: sale } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -340,10 +338,9 @@ export function CartSection() {
 
 export function SaleSummaryCard() {
   const { saleId } = useNewSaleContext();
-  const { data: sales } = useSale(saleId);
+  const { data: sale } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
 
-  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -406,17 +403,16 @@ export function SaleSummaryCard() {
 }
 
 // ============================================
-// Submit Sale Button Component
+// Sale Submit Bar Component (Combined Summary + Button)
 // ============================================
 
-export function SubmitSaleButton() {
+export function SaleSubmitBar() {
   const navigate = useNavigate();
   const { saleId } = useNewSaleContext();
-  const { data: sales } = useSale(saleId);
+  const { data: sale } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const { toast } = useToast();
 
-  const sale = sales?.[0] ?? null;
   const finalizeSale = useFinalizeSale();
 
   const calculations = useSaleCalculations(sale, items);
@@ -439,18 +435,28 @@ export function SubmitSaleButton() {
   }
 
   return (
-    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 border-t shell-surface px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50">
-      <Button
-        onClick={handleSubmit}
-        disabled={!calculations.canSubmit || finalizeSale.isPending}
-        className="h-14 w-full rounded-2xl bg-orange-500 text-lg font-semibold shadow-[0_16px_32px_rgba(249,115,22,0.24)] hover:bg-orange-600 disabled:bg-orange-300 disabled:opacity-100"
-      >
-        {finalizeSale.isPending ? (
-          "Procesando..."
-        ) : (
-          <>Finalizar Venta · S/ {formatCurrency(calculations.totalAmount)}</>
-        )}
-      </Button>
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 border-t shell-surface px-4 py-3 z-50">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">
+            {items.length} {items.length === 1 ? 'producto' : 'productos'}
+          </span>
+          <span className="text-lg font-bold text-orange-600">
+            S/ {formatCurrency(calculations.totalAmount)}
+          </span>
+        </div>
+        <Button
+          onClick={handleSubmit}
+          disabled={!calculations.canSubmit || finalizeSale.isPending}
+          className="h-11 px-6 rounded-xl bg-orange-500 text-sm font-semibold shadow-md hover:bg-orange-600 disabled:bg-orange-300 disabled:opacity-100 whitespace-nowrap"
+        >
+          {finalizeSale.isPending ? (
+            "Procesando..."
+          ) : (
+            <>Finalizar Venta</>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -772,6 +778,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                       ? `Precio base: S/ ${selectedVariant.price}`
                       : undefined
                   }
+                  helperValue={selectedVariant?.price}
+                  onApplyHelperValue={(value) => setFieldValue("pricePerKg", value)}
                 />
                 <CalculatorInput
                   name="totalAmount"
@@ -820,6 +828,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                       ? `Precio base: S/ ${selectedVariant.price}`
                       : undefined
                   }
+                  helperValue={selectedVariant?.price}
+                  onApplyHelperValue={(value) => setFieldValue("pricePerPack", value)}
                 />
                 <CalculatorInput
                   name="totalAmount"
@@ -850,14 +860,16 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
                       : `${Math.round(calculation.quantity)} unidades`}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Precio unitario:
-                  </span>
-                  <span className="font-medium">
-                    S/ {formatCurrency(calculation.unitPrice)}
-                  </span>
-                </div>
+                {isKgProduct && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Precio unitario:
+                    </span>
+                    <span className="font-medium">
+                      S/ {formatCurrency(calculation.unitPrice)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-orange-200/70 pt-2">
                   <span className="font-medium">Subtotal:</span>
                   <span className="font-bold text-lg">

@@ -18,7 +18,7 @@ export { useUpdateSaleBase as useUpdateSale };
 export function useSale(id: string | null) {
   const { data, ...rest } = useSaleBase(id);
   return {
-    data: data ? [data] : [],
+    data: data ?? null,
     ...rest,
   };
 }

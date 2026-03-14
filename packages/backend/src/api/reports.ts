@@ -131,4 +131,15 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
         endDate: t.Optional(t.String()),
       }),
     }
+  )
+  // Sale analysis endpoint
+  .get(
+    "/sale/:id/analysis",
+    async ({ reportService, ctx, params }) => {
+      const analysis = await reportService.getSaleAnalysis(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: analysis };
+    }
   );

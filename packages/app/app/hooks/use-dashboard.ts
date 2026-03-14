@@ -1,5 +1,11 @@
+/**
+ * Dashboard Hooks
+ * Hybrid queries that try API first, fallback to local PGlite
+ */
+
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { useSaleService } from "~/lib/sync/service-provider";
 import type { PeriodType } from "~/components/dashboard/period-selector";
 
 export interface PeriodParams {
@@ -36,51 +42,113 @@ export interface ChartData {
   data: number[];
 }
 
+/**
+ * Sales stats - hybrid query (API with local fallback)
+ */
 export function useSalesStats(period: PeriodParams) {
+  const saleService = useSaleService();
+
   return useQuery({
     queryKey: ["dashboard", "sales-stats", period],
     queryFn: async () => {
-      const params: Record<string, string> = { type: period.type };
-      if (period.startDate) params.startDate = period.startDate;
-      if (period.endDate) params.endDate = period.endDate;
+      const isOnline = navigator.onLine;
 
-      const { data, error } = await api.reports["sales-stats"].get({
-        query: params,
-      });
-      if (error) throw new Error(String(error.value));
-      return (data as { data: SalesStats }).data;
+      if (isOnline) {
+        try {
+          const params: Record<string, string> = { type: period.type };
+          if (period.startDate) params.startDate = period.startDate;
+          if (period.endDate) params.endDate = period.endDate;
+
+          const { data, error } = await api.reports["sales-stats"].get({
+            query: params,
+          });
+          if (!error && data) {
+            return (data as { data: SalesStats }).data;
+          }
+        } catch (e) {
+          console.warn("[useSalesStats] API failed, falling back to local");
+        }
+      }
+
+      // Fallback: calculate from local PGlite
+      const currentStats = await saleService.getSalesStats(period);
+
+      // For now, return the current stats with empty previous/change
+      // (matching the API response structure)
+      return {
+        current: currentStats,
+        previous: { amount: 0, kilos: 0, count: 0 },
+        change: { amount: 0, kilos: 0, count: 0 },
+      } as SalesStats;
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
+    retry: 1,
   });
 }
 
+/**
+ * Debtors summary - hybrid query (API with local fallback)
+ */
 export function useDebtorsSummary() {
+  const saleService = useSaleService();
+
   return useQuery({
     queryKey: ["dashboard", "debtors-summary"],
     queryFn: async () => {
-      const { data, error } = await api.reports["debtors-summary"].get();
-      if (error) throw new Error(String(error.value));
-      return (data as { data: DebtorsSummary }).data;
+      const isOnline = navigator.onLine;
+
+      if (isOnline) {
+        try {
+          const { data, error } = await api.reports["debtors-summary"].get();
+          if (!error && data) {
+            return (data as { data: DebtorsSummary }).data;
+          }
+        } catch (e) {
+          console.warn("[useDebtorsSummary] API failed, falling back to local");
+        }
+      }
+
+      // Fallback: calculate from local PGlite
+      return saleService.getDebtorsSummary();
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
   });
 }
 
+/**
+ * Sales chart - hybrid query (API with local fallback)
+ */
 export function useSalesChart(period: PeriodParams) {
+  const saleService = useSaleService();
+
   return useQuery({
     queryKey: ["dashboard", "sales-chart", period],
     queryFn: async () => {
-      const params: Record<string, string> = { type: period.type };
-      if (period.startDate) params.startDate = period.startDate;
-      if (period.endDate) params.endDate = period.endDate;
+      const isOnline = navigator.onLine;
 
-      const { data, error } = await api.reports["sales-chart"].get({
-        query: params,
-      });
-      if (error) throw new Error(String(error.value));
-      return (data as { data: ChartData }).data;
+      if (isOnline) {
+        try {
+          const params: Record<string, string> = { type: period.type };
+          if (period.startDate) params.startDate = period.startDate;
+          if (period.endDate) params.endDate = period.endDate;
+
+          const { data, error } = await api.reports["sales-chart"].get({
+            query: params,
+          });
+          if (!error && data) {
+            return (data as { data: ChartData }).data;
+          }
+        } catch (e) {
+          console.warn("[useSalesChart] API failed, falling back to local");
+        }
+      }
+
+      // Fallback: calculate from local PGlite
+      return saleService.getSalesChart(period);
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
   });
 }
 

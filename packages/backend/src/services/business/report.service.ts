@@ -1,6 +1,6 @@
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { sales, customers, abonos } from "../../db/schema";
+import { sales, customers, abonos, saleItems } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
 export interface SalesTodayStats {
@@ -498,6 +498,139 @@ export class ReportService {
         start: new Date(today.getTime() - 24 * 60 * 60 * 1000),
         end: today,
       },
+    };
+  }
+
+  // ========== SALE ANALYSIS METHODS ==========
+
+  async getSaleAnalysis(ctx: RequestContext, saleId: string) {
+    const sale = await db.query.sales.findFirst({
+      where: and(eq(sales.id, saleId), eq(sales.businessId, ctx.businessId)),
+      with: {
+        items: true,
+        customer: true,
+      },
+    });
+
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+
+    const [customerHistory, profitAnalysis, paymentStatus] = await Promise.all([
+      sale.customerId ? this.getSaleCustomerHistory(ctx, sale.customerId) : null,
+      this.getSaleProfitAnalysis(ctx, saleId),
+      this.getSalePaymentStatus(ctx, sale),
+    ]);
+
+    return {
+      sale: {
+        id: sale.id,
+        totalAmount: sale.totalAmount,
+        balanceDue: sale.balanceDue,
+        saleDate: sale.saleDate,
+        status: sale.status,
+        saleType: sale.saleType,
+      },
+      customerHistory,
+      profitAnalysis,
+      paymentStatus,
+    };
+  }
+
+  async getSaleCustomerHistory(ctx: RequestContext, customerId: string) {
+    const customerSales = await db
+      .select({
+        count: sql<number>`count(*)`,
+        totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
+        avgAmount: sql<string>`coalesce(avg(${sales.totalAmount}), '0')`,
+        lastSaleDate: sql<Date>`max(${sales.saleDate})`,
+      })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.businessId, ctx.businessId),
+          eq(sales.customerId, customerId),
+          sql`${sales.status} NOT IN ('cancelled', 'draft')`
+        )
+      );
+
+    const row = customerSales[0];
+    return {
+      totalPurchases: row?.count ?? 0,
+      totalSpent: parseFloat(row?.totalAmount ?? "0"),
+      averageSaleAmount: parseFloat(row?.avgAmount ?? "0"),
+      lastPurchaseDate: row?.lastSaleDate,
+    };
+  }
+
+  async getSaleProfitAnalysis(ctx: RequestContext, saleId: string) {
+    const items = await db
+      .select({
+        productName: saleItems.productName,
+        quantity: saleItems.quantity,
+        orderedQuantity: saleItems.orderedQuantity,
+        unitPrice: saleItems.unitPrice,
+        unitPriceFinal: saleItems.unitPriceFinal,
+        subtotal: saleItems.subtotal,
+        costPriceSnapshot: saleItems.costPriceSnapshot,
+      })
+      .from(saleItems)
+      .where(eq(saleItems.saleId, saleId));
+
+    const itemAnalysis = items.map((item) => {
+      const quantity = parseFloat(item.quantity ?? item.orderedQuantity ?? "0");
+      const unitPrice = parseFloat(item.unitPrice ?? item.unitPriceFinal ?? "0");
+      const costPrice = parseFloat(item.costPriceSnapshot ?? "0");
+      const revenue = parseFloat(item.subtotal ?? "0");
+      const cost = quantity * costPrice;
+      const profit = revenue - cost;
+      const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+      return {
+        productName: item.productName,
+        quantity,
+        unitPrice,
+        costPrice,
+        revenue,
+        cost,
+        profit,
+        marginPercent: Math.round(marginPercent * 100) / 100,
+      };
+    });
+
+    const totalRevenue = itemAnalysis.reduce((sum, item) => sum + item.revenue, 0);
+    const totalCost = itemAnalysis.reduce((sum, item) => sum + item.cost, 0);
+    const totalProfit = totalRevenue - totalCost;
+    const totalMarginPercent = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+    return {
+      items: itemAnalysis,
+      summary: {
+        totalRevenue,
+        totalCost,
+        totalProfit,
+        totalMarginPercent: Math.round(totalMarginPercent * 100) / 100,
+      },
+    };
+  }
+
+  async getSalePaymentStatus(
+    ctx: RequestContext,
+    sale: { id: string; totalAmount: string; balanceDue: string; amountPaid: string }
+  ) {
+    const totalAmount = parseFloat(sale.totalAmount ?? "0");
+    const balanceDue = parseFloat(sale.balanceDue ?? "0");
+    const amountPaid = parseFloat(sale.amountPaid ?? "0");
+
+    const paymentPercentage = totalAmount > 0 ? (amountPaid / totalAmount) * 100 : 0;
+
+    return {
+      totalAmount,
+      amountPaid,
+      balanceDue,
+      paymentPercentage: Math.round(paymentPercentage * 100) / 100,
+      isFullyPaid: balanceDue <= 0,
+      status: balanceDue <= 0 ? "paid" : amountPaid > 0 ? "partial" : "pending",
     };
   }
 }

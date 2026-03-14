@@ -235,10 +235,12 @@ export function PurchaseCalculatorContent({ onAddedToCart }: PurchaseCalculatorC
                     }
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Costo unitario:</span>
-                  <span className="font-medium">S/ {formatCurrency(calculation.unitPrice)}</span>
-                </div>
+                {isKgProduct && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Costo unitario:</span>
+                    <span className="font-medium">S/ {formatCurrency(calculation.unitPrice)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t border-orange-200">
                   <span className="font-medium">Subtotal:</span>
                   <span className="font-bold text-lg">S/ {formatCurrency(calculation.subtotal)}</span>

@@ -10,7 +10,7 @@ import { useListSearch } from "~/hooks/use-list-search";
 import { useBusiness } from "~/hooks/use-business";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { useToast } from "~/hooks/use-toast";
+import { showError } from "~/lib/errors";
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
@@ -19,7 +19,6 @@ export default function SalesPage() {
   const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleCreateSale = async () => {
     // Prevent duplicate clicks while mutation is pending
@@ -27,9 +26,10 @@ export default function SalesPage() {
 
     // Prevent if business is not ready
     if (!business?.businessUserId) {
-      toast.error("Error al crear venta", {
-        description: "No se pudo iniciar la venta. Intenta de nuevo.",
-      });
+      showError(
+        "Error al crear venta",
+        new Error("Business seller is not available")
+      );
       return;
     }
 
@@ -38,9 +38,7 @@ export default function SalesPage() {
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       console.error("Failed to create sale:", err);
-      toast.error("Error al crear venta", {
-        description: "No se pudo crear la venta. Intenta de nuevo.",
-      });
+      showError("Error al crear venta", err);
     }
   };
 

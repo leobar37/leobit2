@@ -96,7 +96,7 @@ export function calculateUnitProduct(
 	const totalFromInput = parseNumber(input.totalAmount);
 
 	// Calculate subtotal
-	const initialSubtotal =
+	const subtotal =
 		totalFromInput > 0
 			? totalFromInput
 			: packs > 0
@@ -104,20 +104,18 @@ export function calculateUnitProduct(
 				: quantityUnits *
 					(unitQuantity > 0 ? effectivePricePerPack / unitQuantity : 0);
 
-	// Recalculate unit price from subtotal
+	// Calculate unit price for display (rounded to 2 decimals)
 	const unitPrice =
 		quantityUnits > 0
-			? parseFloat((initialSubtotal / quantityUnits).toFixed(2))
+			? parseFloat((subtotal / quantityUnits).toFixed(2))
 			: 0;
-
-	const finalSubtotal = parseFloat((quantityUnits * unitPrice).toFixed(2));
 
 	return {
 		kgNeto: 0,
 		unitPrice,
 		quantity: quantityUnits,
-		subtotal: finalSubtotal,
-		isValid: finalSubtotal > 0 && unitPrice > 0,
+		subtotal,
+		isValid: subtotal > 0 && unitPrice > 0,
 	};
 }
 

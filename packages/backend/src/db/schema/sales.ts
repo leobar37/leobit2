@@ -151,6 +151,9 @@ export const saleItems = pgTable(
 
     subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
 
+    // Cost snapshot at time of sale (for profit margin analysis)
+    costPriceSnapshot: decimal("cost_price_snapshot", { precision: 10, scale: 2 }),
+
     // Tracking modifications (from orders)
     isModified: boolean("is_modified").notNull().default(false),
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),

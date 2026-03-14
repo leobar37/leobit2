@@ -88,6 +88,8 @@ export function SmartCalculatorForm({
           onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
           decimals={2}
           helperText={variant?.price ? `Precio base: S/ ${variant.price}` : undefined}
+          helperValue={variant?.price}
+          onApplyHelperValue={(value) => setFieldValue("price", value)}
         />
 
         {/* Quantity Input */}

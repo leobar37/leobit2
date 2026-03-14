@@ -141,6 +141,4 @@ export async function clearSyncStorage(
     const success = await deleteDatabaseWithTimeout(dbName);
     results.push({ name: dbName, success });
   }
-
-  console.log("[clearSyncStorage] Cleanup completed:", results);
 }

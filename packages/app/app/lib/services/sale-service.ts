@@ -11,7 +11,7 @@ import { SyncService } from "../sync/sync-service";
 import { SyncStatus, sales, saleItems } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates, normalizeRow } from "../mappers/entity-mapper";
-import { eq } from "drizzle-orm";
+import { eq, sql, and, gte, lte, inArray } from "drizzle-orm";
 
 /**
  * Sale status types
@@ -229,14 +229,10 @@ export class SaleService extends BaseService {
    * Find all sales for the business
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
-    console.log("[SaleService] findByBusiness called, businessId:", this.businessId);
-
     const salesResult = await this.pg.query<Record<string, unknown>>(
       `SELECT * FROM sales WHERE business_id = $1 ORDER BY sale_date DESC`,
       [this.businessId]
     );
-
-    console.log("[SaleService] findByBusiness - sales found:", salesResult.rows.length);
 
     const sales: SaleWithItems[] = [];
 
@@ -504,12 +500,9 @@ export class SaleService extends BaseService {
       );
 
       // Insert all sale items with Drizzle
-      console.log("[SaleService] About to insert", items.length, "items for sale:", saleId);
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemId = itemIds[i];
-
-        console.log("[SaleService] Inserting item:", itemId, "product:", item.productName);
 
         await this.db.insert(saleItems).values({
           id: itemId,
@@ -526,10 +519,7 @@ export class SaleService extends BaseService {
           subtotal: item.subtotal.toString(),
           isModified: false,
         });
-
-        console.log("[SaleService] Item inserted:", itemId);
       }
-      console.log("[SaleService] All items inserted successfully");
 
       // Commit transaction
       await this.pg.exec("COMMIT");
@@ -581,12 +571,10 @@ export class SaleService extends BaseService {
       }
 
       // Return the created sale
-      console.log("[SaleService] createWithItems - fetching created sale:", saleId);
       const createdSale = await this.findById(saleId);
       if (!createdSale) {
         throw new Error("Failed to retrieve created sale");
       }
-      console.log("[SaleService] createWithItems - created sale items count:", createdSale.items?.length ?? 0);
 
       return createdSale;
     } catch (error) {
@@ -891,10 +879,7 @@ export class SaleService extends BaseService {
    * Add an item to an existing sale
    */
   async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
-    console.log("[SaleService] addItem called for sale:", saleId, "item:", item);
-
     const sale = await this.findById(saleId);
-    console.log("[SaleService] addItem - sale found:", sale?.id, "status:", sale?.status);
 
     if (!sale) {
       throw new Error("Sale not found");
@@ -920,8 +905,6 @@ export class SaleService extends BaseService {
 
     const itemId = this.generateId();
     const now = this.now();
-
-    console.log("[SaleService] addItem - inserting item:", itemId, "product:", item.productName);
 
     // Use Drizzle to insert the item
     await this.db.insert(saleItems).values({
@@ -969,12 +952,10 @@ export class SaleService extends BaseService {
     );
 
     // Return the created item
-    console.log("[SaleService] addItem - querying created item:", itemId);
     const itemResult = await this.pg.query<Record<string, unknown>>(
       `SELECT * FROM sale_items WHERE id = $1`,
       [itemId]
     );
-    console.log("[SaleService] addItem - item found:", itemResult.rows.length);
 
     return mapToCamelCase<SaleItem>(itemResult.rows[0]);
   }
@@ -1150,5 +1131,149 @@ export class SaleService extends BaseService {
         balanceDue: parseFloat(updatedSale.balanceDue),
       }
     );
+  }
+
+  /**
+   * Get start date for a period
+   */
+  private getStartDate(period: { type: string; startDate?: string; endDate?: string }): Date {
+    const now = new Date();
+
+    if (period.startDate) {
+      return new Date(period.startDate);
+    }
+
+    switch (period.type) {
+      case "day":
+        now.setHours(0, 0, 0, 0);
+        return now;
+      case "week":
+        now.setDate(now.getDate() - now.getDay());
+        now.setHours(0, 0, 0, 0);
+        return now;
+      case "month":
+        now.setDate(1);
+        now.setHours(0, 0, 0, 0);
+        return now;
+      case "year":
+        now.setMonth(0, 1);
+        now.setHours(0, 0, 0, 0);
+        return now;
+      default:
+        now.setHours(0, 0, 0, 0);
+        return now;
+    }
+  }
+
+  /**
+   * Get sales stats for dashboard (current period)
+   */
+  async getSalesStats(period: { type: string; startDate?: string; endDate?: string }): Promise<{
+    amount: number;
+    kilos: number;
+    count: number;
+  }> {
+    const startDate = this.getStartDate(period);
+
+    // Build where conditions
+    const conditions = [
+      eq(sales.businessId, this.businessId),
+      inArray(sales.status, ["active", "delivered"]),
+      gte(sales.saleDate, startDate),
+    ];
+
+    if (period.endDate) {
+      conditions.push(lte(sales.saleDate, new Date(period.endDate)));
+    }
+
+    const result = await this.db
+      .select({
+        amount: sql<string>`COALESCE(SUM(${sales.totalAmount}), 0)`,
+        kilos: sql<string>`COALESCE(SUM(${sales.netWeight}), 0)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(sales)
+      .where(and(...conditions));
+
+    const row = result[0];
+    return {
+      amount: parseFloat(row?.amount || "0"),
+      kilos: parseFloat(row?.kilos || "0"),
+      count: Number(row?.count || 0),
+    };
+  }
+
+  /**
+   * Get debtors summary from local sales data
+   */
+  async getDebtorsSummary(): Promise<{
+    totalDebt: number;
+    debtorsCount: number;
+  }> {
+    const result = await this.db
+      .select({
+        totalDebt: sql<string>`COALESCE(SUM(${sales.balanceDue}), 0)`,
+        debtorsCount: sql<number>`COUNT(DISTINCT ${sales.customerId})`,
+      })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.businessId, this.businessId),
+          sql`${sales.balanceDue} > 0`,
+          sql`${sales.status} NOT IN ('cancelled', 'draft')`,
+          sql`${sales.customerId} IS NOT NULL`
+        )
+      );
+
+    const row = result[0];
+    return {
+      totalDebt: parseFloat(row?.totalDebt || "0"),
+      debtorsCount: Number(row?.debtorsCount || 0),
+    };
+  }
+
+  /**
+   * Get sales chart data (daily totals for the period)
+   */
+  async getSalesChart(period: { type: string; startDate?: string; endDate?: string }): Promise<{
+    labels: string[];
+    data: number[];
+  }> {
+    const startDate = this.getStartDate(period);
+
+    // Build where conditions
+    const conditions = [
+      eq(sales.businessId, this.businessId),
+      inArray(sales.status, ["active", "delivered"]),
+      gte(sales.saleDate, startDate),
+    ];
+
+    if (period.endDate) {
+      conditions.push(lte(sales.saleDate, new Date(period.endDate)));
+    }
+
+    // Get daily sales totals using Drizzle
+    const result = await this.db
+      .select({
+        date: sql<string>`DATE(${sales.saleDate})`,
+        total: sql<string>`COALESCE(SUM(${sales.totalAmount}), 0)`,
+      })
+      .from(sales)
+      .where(and(...conditions))
+      .groupBy(sql`DATE(${sales.saleDate})`)
+      .orderBy(sql`DATE(${sales.saleDate})`);
+
+    const labels: string[] = [];
+    const data: number[] = [];
+
+    for (const row of result) {
+      // Format date as day name (Lun, Mar, etc.)
+      const date = new Date(row.date);
+      const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+      labels.push(dayNames[date.getDay()]);
+      data.push(parseFloat(row.total));
+    }
+
+    return { labels, data };
   }
 }

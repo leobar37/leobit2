@@ -9,10 +9,13 @@ import {
   DollarSign,
   Weight,
   CreditCard,
+  WifiOff,
+  CloudOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
+import { useSyncStatus } from "~/hooks/use-sync-status";
 import { BusinessUserRole } from "@avileo/shared";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { MetricCard } from "~/components/dashboard/metric-card";
@@ -30,6 +33,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
+  const { data: syncStatus } = useSyncStatus();
 
   const [period, setPeriod] = useState<PeriodValue>({
     type: "day",
@@ -40,6 +44,9 @@ export default function DashboardPage() {
   const { data: salesStats, isLoading: isLoadingSales } = useSalesStats(period);
   const { data: debtorsSummary, isLoading: isLoadingDebtors } = useDebtorsSummary();
   const { data: chartData, isLoading: isLoadingChart } = useSalesChart(period);
+
+  const isOnline = navigator.onLine;
+  const hasPending = syncStatus?.pending ? syncStatus.pending > 0 : false;
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.kilosAsignados != null && distribucion.kilosAsignados > 0;
@@ -58,6 +65,20 @@ export default function DashboardPage() {
           Bienvenido de vuelta a tu sistema de ventas
         </p>
       </div>
+
+      {/* Offline Status Indicators */}
+      {!isOnline && (
+        <div className="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+          <WifiOff className="h-4 w-4" />
+          Sin conexión - mostrando datos locales
+        </div>
+      )}
+      {isOnline && hasPending && (
+        <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+          <CloudOff className="h-4 w-4" />
+          {syncStatus.pending} operación{syncStatus.pending !== 1 ? "es" : ""} pendiente{syncStatus.pending !== 1 ? "s" : ""} de sincronizar
+        </div>
+      )}
 
       {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
         <Link to="/mi-distribucion" className="block">

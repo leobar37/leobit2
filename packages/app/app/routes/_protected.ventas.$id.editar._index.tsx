@@ -12,8 +12,7 @@ import {
   CartSection,
   CustomerSection,
   PaymentModeSection,
-  SaleSummaryCard,
-  SubmitSaleButton,
+  SaleSubmitBar,
 } from "~/components/sales/new-sale";
 import { useNewSaleContext } from "~/components/sales/new-sale-context";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
@@ -24,10 +23,9 @@ import { getSaleCalculatorPath } from "~/lib/sales/navigation";
 
 function HeaderTotal() {
   const { saleId } = useNewSaleContext();
-  const { data: sales } = useSale(saleId);
+  const { data: sale } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
 
-  const sale = sales?.[0] ?? null;
   const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
@@ -48,10 +46,7 @@ export default function SaleEditorPage() {
   const navigate = useNavigate();
   const { saleId } = useNewSaleContext();
 
-  const { data: sales, isLoading } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
-  
-  const sale = sales?.[0] ?? null;
+  const { data: sale, isLoading } = useSale(saleId);
 
   if (!saleId) {
     return <Navigate to="/ventas" replace />;
@@ -95,7 +90,7 @@ export default function SaleEditorPage() {
         </div>
       </header>
 
-      <main className="space-y-4 pb-32">
+      <main className="space-y-4 pb-24">
         <CustomerSection />
 
         <section
@@ -135,10 +130,9 @@ export default function SaleEditorPage() {
 
         <CartSection />
         <PaymentModeSection />
-        <SaleSummaryCard />
       </main>
 
-      <SubmitSaleButton />
+      <SaleSubmitBar />
     </div>
   );
 }

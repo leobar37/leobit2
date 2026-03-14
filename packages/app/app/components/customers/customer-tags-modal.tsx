@@ -1,93 +1,91 @@
 /**
  * Customer Tags Modal
- * Modal for assigning tags to a customer
+ * Modal for assigning tags to a customer using createModal pattern
  */
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { createModal } from "~/lib/modal/create-modal";
 import { TagSelect } from "~/components/tags";
 import {
   useCustomerTags,
   useAssignCustomerTags,
 } from "~/hooks/use-customer-tags";
 
-interface CustomerTagsModalProps {
+interface CustomerTagsData {
   customerId: string;
-  open: boolean;
-  onClose: () => void;
 }
 
-export function CustomerTagsModal({
+function CustomerTagsModalContent({
+  close,
   customerId,
-  open,
-  onClose,
-}: CustomerTagsModalProps) {
+}: CustomerTagsData & { close: () => void }) {
   const { data: customerTags, isLoading } = useCustomerTags(customerId);
   const assignMutation = useAssignCustomerTags();
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  // Initialize selected tags when modal opens
   useEffect(() => {
-    if (open && customerTags) {
+    if (customerTags) {
       setSelectedTagIds(customerTags.map((ct) => ct.tagId));
     }
-  }, [open, customerTags]);
+  }, [customerTags]);
 
   const handleSave = async () => {
     try {
       await assignMutation.mutateAsync({ customerId, tagIds: selectedTagIds });
       toast.success("Etiquetas actualizadas");
-      onClose();
+      close();
     } catch (error) {
       toast.error("Error al actualizar etiquetas");
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Asignar Etiquetas</DialogTitle>
-          <DialogDescription>
-            Selecciona las etiquetas para este cliente
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>Asignar Etiquetas</DialogTitle>
+        <DialogDescription>
+          Selecciona las etiquetas para este cliente
+        </DialogDescription>
+      </DialogHeader>
 
-        <div className="py-4">
-          {isLoading ? (
-            <p className="text-center text-muted-foreground py-4">
-              Cargando etiquetas...
-            </p>
-          ) : (
-            <TagSelect
-              selectedTagIds={selectedTagIds}
-              onChange={setSelectedTagIds}
-            />
-          )}
-        </div>
+      <div className="py-6">
+        {isLoading ? (
+          <p className="py-8 text-center text-muted-foreground">
+            Cargando etiquetas...
+          </p>
+        ) : (
+          <TagSelect
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
+        )}
+      </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={assignMutation.isPending}
-          >
-            {assignMutation.isPending ? "Guardando..." : "Guardar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter className="flex flex-row gap-3 mt-6">
+        <Button variant="outline" onClick={close} className="flex-1">
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={assignMutation.isPending}
+          className="flex-1"
+        >
+          {assignMutation.isPending ? "Guardando..." : "Guardar"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
+
+export const [CustomerTagsModal, useCustomerTagsModal] = createModal<
+  CustomerTagsData
+>(CustomerTagsModalContent, { type: "dialog" });

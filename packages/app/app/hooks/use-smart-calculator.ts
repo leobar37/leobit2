@@ -11,26 +11,23 @@ import {
 	getUnitDefaultValues,
 	parseNumber,
 } from "~/lib/calculator";
-import type { CalculationResult, UnitType } from "~/lib/calculator/types";
+import type { CalculationResult, UnitType, KgCalculatorFields, UnitCalculatorFields } from "~/lib/calculator/types";
 
 export type CalculatorField = "price" | "quantity" | "total";
 
-const kgCalculatorSchema = z.object({
+// Unified schema that handles both kg and unit products
+// This prevents React hooks count mismatch when switching product types
+const calculatorSchema = z.object({
 	totalAmount: z.string(),
 	pricePerKg: z.string(),
 	kilos: z.string(),
 	tara: z.string(),
-});
-
-const unitCalculatorSchema = z.object({
-	totalAmount: z.string(),
 	pricePerPack: z.string(),
 	packs: z.string(),
 	units: z.string(),
 });
 
-export type KgCalculatorFormData = z.infer<typeof kgCalculatorSchema>;
-export type UnitCalculatorFormData = z.infer<typeof unitCalculatorSchema>;
+export type CalculatorFormData = z.infer<typeof calculatorSchema>;
 
 interface UseSmartCalculatorOptions {
 	product: Product | undefined;
@@ -67,7 +64,7 @@ function getFieldNameForUnitType(field: CalculatorField, unitType: UnitType): st
 }
 
 function mapFormToValues(
-	formValues: { totalAmount?: string; pricePerKg?: string; kilos?: string; tara?: string } | { totalAmount?: string; pricePerPack?: string; packs?: string; units?: string },
+	formValues: Partial<CalculatorFormData>,
 	unitType: UnitType
 ): {
 	price: string;
@@ -76,19 +73,17 @@ function mapFormToValues(
 	tara: string;
 } {
 	if (unitType === "kg") {
-		const v = formValues as { totalAmount?: string; pricePerKg?: string; kilos?: string; tara?: string };
 		return {
-			price: v.pricePerKg ?? "",
-			quantity: v.kilos ?? "",
-			total: v.totalAmount ?? "",
-			tara: v.tara ?? "0",
+			price: formValues.pricePerKg ?? "",
+			quantity: formValues.kilos ?? "",
+			total: formValues.totalAmount ?? "",
+			tara: formValues.tara ?? "0",
 		};
 	}
-	const v = formValues as { totalAmount?: string; pricePerPack?: string; packs?: string; units?: string };
 	return {
-		price: v.pricePerPack ?? "",
-		quantity: v.packs ?? "",
-		total: v.totalAmount ?? "",
+		price: formValues.pricePerPack ?? "",
+		quantity: formValues.packs ?? "",
+		total: formValues.totalAmount ?? "",
 		tara: "0",
 	};
 }
@@ -105,11 +100,21 @@ export function useSmartCalculator(
 
 	const defaultPrice = autoFillPrice ? initialPrice : "";
 
-	const form = useForm<KgCalculatorFormData | UnitCalculatorFormData>({
-		resolver: zodResolver(isKgProduct ? kgCalculatorSchema : unitCalculatorSchema),
+	const form = useForm<CalculatorFormData>({
+		resolver: zodResolver(calculatorSchema),
 		defaultValues: isKgProduct
-			? getKgDefaultValues(defaultPrice)
-			: getUnitDefaultValues(defaultPrice),
+			? {
+					...getKgDefaultValues(defaultPrice),
+					pricePerPack: "",
+					packs: "",
+					units: "",
+				} as CalculatorFormData
+			: {
+					...getUnitDefaultValues(defaultPrice),
+					pricePerKg: "",
+					kilos: "",
+					tara: "0",
+				} as CalculatorFormData,
 	});
 
 	const formValues = useWatch({ control: form.control });
@@ -146,9 +151,19 @@ export function useSmartCalculator(
 
 		const newDefaultPrice = autoFillPrice ? initialPrice : "";
 		if (isKgProduct) {
-			form.reset(getKgDefaultValues(newDefaultPrice));
+			form.reset({
+				...getKgDefaultValues(newDefaultPrice),
+				pricePerPack: "",
+				packs: "",
+				units: "",
+			} as CalculatorFormData);
 		} else {
-			form.reset(getUnitDefaultValues(newDefaultPrice));
+			form.reset({
+				...getUnitDefaultValues(newDefaultPrice),
+				pricePerKg: "",
+				kilos: "",
+				tara: "0",
+			} as CalculatorFormData);
 		}
 
 		if (productChanged) {
@@ -168,13 +183,11 @@ export function useSmartCalculator(
 		}
 
 		if (isKgProduct) {
-			const values = formValues as KgCalculatorFormData;
-			return calculateKgProduct(values, variant.price || "0");
+			return calculateKgProduct(formValues as KgCalculatorFields, variant.price || "0");
 		}
 
-		const values = formValues as UnitCalculatorFormData;
 		const unitQuantity = Math.max(1, parseInt(variant.unitQuantity || "1", 10) || 1);
-		return calculateUnitProduct(values, variant.price || "0", unitQuantity);
+		return calculateUnitProduct(formValues as UnitCalculatorFields, variant.price || "0", unitQuantity);
 	}, [formValues, product, variant, isKgProduct]);
 
 	const toggleAutoCalculateField = useCallback((field: CalculatorField) => {
@@ -190,47 +203,47 @@ export function useSmartCalculator(
 
 	const calculateTargetField = useCallback(
 		(
-			values: KgCalculatorFormData | UnitCalculatorFormData,
+			values: CalculatorFormData,
 			targetField: CalculatorField,
-		): Partial<KgCalculatorFormData | UnitCalculatorFormData> => {
+		): Partial<CalculatorFormData> => {
 			if (isKgProduct) {
-				const v = values as KgCalculatorFormData;
+				const v = values as KgCalculatorFields;
 				const kgNeto = parseNumber(v.kilos) - parseNumber(v.tara);
 				const price = parseNumber(v.pricePerKg);
 				const total = parseNumber(v.totalAmount);
 
 				if (targetField === "total" && price > 0 && kgNeto > 0) {
-					return { totalAmount: (price * kgNeto).toFixed(2) } as Partial<KgCalculatorFormData>;
+					return { totalAmount: (price * kgNeto).toFixed(2) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "price" && total > 0 && kgNeto > 0) {
-					return { pricePerKg: (total / kgNeto).toFixed(2) } as Partial<KgCalculatorFormData>;
+					return { pricePerKg: (total / kgNeto).toFixed(2) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "quantity" && total > 0 && price > 0) {
 					const taraNum = parseNumber(v.tara);
 					const kgBruto = total / price + taraNum;
-					return { kilos: kgBruto.toFixed(3) } as Partial<KgCalculatorFormData>;
+					return { kilos: kgBruto.toFixed(3) } as Partial<CalculatorFormData>;
 				}
 			} else {
-				const v = values as UnitCalculatorFormData;
+				const v = values as UnitCalculatorFields;
 				const packs = parseNumber(v.packs);
 				const pricePerPack = parseNumber(v.pricePerPack);
 				const total = parseNumber(v.totalAmount);
 				const unitQuantity = Math.max(1, parseInt(variant?.unitQuantity || "1", 10) || 1);
 
 				if (targetField === "total" && pricePerPack > 0 && packs > 0) {
-					return { totalAmount: (packs * pricePerPack).toFixed(2) } as Partial<UnitCalculatorFormData>;
+					return { totalAmount: (packs * pricePerPack).toFixed(2) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "price" && total > 0 && packs > 0) {
 					const unitPrice = total / (packs * unitQuantity);
-					return { pricePerPack: (unitPrice * unitQuantity).toFixed(2) } as Partial<UnitCalculatorFormData>;
+					return { pricePerPack: (unitPrice * unitQuantity).toFixed(2) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "quantity" && total > 0 && pricePerPack > 0) {
 					const totalUnits = total / (pricePerPack / unitQuantity);
 					const calculatedPacks = Math.ceil(totalUnits / unitQuantity);
-					return { packs: calculatedPacks.toString() } as Partial<UnitCalculatorFormData>;
+					return { packs: calculatedPacks.toString() } as Partial<CalculatorFormData>;
 				}
 			}
-			return {} as Partial<KgCalculatorFormData | UnitCalculatorFormData>;
+			return {} as Partial<CalculatorFormData>;
 		},
 		[isKgProduct, variant],
 	);
@@ -243,7 +256,7 @@ export function useSmartCalculator(
 
 			if (value === "") return;
 
-			const currentValues = form.getValues() as KgCalculatorFormData | UnitCalculatorFormData;
+			const currentValues = form.getValues() as CalculatorFormData;
 			const calculated = calculateTargetField(currentValues, autoCalculateField);
 
 			Object.entries(calculated).forEach(([key, val]) => {
@@ -267,19 +280,33 @@ export function useSmartCalculator(
 				pricePerKg: currentDefaultPrice,
 				kilos: "",
 				tara: "0",
-			});
+				pricePerPack: "",
+				packs: "",
+				units: "",
+			} as CalculatorFormData);
 		} else {
 			form.reset({
 				totalAmount: "",
+				pricePerKg: "",
+				kilos: "",
+				tara: "0",
 				pricePerPack: currentDefaultPrice,
 				packs: "",
 				units: "",
-			});
+			} as CalculatorFormData);
 		}
 	}, [form, isKgProduct, autoFillPrice, initialPrice]);
 
 	const values = useMemo(() => {
-		return mapFormToValues(formValues, unitType);
+		return mapFormToValues(formValues ?? {
+			totalAmount: "",
+			pricePerKg: "",
+			kilos: "",
+			tara: "0",
+			pricePerPack: "",
+			packs: "",
+			units: "",
+		}, unitType);
 	}, [formValues, unitType]);
 
 	return {

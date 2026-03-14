@@ -526,6 +526,9 @@ export class SyncService {
   }
 
   private async markCompleted(id: string): Promise<void> {
+    // Get operation details to update the entity's sync_status
+    const op = await this.getOperation(id);
+
     await this.pg.exec(`
       UPDATE sync_operations
       SET status = '${OPERATION_STATUS.COMPLETED}',
@@ -533,6 +536,22 @@ export class SyncService {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = '${escapeSqlString(id)}'
     `);
+
+    // Update the entity's sync_status to synced
+    if (op && (op.entity_type === 'sales' || op.entity_type === 'customers')) {
+      try {
+        await this.pg.exec(`
+          UPDATE ${op.entity_type}
+          SET sync_status = 'synced',
+              sync_attempts = 0,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = '${escapeSqlString(op.entity_id)}'
+        `);
+      } catch (error) {
+        // Log error but don't fail the sync operation
+        console.warn(`Failed to update ${op.entity_type} sync_status for ${op.entity_id}:`, error);
+      }
+    }
   }
 
   private async markFailed(id: string, error: string): Promise<void> {

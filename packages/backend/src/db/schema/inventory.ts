@@ -41,6 +41,7 @@ export const products = pgTable(
     type: productTypeEnum("type").notNull().default("pollo"),
     unit: productUnitEnum("unit").notNull().default("kg"),
     basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
     isActive: boolean("is_active").notNull().default(true),
 
     // Asset reference (shared gallery image)
@@ -184,6 +185,7 @@ export const productVariants = pgTable(
     sku: varchar("sku", { length: 50 }),
     unitQuantity: decimal("unit_quantity", { precision: 10, scale: 3 }).notNull(),
     price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
 
     // Display & status
     sortOrder: integer("sort_order").notNull().default(0),

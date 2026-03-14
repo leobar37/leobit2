@@ -47,6 +47,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
       const result = await productService.createProduct(ctx as RequestContext, {
         ...body,
         basePrice: parseFloat(body.basePrice),
+        costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
       });
       return { success: true, data: result.data, txid: result.txid };
     },
@@ -56,6 +57,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         type: t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")]),
         unit: t.Union([t.Literal("kg"), t.Literal("unidad")]),
         basePrice: t.String(),
+        costPrice: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
         imageId: t.Optional(t.String()),
       }),
@@ -67,6 +69,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
       const result = await productService.updateProduct(ctx as RequestContext, params.id, {
         ...body,
         basePrice: body.basePrice ? parseFloat(body.basePrice) : undefined,
+        costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
         syncPriceToVariants: body.syncPriceToVariants,
       });
       return { success: true, data: result.data, txid: result.txid };
@@ -80,6 +83,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         type: t.Optional(t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")])),
         unit: t.Optional(t.Union([t.Literal("kg"), t.Literal("unidad")])),
         basePrice: t.Optional(t.String()),
+        costPrice: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
         imageId: t.Optional(t.Union([t.String(), t.Null()])),
         syncPriceToVariants: t.Optional(t.Boolean()),

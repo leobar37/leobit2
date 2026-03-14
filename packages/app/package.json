@@ -45,6 +45,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dayjs": "^1.11.18",
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.36.0",
     "isbot": "^5",

@@ -9,7 +9,9 @@ interface SaleDetailPaymentCardProps {
 
 export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
   const paidAmount = Number(sale.amountPaid ?? 0);
-  const dueAmount = Number(sale.balanceDue ?? 0);
+  const totalAmount = Number(sale.totalAmount ?? 0);
+  // Calculate pending amount: total - paid
+  const dueAmount = Math.max(totalAmount - paidAmount, 0);
 
   return (
     <Card className="shell-card-flat rounded-[28px]">

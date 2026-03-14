@@ -13,6 +13,8 @@ interface CalculatorInputProps {
   onToggleAutoCalculate: () => void;
   decimals?: number;
   helperText?: string;
+  helperValue?: string;
+  onApplyHelperValue?: (value: string) => void;
   className?: string;
 }
 
@@ -26,6 +28,8 @@ export function CalculatorInput({
   onToggleAutoCalculate,
   decimals = 2,
   helperText,
+  helperValue,
+  onApplyHelperValue,
   className,
 }: CalculatorInputProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -84,7 +88,18 @@ export function CalculatorInput({
       </div>
 
       {helperText && (
-        <p className="text-xs text-gray-500">{helperText}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">{helperText}</p>
+          {helperValue && onApplyHelperValue && (
+            <button
+              type="button"
+              onClick={() => onApplyHelperValue(helperValue)}
+              className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+            >
+              Usar
+            </button>
+          )}
+        </div>
       )}
 
       {isAutoCalculateTarget && (

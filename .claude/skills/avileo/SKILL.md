@@ -134,6 +134,7 @@ interface ConfiguracionSistema {
 - **[DATABASE.md](DATABASE.md)** - Database schema, relations, and sync patterns
 - **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
+- **[referencias/toolbar-actions.md](referencias/toolbar-actions.md)** - ToolbarActions component pattern
 
 ## Important Constraints
 

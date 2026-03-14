@@ -61,6 +61,7 @@ export class ProductService {
       type: "pollo" | "huevo" | "otro";
       unit: "kg" | "unidad";
       basePrice: number;
+      costPrice?: number;
       isActive?: boolean;
       imageId?: string;
     }
@@ -77,12 +78,21 @@ export class ProductService {
       throw new ValidationError("El precio no puede ser negativo");
     }
 
+    if (data.costPrice !== undefined && data.costPrice < 0) {
+      throw new ValidationError("El costo no puede ser negativo");
+    }
+
+    if (data.costPrice !== undefined && data.costPrice > data.basePrice) {
+      throw new ValidationError("El costo no puede ser mayor que el precio de venta");
+    }
+
     return db.transaction(async (tx) => {
       const product = await this.repository.create(ctx, {
         name: data.name,
         type: data.type,
         unit: data.unit,
         basePrice: data.basePrice.toString(),
+        costPrice: data.costPrice?.toString() ?? "0",
         isActive: data.isActive ?? true,
         imageId: data.imageId,
       }, tx);
@@ -92,6 +102,7 @@ export class ProductService {
         name: "Estándar",
         unitQuantity: "1",
         price: data.basePrice.toString(),
+        costPrice: data.costPrice?.toString() ?? "0",
         isActive: true,
       }, tx);
 
@@ -110,6 +121,7 @@ export class ProductService {
       type?: "pollo" | "huevo" | "otro";
       unit?: "kg" | "unidad";
       basePrice?: number;
+      costPrice?: number;
       isActive?: boolean;
       imageId?: string | null;
       syncPriceToVariants?: boolean;
@@ -132,12 +144,21 @@ export class ProductService {
       throw new ValidationError("El precio no puede ser negativo");
     }
 
+    if (data.costPrice !== undefined && data.costPrice < 0) {
+      throw new ValidationError("El costo no puede ser negativo");
+    }
+
+    if (data.costPrice !== undefined && data.basePrice !== undefined && data.costPrice > data.basePrice) {
+      throw new ValidationError("El costo no puede ser mayor que el precio de venta");
+    }
+
     return db.transaction(async (tx) => {
       const updated = await this.repository.update(ctx, id, {
         name: data.name,
         type: data.type,
         unit: data.unit,
         basePrice: data.basePrice?.toString(),
+        costPrice: data.costPrice?.toString(),
         isActive: data.isActive,
         imageId: data.imageId,
       }, tx);
