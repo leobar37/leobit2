@@ -156,7 +156,7 @@ export class PaymentRepository {
     data: {
       customerId: string;
       amount: string;
-      paymentMethod: "saldo" | "efectivo" | "yape" | "plin" | "transferencia";
+      paymentMethod: "saldo" | "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
       referenceNumber?: string;
       notes?: string;
       relatedSaleId: string;

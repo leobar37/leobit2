@@ -46,6 +46,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "yape",
   "plin",
   "transferencia",
+  "tarjeta",
   "saldo",
 ]);
 

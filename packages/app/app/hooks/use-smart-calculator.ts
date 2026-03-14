@@ -35,6 +35,12 @@ interface UseSmartCalculatorOptions {
 	initialPrice?: string;
 	autoFillPrice?: boolean;
 	hideTara?: boolean;
+	initialValues?: {
+		quantity: string;
+		unitPrice: string;
+		subtotal: string;
+		isKgProduct?: boolean;
+	};
 }
 
 interface UseSmartCalculatorReturn {
@@ -91,7 +97,7 @@ function mapFormToValues(
 export function useSmartCalculator(
 	options: UseSmartCalculatorOptions,
 ): UseSmartCalculatorReturn {
-	const { product, variant, initialPrice = "", autoFillPrice = false, hideTara = false } = options;
+	const { product, variant, initialPrice = "", autoFillPrice = false, hideTara = false, initialValues } = options;
 
 	const isKgProduct = product?.unit === "kg";
 	const unitType: UnitType = isKgProduct ? "kg" : "unidad";
@@ -100,21 +106,53 @@ export function useSmartCalculator(
 
 	const defaultPrice = autoFillPrice ? initialPrice : "";
 
-	const form = useForm<CalculatorFormData>({
-		resolver: zodResolver(calculatorSchema),
-		defaultValues: isKgProduct
-			? {
-					...getKgDefaultValues(defaultPrice),
+	const getDefaultValues = useCallback((): CalculatorFormData => {
+		const productIsKg = initialValues?.isKgProduct ?? isKgProduct;
+
+		if (initialValues) {
+			if (productIsKg) {
+				return {
+					totalAmount: initialValues.subtotal || "",
+					pricePerKg: initialValues.unitPrice || "",
+					kilos: initialValues.quantity || "",
+					tara: "0",
 					pricePerPack: "",
 					packs: "",
 					units: "",
-				} as CalculatorFormData
-			: {
-					...getUnitDefaultValues(defaultPrice),
+				};
+			} else {
+				return {
+					totalAmount: initialValues.subtotal || "",
 					pricePerKg: "",
 					kilos: "",
 					tara: "0",
-				} as CalculatorFormData,
+					pricePerPack: initialValues.unitPrice || "",
+					packs: initialValues.quantity || "",
+					units: "",
+				};
+			}
+		}
+
+		if (isKgProduct) {
+			return {
+				...getKgDefaultValues(defaultPrice),
+				pricePerPack: "",
+				packs: "",
+				units: "",
+			} as CalculatorFormData;
+		} else {
+			return {
+				...getUnitDefaultValues(defaultPrice),
+				pricePerKg: "",
+				kilos: "",
+				tara: "0",
+			} as CalculatorFormData;
+		}
+	}, [isKgProduct, defaultPrice, initialValues]);
+
+	const form = useForm<CalculatorFormData>({
+		resolver: zodResolver(calculatorSchema),
+		defaultValues: getDefaultValues(),
 	});
 
 	const formValues = useWatch({ control: form.control });

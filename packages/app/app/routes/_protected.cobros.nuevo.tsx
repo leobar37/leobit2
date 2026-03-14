@@ -20,7 +20,7 @@ import { FormPage } from "~/components/layout/form-page";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
-  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia"]),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta"]),
   referenceNumber: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -32,6 +32,7 @@ const paymentMethods = [
   { id: "yape" as const, label: "Yape", icon: Receipt },
   { id: "plin" as const, label: "Plin", icon: Receipt },
   { id: "transferencia" as const, label: "Transferencia", icon: Receipt },
+  { id: "tarjeta" as const, label: "Tarjeta", icon: Receipt },
 ];
 
 function QuickAmountButton({
@@ -137,6 +138,13 @@ export default function NuevoCobroPage() {
     if (!customerId || !customerBalance) return 0;
     return customerBalance.balanceDue || 0;
   }, [customerBalance, customerId]);
+
+  const enabledPaymentMethods = useMemo(() => {
+    const config = paymentConfig?.methods;
+    return paymentMethods.filter(
+      (method) => !config || config[method.id]?.enabled !== false
+    );
+  }, [paymentConfig]);
 
   const {
     register,
@@ -371,7 +379,7 @@ export default function NuevoCobroPage() {
           <CardContent className="p-4 space-y-4">
             <Label>Método de pago</Label>
             <div className="grid grid-cols-2 gap-2">
-              {paymentMethods.map((method) => {
+              {enabledPaymentMethods.map((method) => {
                 const Icon = method.icon;
                 const isSelected = paymentMethod === method.id;
                 return (

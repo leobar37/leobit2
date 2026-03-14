@@ -73,11 +73,13 @@ export class SaleRepository {
     return db.query.sales.findMany(query);
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<Sale | undefined> {
+  async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<Sale | undefined> {
     const start = Date.now();
     logger.debug({ id, businessId: ctx.businessId }, "🔍 SaleRepository.findById");
 
-    const result = await db.query.sales.findFirst({
+    const executor = tx ?? db;
+
+    const result = await executor.query.sales.findFirst({
       where: and(
         eq(sales.id, id),
         eq(sales.businessId, ctx.businessId)
@@ -201,6 +203,135 @@ export class SaleRepository {
       .returning();
 
     return sale;
+  }
+
+  async updateWithItems(
+    ctx: RequestContext,
+    id: string,
+    data: Partial<
+      Pick<
+        Sale,
+        | "status"
+        | "cancelledAt"
+        | "cancelledBy"
+        | "cancelReason"
+        | "refundAmount"
+        | "refundDate"
+        | "refundMethod"
+        | "refundReference"
+        | "refundNotes"
+        | "version"
+        | "confirmedSnapshot"
+        | "deliveredSnapshot"
+        | "deliveryDate"
+        | "saleType"
+        | "paymentMode"
+        | "totalAmount"
+        | "amountPaid"
+        | "balanceDue"
+        | "customerId"
+      >
+    > & {
+      items?: Array<{
+        id?: string;
+        productId: string;
+        productName: string;
+        variantId: string;
+        variantName: string;
+        quantity?: string;
+        orderedQuantity?: string;
+        unitPrice?: string;
+        unitPriceQuoted?: string;
+        subtotal: string;
+      }>;
+    },
+    tx?: DbTransaction
+  ): Promise<Sale> {
+    const executor = tx ?? db;
+    const { items, ...saleData } = data;
+
+    return executor.transaction(async (innerTx) => {
+      // Update the sale
+      const [sale] = await innerTx
+        .update(sales)
+        .set({ ...saleData, updatedAt: new Date() })
+        .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)))
+        .returning();
+
+      if (!sale) {
+        throw new Error("Sale not found");
+      }
+
+      // If items are provided, sync them with the database
+      if (items !== undefined) {
+        // Get existing items
+        const existingItems = await innerTx
+          .select({ id: saleItems.id })
+          .from(saleItems)
+          .innerJoin(sales, eq(sales.id, saleItems.saleId))
+          .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)));
+
+        const existingItemIds = new Set(existingItems.map((i) => i.id));
+        const processedItemIds = new Set<string>();
+
+        // Process each item in the payload
+        for (const item of items) {
+          if (item.id && existingItemIds.has(item.id)) {
+            // Update existing item
+            await innerTx
+              .update(saleItems)
+              .set({
+                productId: item.productId,
+                productName: item.productName,
+                variantId: item.variantId,
+                variantName: item.variantName,
+                quantity: item.quantity ?? null,
+                orderedQuantity: item.orderedQuantity ?? null,
+                unitPrice: item.unitPrice ?? null,
+                unitPriceQuoted: item.unitPriceQuoted ?? null,
+                subtotal: item.subtotal,
+                updatedAt: new Date(),
+              })
+              .where(and(eq(saleItems.id, item.id), eq(saleItems.saleId, id)));
+            processedItemIds.add(item.id);
+          } else {
+            // Create new item
+            const newItemId = item.id ?? crypto.randomUUID();
+            await innerTx.insert(saleItems).values({
+              id: newItemId,
+              saleId: id,
+              productId: item.productId,
+              variantId: item.variantId,
+              productName: item.productName,
+              variantName: item.variantName,
+              quantity: item.quantity ?? null,
+              orderedQuantity: item.orderedQuantity ?? null,
+              unitPrice: item.unitPrice ?? null,
+              unitPriceQuoted: item.unitPriceQuoted ?? null,
+              subtotal: item.subtotal,
+            });
+            processedItemIds.add(newItemId);
+          }
+        }
+
+        // Delete items that are not in the payload
+        for (const existingId of existingItemIds) {
+          if (!processedItemIds.has(existingId)) {
+            await innerTx
+              .delete(saleItems)
+              .where(and(eq(saleItems.id, existingId), eq(saleItems.saleId, id)));
+          }
+        }
+      }
+
+      // Return updated sale with items
+      return (
+        (await this.findById(ctx, id, innerTx)) ??
+        (() => {
+          throw new Error("Sale not found after update");
+        })()
+      );
+    });
   }
 
   async confirmPreOrder(
@@ -375,6 +506,7 @@ export class SaleRepository {
     ctx: RequestContext,
     saleId: string,
     data: {
+      id?: string;
       productId: string;
       productName: string;
       variantId: string;
@@ -392,6 +524,8 @@ export class SaleRepository {
     const [item] = await executor
       .insert(saleItems)
       .values({
+        id: data.id,
+        businessId: ctx.businessId,
         saleId,
         productId: data.productId,
         productName: data.productName,

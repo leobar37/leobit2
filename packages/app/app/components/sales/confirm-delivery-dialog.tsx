@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,26 +14,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FormInput } from "@/components/forms";
+import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 
 const paymentMethods = [
   { value: "efectivo", label: "Efectivo" },
   { value: "yape", label: "Yape" },
   { value: "plin", label: "Plin" },
   { value: "transferencia", label: "Transferencia" },
+  { value: "tarjeta", label: "Tarjeta" },
   { value: "saldo", label: "Saldo a favor" },
 ] as const;
 
 type PaymentMethod = (typeof paymentMethods)[number]["value"];
 
 const confirmDeliverySchema = z.object({
-  advancePaymentMethod: z.nativeEnum({
-    efectivo: "efectivo",
-    yape: "yape",
-    plin: "plin",
-    transferencia: "transferencia",
-    saldo: "saldo",
-  }, {
-    required_error: "Selecciona un método de pago",
+  advancePaymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta", "saldo"], {
+    message: "Selecciona un método de pago",
   }),
   advanceReferenceNumber: z.string().optional(),
   deliveryDate: z.string().optional(),
@@ -61,6 +57,14 @@ export function ConfirmDeliveryDialog({
   onConfirm,
 }: ConfirmDeliveryDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: paymentConfig } = usePaymentMethodsConfig();
+
+  const enabledPaymentMethods = useMemo(() => {
+    const config = paymentConfig?.methods;
+    return paymentMethods.filter(
+      (method) => !config || (config as Record<string, { enabled?: boolean }>)?.[method.value]?.enabled !== false
+    );
+  }, [paymentConfig]);
 
   const {
     register,
@@ -123,7 +127,7 @@ export function ConfirmDeliveryDialog({
               {...register("advancePaymentMethod")}
             >
               <option value="">Selecciona un método</option>
-              {paymentMethods.map((method) => (
+              {enabledPaymentMethods.map((method) => (
                 <option key={method.value} value={method.value}>
                   {method.label}
                 </option>

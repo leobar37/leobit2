@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import {
   CreditCard,
@@ -472,11 +472,13 @@ interface CalculatorContentProps {
 export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const navigate = useNavigate();
   const { saleId, editingItem, setEditingItem } = useNewSaleContext();
+  
+  // Initialize state from editingItem - available immediately on first render due to key prop
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    null,
+    editingItem?.productId ?? null
   );
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    null,
+    editingItem?.variantId ?? null
   );
 
   const { toast } = useToast();
@@ -507,7 +509,14 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
 
   const isEditMode = !!editingItem;
-  const initializedRef = useRef(false);
+
+  // Compute initial values for edit mode - independent of selectedProduct
+  // The isKgProduct will be determined by the product once it loads
+  const editingInitialValues = isEditMode ? {
+    quantity: editingItem.quantity.toString(),
+    unitPrice: editingItem.unitPrice.toString(),
+    subtotal: editingItem.subtotal.toString(),
+  } : undefined;
 
   const {
     form,
@@ -524,23 +533,22 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     variant: selectedVariant,
     autoFillPrice,
     hideTara,
+    initialValues: editingInitialValues,
   });
 
-  // Initialize edit mode - pre-select product, variant and fill calculator
+  // Populate calculator values when editing and product loads
   useEffect(() => {
-    // Reset when editing a different item
-    initializedRef.current = false;
+    if (!isEditMode || !editingItem || !selectedProduct) return;
 
-    if (editingItem && variants.length > 0 && !initializedRef.current) {
-      initializedRef.current = true;
-      setSelectedProductId(editingItem.productId);
-      setSelectedVariantId(editingItem.variantId);
-      // Set calculator values after variants are loaded
-      setFieldValue("quantity", editingItem.quantity.toString());
-      setFieldValue("unitPrice", editingItem.unitPrice.toString());
-      setFieldValue("subtotal", editingItem.subtotal.toString());
-    }
-  }, [editingItem, variants, setFieldValue, setSelectedProductId, setSelectedVariantId]);
+    // Check if form already has values to avoid overwriting
+    const currentQuantity = form.getValues("quantity");
+    if (currentQuantity && currentQuantity !== "0") return;
+
+    // Set the calculator values from editingItem
+    setFieldValue("quantity", editingItem.quantity.toString());
+    setFieldValue("unitPrice", editingItem.unitPrice.toString());
+    setFieldValue("subtotal", editingItem.subtotal.toString());
+  }, [isEditMode, editingItem, selectedProduct, form, setFieldValue]);
 
   const handleSave = async () => {
     if (

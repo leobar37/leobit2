@@ -55,6 +55,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
           t.Literal("yape"),
           t.Literal("plin"),
           t.Literal("transferencia"),
+          t.Literal("tarjeta"),
         ]),
         notes: t.Optional(t.String()),
         proofImageId: t.Optional(t.String()),

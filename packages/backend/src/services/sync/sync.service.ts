@@ -568,7 +568,8 @@ export class SyncService {
         await this.applyDistribucionOperation(ctx, operation, tx);
         return;
       case "sale_items":
-        throw new ValidationError("sale_items no se syncroniza via batch - sync directo");
+        await this.applySaleItemOperation(ctx, operation, tx);
+        return;
       default:
         throw new ValidationError(`Entidad no soportada: ${operation.entityType}`);
     }
@@ -687,12 +688,24 @@ export class SyncService {
         return;
       }
 
-      await this.deps.saleRepo.update(ctx, operation.entityId, {
-        ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
-        ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
-        ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
-        ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
-      });
+      // Check if items are included in the payload - use updateWithItems for atomic item sync
+      if (Array.isArray(payload.items)) {
+        const updateData: Parameters<typeof this.deps.saleRepo.updateWithItems>[2] = {
+          ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
+          ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
+          ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
+          ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
+          items: this.parseSaleItemsForUpdate(payload.items),
+        };
+        await this.deps.saleRepo.updateWithItems(ctx, operation.entityId, updateData);
+      } else {
+        await this.deps.saleRepo.update(ctx, operation.entityId, {
+          ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
+          ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
+          ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
+          ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
+        });
+      }
       return;
     }
 
@@ -794,6 +807,141 @@ export class SyncService {
     await this.deps.distribucionRepo.delete(ctx, operation.entityId);
   }
 
+  private async applySaleItemOperation(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ) {
+    const payload = operation.payload;
+
+    // Validate saleId is present for all operations
+    const saleId = this.requiredString(payload.saleId, "saleId");
+
+    if (operation.operation === "create") {
+      // Use provided transaction or create new one
+      const executeCreate = async (executor: DbTransaction) => {
+        // Get sale within transaction to avoid race conditions
+        const sale = await this.deps.saleRepo.findById(ctx, saleId, executor);
+        if (!sale) {
+          throw new ValidationError(`Venta ${saleId} no encontrada`);
+        }
+
+        await this.deps.saleRepo.addItem(ctx, saleId, {
+          id: operation.entityId, // Use the ID from the sync operation
+          productId: this.requiredString(payload.productId, "productId"),
+          productName: this.requiredString(payload.productName, "productName"),
+          variantId: this.requiredString(payload.variantId, "variantId"),
+          variantName: this.requiredString(payload.variantName, "variantName"),
+          quantity: this.optionalNumericString(payload.quantity),
+          orderedQuantity: this.optionalNumericString(payload.orderedQuantity),
+          unitPrice: this.optionalNumericString(payload.unitPrice),
+          unitPriceQuoted: this.optionalNumericString(payload.unitPriceQuoted),
+          subtotal: this.requiredNumericString(payload.subtotal, "subtotal"),
+        }, executor);
+
+        // Update sale totals
+        const itemSubtotal = parseFloat(this.requiredNumericString(payload.subtotal, "subtotal"));
+        const newTotal = parseFloat(sale.totalAmount) + itemSubtotal;
+        const newBalanceDue = Math.max(newTotal - parseFloat(sale.amountPaid), 0);
+
+        await this.deps.saleRepo.update(ctx, saleId, {
+          totalAmount: newTotal.toFixed(2),
+          balanceDue: newBalanceDue.toFixed(2),
+        }, executor);
+      };
+
+      if (tx) {
+        await executeCreate(tx);
+      } else {
+        await db.transaction(executeCreate);
+      }
+      return;
+    }
+
+    if (operation.operation === "update") {
+      const executeUpdate = async (executor: DbTransaction) => {
+        // Get sale within transaction to avoid race conditions
+        const sale = await this.deps.saleRepo.findById(ctx, saleId, executor);
+        if (!sale) {
+          throw new ValidationError(`Venta ${saleId} no encontrada`);
+        }
+
+        const existingItem = await this.deps.saleRepo.findItemById(ctx, saleId, operation.entityId, executor);
+        if (!existingItem) {
+          throw new ValidationError("Item no encontrado");
+        }
+
+        const oldSubtotal = parseFloat(existingItem.subtotal);
+        const newSubtotal = payload.subtotal !== undefined
+          ? parseFloat(this.requiredNumericString(payload.subtotal, "subtotal"))
+          : oldSubtotal;
+        const subtotalDiff = newSubtotal - oldSubtotal;
+
+        await this.deps.saleRepo.updateItem(ctx, saleId, operation.entityId, {
+          quantity: this.optionalNumericString(payload.quantity),
+          unitPrice: this.optionalNumericString(payload.unitPrice),
+          subtotal: this.optionalNumericString(payload.subtotal),
+          isModified: true,
+        }, executor);
+
+        // Update sale totals if subtotal changed
+        if (Math.abs(subtotalDiff) > 0.01) {
+          const newTotal = parseFloat(sale.totalAmount) + subtotalDiff;
+          const newBalanceDue = Math.max(newTotal - parseFloat(sale.amountPaid), 0);
+
+          await this.deps.saleRepo.update(ctx, saleId, {
+            totalAmount: newTotal.toFixed(2),
+            balanceDue: newBalanceDue.toFixed(2),
+          }, executor);
+        }
+      };
+
+      if (tx) {
+        await executeUpdate(tx);
+      } else {
+        await db.transaction(executeUpdate);
+      }
+      return;
+    }
+
+    if (operation.operation === "delete") {
+      const executeDelete = async (executor: DbTransaction) => {
+        // Get sale within transaction to avoid race conditions
+        const sale = await this.deps.saleRepo.findById(ctx, saleId, executor);
+        if (!sale) {
+          throw new ValidationError(`Venta ${saleId} no encontrada`);
+        }
+
+        const existingItem = await this.deps.saleRepo.findItemById(ctx, saleId, operation.entityId, executor);
+        if (!existingItem) {
+          return; // Already deleted, idempotent
+        }
+
+        const subtotal = parseFloat(existingItem.subtotal);
+
+        await this.deps.saleRepo.deleteItem(ctx, saleId, operation.entityId, executor);
+
+        // Update sale totals
+        const newTotal = parseFloat(sale.totalAmount) - subtotal;
+        const newBalanceDue = Math.max(newTotal - parseFloat(sale.amountPaid), 0);
+
+        await this.deps.saleRepo.update(ctx, saleId, {
+          totalAmount: newTotal.toFixed(2),
+          balanceDue: newBalanceDue.toFixed(2),
+        }, executor);
+      };
+
+      if (tx) {
+        await executeDelete(tx);
+      } else {
+        await db.transaction(executeDelete);
+      }
+      return;
+    }
+
+    throw new ValidationError("Acción no soportada para sale_items");
+  }
+
   private parseSaleInsert(payload: Record<string, unknown>): ParsedSaleInsert {
     const type = payload.type === "pre_order" ? "pre_order" : "instant_sale";
     const saleType = this.requiredSaleType(payload.saleType);
@@ -864,6 +1012,46 @@ export class SyncService {
       orderDate: this.optionalString(payload.orderDate),
       items,
     };
+  }
+
+  private parseSaleItemsForUpdate(
+    rawItems: unknown[]
+  ): Array<{
+    id?: string;
+    productId: string;
+    productName: string;
+    variantId: string;
+    variantName: string;
+    quantity?: string;
+    orderedQuantity?: string;
+    unitPrice?: string;
+    unitPriceQuoted?: string;
+    subtotal: string;
+  }> {
+    if (!Array.isArray(rawItems)) {
+      return [];
+    }
+
+    return rawItems.map((item, index) => {
+      if (!item || typeof item !== "object") {
+        throw new ValidationError(`Item inválido en posición ${index}`);
+      }
+
+      const safe = item as Record<string, unknown>;
+
+      return {
+        id: this.optionalString(safe.id),
+        productId: this.requiredString(safe.productId, "productId"),
+        productName: this.requiredString(safe.productName, "productName"),
+        variantId: this.requiredString(safe.variantId, "variantId"),
+        variantName: this.requiredString(safe.variantName, "variantName"),
+        quantity: this.optionalNumericString(safe.quantity),
+        orderedQuantity: this.optionalNumericString(safe.orderedQuantity),
+        unitPrice: this.optionalNumericString(safe.unitPrice),
+        unitPriceQuoted: this.optionalNumericString(safe.unitPriceQuoted),
+        subtotal: this.requiredNumericString(safe.subtotal, "subtotal"),
+      };
+    });
   }
 
   private normalizedAmount(value: number, field: string): number {

@@ -6,7 +6,7 @@ import { getSaleEditorPath } from "~/lib/sales/navigation";
 
 export default function SaleEditorCalculatorPage() {
   const navigate = useNavigate();
-  const { saleId } = useNewSaleContext();
+  const { saleId, editingItem } = useNewSaleContext();
 
   if (!saleId) {
     return <Navigate to="/ventas" replace />;
@@ -25,12 +25,17 @@ export default function SaleEditorCalculatorPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="ml-1 text-lg font-bold tracking-tight">Calculadora</h1>
+          <h1 className="ml-1 text-lg font-bold tracking-tight">
+            {editingItem ? "Editar Producto" : "Calculadora"}
+          </h1>
         </div>
       </header>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <CalculatorContent returnPath={returnPath} />
+        <CalculatorContent 
+          key={editingItem?.itemId || "new"} 
+          returnPath={returnPath} 
+        />
       </div>
     </div>
   );

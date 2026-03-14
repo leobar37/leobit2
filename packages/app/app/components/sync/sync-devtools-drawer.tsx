@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useEngine, getDatabase } from "~/engine";
 import { useClearSyncStorage } from "@/hooks/use-clear-sync-storage";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +25,7 @@ import {
   Clock,
   ToggleLeft,
   ToggleRight,
+  Search,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useSync } from "~/components/sync/sync-status";
@@ -31,6 +33,8 @@ import { useSyncService } from "~/lib/sync/service-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { runManualSync } from "~/lib/sync/manual-sync";
 import { useToast } from "~/hooks/use-toast";
+import { SHAPES_CONFIG } from "~/lib/sync/shape-config";
+import { useListSearch } from "~/hooks/use-list-search";
 
 interface SyncStatus {
   pending: number;
@@ -63,12 +67,55 @@ interface EntitySyncSummary {
   error: number;
 }
 
-const ENTITY_SUMMARY_CONFIG = [
-  { table: "customers", label: "Clientes" },
-  { table: "sales", label: "Ventas" },
-  { table: "abonos", label: "Abonos" },
-  { table: "products", label: "Productos" },
+const ENTITY_LABELS: Record<string, string> = {
+  customers: "Clientes",
+  products: "Productos",
+  suppliers: "Proveedores",
+  product_variants: "Variantes",
+  inventory: "Inventario",
+  variant_inventory: "Inventario por variante",
+  sales: "Ventas",
+  purchases: "Compras",
+  abonos: "Abonos",
+  sale_items: "Items de venta",
+  purchase_items: "Items de compra",
+  distribuciones: "Distribuciones",
+  distribucion_items: "Items de distribución",
+  closings: "Cierres",
+  tags: "Etiquetas",
+  customer_tags: "Etiquetas por cliente",
+};
+
+const TABLES_WITH_SYNC_STATUS = new Set([
+  "customers",
+  "products",
+  "suppliers",
+  "product_variants",
+  "sales",
+  "purchases",
+  "abonos",
+  "purchase_items",
+  "distribuciones",
+  "distribucion_items",
+  "closings",
+  "tags",
+  "customer_tags",
+]);
+
+const ENTITY_SUMMARY_CONFIG = SHAPES_CONFIG.filter((shape) => shape.enabled !== false).map(
+  (shape) => ({
+    table: shape.table,
+    label: ENTITY_LABELS[shape.table] ?? shape.table,
+    hasSyncStatus: TABLES_WITH_SYNC_STATUS.has(shape.table),
+  }),
+);
+
+const OPERATION_TABS = [
+  { value: "tables", label: "Tablas" },
+  { value: "operations", label: "Operaciones" },
 ] as const;
+
+type ActiveTab = (typeof OPERATION_TABS)[number]["value"];
 
 interface SyncDevToolsDrawerProps {
   triggerClassName?: string;
@@ -106,6 +153,29 @@ export function SyncDevToolsDrawer({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("tables");
+
+  const { filteredItems: filteredEntitySummaries, search: tableSearch, setSearch: setTableSearch } = useListSearch({
+    items: entitySummaries,
+    searchFields: [(summary) => summary.label, (summary) => summary.table],
+    debounceMs: 150,
+  });
+
+  const {
+    filteredItems: filteredOperations,
+    search: operationSearch,
+    setSearch: setOperationSearch,
+  } = useListSearch({
+    items: operations,
+    searchFields: [
+      (operation) => operation.entity_type,
+      (operation) => operation.entity_id,
+      (operation) => operation.operation,
+      (operation) => operation.status,
+      (operation) => operation.last_error ?? undefined,
+    ],
+    debounceMs: 150,
+  });
 
   useEffect(() => {
     if (!isOpen || !isInitialized) return;
@@ -150,30 +220,52 @@ export function SyncDevToolsDrawer({
         `);
         setOperations(opsResult.rows as unknown as SyncOperation[]);
 
-        const summaryQueries = ENTITY_SUMMARY_CONFIG.map(
-          ({ table, label }) => `
-            SELECT
-              '${table}' AS table_name,
-              '${label}' AS label,
-              COUNT(*)::text AS total,
-              COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
-              COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
-              COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
-            FROM ${table}
-          `,
-        ).join(" UNION ALL ");
+        const summaryResults = await Promise.all(
+          ENTITY_SUMMARY_CONFIG.map(async ({ table, label, hasSyncStatus }) => {
+            if (hasSyncStatus) {
+              const result = await db.execute(`
+                SELECT
+                  '${table}' AS table_name,
+                  '${label}' AS label,
+                  COUNT(*)::text AS total,
+                  COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
+                  COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
+                  COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
+                FROM ${table}
+              `);
 
-        const summaryResult = await db.execute(summaryQueries);
-        setEntitySummaries(
-          summaryResult.rows.map((row) => ({
-            table: String(row.table_name),
-            label: String(row.label),
-            total: parseInt(String(row.total), 10),
-            pending: parseInt(String(row.pending), 10),
-            synced: parseInt(String(row.synced), 10),
-            error: parseInt(String(row.error), 10),
-          })),
+              const row = result.rows[0];
+              return {
+                table: String(row.table_name),
+                label: String(row.label),
+                total: parseInt(String(row.total), 10),
+                pending: parseInt(String(row.pending), 10),
+                synced: parseInt(String(row.synced), 10),
+                error: parseInt(String(row.error), 10),
+              };
+            }
+
+            const result = await db.execute(`
+              SELECT
+                '${table}' AS table_name,
+                '${label}' AS label,
+                COUNT(*)::text AS total
+              FROM ${table}
+            `);
+
+            const row = result.rows[0];
+            return {
+              table: String(row.table_name),
+              label: String(row.label),
+              total: parseInt(String(row.total), 10),
+              pending: 0,
+              synced: parseInt(String(row.total), 10),
+              error: 0,
+            };
+          }),
         );
+
+        setEntitySummaries(summaryResults);
       } catch (error) {
         console.error("[SyncDevTools] Error fetching data:", error);
       }
@@ -198,13 +290,19 @@ export function SyncDevToolsDrawer({
   };
 
   const handleClearStorage = async () => {
-    if (
-      !confirm(
-        "⚠️ ¿Estás seguro?\n\nEsto eliminará todos los datos locales, cerrará la sesión y recargará la página.\n\nEsta acción no se puede deshacer.",
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "¿Limpiar almacenamiento local?",
+      description:
+        "Esto eliminará todos los datos locales, cerrará la sesión y recargará la página. Esta acción no se puede deshacer.",
+      confirmText: "Limpiar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
       return;
     }
+
     await clearSync.mutateAsync({ preserveSession: false });
   };
 
@@ -519,136 +617,200 @@ export function SyncDevToolsDrawer({
                 </div>
               )}
 
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">
-                    Entidades sincronizadas
-                  </h3>
-                  <span className="text-xs text-muted-foreground">
-                    4 tablas clave
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {entitySummaries.map((summary) => (
-                    <div
-                      key={summary.table}
-                      className={`rounded-xl border px-3 py-3 ${getEntityTone(summary)}`}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/70 bg-muted/40 p-1">
+                  {OPERATION_TABS.map((tab) => (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setActiveTab(tab.value)}
+                      className={cn(
+                        "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                        activeTab === tab.value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">{summary.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Total local: {summary.total}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="bg-white/80">
-                          {summary.table}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-white/80 text-orange-700"
-                        >
-                          Pendientes: {summary.pending}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="bg-white/80 text-green-700"
-                        >
-                          Synced: {summary.synced}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="bg-white/80 text-red-700"
-                        >
-                          Error: {summary.error}
-                        </Badge>
-                      </div>
-                    </div>
+                      {tab.label}
+                    </button>
                   ))}
                 </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold">
-                    Operaciones con problema
-                  </h3>
-                  {operations.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
-                      onClick={handleDeleteAllOperations}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Eliminar todas
-                    </Button>
-                  )}
-                </div>
-                <ScrollArea className="min-h-[140px] max-h-[40vh] border rounded-xl">
-                  {operations.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                      <p>No hay operaciones pendientes</p>
+                {activeTab === "tables" ? (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">
+                          Entidades sincronizadas
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {entitySummaries.length} tablas detectadas
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-white/80">
+                        {filteredEntitySummaries.length}/{entitySummaries.length}
+                      </Badge>
                     </div>
-                  ) : (
-                    <div className="divide-y">
-                      {operations.map((op) => (
-                        <div
-                          key={op.id}
-                          className="p-3 hover:bg-muted/50 sm:p-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(op.status)}
-                              <span className="font-medium capitalize">
-                                {op.entity_type}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {op.operation}
+
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar tabla..."
+                        value={tableSearch}
+                        onChange={(e) => setTableSearch(e.target.value)}
+                        className="h-10 rounded-xl border-stone-200/80 bg-white/75 pl-10 pr-4"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      {filteredEntitySummaries.length === 0 ? (
+                        <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          No se encontraron tablas.
+                        </div>
+                      ) : (
+                        filteredEntitySummaries.map((summary) => (
+                          <div
+                            key={summary.table}
+                            className={`rounded-xl border px-3 py-3 ${getEntityTone(summary)}`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{summary.label}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Total local: {summary.total}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="bg-white/80">
+                                {summary.table}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(op.created_at).toLocaleTimeString()}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-6 w-6",
-                                  syncService
-                                    ? "text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    : "text-muted-foreground cursor-not-allowed"
-                                )}
-                                onClick={() => handleDeleteOperation(op.id)}
-                                title={syncService ? "Eliminar operación" : "Servicio no disponible"}
-                                disabled={!syncService}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Badge
+                                variant="outline"
+                                className="bg-white/80 text-orange-700"
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                                Pendientes: {summary.pending}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="bg-white/80 text-green-700"
+                              >
+                                Synced: {summary.synced}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="bg-white/80 text-red-700"
+                              >
+                                Error: {summary.error}
+                              </Badge>
                             </div>
                           </div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            <span className="font-mono">{op.entity_id}</span>
-                            {op.sync_attempts > 0 && (
-                              <span className="ml-2">
-                                Intentos: {op.sync_attempts}
-                              </span>
-                            )}
-                          </div>
-                          {op.last_error && (
-                            <div className="mt-1 text-xs leading-5 text-red-500 line-clamp-2">
-                              {op.last_error}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
-                  )}
-                </ScrollArea>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">
+                          Operaciones con problema
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Pendientes, fallidas o en conflicto
+                        </p>
+                      </div>
+                      {operations.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
+                          onClick={handleDeleteAllOperations}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Eliminar todas
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar operación..."
+                        value={operationSearch}
+                        onChange={(e) => setOperationSearch(e.target.value)}
+                        className="h-10 rounded-xl border-stone-200/80 bg-white/75 pl-10 pr-4"
+                      />
+                    </div>
+
+                    <ScrollArea className="min-h-[140px] max-h-[40vh] border rounded-xl">
+                      {filteredOperations.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                          <p>
+                            {operationSearch
+                              ? "No se encontraron operaciones"
+                              : "No hay operaciones pendientes"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {filteredOperations.map((op) => (
+                            <div
+                              key={op.id}
+                              className="p-3 hover:bg-muted/50 sm:p-3"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {getStatusIcon(op.status)}
+                                  <span className="font-medium capitalize">
+                                    {op.entity_type}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {op.operation}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(op.created_at).toLocaleTimeString()}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn(
+                                      "h-6 w-6",
+                                      syncService
+                                        ? "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        : "text-muted-foreground cursor-not-allowed"
+                                    )}
+                                    onClick={() => handleDeleteOperation(op.id)}
+                                    title={syncService ? "Eliminar operación" : "Servicio no disponible"}
+                                    disabled={!syncService}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                <span className="font-mono">{op.entity_id}</span>
+                                {op.sync_attempts > 0 && (
+                                  <span className="ml-2">
+                                    Intentos: {op.sync_attempts}
+                                  </span>
+                                )}
+                              </div>
+                              {op.last_error && (
+                                <div className="mt-1 text-xs leading-5 text-red-500 line-clamp-2">
+                                  {op.last_error}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                )}
               </div>
             </div>
           </ScrollArea>

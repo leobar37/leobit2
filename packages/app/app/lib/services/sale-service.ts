@@ -524,7 +524,7 @@ export class SaleService extends BaseService {
       // Commit transaction
       await this.pg.exec("COMMIT");
 
-      // Queue sync operations for sale and all items with same syncGroupId
+      // Queue sync operation for sale with items included in payload
       await this.queueSync(
         "insert",
         saleId,
@@ -542,20 +542,7 @@ export class SaleService extends BaseService {
           netWeight: saleInput.netWeight,
           deliveryDate: saleInput.deliveryDate,
           orderDate: saleInput.orderDate,
-        },
-        syncGroupId
-      );
-
-      // Queue sync for each item with same syncGroupId using the SAME IDs
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const itemId = itemIds[i];
-
-        await this.queueSync(
-          "insert",
-          itemId,
-          {
-            saleId,
+          items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
             productName: item.productName,
@@ -565,10 +552,10 @@ export class SaleService extends BaseService {
             unitPrice: item.unitPrice,
             unitPriceQuoted: item.unitPriceQuoted,
             subtotal: item.subtotal,
-          },
-          syncGroupId
-        );
-      }
+          })),
+        },
+        syncGroupId
+      );
 
       // Return the created sale
       const createdSale = await this.findById(saleId);
@@ -849,25 +836,13 @@ export class SaleService extends BaseService {
       throw new Error("Only draft sales can be deleted");
     }
 
-    // Capture item IDs BEFORE deleting them
-    const itemsResult = await this.pg.query<{ id: string }>(
-      `SELECT id FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-      [id, this.businessId]
-    );
-    const itemIds = itemsResult.rows.map((row) => row.id);
-
-    // Delete sale items first using Drizzle
+    // Delete sale items first using Drizzle (cascade on server will handle the sync)
     await this.db.delete(saleItems).where(eq(saleItems.saleId, id));
 
     // Delete the sale
     await this.pg.query(`DELETE FROM sales WHERE id = $1`, [id]);
 
-    // Queue deletion sync for all items first
-    for (const itemId of itemIds) {
-      await this.queueSync("delete", itemId, {});
-    }
-
-    // Queue deletion sync for the sale
+    // Queue deletion sync for the sale only (items are handled by cascade)
     await this.queueSync(
       "delete",
       id,
@@ -934,6 +909,7 @@ export class SaleService extends BaseService {
       [item.subtotal, now, SyncStatus.PENDING, saleId]
     );
 
+    // Queue sync for the new item (individual sync, following the same pattern as other entities)
     await this.queueSync(
       "insert",
       itemId,
@@ -1021,7 +997,7 @@ export class SaleService extends BaseService {
       );
     }
 
-    // Queue sync operation
+    // Queue sync for the updated item (individual sync, following the same pattern as other entities)
     await this.queueSync(
       "update",
       itemId,
@@ -1083,10 +1059,13 @@ export class SaleService extends BaseService {
       [subtotal, now, SyncStatus.PENDING, saleId]
     );
 
+    // Queue sync for the deleted item (individual sync, following the same pattern as other entities)
     await this.queueSync(
       "delete",
       itemId,
-      {}
+      {
+        saleId,
+      }
     );
   }
 

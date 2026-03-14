@@ -157,6 +157,10 @@ export const saleItems = pgTable(
     // Tracking modifications (from orders)
     isModified: boolean("is_modified").notNull().default(false),
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
+
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_sale_items_business_id").on(table.businessId),
