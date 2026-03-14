@@ -151,6 +151,15 @@ export class PaymentRepository {
     });
   }
 
+  async findAllBySaleId(ctx: RequestContext, saleId: string): Promise<Abono[]> {
+    return db.query.abonos.findMany({
+      where: and(
+        eq(abonos.businessId, ctx.businessId),
+        eq(abonos.relatedSaleId, saleId)
+      ),
+    });
+  }
+
   async createReversal(
     ctx: RequestContext,
     data: {

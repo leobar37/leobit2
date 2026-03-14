@@ -22,6 +22,18 @@ const QUERY_KEYS = {
   byStatus: (status: SaleStatus) => ["sales-new", "status", status],
 } as const;
 
+export type CancelMode = "simple" | "complete" | "custom";
+
+export type CancelSaleInput = {
+  reason: string;
+  cancelMode?: CancelMode;
+  refundAmount?: number;
+  refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
+  refundReference?: string;
+  reverseAbones?: boolean;
+  restoreInventory?: boolean;
+};
+
 interface SaleFilters {
   customerId?: string;
   status?: SaleStatus;
@@ -221,12 +233,12 @@ export function useCancelSale() {
   return useMutation({
     mutationFn: async ({
       id,
-      reason,
+      data,
     }: {
       id: string;
-      reason: string;
+      data: CancelSaleInput;
     }): Promise<void> => {
-      return saleService.cancel(id, reason);
+      return saleService.cancel(id, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

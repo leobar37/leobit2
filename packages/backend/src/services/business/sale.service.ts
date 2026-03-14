@@ -450,10 +450,13 @@ export class SaleService {
     id: string,
     data: {
       reason: string;
+      cancelMode?: "simple" | "complete" | "custom";
       refundAmount?: number;
       refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
       refundReference?: string;
       refundNotes?: string;
+      reverseAbones?: boolean;
+      restoreInventory?: boolean;
     }
   ): Promise<Sale> {
     if (!ctx.isAdmin()) {
@@ -470,6 +473,9 @@ export class SaleService {
     }
 
     const amountPaid = parseFloat(sale.amountPaid);
+    const cancelMode = data.cancelMode || "simple";
+    const shouldReverseAbones = cancelMode === "complete" || (cancelMode === "custom" && data.reverseAbones);
+    const shouldRestoreInventory = cancelMode === "complete" || (cancelMode === "custom" && data.restoreInventory);
 
     return db.transaction(async (tx) => {
       const updateData: Partial<Sale> = {
@@ -478,6 +484,25 @@ export class SaleService {
         cancelledBy: ctx.businessUserId,
         cancelReason: data.reason,
       };
+
+      if (shouldReverseAbones && sale.customerId) {
+        const abonos = await this.paymentRepository.findAllBySaleId(ctx, sale.id);
+        for (const abono of abonos) {
+          await this.paymentRepository.createReversal(
+            ctx,
+            {
+              customerId: sale.customerId,
+              amount: (-parseFloat(abono.amount)).toFixed(2),
+              paymentMethod: abono.paymentMethod as "saldo" | "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta",
+              referenceNumber: abono.referenceNumber ? `REV-${abono.referenceNumber}` : undefined,
+              notes: `Reversión por cancelación de venta #${sale.id}`,
+              relatedSaleId: sale.id,
+            },
+            tx
+          );
+        }
+        updateData.amountPaid = "0";
+      }
 
       if (data.refundAmount && data.refundAmount > 0) {
         updateData.refundAmount = data.refundAmount.toFixed(2);
@@ -516,7 +541,7 @@ export class SaleService {
 
       const cancelledSale = await this.repository.update(ctx, id, updateData, tx);
 
-      if (sale.distribucionId) {
+      if (shouldRestoreInventory && sale.distribucionId) {
         const saleItems = await this.repository.findSaleItems(ctx, id, tx);
         const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
           ctx,
@@ -530,7 +555,7 @@ export class SaleService {
 
           if (distItem) {
             const currentVendida = parseFloat(distItem.cantidadVendida);
-            const newVendida = Math.max(currentVendida - parseFloat(saleItem.quantity), 0);
+            const newVendida = Math.max(currentVendida - parseFloat(saleItem.quantity || "0"), 0);
             await this.distribucionItemRepository.updateVendido(
               ctx,
               distItem.id,

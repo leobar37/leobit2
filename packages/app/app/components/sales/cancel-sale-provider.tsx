@@ -14,6 +14,7 @@ import { useCancelSale } from "~/hooks/use-sales";
 import type { CancelSaleInput, Sale } from "~/hooks/use-sales";
 
 type RefundMethod = NonNullable<CancelSaleInput["refundMethod"]>;
+type CancelMode = "simple" | "complete" | "custom";
 
 const refundMethodValues = [
   "efectivo",
@@ -25,10 +26,13 @@ const refundMethodValues = [
 
 const cancelSaleSchema = z.object({
   reason: z.string().trim().min(1, "El motivo es requerido"),
+  cancelMode: z.enum(["simple", "complete", "custom"]),
   hasRefund: z.boolean(),
   refundAmount: z.string(),
   refundMethod: z.enum(refundMethodValues),
   refundReference: z.string(),
+  reverseAbones: z.boolean(),
+  restoreInventory: z.boolean(),
 });
 
 export type CancelSaleFormValues = z.infer<typeof cancelSaleSchema>;
@@ -55,10 +59,13 @@ const CancelSaleContext = createContext<CancelSaleContextValue | null>(null);
 function getDefaultValues(paidAmount: number): CancelSaleFormValues {
   return {
     reason: "",
+    cancelMode: "simple",
     hasRefund: false,
     refundAmount: paidAmount > 0 ? paidAmount.toString() : "",
     refundMethod: "efectivo",
     refundReference: "",
+    reverseAbones: false,
+    restoreInventory: false,
   };
 }
 
@@ -113,6 +120,7 @@ export function CancelSaleProvider({
   const submit = form.handleSubmit(async (values) => {
     const payload: CancelSaleInput = {
       reason: values.reason,
+      cancelMode: values.cancelMode,
     };
 
     if (values.hasRefund && paidAmount > 0) {
@@ -125,6 +133,14 @@ export function CancelSaleProvider({
       if (values.refundReference.trim()) {
         payload.refundReference = values.refundReference.trim();
       }
+    }
+
+    if (values.cancelMode === "complete") {
+      payload.reverseAbones = true;
+      payload.restoreInventory = true;
+    } else if (values.cancelMode === "custom") {
+      payload.reverseAbones = values.reverseAbones;
+      payload.restoreInventory = values.restoreInventory;
     }
 
     try {

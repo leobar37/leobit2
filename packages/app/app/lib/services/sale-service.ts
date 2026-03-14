@@ -682,7 +682,7 @@ export class SaleService extends BaseService {
   /**
    * Cancel a sale
    */
-  async cancel(id: string, reason: string): Promise<void> {
+  async cancel(id: string, data: { reason: string; cancelMode?: "simple" | "complete" | "custom"; refundAmount?: number; refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo"; refundReference?: string; reverseAbones?: boolean; restoreInventory?: boolean; }): Promise<void> {
     const sale = await this.findById(id);
 
     if (!sale) {
@@ -703,7 +703,7 @@ export class SaleService extends BaseService {
         updated_at = $1,
         sync_status = $3
       WHERE id = $4`,
-      [now, reason, SyncStatus.PENDING, id]
+      [now, data.reason, SyncStatus.PENDING, id]
     );
 
     await this.queueSync(
@@ -711,7 +711,7 @@ export class SaleService extends BaseService {
       id,
       {
         status: "cancelled",
-        cancelReason: reason,
+        cancelReason: data.reason,
         cancelledAt: now,
       }
     );

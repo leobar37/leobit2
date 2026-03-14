@@ -24,6 +24,12 @@ const refundMethodLabels = {
   saldo: "Saldo",
 } as const;
 
+const cancelModeLabels = {
+  simple: "Simple - Solo ingresa motivo",
+  complete: "Completa - Reversa todo automaticamente",
+  custom: "Personalizada - Elige que reversar",
+} as const;
+
 export function CancelSaleDialog() {
   const {
     close,
@@ -42,6 +48,12 @@ export function CancelSaleDialog() {
   } = useFormContext<CancelSaleFormValues>();
   const hasRefund = useWatch({ control, name: "hasRefund" });
   const refundMethod = useWatch({ control, name: "refundMethod" });
+  const cancelMode = useWatch({ control, name: "cancelMode" });
+  const reverseAbones = useWatch({ control, name: "reverseAbones" });
+  const restoreInventory = useWatch({ control, name: "restoreInventory" });
+
+  const showCustomOptions = cancelMode === "custom";
+  const showCompleteSummary = cancelMode === "complete";
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -60,6 +72,65 @@ export function CancelSaleDialog() {
             error={errors.reason?.message}
             {...register("reason")}
           />
+
+          <div className="space-y-2">
+            <Label>Modo de cancelacion</Label>
+            <div className="space-y-2">
+              {(["simple", "complete", "custom"] as const).map((mode) => (
+                <div key={mode} className="flex items-center gap-2">
+                  <input
+                    id={`cancelMode-${mode}`}
+                    type="radio"
+                    value={mode}
+                    {...register("cancelMode")}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor={`cancelMode-${mode}`} className="font-normal cursor-pointer">
+                    {cancelModeLabels[mode]}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {showCompleteSummary && paidAmount > 0 && (
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 border border-green-200">
+              <p className="font-medium">Se realizara:</p>
+              <ul className="mt-1 list-disc list-inside">
+                <li>Reversar todos los abonos ({paidAmount.toFixed(2)})</li>
+                <li>Restaurar inventario utilizado</li>
+                <li>Registrar reembolso si aplica</li>
+              </ul>
+            </div>
+          )}
+
+          {showCustomOptions && (
+            <div className="space-y-3 border-t pt-4">
+              <Label className="font-medium">Opciones de reversión:</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="reverseAbones"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  {...register("reverseAbones")}
+                />
+                <Label htmlFor="reverseAbones" className="font-normal">
+                  Reversar abonos (monto: {paidAmount.toFixed(2)})
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="restoreInventory"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  {...register("restoreInventory")}
+                />
+                <Label htmlFor="restoreInventory" className="font-normal">
+                  Restaurar inventario
+                </Label>
+              </div>
+            </div>
+          )}
 
           {paidAmount > 0 && (
             <div className="space-y-3 border-t pt-4">
