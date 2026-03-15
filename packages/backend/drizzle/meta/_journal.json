@@ -232,6 +232,13 @@
       "when": 1773521265525,
       "tag": "0032_sync_status_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1773600000000,
+      "tag": "0035_add_customer_groups",
+      "breakpoints": true
     }
   ]
 }
