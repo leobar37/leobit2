@@ -1,59 +1,31 @@
 # Architecture
 
-## PGlite + ElectricSQL Migration
+Architectural decisions and patterns for this mission.
 
-### Stack
-- **Local DB**: PGlite (PostgreSQL WASM)
-- **Sync**: ElectricSQL (read sync)
-- **ORM**: Drizzle ORM
-- **Write Queue**: IndexedDB + custom write-engine
+## Offline-First Tables
 
-### Data Flow
-```
-┌─────────────┐     ┌──────────┐     ┌─────────────┐
-│   React UI  │────▶│  Drizzle │────▶│   PGlite    │
-└─────────────┘     └──────────┘     └──────┬──────┘
-                                            │
-                              ┌─────────────┴─────────────┐
-                              │                           │
-                              ▼                           ▼
-                        ┌──────────┐              ┌──────────────┐
-                        │ Electric │              │ Write Queue  │
-                        │  (read)  │              │  (IndexedDB) │
-                        └────┬─────┘              └──────┬───────┘
-                             │                           │
-                             ▼                           ▼
-                        ┌──────────┐              ┌──────────────┐
-                        │PostgreSQL│◀─────────────│  REST API    │
-                        │ (server) │   (writes)   │  (ElysiaJS)  │
-                        └──────────┘              └──────────────┘
-```
+All new tables follow this pattern:
 
-### Key Patterns
-
-#### Hook Pattern
 ```typescript
-// Query
-const { data } = useQuery({
-  queryKey: ['entity', id],
-  queryFn: async () => {
-    const { db } = getDatabase();
-    return db.select().from(entities).where(eq(entities.id, id));
-  }
-});
-
-// Mutation
-const mutation = useMutation({
-  mutationFn: async (data) => {
-    return pushWrite('/api/entities', 'POST', data);
-  }
-});
+businessId: uuid("business_id")
+  .notNull()
+  .references(() => businesses.id),
+syncStatus: syncStatusEnum("sync_status")
+  .notNull()
+  .default("synced"),
+syncAttempts: integer("sync_attempts")
+  .notNull()
+  .default(0),
 ```
 
-#### Offline Write Flow
-1. User triggers mutation
-2. `pushWrite` checks online status
-3. If online: POST to API
-4. If offline: Queue in IndexedDB
-5. When online: Process queue
-6. Electric syncs changes back
+## API Pattern
+
+- RESTful endpoints using ElysiaJS
+- All routes require businessId from context
+- Error handling via domain errors (NotFoundError, ValidationError)
+
+## Frontend Pattern
+
+- React Router v7 with file-based routing
+- TanStack Query for server state
+- Offline-first: check isOnline() before API calls

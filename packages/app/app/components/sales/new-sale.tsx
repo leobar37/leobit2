@@ -39,6 +39,7 @@ import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { useNewSaleContext } from "./new-sale-context";
 import { useToast } from "~/hooks/use-toast";
+import { useUpdateVisita } from "~/hooks/use-visitas";
 
 export function CustomerSection() {
   const { saleId } = useNewSaleContext();
@@ -410,10 +411,11 @@ export function SaleSummaryCard() {
 
 export function SaleSubmitBar() {
   const navigate = useNavigate();
-  const { saleId } = useNewSaleContext();
+  const { saleId, visitaId } = useNewSaleContext();
   const { data: sale } = useSale(saleId);
   const { data: items = [] } = useSaleItems(saleId);
   const { toast } = useToast();
+  const updateVisita = useUpdateVisita();
 
   const finalizeSale = useFinalizeSale();
 
@@ -423,7 +425,23 @@ export function SaleSubmitBar() {
     if (!calculations.canSubmit || !saleId) return;
 
     try {
+      // First finalize the sale
       await finalizeSale.mutateAsync(saleId);
+
+      // If there's a visitaId, update the visit with saleId and mark as "compro"
+      if (visitaId) {
+        try {
+          await updateVisita.mutateAsync({
+            id: visitaId,
+            status: "compro",
+            saleId: saleId,
+          });
+        } catch (updateError) {
+          console.error("[SaleSubmitBar] Error updating visita:", updateError);
+          // Continue even if visit update fails - sale was already confirmed
+        }
+      }
+
       navigate("/ventas");
     } catch {
       toast.error("Error al finalizar venta", {

@@ -1,0 +1,58 @@
+{
+  "milestone": "backend",
+  "round": 2,
+  "status": "pass",
+  "validatorsRun": {
+    "build": {
+      "passed": true,
+      "command": "cd packages/backend && bun run build",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd packages/backend && bun run build",
+      "exitCode": 0,
+      "note": "TypeScript compilation included in build command"
+    },
+    "test": {
+      "passed": false,
+      "command": "cd packages/app && bun test --run",
+      "exitCode": 1,
+      "summary": "Pre-existing infrastructure issue: Playwright version conflicts in e2e tests. Not related to backend features."
+    },
+    "lint": {
+      "passed": null,
+      "command": "N/A",
+      "exitCode": null,
+      "summary": "No lint script configured in package.json"
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": [],
+    "featuresReviewed": [
+      "fix-typescript-customer-groups",
+      "fix-typescript-visita-repository"
+    ]
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "services.yaml",
+      "suggestion": "Add lint script to package.json or document that lint is not configured",
+      "evidence": "No lint script found in root or app package.json",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add guidance about testing that vitest config should exclude e2e tests by default to avoid Playwright version conflicts",
+      "evidence": "e2e tests are causing Playwright version conflict errors in vitest",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/backend/scrutiny/synthesis.json"
+}

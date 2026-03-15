@@ -125,7 +125,10 @@ export function useCreateDraftSale() {
   const { data: business } = useBusiness();
 
   return useMutation({
-    mutationFn: async (): Promise<Sale> => {
+    mutationFn: async (options?: {
+      customerId?: string;
+      distribucionId?: string;
+    }): Promise<Sale> => {
       console.log("[useCreateDraftSale] Mutation started");
       console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
 
@@ -141,6 +144,8 @@ export function useCreateDraftSale() {
         sellerId,
         type: "instant_sale",
         saleType: "contado",
+        customerId: options?.customerId,
+        distribucionId: options?.distribucionId,
       });
       console.log("[useCreateDraftSale] Sale created with id:", sale.id);
       return sale;

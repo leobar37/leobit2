@@ -398,9 +398,13 @@ export default function VisitasPage() {
     if (!visita.customer) return;
 
     try {
-      const sale = await createDraftSale.mutateAsync();
-      // Navigate to sale edit page
-      navigate(`/ventas/${sale.id}/editar`);
+      // Create draft sale with customer and distribution info, pass visitaId for linking
+      const sale = await createDraftSale.mutateAsync({
+        customerId: visita.customerId,
+        distribucionId: visita.distribucionId,
+      });
+      // Navigate to sale edit page with visitaId for later linking
+      navigate(`/ventas/${sale.id}/editar?visitaId=${visita.id}`);
     } catch (err) {
       console.error("Error creating sale:", err);
       showError("Error al crear venta", err);

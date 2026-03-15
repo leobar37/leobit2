@@ -1,16 +1,30 @@
 commands:
-  install: cd packages/app && npm install
-  typecheck: cd packages/app && npm run typecheck
-  build: cd packages/app && npm run build
-  test: cd packages/app && npm test
-  lint: cd packages/app && npm run lint
-  dev: cd packages/app && npm run dev
+  install: bun install
+  typecheck: cd packages/backend && bun run build
+  build: turbo build
+  test: cd packages/app && bun test
+  lint: cd packages/app && bun run lint
+  db:generate: bun run db:generate
+  db:migrate: bun run db:migrate
 
-devServer:
-  start: cd packages/app && npm run dev
-  port: 5173
-  healthcheck: curl -sf http://localhost:5173
+services:
+  postgres:
+    start: docker compose up -d postgres
+    stop: docker compose stop postgres
+    healthcheck: pg_isready -h localhost -p 5432
+    port: 5432
+    depends_on: []
 
-test:
-  unit: cd packages/app && npm test
-  integration: cd packages/app && npm run test:integration
+  backend:
+    start: cd packages/backend && bun run dev
+    stop: lsof -ti :3000 | xargs kill
+    healthcheck: curl -sf http://localhost:3000/health
+    port: 3000
+    depends_on: [postgres]
+
+  frontend:
+    start: cd packages/app && bun run dev
+    stop: lsof -ti :5173 | xargs kill
+    healthcheck: curl -sf http://localhost:5173
+    port: 5173
+    depends_on: [backend]

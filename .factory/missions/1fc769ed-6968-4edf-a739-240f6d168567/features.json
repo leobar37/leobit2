@@ -1,0 +1,171 @@
+{
+  "features": [
+    {
+      "id": "backend-schema-customer-groups",
+      "description": "Create customer_groups and customer_group_members tables in Drizzle schema with businessId and syncStatus for offline-first",
+      "skillName": "backend-worker",
+      "milestone": "backend",
+      "preconditions": ["Database schema exists in packages/backend/src/db/schema/"],
+      "expectedBehavior": [
+        "customer_groups table: id, businessId, name, syncStatus, syncAttempts, createdAt",
+        "customer_group_members table: id, groupId, customerId, syncStatus, syncAttempts",
+        "Both tables have proper indexes and foreign keys",
+        "Types exported: CustomerGroup, NewCustomerGroup, CustomerGroupMember"
+      ],
+      "verificationSteps": [
+        "bun run db:generate creates migration files",
+        "bun run db:migrate applies migrations without errors",
+        "TypeScript compiles without errors"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "backend-schema-visitas",
+      "description": "Create visitas table linked to distribution, with status enum and syncStatus for offline-first",
+      "skillName": "backend-worker",
+      "milestone": "backend",
+      "preconditions": ["Database schema exists", "distribuciones table exists"],
+      "expectedBehavior": [
+        "visitas table: id, businessId, distribucionId, customerId, vendedorId",
+        "Status enum: pendiente, compro, no_compra",
+        "motivoNoCompra: string (nullable)",
+        "saleId: optional link to sale",
+        "syncStatus, syncAttempts, createdAt, updatedAt"
+      ],
+      "verificationSteps": [
+        "bun run db:generate creates migration",
+        "bun run db:migrate applies",
+        "TypeScript compiles"
+      ],
+      "fulfills": [],
+      "status": "pending"
+    },
+    {
+      "id": "backend-api-customer-groups",
+      "description": "REST API endpoints for customer groups CRUD and member management",
+      "skillName": "backend-worker",
+      "milestone": "backend",
+      "preconditions": ["Schema tables exist", "Repository pattern established"],
+      "expectedBehavior": [
+        "GET /api/groups - list all groups for business",
+        "POST /api/groups - create new group",
+        "GET /api/groups/:id - get group with members",
+        "PUT /api/groups/:id - update group name",
+        "DELETE /api/groups/:id - delete group (cascade members)",
+        "POST /api/groups/:id/members - add customers to group",
+        "DELETE /api/groups/:id/members/:customerId - remove customer",
+        "All endpoints require businessId from context"
+      ],
+      "verificationSteps": [
+        "curl GET /api/groups returns 200",
+        "curl POST /api/groups creates group",
+        "curl DELETE /api/groups/:id deletes group"
+      ],
+      "fulfills": ["VAL-GROUP-001", "VAL-GROUP-002", "VAL-GROUP-003", "VAL-GROUP-004", "VAL-GROUP-005"],
+      "status": "pending"
+    },
+    {
+      "id": "backend-api-visitas",
+      "description": "REST API endpoints for visits CRUD linked to distributions",
+      "skillName": "backend-worker",
+      "milestone": "backend",
+      "preconditions": ["Schema tables exist", "Groups API complete"],
+      "expectedBehavior": [
+        "GET /api/visitas?distribucionId=:id - list visits by distribution",
+        "POST /api/visitas - create single visit",
+        "POST /api/visitas/bulk - create visits from group",
+        "PATCH /api/visitas/:id - update status (compro/no_compra)",
+        "PATCH validates status enum values",
+        "All queries filter by businessId"
+      ],
+      "verificationSteps": [
+        "curl GET /api/visitas?distribucionId=:id returns 200",
+        "curl POST /api/visitas creates visit",
+        "curl PATCH /api/visitas/:id updates status"
+      ],
+      "fulfills": ["VAL-VISIT-001", "VAL-VISIT-002", "VAL-VISIT-003", "VAL-VISIT-004", "VAL-VISIT-005", "VAL-VISIT-006"],
+      "status": "pending"
+    },
+    {
+      "id": "frontend-groups-page",
+      "description": "Create groups management page at /grupos with CRUD and member management UI",
+      "skillName": "frontend-worker",
+      "milestone": "frontend-groups",
+      "preconditions": ["Backend API exists for groups", "React Router setup known"],
+      "expectedBehavior": [
+        "Route /grupos renders group list",
+        "Create group form with name field",
+        "Group cards show name and member count",
+        "Add/remove members from group UI",
+        "Delete group with confirmation",
+        "Uses existing UI components (Card, Button, etc.)"
+      ],
+      "verificationSteps": [
+        "Page loads without console errors",
+        "Form submits successfully",
+        "Members can be added/removed"
+      ],
+      "fulfills": ["VAL-GROUP-FE-001", "VAL-GROUP-FE-002", "VAL-GROUP-FE-003", "VAL-GROUP-FE-004"],
+      "status": "pending"
+    },
+    {
+      "id": "frontend-visits-page",
+      "description": "Create visits page at /visitas with distribution context, customer/group selector, and status management",
+      "skillName": "frontend-worker",
+      "milestone": "frontend-visits",
+      "preconditions": ["Backend API exists for visits", "Groups page exists"],
+      "expectedBehavior": [
+        "Route /visitas shows for active distribution",
+        "Customer selector: individual or by group",
+        "Visit list with status indicators (color-coded)",
+        "Quick actions: Generar venta, No compró",
+        "Reason selector for no purchase",
+        "Offline-first: visits queue when offline"
+      ],
+      "verificationSteps": [
+        "Page loads with distribution context",
+        "Group selection creates multiple visits",
+        "Status update works"
+      ],
+      "fulfills": ["VAL-VISIT-FE-001", "VAL-VISIT-FE-002", "VAL-VISIT-FE-003", "VAL-VISIT-FE-004", "VAL-VISIT-FE-005"],
+      "status": "pending"
+    },
+    {
+      "id": "frontend-toolbar-visits",
+      "description": "Add visits quick access button to toolbar for fast navigation",
+      "skillName": "frontend-worker",
+      "milestone": "frontend-toolbar",
+      "preconditions": ["Visits page exists", "Toolbar component known"],
+      "expectedBehavior": [
+        "Toolbar shows visits icon/button",
+        "Clicking navigates to /visitas",
+        "Button visible for users with active distribution"
+      ],
+      "verificationSteps": [
+        "Toolbar renders visits button",
+        "Click navigates correctly"
+      ],
+      "fulfills": ["VAL-TOOLBAR-001", "VAL-TOOLBAR-002"],
+      "status": "pending"
+    },
+    {
+      "id": "cross-flow-group-to-visits",
+      "description": "End-to-end flow: create visits from group selection, link sale to visit",
+      "skillName": "frontend-worker",
+      "milestone": "cross-flow",
+      "preconditions": ["Groups page exists", "Visits page exists", "Sale flow exists"],
+      "expectedBehavior": [
+        "Select group in visits page → creates visit per member",
+        "Generate sale from visit → saleId linked in visit",
+        "Data syncs when online (offline-first)"
+      ],
+      "verificationSteps": [
+        "Group selection creates all visits",
+        "Sale links back to visit"
+      ],
+      "fulfills": ["VAL-CROSS-001", "VAL-CROSS-002", "VAL-CROSS-003"],
+      "status": "pending"
+    }
+  ]
+}

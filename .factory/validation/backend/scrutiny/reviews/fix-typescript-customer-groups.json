@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-typescript-customer-groups",
+  "reviewedAt": "2026-03-15T04:50:00.000Z",
+  "commitId": "af7158a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses the TypeScript error by adding the missing import for customerGroupMembers. The import was added on line 16: `import { customerGroupMembers } from './customer-group-members';`. This import is needed because the relations definition on line 55 uses `members: many(customerGroupMembers),` but was missing the import. The build passes successfully.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The fix for the TypeScript error in customer-groups.ts is complete and correct. The worker added the missing import `import { customerGroupMembers } from './customer-group-members';` and verified the build passes with both `bun run build` and `bunx tsc --noEmit`. No issues found."
+}

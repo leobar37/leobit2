@@ -13,6 +13,7 @@ import {
 import { relations } from "drizzle-orm";
 import { syncStatusEnum } from "./enums";
 import { businesses } from "./businesses";
+import { customerGroupMembers } from "./customer-group-members";
 
 // Table definition
 export const customerGroups = pgTable(

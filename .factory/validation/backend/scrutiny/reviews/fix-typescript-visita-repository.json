@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-typescript-visita-repository",
+  "reviewedAt": "2026-03-15T05:00:00.000Z",
+  "commitId": "994ca9e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Fixed TypeScript error in visita.repository.ts by changing customerDni type from `string | undefined` to `string | null | undefined`. The fix correctly matches the nullable dni field in the customers schema.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The fix is correct and complete. The worker identified the type mismatch in the VisitaWithCustomer interface where customerDni was defined as optional string but the database field dni in customers table is nullable (defined as varchar without .notNull()). The fix changed the type from `customerDni?: string` to `customerDni?: string | null`, which correctly represents the nullable database field. The build passes without errors (bundled 1908 modules). No issues found."
+}
