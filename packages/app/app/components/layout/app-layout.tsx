@@ -36,6 +36,7 @@ const menuItems = [
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
+  { icon: Users, label: "Grupos", href: "/grupos" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
 
