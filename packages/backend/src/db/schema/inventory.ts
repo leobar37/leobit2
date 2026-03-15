@@ -147,6 +147,11 @@ export const distribucionItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy - required for Electric sync filtering
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
+
     distribucionId: uuid("distribucion_id")
       .notNull()
       .references(() => distribuciones.id, { onDelete: "cascade" }),
@@ -165,6 +170,7 @@ export const distribucionItems = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_distribucion_items_business_id").on(table.businessId),
     index("idx_distribucion_items_distribucion_id").on(table.distribucionId),
     index("idx_distribucion_items_variant_id").on(table.variantId),
     index("idx_distribucion_items_sync_status").on(table.syncStatus),
@@ -181,8 +187,9 @@ export const productVariants = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
 
-    // Multi-tenancy - for Electric sync filtering (nullable for existing data)
+    // Multi-tenancy - required for Electric sync filtering
     businessId: uuid("business_id")
+      .notNull()
       .references(() => businesses.id),
 
     // Variant info
@@ -284,6 +291,10 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
 }));
 
 export const distribucionItemsRelations = relations(distribucionItems, ({ one }) => ({
+  business: one(businesses, {
+    fields: [distribucionItems.businessId],
+    references: [businesses.id],
+  }),
   distribucion: one(distribuciones, {
     fields: [distribucionItems.distribucionId],
     references: [distribuciones.id],

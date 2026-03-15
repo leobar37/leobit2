@@ -50,18 +50,26 @@ describe("ElectricService", () => {
     process.env.VITE_ELECTRIC_TOKEN = "token-123";
   });
 
-  it("uses only the tenant filter for special tables without business_id", () => {
+  it("uses only the tenant filter for special tables without business_id (customer_tags)", () => {
     expect(
-      mergeWhere("business_id = 'wrong'", "purchase_id IN ('pur-1')", "purchase_items")
-    ).toBe("purchase_id IN ('pur-1')");
+      mergeWhere("business_id = 'wrong'", "customer_id IN ('cust-1')", "customer_tags")
+    ).toBe("customer_id IN ('cust-1')");
+  });
 
+  it("combines client and tenant filters for purchase_items (now has business_id)", () => {
+    expect(
+      mergeWhere("status = 'active'", "business_id = 'biz-1'", "purchase_items")
+    ).toBe("(status = 'active') AND (business_id = 'biz-1')");
+  });
+
+  it("combines client and tenant filters for distribucion_items (now has business_id)", () => {
     expect(
       mergeWhere(
-        "business_id = 'wrong'",
-        "distribucion_id IN ('dist-1')",
+        "status = 'active'",
+        "business_id = 'biz-1'",
         "distribucion_items"
       )
-    ).toBe("distribucion_id IN ('dist-1')");
+    ).toBe("(status = 'active') AND (business_id = 'biz-1')");
   });
 
   it("combines the client and tenant filters for direct business tables", () => {
@@ -104,34 +112,16 @@ describe("ElectricService", () => {
     );
   });
 
-  it("builds distribucion_items tenant filters from distribucion ids", async () => {
-    dbSelectMock.mockReturnValue({
-      from: () => ({
-        where: distribucionesWhereMock.mockResolvedValue([
-          { id: "dist-1" },
-          { id: "dist-2" },
-        ]),
-      }),
-    });
-
-    await expect(
-      service.buildTenantWhere("distribucion_items", "biz-1")
-    ).resolves.toBe("distribucion_id IN ('dist-1', 'dist-2')");
+  it("builds direct tenant filters for distribucion_items (has business_id)", async () => {
+    await expect(service.buildTenantWhere("distribucion_items", "biz-1")).resolves.toBe(
+      "business_id = 'biz-1'"
+    );
   });
 
-  it("builds purchase_items tenant filters from purchase ids", async () => {
-    dbSelectMock.mockReturnValue({
-      from: () => ({
-        where: purchasesWhereMock.mockResolvedValue([
-          { id: "pur-1" },
-          { id: "pur-2" },
-        ]),
-      }),
-    });
-
-    await expect(
-      service.buildTenantWhere("purchase_items", "biz-1")
-    ).resolves.toBe("purchase_id IN ('pur-1', 'pur-2')");
+  it("builds direct tenant filters for purchase_items (has business_id)", async () => {
+    await expect(service.buildTenantWhere("purchase_items", "biz-1")).resolves.toBe(
+      "business_id = 'biz-1'"
+    );
   });
 
   it("throws when Electric source id is missing", async () => {
@@ -213,17 +203,12 @@ describe("ElectricService", () => {
         "content-type": "application/json",
         "electric-offset": "123",
         "electric-handle": "handle-1",
+        "electric-schema": "",
       },
     });
   });
 
-  it("overrides invalid client where clauses for distribucion_items", async () => {
-    dbSelectMock.mockReturnValue({
-      from: () => ({
-        where: distribucionesWhereMock.mockResolvedValue([{ id: "dist-1" }]),
-      }),
-    });
-
+  it("uses direct business_id filter for distribucion_items (has business_id)", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("shape-body", {
         status: 200,
@@ -239,7 +224,6 @@ describe("ElectricService", () => {
         table: "distribucion_items",
         searchParams: new URLSearchParams([
           ["table", "distribucion_items"],
-          ["where", "business_id = 'wrong'"],
         ]),
       }
     );
@@ -248,17 +232,11 @@ describe("ElectricService", () => {
     const proxiedUrl = new URL(url);
 
     expect(proxiedUrl.searchParams.get("where")).toBe(
-      "distribucion_id IN ('dist-1')"
+      "business_id = 'biz-1'"
     );
   });
 
-  it("overrides invalid client where clauses for purchase_items", async () => {
-    dbSelectMock.mockReturnValue({
-      from: () => ({
-        where: purchasesWhereMock.mockResolvedValue([{ id: "pur-1" }]),
-      }),
-    });
-
+  it("uses direct business_id filter for purchase_items (has business_id)", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("shape-body", {
         status: 200,
@@ -274,7 +252,6 @@ describe("ElectricService", () => {
         table: "purchase_items",
         searchParams: new URLSearchParams([
           ["table", "purchase_items"],
-          ["where", "business_id = 'wrong'"],
         ]),
       }
     );
@@ -283,7 +260,7 @@ describe("ElectricService", () => {
     const proxiedUrl = new URL(url);
 
     expect(proxiedUrl.searchParams.get("where")).toBe(
-      "purchase_id IN ('pur-1')"
+      "business_id = 'biz-1'"
     );
   });
 });

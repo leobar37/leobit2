@@ -78,6 +78,7 @@ export class ProductVariantRepository {
       .insert(productVariants)
       .values({
         ...data,
+        businessId: ctx.businessId,
         isActive: data.isActive ?? true,
         sortOrder: data.sortOrder ?? 0,
       })

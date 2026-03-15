@@ -63,6 +63,11 @@ export const purchaseItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy - required for Electric sync filtering
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
+
     purchaseId: uuid("purchase_id")
       .notNull()
       .references(() => purchases.id, { onDelete: "cascade" }),
@@ -88,6 +93,7 @@ export const purchaseItems = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_purchase_items_business_id").on(table.businessId),
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
     index("idx_purchase_items_product_id").on(table.productId),
     index("idx_purchase_items_variant_id").on(table.variantId),
@@ -116,6 +122,10 @@ export const purchasesRelations = relations(purchases, ({ one, many }) => ({
 }));
 
 export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
+  business: one(businesses, {
+    fields: [purchaseItems.businessId],
+    references: [businesses.id],
+  }),
   purchase: one(purchases, {
     fields: [purchaseItems.purchaseId],
     references: [purchases.id],

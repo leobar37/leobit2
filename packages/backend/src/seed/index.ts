@@ -436,6 +436,7 @@ async function seedRealSales(ctx: RequestContext, salesData: any[]) {
     for (const item of sale.items) {
       await db.insert(saleItemsSchema).values({
         id: item.id,
+        businessId: ctx.businessId,
         saleId: sale.id,
         productId: item.productId,
         variantId: item.variantId,

@@ -6,7 +6,7 @@ let db: ReturnType<typeof drizzle> | null = null;
 let initPromise: Promise<{ pg: import("@electric-sql/pglite").PGlite; db: ReturnType<typeof drizzle> }> | null = null;
 
 // Current schema version - bump this when schema changes
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
 const VERSION_KEY = "avileo_schema_version";
 
 interface PendingSale {

@@ -26,6 +26,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Search,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useSync } from "~/components/sync/sync-status";
@@ -154,6 +156,8 @@ export function SyncDevToolsDrawer({
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("tables");
+  const [isCopyingReport, setIsCopyingReport] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
 
   const { filteredItems: filteredEntitySummaries, search: tableSearch, setSearch: setTableSearch } = useListSearch({
     items: entitySummaries,
@@ -304,6 +308,35 @@ export function SyncDevToolsDrawer({
     }
 
     await clearSync.mutateAsync({ preserveSession: false });
+  };
+
+  const handleCopyReport = async () => {
+    setIsCopyingReport(true);
+    try {
+      const avileoDebug = (window as unknown as Record<string, unknown>).avileoDebug as {
+        copyDiagnosticReport?: () => Promise<unknown>;
+      } | undefined;
+      
+      if (avileoDebug?.copyDiagnosticReport) {
+        await avileoDebug.copyDiagnosticReport();
+        setReportCopied(true);
+        setTimeout(() => setReportCopied(false), 2000);
+        toast.success("Reporte copiado", {
+          description: "El reporte de diagnóstico se copió al portapapeles",
+        });
+      } else {
+        toast.error("Error", {
+          description: "El helper de diagnóstico no está disponible",
+        });
+      }
+    } catch (error) {
+      console.error("Error copying report:", error);
+      toast.error("Error", {
+        description: "No se pudo copiar el reporte",
+      });
+    } finally {
+      setIsCopyingReport(false);
+    }
   };
 
   const handleDeleteOperation = async (operationId: string) => {
@@ -568,6 +601,20 @@ export function SyncDevToolsDrawer({
                     <Play className="h-4 w-4 mr-2" />
                   )}
                   Forzar Sync
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCopyReport}
+                  disabled={isCopyingReport}
+                >
+                  {isCopyingReport ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : reportCopied ? (
+                    <Check className="h-4 w-4 mr-2 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {reportCopied ? "Copiado" : "Reporte"}
                 </Button>
                 <Button
                   variant="destructive"

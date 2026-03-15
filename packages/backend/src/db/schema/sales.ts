@@ -120,8 +120,9 @@ export const saleItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
-    // Multi-tenancy - for Electric sync filtering (nullable for existing data)
+    // Multi-tenancy - required for Electric sync filtering
     businessId: uuid("business_id")
+      .notNull()
       .references(() => businesses.id),
 
     // Relations
