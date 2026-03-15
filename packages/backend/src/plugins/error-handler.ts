@@ -53,6 +53,15 @@ export const errorPlugin = new Elysia({ name: "error-handler" })
     if (error instanceof Error) {
       console.error("Stack trace:", error.stack);
     }
+    // Also write to file for debugging
+    try {
+      Bun.write("/tmp/error-debug.log", JSON.stringify({
+        code,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      }, null, 2));
+    } catch {}
 
     set.status = 500;
     setCorsHeaders(set, requestOrigin);

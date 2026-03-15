@@ -40,7 +40,7 @@ export const closings = pgTable(
     totalKilos: decimal("total_kilos", { precision: 10, scale: 3 }),
     backdateReason: text("backdate_reason"),
 
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),

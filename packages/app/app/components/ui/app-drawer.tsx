@@ -10,6 +10,7 @@ import {
   DrawerTitle,
   DrawerFooter,
   DrawerClose,
+  DrawerDescription,
 } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { cn } from "~/lib/utils"
@@ -121,10 +122,13 @@ function AppDrawerRoot({
 }: AppDrawerProps) {
   return (
     <Drawer {...props}>
-      <DrawerContent 
+      <DrawerContent
         className={cn(appDrawerVariants({ size }), contentClassName)}
         data-testid={dataTestId}
       >
+        <DrawerDescription className="sr-only">
+          Panel lateral para seleccionar o buscar clientes
+        </DrawerDescription>
         {children}
       </DrawerContent>
     </Drawer>

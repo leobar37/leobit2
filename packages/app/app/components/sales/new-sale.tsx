@@ -127,7 +127,20 @@ export function PaymentModeSection() {
 
   const calculations = useSaleCalculations(sale, items);
 
-  if (items.length === 0) {
+  // Define callback before guard clause to ensure hooks are always called in same order
+  const handleUpdateAmountPaid = useCallback(
+    async (amount: string, balanceDue: string) => {
+      if (!saleId) return;
+      await updateSale.mutateAsync({
+        id: saleId,
+        input: { amountPaid: amount, balanceDue },
+      });
+    },
+    [saleId, updateSale]
+  );
+
+  // Guard clause: ensure we have required data before rendering
+  if (!saleId || items.length === 0) {
     return null;
   }
 
@@ -159,17 +172,6 @@ export function PaymentModeSection() {
       });
     }
   };
-
-  const handleUpdateAmountPaid = useCallback(
-    async (amount: string, balanceDue: string) => {
-      if (!saleId) return;
-      await updateSale.mutateAsync({
-        id: saleId,
-        input: { amountPaid: amount, balanceDue },
-      });
-    },
-    [saleId, updateSale]
-  );
 
   return (
     <Card className="shell-card rounded-3xl border-0">

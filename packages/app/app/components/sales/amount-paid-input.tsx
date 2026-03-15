@@ -53,6 +53,7 @@ export const AmountPaidInput = memo(function AmountPaidInput({
       <label className="text-sm font-medium">Monto pagado (S/)</label>
       <Input
         type="number"
+        min="0"
         placeholder="0.00"
         value={value}
         onChange={(e) => setValue(e.target.value)}

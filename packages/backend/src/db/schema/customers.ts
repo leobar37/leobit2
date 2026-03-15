@@ -30,7 +30,7 @@ export const customers = pgTable(
     notes: text("notes"),
 
     // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Relations - creado por un usuario dentro de un negocio

@@ -21,11 +21,27 @@ export default function SalesPage() {
   const navigate = useNavigate();
 
   const handleCreateSale = async () => {
+    console.log("[SalesPage] handleCreateSale called");
+    console.log("[SalesPage] createDraftSale.isPending:", createDraftSale.isPending);
+    console.log("[SalesPage] businessLoading:", businessLoading);
+    console.log("[SalesPage] business:", business);
+    console.log("[SalesPage] business?.businessUserId:", business?.businessUserId);
+
     // Prevent duplicate clicks while mutation is pending
-    if (createDraftSale.isPending) return;
+    if (createDraftSale.isPending) {
+      console.log("[SalesPage] Early return: isPending is true");
+      return;
+    }
+
+    // Wait until business membership finishes loading to avoid a false disabled look
+    if (businessLoading) {
+      console.log("[SalesPage] Early return: businessLoading is true");
+      return;
+    }
 
     // Prevent if business is not ready
     if (!business?.businessUserId) {
+      console.log("[SalesPage] Early return: no businessUserId");
       showError(
         "Error al crear venta",
         new Error("Business seller is not available")
@@ -34,17 +50,29 @@ export default function SalesPage() {
     }
 
     try {
+      console.log("[SalesPage] Calling createDraftSale.mutateAsync...");
       const sale = await createDraftSale.mutateAsync();
+      console.log("[SalesPage] Sale created successfully:", sale.id);
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
-      console.error("Failed to create sale:", err);
+      console.error("[SalesPage] Failed to create sale:", err);
       showError("Error al crear venta", err);
     }
   };
 
+  // Sort sales by saleDate descending (most recent first)
+  const sortedByDate = useMemo(() => {
+    if (!allSales) return [];
+    return [...allSales].sort((a, b) => {
+      const dateA = new Date(a.saleDate).getTime();
+      const dateB = new Date(b.saleDate).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+  }, [allSales]);
+
   // Use centralized search hook with customer name support
   const { filteredItems: sortedSales, search, setSearch } = useListSearch({
-    items: allSales,
+    items: sortedByDate,
     searchFields: [
       (sale) => sale.id,
       (sale) => sale.customer?.name ?? undefined,
@@ -134,7 +162,7 @@ export default function SalesPage() {
         size="icon"
         className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
         onClick={handleCreateSale}
-        disabled={createDraftSale.isPending || businessLoading || !business?.businessUserId}
+        disabled={createDraftSale.isPending}
       >
         {createDraftSale.isPending ? (
           <ShoppingCart className="h-6 w-6 animate-spin" />

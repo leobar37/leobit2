@@ -41,8 +41,11 @@ export default defineConfig({
     tsconfigPaths({
       ignoreConfigErrors: true,
     }),
-    !isDev && VitePWA({
+    VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: true,
+      },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [

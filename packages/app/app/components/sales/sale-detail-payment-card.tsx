@@ -1,7 +1,8 @@
+import { CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Sale } from "~/hooks/use-sales";
-import { formatCurrency } from "~/lib/utils";
+import type { Sale } from "~/lib/services/sale-service";
+import { cn, formatCurrency } from "~/lib/utils";
+import { SaleDetailSection } from "./sale-detail-section";
 
 interface SaleDetailPaymentCardProps {
   sale: Sale;
@@ -10,37 +11,57 @@ interface SaleDetailPaymentCardProps {
 export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
   const paidAmount = Number(sale.amountPaid ?? 0);
   const totalAmount = Number(sale.totalAmount ?? 0);
-  // Calculate pending amount: total - paid
   const dueAmount = Math.max(totalAmount - paidAmount, 0);
+  const rows = [
+    { label: "Total", value: `S/ ${formatCurrency(sale.totalAmount)}` },
+    { label: "Abono inicial", value: `S/ ${formatCurrency(paidAmount)}` },
+  ];
 
   return (
-    <Card className="shell-card-flat rounded-[28px]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Resumen de Pago</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Total</span>
-          <span className="text-lg font-semibold">S/ {formatCurrency(sale.totalAmount)}</span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Abono inicial</span>
-          <span>S/ {formatCurrency(paidAmount)}</span>
-        </div>
-
-        {dueAmount > 0 ? (
-          <div className="flex items-center justify-between border-t shell-divider pt-3">
-            <span className="font-medium text-red-600">Pendiente</span>
-            <span className="font-semibold text-red-600">S/ {formatCurrency(dueAmount)}</span>
+    <SaleDetailSection
+      title="Pago"
+      icon={<CreditCard className="h-4 w-4" />}
+      action={
+        <Badge className="rounded-md bg-white/80 px-2 text-foreground shadow-none">
+          {sale.saleType === "credito" ? "Crédito" : "Contado"}
+        </Badge>
+      }
+    >
+      <div className="px-3">
+        {rows.map((row, index) => (
+          <div
+            key={row.label}
+            className={cn(
+              "flex items-center justify-between gap-3 py-3.5",
+              "border-t shell-divider first:border-0"
+            )}
+          >
+            <span className="text-sm text-muted-foreground">{row.label}</span>
+            <span className="text-base font-semibold text-foreground">{row.value}</span>
           </div>
-        ) : (
-          <div className="flex items-center justify-between border-t shell-divider pt-3">
-            <span className="font-medium text-green-600">Estado</span>
-            <Badge className="bg-green-100 text-green-700">Sin deuda</Badge>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ))}
+
+        <div className="flex items-center justify-between border-t shell-divider py-3.5">
+          <span
+            className={cn(
+              "text-sm font-semibold",
+              dueAmount > 0 ? "text-red-600" : "text-emerald-600"
+            )}
+          >
+            {dueAmount > 0 ? "Pendiente" : "Estado"}
+          </span>
+
+          {dueAmount > 0 ? (
+            <span className="text-lg font-semibold text-red-600">
+              S/ {formatCurrency(dueAmount)}
+            </span>
+          ) : (
+            <Badge className="rounded-md bg-emerald-100 px-2 text-emerald-700 shadow-none">
+              Sin deuda
+            </Badge>
+          )}
+        </div>
+      </div>
+    </SaleDetailSection>
   );
 }

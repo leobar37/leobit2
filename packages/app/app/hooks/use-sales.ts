@@ -138,19 +138,27 @@ export function useCreateDraftSale() {
 
   return useMutation({
     mutationFn: async (): Promise<Sale> => {
+      console.log("[useCreateDraftSale] Mutation started");
+      console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
+
       const sellerId = business?.businessUserId;
 
       if (!sellerId) {
+        console.log("[useCreateDraftSale] ERROR: No sellerId available");
         throw new Error("Business seller is not available");
       }
 
-      return saleService.createDraft({
+      console.log("[useCreateDraftSale] Calling saleService.createDraft with sellerId:", sellerId);
+      const sale = await saleService.createDraft({
         sellerId,
         type: "instant_sale",
         saleType: "contado",
       });
+      console.log("[useCreateDraftSale] Sale created with id:", sale.id);
+      return sale;
     },
     onSuccess: () => {
+      console.log("[useCreateDraftSale] Mutation succeeded");
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
     },

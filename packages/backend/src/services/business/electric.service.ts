@@ -182,9 +182,12 @@ export class ElectricService {
     ctx: RequestContext,
     input: ElectricProxyInput
   ): Promise<ElectricProxyResult> {
+    console.error("[ElectricService] proxyShape called for table:", input.table);
     const startTime = Date.now();
     const tenantWhere = await this.buildTenantWhere(input.table, ctx.businessId);
+    console.error("[ElectricService] tenantWhere:", tenantWhere);
     const electricUrl = this.buildElectricUrl(input.searchParams, input.table, tenantWhere);
+    console.error("[ElectricService] electricUrl:", electricUrl.toString());
     const electricToken = this.getElectricToken();
 
     // Extract key parameters for logging
@@ -202,6 +205,20 @@ export class ElectricService {
       expiredHandle: sanitizeHandle(expiredHandle),
       hasWhere,
       businessId: ctx.businessId,
+    });
+
+    // DETAILED LOGGING FOR DEBUGGING
+    logger.info({
+      msg: "📡 ELECTRIC PROXY REQUEST DETAILS",
+      table,
+      electricUrl: electricUrl.toString(),
+      businessId: ctx.businessId,
+      params: {
+        handle,
+        offset,
+        expiredHandle,
+        where: tenantWhere,
+      },
     });
 
     // Retry logic for transient 502 errors
@@ -262,6 +279,16 @@ export class ElectricService {
 
     const body = await response.text();
     const duration = Date.now() - startTime;
+
+    // DETAILED LOGGING FOR RESPONSE
+    logger.info({
+      msg: "📡 ELECTRIC PROXY RESPONSE",
+      table,
+      status: response.status,
+      duration,
+      bodyPreview: body.slice(0, 500),
+      headers: Object.fromEntries(response.headers.entries()),
+    });
 
     // Log based on response status and content
     // Note: 409 is now handled gracefully (transformed to 200 with must-refetch)
@@ -534,6 +561,9 @@ export class ElectricService {
 
   private getElectricToken() {
     const electricToken = process.env.VITE_ELECTRIC_TOKEN;
+
+    console.log("[DEBUG] VITE_ELECTRIC_TOKEN:", electricToken ? "Set" : "Not set");
+    console.log("[DEBUG] ELECTRIC_URL:", process.env.ELECTRIC_URL || "Using default");
 
     if (!electricToken) {
       throw new AppError("Missing Electric token", "MISSING_SECRET", 500);

@@ -3,6 +3,8 @@ import { auth } from "../lib/auth";
 
 const isAuthDebugEnabled = process.env.NODE_ENV !== "production";
 
+const AUTH_HANDLER_TIMEOUT_MS = 10000; // 10 second timeout
+
 function debugAuthRoute(message: string, payload?: unknown) {
   if (!isAuthDebugEnabled) return;
 
@@ -12,6 +14,27 @@ function debugAuthRoute(message: string, payload?: unknown) {
   }
 
   console.log(`[AuthRoute] ${message}`, payload);
+}
+
+/**
+ * Wrap a promise with a timeout to prevent indefinite hangs
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operationName: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
 }
 
 // Use .all() with parse:'none' to let Better Auth receive the raw Request body.
@@ -27,8 +50,18 @@ export const authRoutes = new Elysia()
         authorizationPreview: request.headers.get("authorization")?.slice(0, 24) ?? null,
       });
 
-      const response = await auth.handler(request);
-      const responseBody = await response.text();
+      const response = await withTimeout(
+        auth.handler(request),
+        AUTH_HANDLER_TIMEOUT_MS,
+        "Auth handler"
+      );
+
+      // Also wrap response.text() with timeout since it can hang on slow responses
+      const responseBody = await withTimeout(
+        response.text(),
+        5000,
+        "Auth response body read"
+      );
 
       debugAuthRoute("Auth handler response", {
         method: request.method,
@@ -44,14 +77,18 @@ export const authRoutes = new Elysia()
       });
       return responseBody;
     } catch (error) {
-      console.error("[Auth Handler Error]", error);
-      set.status = 500;
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const isTimeout = errorMessage.includes("timed out");
+
+      console.error("[Auth Handler Error]", errorMessage);
+
+      set.status = isTimeout ? 504 : 500;
       set.headers["content-type"] = "application/json";
       return JSON.stringify({
         success: false,
         error: {
-          code: "AUTH_HANDLER_ERROR",
-          message: error instanceof Error ? error.message : "Unknown error",
+          code: isTimeout ? "AUTH_TIMEOUT" : "AUTH_HANDLER_ERROR",
+          message: errorMessage,
         },
       });
     }

@@ -33,7 +33,7 @@ export const tags = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
 
     // Sync status for offline support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps

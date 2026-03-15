@@ -24,6 +24,7 @@
     "db:fix-all-businesses": "bun run src/db/fix-all-businesses-data.ts",
     "db:fix-corrupted-sales": "bun run src/db/fix-corrupted-sales.ts",
     "db:check-duplicates": "bun run src/db/check-duplicates.ts",
+    "db:check-sync-status": "bun run src/db/scripts/check-sync-status.ts",
     "db:apply-migration": "bun run scripts/run-migration.ts",
     "db:backup": "bun run scripts/backup-db.ts",
     "test": "vitest",

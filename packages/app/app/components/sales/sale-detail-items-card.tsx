@@ -1,7 +1,7 @@
 import { Package } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SaleItem } from "~/hooks/use-sales";
-import { formatCurrency } from "~/lib/utils";
+import type { SaleItem } from "~/lib/services/sale-service";
+import { cn, formatCurrency } from "~/lib/utils";
+import { SaleDetailSection } from "./sale-detail-section";
 
 interface SaleDetailItemsCardProps {
   items: SaleItem[];
@@ -14,19 +14,27 @@ export function SaleDetailItemsCard({ items, totalAmount }: SaleDetailItemsCardP
   }
 
   return (
-    <Card className="shell-card-flat rounded-[28px]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Productos Vendidos</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0">
+    <SaleDetailSection
+      title="Productos"
+      icon={<Package className="h-4 w-4" />}
+      action={
+        <span className="text-xs font-medium text-muted-foreground">
+          {items.length} producto{items.length > 1 ? "s" : ""}
+        </span>
+      }
+    >
+      <div className="px-3">
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-start justify-between border-b shell-divider py-3 first:pt-0 last:border-0"
+            className={cn(
+              "flex items-start justify-between gap-3 py-3.5",
+              "border-t shell-divider first:border-0"
+            )}
           >
             <div className="flex flex-1 items-start gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[16px] bg-orange-100/90 ring-1 ring-orange-100">
-                <Package className="h-5 w-5 text-orange-600" />
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-orange-600">
+                <Package className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-foreground">{item.productName}</p>
@@ -40,13 +48,14 @@ export function SaleDetailItemsCard({ items, totalAmount }: SaleDetailItemsCardP
             </span>
           </div>
         ))}
-        <div className="flex items-center justify-between border-t shell-divider pt-2">
-          <span className="text-muted-foreground">
-            {items.length} producto{items.length > 1 ? "s" : ""}
+
+        <div className="flex items-center justify-between border-t shell-divider py-3.5">
+          <span className="text-sm text-muted-foreground">Total de productos</span>
+          <span className="text-lg font-semibold text-foreground">
+            S/ {formatCurrency(totalAmount)}
           </span>
-          <span className="text-lg font-semibold">S/ {formatCurrency(totalAmount)}</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SaleDetailSection>
   );
 }

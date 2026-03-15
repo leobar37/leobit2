@@ -76,6 +76,7 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "inventory",
     primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "product_id",
@@ -87,6 +88,7 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "variant_inventory",
     primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "variant_id",

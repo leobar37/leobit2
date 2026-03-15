@@ -12,6 +12,9 @@ export const BATCH_SIZE = 50;
 /** Interval in milliseconds between sync cycles */
 export const SYNC_INTERVAL_MS = 30000;
 
+/** Interval in milliseconds between pull sync cycles (server to client) */
+export const PULL_INTERVAL_MS = 10000;
+
 /** Base delay for exponential backoff in milliseconds */
 export const BACKOFF_BASE_MS = 1000;
 
@@ -48,6 +51,8 @@ export const SYNCABLE_ENTITIES = [
   "sale_items",
   "abonos",
   "distribuciones",
+  "variant_inventory",
+  "closings",
   "orders",
   "order_items",
   "files",

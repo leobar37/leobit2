@@ -515,6 +515,7 @@ export default function Page() {
 | File | Purpose |
 |------|---------|
 | `app/lib/utils.ts` | `cn()` utility for Tailwind class merging |
+| `app/lib/date-utils.ts` | Date utilities with local timezone support |
 | `app/lib/schemas.ts` | Zod schemas for forms (login, register) |
 | `app/lib/auth-client.ts` | Better Auth client configuration |
 | `app/lib/api-client.ts` | Eden Treaty API client instance |
@@ -522,6 +523,29 @@ export default function Page() {
 | `app/lib/db/collections.ts` | Data operation functions |
 | `app/lib/db/electric-client.tsx` | Sync state provider (placeholder) |
 | `../docs/screens/mobile-list-pattern.md` | Shared mobile list + FAB UI pattern |
+
+### Local Timezone Handling
+
+All date operations in the frontend must use local timezone (Peru UTC-5) to ensure consistent sorting and display. Use the utilities in `app/lib/date-utils.ts`:
+
+```typescript
+import { toLocalISOString, now, formatRecentDateTime } from "~/lib/date-utils";
+
+// For database storage (used in BaseService)
+const timestamp = toLocalISOString(); // "2026-03-14T10:00:00"
+
+// For current date as Date object
+const currentDate = now(); // Date object
+
+// For display
+const formatted = formatRecentDateTime(date); // "Hoy, 10:00" or "Ayer, 15:30"
+```
+
+**Key utilities:**
+- `toLocalISOString()` - Returns current timestamp as ISO string in local timezone (no UTC offset)
+- `now()` - Returns current date as Date object
+- `formatRecentDateTime()` - Formats date with relative text ("Hoy", "Ayer", etc.)
+- `toDateString()` - Converts Date to YYYY-MM-DD string for inputs
 
 ### Component Categories
 

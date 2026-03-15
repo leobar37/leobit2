@@ -43,7 +43,7 @@ export const purchases = pgTable(
     notes: text("notes"),
 
     // Sync fields for offline-first support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -82,7 +82,7 @@ export const purchaseItems = pgTable(
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
 
     // Sync fields for offline-first support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),

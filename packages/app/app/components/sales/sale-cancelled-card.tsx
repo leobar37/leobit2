@@ -1,6 +1,5 @@
 import { XCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import type { Sale } from "~/hooks/use-sales";
+import type { Sale } from "~/lib/services/sale-service";
 import { formatCurrency } from "~/lib/utils";
 
 interface SaleCancelledCardProps {
@@ -9,25 +8,28 @@ interface SaleCancelledCardProps {
 
 export function SaleCancelledCard({ sale }: SaleCancelledCardProps) {
   return (
-    <Card className="border-red-200 bg-red-50 shadow-md">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <XCircle className="h-6 w-6 text-red-600" />
-          <div>
-            <p className="font-semibold text-red-700">Venta Cancelada</p>
-            <p className="text-sm text-red-600">
-              Cancelada el {sale.cancelledAt ? new Date(sale.cancelledAt).toLocaleDateString("es-PE") : ""}
-              {sale.cancelReason && ` - ${sale.cancelReason}`}
-            </p>
-            {sale.refundAmount && Number(sale.refundAmount) > 0 && (
-              <p className="mt-1 text-sm font-medium text-red-600">
-                Reembolso: S/ {formatCurrency(sale.refundAmount)}
-                {sale.refundMethod && ` via ${sale.refundMethod}`}
-              </p>
-            )}
-          </div>
+    <section className="overflow-hidden rounded-2xl border border-red-200/80 bg-red-50/70">
+      <div className="flex items-start gap-3 p-4">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-red-600">
+          <XCircle className="h-5 w-5 text-red-600" />
         </div>
-      </CardContent>
-    </Card>
+        <div>
+          <p className="font-semibold text-red-700">Venta cancelada</p>
+          <p className="text-sm text-red-600">
+            Cancelada el{" "}
+            {sale.cancelledAt
+              ? new Date(sale.cancelledAt).toLocaleDateString("es-PE")
+              : ""}
+            {sale.cancelReason && ` - ${sale.cancelReason}`}
+          </p>
+          {sale.refundAmount && Number(sale.refundAmount) > 0 && (
+            <p className="mt-1 text-sm font-medium text-red-600">
+              Reembolso: S/ {formatCurrency(sale.refundAmount)}
+              {sale.refundMethod && ` vía ${sale.refundMethod}`}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

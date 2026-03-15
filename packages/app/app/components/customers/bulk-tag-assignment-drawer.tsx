@@ -1,28 +1,30 @@
 /**
- * Bulk Tag Assignment Drawer
- * Drawer for assigning tags to multiple customers at once
+ * Bulk Customer Tags Modal
+ * Modal for assigning tags to multiple customers using createModal pattern
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { Tag, Users } from "lucide-react";
+import { Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AppDrawer } from "~/components/ui/app-drawer";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { createModal } from "~/lib/modal/create-modal";
 import { TagSelect } from "~/components/tags";
 import { useBulkAssignTags } from "~/hooks/use-bulk-assign-tags";
 
-interface BulkTagAssignmentDrawerProps {
+interface BulkCustomerTagsData {
   customerIds: string[];
-  open: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
 }
 
-export function BulkTagAssignmentDrawer({
+function BulkCustomerTagsModalContent({
+  close,
   customerIds,
-  open,
-  onClose,
-  onSuccess,
-}: BulkTagAssignmentDrawerProps) {
+}: BulkCustomerTagsData & { close: () => void }) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const assignMutation = useBulkAssignTags();
 
@@ -34,8 +36,7 @@ export function BulkTagAssignmentDrawer({
       });
       toast.success(`Etiquetas asignadas a ${customerIds.length} cliente(s)`);
       setSelectedTagIds([]);
-      onSuccess?.();
-      onClose();
+      close();
     } catch (error) {
       toast.error("Error al asignar etiquetas");
     }
@@ -43,54 +44,42 @@ export function BulkTagAssignmentDrawer({
 
   const handleClose = () => {
     setSelectedTagIds([]);
-    onClose();
+    close();
   };
 
   return (
-    <AppDrawer
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose();
-      }}
-    >
-      <AppDrawer.Header
-        title={`Asignar Etiquetas (${customerIds.length} clientes)`}
-        icon={<Tag className="h-5 w-5" />}
-        onClose={handleClose}
-      />
+    <>
+      <DialogHeader>
+        <DialogTitle>Asignar Etiquetas ({customerIds.length} clientes)</DialogTitle>
+        <DialogDescription>
+          Selecciona las etiquetas que deseas asignar a los clientes seleccionados.
+          Las etiquetas seleccionadas reemplazarán las actuales de cada cliente.
+        </DialogDescription>
+      </DialogHeader>
 
-      <AppDrawer.Body>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Selecciona las etiquetas que deseas asignar a los clientes seleccionados.
-            Las etiquetas seleccionadas reemplazarán las actuales de cada cliente.
-          </p>
+      <div className="py-6">
+        <TagSelect
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
+        />
+      </div>
 
-          <TagSelect
-            selectedTagIds={selectedTagIds}
-            onChange={setSelectedTagIds}
-          />
-        </div>
-      </AppDrawer.Body>
-
-      <AppDrawer.Footer>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="flex-1 rounded-xl"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={assignMutation.isPending}
-            className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
-          >
-            {assignMutation.isPending ? "Guardando..." : "Guardar"}
-          </Button>
-        </div>
-      </AppDrawer.Footer>
-    </AppDrawer>
+      <DialogFooter className="flex flex-row gap-3 mt-6">
+        <Button variant="outline" onClick={handleClose} className="flex-1">
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={assignMutation.isPending}
+          className="flex-1"
+        >
+          {assignMutation.isPending ? "Guardando..." : "Guardar"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
+
+export const [BulkCustomerTagsModal, useBulkCustomerTagsModal] = createModal<
+  BulkCustomerTagsData
+>(BulkCustomerTagsModalContent, { type: "dialog" });

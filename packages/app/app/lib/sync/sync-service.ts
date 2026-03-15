@@ -183,6 +183,13 @@ export class SyncService {
     const id = crypto.randomUUID();
     const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
 
+    console.log(`[SYNC] Enqueuing operation:`, {
+      entityType: params.entity_type,
+      operation: params.operation,
+      entityId: params.entityId,
+      idempotencyKey,
+    });
+
     const existingOp = await this.pg.query<{ id: string }>(
       `SELECT id
        FROM sync_operations
@@ -556,6 +563,15 @@ export class SyncService {
 
   private async markFailed(id: string, error: string): Promise<void> {
     const op = await this.getOperation(id);
+
+    console.error(`[SYNC] Operation marked as FAILED:`, {
+      operationId: id,
+      entityType: op?.entity_type,
+      operation: op?.operation,
+      entityId: op?.entity_id,
+      error,
+      attempts: op?.sync_attempts,
+    });
     if (!op) return;
 
     const newAttempts = op.sync_attempts + 1;
@@ -671,6 +687,17 @@ export class SyncService {
   ): Promise<BatchSyncResponse> {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
+    console.log(`[SYNC] Sending batch to server:`, {
+      url: `${apiUrl}/sync/batch`,
+      operationsCount: operations.length,
+      operations: operations.map(op => ({
+        idempotencyKey: op.idempotency_key,
+        entityType: op.entity_type,
+        operation: op.operation,
+        entityId: op.entity_id,
+      })),
+    });
+
     const response = await fetch(`${apiUrl}/sync/batch`, {
       method: "POST",
       headers: {
@@ -693,6 +720,10 @@ export class SyncService {
     });
 
     if (!response.ok) {
+      console.error(`[SYNC] Batch request failed:`, {
+        status: response.status,
+        statusText: response.statusText,
+      });
       throw new Error(`Sync batch failed: ${response.status} ${response.statusText}`);
     }
 
@@ -706,6 +737,17 @@ export class SyncService {
     if (!body.success || !body.data?.results) {
       throw new Error("Sync batch returned an invalid response");
     }
+
+    console.log(`[SYNC] Batch response received:`, {
+      success: body.success,
+      resultsCount: body.data?.results?.length,
+      results: body.data?.results?.map((r: any) => ({
+        idempotencyKey: r.idempotencyKey,
+        success: r.success,
+        error: r.error,
+        hasConflict: !!r.conflict,
+      })),
+    });
 
     return {
       results: body.data.results.map((result) => ({

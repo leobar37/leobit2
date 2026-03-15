@@ -52,7 +52,7 @@ export const abonos = pgTable(
     relatedSaleId: uuid("related_sale_id").references(() => sales.id),
 
     // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps

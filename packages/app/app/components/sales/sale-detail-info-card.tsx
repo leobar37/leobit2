@@ -1,7 +1,7 @@
 import { Calendar, Scale, User } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Sale } from "~/hooks/use-sales";
-import { formatCurrency } from "~/lib/utils";
+import type { Sale } from "~/lib/services/sale-service";
+import { cn, formatCurrency } from "~/lib/utils";
+import { SaleDetailSection } from "./sale-detail-section";
 
 interface SaleDetailInfoCardProps {
   hideTara: boolean;
@@ -17,36 +17,72 @@ export function SaleDetailInfoCard({ hideTara, sale }: SaleDetailInfoCardProps) 
     minute: "2-digit",
   });
 
+  const rows = [
+    {
+      icon: Calendar,
+      label: "Fecha",
+      value: formattedDate,
+      accent: "text-muted-foreground",
+    },
+    {
+      icon: User,
+      label: "Cliente",
+      value: sale.customer?.name || "Cliente general",
+      accent: "text-foreground",
+    },
+    ...(!sale.tara || hideTara
+      ? []
+      : [
+          {
+            icon: Scale,
+            label: "Tara",
+            value: `${formatCurrency(sale.tara)} kg`,
+            accent: "text-muted-foreground",
+          },
+        ]),
+    ...(sale.netWeight
+      ? [
+          {
+            icon: Scale,
+            label: "Peso neto",
+            value: `${formatCurrency(sale.netWeight)} kg`,
+            accent: "text-orange-700",
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <Card className="shell-card-flat rounded-[28px]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Informacion General</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span>{formattedDate}</span>
-        </div>
+    <SaleDetailSection
+      title="Información general"
+      icon={<Calendar className="h-4 w-4" />}
+    >
+      {rows.map((row, index) => {
+        const Icon = row.icon;
 
-        <div className="flex items-center gap-3">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <span>{sale.customer?.name || "Cliente general"}</span>
-        </div>
+        return (
+          <div
+            key={row.label}
+            className={cn(
+              "flex items-start gap-3 px-3 py-3.5",
+              index > 0 && "border-t shell-divider"
+            )}
+          >
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-muted-foreground">
+              <Icon className="h-4 w-4" />
+            </div>
 
-        {sale.tara && !hideTara && (
-          <div className="flex items-center gap-3">
-            <Scale className="h-4 w-4 text-muted-foreground" />
-            <span>Tara: {formatCurrency(sale.tara)} kg</span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground/80">
+                {row.label}
+              </p>
+              <p className={cn("mt-1 text-sm font-medium", row.accent)}>
+                {row.value}
+              </p>
+            </div>
           </div>
-        )}
-
-        {sale.netWeight && (
-          <div className="flex items-center gap-3">
-            <Scale className="h-4 w-4 text-orange-600" />
-            <span className="font-medium">Neto: {formatCurrency(sale.netWeight)} kg</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        );
+      })}
+    </SaleDetailSection>
   );
 }
