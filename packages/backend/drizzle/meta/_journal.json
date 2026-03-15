@@ -239,6 +239,13 @@
       "when": 1773600000000,
       "tag": "0035_add_customer_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1773610000000,
+      "tag": "0036_add_visitas_table",
+      "breakpoints": true
     }
   ]
 }

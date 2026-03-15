@@ -43,6 +43,7 @@ export {
   supplierTypeEnum,
   purchaseStatusEnum,
   orderPaymentStatusEnum,
+  visitaStatusEnum,
 } from "./enums";
 
 // User Profiles (extiende Better Auth)
@@ -262,3 +263,11 @@ export {
   type WhatsAppMessage,
   type NewWhatsAppMessage,
 } from "./whatsapp-messages";
+
+// Visitas (visits linked to distributions)
+export {
+  visitas,
+  visitasRelations,
+  type Visita,
+  type NewVisita,
+} from "./visitas";
