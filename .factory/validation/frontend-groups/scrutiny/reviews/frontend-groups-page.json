@@ -1,0 +1,50 @@
+{
+  "featureId": "frontend-groups-page",
+  "reviewedAt": "2026-03-15T05:47:00.000Z",
+  "commitId": "0e74ce1845ae4b9944c894866a51d607c6a03d7d",
+  "transcriptSkeletonReviewed": false,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature implementation fully covers all expected behaviors specified in the feature description. The grupos page at /grupos includes CRUD operations (create, read, update, delete groups), member management (add/remove customers to groups), search functionality, and uses existing UI components. The implementation follows React Router v7 conventions and integrates with the existing backend API.",
+    "issues": [
+      {
+        "file": "packages/app/app/routes/_protected.grupos.tsx",
+        "line": "68-117",
+        "severity": "non_blocking",
+        "description": "Uses direct fetch() calls instead of TanStack Query hooks. The codebase standard (documented in library/architecture.md and used by useCustomers hook) is to use TanStack Query for server state. While the inline fetch works functionally, it doesn't follow the established pattern for consistency."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.grupos.tsx",
+        "line": "68-117",
+        "severity": "non_blocking",
+        "description": "No offline-first check before API calls. The AGENTS.md specifies 'Offline-first: check isOnline() before API calls', but the implementation makes direct API calls without checking connectivity. This may cause issues when the app is offline."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.grupos.tsx",
+        "line": "71",
+        "severity": "non_blocking",
+        "description": "Hardcoded API fallback URL 'http://localhost:5201' should use the existing pattern from the codebase for API URL resolution."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The feature implementation uses direct fetch() instead of TanStack Query hooks, which deviates from the frontend pattern documented in .factory/library/architecture.md that specifies 'TanStack Query for server state'.",
+      "evidence": "packages/app/app/routes/_protected.grupos.tsx:68-117 - apiCall function uses fetch(), while existing useCustomers hook (packages/app/app/hooks/use-customers.ts) uses useQuery from TanStack Query"
+    },
+    {
+      "area": "conventions",
+      "observation": "The implementation doesn't check isOnline() before API calls, which is specified as a requirement in the mission AGENTS.md under 'Frontend Patterns'.",
+      "evidence": "packages/app/app/routes/_protected.grupos.tsx - No isOnline() check before fetch calls"
+    },
+    {
+      "area": "skills",
+      "observation": "The skill SKILL.md specifies creating hooks for data fetching with TanStack Query, but the worker implemented inline API functions instead of creating a useGroups hook.",
+      "evidence": "frontend-worker/SKILL.md section 3 says 'Use TanStack Query for server state', but no hook was created for groups - the code uses inline apiCall functions"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The feature implementation fully delivers the required functionality: route /grupos with group list, create/edit/delete forms, member management UI, and confirmation dialogs. All expected behaviors are present. The code has some deviations from established patterns (TanStack Query usage, offline-first checks) but these are non-blocking issues that don't prevent the feature from working. The bottom navigation was properly updated to include /grupos."
+}
