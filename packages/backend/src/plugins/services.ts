@@ -49,6 +49,8 @@ import { TagService } from "../services/business/tag.service";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
 import { CustomerTagService } from "../services/business/customer-tag.service";
 import { ElectricService } from "../services/business/electric.service";
+import { CustomerGroupRepository } from "../services/repository/customer-group.repository";
+import { CustomerGroupService } from "../services/business/customer-group.service";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -76,6 +78,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const whatsAppMessageRepo = new WhatsAppMessageRepository();
     const tagRepo = new TagRepository();
     const customerTagRepo = new CustomerTagRepository();
+    const customerGroupRepo = new CustomerGroupRepository();
 
     const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo);
     const customerService = new CustomerService(customerRepo);
@@ -113,6 +116,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const templateSeedService = new TemplateSeedService(whatsAppTemplateRepo);
     const tagService = new TagService(tagRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
+    const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
     const electricService = new ElectricService();
 
     return {
@@ -164,6 +168,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       tagService,
       customerTagRepo,
       customerTagService,
+      customerGroupRepo,
+      customerGroupService,
       electricService,
     };
   });
