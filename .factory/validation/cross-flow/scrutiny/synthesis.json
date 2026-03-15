@@ -1,0 +1,86 @@
+{
+  "milestone": "cross-flow",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "cd packages/app && bun test",
+      "exitCode": 1,
+      "note": "91 tests failing - pre-existing issues in test suite (Playwright conflicts, jsdom setup)"
+    },
+    "typecheck": {
+      "passed": false,
+      "command": "cd packages/app && bun run typecheck",
+      "exitCode": 2,
+      "note": "Many TypeScript errors - pre-existing issues in codebase"
+    },
+    "build": {
+      "passed": true,
+      "command": "cd packages/backend && bun run build",
+      "exitCode": 0,
+      "note": "Backend builds successfully"
+    },
+    "lint": {
+      "passed": null,
+      "command": "cd packages/app && bun run lint",
+      "exitCode": null,
+      "note": "No lint script available in package.json"
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": ["cross-flow-group-to-visits"]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "cross-flow-group-to-visits",
+      "severity": "blocking",
+      "description": "VAL-CROSS-003 not implemented: handleCreateSingleVisita() makes direct API call without checking isOnline() first. According to project conventions (AGENTS.md), offline-first features must check isOnline() before API calls.",
+      "file": "packages/app/app/routes/_protected.visitas.tsx",
+      "line": 142
+    },
+    {
+      "featureId": "cross-flow-group-to-visits",
+      "severity": "blocking",
+      "description": "VAL-CROSS-003 not implemented: handleCreateGroupVisitas() makes direct bulk API call without checking isOnline(). This fails the requirement 'Offline visit creation syncs when online'.",
+      "file": "packages/app/app/routes/_protected.visitas.tsx",
+      "line": 167
+    },
+    {
+      "featureId": "cross-flow-group-to-visits",
+      "severity": "blocking",
+      "description": "VAL-CROSS-003 not implemented: handleMarkAsPurchased() and handleMarkAsNotPurchased() make direct API calls without offline-first logic.",
+      "file": "packages/app/app/routes/_protected.visitas.tsx",
+      "line": 192
+    },
+    {
+      "featureId": "cross-flow-group-to-visits",
+      "severity": "blocking",
+      "description": "VAL-CROSS-003 not implemented: handleGenerateSale() navigates to sale page without offline-first handling.",
+      "file": "packages/app/app/routes/_protected.visitas.tsx",
+      "line": 409
+    },
+    {
+      "featureId": "cross-flow-group-to-visits",
+      "severity": "blocking",
+      "description": "use-visitas.ts uses plain useMutation without offline-aware wrapper. Should use useOfflineAwareMutation for offline-first support per project conventions.",
+      "file": "packages/app/app/hooks/use-visitas.ts",
+      "line": 1
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add guidance for handling pre-existing validator failures during milestone scrutiny - tests and typecheck failures predate this milestone",
+      "evidence": "Validator failures (test, typecheck) exist in the codebase but are not related to the cross-flow milestone implementation",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/cross-flow/scrutiny/synthesis.json",
+  "notes": "This is round 2 of scrutiny. The cross-flow-group-to-visits feature was reviewed. 5 blocking issues found - VAL-CROSS-003 (offline visit creation syncs when online) is not implemented. All visit mutation functions make direct API calls without checking isOnline(). Build passes. Pre-existing validator failures (test, typecheck) remain unrelated to this milestone."
+}
