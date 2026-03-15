@@ -45,6 +45,8 @@ import { useCustomers } from "~/hooks/use-customers";
 import { useListSearch } from "~/hooks/use-list-search";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useCreateDraftSale } from "~/hooks/use-sales";
+import { useCreateVisita, useCreateVisitasFromGroup, useUpdateVisita } from "~/hooks/use-visitas";
+import { isOnline } from "~/lib/file-queue/utils";
 import { toast } from "sonner";
 import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
 import { showError } from "~/lib/errors";
@@ -136,39 +138,6 @@ async function fetchVisitas(distribucionId: string): Promise<Visita[]> {
   return apiCall<Visita[]>(`/api/visitas?distribucionId=${distribucionId}`);
 }
 
-async function createVisita(
-  distribucionId: string,
-  customerId: string
-): Promise<Visita> {
-  return apiCall<Visita>("/api/visitas", "POST", {
-    distribucionId,
-    customerId,
-  });
-}
-
-async function bulkCreateVisitas(
-  distribucionId: string,
-  customerIds: string[]
-): Promise<{ visits: Visita[]; count: number }> {
-  return apiCall<{ visits: Visita[]; count: number }>("/api/visitas/bulk", "POST", {
-    distribucionId,
-    customerIds,
-  });
-}
-
-async function updateVisitaStatus(
-  id: string,
-  status: "pendiente" | "compro" | "no_compra",
-  motivoNoCompra?: string,
-  saleId?: string
-): Promise<Visita> {
-  return apiCall<Visita>(`/api/visitas/${id}`, "PATCH", {
-    status,
-    motivoNoCompra,
-    saleId,
-  });
-}
-
 async function fetchGroups(): Promise<CustomerGroup[]> {
   return apiCall<CustomerGroup[]>("/api/groups");
 }
@@ -241,6 +210,11 @@ export default function VisitasPage() {
   const { data: customers } = useCustomers();
   const [groups, setGroups] = useState<CustomerGroup[]>([]);
 
+  // Offline-aware mutations for visitas
+  const createVistaMutation = useCreateVisita();
+  const createVisitasFromGroupMutation = useCreateVisitasFromGroup();
+  const updateVistaMutation = useUpdateVisita();
+
   // Load groups
   useEffect(() => {
     fetchGroups()
@@ -291,7 +265,10 @@ export default function VisitasPage() {
 
     setIsCreating(true);
     try {
-      const newVisita = await createVisita(distribucion.id, selectedCustomerId);
+      const newVisita = await createVistaMutation.mutateAsync({
+        distribucionId: distribucion.id,
+        customerId: selectedCustomerId,
+      });
       const customer = getCustomerById(selectedCustomerId);
       setVisitas((prev) => [...prev, { ...newVisita, customer }]);
       setIsSelectionOpen(false);
@@ -317,11 +294,13 @@ export default function VisitasPage() {
 
     setIsCreating(true);
     try {
-      const customerIds = group.members.map((m) => m.customerId);
-      const result = await bulkCreateVisitas(distribucion.id, customerIds);
+      const visits = await createVisitasFromGroupMutation.mutateAsync({
+        distribucionId: distribucion.id,
+        groupId: selectedGroupId,
+      });
 
       // Add customer info to visits
-      const visitsWithCustomer = result.visits.map((v) => ({
+      const visitsWithCustomer = visits.map((v) => ({
         ...v,
         customer: getCustomerById(v.customerId),
       }));
@@ -329,7 +308,7 @@ export default function VisitasPage() {
       setVisitas((prev) => [...prev, ...visitsWithCustomer]);
       setIsSelectionOpen(false);
       setSelectedGroupId("");
-      toast.success(`${result.count} visitas creadas`);
+      toast.success(`${visits.length} visitas creadas`);
     } catch (error) {
       console.error("Error creating group visitas:", error);
       toast.error("Error al crear visitas");
@@ -345,7 +324,10 @@ export default function VisitasPage() {
 
     setIsUpdating(true);
     try {
-      const updated = await updateVisitaStatus(selectedVisita.id, "compro");
+      const updated = await updateVistaMutation.mutateAsync({
+        id: selectedVisita.id,
+        status: "compro",
+      });
       setVisitas((prev) =>
         prev.map((v) => (v.id === selectedVisita.id ? { ...v, ...updated } : v))
       );
@@ -371,11 +353,11 @@ export default function VisitasPage() {
 
     setIsUpdating(true);
     try {
-      const updated = await updateVisitaStatus(
-        selectedVisita.id,
-        "no_compra",
-        motivo
-      );
+      const updated = await updateVistaMutation.mutateAsync({
+        id: selectedVisita.id,
+        status: "no_compra",
+        motivoNoCompra: motivo,
+      });
       setVisitas((prev) =>
         prev.map((v) => (v.id === selectedVisita.id ? { ...v, ...updated } : v))
       );
@@ -396,6 +378,11 @@ export default function VisitasPage() {
 
   async function handleGenerateSale(visita: Visita) {
     if (!visita.customer) return;
+
+    // Handle offline case - show info message
+    if (!isOnline()) {
+      toast.info("Creando venta en modo offline. Se sincronizará cuando haya conexión.");
+    }
 
     try {
       // Create draft sale with customer and distribution info, pass visitaId for linking
