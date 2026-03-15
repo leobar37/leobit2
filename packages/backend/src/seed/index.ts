@@ -121,8 +121,27 @@ export async function seedDatabase(): Promise<SeedResult> {
     : await createTestUser();
   console.log();
 
-  const { business, businessUserId } = await createBusinessAndLinkUser(user.userId, currentBusiness);
-  console.log(`✓ Business created: ${business.name} (ID: ${business.id})\n`);
+  // Check if user already has a business - reuse it instead of creating new
+  const existingBusinessUser = await db.query.businessUsers.findFirst({
+    where: (bu, { eq }) => eq(bu.userId, user.userId),
+    with: {
+      business: true,
+    },
+  });
+
+  let business: { id: string; name: string };
+  let businessUserId: string;
+
+  if (existingBusinessUser) {
+    business = existingBusinessUser.business;
+    businessUserId = existingBusinessUser.id;
+    console.log(`✓ Reusing existing business: ${business.name} (ID: ${business.id})\n`);
+  } else {
+    const result = await createBusinessAndLinkUser(user.userId, currentBusiness);
+    business = result.business;
+    businessUserId = result.businessUserId;
+    console.log(`✓ Business created: ${business.name} (ID: ${business.id})\n`);
+  }
 
   const ctx = RequestContext.forWorker(business.id, businessUserId);
   console.log("Created admin context for seeding\n");
@@ -343,7 +362,7 @@ async function seedRealCustomers(ctx: RequestContext, customersData: any[]) {
       phone: customer.phone,
       address: customer.address,
       notes: customer.notes,
-      syncStatus: customer.syncStatus || "pending",
+      syncStatus: customer.syncStatus || "synced",
       syncAttempts: customer.syncAttempts || 0,
       createdBy: customer.createdBy,
       createdAt: new Date(customer.createdAt),
@@ -378,7 +397,7 @@ async function seedRealSales(ctx: RequestContext, salesData: any[]) {
       id: sale.id,
       businessId: ctx.businessId,
       customerId: sale.customerId,
-      sellerId: ctx.userId,
+      sellerId: ctx.businessUserId,
       distribucionId: sale.distribucionId,
       type: sale.type,
       saleType: sale.saleType,
@@ -396,7 +415,7 @@ async function seedRealSales(ctx: RequestContext, salesData: any[]) {
       confirmedSnapshot: sale.confirmedSnapshot,
       deliveredSnapshot: sale.deliveredSnapshot,
       allowCustomerEdit: sale.allowCustomerEdit,
-      syncStatus: sale.syncStatus || "pending",
+      syncStatus: sale.syncStatus || "synced",
       syncAttempts: sale.syncAttempts || 0,
       cancelledAt: sale.cancelledAt,
       cancelledBy: sale.cancelledBy,
@@ -461,14 +480,14 @@ async function seedRealAbonos(ctx: RequestContext, abonosData: any[]) {
       id: abono.id,
       businessId: ctx.businessId,
       customerId: abono.customerId,
-      sellerId: ctx.userId,
+      sellerId: ctx.businessUserId,
       amount: abono.amount,
       paymentMethod: abono.paymentMethod,
       notes: abono.notes,
       proofImageId: abono.proofImageId,
       referenceNumber: abono.referenceNumber,
       relatedSaleId: abono.relatedSaleId,
-      syncStatus: abono.syncStatus || "pending",
+      syncStatus: abono.syncStatus || "synced",
       syncAttempts: abono.syncAttempts || 0,
       createdAt: new Date(abono.createdAt),
     });

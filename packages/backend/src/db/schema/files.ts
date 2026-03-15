@@ -37,7 +37,7 @@ export const files = pgTable(
     deletedBy: text("deleted_by").references(() => user.id),
 
     // Sync status for offline-first (for payment proofs, etc.)
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
   },
   (table) => [

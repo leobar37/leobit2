@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
-import { AlertCircle, Loader2, User, TrendingUp, CreditCard } from "lucide-react";
+import { AlertCircle, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSale } from "~/hooks/use-sales";
 import { useSaleAnalysis } from "~/hooks/use-sale-analysis";
@@ -22,6 +22,7 @@ import {
   getSaleEditorPath,
   shouldOpenSaleEditor,
 } from "~/lib/sales/navigation";
+import { cn } from "~/lib/utils";
 
 type TabType = "details" | "analysis";
 
@@ -68,36 +69,43 @@ export default function SaleDetailPage() {
   return (
     <CancelSaleProvider sale={sale}>
       <div className="min-h-screen app-shell">
-        <SaleDetailHeader canCancel={canCancel} onBack={() => navigate("/ventas")} />
+        <SaleDetailHeader
+          canCancel={canCancel}
+          onBack={() => navigate("/ventas")}
+          sale={sale}
+        />
 
-        <main className="space-y-4 p-4 pb-24">
-          {/* Tabs */}
-          <div className="shell-card-flat overflow-hidden rounded-[28px]">
-            <div className="flex border-b shell-divider">
-              <button
-                onClick={() => setActiveTab("details")}
-                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${
-                  activeTab === "details"
-                    ? "border-b-2 border-orange-500 text-orange-600"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Detalles
-              </button>
-              <button
-                onClick={() => setActiveTab("analysis")}
-                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${
-                  activeTab === "analysis"
-                    ? "border-b-2 border-orange-500 text-orange-600"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <TrendingUp className="h-4 w-4" />
-                Análisis
-              </button>
+        <main className="space-y-3 px-3 py-3 pb-24 sm:px-4">
+          <div className="shell-card-flat overflow-hidden rounded-[22px]">
+            <div className="border-b shell-divider px-3 pt-1">
+              <div className="flex">
+                <button
+                  onClick={() => setActiveTab("details")}
+                  className={cn(
+                    "relative flex-1 px-3 py-3 text-sm font-medium transition-colors",
+                    activeTab === "details"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-orange-500"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  Detalles
+                </button>
+                <button
+                  onClick={() => setActiveTab("analysis")}
+                  className={cn(
+                    "relative flex flex-1 items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors",
+                    activeTab === "analysis"
+                      ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-orange-500"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  Análisis
+                </button>
+              </div>
             </div>
 
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               {activeTab === "details" ? (
                 <div className="space-y-4">
                   {isCancelled && <SaleCancelledCard sale={sale} />}
@@ -123,7 +131,7 @@ export default function SaleDetailPage() {
                       <SaleAnalysisPayment paymentStatus={analysis.paymentStatus} />
                     </>
                   ) : (
-                    <p className="text-center text-muted-foreground py-8">
+                    <p className="py-8 text-center text-muted-foreground">
                       No hay datos de análisis disponibles
                     </p>
                   )}

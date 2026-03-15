@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router";
+import { useState } from "react";
 import { authClient, useSession, changePassword, refreshSession } from "../lib/auth-client";
 import { api } from "../lib/api-client";
 import {
   clearStoredAuthState,
   clearStoredBusinessId,
   setStoredBusinessId,
+  clearSyncStorage,
 } from "../lib/session-storage";
 
 async function hydrateCurrentBusinessId() {
@@ -32,6 +34,7 @@ async function ensureSessionReady() {
 export function useAuth() {
   const navigate = useNavigate();
   const { data: session, isPending } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const login = async (email: string, password: string) => {
     clearStoredAuthState();
@@ -74,12 +77,21 @@ export function useAuth() {
   };
 
   const logout = async () => {
-    try {
-      await authClient.signOut();
-    } finally {
-      clearStoredAuthState();
-      navigate("/login");
-    }
+    setIsLoggingOut(true);
+
+    // Clear local storage and IndexedDB immediately (non-blocking)
+    // This ensures the user can always log out even if the server is down
+    await clearSyncStorage();
+
+    // Notify server in background (fire and forget - ignore errors)
+    // The local cleanup is already done, so the user is effectively logged out
+    authClient.signOut().catch((error) => {
+      console.warn("Logout server call failed (can be ignored):", error);
+    });
+
+    // Navigate immediately - no need to wait for server
+    navigate("/login");
+    setIsLoggingOut(false);
   };
 
   const changeUserPassword = async (data: {
@@ -103,6 +115,7 @@ export function useAuth() {
     user: session?.user ?? null,
     isAuthenticated: !!session?.user,
     isLoading: isPending,
+    isLoggingOut,
     login,
     register,
     logout,

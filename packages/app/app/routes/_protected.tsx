@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
 import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
+import { PullSyncWrapper } from "~/components/sync/pull-sync-wrapper";
 import {
   ConflictResolver,
   type ConflictData,
@@ -15,7 +16,7 @@ import { ServicesProvider } from "~/lib/sync/service-provider";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 import { refreshSession } from "~/lib/auth-client";
-import { getStoredBusinessId, getStoredAuthToken } from "~/lib/session-storage";
+import { getStoredBusinessId, getStoredAuthToken, clearStoredAuthState } from "~/lib/session-storage";
 
 function OutletWithLog() {
   useAutoFileUploadProcessor();
@@ -31,7 +32,7 @@ function ServicesProviderWrapper({
   token: string;
   children: React.ReactNode;
 }) {
-  const { pg, db, isInitialized, error } = useEngine();
+  const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
 
   if (!isInitialized || !pg || !db) {
     return (
@@ -42,9 +43,36 @@ function ServicesProviderWrapper({
     );
   }
 
+  // Show schema error with reset option
+  if (schemaError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12 px-4">
+        <div className="text-center space-y-2">
+          <p className="text-destructive font-medium">Error de sincronización</p>
+          <p className="text-sm text-muted-foreground">
+            La base de datos local está desactualizada. Por favor, resetea el sistema para sincronizar nuevamente.
+          </p>
+          {error && (
+            <p className="text-xs text-muted-foreground/70 mt-2">
+              {error.message}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={resetAndLogout}
+          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+        >
+          Resetear e ir al login
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ServicesProvider pg={pg} db={db} businessId={businessId} authToken={token}>
-      {children}
+      <PullSyncWrapper>
+        {children}
+      </PullSyncWrapper>
     </ServicesProvider>
   );
 }
@@ -58,12 +86,16 @@ export default function ProtectedLayout() {
 
   // Keep session alive by refreshing every 15 minutes
   useEffect(() => {
-    const interval = setInterval(
-      () => {
-        void refreshSession();
-      },
-      15 * 60 * 1000,
-    );
+    const checkSession = async () => {
+      const session = await refreshSession();
+      if (!session) {
+        clearStoredAuthState();
+        window.location.href = "/login";
+        return;
+      }
+    };
+
+    const interval = setInterval(checkSession, 15 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);

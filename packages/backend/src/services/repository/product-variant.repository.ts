@@ -176,6 +176,7 @@ export class ProductVariantRepository {
       .values({
         variantId: data.variantId,
         quantity: data.quantity ?? "0",
+        businessId: ctx.businessId,
       })
       .returning();
 

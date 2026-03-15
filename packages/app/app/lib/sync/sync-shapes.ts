@@ -24,7 +24,7 @@ type ElectricNamespace = {
     onMustRefetch?: (tx: PGlite) => Promise<void>;
   }) => Promise<{
     unsubscribe: () => void;
-    isUpToDate: () => boolean;
+    isUpToDate: boolean;
   }>;
   syncShapesToTables: (options: {
     key: string;
@@ -41,7 +41,7 @@ type ElectricNamespace = {
     onError?: (error: Error) => void;
   }) => Promise<{
     unsubscribe: () => void;
-    isUpToDate: () => boolean;
+    isUpToDate: boolean;
   }>;
 };
 
@@ -125,9 +125,15 @@ export async function syncTable(
   businessId: string,
   token: string
 ): Promise<SyncTableResult> {
-  try {
-    const url = buildShapeUrl(config.table, businessId, config.where);
+  const url = buildShapeUrl(config.table, businessId, config.where);
 
+  console.log(`[SYNC-DEBUG] Starting sync for table: ${config.table}`);
+  console.log(`[SYNC-DEBUG] URL: ${url}`);
+  console.log(`[SYNC-DEBUG] Business ID: ${businessId}`);
+  console.log(`[SYNC-DEBUG] Token length: ${token.length}`);
+  console.log(`[SYNC-DEBUG] Primary key: ${config.primaryKey.join(", ")}`);
+
+  try {
     const syncResult = await pg.electric.syncShapeToTable({
       shape: {
         url,
@@ -143,19 +149,23 @@ export async function syncTable(
       primaryKey: config.primaryKey,
       shapeKey: buildShapeKey(config.table, businessId),
       onInitialSync: () => {
+        console.log(`[SYNC-DEBUG] onInitialSync called for ${config.table}`);
         reportShapeUpToDate(config.table);
       },
       onError: (error) => {
         const errorMessage = formatSyncError(error);
+        console.error(`[SYNC-DEBUG] onError for ${config.table}:`, errorMessage);
 
         // Handle 409 Conflict (expired handle) - this is recoverable
         // Silent - these are expected and handled automatically
         if (isExpiredHandleError(error)) {
+          console.log(`[SYNC-DEBUG] ${config.table}: expired handle error (recoverable)`);
           reportRecoverableSyncError(config.table, "expired-handle", errorMessage);
           return;
         }
 
         if (errorMessage.includes("duplicate key value violates unique constraint")) {
+          console.log(`[SYNC-DEBUG] ${config.table}: duplicate key error (recoverable)`);
           reportRecoverableSyncError(config.table, "duplicate-key", errorMessage);
           return;
         }
@@ -164,22 +174,33 @@ export async function syncTable(
         console.warn(`[Sync] Error for table ${config.table}:`, errorMessage);
       },
       onMustRefetch: async (tx) => {
+        console.log(`[SYNC-DEBUG] onMustRefetch called for ${config.table}`);
         reportMustRefetch(config.table);
         await tx.exec(`DELETE FROM "${config.table}"`);
       },
     });
 
+    console.log(`[SYNC-DEBUG] syncShapeToTable returned for ${config.table}`);
+    console.log(`[SYNC-DEBUG] syncResult type:`, typeof syncResult);
+    console.log(`[SYNC-DEBUG] syncResult keys:`, Object.keys(syncResult || {}));
+
+    // isUpToDate is a property (readonly boolean), not a method
+    const upToDate = syncResult?.isUpToDate ?? false;
+    console.log(`[SYNC-DEBUG] isUpToDate: ${upToDate}`);
+
     return {
       table: config.table,
       success: true,
-      unsubscribe: syncResult.unsubscribe,
+      unsubscribe: syncResult?.unsubscribe,
     };
   } catch (error) {
     const errorMessage = formatSyncError(error);
+    console.error(`[SYNC-DEBUG] CATCH block for ${config.table}:`, errorMessage);
 
     // Handle 409 Conflict (expired handle) - treat as recoverable
     // Silent - these are expected and handled automatically
     if (isExpiredHandleError(error)) {
+      console.log(`[SYNC-DEBUG] ${config.table}: expired handle in catch (recoverable)`);
       reportRecoverableSyncError(config.table, "expired-handle", errorMessage);
       return {
         table: config.table,
@@ -190,6 +211,7 @@ export async function syncTable(
 
     // Ignore duplicate key errors - these are expected when data already exists
     if (errorMessage.includes("duplicate key value violates unique constraint")) {
+      console.log(`[SYNC-DEBUG] ${config.table}: duplicate key in catch (recoverable)`);
       reportRecoverableSyncError(config.table, "duplicate-key", errorMessage);
       return {
         table: config.table,
@@ -218,11 +240,18 @@ export async function syncTables(
   token: string,
   shapes: ShapeConfig[]
 ): Promise<SyncTablesResult> {
+  console.log(`[SYNC-DEBUG] syncTables called with ${shapes.length} shapes`);
+  console.log(`[SYNC-DEBUG] Business ID: ${businessId}`);
+  console.log(`[SYNC-DEBUG] Token present: ${!!token}`);
+
   const results: SyncTableResult[] = [];
 
   // Sync tables sequentially to avoid overwhelming the server
   for (const shape of shapes) {
+    console.log(`[SYNC-DEBUG] Processing shape: ${shape.table} (priority: ${shape.priority})`);
+
     if (shape.enabled === false) {
+      console.log(`[SYNC-DEBUG] ${shape.table} is disabled, skipping`);
       results.push({
         table: shape.table,
         success: true,
@@ -232,11 +261,15 @@ export async function syncTables(
     }
 
     const result = await syncTable(pg, shape, businessId, token);
+    console.log(`[SYNC-DEBUG] Result for ${shape.table}: success=${result.success}`);
     results.push(result);
   }
 
   const success = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
+
+  console.log(`[SYNC-DEBUG] syncTables complete: ${success.length} success, ${failed.length} failed`);
+  console.log(`[SYNC-DEBUG] Failed tables:`, failed.map(r => r.table).join(", "));
 
   return { success, failed };
 }
@@ -245,6 +278,7 @@ export async function syncTables(
  * Stop all sync subscriptions
  */
 export function stopAllSyncs(results: SyncTableResult[]): void {
+  console.log(`[SYNC-DEBUG] stopAllSyncs called for ${results.length} results`);
   for (const result of results) {
     if (result.unsubscribe) {
       try {

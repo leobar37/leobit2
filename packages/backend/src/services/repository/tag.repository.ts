@@ -36,7 +36,7 @@ export class TagRepository {
       .values({
         ...data,
         businessId: ctx.businessId,
-        syncStatus: "pending",
+        syncStatus: "synced",
         syncAttempts: 0,
       })
       .returning();
@@ -57,7 +57,7 @@ export class TagRepository {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.color !== undefined && { color: data.color }),
         updatedAt: new Date(),
-        syncStatus: "pending",
+        syncStatus: "synced",
       })
       .where(and(
         eq(tags.id, id),

@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { Store, Loader2 } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
@@ -42,21 +42,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center sm:justify-center p-0 sm:p-4">
-      <Card className="w-full h-screen sm:h-auto sm:max-w-sm border-0 shadow-none sm:shadow-sm rounded-none sm:rounded-2xl">
-        <CardHeader className="space-y-4 text-center pb-6 pt-8 sm:pt-4">
-          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center">
-            <Store className="w-8 h-8 text-white" />
+    <div className="app-shell flex min-h-[100svh] items-center justify-center px-4 py-6 sm:p-6">
+      <Card className="shell-card w-full max-w-md rounded-[32px] border-white/70 shadow-[0_24px_60px_rgba(15,23,42,0.08),0_8px_22px_rgba(249,115,22,0.08)]">
+        <CardHeader className="space-y-5 px-5 pb-5 pt-7 text-center sm:px-6 sm:pt-8">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 shadow-[0_18px_40px_rgba(249,115,22,0.28)]">
+            <Store className="h-9 w-9 text-white" />
           </div>
-          <div>
-            <CardTitle className="text-2xl font-bold text-foreground">
+          <div className="space-y-3">
+            <CardTitle className="text-4xl font-bold tracking-[-0.03em] text-foreground">
               Bienvenido
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="mx-auto max-w-[18rem] text-[15px] leading-6 text-muted-foreground sm:text-base">
               Ingresa tus credenciales para continuar
             </CardDescription>
             {isDevelopment() && (
-              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 mt-2">
+              <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-100/90 px-3 py-1 text-xs font-medium text-emerald-800 shadow-sm">
                 Modo desarrollo
               </span>
             )}
@@ -64,33 +64,35 @@ export default function LoginPage() {
         </CardHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <FormInput
-              label="Correo electrónico"
-              type="email"
-              placeholder="tu@email.com"
-              error={form.formState.errors.email?.message}
-              {...form.register("email")}
-            />
+          <CardContent className="px-5 pb-2 sm:px-6">
+            <div className="space-y-4 rounded-[28px] border border-white/75 bg-white/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:p-5">
+              <FormInput
+                label="Correo electrónico"
+                type="email"
+                placeholder="tu@email.com"
+                error={form.formState.errors.email?.message}
+                {...form.register("email")}
+              />
 
-            <FormPassword
-              label="Contraseña"
-              placeholder="••••••••"
-              error={form.formState.errors.password?.message}
-              {...form.register("password")}
-            />
+              <FormPassword
+                label="Contraseña"
+                placeholder="••••••••"
+                error={form.formState.errors.password?.message}
+                {...form.register("password")}
+              />
 
-            {form.formState.errors.root && (
-              <p className="text-sm text-destructive text-center">
-                {form.formState.errors.root.message}
-              </p>
-            )}
+              {form.formState.errors.root && (
+                <p className="text-center text-sm text-destructive">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+            </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-4 px-5 pb-6 pt-5 sm:px-6 sm:pb-7">
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold transition-all duration-200"
+              className="h-14 w-full rounded-[24px] bg-gradient-to-r from-orange-500 to-orange-600 text-base font-semibold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] transition-all duration-200 hover:from-orange-600 hover:to-orange-700"
               disabled={form.formState.isSubmitting || !form.formState.isValid}
             >
               {form.formState.isSubmitting ? (

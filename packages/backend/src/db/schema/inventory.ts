@@ -47,8 +47,12 @@ export const products = pgTable(
     // Asset reference (shared gallery image)
     imageId: uuid("image_id").references(() => assets.id),
 
+    // Variants support
+    hasVariants: boolean("has_variants").notNull().default(false),
+
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
 
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
@@ -60,6 +64,7 @@ export const products = pgTable(
     index("idx_products_is_active").on(table.isActive),
     index("idx_products_image_id").on(table.imageId),
     index("idx_products_sync_status").on(table.syncStatus),
+    index("idx_products_updated_at").on(table.updatedAt),
   ]
 );
 
@@ -120,7 +125,7 @@ export const distribuciones = pgTable(
     pesoConfirmado: boolean("peso_confirmado").notNull().default(true),
 
     // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps
@@ -154,7 +159,7 @@ export const distribucionItems = pgTable(
 
     unidad: varchar("unidad", { length: 20 }).notNull().default("kg"),
 
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),

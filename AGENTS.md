@@ -2,6 +2,11 @@
 
 > **Hierarchical knowledge base for AI agents. For detailed package docs, see package-level AGENTS.md files.**
 
+**Generated:** 2026-03-15  
+**Commit:** e7f0eef  
+**Branch:** main  
+**Mode:** Update
+
 ## Project Overview
 
 **Avileo (PollosPro)**: Offline-first chicken sales management system for mobile vendors.

@@ -230,7 +230,7 @@ export class SaleService extends BaseService {
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
     const salesResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE business_id = $1 ORDER BY sale_date DESC`,
+      `SELECT * FROM sales WHERE business_id = $1`,
       [this.businessId]
     );
 
@@ -353,11 +353,16 @@ export class SaleService extends BaseService {
    * Used for creating a new sale that will be edited later
    */
   async createDraft(saleInput: Omit<CreateSaleInput, "totalAmount"> & { totalAmount?: number }): Promise<Sale> {
+    console.log("[SaleService] createDraft called with saleInput:", saleInput);
+    console.log("[SaleService] this.businessId:", this.businessId);
+    console.log("[SaleService] sellerId:", saleInput.sellerId);
+
     const syncGroupId = this.generateSyncGroup();
     const now = this.now();
     const saleId = generateId();
     const sellerId = saleInput.sellerId;
 
+    console.log("[SaleService] Starting transaction for saleId:", saleId);
     await this.pg.exec("BEGIN");
 
     try {
@@ -425,6 +430,7 @@ export class SaleService extends BaseService {
 
       return createdSale;
     } catch (error) {
+      console.error("[SaleService] createDraft error:", error);
       await this.pg.exec("ROLLBACK");
       throw error;
     }

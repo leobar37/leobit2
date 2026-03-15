@@ -76,7 +76,7 @@ export const sales = pgTable(
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
 
     // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("pending"),
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Cancellation fields
@@ -157,6 +157,10 @@ export const saleItems = pgTable(
     // Tracking modifications (from orders)
     isModified: boolean("is_modified").notNull().default(false),
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
+
+    // Sync status for offline-first
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),

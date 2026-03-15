@@ -7,8 +7,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { SyncService, type EnqueueParams } from "../sync/sync-service";
+import { runSyncHooks } from "../sync/registry";
 import { SyncStatus } from "@avileo/shared";
 import { generateId } from "~/lib/utils/id-generator";
+import { toLocalISOString } from "~/lib/date-utils";
 
 /** Entity types supported by services */
 export type EntityType =
@@ -115,10 +117,11 @@ export abstract class BaseService {
   }
 
   /**
-   * Returns current ISO timestamp
+   * Returns current timestamp as ISO string in local timezone
+   * Uses toLocalISOString() to ensure dates are stored in the user's local timezone (Peru UTC-5)
    */
   protected now(): string {
-    return new Date().toISOString();
+    return toLocalISOString();
   }
 
   /**
@@ -142,8 +145,28 @@ export abstract class BaseService {
     payload: Record<string, unknown>,
     syncGroupId?: string
   ): Promise<void> {
+    // Run sync hooks before enqueueing
+    const entityType = this.getEntityType();
+    const hookResult = await runSyncHooks(
+      entityType,
+      {
+        operation: action,
+        entityId,
+        data: payload,
+      },
+      {
+        pg: this.pg,
+        businessId: this.businessId,
+      }
+    );
+
+    if (!hookResult.allow) {
+      console.log(`[SyncHook] Skipping sync for ${entityType}:${entityId} - ${hookResult.reason}`);
+      return;
+    }
+
     const params: EnqueueParams = {
-      entity_type: this.getEntityType(),
+      entity_type: entityType,
       operation: action,
       entityId,
       data: payload,

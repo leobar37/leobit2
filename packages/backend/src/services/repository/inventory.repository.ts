@@ -40,11 +40,14 @@ export class InventoryRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewInventory, "id" | "updatedAt">,
+    data: Omit<NewInventory, "id" | "updatedAt" | "businessId">,
     tx?: DbTransaction
   ): Promise<Inventory> {
     const dbOrTx = tx || db;
-    const [item] = await dbOrTx.insert(inventory).values(data).returning();
+    const [item] = await dbOrTx.insert(inventory).values({
+      ...data,
+      businessId: ctx.businessId,
+    }).returning();
     return item;
   }
 

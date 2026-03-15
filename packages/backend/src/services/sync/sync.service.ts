@@ -105,7 +105,22 @@ export class SyncService {
     ctx: RequestContext,
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
-    logger.info({ operations: operations.length, businessId: ctx.businessId }, "📥 Sync batch received");
+    logger.info(
+      { operations: operations.length, businessId: ctx.businessId },
+      "📥 Sync batch received"
+    );
+
+    // DETAILED LOGGING: Log each operation
+    for (const op of operations) {
+      logger.info({
+        msg: "📋 Processing operation",
+        idempotencyKey: op.idempotencyKey,
+        entityType: op.entityType,
+        operation: op.operation,
+        entityId: op.entityId,
+        payload: op.payload,
+      });
+    }
 
     const results: SyncOperationResult[] = [];
     const nowIso = toISODate(now());
@@ -135,9 +150,31 @@ export class SyncService {
     const conflicts = results.filter((item) => item.conflict !== undefined).length;
     const failed = results.length - succeeded - conflicts;
 
+    // Summarize sales operations specifically
+    const saleOperations = operations.filter((op) => op.entityType === "sales");
+    const saleResults = results.filter((r) =>
+      operations.some((op) => op.idempotencyKey === r.idempotencyKey && op.entityType === "sales")
+    );
+    const salesSucceeded = saleResults.filter((r) => r.success && !r.conflict).length;
+    const salesFailed = saleResults.filter((r) => !r.success && !r.conflict).length;
+    const salesConflicts = saleResults.filter((r) => r.conflict !== undefined).length;
+
     logger.info(
-      { summary: { total: results.length, succeeded, failed, conflicts } },
-      "📤 Sync batch completed"
+      {
+        summary: { total: results.length, succeeded, failed, conflicts },
+        sales: saleOperations.length > 0 ? {
+          total: saleOperations.length,
+          succeeded: salesSucceeded,
+          failed: salesFailed,
+          conflicts: salesConflicts,
+          operations: saleOperations.map((op) => ({
+            operation: op.operation,
+            entityId: op.entityId,
+            status: op.payload?.status,
+          })),
+        } : undefined,
+      },
+      saleOperations.length > 0 ? "📤 Sync batch completed (with sales)" : "📤 Sync batch completed"
     );
 
     return {
@@ -297,9 +334,30 @@ export class SyncService {
             });
           } catch (error) {
             const message = error instanceof Error ? error.message : "Unknown error";
+            const stack = error instanceof Error ? error.stack : undefined;
+
+            // Enhanced logging for sale operations
+            const isSaleOperation = operation.entityType === "sales";
             logger.error(
-              { entityType: operation.entityType, operation: operation.operation, entityId: operation.entityId, error: message },
-              "❌ Operation failed"
+              {
+                entityType: operation.entityType,
+                operation: operation.operation,
+                entityId: operation.entityId,
+                error: message,
+                stack,
+                businessId: ctx.businessId,
+                userId: ctx.businessUserId,
+                ...(isSaleOperation && {
+                  saleDetails: {
+                    requestedStatus: operation.payload?.status,
+                    requestedTotal: operation.payload?.totalAmount,
+                    hasItems: Array.isArray(operation.payload?.items),
+                    itemCount: operation.payload?.items?.length,
+                    payloadKeys: Object.keys(operation.payload || {}),
+                  }
+                }),
+              },
+              isSaleOperation ? "❌ SALE OPERATION FAILED" : "❌ Operation failed with details"
             );
 
             await tx
@@ -326,6 +384,18 @@ export class SyncService {
       });
     } catch (error) {
       // Transaction failed - mark all as failed
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      logger.error(
+        {
+          operationsCount: opsToProcess.length,
+          error: errorMessage,
+          stack: errorStack,
+        },
+        "❌ Transaction failed - all operations marked as failed"
+      );
+
       for (const operation of opsToProcess) {
         const alreadyHasResult = results.find(
           (r) => r.idempotencyKey === operation.idempotencyKey
@@ -432,10 +502,19 @@ export class SyncService {
       case "sales": {
         const sale = await this.deps.saleRepo.findById(ctx, operation.entityId);
         if (!sale) {
+          logger.debug({ msg: "Conflict check - sale not found (no conflict)", entityId: operation.entityId });
           return { hasConflict: false };
         }
         // Sales have explicit version field
         if (sale.version > operation.localVersion) {
+          logger.warn({
+            msg: "⚠️ Sale conflict detected",
+            entityId: operation.entityId,
+            serverVersion: sale.version,
+            clientVersion: operation.localVersion,
+            serverStatus: sale.status,
+            serverUpdatedAt: sale.updatedAt.toISOString(),
+          });
           return {
             hasConflict: true,
             serverVersion: sale.version,
@@ -449,6 +528,12 @@ export class SyncService {
             },
           };
         }
+        logger.debug({
+          msg: "Conflict check - no conflict",
+          entityId: operation.entityId,
+          serverVersion: sale.version,
+          clientVersion: operation.localVersion,
+        });
         return { hasConflict: false };
       }
       case "abonos": {
@@ -632,8 +717,24 @@ export class SyncService {
     const payload = operation.payload;
     const dbOrTx = tx || db;
 
+    logger.info({
+      msg: "🔄 Processing sales operation",
+      operation: operation.operation,
+      entityId: operation.entityId,
+      businessId: ctx.businessId,
+      userId: ctx.businessUserId,
+      payloadKeys: Object.keys(payload),
+    });
+
     if (operation.operation === "create") {
       const sale = this.parseSaleInsert(payload);
+      logger.debug({
+        msg: "📦 Creating sale from sync",
+        saleId: operation.entityId,
+        saleType: sale.saleType,
+        totalAmount: sale.totalAmount,
+        itemCount: sale.items?.length || 0,
+      });
       await dbOrTx.transaction(async (innerTx) => {
         const createdSale = await this.deps.saleRepo.create(ctx, sale, innerTx);
 
@@ -650,33 +751,80 @@ export class SyncService {
           );
         }
       });
+      logger.info({ msg: "✅ Sale created via sync", saleId: operation.entityId });
       return;
     }
 
     if (operation.operation === "update") {
       const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
       if (!existing) {
+        logger.error({
+          msg: "❌ Sale update failed - not found",
+          saleId: operation.entityId,
+          businessId: ctx.businessId,
+        });
         throw new ValidationError("Venta no encontrada");
       }
 
+      logger.info({
+        msg: "📝 Processing sale update",
+        saleId: operation.entityId,
+        existingStatus: existing.status,
+        existingType: existing.type,
+        existingVersion: existing.version,
+        requestedStatus: payload.status,
+        payloadKeys: Object.keys(payload),
+        hasItems: Array.isArray(payload.items),
+        itemCount: Array.isArray(payload.items) ? payload.items.length : 0,
+      });
+
       if (payload.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
+        logger.info({
+          msg: "🚀 Confirming instant sale",
+          saleId: operation.entityId,
+          fromStatus: existing.status,
+          toStatus: "active",
+        });
         await this.deps.saleRepo.update(ctx, operation.entityId, {
           status: "active",
         });
+        logger.info({ msg: "✅ Instant sale confirmed", saleId: operation.entityId });
         return;
       }
 
       if (payload.status === "confirmed" && existing.status === "draft" && existing.type === "pre_order") {
+        logger.info({
+          msg: "📦 Confirming pre-order",
+          saleId: operation.entityId,
+          fromStatus: existing.status,
+          toStatus: "confirmed",
+          version: existing.version,
+        });
         await this.deps.saleRepo.confirmPreOrder(ctx, operation.entityId, existing.version);
+        logger.info({ msg: "✅ Pre-order confirmed", saleId: operation.entityId });
         return;
       }
 
       if (payload.status === "delivered" && existing.status === "confirmed" && existing.type === "pre_order") {
+        logger.info({
+          msg: "🚚 Delivering pre-order",
+          saleId: operation.entityId,
+          fromStatus: existing.status,
+          toStatus: "delivered",
+          version: existing.version,
+        });
         await this.deps.saleRepo.deliverPreOrder(ctx, operation.entityId, existing.version);
+        logger.info({ msg: "✅ Pre-order delivered", saleId: operation.entityId });
         return;
       }
 
       if (payload.status === "cancelled") {
+        logger.info({
+          msg: "❌ Cancelling sale",
+          saleId: operation.entityId,
+          fromStatus: existing.status,
+          refundAmount: payload.refundAmount,
+        });
         await this.deps.saleRepo.update(ctx, operation.entityId, {
           status: "cancelled",
           cancelledAt: now(),
@@ -685,11 +833,18 @@ export class SyncService {
           refundAmount: this.optionalNumericString(payload.refundAmount),
           refundMethod: payload.refundMethod as any,
         });
+        logger.info({ msg: "✅ Sale cancelled", saleId: operation.entityId });
         return;
       }
 
       // Check if items are included in the payload - use updateWithItems for atomic item sync
       if (Array.isArray(payload.items)) {
+        logger.info({
+          msg: "📝 Updating sale with items",
+          saleId: operation.entityId,
+          itemCount: payload.items.length,
+          updateFields: Object.keys(payload).filter(k => k !== "items"),
+        });
         const updateData: Parameters<typeof this.deps.saleRepo.updateWithItems>[2] = {
           ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
           ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
@@ -698,13 +853,20 @@ export class SyncService {
           items: this.parseSaleItemsForUpdate(payload.items),
         };
         await this.deps.saleRepo.updateWithItems(ctx, operation.entityId, updateData);
+        logger.info({ msg: "✅ Sale updated with items", saleId: operation.entityId });
       } else {
+        logger.info({
+          msg: "📝 Updating sale (no items)",
+          saleId: operation.entityId,
+          updateFields: Object.keys(payload),
+        });
         await this.deps.saleRepo.update(ctx, operation.entityId, {
           ...(payload.customerId !== undefined && { customerId: this.optionalString(payload.customerId) }),
           ...(payload.deliveryDate !== undefined && { deliveryDate: this.optionalString(payload.deliveryDate) }),
           ...(payload.saleType !== undefined && { saleType: this.requiredSaleType(payload.saleType) }),
           ...(payload.totalAmount !== undefined && { totalAmount: this.requiredNumericString(payload.totalAmount, "totalAmount") }),
         });
+        logger.info({ msg: "✅ Sale updated", saleId: operation.entityId });
       }
       return;
     }
@@ -712,13 +874,17 @@ export class SyncService {
     if (operation.operation === "delete") {
       const existing = await this.deps.saleRepo.findById(ctx, operation.entityId);
       if (!existing) {
+        logger.warn({ msg: "⚠️ Sale delete skipped - not found", saleId: operation.entityId });
         return;
       }
 
+      logger.info({ msg: "🗑️ Deleting sale", saleId: operation.entityId, status: existing.status });
       await this.deps.saleRepo.delete(ctx, operation.entityId);
+      logger.info({ msg: "✅ Sale deleted", saleId: operation.entityId });
       return;
     }
 
+    logger.error({ msg: "❌ Unsupported sale operation", operation: operation.operation });
     throw new ValidationError("Acción no soportada para ventas");
   }
 
@@ -729,7 +895,21 @@ export class SyncService {
   ) {
     const payload = operation.payload;
 
+    logger.info({
+      msg: "💳 Applying abonos operation",
+      operation: operation.operation,
+      entityId: operation.entityId,
+      payload,
+    });
+
     if (operation.operation === "create") {
+      logger.info({
+        msg: "💳 Creating abono",
+        customerId: payload.customerId,
+        amount: payload.amount,
+        paymentMethod: payload.paymentMethod,
+      });
+
       await this.deps.paymentRepo.create(ctx, {
         customerId: this.requiredString(payload.customerId, "customerId"),
         amount: this.requiredNumericString(payload.amount, "amount"),

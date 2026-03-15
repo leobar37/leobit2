@@ -1,7 +1,7 @@
 import { ShoppingCart, WifiOff, Wifi } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import type { Sale } from "~/lib/services/sale-service";
+import { formatCurrency } from "~/lib/utils";
 
 interface SaleDetailSummaryCardProps {
   sale: Sale;
@@ -10,6 +10,7 @@ interface SaleDetailSummaryCardProps {
 export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
   const paidAmount = Number(sale.amountPaid ?? 0);
   const dueAmount = Number(sale.balanceDue ?? 0);
+  const totalAmount = Number(sale.totalAmount ?? 0);
 
   const saleWorkflowStatus =
     sale.status === "draft"
@@ -62,43 +63,61 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
   };
 
   return (
-    <Card className="shell-card-flat rounded-[28px]">
-      <CardContent className="p-4">
+    <section className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white/68">
+      <div className="space-y-4 p-4">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100">
-            <ShoppingCart className="h-7 w-7 text-orange-600" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50">
+            <ShoppingCart className="h-5 w-5 text-orange-600" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground">Venta #{sale.id.slice(-6)}</p>
-            
-            {/* Main badges - now wrap properly */}
-            <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-orange-700/80">
+              {saleWorkflowStatus}
+            </p>
+
+            <div className="mt-1 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-lg font-bold tracking-tight text-foreground">
+                  Venta #{sale.id.slice(-6)}
+                </p>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {sale.customer?.name || "Cliente general"}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold tracking-[-0.04em] text-foreground">
+                  S/ {formatCurrency(totalAmount)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
               <Badge
                 variant="outline"
                 className={`rounded-md border px-2 py-0.5 text-xs font-medium ${getWorkflowBadgeStyles()}`}
               >
                 {saleWorkflowStatus}
               </Badge>
-              
+
               <Badge
                 variant="outline"
                 className={`rounded-md border px-2 py-0.5 text-xs font-medium ${getPaymentBadgeStyles()}`}
               >
                 {saleStatus}
               </Badge>
-              
+
               {sale.saleType === "credito" && (
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700"
                 >
                   Crédito
                 </Badge>
               )}
             </div>
-            
-            {/* Sync status - separate row with icon */}
-            <div className="mt-2 flex items-center gap-1.5">
+
+            <div className="mt-3 flex items-center gap-1.5">
               {sale.syncStatus === "synced" ? (
                 <>
                   <Wifi className="h-3 w-3 text-emerald-500" />
@@ -118,7 +137,33 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="grid grid-cols-2 gap-4 border-t shell-divider pt-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Abonado</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              S/ {formatCurrency(paidAmount)}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground">
+              {sale.saleType === "credito" ? "Saldo pendiente" : "Estado"}
+            </p>
+            <p
+              className={`mt-1 text-lg font-semibold ${
+                sale.saleType === "credito" && dueAmount > 0
+                  ? "text-red-600"
+                  : "text-emerald-600"
+              }`}
+            >
+              {sale.saleType === "credito"
+                ? `S/ ${formatCurrency(dueAmount)}`
+                : "Pagado"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

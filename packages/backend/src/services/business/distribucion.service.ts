@@ -144,7 +144,7 @@ export class DistribucionService {
       modo: data.modo || "estricto",
       confiarEnVendedor: data.confiarEnVendedor || false,
       pesoConfirmado: !data.confiarEnVendedor,
-      syncStatus: "pending",
+      syncStatus: "synced",
       syncAttempts: 0,
     });
 

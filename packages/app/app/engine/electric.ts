@@ -52,7 +52,12 @@ class ElectricSyncManager {
   async startSync(config: ElectricSyncConfig): Promise<() => void> {
     const { pg, businessId, onTableSync, onSyncComplete } = config;
 
+    console.log(`[ELECTRIC-ENGINE] startSync called for business: ${businessId}`);
+    console.log(`[ELECTRIC-ENGINE] Token present: ${!!config.token}`);
+    console.log(`[ELECTRIC-ENGINE] PG instance: ${pg ? 'yes' : 'no'}`);
+
     if (this.state.isSyncing && this.state.businessId === businessId) {
+      console.log(`[ELECTRIC-ENGINE] Already syncing for this business, returning existing cleanup`);
       return () => this.stopSync();
     }
 
@@ -65,13 +70,20 @@ class ElectricSyncManager {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      console.log(`[ELECTRIC-ENGINE] Sync attempt ${attempt}/${MAX_RETRY_ATTEMPTS}`);
+
       try {
         const shapes = getShapesByPriority();
+        console.log(`[ELECTRIC-ENGINE] Got ${shapes.length} shapes to sync`);
         const result = await this.syncWithRetry(pg, config.businessId, config.token, shapes, attempt);
 
         this.setState({
           currentSyncResults: [...result.success, ...result.failed],
         });
+
+        console.log(`[ELECTRIC-ENGINE] Sync result: ${result.success.length} success, ${result.failed.length} failed`);
+        console.log(`[ELECTRIC-ENGINE] Success tables:`, result.success.map(r => r.table).join(', '));
+        console.log(`[ELECTRIC-ENGINE] Failed tables:`, result.failed.map(r => `${r.table} (${r.error || 'unknown'})`).join(', '));
 
         for (const tableResult of result.success) {
           onTableSync?.(tableResult.table, true);
@@ -86,12 +98,15 @@ class ElectricSyncManager {
         });
 
         lastError = null;
+        console.log(`[ELECTRIC-ENGINE] Sync completed successfully`);
         break;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`[ELECTRIC-ENGINE] Sync attempt ${attempt} failed:`, lastError.message);
 
         if (attempt < MAX_RETRY_ATTEMPTS) {
           const delay = RETRY_BASE_DELAY * Math.pow(2, attempt - 1);
+          console.log(`[ELECTRIC-ENGINE] Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -100,9 +115,11 @@ class ElectricSyncManager {
     this.setState({ isSyncing: false });
 
     if (lastError) {
+      console.error(`[ELECTRIC-ENGINE] All retry attempts exhausted, throwing error:`, lastError.message);
       throw lastError;
     }
 
+    console.log(`[ELECTRIC-ENGINE] Returning cleanup function`);
     return () => this.stopSync();
   }
 
@@ -113,11 +130,15 @@ class ElectricSyncManager {
     shapes: Parameters<typeof syncTables>[3],
     attempt: number
   ): Promise<{ success: SyncTableResult[]; failed: SyncTableResult[] }> {
+    console.log(`[ELECTRIC-ENGINE] syncWithRetry called (attempt ${attempt})`);
+    console.log(`[ELECTRIC-ENGINE] Calling syncTables with ${shapes.length} shapes`);
     const result = await syncTables(pg, businessId, token, shapes);
+    console.log(`[ELECTRIC-ENGINE] syncTables returned: ${result.success.length} success, ${result.failed.length} failed`);
     return result;
   }
 
   stopSync(): void {
+    console.log(`[ELECTRIC-ENGINE] stopSync called`);
     const { currentSyncResults } = this.getState();
     stopAllSyncs(currentSyncResults);
     this.setState({
@@ -125,6 +146,7 @@ class ElectricSyncManager {
       isSyncing: false,
       businessId: null,
     });
+    console.log(`[ELECTRIC-ENGINE] stopSync complete`);
   }
 
   getSyncState(): ElectricSyncState {

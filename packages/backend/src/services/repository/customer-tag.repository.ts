@@ -45,7 +45,7 @@ export class CustomerTagRepository {
         customerId,
         tagId,
         assignedBy: ctx.businessUserId,
-        syncStatus: "pending",
+        syncStatus: "synced",
         syncAttempts: 0,
       }));
 
@@ -70,7 +70,7 @@ export class CustomerTagRepository {
         tagId,
         assignedBy: ctx.businessUserId,
         assignedAt: new Date(),
-        syncStatus: "pending",
+        syncStatus: "synced",
         syncAttempts: 0,
       })
       .returning();

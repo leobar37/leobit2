@@ -2,6 +2,9 @@ import { Elysia, t } from "elysia";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
+import { createLogger } from "../lib/logger";
+
+const logger = createLogger("SyncRoute");
 
 export const syncRoutes = new Elysia({ prefix: "/sync" })
   .use(contextPlugin)
@@ -9,10 +12,46 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   .post(
     "/batch",
     async ({ syncService, ctx, body }) => {
+      // Log incoming sync batch request
+      const salesOps = body.operations.filter((op: { entityType: string }) => op.entityType === "sales");
+      const updateOps = salesOps.filter((op: { operation: string }) => op.operation === "update");
+
+      logger.info({
+        msg: "📥 SYNC BATCH REQUEST",
+        businessId: ctx.businessId,
+        userId: ctx.businessUserId,
+        totalOperations: body.operations.length,
+        operationsByEntity: body.operations.reduce((acc: Record<string, number>, op: { entityType: string }) => {
+          acc[op.entityType] = (acc[op.entityType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        salesOperations: salesOps.length,
+        saleUpdates: updateOps.length,
+        saleUpdateIds: updateOps.map((op: { entityId: string }) => op.entityId),
+      });
+
+      const startTime = Date.now();
       const result = await syncService.processBatch(
         ctx as RequestContext,
         body.operations
       );
+      const duration = Date.now() - startTime;
+
+      // Log completion
+      const failedOps = result.results.filter((r: { success: boolean }) => !r.success);
+      logger.info({
+        msg: "📤 SYNC BATCH RESPONSE",
+        businessId: ctx.businessId,
+        duration,
+        total: result.results.length,
+        succeeded: result.results.length - failedOps.length,
+        failed: failedOps.length,
+        errors: failedOps.map((r: { idempotencyKey: string; error?: string }) => ({
+          key: r.idempotencyKey,
+          error: r.error,
+        })),
+      });
+
       return { success: true, data: result };
     },
     {
