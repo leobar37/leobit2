@@ -1,10 +1,12 @@
 /**
  * Visits Hook
  * Reactively fetch and mutate visits using API
+ * Offline-first: uses useOfflineAwareMutation to check connectivity before API calls
  */
 
-import { useMutation } from "@tanstack/react-query";
 import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+import { toast } from "sonner";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
@@ -73,25 +75,80 @@ async function apiCall<T>(
 
 /**
  * Update visita status (mark as purchased/not purchased, link sale)
+ * Uses offline-aware mutation to check connectivity before API call
  */
 export function useUpdateVisita() {
-  return useMutation({
+  return useOfflineAwareMutation<Visita, Error, {
+    id: string;
+    status: "pendiente" | "compro" | "no_compra";
+    motivoNoCompra?: string;
+    saleId?: string;
+  }>({
     mutationFn: async ({
       id,
       status,
       motivoNoCompra,
       saleId,
-    }: {
-      id: string;
-      status: "pendiente" | "compro" | "no_compra";
-      motivoNoCompra?: string;
-      saleId?: string;
     }): Promise<Visita> => {
       return apiCall<Visita>(`/api/visitas/${id}`, "PATCH", {
         status,
         motivoNoCompra,
         saleId,
       });
+    },
+    offlineMessage: "Se requiere conexión a internet para actualizar la visita",
+    onSuccess: () => {
+      toast.success("Visita actualizada correctamente");
+    },
+  });
+}
+
+/**
+ * Create a new visita for a customer
+ * Uses offline-aware mutation to check connectivity before API call
+ */
+export function useCreateVisita() {
+  return useOfflineAwareMutation<Visita, Error, {
+    distribucionId: string;
+    customerId: string;
+  }>({
+    mutationFn: async ({
+      distribucionId,
+      customerId,
+    }): Promise<Visita> => {
+      return apiCall<Visita>("/api/visitas", "POST", {
+        distribucionId,
+        customerId,
+      });
+    },
+    offlineMessage: "Se requiere conexión a internet para crear la visita",
+    onSuccess: () => {
+      toast.success("Visita creada correctamente");
+    },
+  });
+}
+
+/**
+ * Create multiple visitas from a group of customers
+ * Uses offline-aware mutation to check connectivity before API call
+ */
+export function useCreateVisitasFromGroup() {
+  return useOfflineAwareMutation<Visita[], Error, {
+    distribucionId: string;
+    groupId: string;
+  }>({
+    mutationFn: async ({
+      distribucionId,
+      groupId,
+    }): Promise<Visita[]> => {
+      return apiCall<Visita[]>("/api/visitas/bulk", "POST", {
+        distribucionId,
+        groupId,
+      });
+    },
+    offlineMessage: "Se requiere conexión a internet para crear las visitas",
+    onSuccess: () => {
+      toast.success("Visitas creadas correctamente");
     },
   });
 }
