@@ -9,7 +9,7 @@ import type { RequestContext } from "../../context/request-context";
 
 export interface VisitaWithCustomer extends Visita {
   customerName: string;
-  customerDni?: string;
+  customerDni?: string | null;
 }
 
 export interface CreateVisitaData {
