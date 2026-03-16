@@ -1,15 +1,10 @@
-import { User, Phone, MapPin, CreditCard, CloudOff, Tag, Check } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
+import { User, Phone, MapPin, CreditCard, CloudOff, Check } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "~/lib/utils";
 import type { Customer } from "~/lib/db/schema";
 
 import { useCustomerTags } from "~/hooks/use-customer-tags";
 import { TagBadge } from "~/components/tags";
-import {
-  MinimalCard,
-  MinimalCardContent,
-  MinimalCardMedia,
-} from "~/components/cards";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -20,9 +15,13 @@ interface CustomerCardProps {
   onSelect?: (selected: boolean) => void;
 }
 
-export function CustomerCard({ 
-  customer, 
-  showDebt = false, 
+/**
+ * Card component for displaying customer information.
+ * Uses shell-card-flat styling for consistency with other list cards.
+ */
+export function CustomerCard({
+  customer,
+  showDebt = false,
   showTags = true,
   selectable = false,
   selected = false,
@@ -38,45 +37,42 @@ export function CustomerCard({
   };
 
   return (
-    <MinimalCard
-      variant={selected ? "filled" : "outlined"}
-      tone={selected ? "primary" : "neutral"}
-      interactive
-      clickable={!selectable}
-      radius="md"
+    <Card
       className={cn(
-        selectable && "cursor-pointer",
-        selected && "bg-orange-500"
+        "w-full rounded-[24px] transition-colors",
+        selected
+          ? "bg-orange-500 border-orange-500"
+          : "shell-card-flat hover:border-stone-300/90",
+        (selectable || !selected) && "cursor-pointer"
       )}
       onClick={handleClick}
     >
-      <MinimalCardContent className="p-4">
+      <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {selectable ? (
-            <div 
-              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                selected 
-                  ? "bg-orange-500 text-white" 
-                  : "bg-orange-100 text-orange-600"
-              }`}
-            >
-              {selected ? (
-                <Check className="h-5 w-5" />
-              ) : (
-                <User className="h-5 w-5" />
-              )}
-            </div>
-          ) : (
-            <MinimalCardMedia 
-              icon={User} 
-              iconColor="text-orange-600" 
-              size="md" 
-            />
-          )}
+          {/* Icon or Checkbox */}
+          <div
+            className={cn(
+              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors",
+              selected
+                ? "bg-orange-500 text-white ring-2 ring-white/30"
+                : "bg-orange-100 text-orange-600"
+            )}
+          >
+            {selectable && selected ? (
+              <Check className="h-5 w-5" />
+            ) : (
+              <User className="h-5 w-5" />
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className={`font-semibold truncate ${selected ? "text-white" : "text-foreground"}`}>
+              <h3
+                className={cn(
+                  "font-semibold truncate",
+                  selected ? "text-white" : "text-foreground"
+                )}
+              >
                 {customer.name}
               </h3>
               {isPending && !selectable && (
@@ -98,7 +94,12 @@ export function CustomerCard({
                   />
                 ))}
                 {customerTags.length > 3 && (
-                  <span className={`text-xs px-1 ${selected ? "text-white/70" : "text-muted-foreground"}`}>
+                  <span
+                    className={cn(
+                      "text-xs px-1",
+                      selected ? "text-white/70" : "text-muted-foreground"
+                    )}
+                  >
                     +{customerTags.length - 3}
                   </span>
                 )}
@@ -107,21 +108,36 @@ export function CustomerCard({
 
             <div className="mt-2 space-y-1">
               {customer.dni && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div
+                  className={cn(
+                    "flex items-center gap-2 text-sm",
+                    selected ? "text-white/80" : "text-muted-foreground"
+                  )}
+                >
                   <CreditCard className="h-3.5 w-3.5" />
                   <span>{customer.dni}</span>
                 </div>
               )}
 
               {customer.phone && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div
+                  className={cn(
+                    "flex items-center gap-2 text-sm",
+                    selected ? "text-white/80" : "text-muted-foreground"
+                  )}
+                >
                   <Phone className="h-3.5 w-3.5" />
                   <span>{customer.phone}</span>
                 </div>
               )}
 
               {customer.address && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div
+                  className={cn(
+                    "flex items-center gap-2 text-sm",
+                    selected ? "text-white/80" : "text-muted-foreground"
+                  )}
+                >
                   <MapPin className="h-3.5 w-3.5" />
                   <span className="truncate">{customer.address}</span>
                 </div>
@@ -129,7 +145,7 @@ export function CustomerCard({
             </div>
           </div>
         </div>
-      </MinimalCardContent>
-    </MinimalCard>
+      </CardContent>
+    </Card>
   );
 }

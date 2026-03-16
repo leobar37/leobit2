@@ -1,4 +1,5 @@
 export { DistribucionTable } from "./distribucion-table";
+export { DistribucionCard } from "./distribucion-card";
 export { CreateDistribucionForm } from "./create-distribucion-form";
 export { EditDistribucionForm } from "./edit-distribucion-form";
 export { ProductVariantSelector } from "./product-variant-selector";

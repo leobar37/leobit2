@@ -1,9 +1,9 @@
-import { formatKilos } from "~/lib/utils";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { getToday } from "~/lib/date-utils";
+import { formatKilos } from "~/lib/utils";
 import { useBusiness } from "@/hooks/use-business";
 import {
   useDistribuciones,
@@ -11,7 +11,7 @@ import {
   useDeleteDistribucion,
   type Distribucion,
 } from "~/hooks/use-distribuciones";
-import { DistribucionTable } from "~/components/distribucion";
+import { DistribucionCard } from "~/components/distribucion";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -111,51 +111,80 @@ export default function DistribucionesPage() {
 
   return (
     <div className="space-y-4">
-        <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/5">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-orange-600" />
-              <span className="font-medium">{selectedDate}</span>
-            </div>
-            <FormProvider {...filterForm}>
-              <FormDate
-                name="fecha"
-                label="Seleccionar fecha"
-                quickActionLabels={["Hoy", "Mañana"]}
-              />
-            </FormProvider>
-          </CardContent>
-        </Card>
+      {/* Date Selector Card */}
+      <Card className="shell-card-flat rounded-[24px]">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-orange-600" />
+            <span className="font-medium">{selectedDate}</span>
+          </div>
+          <FormProvider {...filterForm}>
+            <FormDate
+              name="fecha"
+              label="Seleccionar fecha"
+              quickActionLabels={["Hoy", "Mañana"]}
+            />
+          </FormProvider>
+        </CardContent>
+      </Card>
 
-        <Card className="border-0 shadow-md rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-base">Resumen del Día</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <span className="text-xl font-bold text-orange-600">
-                  {formatKilos(totalAsignado, 0)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Asignado (kg)</p>
-              </div>
-              <div className="text-center p-3 bg-green-50 rounded-xl">
-                <span className="text-xl font-bold text-green-600">
-                  {formatKilos(totalVendido, 0)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Vendido (kg)</p>
-              </div>
+      {/* Summary Card */}
+      <Card className="shell-card-flat rounded-[24px]">
+        <CardHeader>
+          <CardTitle className="text-base">Resumen del Día</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-3 bg-orange-50 rounded-xl">
+              <span className="text-xl font-bold text-orange-600">
+                {formatKilos(totalAsignado, 0)}
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">Asignado (kg)</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-center p-3 bg-green-50 rounded-xl">
+              <span className="text-xl font-bold text-green-600">
+                {formatKilos(totalVendido, 0)}
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">Vendido (kg)</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <DistribucionTable
-        distribuciones={distribuciones}
-        onEdit={handleNavigateToEdit}
-        onClose={handleClose}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
+      {/* Distribution List */}
+      {isLoading ? (
+        <div className="rounded-[24px] border border-stone-200/80 bg-white/50 p-8 text-center text-muted-foreground">
+          Cargando distribuciones...
+        </div>
+      ) : distribuciones.length === 0 ? (
+        <div className="rounded-[24px] border border-stone-200/80 bg-white/50 p-8 text-center">
+          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Truck className="h-8 w-8 text-orange-600" />
+          </div>
+          <p className="text-muted-foreground">No hay distribuciones para esta fecha</p>
+          {isAdmin && (
+            <Button
+              className="mt-4 bg-orange-500 hover:bg-orange-600"
+              onClick={handleNavigateToCreate}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Crear distribución
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {distribuciones.map((distribucion) => (
+            <DistribucionCard
+              key={distribucion.id}
+              distribucion={distribucion}
+              onEdit={handleNavigateToEdit}
+              onClose={handleClose}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
 
       <ConfirmDialog />
     </div>
