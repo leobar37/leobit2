@@ -11,11 +11,9 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
   .use(contextPlugin)
   .use(servicesPlugin)
   .get("/", async ({ request, set, ctx, electricService }) => {
-    await Bun.write("/tmp/electric-debug.log", "[ElectricRoute] Handler started\n");
     const requestCtx = ctx as RequestContext;
     const incomingUrl = new URL(request.url);
     const table = incomingUrl.searchParams.get("table");
-    console.error("[ElectricRoute] table:", table);
     const offset = incomingUrl.searchParams.get("offset");
     const handle = incomingUrl.searchParams.get("handle");
 
@@ -36,6 +34,17 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
       "electric-schema": "",
       "electric-handle": "",
     };
+
+    // CORS expose headers for all responses
+    const exposeHeaders = [
+      "electric-offset",
+      "electric-handle",
+      "electric-schema",
+      "electric-cursor",
+      "electric-up-to-date",
+      "electric-control",
+    ];
+    set.headers["access-control-expose-headers"] = exposeHeaders.join(", ");
 
     if (!table) {
       set.status = 400;
@@ -67,27 +76,23 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
       };
     }
 
-    console.log(`[Electric] Processing request for table: ${table}, businessId: ${ctx.businessId}`);
-
     try {
       const result = await electricService.proxyShape(requestCtx, {
         table,
         searchParams: incomingUrl.searchParams,
         accept: request.headers.get("accept"),
       });
-      console.log(`[Electric] Proxy result: status=${result.status}`);
 
       set.status = result.status;
 
-    // Merge service headers with defaults to ensure all required headers are present
-    const mergedHeaders = { ...defaultHeaders, ...result.headers };
-    for (const [header, value] of Object.entries(mergedHeaders)) {
-      set.headers[header] = value;
-    }
+      // Merge service headers with defaults to ensure all required headers are present
+      const mergedHeaders = { ...defaultHeaders, ...result.headers };
+      for (const [header, value] of Object.entries(mergedHeaders)) {
+        set.headers[header] = value;
+      }
 
-    return result.body;
+      return result.body;
     } catch (error) {
-      console.error("Electric proxy error:", error);
       logger.error({
         msg: "Electric proxy error",
         table,
@@ -98,6 +103,8 @@ export const electricRoutes = new Elysia({ prefix: "/electric" })
       for (const [header, value] of Object.entries(defaultHeaders)) {
         set.headers[header] = value;
       }
+      // Expose headers for error responses too
+      set.headers["access-control-expose-headers"] = exposeHeaders.join(", ");
       return {
         success: false,
         error: {

@@ -55,6 +55,7 @@ export const app = new Elysia()
     set.headers["access-control-allow-credentials"] = corsConfig.credentials;
     set.headers["access-control-allow-methods"] = corsConfig.methods;
     set.headers["access-control-allow-headers"] = corsConfig.headers;
+    set.headers["access-control-expose-headers"] = corsConfig.exposeHeaders;
     set.headers["access-control-max-age"] = corsConfig.maxAge;
     return null;
   })
@@ -63,8 +64,8 @@ export const app = new Elysia()
     set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
     set.headers["access-control-allow-credentials"] = corsConfig.credentials;
     const existingExposeHeaders =
-      set.headers["access-control-expose-headers"] ??
-      set.headers["Access-Control-Expose-Headers"];
+      (set.headers["access-control-expose-headers"] ??
+      set.headers["Access-Control-Expose-Headers"]) as string | undefined;
     set.headers["access-control-expose-headers"] = mergeExposeHeaders(
       existingExposeHeaders,
       corsConfig.exposeHeaders

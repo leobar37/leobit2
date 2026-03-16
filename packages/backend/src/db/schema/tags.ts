@@ -9,13 +9,10 @@ import {
   timestamp,
   index,
   integer,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
-
-// Sync status enum
-export const syncStatusEnum = pgEnum("sync_status", ["pending", "synced", "error"]);
+import { syncStatusEnum } from "./enums";
 
 // Table definition
 export const tags = pgTable(
@@ -43,6 +40,7 @@ export const tags = pgTable(
   (table) => [
     index("idx_tags_business_id").on(table.businessId),
     index("idx_tags_name").on(table.name),
+    index("idx_tags_sync_status").on(table.syncStatus),
   ]
 );
 

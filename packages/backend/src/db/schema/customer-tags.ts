@@ -9,15 +9,12 @@ import {
   primaryKey,
   index,
   integer,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { customers } from "./customers";
 import { tags } from "./tags";
 import { businessUsers } from "./businesses";
-
-// Sync status enum
-const syncStatusEnum = pgEnum("sync_status", ["pending", "synced", "error"]);
+import { syncStatusEnum } from "./enums";
 
 // Table definition (junction table)
 export const customerTags = pgTable(

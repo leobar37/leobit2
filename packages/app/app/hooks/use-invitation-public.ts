@@ -1,6 +1,7 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { PublicInvitation } from "@avileo/shared";
 import { api } from "~/lib/api-client";
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 
 async function validateInvitation(token: string): Promise<PublicInvitation> {
   const { data, error } = await api.public.invitations({ token }).get();
@@ -45,7 +46,8 @@ export function useValidateInvitation(token: string) {
 }
 
 export function useAcceptInvitation() {
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: acceptInvitation,
+    offlineMessage: "Se requiere conexión a internet para aceptar la invitación",
   });
 }

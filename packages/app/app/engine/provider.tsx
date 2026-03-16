@@ -74,8 +74,9 @@ export function EngineProvider({
           const pg = pgRef.current;
           if (!pg) return console.error("PG not initialized");
           const result = await pg.query(`SELECT COUNT(*) as count FROM products`);
-          console.log("Product count:", result.rows[0]?.count);
-          return result.rows[0]?.count;
+          const row = result.rows[0] as { count: string | number } | undefined;
+          console.log("Product count:", row?.count);
+          return row?.count;
         },
         // Check all synced tables
         checkAllTables: async () => {
@@ -85,7 +86,8 @@ export function EngineProvider({
           for (const table of tables) {
             try {
               const result = await pg.query(`SELECT COUNT(*) as count FROM "${table}"`);
-              console.log(`${table}: ${result.rows[0]?.count} rows`);
+              const row = result.rows[0] as { count: string | number } | undefined;
+              console.log(`${table}: ${row?.count} rows`);
             } catch (e) {
               console.log(`${table}: ERROR - ${e}`);
             }
@@ -156,7 +158,8 @@ export function EngineProvider({
             for (const table of tables) {
               try {
                 const result = await pg.query(`SELECT COUNT(*) as count FROM electric.${table}`);
-                console.log(`electric.${table}: ${result.rows[0]?.count} rows`);
+                const row = result.rows[0] as { count: string | number } | undefined;
+                console.log(`electric.${table}: ${row?.count} rows`);
               } catch (e) {
                 console.log(`electric.${table}: not found`);
               }
@@ -167,7 +170,7 @@ export function EngineProvider({
           // List all schemas
           try {
             const result = await pg.query(`SELECT schema_name FROM information_schema.schemata`);
-            console.log("Schemas:", result.rows.map((r: { schema_name: string }) => r.schema_name));
+            console.log("Schemas:", result.rows.map((r: unknown) => (r as { schema_name: string }).schema_name));
           } catch (e) {
             console.log("Error listing schemas:", e);
           }
@@ -186,6 +189,107 @@ export function EngineProvider({
             console.log("Test cleanup done");
           } catch (e) {
             console.error("Test insert failed:", e);
+          }
+        },
+        // Generate and copy diagnostic report to clipboard
+        copyDiagnosticReport: async () => {
+          const pg = pgRef.current;
+          interface DiagnosticReport {
+            timestamp: string;
+            localStorage: {
+              bearer_token: string;
+              current_business_id: string | null;
+              avileo_schema_version: string | null;
+            };
+            pgInitialized: boolean;
+            electric: {
+              exists: boolean;
+              sync: boolean;
+            };
+            tables: Record<string, number>;
+            electricTables: Record<string, number>;
+            errors: string[];
+            syncStatus?: unknown;
+            schemas?: string[] | string;
+          }
+          const report: DiagnosticReport = {
+            timestamp: new Date().toISOString(),
+            localStorage: {
+              bearer_token: localStorage.getItem("bearer_token") ? "present" : "missing",
+              current_business_id: localStorage.getItem("current_business_id"),
+              avileo_schema_version: localStorage.getItem("avileo_schema_version"),
+            },
+            pgInitialized: !!pg,
+            electric: {
+              exists: pg ? 'electric' in pg : false,
+              sync: pg ? 'sync' in pg : false,
+            },
+            tables: {},
+            electricTables: {},
+            errors: [],
+          };
+
+          if (!pg) {
+            report.errors.push("PGlite not initialized");
+          } else {
+            // Check all main tables
+            const tables = [
+              'products', 'customers', 'sales', 'abonos', 'inventory',
+              'suppliers', 'tags', 'product_variants', 'purchases',
+              'sale_items', 'purchase_items', 'distribuciones',
+              'distribucion_items', 'closings', 'variant_inventory', 'customer_tags'
+            ];
+            for (const table of tables) {
+              try {
+                const result = await pg.query(`SELECT COUNT(*) as count FROM "${table}"`);
+                const count = result.rows[0] as { count: string | number } | undefined;
+                report.tables[table] = Number(count?.count || 0);
+              } catch (e) {
+                report.tables[table] = -1;
+                report.errors.push(`${table}: ${e instanceof Error ? e.message : String(e)}`);
+              }
+            }
+
+            // Check Electric internal tables
+            const electricTables = ['shape_subscriptions', 'shape_sync_status', 'sync_status'];
+            for (const table of electricTables) {
+              try {
+                const result = await pg.query(`SELECT COUNT(*) as count FROM electric.${table}`);
+                const count = result.rows[0] as { count: string | number } | undefined;
+                report.electricTables[table] = Number(count?.count || 0);
+              } catch {
+                report.electricTables[table] = -1;
+              }
+            }
+
+            // Check sync status
+            try {
+              const syncResult = await pg.query(`SELECT * FROM electric.sync_status`);
+              report.syncStatus = syncResult.rows;
+            } catch {
+              report.syncStatus = "not available";
+            }
+
+            // Check schemas
+            try {
+              const schemaResult = await pg.query(`SELECT schema_name FROM information_schema.schemata`);
+              report.schemas = schemaResult.rows.map((r: unknown) => (r as { schema_name: string }).schema_name);
+            } catch {
+              report.schemas = "error fetching";
+            }
+          }
+
+          const jsonReport = JSON.stringify(report, null, 2);
+          
+          try {
+            await navigator.clipboard.writeText(jsonReport);
+            console.log("✅ Diagnostic report copied to clipboard!");
+            console.log("Report preview:", report);
+            return report;
+          } catch (e) {
+            console.error("Failed to copy to clipboard:", e);
+            console.log("Report (copy manually):", jsonReport);
+            return report;
           }
         },
       };

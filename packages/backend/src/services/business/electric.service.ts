@@ -47,6 +47,8 @@ const DIRECT_BUSINESS_TABLES = new Set([
   "closings",
   "product_variants",
   "sale_items",
+  "purchase_items",
+  "distribucion_items",
   "tags",
   "distribuciones",
   "variant_inventory",
@@ -70,14 +72,12 @@ export const ALLOWED_TABLES = new Set([
   "customer_tags",
   "inventory",
   "variant_inventory",
+  "assets",
+  "files",
 ]);
 
 const SPECIAL_FILTER_TABLES = new Set([
-  "purchase_items",
-  "distribucion_items",
   "customer_tags",
-  "inventory",
-  "variant_inventory",
 ]);
 
 interface SpecialFilterConfig {
@@ -87,30 +87,10 @@ interface SpecialFilterConfig {
 }
 
 const SPECIAL_FILTER_CONFIG: Record<string, SpecialFilterConfig> = {
-  purchase_items: {
-    parentTable: "purchases",
-    parentColumn: "id",
-    childColumn: "purchase_id",
-  },
-  distribucion_items: {
-    parentTable: "distribuciones",
-    parentColumn: "id",
-    childColumn: "distribucion_id",
-  },
   customer_tags: {
     parentTable: "customers",
     parentColumn: "id",
     childColumn: "customer_id",
-  },
-  inventory: {
-    parentTable: "products",
-    parentColumn: "id",
-    childColumn: "product_id",
-  },
-  variant_inventory: {
-    parentTable: "product_variants",
-    parentColumn: "id",
-    childColumn: "variant_id",
   },
 };
 
@@ -182,12 +162,9 @@ export class ElectricService {
     ctx: RequestContext,
     input: ElectricProxyInput
   ): Promise<ElectricProxyResult> {
-    console.error("[ElectricService] proxyShape called for table:", input.table);
     const startTime = Date.now();
     const tenantWhere = await this.buildTenantWhere(input.table, ctx.businessId);
-    console.error("[ElectricService] tenantWhere:", tenantWhere);
     const electricUrl = this.buildElectricUrl(input.searchParams, input.table, tenantWhere);
-    console.error("[ElectricService] electricUrl:", electricUrl.toString());
     const electricToken = this.getElectricToken();
 
     // Extract key parameters for logging
@@ -458,48 +435,17 @@ export class ElectricService {
   ): Promise<string> {
     let rows: { id: unknown }[];
 
-    switch (config.parentTable) {
-      case "purchases": {
-        rows = await db
-          .select({ id: purchases.id })
-          .from(purchases)
-          .where(eq(purchases.businessId, businessId));
-        break;
-      }
-      case "distribuciones": {
-        rows = await db
-          .select({ id: distribuciones.id })
-          .from(distribuciones)
-          .where(eq(distribuciones.businessId, businessId));
-        break;
-      }
-      case "customers": {
-        rows = await db
-          .select({ id: customers.id })
-          .from(customers)
-          .where(eq(customers.businessId, businessId));
-        break;
-      }
-      case "products": {
-        rows = await db
-          .select({ id: products.id })
-          .from(products)
-          .where(eq(products.businessId, businessId));
-        break;
-      }
-      case "product_variants": {
-        rows = await db
-          .select({ id: productVariants.id })
-          .from(productVariants)
-          .where(eq(productVariants.businessId, businessId));
-        break;
-      }
-      default:
-        throw new AppError(
-          `Unknown parent table: ${config.parentTable}`,
-          "INVALID_CONFIG",
-          500
-        );
+    if (config.parentTable === "customers") {
+      rows = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(eq(customers.businessId, businessId));
+    } else {
+      throw new AppError(
+        `Unknown parent table: ${config.parentTable}`,
+        "INVALID_CONFIG",
+        500
+      );
     }
 
     if (rows.length === 0) {
@@ -536,6 +482,14 @@ export class ElectricService {
       electricUrl.searchParams.set(key, value);
     }
 
+    // Electric requires offset=-1 for initial sync (when no handle provided)
+    // If offset is 0_0 or missing and there's no handle, set it to -1
+    const hasHandle = electricUrl.searchParams.get("handle");
+    const currentOffset = electricUrl.searchParams.get("offset");
+    if (!hasHandle && (!currentOffset || currentOffset === "0_0")) {
+      electricUrl.searchParams.set("offset", "-1");
+    }
+
     if (!electricUrl.searchParams.get("source_id")) {
       const sourceId = process.env.VITE_ELECTRIC_SOURCE_ID;
 
@@ -561,9 +515,6 @@ export class ElectricService {
 
   private getElectricToken() {
     const electricToken = process.env.VITE_ELECTRIC_TOKEN;
-
-    console.log("[DEBUG] VITE_ELECTRIC_TOKEN:", electricToken ? "Set" : "Not set");
-    console.log("[DEBUG] ELECTRIC_URL:", process.env.ELECTRIC_URL || "Using default");
 
     if (!electricToken) {
       throw new AppError("Missing Electric token", "MISSING_SECRET", 500);

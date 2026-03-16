@@ -299,11 +299,12 @@ export const productVariants = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     productId: uuid("product_id").notNull(),
-    businessId: uuid("business_id"),
+    businessId: uuid("business_id").notNull(),
     name: varchar("name", { length: 50 }).notNull(),
     sku: varchar("sku", { length: 50 }),
     unitQuantity: decimal("unit_quantity", { precision: 10, scale: 3 }).notNull(),
     price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
@@ -319,6 +320,50 @@ export const productVariants = pgTable(
 
 export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
+
+// ============================================================================
+// Inventory (Simple)
+// ============================================================================
+
+export const inventory = pgTable(
+  "inventory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_inventory_business_id").on(table.businessId),
+    index("idx_inventory_product_id").on(table.productId),
+  ]
+);
+
+export type Inventory = typeof inventory.$inferSelect;
+export type NewInventory = typeof inventory.$inferInsert;
+
+// ============================================================================
+// Variant Inventory (for products with variants)
+// ============================================================================
+
+export const variantInventory = pgTable(
+  "variant_inventory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    variantId: uuid("variant_id").notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_variant_inventory_business_id").on(table.businessId),
+    index("idx_variant_inventory_variant_id").on(table.variantId),
+  ]
+);
+
+export type VariantInventory = typeof variantInventory.$inferSelect;
+export type NewVariantInventory = typeof variantInventory.$inferInsert;
 
 // ============================================================================
 // Suppliers
@@ -539,12 +584,31 @@ export const abonosRelations = relations(abonos, ({ one }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   variants: many(productVariants),
+  inventory: many(inventory),
 }));
 
 export const productVariantsRelations = relations(productVariants, ({ one }) => ({
   product: one(products, {
     fields: [productVariants.productId],
     references: [products.id],
+  }),
+  inventory: one(variantInventory, {
+    fields: [productVariants.id],
+    references: [variantInventory.variantId],
+  }),
+}));
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  product: one(products, {
+    fields: [inventory.productId],
+    references: [products.id],
+  }),
+}));
+
+export const variantInventoryRelations = relations(variantInventory, ({ one }) => ({
+  variant: one(productVariants, {
+    fields: [variantInventory.variantId],
+    references: [productVariants.id],
   }),
 }));
 
