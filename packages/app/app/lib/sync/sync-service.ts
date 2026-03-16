@@ -117,8 +117,22 @@ type CoalescePlan =
       type: "none";
     };
 
-const SYNC_STATUS_ENTITY_TABLES = new Set(["sales", "customers"]);
-const SELF_HEAL_INSERTABLE_ENTITIES = new Set(["sales", "customers"]);
+const SYNC_STATUS_ENTITY_TABLES = new Set([
+  "sales",
+  "customers",
+  "customer_groups",
+  "customer_group_members",
+  "visitas",
+  "abonos",
+]);
+
+const SELF_HEAL_INSERTABLE_ENTITIES = new Set([
+  "sales",
+  "customers",
+  "customer_groups",
+  "visitas",
+  "abonos",
+]);
 
 function parsePayload(payload: unknown): Record<string, unknown> {
   if (!payload) return {};
