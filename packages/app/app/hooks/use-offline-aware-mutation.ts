@@ -28,12 +28,18 @@ export function useOfflineAwareMutation<TData = unknown, TError = Error, TVariab
   const { mutationFn, offlineMessage, onOffline, ...restOptions } = options;
 
   const wrappedMutationFn = async (variables: TVariables): Promise<TData> => {
-    if (!isOnline()) {
+    console.log("[Offline] Attempting mutation, checking online status...");
+    const online = isOnline();
+    console.log("[Offline] Online status:", online);
+
+    if (!online) {
       const message = offlineMessage ?? "Se requiere conexión a internet para realizar esta acción";
+      console.log("[Offline] BLOCKED - showing toast:", message);
       toast.error(message);
       onOffline?.();
       throw new Error("Offline: No internet connection");
     }
+    console.log("[Offline] Proceeding with mutation...");
     return mutationFn(variables);
   };
 

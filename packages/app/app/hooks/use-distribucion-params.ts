@@ -10,12 +10,16 @@ export function useDistribucionParams() {
 
   const navigateToCreate = useCallback(
     (options?: { fecha?: string }) => {
+      console.log("[useDistribucionParams] navigateToCreate called, options:", options);
       const params = new URLSearchParams();
       if (options?.fecha) {
         params.set("fecha", options.fecha);
       }
       const queryString = params.toString();
-      navigate(`/distribuciones/nueva${queryString ? `?${queryString}` : ""}`);
+      const path = `/distribuciones/nueva${queryString ? `?${queryString}` : ""}`;
+      console.log("[useDistribucionParams] Navigating to:", path);
+      navigate(path);
+      console.log("[useDistribucionParams] navigate called");
     },
     [navigate]
   );

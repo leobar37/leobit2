@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { Drawer, DrawerContent } from "~/components/ui/drawer";
 import { Sheet, SheetContent } from "~/components/ui/sheet";
 import { useIsMobile } from "~/hooks/use-mobile";
+import { ModalLayoutProvider } from "~/lib/modal/components";
 
 interface ModalConfig {
   type?: "dialog" | "sheet" | "drawer" | "responsive";
@@ -68,14 +69,16 @@ export function createModal<TProps extends object>(
     if (!isOpen) return null;
 
     const content = (
-      <ContentComponent {...((data || {}) as TProps)} close={close} />
+      <ModalLayoutProvider>
+        <ContentComponent {...((data || {}) as TProps)} close={close} />
+      </ModalLayoutProvider>
     );
 
     if (config.type === "responsive") {
       if (isMobile) {
         return (
           <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-            <DrawerContent className="flex flex-col max-h-[50vh] sm:max-h-[85vh]">
+            <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
               {content}
             </DrawerContent>
           </Drawer>
@@ -85,7 +88,7 @@ export function createModal<TProps extends object>(
         <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
           <SheetContent
             side={config.side || "right"}
-            className="flex flex-col w-full sm:max-w-md"
+            className="flex flex-col w-full p-0 sm:max-w-md"
           >
             {content}
           </SheetContent>
@@ -96,7 +99,7 @@ export function createModal<TProps extends object>(
     if (config.type === "drawer") {
       return (
         <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-          <DrawerContent className="flex flex-col max-h-[50vh] sm:max-h-[85vh]">
+          <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
             {content}
           </DrawerContent>
         </Drawer>
@@ -108,17 +111,18 @@ export function createModal<TProps extends object>(
         <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
           <SheetContent
             side={config.side || "right"}
-            className="flex flex-col w-full sm:max-w-md"
+            className="flex flex-col w-full p-0 sm:max-w-md"
           >
             {content}
           </SheetContent>
         </Sheet>
       );
     }
+
     // Default to drawer for mobile-first approach
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-        <DrawerContent className="flex flex-col max-h-[50vh] sm:max-h-[85vh]">
+        <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
           {content}
         </DrawerContent>
       </Drawer>

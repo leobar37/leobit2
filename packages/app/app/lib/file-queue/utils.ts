@@ -1,3 +1,5 @@
 export function isOnline(): boolean {
-  return typeof navigator !== "undefined" && navigator.onLine;
+  const online = typeof navigator !== "undefined" && navigator.onLine;
+  console.log("[Offline] isOnline check:", online, "| navigator.onLine:", navigator.onLine);
+  return online;
 }

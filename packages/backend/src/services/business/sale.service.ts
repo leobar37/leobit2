@@ -130,8 +130,10 @@ export class SaleService {
       today
     );
 
+    const isPreOrder = data.type === "pre_order";
+
     if (!isEmptyDraft && distribucion) {
-      if (distribucion.modo === "estricto") {
+      if (!isPreOrder) {
         await this.validarStockEstricto(ctx, distribucion.id, items);
       }
     } else if (!isEmptyDraft) {
@@ -140,8 +142,6 @@ export class SaleService {
         throw new ValidationError("No tiene distribución asignada para hoy");
       }
     }
-
-    const isPreOrder = data.type === "pre_order";
 
     const salePayload: CreateSaleInput = {
       customerId: data.customerId,
@@ -172,7 +172,7 @@ export class SaleService {
     return db.transaction(async (tx) => {
       const sale = await this.repository.create(ctx, salePayload, tx);
 
-      if (!isEmptyDraft && distribucion && distribucion.modo !== "libre") {
+      if (!isEmptyDraft && distribucion && distribucion.modo !== "libre" && !isPreOrder) {
         const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
           ctx,
           distribucion.id
@@ -832,6 +832,27 @@ export class SaleService {
           `Stock insuficiente para ${saleItem.variantName}. Disponible: ${disponible}, Venta: ${saleItem.quantity}`
         );
       }
+    }
+  }
+
+  private async validarStockAcumulativo(
+    ctx: RequestContext,
+    distribucionId: string,
+    items: Array<{
+      variantId: string;
+      variantName: string;
+      quantity: number;
+    }>
+  ): Promise<void> {
+    const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+      ctx,
+      distribucionId
+    );
+
+    for (const saleItem of items) {
+      const distItem = distribucionItems.find(
+        (di) => di.variantId === saleItem.variantId
+      );
     }
   }
 }

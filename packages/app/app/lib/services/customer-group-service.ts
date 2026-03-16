@@ -24,6 +24,12 @@ export interface GroupMemberWithCustomer {
   addedAt: Date;
 }
 
+export interface CustomerGroupSummary {
+  id: string;
+  name: string;
+  syncStatus: string;
+}
+
 export interface CustomerGroupWithMemberCount extends Omit<CustomerGroup, "businessId"> {
   memberCount?: number;
 }
@@ -159,7 +165,27 @@ export class CustomerGroupService extends BaseService {
     }));
   }
 
-  async create(input: CreateCustomerGroupInput): Promise<CustomerGroup> {
+  async getCustomerGroups(customerId: string): Promise<CustomerGroupSummary[]> {
+    const results = await this.db
+      .select({
+        id: customerGroups.id,
+        name: customerGroups.name,
+        syncStatus: customerGroups.syncStatus,
+      })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(
+        and(
+          eq(customerGroupMembers.customerId, customerId),
+          eq(customerGroups.businessId, this.businessId)
+        )
+      )
+      .orderBy(desc(customerGroups.createdAt));
+
+    return results;
+  }
+
+  async create(input: CreateCustomerGroupInput, syncGroupId?: string): Promise<CustomerGroup> {
     const id = this.generateId();
     const now = new Date(this.now());
 
@@ -177,7 +203,7 @@ export class CustomerGroupService extends BaseService {
 
     await this.queueSync("insert", id, {
       name: input.name,
-    });
+    }, syncGroupId);
 
     const created = await this.db
       .select()
@@ -190,6 +216,32 @@ export class CustomerGroupService extends BaseService {
     }
 
     return created[0];
+  }
+
+  /**
+   * Create a group with initial members atomically
+   * Uses syncGroupId to ensure group and members are synced together
+   */
+  async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<CustomerGroup> {
+    const syncGroupId = this.generateSyncGroup();
+
+    await this.create(input, syncGroupId);
+
+    const groups = await this.db
+      .select()
+      .from(customerGroups)
+      .where(eq(customerGroups.name, input.name))
+      .limit(1);
+
+    if (groups.length === 0) {
+      throw new Error("Failed to create customer group");
+    }
+
+    if (customerIds.length > 0) {
+      await this.addMembers(groups[0].id, customerIds, syncGroupId);
+    }
+
+    return groups[0];
   }
 
   async update(id: string, input: UpdateCustomerGroupInput): Promise<CustomerGroup> {
@@ -270,7 +322,7 @@ export class CustomerGroupService extends BaseService {
     await this.queueSync("delete", id, {});
   }
 
-  async addMembers(groupId: string, customerIds: string[]): Promise<void> {
+  async addMembers(groupId: string, customerIds: string[], syncGroupId?: string): Promise<void> {
     const group = await this.db
       .select()
       .from(customerGroups)
@@ -318,7 +370,7 @@ export class CustomerGroupService extends BaseService {
       await this.queueSync("insert", memberIds[i], {
         groupId,
         customerId: newCustomerIds[i],
-      });
+      }, syncGroupId, "customer_group_members");
     }
   }
 

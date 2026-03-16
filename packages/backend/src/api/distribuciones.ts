@@ -108,6 +108,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         fecha: body.fecha,
         modo: body.modo,
         confiarEnVendedor: body.confiarEnVendedor,
+        groupId: body.groupId,
         items: body.items,
       });
       return {
@@ -122,6 +123,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         fecha: t.Optional(t.String()),
         modo: t.Optional(t.Union([t.Literal("estricto"), t.Literal("acumulativo"), t.Literal("libre")])),
         confiarEnVendedor: t.Optional(t.Boolean()),
+        groupId: t.Optional(t.String()),
         items: t.Array(
           t.Object({
             variantId: t.String(),
@@ -132,7 +134,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       }),
       detail: {
         summary: "Crear distribución",
-        description: "Crea una nueva asignación con items a un vendedor (solo admin)",
+        description: "Crea una nueva asignación con items a un vendedor. Si se proporciona groupId, se crean visitas automáticamente para todos los clientes del grupo.",
         tags: ["Distribuciones"],
       },
     }
@@ -202,6 +204,39 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       detail: {
         summary: "Listar items de distribución",
         description: "Obtiene todos los items de una distribución",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
+  .put(
+    "/:id/items",
+    async ({ ctx, params, body, distribucionService }) => {
+      const distribucion = await distribucionService.replaceDistribucionItems(
+        ctx,
+        params.id,
+        body.items
+      );
+      return {
+        success: true,
+        data: distribucion,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        items: t.Array(
+          t.Object({
+            variantId: t.String(),
+            cantidadAsignada: t.Number({ minimum: 0.001 }),
+            unidad: t.String(),
+          })
+        ),
+      }),
+      detail: {
+        summary: "Reemplazar items de distribución",
+        description: "Reemplaza todos los items de una distribución en modo libre. Solo para distribuciones creadas sin productos.",
         tags: ["Distribuciones"],
       },
     }

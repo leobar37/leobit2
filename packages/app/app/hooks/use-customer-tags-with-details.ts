@@ -1,0 +1,65 @@
+/**
+ * Customer Tags Hook with Tag Details
+ * Returns customer tags enriched with tag name and color
+ */
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCustomerTagService, useTagService } from "~/lib/sync/service-provider";
+import type { CustomerTag, Tag } from "@avileo/shared";
+
+export interface CustomerTagWithDetails extends CustomerTag {
+  tagName: string;
+  tagColor: string;
+}
+
+const QUERY_KEYS = {
+  customerTagsWithDetails: (customerId: string) => ["customer-tags-with-details", customerId] as const,
+} as const;
+
+/**
+ * Get all tags for a specific customer with tag details (name, color)
+ */
+export function useCustomerTagsWithDetails(customerId: string | null) {
+  const customerTagService = useCustomerTagService();
+  const tagService = useTagService();
+
+  return useQuery({
+    queryKey: customerId ? QUERY_KEYS.customerTagsWithDetails(customerId) : ["customer-tags-with-details", "none"],
+    queryFn: async () => {
+      if (!customerId) return [];
+      
+      // Get customer-tag assignments
+      const customerTags = await customerTagService.getCustomerTags(customerId);
+      
+      if (customerTags.length === 0) return [];
+      
+      // Get all tags to enrich with names and colors
+      const allTags = await tagService.findByBusiness();
+      const tagMap = new Map(allTags.map(t => [t.id, t]));
+      
+      // Enrich customer tags with tag details
+      return customerTags.map(ct => {
+        const tag = tagMap.get(ct.tagId);
+        return {
+          ...ct,
+          tagName: tag?.name ?? "Tag",
+          tagColor: tag?.color ?? "#f97316",
+        };
+      });
+    },
+    enabled: !!customerId,
+  });
+}
+
+/**
+ * Invalidate customer tags with details query
+ */
+export function useInvalidateCustomerTagsWithDetails() {
+  const queryClient = useQueryClient();
+  
+  return (customerId: string) => {
+    queryClient.invalidateQueries({ 
+      queryKey: QUERY_KEYS.customerTagsWithDetails(customerId) 
+    });
+  };
+}

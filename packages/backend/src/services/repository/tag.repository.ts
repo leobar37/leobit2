@@ -44,6 +44,25 @@ export class TagRepository {
     return tag;
   }
 
+  async createWithId(
+    ctx: RequestContext,
+    data: Omit<NewTag, "businessId" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">,
+    tx?: DbTransaction
+  ): Promise<Tag> {
+    const dbOrTx = tx || db;
+    const [tag] = await dbOrTx
+      .insert(tags)
+      .values({
+        ...data,
+        businessId: ctx.businessId,
+        syncStatus: "synced",
+        syncAttempts: 0,
+      })
+      .returning();
+
+    return tag;
+  }
+
   async update(
     ctx: RequestContext,
     id: string,

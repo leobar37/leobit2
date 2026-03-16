@@ -15,7 +15,7 @@ import { formatKilos as formatKilosUtil } from "~/lib/utils";
 interface DistribucionTableProps {
   distribuciones: Distribucion[];
   onEdit: (distribucion: Distribucion) => void;
-  onClose: (id: string) => void;
+  onClose: (distribucion: Distribucion) => void;
   onDelete: (id: string) => void;
   isLoading?: boolean;
 }
@@ -27,6 +27,7 @@ export function DistribucionTable({
   onDelete,
   isLoading,
 }: DistribucionTableProps) {
+  console.log("[DistribucionTable] Render - distribuciones:", distribuciones.length);
   const getStatusBadge = (estado: Distribucion["estado"]) => {
     const variants = {
       activo: { variant: "default" as const, label: "Activo" },
@@ -92,7 +93,10 @@ export function DistribucionTable({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => onEdit(dist)}
+                    onClick={() => {
+                      console.log("[DistribucionTable] Edit clicked for:", dist.id);
+                      onEdit(dist);
+                    }}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -101,7 +105,10 @@ export function DistribucionTable({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => onClose(dist.id)}
+                      onClick={() => {
+                        console.log("[DistribucionTable] Close clicked for:", dist.id);
+                        onClose(dist);
+                      }}
                     >
                       <CheckCircle className="h-4 w-4 text-green-600" />
                     </Button>
@@ -110,7 +117,10 @@ export function DistribucionTable({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => onDelete(dist.id)}
+                    onClick={() => {
+                      console.log("[DistribucionTable] Delete clicked for:", dist.id);
+                      onDelete(dist.id);
+                    }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

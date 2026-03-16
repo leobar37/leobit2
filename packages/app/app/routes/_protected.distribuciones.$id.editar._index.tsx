@@ -2,7 +2,7 @@ import { useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EditDistribucionForm } from "~/components/distribucion";
-import { useDistribucion, useUpdateDistribucion, type Distribucion } from "~/hooks/use-distribuciones";
+import { useDistribucion, useUpdateDistribucion, useUpdateDistribucionItems, type Distribucion } from "~/hooks/use-distribuciones";
 import { useToastError } from "~/hooks/use-toast-error";
 import { Loader2 } from "lucide-react";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
@@ -12,6 +12,7 @@ export default function EditarDistribucionPage() {
   const { showSuccess, showError } = useToastError();
   const { goBack: goBackRoute } = useDistribucionParams();
   const updateMutation = useUpdateDistribucion();
+  const updateItemsMutation = useUpdateDistribucionItems();
 
   const { data: distribucion, isLoading } = useDistribucion(id || "");
 
@@ -25,6 +26,20 @@ export default function EditarDistribucionPage() {
     } catch (error) {
       showError("Error", error, {
         description: "No se pudo actualizar la distribución",
+      });
+    }
+  };
+
+  const handleUpdateItems = async (items: Array<{ variantId: string; cantidadAsignada: number; unidad: string }>) => {
+    if (!id) return;
+    try {
+      await updateItemsMutation.mutateAsync({ id, items });
+      showSuccess("Productos registrados", {
+        description: "Los productos se han registrado exitosamente.",
+      });
+    } catch (error) {
+      showError("Error", error, {
+        description: "No se pudieron registrar los productos",
       });
     }
   };
@@ -69,7 +84,11 @@ export default function EditarDistribucionPage() {
 
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="max-w-lg mx-auto">
-          <EditDistribucionForm distribucion={distribucion} onSubmit={handleSubmit} />
+          <EditDistribucionForm 
+            distribucion={distribucion} 
+            onSubmit={handleSubmit} 
+            onUpdateItems={handleUpdateItems}
+          />
           <Button
             variant="outline"
             className="w-full mt-4 rounded-xl"

@@ -1,3 +1,4 @@
+import { Outlet, useLocation } from "react-router";
 import { formatKilos } from "~/lib/utils";
 import { Plus, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,11 @@ const distribucionFilterSchema = z.object({
 type DistribucionFilterData = z.infer<typeof distribucionFilterSchema>;
 
 export default function DistribucionesPage() {
+  const location = useLocation();
+  const isIndexRoute = location.pathname === "/distribuciones";
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  console.log("[Distribuciones] isAdmin:", isAdmin, "business:", business);
   const { navigateToCreate, navigateToEdit } = useDistribucionParams();
 
   const filterForm = useForm<DistribucionFilterData>({
@@ -49,23 +53,28 @@ export default function DistribucionesPage() {
 
   const distribuciones = distribucionesData ?? [];
   const totalAsignado = distribuciones.reduce(
-    (sum, d) => sum + (d.kilosAsignados || 0),
+    (sum, d) => sum + Number(d.kilosAsignados || 0),
     0
   );
   const totalVendido = distribuciones.reduce(
-    (sum, d) => sum + (d.kilosVendidos || 0),
+    (sum, d) => sum + Number(d.kilosVendidos || 0),
     0
   );
 
   const handleNavigateToCreate = () => {
+    console.log("[Distribuciones] handleNavigateToCreate clicked, fecha:", selectedDate);
     navigateToCreate({ fecha: selectedDate });
+    console.log("[Distribuciones] navigateToCreate called");
   };
 
   const handleNavigateToEdit = (distribucion: Distribucion) => {
+    console.log("[Distribuciones] handleNavigateToEdit clicked, id:", distribucion.id);
     navigateToEdit(distribucion.id);
   };
 
-  const handleClose = async (id: string) => {
+  const handleClose = async (distribucion: Distribucion) => {
+    console.log("[Distribuciones] handleClose clicked for id:", distribucion.id);
+    
     const confirmed = await confirm({
       title: "Cerrar distribución",
       description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer.",
@@ -75,11 +84,18 @@ export default function DistribucionesPage() {
     });
 
     if (confirmed) {
-      await closeMutation.mutateAsync(id);
+      console.log("[Distribuciones] Confirmed, calling closeMutation.mutateAsync...");
+      try {
+        await closeMutation.mutateAsync(distribucion.id);
+        console.log("[Distribuciones] Close successful!");
+      } catch (error) {
+        console.error("[Distribuciones] Close failed:", error);
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
+    console.log("[Distribuciones] handleDelete clicked for id:", id);
     const confirmed = await confirm({
       title: "Eliminar distribución",
       description: "¿Estás seguro de eliminar esta distribución? Esta acción no se puede deshacer.",
@@ -89,7 +105,13 @@ export default function DistribucionesPage() {
     });
 
     if (confirmed) {
-      await deleteMutation.mutateAsync(id);
+      console.log("[Distribuciones] Confirmed, calling deleteMutation.mutateAsync...");
+      try {
+        await deleteMutation.mutateAsync(id);
+        console.log("[Distribuciones] Delete successful!");
+      } catch (error) {
+        console.error("[Distribuciones] Delete failed:", error);
+      }
     }
   };
 
@@ -98,20 +120,17 @@ export default function DistribucionesPage() {
     showBottomNav: true,
     showBackButton: true,
     backHref: "/config",
-    actions: isAdmin ? (
-      <Button
-        className="bg-orange-500 hover:bg-orange-600"
-        onClick={handleNavigateToCreate}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Nueva
-      </Button>
-    ) : undefined,
   });
 
+  // When not on index route, render child routes via Outlet
+  if (!isIndexRoute) {
+    return <Outlet />;
+  }
+
   return (
-    <div className="space-y-4">
-        <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/5">
+    <>
+      <div className="space-y-4 pb-24">
+        <Card className="rounded-2xl border border-stone-200/80 bg-gradient-to-br from-orange-500/10 to-orange-600/5 shadow-[0_4px_14px_rgba(15,23,42,0.05)]">
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-orange-600" />
@@ -127,7 +146,7 @@ export default function DistribucionesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="rounded-2xl border border-stone-200/80 shadow-[0_4px_14px_rgba(15,23,42,0.05)]">
           <CardHeader>
             <CardTitle className="text-base">Resumen del Día</CardTitle>
           </CardHeader>
@@ -157,7 +176,18 @@ export default function DistribucionesPage() {
         isLoading={isLoading}
       />
 
-      <ConfirmDialog />
-    </div>
+        <ConfirmDialog />
+      </div>
+
+      {isAdmin && (
+        <Button
+          size="icon"
+          className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+          onClick={handleNavigateToCreate}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
+    </>
   );
 }

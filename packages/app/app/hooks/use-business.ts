@@ -84,14 +84,11 @@ async function uploadBusinessLogo(
 }
 
 export function useBusiness() {
-  return useQuery({
+  return useQuery<Business>({
     queryKey: ["business"],
     queryFn: getBusiness,
     retry: false,
     throwOnError: false,
-    onError: (err) => {
-      console.error("[useBusiness] Query error callback:", err);
-    },
   });
 }
 

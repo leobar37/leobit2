@@ -5,9 +5,10 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import { eq, and } from "drizzle-orm";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, type CustomerTag } from "@avileo/shared";
+import { SyncStatus, customerTags, type CustomerTag } from "@avileo/shared";
 
 /**
  * Customer Tag Service
@@ -40,24 +41,22 @@ export class CustomerTagService extends BaseService {
    * Get all tags for a customer
    */
   async getCustomerTags(customerId: string): Promise<CustomerTag[]> {
-    const result = await this.pg.query<CustomerTag>(
-      `SELECT * FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1`,
-      [customerId]
-    );
-
-    return result.rows;
+    return this.db
+      .select()
+      .from(customerTags)
+      .where(eq(customerTags.customerId, customerId));
   }
 
   /**
    * Get all customers with a specific tag
    */
   async getCustomersByTag(tagId: string): Promise<string[]> {
-    const result = await this.pg.query<{ customer_id: string }>(
-      `SELECT customer_id FROM ${CustomerTagService.TABLE_NAME} WHERE tag_id = $1`,
-      [tagId]
-    );
+    const result = await this.db
+      .select({ customerId: customerTags.customerId })
+      .from(customerTags)
+      .where(eq(customerTags.tagId, tagId));
 
-    return result.rows.map(r => r.customer_id);
+    return result.map((r) => r.customerId);
   }
 
   /**
@@ -65,10 +64,9 @@ export class CustomerTagService extends BaseService {
    */
   async assignTags(customerId: string, tagIds: string[]): Promise<void> {
     // First, remove all existing tags for this customer
-    await this.pg.exec(
-      `DELETE FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1`,
-      [customerId]
-    );
+    await this.db
+      .delete(customerTags)
+      .where(eq(customerTags.customerId, customerId));
 
     // Then, insert new assignments if any
     if (tagIds.length > 0) {
@@ -77,20 +75,14 @@ export class CustomerTagService extends BaseService {
       for (const tagId of tagIds) {
         const id = this.generateId();
 
-        await this.pg.exec(
-          `INSERT INTO ${CustomerTagService.TABLE_NAME} (
-            customer_id, tag_id, assigned_at, assigned_by,
-            sync_status, sync_attempts
-          ) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            customerId,
-            tagId,
-            now,
-            null,
-            SyncStatus.PENDING,
-            0,
-          ]
-        );
+        await this.db.insert(customerTags).values({
+          customerId,
+          tagId,
+          assignedAt: new Date(now),
+          assignedBy: null,
+          syncStatus: SyncStatus.PENDING,
+          syncAttempts: 0,
+        });
 
         await this.queueSync("insert", id, {
           customerId,
@@ -105,32 +97,32 @@ export class CustomerTagService extends BaseService {
    */
   async addTag(customerId: string, tagId: string): Promise<void> {
     // Check if already assigned
-    const existing = await this.pg.query<CustomerTag>(
-      `SELECT * FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1 AND tag_id = $2`,
-      [customerId, tagId]
-    );
+    const existing = await this.db
+      .select()
+      .from(customerTags)
+      .where(
+        and(
+          eq(customerTags.customerId, customerId),
+          eq(customerTags.tagId, tagId)
+        )
+      )
+      .limit(1);
 
-    if (existing.rows.length > 0) {
+    if (existing.length > 0) {
       return; // Already assigned
     }
 
     const id = this.generateId();
     const now = new Date().toISOString();
 
-    await this.pg.exec(
-      `INSERT INTO ${CustomerTagService.TABLE_NAME} (
-        customer_id, tag_id, assigned_at, assigned_by,
-        sync_status, sync_attempts
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        customerId,
-        tagId,
-        now,
-        null,
-        SyncStatus.PENDING,
-        0,
-      ]
-    );
+    await this.db.insert(customerTags).values({
+      customerId,
+      tagId,
+      assignedAt: new Date(now),
+      assignedBy: null,
+      syncStatus: SyncStatus.PENDING,
+      syncAttempts: 0,
+    });
 
     await this.queueSync("insert", id, {
       customerId,
@@ -142,10 +134,14 @@ export class CustomerTagService extends BaseService {
    * Remove a single tag from a customer
    */
   async removeTag(customerId: string, tagId: string): Promise<void> {
-    await this.pg.exec(
-      `DELETE FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1 AND tag_id = $2`,
-      [customerId, tagId]
-    );
+    await this.db
+      .delete(customerTags)
+      .where(
+        and(
+          eq(customerTags.customerId, customerId),
+          eq(customerTags.tagId, tagId)
+        )
+      );
 
     await this.queueSync("delete", `${customerId}_${tagId}`, {
       customerId,
@@ -164,34 +160,32 @@ export class CustomerTagService extends BaseService {
 
     for (const customerId of customerIds) {
       // Remove existing tags
-      await this.pg.exec(
-        `DELETE FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1`,
-        [customerId]
-      );
+      await this.db
+        .delete(customerTags)
+        .where(eq(customerTags.customerId, customerId));
 
       // Add new tags
       for (const tagId of tagIds) {
         const id = this.generateId();
 
-        await this.pg.exec(
-          `INSERT INTO ${CustomerTagService.TABLE_NAME} (
-            customer_id, tag_id, assigned_at, assigned_by,
-            sync_status, sync_attempts
-          ) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            customerId,
-            tagId,
-            now,
-            null,
-            SyncStatus.PENDING,
-            0,
-          ]
-        );
-
-        await this.queueSync("insert", id, {
+        await this.db.insert(customerTags).values({
           customerId,
           tagId,
-        }, syncGroupId);
+          assignedAt: new Date(now),
+          assignedBy: null,
+          syncStatus: SyncStatus.PENDING,
+          syncAttempts: 0,
+        });
+
+        await this.queueSync(
+          "insert",
+          id,
+          {
+            customerId,
+            tagId,
+          },
+          syncGroupId
+        );
       }
     }
   }
@@ -200,11 +194,24 @@ export class CustomerTagService extends BaseService {
    * Check if a customer has a specific tag
    */
   async hasTag(customerId: string, tagId: string): Promise<boolean> {
-    const result = await this.pg.query<CustomerTag>(
-      `SELECT 1 FROM ${CustomerTagService.TABLE_NAME} WHERE customer_id = $1 AND tag_id = $2`,
-      [customerId, tagId]
-    );
+    const result = await this.db
+      .select()
+      .from(customerTags)
+      .where(
+        and(
+          eq(customerTags.customerId, customerId),
+          eq(customerTags.tagId, tagId)
+        )
+      )
+      .limit(1);
 
-    return result.rows.length > 0;
+    return result.length > 0;
+  }
+
+  /**
+   * Get all customer-tag mappings for the current business
+   */
+  async getAllCustomerTags(): Promise<CustomerTag[]> {
+    return this.db.select().from(customerTags);
   }
 }

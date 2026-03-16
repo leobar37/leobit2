@@ -41,11 +41,14 @@ export class DistribucionItemRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewDistribucionItem, "id" | "createdAt">
+    data: Omit<NewDistribucionItem, "id" | "createdAt" | "businessId">
   ): Promise<DistribucionItem> {
     const [item] = await db
       .insert(distribucionItems)
-      .values(data)
+      .values({
+        ...data,
+        businessId: ctx.businessId,
+      })
       .returning();
     return item;
   }

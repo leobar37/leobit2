@@ -15,6 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Provider as JotaiProvider } from "jotai";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 
 export function HydrateFallback() {
   return (
@@ -96,7 +97,9 @@ export default function App() {
   return (
     <JotaiProvider>
       <QueryClientProvider client={queryClient}>
-        <Outlet />
+        <NuqsAdapter>
+          <Outlet />
+        </NuqsAdapter>
         <Toaster position="top-center" />
       </QueryClientProvider>
     </JotaiProvider>

@@ -56,9 +56,11 @@ export class TagSyncHandler extends BaseSyncHandler {
   ): Promise<void> {
     const parsed = tagCreateSchema.parse(operation.payload);
 
-    await this.tagRepo.create(ctx, {
+    // Use operation.entityId to preserve local ID
+    await this.tagRepo.createWithId(ctx, {
+      id: operation.entityId,
       name: parsed.name,
-      color: parsed.color ?? "#3b82f6",
+      color: parsed.color ?? "#f97316",
     }, tx);
   }
 

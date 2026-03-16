@@ -79,6 +79,26 @@ export function useCreateCustomerGroup() {
 }
 
 /**
+ * Create a new customer group with initial members atomically
+ * Uses syncGroupId to ensure group and members are synced together
+ */
+export function useCreateCustomerGroupWithMembers() {
+  const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
+
+  return useMutation<CustomerGroup, Error, { name: string; customerIds: string[] }>({
+    mutationFn: async ({ name, customerIds }) => {
+      return customerGroupService.createWithMembers({ name }, customerIds) as Promise<CustomerGroup>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
+      queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
+      toast.success("Grupo creado con miembros correctamente");
+    },
+  });
+}
+
+/**
  * Update an existing customer group
  */
 export function useUpdateCustomerGroup() {
@@ -129,6 +149,7 @@ export function useAddMembersToGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
       toast.success("Miembros agregados correctamente");
     },
   });
@@ -148,6 +169,7 @@ export function useRemoveMemberFromGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
       toast.success("Miembro eliminado correctamente");
     },
   });

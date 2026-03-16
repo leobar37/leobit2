@@ -175,41 +175,47 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="shell-card-flat rounded-[28px]">
-          <CardContent className="space-y-4 p-4">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Saldo pendiente</p>
-              <p className="text-4xl font-bold text-red-600">
-                S/ {formatCurrency(balance?.balanceDue ?? 0)}
-              </p>
-              {balanceLoading ? (
-                <p className="mt-1 text-xs text-muted-foreground">Calculando saldo...</p>
-              ) : null}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="shell-block-muted rounded-[20px] p-3">
-                <p className="text-xs text-muted-foreground">Ventas crédito</p>
-                <p className="font-semibold">
-                  S/ {formatCurrency(balance?.totalSales ?? 0)}
+        {balance && balance.totalSales > 0 && (
+          <Card className="shell-card-flat rounded-[28px]">
+            <CardContent className="space-y-4 p-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Saldo pendiente</p>
+                <p className={`text-4xl font-bold ${(balance.balanceDue ?? 0) > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {(balance.balanceDue ?? 0) > 0 
+                    ? `S/ ${formatCurrency(balance.balanceDue)}` 
+                    : "Sin deuda"}
                 </p>
+                {balanceLoading ? (
+                  <p className="mt-1 text-xs text-muted-foreground">Calculando saldo...</p>
+                ) : null}
               </div>
-              <div className="shell-block-muted rounded-[20px] p-3">
-                <p className="text-xs text-muted-foreground">Abonos</p>
-                <p className="font-semibold text-green-600">
-                  S/ {formatCurrency(balance?.totalPayments ?? 0)}
-                </p>
-              </div>
-            </div>
 
-            <Button asChild className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600">
-              <Link to={`/cobros/nuevo?clienteId=${id}`}>
-                <Wallet className="mr-2 h-4 w-4" />
-                Registrar pago
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="shell-block-muted rounded-[20px] p-3">
+                  <p className="text-xs text-muted-foreground">Ventas crédito</p>
+                  <p className="font-semibold">
+                    S/ {formatCurrency(balance.totalSales)}
+                  </p>
+                </div>
+                <div className="shell-block-muted rounded-[20px] p-3">
+                  <p className="text-xs text-muted-foreground">Abonos</p>
+                  <p className="font-semibold text-green-600">
+                    S/ {formatCurrency(balance.totalPayments)}
+                  </p>
+                </div>
+              </div>
+
+              {(balance.balanceDue ?? 0) > 0 && (
+                <Button asChild className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600">
+                  <Link to={`/cobros/nuevo?clienteId=${id}`}>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Registrar pago
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <CustomerTagsModal />
 

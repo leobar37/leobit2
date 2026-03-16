@@ -1,6 +1,8 @@
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
+import type { CustomerGroupRepository } from "../repository/customer-group.repository";
+import type { VisitaRepository } from "../repository/visita.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -19,7 +21,9 @@ export class DistribucionService {
   constructor(
     private repository: DistribucionRepository,
     private itemRepository: DistribucionItemRepository,
-    private variantRepository: ProductVariantRepository
+    private variantRepository: ProductVariantRepository,
+    private customerGroupRepository: CustomerGroupRepository,
+    private visitaRepository: VisitaRepository
   ) {}
 
   async getDistribuciones(
@@ -78,6 +82,7 @@ export class DistribucionService {
       fecha?: string;
       modo?: "estricto" | "acumulativo" | "libre";
       confiarEnVendedor?: boolean;
+      groupId?: string;
       items: Array<{
         variantId: string;
         cantidadAsignada: number;
@@ -98,23 +103,27 @@ export class DistribucionService {
     }
 
     if (!data.items || data.items.length === 0) {
-      throw new ValidationError("La distribución debe tener al menos un item");
+      if (data.modo !== "libre") {
+        throw new ValidationError("La distribución debe tener al menos un item");
+      }
     }
 
-    for (const item of data.items) {
-      if (item.cantidadAsignada <= 0) {
-        throw new ValidationError("La cantidad asignada debe ser mayor a 0");
-      }
+    if (data.items && data.items.length > 0) {
+      for (const item of data.items) {
+        if (item.cantidadAsignada <= 0) {
+          throw new ValidationError("La cantidad asignada debe ser mayor a 0");
+        }
 
-      const variant = await this.variantRepository.findById(ctx, item.variantId);
-      if (!variant) {
-        throw new NotFoundError(`Variante ${item.variantId}`);
-      }
+        const variant = await this.variantRepository.findById(ctx, item.variantId);
+        if (!variant) {
+          throw new NotFoundError(`Variante ${item.variantId}`);
+        }
 
-      if (variant.inventory && parseFloat(variant.inventory.quantity) < item.cantidadAsignada) {
-        throw new ValidationError(
-          `Stock insuficiente para ${variant.name}. Disponible: ${variant.inventory.quantity}, Requerido: ${item.cantidadAsignada}`
-        );
+        if (variant.inventory && parseFloat(variant.inventory.quantity) < item.cantidadAsignada) {
+          throw new ValidationError(
+            `Stock insuficiente para ${variant.name}. Disponible: ${variant.inventory.quantity}, Requerido: ${item.cantidadAsignada}`
+          );
+        }
       }
     }
 
@@ -148,16 +157,29 @@ export class DistribucionService {
       syncAttempts: 0,
     });
 
-    for (const item of data.items) {
-      await this.itemRepository.create(ctx, {
-        distribucionId: distribucion.id,
-        variantId: item.variantId,
-        cantidadAsignada: item.cantidadAsignada.toString(),
-        cantidadVendida: "0",
-        unidad: item.unidad,
-        syncStatus: "synced",
-        syncAttempts: 0,
-      });
+    if (data.items && data.items.length > 0) {
+      for (const item of data.items) {
+        await this.itemRepository.create(ctx, {
+          distribucionId: distribucion.id,
+          variantId: item.variantId,
+          cantidadAsignada: item.cantidadAsignada.toString(),
+          cantidadVendida: "0",
+          unidad: item.unidad,
+          syncStatus: "synced",
+          syncAttempts: 0,
+        });
+      }
+    }
+
+    if (data.groupId) {
+      const group = await this.customerGroupRepository.findByIdWithMembers(ctx, data.groupId);
+      if (group && group.members.length > 0) {
+        const customerIds = group.members.map(m => m.customerId);
+        await this.visitaRepository.bulkCreate(ctx, {
+          distribucionId: distribucion.id,
+          customerIds,
+        });
+      }
     }
 
     const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id);
@@ -359,5 +381,69 @@ export class DistribucionService {
     }
 
     await this.repository.delete(ctx, id);
+  }
+
+  async replaceDistribucionItems(
+    ctx: RequestContext,
+    distribucionId: string,
+    items: Array<{
+      variantId: string;
+      cantidadAsignada: number;
+      unidad: string;
+    }>
+  ): Promise<DistribucionWithItems> {
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para actualizar distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede modificar esta distribución");
+    }
+
+    if (distribucion.modo !== "libre") {
+      throw new ValidationError("Solo se pueden modificar items en distribuciones con modo libre");
+    }
+
+    for (const item of items) {
+      if (item.cantidadAsignada <= 0) {
+        throw new ValidationError("La cantidad asignada debe ser mayor a 0");
+      }
+
+      const variant = await this.variantRepository.findById(ctx, item.variantId);
+      if (!variant) {
+        throw new NotFoundError(`Variante ${item.variantId}`);
+      }
+    }
+
+    await this.itemRepository.deleteByDistribucionId(ctx, distribucionId);
+
+    for (const item of items) {
+      await this.itemRepository.create(ctx, {
+        distribucionId,
+        variantId: item.variantId,
+        cantidadAsignada: item.cantidadAsignada.toString(),
+        cantidadVendida: "0",
+        unidad: item.unidad,
+        syncStatus: "synced",
+        syncAttempts: 0,
+      });
+    }
+
+    const totalKilos = items.reduce((sum, item) => sum + item.cantidadAsignada, 0);
+    await this.repository.update(ctx, distribucionId, {
+      kilosAsignados: totalKilos.toString(),
+    });
+
+    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucionId);
+    if (!distribucionWithItems) {
+      throw new NotFoundError("Distribución");
+    }
+
+    return distribucionWithItems;
   }
 }

@@ -8,12 +8,13 @@ import type { Tag } from "@avileo/shared";
 interface TagBadgeProps {
   tag: Tag | { id: string; name: string; color: string };
   onRemove?: () => void;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   className?: string;
 }
 
 export function TagBadge({ tag, onRemove, size = "md", className = "" }: TagBadgeProps) {
   const sizeClasses = {
+    xs: "px-1.5 py-0 text-[10px]",
     sm: "px-2 py-0.5 text-xs",
     md: "px-2.5 py-1 text-sm",
   };

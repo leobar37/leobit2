@@ -50,6 +50,7 @@ export function useAddCustomerTag() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
+      queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
     },
   });
 }
@@ -67,6 +68,7 @@ export function useRemoveCustomerTag() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
+      queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
     },
   });
 }
@@ -84,6 +86,7 @@ export function useAssignCustomerTags() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
+      queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
     },
   });
 }

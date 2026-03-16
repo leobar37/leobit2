@@ -3,13 +3,13 @@ import { Plus, Search, Users, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { useGrupoDialogs } from "~/hooks/use-grupo-dialogs";
 import {
@@ -25,7 +25,7 @@ import {
 } from "~/hooks/use-grupos";
 import { useCustomers } from "~/hooks/use-customers";
 import { GroupCard } from "~/components/grupos/group-card";
-import { GroupFormDialog } from "~/components/grupos/group-form-dialog";
+import { GroupFormDrawer } from "~/components/grupos/group-form-drawer";
 import { MemberDialog } from "~/components/grupos/member-dialog";
 
 export default function GroupsPage() {
@@ -225,26 +225,25 @@ export default function GroupsPage() {
         </Button>
       </div>
 
-      <GroupFormDialog
+      <GroupFormDrawer
         isOpen={dialogs.formModal.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            dialogs.formModal.close();
-            dialogs.resetFormState();
-          }
+        data={{
+          mode: dialogs.dialogMode,
+          groupName: dialogs.groupName,
+          onGroupNameChange: dialogs.setGroupName,
+          onSubmit:
+            dialogs.dialogMode === "create"
+              ? handleCreateGroup
+              : handleUpdateGroup,
+          isSubmitting: dialogs.isSubmitting,
         }}
-        mode={dialogs.dialogMode}
-        groupName={dialogs.groupName}
-        onGroupNameChange={dialogs.setGroupName}
-        isSubmitting={dialogs.isSubmitting}
-        onSubmit={
-          dialogs.dialogMode === "create"
-            ? handleCreateGroup
-            : handleUpdateGroup
-        }
+        onClose={() => {
+          dialogs.formModal.close();
+          dialogs.resetFormState();
+        }}
       />
 
-      <Dialog
+      <Sheet
         open={dialogs.deleteModal.isOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -253,16 +252,16 @@ export default function GroupsPage() {
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar Grupo</DialogTitle>
-            <DialogDescription>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>Eliminar Grupo</SheetTitle>
+            <SheetDescription>
               ¿Estás seguro de que deseas eliminar el grupo &quot;
               {dialogs.deleteModal.data?.name}&quot;? Esta acción eliminará todos
               los miembros asociados.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="mt-6 flex-row gap-3">
             <Button
               variant="outline"
               onClick={() => {
@@ -270,6 +269,7 @@ export default function GroupsPage() {
                 dialogs.setIsDeleting(false);
               }}
               disabled={dialogs.isDeleting}
+              className="h-12 flex-1 rounded-xl"
             >
               Cancelar
             </Button>
@@ -277,7 +277,7 @@ export default function GroupsPage() {
               variant="destructive"
               onClick={handleDeleteGroup}
               disabled={dialogs.isDeleting}
-              className="bg-red-500 hover:bg-red-600"
+              className="h-12 flex-1 rounded-xl bg-red-500 hover:bg-red-600"
             >
               {dialogs.isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -286,9 +286,9 @@ export default function GroupsPage() {
               )}
               Eliminar grupo
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <MemberDialog
         isOpen={dialogs.memberModal.isOpen}

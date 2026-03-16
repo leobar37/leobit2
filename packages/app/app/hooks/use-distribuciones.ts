@@ -177,6 +177,7 @@ interface CreateDistribucionInput {
   fecha?: string;
   modo?: "estricto" | "acumulativo" | "libre";
   confiarEnVendedor?: boolean;
+  groupId?: string;
   items?: Array<{
     variantId: string;
     cantidadAsignada: number;
@@ -193,6 +194,7 @@ export function useCreateDistribucion() {
 
   return useOfflineAwareMutation({
     mutationFn: async (input: CreateDistribucionInput) => {
+      console.log("[Distribuciones] useCreateDistribucion called with:", input);
       const today = input.fecha || new Date().toISOString().split("T")[0];
       const payload = {
         vendedorId: input.vendedorId,
@@ -202,7 +204,9 @@ export function useCreateDistribucion() {
         confiarEnVendedor: input.confiarEnVendedor || false,
         items: input.items || [],
       };
+      console.log("[Distribuciones] useCreateDistribucion payload:", payload);
       const result = await extractData(api.distribuciones.post(payload));
+      console.log("[Distribuciones] useCreateDistribucion result:", result);
       return result;
     },
     offlineMessage: "Se requiere conexión a internet para crear una distribución",
@@ -223,7 +227,9 @@ export function useCloseDistribucion() {
 
   return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
+      console.log("[Distribuciones] useCloseDistribucion - calling API for id:", id);
       const result = await extractData(api.distribuciones({ id }).close.post());
+      console.log("[Distribuciones] useCloseDistribucion - API response:", result);
       return result;
     },
     offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
@@ -239,7 +245,7 @@ export function useCloseDistribucion() {
 }
 
 /**
- * Update distribucion items
+ * Update distribucion items (replace all items)
  * Requires internet connection
  */
 export function useUpdateDistribucionItems() {
@@ -253,7 +259,8 @@ export function useUpdateDistribucionItems() {
       id: string;
       items: Array<{
         variantId: string;
-        cantidadVendida: number;
+        cantidadAsignada: number;
+        unidad: string;
       }>;
     }) => {
       const result = await extractData(
@@ -265,6 +272,9 @@ export function useUpdateDistribucionItems() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY],
       });
     },
   });
@@ -304,7 +314,9 @@ export function useDeleteDistribucion() {
 
   return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
+      console.log("[Distribuciones] useDeleteDistribucion - calling API for id:", id);
       const result = await extractData(api.distribuciones({ id }).delete());
+      console.log("[Distribuciones] useDeleteDistribucion - API response:", result);
       return result;
     },
     offlineMessage: "Se requiere conexión a internet para eliminar la distribución",

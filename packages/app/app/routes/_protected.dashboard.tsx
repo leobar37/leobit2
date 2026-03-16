@@ -76,15 +76,15 @@ export default function DashboardPage() {
       {isOnline && hasPending && (
         <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
           <CloudOff className="h-4 w-4" />
-          {syncStatus.pending} operación{syncStatus.pending !== 1 ? "es" : ""} pendiente{syncStatus.pending !== 1 ? "s" : ""} de sincronizar
+          {syncStatus?.pending} operación{syncStatus.pending !== 1 ? "es" : ""} pendiente{syncStatus.pending !== 1 ? "s" : ""} de sincronizar
         </div>
       )}
 
       {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
         <Link to="/mi-distribucion" className="block">
           <InventoryCard
-            kilosAsignados={distribucion.kilosAsignados}
-            kilosVendidos={distribucion.kilosVendidos}
+            kilosAsignados={Number(distribucion.kilosAsignados)}
+            kilosVendidos={Number(distribucion.kilosVendidos)}
             puntoVenta={distribucion.puntoVenta}
           />
         </Link>

@@ -1,21 +1,46 @@
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trash2, MapPin, Users, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "~/hooks/use-auth";
-import { useTeam } from "~/hooks/use-team";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useProducts, type Product } from "~/hooks/use-products";
 import { type ProductVariant } from "~/hooks/use-product-variants";
-import {
-  type CreateDistribucionInput,
-} from "~/hooks/use-distribuciones";
+import { type CreateDistribucionInput } from "~/hooks/use-distribuciones";
+import { type CustomerGroup } from "~/hooks/use-grupos";
 import { ProductVariantSelector } from "./product-variant-selector";
+import { VendedorSelect, type VendedorOption } from "./vendedor-select";
+import { GroupSelect } from "./group-select";
+
+type ModoDistribucion = "estricto" | "acumulativo" | "libre";
+
+const MODO_OPTIONS: { value: ModoDistribucion; label: string; description: string; icon: React.ElementType }[] = [
+  { 
+    value: "estricto", 
+    label: "Estricto", 
+    description: "Productos obligatorios. No puedes exceder lo asignado.",
+    icon: Lock
+  },
+  { 
+    value: "acumulativo", 
+    label: "Acumulativo", 
+    description: "Productos obligatorios. Puedes exceder, luego repones.",
+    icon: AlertCircle
+  },
+  { 
+    value: "libre", 
+    label: "Libre", 
+    description: "Sin productos fijos. Registras al cerrar.",
+    icon: CheckCircle2
+  },
+];
 
 interface CreateDistribucionFormProps {
   onSubmit: (data: CreateDistribucionInput) => void;
+  isPending?: boolean;
+  onValidityChange?: (isValid: boolean) => void;
 }
 
 interface DistributionItem {
@@ -28,19 +53,24 @@ interface DistributionItem {
 
 export function CreateDistribucionForm({
   onSubmit,
+  isPending = false,
+  onValidityChange,
 }: CreateDistribucionFormProps) {
-  const { user } = useAuth();
-  const { data: team } = useTeam();
   const { data: products } = useProducts();
 
-  const [vendedorId, setVendedorId] = useState("");
+  const [selectedVendedor, setSelectedVendedor] = useState<VendedorOption | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [puntoVenta, setPuntoVenta] = useState("");
   const [items, setItems] = useState<DistributionItem[]>([]);
+  const [modo, setModo] = useState<ModoDistribucion>("estricto");
 
-  const vendedores =
-    team?.filter((m) => (m.role === "VENDEDOR" || m.role === "ADMIN_NEGOCIO") && m.isActive) || [];
-  const currentMemberId =
-    team?.find((member) => member.userId === user?.id)?.id ?? null;
+  const esModoLibre = modo === "libre";
+  const requiereProductos = modo !== "libre";
+  const isValid = !!selectedVendedor && (esModoLibre || items.length > 0);
+
+  useEffect(() => {
+    onValidityChange?.(isValid);
+  }, [isValid, onValidityChange]);
 
   const handleAddItem = (
     variant: ProductVariant,
@@ -83,11 +113,14 @@ export function CreateDistribucionForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vendedorId || items.length === 0) return;
+    if (!selectedVendedor) return;
+    if (requiereProductos && items.length === 0) return;
 
     onSubmit({
-      vendedorId,
+      vendedorId: selectedVendedor.id,
       puntoVenta: puntoVenta || "Sin punto",
+      groupId: selectedGroup?.id,
+      modo: modo,
       items: items.map((item) => ({
         variantId: item.variantId,
         cantidadAsignada: item.cantidadAsignada,
@@ -99,48 +132,96 @@ export function CreateDistribucionForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="vendedorId">Vendedor *</Label>
-        <select
-          id="vendedorId"
-          value={vendedorId}
-          onChange={(e) => setVendedorId(e.target.value)}
-          className="w-full h-10 px-3 rounded-xl border border-input bg-background"
+        <Label>Vendedor *</Label>
+        <VendedorSelect
+          value={selectedVendedor?.id || null}
+          selectedVendedor={selectedVendedor}
+          onChange={setSelectedVendedor}
           required
-        >
-          <option value="">Seleccionar vendedor</option>
-          {vendedores.length === 0 && (
-            <option value="" disabled>No hay miembros activos para asignar</option>
-          )}
-          {vendedores.map((vendedor) => (
-            <option key={vendedor.id} value={vendedor.id}>
-              {vendedor.id === currentMemberId
-                ? "Yo (Admin)"
-                : `${vendedor.name}${vendedor.role === "ADMIN_NEGOCIO" ? " (Admin)" : ""}`}
-            </option>
-          ))}
-        </select>
+          helperText="Seleccione un vendedor"
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="puntoVenta">Punto de Venta</Label>
-        <Input
-          id="puntoVenta"
-          value={puntoVenta}
-          onChange={(e) => setPuntoVenta(e.target.value)}
-          placeholder="Carro A, Casa, Local..."
-          className="rounded-xl"
-        />
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            id="puntoVenta"
+            value={puntoVenta}
+            onChange={(e) => setPuntoVenta(e.target.value)}
+            placeholder="Carro A, Casa, Local..."
+            className="rounded-xl pl-10"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label>Agregar Productos</Label>
-        <ProductVariantSelector
-          products={products || []}
-          onAddItem={handleAddItem}
+        <Label className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Grupo de Clientes
+        </Label>
+        <GroupSelect
+          value={selectedGroup?.id || null}
+          selectedGroup={selectedGroup}
+          onChange={setSelectedGroup}
+          helperText="Se crearán visitas para todos los clientes del grupo"
         />
+        {selectedGroup && (
+          <p className="text-sm text-muted-foreground">
+            Se crearán {selectedGroup.memberCount ?? 0} visitas automáticamente
+          </p>
+        )}
       </div>
 
-      {items.length > 0 && (
+      <div className="space-y-2">
+        <Label>Modo de Distribución</Label>
+        <RadioGroup
+          value={modo}
+          onValueChange={(value) => setModo(value as ModoDistribucion)}
+          className="space-y-2"
+          disabled={isPending}
+        >
+          {MODO_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            return (
+              <label
+                key={option.value}
+                className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                  modo === option.value
+                    ? "border-orange-500 bg-orange-50"
+                    : "border-gray-200 hover:border-orange-200"
+                }`}
+              >
+                <RadioGroupItem
+                  value={option.value}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-orange-600" />
+                    <span className="font-medium text-sm">{option.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {option.description}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
+        </RadioGroup>
+      </div>
+
+      {requiereProductos && (
+        <div className="space-y-2">
+          <ProductVariantSelector
+            products={products || []}
+            onAddItem={handleAddItem}
+          />
+        </div>
+      )}
+
+      {requiereProductos && items.length > 0 && (
         <div className="space-y-2">
           <Label>Items Asignados ({items.length})</Label>
           <div className="space-y-2">
@@ -170,6 +251,7 @@ export function CreateDistribucionForm({
                     size="icon"
                     className="h-8 w-8 shrink-0"
                     onClick={() => handleRemoveItem(index)}
+                    disabled={isPending}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -180,7 +262,7 @@ export function CreateDistribucionForm({
         </div>
       )}
 
-      {items.length > 0 && (
+      {requiereProductos && items.length > 0 && (
         <div className="p-4 bg-orange-100 rounded-xl">
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Asignado:</span>
@@ -191,13 +273,9 @@ export function CreateDistribucionForm({
         </div>
       )}
 
-      <Button
-        type="submit"
-        className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
-        disabled={!vendedorId || items.length === 0}
-      >
-        Crear Distribución
-      </Button>
+      <button type="submit" disabled className="hidden" />
     </form>
   );
 }
+
+export type { CreateDistribucionFormProps };

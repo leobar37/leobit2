@@ -173,6 +173,18 @@ export default function MiDistribucionPage() {
           puntoVenta={distribucion.puntoVenta}
         />
 
+        {distribucion.modo === "libre" && (!distribucion.items || distribucion.items.length === 0) && (
+          <Card className="border-0 shadow-md rounded-2xl">
+            <CardContent className="p-6 text-center">
+              <Package className="h-10 w-10 text-orange-500 mx-auto mb-3" />
+              <h3 className="font-semibold mb-1">Distribución Libre</h3>
+              <p className="text-sm text-muted-foreground">
+                Los productos se registrarán al cerrar la distribución
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {distribucion.items && distribucion.items.length > 0 && (
           <Card className="border-0 shadow-md rounded-2xl">
             <CardHeader>
