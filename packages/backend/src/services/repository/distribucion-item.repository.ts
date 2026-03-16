@@ -14,7 +14,10 @@ export class DistribucionItemRepository {
     distribucionId: string
   ): Promise<DistribucionItem[]> {
     return db.query.distribucionItems.findMany({
-      where: eq(distribucionItems.distribucionId, distribucionId),
+      where: and(
+        eq(distribucionItems.distribucionId, distribucionId),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ),
       with: {
         variant: true,
       },
@@ -26,7 +29,10 @@ export class DistribucionItemRepository {
     id: string
   ): Promise<DistribucionItem | undefined> {
     return db.query.distribucionItems.findFirst({
-      where: eq(distribucionItems.id, id),
+      where: and(
+        eq(distribucionItems.id, id),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ),
       with: {
         variant: true,
       },
@@ -54,7 +60,10 @@ export class DistribucionItemRepository {
     const [item] = await executor
       .update(distribucionItems)
       .set({ cantidadVendida: cantidad })
-      .where(eq(distribucionItems.id, id))
+      .where(and(
+        eq(distribucionItems.id, id),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ))
       .returning();
     return item;
   }
@@ -62,7 +71,10 @@ export class DistribucionItemRepository {
   async delete(ctx: RequestContext, id: string): Promise<void> {
     await db
       .delete(distribucionItems)
-      .where(eq(distribucionItems.id, id));
+      .where(and(
+        eq(distribucionItems.id, id),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ));
   }
 
   async deleteByDistribucionId(
@@ -71,6 +83,9 @@ export class DistribucionItemRepository {
   ): Promise<void> {
     await db
       .delete(distribucionItems)
-      .where(eq(distribucionItems.distribucionId, distribucionId));
+      .where(and(
+        eq(distribucionItems.distribucionId, distribucionId),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ));
   }
 }
