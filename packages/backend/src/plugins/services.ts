@@ -101,6 +101,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       customerTagRepo,
       purchaseRepo,
       inventoryRepo,
+      customerGroupRepo,
+      visitaRepo,
     });
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);

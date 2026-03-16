@@ -38,7 +38,6 @@ const menuItems = [
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Calendar, label: "Visitas", href: "/visitas" },
-  { icon: Users, label: "Grupos", href: "/grupos" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
 

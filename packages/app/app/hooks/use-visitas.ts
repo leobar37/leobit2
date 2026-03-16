@@ -1,76 +1,72 @@
 /**
  * Visits Hook
- * Reactively fetch and mutate visits using API
- * Offline-first: uses useOfflineAwareMutation to check connectivity before API calls
+ * Reactively fetch and mutate visits using local-first services
+ * Offline-first: uses service layer for local data with automatic sync
  */
 
-import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+import { useVisitaService, useCustomerGroupService } from "~/lib/sync/service-provider";
 import { toast } from "sonner";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-// Types
 export interface Visita {
   id: string;
   distribucionId: string;
   customerId: string;
-  customer?: {
-    id: string;
-    name: string;
-    dni?: string | null;
-    address?: string | null;
-    phone?: string | null;
-  };
+  businessId: string;
   vendedorId: string;
   status: "pendiente" | "compro" | "no_compra";
   motivoNoCompra?: string | null;
   saleId?: string | null;
   createdAt: string;
   updatedAt: string;
+  customer?: {
+    id: string;
+    name: string;
+    dni: string | null;
+    address: string | null;
+    phone: string | null;
+  };
 }
 
-// API helper
-async function apiCall<T>(
-  endpoint: string,
-  method: string = "GET",
-  body?: unknown
-): Promise<T> {
-  const token = getStoredAuthToken();
-  const businessId = getStoredBusinessId();
+export interface CreateVisitaInput {
+  distribucionId: string;
+  customerId: string;
+}
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+export interface UpdateVisitaInput {
+  status: "pendiente" | "compro" | "no_compra";
+  motivoNoCompra?: string;
+  saleId?: string;
+}
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  if (businessId) {
-    headers["x-business-id"] = businessId;
-  }
+const QUERY_KEYS = {
+  visitas: (distribucionId: string) => ["visitas", distribucionId] as const,
+};
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
+function toIsoString(date: Date): string {
+  return date instanceof Date ? date.toISOString() : String(date);
+}
+
+/**
+ * Get visitas by distribucion
+ */
+export function useVisitas(distribucionId: string | undefined) {
+  const visitaService = useVisitaService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.visitas(distribucionId || ""),
+    queryFn: async () => {
+      if (!distribucionId) return [];
+      const result = await visitaService.findByDistribucion(distribucionId);
+      return result.map((v) => ({
+        ...v,
+        createdAt: toIsoString(v.createdAt),
+        updatedAt: toIsoString(v.updatedAt),
+      })) as unknown as Promise<Visita[]>;
+    },
+    enabled: !!distribucionId,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(errorData.error || `Request failed with status ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  const data = await response.json();
-  if (!data.success) {
-    throw new Error(data.error || "Request failed");
-  }
-
-  return data.data as T;
 }
 
 /**
@@ -78,26 +74,20 @@ async function apiCall<T>(
  * Uses offline-aware mutation to check connectivity before API call
  */
 export function useUpdateVisita() {
-  return useOfflineAwareMutation<Visita, Error, {
-    id: string;
-    status: "pendiente" | "compro" | "no_compra";
-    motivoNoCompra?: string;
-    saleId?: string;
-  }>({
-    mutationFn: async ({
-      id,
-      status,
-      motivoNoCompra,
-      saleId,
-    }): Promise<Visita> => {
-      return apiCall<Visita>(`/api/visitas/${id}`, "PATCH", {
-        status,
-        motivoNoCompra,
-        saleId,
-      });
+  const queryClient = useQueryClient();
+  const visitaService = useVisitaService();
+
+  return useMutation<Visita, Error, UpdateVisitaInput & { id: string }>({
+    mutationFn: async ({ id, ...input }) => {
+      const result = await visitaService.update(id, input);
+      return {
+        ...result,
+        createdAt: toIsoString(result.createdAt),
+        updatedAt: toIsoString(result.updatedAt),
+      } as unknown as Promise<Visita>;
     },
-    offlineMessage: "Se requiere conexión a internet para actualizar la visita",
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visitas"] });
       toast.success("Visita actualizada correctamente");
     },
   });
@@ -108,21 +98,20 @@ export function useUpdateVisita() {
  * Uses offline-aware mutation to check connectivity before API call
  */
 export function useCreateVisita() {
-  return useOfflineAwareMutation<Visita, Error, {
-    distribucionId: string;
-    customerId: string;
-  }>({
-    mutationFn: async ({
-      distribucionId,
-      customerId,
-    }): Promise<Visita> => {
-      return apiCall<Visita>("/api/visitas", "POST", {
-        distribucionId,
-        customerId,
-      });
+  const queryClient = useQueryClient();
+  const visitaService = useVisitaService();
+
+  return useMutation<Visita, Error, CreateVisitaInput>({
+    mutationFn: async (input) => {
+      const result = await visitaService.create(input);
+      return {
+        ...result,
+        createdAt: toIsoString(result.createdAt),
+        updatedAt: toIsoString(result.updatedAt),
+      } as unknown as Promise<Visita>;
     },
-    offlineMessage: "Se requiere conexión a internet para crear la visita",
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.visitas(variables.distribucionId) });
       toast.success("Visita creada correctamente");
     },
   });
@@ -130,24 +119,33 @@ export function useCreateVisita() {
 
 /**
  * Create multiple visitas from a group of customers
+ * First fetches group members, then creates visits for each
  * Uses offline-aware mutation to check connectivity before API call
  */
 export function useCreateVisitasFromGroup() {
-  return useOfflineAwareMutation<Visita[], Error, {
-    distribucionId: string;
-    groupId: string;
-  }>({
-    mutationFn: async ({
-      distribucionId,
-      groupId,
-    }): Promise<Visita[]> => {
-      return apiCall<Visita[]>("/api/visitas/bulk", "POST", {
-        distribucionId,
-        groupId,
-      });
+  const queryClient = useQueryClient();
+  const visitaService = useVisitaService();
+  const customerGroupService = useCustomerGroupService();
+
+  return useMutation<Visita[], Error, { distribucionId: string; groupId: string }>({
+    mutationFn: async ({ distribucionId, groupId }) => {
+      const group = await customerGroupService.findById(groupId);
+      
+      if (!group?.members?.length) {
+        throw new Error("El grupo no tiene miembros");
+      }
+      
+      const customerIds = group.members.map(m => m.customerId);
+      
+      const result = await visitaService.createBulk(distribucionId, customerIds);
+      return result.map((v) => ({
+        ...v,
+        createdAt: toIsoString(v.createdAt),
+        updatedAt: toIsoString(v.updatedAt),
+      })) as unknown as Promise<Visita[]>;
     },
-    offlineMessage: "Se requiere conexión a internet para crear las visitas",
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.visitas(variables.distribucionId) });
       toast.success("Visitas creadas correctamente");
     },
   });

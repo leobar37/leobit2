@@ -47,6 +47,11 @@ export class CustomerGroupRepository {
    * Get member count for a group
    */
   async getMemberCount(ctx: RequestContext, groupId: string): Promise<number> {
+    const group = await this.findById(ctx, groupId);
+    if (!group) {
+      return 0;
+    }
+
     const result = await db
       .select({ count: customerGroupMembers.id })
       .from(customerGroupMembers)
