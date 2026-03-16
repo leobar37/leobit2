@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { filterBySearch, useDebounce, type SearchableField } from "~/lib/search";
+import { filterBySearch, useDebounce } from "~/lib/search";
+import type { SearchableField } from "~/lib/search";
 
 /**
  * Parameters for the useListSearch hook
