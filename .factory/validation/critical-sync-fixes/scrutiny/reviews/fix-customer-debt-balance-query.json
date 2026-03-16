@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-customer-debt-balance-query",
+  "reviewedAt": "2026-03-16T09:05:00.000Z",
+  "commitId": "6220684",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly fixes the getCustomerDebtBalance() method in payment-service.ts. The SQL query was changed from using invalid columns/status values (status = 'credit', count_toward_debt = true) to the correct ones (sale_type = 'credito', status NOT IN ('draft', 'cancelled')). This aligns with the existing correct implementation in useAccountsReceivable hook.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The fix correctly addresses all validation contract requirements (VAL-CSYNC-010): (1) Query now uses sale_type = 'credito' instead of status = 'credit', (2) Query does not reference count_toward_debt column, (3) Query excludes draft and cancelled sales with status NOT IN ('draft', 'cancelled'), (4) Build succeeds. The typecheck shows pre-existing errors but none specific to the modified file. The implementation aligns with the existing correct pattern in useAccountsReceivable hook."
+}
