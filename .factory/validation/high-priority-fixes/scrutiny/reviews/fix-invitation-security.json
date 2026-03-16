@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-invitation-security",
+  "reviewedAt": "2026-03-16T04:35:00.000Z",
+  "commitId": "f78ce2d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly addresses both security and multi-business issues. Security: POST /public/invitations/accept now requires authentication via contextPlugin and derives userId from the authenticated session (ctx.userId) instead of accepting client-supplied userId. The request body no longer includes userId. Multi-business: Both acceptInvitation() and createInvitation() now use findByUserIdAndBusinessId() to check membership for the specific businessId only, allowing users to join multiple businesses.",
+    "issues": [
+      {
+        "file": "packages/backend/src/plugins/context.ts",
+        "line": 14,
+        "severity": "non_blocking",
+        "description": "contextPlugin throws plain Error('No autorizado') instead of UnauthorizedError when no session exists. This is inconsistent with middleware/auth.ts which uses throw new UnauthorizedError(). However, set.status = 401 is properly set before throwing, so the HTTP response will correctly return 401."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker correctly followed existing patterns: added contextPlugin and servicesPlugin to publicInvitationRoutes, used findByUserIdAndBusinessId for per-business membership checks, derived userId from session context.",
+      "evidence": "Code inspection shows proper use of existing patterns in the codebase"
+    },
+    {
+      "area": "skills",
+      "observation": "The sync-fix-worker skill was created as part of this commit. No existing skill was available to follow, so the worker created the skill file. This is evidence that the skill infrastructure was set up as part of the work.",
+      "evidence": "git show f78ce2d shows .factory/skills/sync-fix-worker/SKILL.md was created as new file"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The feature fix-invitation-security correctly implements both required fixes: (1) SECURITY - Added authentication to POST /public/invitations/accept via contextPlugin and derives userId from authenticated session, ignoring client-supplied userId; (2) MULTI-BUSINESS - Changed acceptInvitation() and createInvitation() to check membership for specific businessId only using new findByUserIdAndBusinessId() method. Tests pass and build succeeds. One non-blocking inconsistency: contextPlugin uses plain Error instead of UnauthorizedError."
+}

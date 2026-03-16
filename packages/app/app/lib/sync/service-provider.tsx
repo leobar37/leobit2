@@ -31,6 +31,7 @@ export interface ServicesContextValue {
   visitaService: VisitaService;
   customerGroupService: CustomerGroupService;
   businessId: string;
+  businessUserId: string;
   authToken: string;
 }
 
@@ -54,6 +55,7 @@ interface ServicesProviderProps {
   pg: PGlite;
   db: ReturnType<typeof drizzle>;
   businessId: string;
+  businessUserId: string;
   authToken: string;
   children: ReactNode;
 }
@@ -62,6 +64,7 @@ export function ServicesProvider({
   pg,
   db,
   businessId,
+  businessUserId,
   authToken,
   children,
 }: ServicesProviderProps) {
@@ -84,16 +87,16 @@ export function ServicesProvider({
     const syncService = syncServiceRef.current;
     const pullService = pullServiceRef.current;
 
-    const customerService = new CustomerService(pg, db, syncService, businessId);
-    const saleService = new SaleService(pg, db, syncService, businessId);
-    const paymentService = new PaymentService(pg, db, syncService, businessId);
-    const purchaseService = new PurchaseService(pg, db, syncService, businessId);
-    const productService = new ProductService(pg, db, syncService, businessId);
-    const inventoryService = new InventoryService(pg, db, syncService, businessId);
-    const tagService = new TagService(pg, db, syncService, businessId);
-    const customerTagService = new CustomerTagService(pg, db, syncService, businessId);
-    const visitaService = new VisitaService(pg, db, syncService, businessId);
-    const customerGroupService = new CustomerGroupService(pg, db, syncService, businessId);
+    const customerService = new CustomerService(pg, db, syncService, businessId, businessUserId);
+    const saleService = new SaleService(pg, db, syncService, businessId, businessUserId);
+    const paymentService = new PaymentService(pg, db, syncService, businessId, businessUserId);
+    const purchaseService = new PurchaseService(pg, db, syncService, businessId, businessUserId);
+    const productService = new ProductService(pg, db, syncService, businessId, businessUserId);
+    const inventoryService = new InventoryService(pg, db, syncService, businessId, businessUserId);
+    const tagService = new TagService(pg, db, syncService, businessId, businessUserId);
+    const customerTagService = new CustomerTagService(pg, db, syncService, businessId, businessUserId);
+    const visitaService = new VisitaService(pg, db, syncService, businessId, businessUserId);
+    const customerGroupService = new CustomerGroupService(pg, db, syncService, businessId, businessUserId);
 
     return {
       pg,
@@ -111,9 +114,10 @@ export function ServicesProvider({
       visitaService,
       customerGroupService,
       businessId,
+      businessUserId,
       authToken,
     };
-  }, [pg, db, businessId, authToken]);
+  }, [pg, db, businessId, businessUserId, authToken]);
 
   // Start auto-sync when services are ready
   useEffect(() => {
@@ -376,6 +380,11 @@ export function useDrizzle(): ReturnType<typeof drizzle> {
 export function useBusinessId(): string {
   const { businessId } = useServices();
   return businessId;
+}
+
+export function useBusinessUserId(): string {
+  const { businessUserId } = useServices();
+  return businessUserId;
 }
 
 export function useAuthToken(): string {

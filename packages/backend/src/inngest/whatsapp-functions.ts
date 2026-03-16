@@ -32,7 +32,7 @@ export const sendWhatsAppMessage = inngest.createFunction(
 
       await step.run("update-log-success", async () => {
         const ctx = RequestContext.forWorker(businessId, businessUserId);
-        await messageRepo.updateStatus(ctx, messageLogId, "enviado");
+        await messageRepo.updateStatus(ctx, messageLogId, "entregado");
       });
     } catch (error) {
       await step.run("update-log-error", async () => {

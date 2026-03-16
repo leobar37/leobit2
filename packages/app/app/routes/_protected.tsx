@@ -15,6 +15,7 @@ import { EngineProvider, useEngine } from "~/engine";
 import { ServicesProvider } from "~/lib/sync/service-provider";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
+import { useBusiness } from "~/hooks/use-business";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, clearStoredAuthState } from "~/lib/session-storage";
 
@@ -33,6 +34,7 @@ function ServicesProviderWrapper({
   children: React.ReactNode;
 }) {
   const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
+  const { data: business, isLoading: isBusinessLoading } = useBusiness();
 
   if (!isInitialized || !pg || !db) {
     return (
@@ -68,8 +70,20 @@ function ServicesProviderWrapper({
     );
   }
 
+  // Wait for business data to load before providing services
+  if (isBusinessLoading || !business) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Cargando información del negocio...</p>
+      </div>
+    );
+  }
+
+  const businessUserId = business.businessUserId;
+
   return (
-    <ServicesProvider pg={pg} db={db} businessId={businessId} authToken={token}>
+    <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
       <PullSyncWrapper>
         {children}
       </PullSyncWrapper>

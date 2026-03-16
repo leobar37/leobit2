@@ -37,7 +37,7 @@ export class PaymentRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewAbono, "businessId" | "sellerId" | "id" | "createdAt">,
+    data: Omit<NewAbono, "businessId" | "sellerId" | "createdAt"> & { id?: string },
     tx?: DbTransaction
   ): Promise<Abono> {
     const executor = tx ?? db;
@@ -45,6 +45,7 @@ export class PaymentRepository {
     const [abono] = await executor
       .insert(abonos)
       .values({
+        id: data.id,
         ...data,
         businessId: ctx.businessId,
         sellerId: ctx.businessUserId,

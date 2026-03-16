@@ -165,9 +165,10 @@ export class SaleService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   /**
@@ -1040,7 +1041,8 @@ export class SaleService extends BaseService {
       );
     }
 
-    // Queue sync for the updated item (individual sync, following the same pattern as other entities)
+    // Queue sync for the updated item with same syncGroupId as the sale insert
+    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
     await this.queueSync(
       "update",
       itemId,
@@ -1049,7 +1051,9 @@ export class SaleService extends BaseService {
         quantity: data.quantity,
         unitPrice: data.unitPrice,
         subtotal: data.subtotal,
-      }
+      },
+      saleSyncGroupId,
+      "sale_items"
     );
 
     // Return updated item
@@ -1102,13 +1106,16 @@ export class SaleService extends BaseService {
       [subtotal, now, SyncStatus.PENDING, saleId]
     );
 
-    // Queue sync for the deleted item (individual sync, following the same pattern as other entities)
+    // Queue sync for the deleted item with same syncGroupId as the sale insert
+    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
     await this.queueSync(
       "delete",
       itemId,
       {
         saleId,
-      }
+      },
+      saleSyncGroupId,
+      "sale_items"
     );
   }
 

@@ -1,0 +1,27 @@
+{
+  "featureId": "fix-sale-item-syncgroupid",
+  "reviewedAt": "2026-03-16T09:35:00.000Z",
+  "commitId": "545f0d3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly implements the required changes. Both updateItem() and removeItem() now pass syncGroupId (from getInsertSyncGroupId(saleId)) and entityTypeOverride ('sale_items') to queueSync, matching the addItem() pattern as specified in the feature description.",
+    "issues": []
+  },
+  "validationAssertions": {
+    "VAL-HIGH-004": {
+      "description": "SaleService.updateItem() passes syncGroupId",
+      "status": "pass",
+      "evidence": "Lines 1045 and 1055-1056 in sale-service.ts: const saleSyncGroupId = await this.getInsertSyncGroupId(saleId); await this.queueSync('update', itemId, {...}, saleSyncGroupId, 'sale_items');"
+    },
+    "VAL-HIGH-005": {
+      "description": "SaleService.removeItem() passes syncGroupId",
+      "status": "pass",
+      "evidence": "Lines 1110 and 1117-1118 in sale-service.ts: const saleSyncGroupId = await this.getInsertSyncGroupId(saleId); await this.queueSync('delete', itemId, {...}, saleSyncGroupId, 'sale_items');"
+    }
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Code review PASSED. The worker correctly fixed updateItem() and removeItem() to pass syncGroupId (from getInsertSyncGroupId(saleId)) and entityTypeOverride ('sale_items') to queueSync, matching the addItem() pattern. Both validation assertions VAL-HIGH-004 and VAL-HIGH-005 are satisfied. Build succeeded. No issues found."
+}

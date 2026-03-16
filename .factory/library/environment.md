@@ -2,22 +2,17 @@
 
 Environment variables, external dependencies, and setup notes.
 
-**What belongs here:** Required env vars, external API keys/services, dependency quirks.
+**What belongs here:** Required env vars, external API keys/services, dependency quirks, platform-specific notes.
 **What does NOT belong here:** Service ports/commands (use `.factory/services.yaml`).
 
 ---
 
-## Database
+## Runtime
+- Bun 1.1.38+ required
+- No Docker or PostgreSQL needed for this mission (typecheck/lint only validation)
 
-- PostgreSQL on localhost:5432
-- Drizzle ORM for schema and queries
-
-## Auth
-
-- Better Auth for JWT sessions
-- businessId extracted from request context
-
-## Sync
-
-- ElectricSQL for offline sync
-- All tables have syncStatus + syncAttempts columns
+## Dependencies
+- `bun install` at repo root installs all workspace packages
+- Frontend: packages/app (React Router v7 + Vite)
+- Backend: packages/backend (ElysiaJS + Drizzle)
+- Shared: packages/shared (tsup build)

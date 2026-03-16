@@ -1,29 +1,26 @@
 # User Testing
 
-Testing surface and validation approach for this mission.
+Testing surface, resource cost classification per surface.
 
-## Validation Surfaces
+---
 
-| Surface | Tool | Setup |
-|---------|------|-------|
-| API endpoints | curl | Run backend server |
-| Frontend pages | Manual verification | Run frontend server |
+## Validation Surface
 
-## Validation Approach
+This mission uses **automated validation only** (no browser/manual testing):
+- `bun run typecheck` (packages/app)
+- `bun run test --run` (packages/app — Vitest)
+- `bun run test --run` (packages/backend — Vitest, tests that don't need DB)
+- `bun run build` (root — turbo build)
 
-Given the constraint of no browser automation:
+No dev server, no database, no browser testing needed.
 
-1. **API Validation**: Use curl to test all REST endpoints
-2. **TypeScript**: Verify build passes
-3. **Code Review**: Verify patterns match existing codebase
+## Validation Concurrency
 
-## Resource Cost Classification
+- Machine: 24 GB RAM, 12 cores
+- All validation is CLI-based (typecheck, test, build)
+- Max concurrent validators: **5** (CLI validators are lightweight, ~200MB each)
 
-- **Backend validation**: Minimal resources (just API calls)
-- **Frontend validation**: N/A - manual verification
-
-## Limitations
-
-- No E2E/browser tests
-- No automated UI validation
-- Manual verification required for frontend flows
+## Existing Test Files
+- `packages/app/app/lib/sync/create-sync-hook.test.ts`
+- `packages/app/app/lib/sync/shape-config.test.ts`
+- `packages/app/app/lib/sync/pull-service.test.ts`

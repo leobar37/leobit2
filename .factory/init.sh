@@ -1,13 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "Installing dependencies..."
-bun install
+cd /Users/leobar37/.supacode/repos/avileo/feature/improvements
 
-echo "Generating database migrations..."
-bun run db:generate
+# Install dependencies (idempotent)
+bun install --frozen-lockfile 2>/dev/null || bun install
 
-echo "Applying migrations..."
-bun run db:migrate
-
-echo "Setup complete!"
+echo "Init complete."

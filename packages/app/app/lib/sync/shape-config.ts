@@ -158,7 +158,6 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "purchase_items",
     primaryKey: ["id"],
-    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "purchase_id",
@@ -188,7 +187,6 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
   {
     table: "distribucion_items",
     primaryKey: ["id"],
-    where: "business_id = '{businessId}'",
     foreignKeys: [
       {
         column: "distribucion_id",
@@ -200,6 +198,32 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
       },
     ],
     priority: 35,
+  },
+
+  // Visitas (vendor visits to customers during distributions)
+  {
+    table: "visitas",
+    primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
+    foreignKeys: [
+      {
+        column: "distribucion_id",
+        references: { table: "distribuciones", column: "id" },
+      },
+      {
+        column: "customer_id",
+        references: { table: "customers", column: "id" },
+      },
+      {
+        column: "vendedor_id",
+        references: { table: "business_users", column: "id" },
+      },
+      {
+        column: "sale_id",
+        references: { table: "sales", column: "id" },
+      },
+    ],
+    priority: 30,
   },
 
   // Daily closings
@@ -224,6 +248,14 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
     priority: 10,
   },
 
+  // Customer Groups (sync with core business data - no dependencies)
+  {
+    table: "customer_groups",
+    primaryKey: ["id"],
+    where: "business_id = '{businessId}'",
+    priority: 10,
+  },
+
   // Customer Tags (sync after customers and tags)
   {
     table: "customer_tags",
@@ -236,6 +268,23 @@ export const SHAPES_CONFIG: ShapeConfig[] = [
       {
         column: "tag_id",
         references: { table: "tags", column: "id" },
+      },
+    ],
+    priority: 30,
+  },
+
+  // Customer Group Members (sync after customers and customer_groups)
+  {
+    table: "customer_group_members",
+    primaryKey: ["id"],
+    foreignKeys: [
+      {
+        column: "group_id",
+        references: { table: "customer_groups", column: "id" },
+      },
+      {
+        column: "customer_id",
+        references: { table: "customers", column: "id" },
       },
     ],
     priority: 30,

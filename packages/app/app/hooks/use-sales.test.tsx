@@ -29,6 +29,7 @@ function createWrapper(businessUserId?: string) {
           <ServicesProvider
             pg={pg as never}
             businessId="biz-1"
+            businessUserId={businessUserId || "seller-123"}
             authToken="token-1"
           >
             {children}

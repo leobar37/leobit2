@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-group-member-deletion-sync",
+  "reviewedAt": "2026-03-16T13:30:00.000Z",
+  "commitId": "2ed47d8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly modifies the CustomerGroupService.delete() method to sync individual member deletions. Before deleting members, it queries all current members of the group using the customerGroupMembers table, then for each member queues a delete sync operation with entityTypeOverride='customer_group_members' and the member's UUID as entityId. The implementation follows the same pattern used in addMembers() and removeMember() methods which already use individual sync operations.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "commit-mismatch",
+      "observation": "The handoff reports commitId '2ed47d8' but this commit is actually for a different feature (businessId filtering in DistribucionItemRepository). The actual changes for this feature are in the working directory as uncommitted changes. This may cause confusion when tracking changes.",
+      "evidence": "git log shows 2ed47d8 is 'fix: add businessId filtering to DistribucionItemRepository methods'. The actual change for fix-group-member-deletion-sync is in the working directory: git diff shows modifications to customer-group-service.ts"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The feature implementation is correct. The delete() method now queries all current members before deletion and queues individual delete sync operations for each member with entityTypeOverride='customer_group_members'. Build passes successfully. The only notable observation is a commit ID mismatch in the handoff, but this does not affect the correctness of the implementation."
+}
