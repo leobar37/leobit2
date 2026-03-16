@@ -64,7 +64,7 @@ export function useCreatePayment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.customerPayments(variables.customer_id),
+        queryKey: QUERY_KEYS.customerPayments(variables.customerId),
       });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
     },
@@ -82,11 +82,11 @@ export function useCreatePayment() {
       throw new Error("Business seller is not available");
     }
     const result = await mutation.mutateAsync({
-      customer_id: data.customerId,
-      seller_id: sellerId,
+      customerId: data.customerId,
+      sellerId: sellerId,
       amount: parseFloat(data.amount) || 0,
-      payment_method: data.paymentMethod,
-      reference_number: data.referenceNumber,
+      paymentMethod: data.paymentMethod,
+      referenceNumber: data.referenceNumber,
       notes: data.notes,
     });
     return result.id;
@@ -142,8 +142,8 @@ export function useUpdatePayment() {
     await mutation.mutateAsync({
       id: paymentId,
       input: {
-        proof_image_id: data.proofImageId,
-        reference_number: data.referenceNumber,
+        proofImageId: data.proofImageId,
+        referenceNumber: data.referenceNumber,
       },
     });
   };

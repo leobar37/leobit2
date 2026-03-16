@@ -7,7 +7,7 @@ let db: ReturnType<typeof drizzle> | null = null;
 let initPromise: Promise<{ pg: import("@electric-sql/pglite").PGlite; db: ReturnType<typeof drizzle> }> | null = null;
 
 // Current schema version - bump this when schema changes
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 const VERSION_KEY = "avileo_schema_version";
 
 interface PendingSale {
@@ -107,11 +107,49 @@ interface PendingCustomer {
   updated_at: string;
 }
 
+interface PendingVisita {
+  id: string;
+  business_id: string;
+  distribucion_id: string;
+  customer_id: string;
+  vendedor_id: string;
+  status: string;
+  motivo_no_compra: string | null;
+  sale_id: string | null;
+  sync_status: string;
+  sync_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PendingCustomerGroup {
+  id: string;
+  name: string;
+  business_id: string;
+  sync_status: string;
+  sync_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PendingCustomerGroupMember {
+  id: string;
+  group_id: string;
+  customer_id: string;
+  added_at: string;
+  added_by: string | null;
+  sync_status: string;
+  sync_attempts: number;
+}
+
 interface PendingData {
   sales: PendingSale[];
   saleItems: PendingSaleItem[];
   abonos: PendingAbono[];
   customers: PendingCustomer[];
+  visitas: PendingVisita[];
+  customerGroups: PendingCustomerGroup[];
+  customerGroupMembers: PendingCustomerGroupMember[];
 }
 
 export async function initDatabase(): Promise<{
@@ -214,6 +252,9 @@ async function exportPendingData(): Promise<PendingData> {
     saleItems: [],
     abonos: [],
     customers: [],
+    visitas: [],
+    customerGroups: [],
+    customerGroupMembers: [],
   };
 
   try {
@@ -264,6 +305,24 @@ async function exportPendingData(): Promise<PendingData> {
         SELECT * FROM customers WHERE sync_status IN ('pending', 'error')
       `);
       data.customers = customersResult.rows;
+
+      // Export pending visitas
+      const visitasResult = await tempPg.query<PendingVisita>(`
+        SELECT * FROM visitas WHERE sync_status IN ('pending', 'error')
+      `);
+      data.visitas = visitasResult.rows;
+
+      // Export pending customer groups
+      const customerGroupsResult = await tempPg.query<PendingCustomerGroup>(`
+        SELECT * FROM customer_groups WHERE sync_status IN ('pending', 'error')
+      `);
+      data.customerGroups = customerGroupsResult.rows;
+
+      // Export pending customer group members
+      const customerGroupMembersResult = await tempPg.query<PendingCustomerGroupMember>(`
+        SELECT * FROM customer_group_members WHERE sync_status IN ('pending', 'error')
+      `);
+      data.customerGroupMembers = customerGroupMembersResult.rows;
     } catch (err) {
       console.warn("[DB] Error exporting pending data (tables may not exist):", err);
     } finally {
@@ -444,7 +503,87 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
       }
     }
 
-    console.log(`[DB] Import complete: ${data.sales.length} sales, ${data.saleItems.length} items, ${data.abonos.length} abonos, ${data.customers.length} customers`);
+    // Import visitas
+    for (const visita of data.visitas) {
+      try {
+        await pg.exec(`
+          INSERT INTO visitas (
+            id, business_id, distribucion_id, customer_id, vendedor_id, status,
+            motivo_no_compra, sale_id, sync_status, sync_attempts, created_at, updated_at
+          ) VALUES (
+            '${visita.id}',
+            '${visita.business_id}',
+            '${visita.distribucion_id}',
+            '${visita.customer_id}',
+            '${visita.vendedor_id}',
+            '${visita.status}',
+            ${visita.motivo_no_compra ? `'${visita.motivo_no_compra.replace(/'/g, "''")}'` : "NULL"},
+            ${visita.sale_id ? `'${visita.sale_id}'` : "NULL"},
+            '${visita.sync_status}',
+            ${visita.sync_attempts},
+            '${visita.created_at}',
+            '${visita.updated_at}'
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            sync_status = EXCLUDED.sync_status,
+            sync_attempts = EXCLUDED.sync_attempts,
+            updated_at = EXCLUDED.updated_at
+        `);
+      } catch (err) {
+        console.warn(`[DB] Failed to import visita ${visita.id}:`, err);
+      }
+    }
+
+    // Import customer groups
+    for (const group of data.customerGroups) {
+      try {
+        await pg.exec(`
+          INSERT INTO customer_groups (
+            id, name, business_id, sync_status, sync_attempts, created_at, updated_at
+          ) VALUES (
+            '${group.id}',
+            '${group.name.replace(/'/g, "''")}',
+            '${group.business_id}',
+            '${group.sync_status}',
+            ${group.sync_attempts},
+            '${group.created_at}',
+            '${group.updated_at}'
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            sync_status = EXCLUDED.sync_status,
+            sync_attempts = EXCLUDED.sync_attempts,
+            updated_at = EXCLUDED.updated_at
+        `);
+      } catch (err) {
+        console.warn(`[DB] Failed to import customer group ${group.id}:`, err);
+      }
+    }
+
+    // Import customer group members
+    for (const member of data.customerGroupMembers) {
+      try {
+        await pg.exec(`
+          INSERT INTO customer_group_members (
+            id, group_id, customer_id, added_at, added_by, sync_status, sync_attempts
+          ) VALUES (
+            '${member.id}',
+            '${member.group_id}',
+            '${member.customer_id}',
+            '${member.added_at}',
+            ${member.added_by ? `'${member.added_by}'` : "NULL"},
+            '${member.sync_status}',
+            ${member.sync_attempts}
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            sync_status = EXCLUDED.sync_status,
+            sync_attempts = EXCLUDED.sync_attempts
+        `);
+      } catch (err) {
+        console.warn(`[DB] Failed to import customer group member ${member.id}:`, err);
+      }
+    }
+
+    console.log(`[DB] Import complete: ${data.sales.length} sales, ${data.saleItems.length} items, ${data.abonos.length} abonos, ${data.customers.length} customers, ${data.visitas.length} visitas, ${data.customerGroups.length} groups, ${data.customerGroupMembers.length} group members`);
   } catch (err) {
     console.error("[DB] Error importing pending data:", err);
   }
@@ -911,5 +1050,58 @@ async function createTables(pgInstance: import("@electric-sql/pglite").PGlite): 
     );
     CREATE INDEX IF NOT EXISTS idx_variant_inventory_business_id ON variant_inventory(business_id);
     CREATE INDEX IF NOT EXISTS idx_variant_inventory_variant_id ON variant_inventory(variant_id);
+  `);
+
+  await pgInstance.exec(`
+    CREATE TABLE IF NOT EXISTS visitas (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      business_id UUID NOT NULL,
+      distribucion_id UUID NOT NULL,
+      customer_id UUID NOT NULL,
+      vendedor_id UUID NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendiente',
+      motivo_no_compra VARCHAR(255),
+      sale_id UUID,
+      sync_status TEXT NOT NULL DEFAULT 'synced',
+      sync_attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_visitas_business_id ON visitas(business_id);
+    CREATE INDEX IF NOT EXISTS idx_visitas_distribucion_id ON visitas(distribucion_id);
+    CREATE INDEX IF NOT EXISTS idx_visitas_customer_id ON visitas(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_visitas_vendedor_id ON visitas(vendedor_id);
+    CREATE INDEX IF NOT EXISTS idx_visitas_status ON visitas(status);
+    CREATE INDEX IF NOT EXISTS idx_visitas_sale_id ON visitas(sale_id);
+    CREATE INDEX IF NOT EXISTS idx_visitas_sync_status ON visitas(sync_status);
+    CREATE INDEX IF NOT EXISTS idx_visitas_created_at ON visitas(created_at);
+  `);
+
+  await pgInstance.exec(`
+    CREATE TABLE IF NOT EXISTS customer_groups (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(100) NOT NULL,
+      business_id UUID NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'synced',
+      sync_attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_groups_business_id ON customer_groups(business_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_groups_name ON customer_groups(name);
+  `);
+
+  await pgInstance.exec(`
+    CREATE TABLE IF NOT EXISTS customer_group_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      group_id UUID NOT NULL,
+      customer_id UUID NOT NULL,
+      added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      added_by UUID,
+      sync_status TEXT NOT NULL DEFAULT 'synced',
+      sync_attempts INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_group_members_group_id ON customer_group_members(group_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_group_members_customer_id ON customer_group_members(customer_id);
   `);
 }

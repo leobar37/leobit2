@@ -73,6 +73,8 @@ export const invitationRoutes = new Elysia({ prefix: "/invitations" })
 export const publicInvitationRoutes = new Elysia({
   prefix: "/public/invitations",
 })
+  .use(contextPlugin)
+  .use(servicesPlugin)
   .get(
     "/:token",
     async ({ staffInvitationService, params }) => {
@@ -89,15 +91,15 @@ export const publicInvitationRoutes = new Elysia({
   )
   .post(
     "/accept",
-    async ({ staffInvitationService, body }) => {
-      await staffInvitationService.acceptInvitation(body.token, body.userId);
+    async ({ staffInvitationService, ctx, body }) => {
+      // Derive userId from authenticated session, ignore client-supplied userId
+      await staffInvitationService.acceptInvitation(body.token, ctx.userId);
 
       return { success: true };
     },
     {
       body: t.Object({
         token: t.String(),
-        userId: t.String(),
       }),
     }
   );

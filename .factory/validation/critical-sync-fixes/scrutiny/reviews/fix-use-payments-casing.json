@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-use-payments-casing",
+  "reviewedAt": "2026-03-16T10:30:00.000Z",
+  "commitId": "520cb2d1a41e9ed4b48c3db8dd43d0979fa17456",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly updates use-payments.ts to use camelCase properties matching the CreateAbonoInput and UpdateAbonoInput interfaces. All required changes were made: customer_id → customerId, seller_id → sellerId, payment_method → paymentMethod, reference_number → referenceNumber, proof_image_id → proofImageId. The worker also correctly reverted accidental changes to lines 129 and 131 which were in the onSuccess callback where data is of type Abono (database entity) and correctly uses snake_case. Typecheck shows only the pre-existing businessUserId error (unrelated to this fix), and build succeeds.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The implementation correctly fixes all snake_case to camelCase property references in use-payments.ts to match the CreateAbonoInput and UpdateAbonoInput interfaces. Typecheck shows no new errors (only the pre-existing businessUserId error), and build succeeds. The worker properly identified that some snake_case references in onSuccess callbacks should remain unchanged since they reference the database entity type Abono rather than the input interfaces."
+}

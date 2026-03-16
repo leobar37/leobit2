@@ -41,9 +41,10 @@ export class VisitaService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   getEntityType(): EntityType {
@@ -167,7 +168,7 @@ export class VisitaService extends BaseService {
       id,
       distribucionId: input.distribucionId,
       customerId: input.customerId,
-      vendedorId: this.businessId,
+      vendedorId: this.businessUserId,
       status: "pendiente",
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,
@@ -201,7 +202,7 @@ export class VisitaService extends BaseService {
         id: this.generateId(),
         distribucionId,
         customerId,
-        vendedorId: this.businessId,
+        vendedorId: this.businessUserId,
         status: "pendiente",
         syncStatus: SyncStatus.PENDING,
         syncAttempts: 0,

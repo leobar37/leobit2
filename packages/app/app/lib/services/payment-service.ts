@@ -30,21 +30,21 @@ export interface Abono {
 
 /** Input for creating a new payment */
 export interface CreateAbonoInput {
-  customer_id: string;
-  seller_id: string;
+  customerId: string;
+  sellerId: string;
   amount: number;
-  payment_method: string;
+  paymentMethod: string;
   notes?: string;
-  related_sale_id?: string;
-  proof_image_id?: string;
-  reference_number?: string;
+  relatedSaleId?: string;
+  proofImageId?: string;
+  referenceNumber?: string;
 }
 
 /** Input for updating a payment */
 export interface UpdateAbonoInput {
   notes?: string;
-  proof_image_id?: string | null;
-  reference_number?: string | null;
+  proofImageId?: string | null;
+  referenceNumber?: string | null;
 }
 
 /**
@@ -56,9 +56,10 @@ export class PaymentService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   /**
@@ -119,13 +120,13 @@ export class PaymentService extends BaseService {
 
   /**
    * Get customer debt balance (sales - payments)
-   * Only counts credit sales that count toward debt
+   * Only counts credit sales (sale_type = credito) that are not draft/cancelled
    */
   async getCustomerDebtBalance(customerId: string): Promise<number> {
     const salesResult = await this.pg.query<{ total: string }>(
       `SELECT COALESCE(SUM(total_amount), 0) as total FROM sales
        WHERE customer_id = $1 AND business_id = $2
-       AND status = 'credit' AND count_toward_debt = true`,
+       AND sale_type = 'credito' AND status NOT IN ('draft', 'cancelled')`,
       [customerId, this.businessId]
     );
 
@@ -185,10 +186,10 @@ export class PaymentService extends BaseService {
       const amount = formatCurrency(input.amount);
 
       // Validate customer belongs to this business
-      await this.validateCustomerBusiness(input.customer_id);
+      await this.validateCustomerBusiness(input.customerId);
 
       // Validate payment amount against customer debt (offline validation)
-      await this.validatePaymentAmount(input.customer_id, input.amount);
+      await this.validatePaymentAmount(input.customerId, input.amount);
 
       await this.pg.exec(
         `INSERT INTO abonos (
@@ -201,14 +202,14 @@ export class PaymentService extends BaseService {
         [
           id,
           this.businessId,
-          input.customer_id,
-          input.seller_id,
+          input.customerId,
+          input.sellerId,
           amount,
-          input.payment_method,
+          input.paymentMethod,
           input.notes ?? null,
-          input.proof_image_id ?? null,
-          input.reference_number ?? null,
-          input.related_sale_id ?? null,
+          input.proofImageId ?? null,
+          input.referenceNumber ?? null,
+          input.relatedSaleId ?? null,
           "pending",
           0,
           now,
@@ -217,14 +218,14 @@ export class PaymentService extends BaseService {
 
       // Queue sync operation
       await this.queueSync("insert", id, {
-        customer_id: input.customer_id,
-        seller_id: input.seller_id,
+        customerId: input.customerId,
+        sellerId: input.sellerId,
         amount,
-        payment_method: input.payment_method,
+        paymentMethod: input.paymentMethod,
         notes: input.notes,
-        proof_image_id: input.proof_image_id,
-        reference_number: input.reference_number,
-        related_sale_id: input.related_sale_id,
+        proofImageId: input.proofImageId,
+        referenceNumber: input.referenceNumber,
+        relatedSaleId: input.relatedSaleId,
       } as Record<string, unknown>);
 
       // Return the created payment
@@ -257,14 +258,14 @@ export class PaymentService extends BaseService {
       params.push(input.notes ?? null);
     }
 
-    if (input.proof_image_id !== undefined) {
+    if (input.proofImageId !== undefined) {
       updates.push(`proof_image_id = $${paramIndex++}`);
-      params.push(input.proof_image_id ?? null);
+      params.push(input.proofImageId ?? null);
     }
 
-    if (input.reference_number !== undefined) {
+    if (input.referenceNumber !== undefined) {
       updates.push(`reference_number = $${paramIndex++}`);
-      params.push(input.reference_number ?? null);
+      params.push(input.referenceNumber ?? null);
     }
 
     if (updates.length === 0) {
@@ -290,8 +291,8 @@ export class PaymentService extends BaseService {
     // Queue sync operation
     await this.queueSync("update", id, {
       notes: input.notes,
-      proof_image_id: input.proof_image_id,
-      reference_number: input.reference_number,
+      proofImageId: input.proofImageId,
+      referenceNumber: input.referenceNumber,
     } as Record<string, unknown>);
 
     return this.findById(id);

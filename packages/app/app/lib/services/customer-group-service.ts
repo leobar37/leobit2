@@ -40,9 +40,10 @@ export class CustomerGroupService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   getEntityType(): EntityType {
@@ -247,6 +248,17 @@ export class CustomerGroupService extends BaseService {
       throw new Error(`Customer group not found: ${id}`);
     }
 
+    // Query all current members before deleting to sync their deletions individually
+    const members = await this.db
+      .select({ id: customerGroupMembers.id })
+      .from(customerGroupMembers)
+      .where(eq(customerGroupMembers.groupId, id));
+
+    // Queue individual delete sync operations for each member
+    for (const member of members) {
+      await this.queueSync("delete", member.id, {}, undefined, "customer_group_members");
+    }
+
     await this.db
       .delete(customerGroupMembers)
       .where(eq(customerGroupMembers.groupId, id));
@@ -285,22 +297,27 @@ export class CustomerGroupService extends BaseService {
     }
 
     const now = new Date(this.now());
-    const members: Partial<CustomerGroupMember>[] = newCustomerIds.map(customerId => ({
-      id: this.generateId(),
-      groupId,
-      customerId,
-      addedBy: this.businessId,
-      syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,
-      addedAt: now,
-    }));
+    const memberIds: string[] = [];
+    const members: Partial<CustomerGroupMember>[] = newCustomerIds.map(customerId => {
+      const memberId = this.generateId();
+      memberIds.push(memberId);
+      return {
+        id: memberId,
+        groupId,
+        customerId,
+        addedBy: this.businessUserId,
+        syncStatus: SyncStatus.PENDING,
+        syncAttempts: 0,
+        addedAt: now,
+      };
+    });
 
     await this.db.insert(customerGroupMembers).values(members as CustomerGroupMember[]);
 
-    for (const customerId of newCustomerIds) {
-      await this.queueSync("insert", `${groupId}_${customerId}`, {
+    for (let i = 0; i < newCustomerIds.length; i++) {
+      await this.queueSync("insert", memberIds[i], {
         groupId,
-        customerId,
+        customerId: newCustomerIds[i],
       });
     }
   }
@@ -319,6 +336,22 @@ export class CustomerGroupService extends BaseService {
       throw new Error(`Customer group not found: ${groupId}`);
     }
 
+    // Look up the member to get its actual UUID
+    const member = await this.db
+      .select()
+      .from(customerGroupMembers)
+      .where(and(
+        eq(customerGroupMembers.groupId, groupId),
+        eq(customerGroupMembers.customerId, customerId)
+      ))
+      .limit(1);
+
+    if (member.length === 0) {
+      throw new Error(`Customer ${customerId} is not a member of group ${groupId}`);
+    }
+
+    const memberId = member[0].id;
+
     await this.db
       .delete(customerGroupMembers)
       .where(and(
@@ -326,7 +359,7 @@ export class CustomerGroupService extends BaseService {
         eq(customerGroupMembers.customerId, customerId)
       ));
 
-    await this.queueSync("delete", `${groupId}_${customerId}`, {
+    await this.queueSync("delete", memberId, {
       groupId,
       customerId,
     });

@@ -1,0 +1,22 @@
+{
+  "featureId": "add-shapes-config-entries",
+  "reviewedAt": "2026-03-16T04:15:00.000Z",
+  "commitId": "42f9f89",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature was already implemented in the branch before the worker session ran. However, there is a blocking issue: customer_group_members is missing from SELF_HEAL_INSERTABLE_ENTITIES. The feature description explicitly states 'add these three entity types (visitas, customer_groups, customer_group_members) to SYNC_STATUS_ENTITY_TABLES and SELF_HEAL_INSERTABLE_ENTITIES', but customer_group_members is only in SYNC_STATUS_ENTITY_TABLES (6 entries) and not in SELF_HEAL_INSERTABLE_ENTITIES (5 entries).",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/sync/sync-service.ts",
+        "line": 129,
+        "severity": "blocking",
+        "description": "customer_group_members is missing from SELF_HEAL_INSERTABLE_ENTITIES. The feature description explicitly requires adding 'these three entity types (visitas, customer_groups, customer_group_members) to SYNC_STATUS_ENTITY_TABLES and SELF_HEAL_INSERTABLE_ENTITIES'. Currently SELF_HEAL_INSERTABLE_ENTITIES only has: sales, customers, customer_groups, visitas, abonos. It should also include customer_group_members."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "FAIL: The feature implementation is incomplete. While SHAPES_CONFIG entries and SYNC_STATUS_ENTITY_TABLES are correct, SELF_HEAL_INSERTABLE_ENTITIES is missing customer_group_members. Current value: new Set(['sales', 'customers', 'customer_groups', 'visitas', 'abonos']). Required: should also include 'customer_group_members'. Tests pass (2/2) and no type errors in modified files. Pre-existing type errors are unrelated to this feature."
+}

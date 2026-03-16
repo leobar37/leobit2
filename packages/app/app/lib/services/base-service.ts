@@ -88,17 +88,20 @@ export abstract class BaseService {
   protected readonly db: ReturnType<typeof drizzle>;
   protected readonly syncService: SyncService;
   protected readonly businessId: string;
+  protected readonly businessUserId: string;
 
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
     this.pg = pg;
     this.db = db;
     this.syncService = syncService;
     this.businessId = businessId;
+    this.businessUserId = businessUserId;
   }
 
   /**

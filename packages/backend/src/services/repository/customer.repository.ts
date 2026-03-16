@@ -81,7 +81,7 @@ export class CustomerRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt">,
+    data: Omit<NewCustomer, "businessId" | "createdBy" | "id" | "createdAt" | "updatedAt"> & { id?: string },
     tx?: DbTransaction
   ): Promise<Customer> {
     const executor = tx ?? db;
@@ -90,6 +90,7 @@ export class CustomerRepository {
       .insert(customers)
       .values({
         ...data,
+        ...(data.id ? { id: data.id } : {}),
         businessId: ctx.businessId,
         createdBy: ctx.businessUserId,
       })
