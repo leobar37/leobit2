@@ -9,6 +9,8 @@ import { businessRoutes } from "./api/businesses";
 import { invitationRoutes, publicInvitationRoutes } from "./api/invitations";
 
 import { customerRoutes } from "./api/customers";
+import { customerGroupRoutes } from "./api/customer-groups";
+import { visitaRoutes } from "./api/visitas";
 import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
 import { inventoryRoutes } from "./api/inventory";
@@ -73,6 +75,8 @@ export const app = new Elysia()
   .use(invitationRoutes)
   .use(publicInvitationRoutes)
   .use(customerRoutes)
+  .use(customerGroupRoutes)
+  .use(visitaRoutes)
   .use(productRoutes)
   .use(paymentRoutes)
   .use(inventoryRoutes)

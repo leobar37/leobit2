@@ -86,3 +86,10 @@ export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
   "pagado_total",
   "saldo_pendiente",
 ]);
+
+// Visitas (visit status for vendor distribution visits)
+export const visitaStatusEnum = pgEnum("visita_status", [
+  "pendiente",
+  "compro",
+  "no_compra",
+]);

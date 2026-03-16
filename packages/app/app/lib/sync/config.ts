@@ -60,6 +60,9 @@ export const SYNCABLE_ENTITIES = [
   "suppliers",
   "purchases",
   "purchase_items",
+  "customer_groups",
+  "customer_group_members",
+  "visitas",
 ] as const;
 
 /** Conflict resolution strategies */

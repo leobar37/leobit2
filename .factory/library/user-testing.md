@@ -1,38 +1,29 @@
-# User Testing Guide
+# User Testing
 
-## Testing Surface
+Testing surface and validation approach for this mission.
 
-### Pages to Test
-1. `/distribuciones` - Admin distribuciones list
-2. `/mi-distribucion` - Vendor distribution view
-3. `/compras` - Purchases list
-4. `/compras/nueva` - Create purchase
-5. `/proveedores` - Suppliers list
-6. `/productos` - Products list
+## Validation Surfaces
 
-### Testing Tools
-- **Browser DevTools**: Network tab for sync, Application tab for IndexedDB
-- **React Query DevTools**: Query cache inspection
-- **PGlite Console**: Direct DB inspection
+| Surface | Tool | Setup |
+|---------|------|-------|
+| API endpoints | curl | Run backend server |
+| Frontend pages | Manual verification | Run frontend server |
 
-### Offline Testing
-1. Open Chrome DevTools
-2. Go to Network tab
-3. Set "Offline" throttle
-4. Perform actions
-5. Check IndexedDB for queued writes
-6. Set "Online" and verify sync
+## Validation Approach
 
-### Data Validation
-```javascript
-// Check PGlite data in console
-const { getDatabase } = await import('~/engine');
-const { db } = getDatabase();
-const data = await db.select().from(customers);
-console.log(data);
-```
+Given the constraint of no browser automation:
 
-### Sync Verification
-- Watch Electric sync in Network tab
-- Check shape responses
-- Verify real-time updates
+1. **API Validation**: Use curl to test all REST endpoints
+2. **TypeScript**: Verify build passes
+3. **Code Review**: Verify patterns match existing codebase
+
+## Resource Cost Classification
+
+- **Backend validation**: Minimal resources (just API calls)
+- **Frontend validation**: N/A - manual verification
+
+## Limitations
+
+- No E2E/browser tests
+- No automated UI validation
+- Manual verification required for frontend flows

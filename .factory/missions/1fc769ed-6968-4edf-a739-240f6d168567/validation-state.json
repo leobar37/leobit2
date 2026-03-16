@@ -1,0 +1,29 @@
+{
+  "assertions": {
+    "VAL-GROUP-001": { "status": "pending" },
+    "VAL-GROUP-002": { "status": "pending" },
+    "VAL-GROUP-003": { "status": "pending" },
+    "VAL-GROUP-004": { "status": "pending" },
+    "VAL-GROUP-005": { "status": "pending" },
+    "VAL-VISIT-001": { "status": "pending" },
+    "VAL-VISIT-002": { "status": "pending" },
+    "VAL-VISIT-003": { "status": "pending" },
+    "VAL-VISIT-004": { "status": "pending" },
+    "VAL-VISIT-005": { "status": "pending" },
+    "VAL-VISIT-006": { "status": "pending" },
+    "VAL-GROUP-FE-001": { "status": "pending" },
+    "VAL-GROUP-FE-002": { "status": "pending" },
+    "VAL-GROUP-FE-003": { "status": "pending" },
+    "VAL-GROUP-FE-004": { "status": "pending" },
+    "VAL-VISIT-FE-001": { "status": "pending" },
+    "VAL-VISIT-FE-002": { "status": "pending" },
+    "VAL-VISIT-FE-003": { "status": "pending" },
+    "VAL-VISIT-FE-004": { "status": "pending" },
+    "VAL-VISIT-FE-005": { "status": "pending" },
+    "VAL-TOOLBAR-001": { "status": "pending" },
+    "VAL-TOOLBAR-002": { "status": "pending" },
+    "VAL-CROSS-001": { "status": "pending" },
+    "VAL-CROSS-002": { "status": "pending" },
+    "VAL-CROSS-003": { "status": "pending" }
+  }
+}

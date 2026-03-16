@@ -225,7 +225,7 @@ export type InventoryUpdateInput = z.infer<typeof inventoryUpdateSchema>;
 
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "inventory"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "inventory", "customer_groups", "customer_group_members", "visitas"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),
@@ -236,3 +236,44 @@ export const syncOperationSchema = z.object({
 });
 
 export type SyncOperationParsed = z.infer<typeof syncOperationSchema>;
+
+// Customer Group schemas
+export const customerGroupCreateSchema = z.object({
+  name: z.string().min(1, "name es requerido"),
+  color: z.string().optional(),
+});
+
+export const customerGroupUpdateSchema = customerGroupCreateSchema.partial();
+
+export type CustomerGroupCreateInput = z.infer<typeof customerGroupCreateSchema>;
+export type CustomerGroupUpdateInput = z.infer<typeof customerGroupUpdateSchema>;
+
+// Customer Group Member schemas
+export const customerGroupMemberCreateSchema = z.object({
+  groupId: z.string(),
+  customerId: z.string(),
+  addedBy: z.string().optional(),
+});
+
+export const customerGroupMemberUpdateSchema = customerGroupMemberCreateSchema.partial();
+
+export type CustomerGroupMemberCreateInput = z.infer<typeof customerGroupMemberCreateSchema>;
+export type CustomerGroupMemberUpdateInput = z.infer<typeof customerGroupMemberUpdateSchema>;
+
+// Visita schemas
+export const visitaCreateSchema = z.object({
+  distribucionId: z.string(),
+  customerId: z.string(),
+  status: z.enum(["pendiente", "compro", "no_compra"]).default("pendiente"),
+  motivoNoCompra: z.string().optional(),
+  saleId: z.string().optional(),
+});
+
+export const visitaUpdateSchema = z.object({
+  status: z.enum(["pendiente", "compro", "no_compra"]).optional(),
+  motivoNoCompra: z.string().optional(),
+  saleId: z.string().optional(),
+});
+
+export type VisitaCreateInput = z.infer<typeof visitaCreateSchema>;
+export type VisitaUpdateInput = z.infer<typeof visitaUpdateSchema>;

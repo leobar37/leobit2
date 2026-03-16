@@ -19,6 +19,7 @@ import {
   User,
   ArrowLeft,
   Wallet,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ const menuItems = [
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
+  { icon: Calendar, label: "Visitas", href: "/visitas" },
+  { icon: Users, label: "Grupos", href: "/grupos" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
 

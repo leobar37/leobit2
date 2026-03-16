@@ -1,0 +1,46 @@
+{
+  "featureId": "fix-offline-first-visitas",
+  "reviewedAt": "2026-03-15T07:30:00.000Z",
+  "commitId": "5cfce0f",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix partially addresses the original 5 blocking issues. It correctly converts use-visitas.ts to use useOfflineAwareMutation (issue #5). However, issues #1-4 in _protected.visitas.tsx remain unfixed - the component still uses direct API functions (createVista, bulkCreateVisitas, updateVistaStatus) instead of the new offline-aware mutations, and handleGenerateSale uses useCreateDraftSale which doesn't have offline-aware logic.",
+    "issues": [
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 139,
+        "severity": "blocking",
+        "description": "Original issue #1: handleCreateSingleVista() still calls createVista() which makes direct API call via apiCall() without checking isOnline(). The fix provides useCreateVista hook but it's not used in the component."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 149,
+        "severity": "blocking",
+        "description": "Original issue #2: handleCreateGroupVisitas() still calls bulkCreateVisitas() which makes direct bulk API call without checking isOnline(). The fix provides useCreateVisitasFromGroup hook but it's not used in the component."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 159,
+        "severity": "blocking",
+        "description": "Original issue #3: handleMarkAsPurchased() and handleMarkAsNotPurchased() still call updateVistaStatus() which makes direct API calls without offline-first logic. The fix provides useUpdateVista hook but it's not used in the component."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 397,
+        "severity": "blocking",
+        "description": "Original issue #4: handleGenerateSale() uses useCreateDraftSale() mutation which is not offline-aware. The use-sales.ts hook doesn't use useOfflineAwareMutation."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "scope",
+      "observation": "The feature description only mentioned fixing 'use-visitas.ts should use useOfflineAwareMutation' - the fix correctly addresses this scope. However, the original 5 blocking issues were about the component layer (_protected.visitas.tsx), not just the hook. The fix provides offline-aware mutations as tools but doesn't integrate them into the component.",
+      "evidence": "packages/app/app/hooks/use-visitas.ts now exports useCreateVista, useCreateVistaFromGroup, useUpdateVista with useOfflineAwareMutation. But _protected.visitas.tsx still imports and uses direct API functions createVista, bulkCreateVisitas, updateVistaStatus."
+    }
+  ],
+  "addressesFailureFrom": "/Users/leobar37/.supacode/repos/avileo/feature/visitas/.factory/validation/cross-flow/scrutiny/reviews/cross-flow-group-to-visits.json",
+  "summary": "PARTIAL FIX: The fix correctly implements useOfflineAwareMutation in use-visitas.ts (issue #5 from original review). However, issues #1-4 remain unfixed - the component _protected.visitas.tsx still uses direct API functions instead of the new offline-aware mutations, and handleGenerateSale uses useCreateDraftSale which is not offline-aware. The feature scope was limited to the hook file, but the original blocking issues were at the component level."
+}

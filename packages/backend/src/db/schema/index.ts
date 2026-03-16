@@ -43,6 +43,7 @@ export {
   supplierTypeEnum,
   purchaseStatusEnum,
   orderPaymentStatusEnum,
+  visitaStatusEnum,
 } from "./enums";
 
 // User Profiles (extiende Better Auth)
@@ -104,6 +105,22 @@ export {
   type CustomerTag,
   type NewCustomerTag,
 } from "./customer-tags";
+
+// Customer Groups
+export {
+  customerGroups,
+  customerGroupsRelations,
+  type CustomerGroup,
+  type NewCustomerGroup,
+} from "./customer-groups";
+
+// Customer Group Members
+export {
+  customerGroupMembers,
+  customerGroupMembersRelations,
+  type CustomerGroupMember,
+  type NewCustomerGroupMember,
+} from "./customer-group-members";
 
 // Sales (Unified for instant_sales and pre_orders)
 export {
@@ -246,3 +263,11 @@ export {
   type WhatsAppMessage,
   type NewWhatsAppMessage,
 } from "./whatsapp-messages";
+
+// Visitas (visits linked to distributions)
+export {
+  visitas,
+  visitasRelations,
+  type Visita,
+  type NewVisita,
+} from "./visitas";

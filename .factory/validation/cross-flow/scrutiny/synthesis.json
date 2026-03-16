@@ -1,0 +1,44 @@
+{
+  "milestone": "cross-flow",
+  "round": 4,
+  "status": "pass",
+  "validatorsRun": {
+    "typecheck-backend": {
+      "passed": true,
+      "command": "cd packages/backend && bun run build",
+      "exitCode": 0,
+      "note": "Backend builds successfully"
+    },
+    "typecheck-frontend": {
+      "passed": true,
+      "command": "cd packages/app && bun run build",
+      "exitCode": 0,
+      "note": "Frontend builds successfully"
+    },
+    "lint": {
+      "passed": null,
+      "command": "N/A",
+      "exitCode": null,
+      "note": "No lint script available in project"
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill:frontend-worker",
+      "suggestion": "Add explicit scope guidance: When fixing offline-first issues, ensure the fix covers BOTH the hook layer (useOfflineAwareMutation) AND the component layer (using the new hooks in the component). A fix that only adds hooks without integrating them into components is incomplete.",
+      "evidence": "fix-offline-first-visitas (round 3) correctly added useOfflineAwareMutation to use-visitas.ts but didn't integrate the hooks into _protected.visitas.tsx, leaving issues #1-4 unfixed. The subsequent fix feature fix-visitas-component-offline resolved this.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/cross-flow/scrutiny/synthesis.json",
+  "notes": "This is round 4 of scrutiny. The fix feature fix-visitas-component-offline was reviewed and passes. All 4 original blocking issues are now resolved: 1) handleCreateSingleVista uses useCreateVista, 2) handleCreateVisitasFromGroup uses useCreateVisitasFromGroup, 3) handleMarkAsPurchased/NoCompra use useUpdateVista, 4) handleGenerateSale has isOnline() check. One non-blocking issue noted: handleGenerateSale still attempts the mutation when offline but handles error gracefully. Both backend and frontend builds pass."
+}

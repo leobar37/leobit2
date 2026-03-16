@@ -32,6 +32,9 @@ const VALID_TABLES = new Set([
   "closings",
   "tags",
   "customer_tags",
+  "customer_groups",
+  "customer_group_members",
+  "visitas",
 ]);
 
 export interface PullChange {

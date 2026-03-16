@@ -1,0 +1,62 @@
+{
+  "featureId": "cross-flow-group-to-visits",
+  "reviewedAt": "2026-03-15T06:15:00.000Z",
+  "commitId": "c2793d2e17ad69f24fd29f3b0f657e2103b5483e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature implements VAL-CROSS-001 (group selection creates visits) and VAL-CROSS-002 (sale links back to visit) correctly. However, VAL-CROSS-003 (offline visit creation syncs when online) is NOT implemented - the code makes direct API calls without any offline-first logic (no isOnline() check, no useOfflineAwareMutation). This is a blocking issue because the Avileo app is designed as offline-first and VAL-CROSS-003 explicitly requires offline visit creation.",
+    "issues": [
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 142,
+        "severity": "blocking",
+        "description": "VAL-CROSS-003 not implemented: handleCreateSingleVisita() makes direct API call without checking isOnline() first. According to project conventions (AGENTS.md), offline-first features must check isOnline() before API calls."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 167,
+        "severity": "blocking",
+        "description": "VAL-CROSS-003 not implemented: handleCreateGroupVisitas() makes direct bulk API call without checking isOnline(). This fails the requirement 'Offline visit creation syncs when online'."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 192,
+        "severity": "blocking",
+        "description": "VAL-CROSS-003 not implemented: handleMarkAsPurchased() and handleMarkAsNotPurchased() make direct API calls without offline-first logic."
+      },
+      {
+        "file": "packages/app/app/routes/_protected.visitas.tsx",
+        "line": 409,
+        "severity": "blocking",
+        "description": "VAL-CROSS-003 not implemented: handleGenerateSale() navigates to sale page without offline-first handling."
+      },
+      {
+        "file": "packages/app/app/hooks/use-visitas.ts",
+        "line": 1,
+        "severity": "blocking",
+        "description": "use-visitas.ts uses plain useMutation without offline-aware wrapper. Should use useOfflineAwareMutation for offline-first support per project conventions."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md in mission directory explicitly states 'Offline-first: check isOnline() before API calls' as a key pattern, but the worker did not follow this for visit creation. The visits page makes direct API calls without checking connectivity.",
+      "evidence": "packages/app/app/routes/_protected.visitas.tsx:142-450 - All mutation functions (handleCreateSingleVisita, handleCreateGroupVisitas, handleMarkAsPurchased, handleMarkAsNotPurchased) call apiCall directly without isOnline() check"
+    },
+    {
+      "area": "skills",
+      "observation": "The feature specifies skillName 'frontend-worker' but this skill doesn't exist in .factory/skills/ directory. The worker may not have had proper guidance on offline-first implementation.",
+      "evidence": "features.json shows skillName: 'frontend-worker' but ls .factory/skills/ shows no frontend-worker skill exists"
+    },
+    {
+      "area": "knowledge",
+      "observation": "The codebase has existing patterns for offline-first: useOfflineAwareMutation hook, useSync() hook with isOnline state. The worker should have used these but didn't. This knowledge exists in AGENTS.md files but wasn't applied.",
+      "evidence": "packages/app/app/hooks/AGENTS.md documents useOfflineAwareMutation pattern; packages/app/AGENTS.md documents useSync() and isOnline checks"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL: VAL-CROSS-003 (offline visit creation syncs when online) is not implemented. The code makes direct API calls without offline-first logic. The project AGENTS.md explicitly requires checking isOnline() before API calls, but this pattern was not followed for visit creation functions. Build passes (exit code 0)."
+}
