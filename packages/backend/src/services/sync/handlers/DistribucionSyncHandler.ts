@@ -1,0 +1,111 @@
+import type { RequestContext } from "../../../context/request-context";
+import type { DbTransaction } from "../../../lib/txid";
+import type { SyncOperationInput } from "../types";
+import type { SyncHandlerResult } from "../framework/types";
+import type { DistribucionRepository } from "../../repository/distribucion.repository";
+import type { DistribucionService } from "../../business/distribucion.service";
+import { BaseSyncHandler } from "./BaseSyncHandler";
+import { distribucionCreateSchema, distribucionUpdateSchema } from "../schemas";
+import { getToday } from "../../../lib/date-utils";
+
+export class DistribucionSyncHandler extends BaseSyncHandler {
+  readonly entityType = "distribuciones" as const;
+
+  constructor(
+    private distribucionRepo: DistribucionRepository,
+    private distribucionService: DistribucionService
+  ) {
+    super();
+  }
+
+  async validateBusinessRules(
+    _ctx: RequestContext,
+    payload: Record<string, unknown>,
+    _tx?: DbTransaction
+  ): Promise<void> {
+    distribucionCreateSchema.parse(payload);
+  }
+
+  async execute(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<SyncHandlerResult> {
+    this.logStart(ctx, operation);
+
+    try {
+      if (operation.operation === "create") {
+        await this.handleCreate(ctx, operation, tx);
+      } else if (operation.operation === "update") {
+        await this.handleUpdate(ctx, operation, tx);
+      } else if (operation.operation === "delete") {
+        await this.handleDelete(ctx, operation, tx);
+      } else {
+        throw new Error(`Acción no soportada: ${operation.operation}`);
+      }
+
+      this.logSuccess(ctx, operation);
+      return this.createSuccessResult(operation);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logError(ctx, operation, err);
+      return this.createErrorResult(operation, err.message);
+    }
+  }
+
+  private async handleCreate(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    _tx?: DbTransaction
+  ): Promise<void> {
+    const parsed = distribucionCreateSchema.parse(operation.payload);
+
+    await this.distribucionService.createDistribucion(ctx, {
+      vendedorId: parsed.vendedorId,
+      puntoVenta: parsed.puntoVenta,
+      fecha: parsed.fecha ?? getToday(),
+      modo: parsed.modo,
+      confiarEnVendedor: parsed.confiarEnVendedor,
+      items: parsed.items.map(item => ({
+        variantId: item.variantId,
+        cantidadAsignada: Number(item.cantidadAsignada),
+        unidad: item.unidad,
+      })),
+    });
+  }
+
+  private async handleUpdate(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    _tx?: DbTransaction
+  ): Promise<void> {
+    const parsed = distribucionUpdateSchema.parse(operation.payload);
+    const updateData: Parameters<typeof this.distribucionRepo.update>[2] = {};
+
+    if (parsed.puntoVenta !== undefined) updateData.puntoVenta = parsed.puntoVenta;
+    if (parsed.kilosAsignados !== undefined) updateData.kilosAsignados = String(parsed.kilosAsignados);
+    if (parsed.kilosVendidos !== undefined) updateData.kilosVendidos = String(parsed.kilosVendidos);
+    if (parsed.montoRecaudado !== undefined) updateData.montoRecaudado = String(parsed.montoRecaudado);
+    if (parsed.fecha !== undefined) updateData.fecha = parsed.fecha;
+    if (parsed.estado !== undefined) updateData.estado = parsed.estado;
+
+    const updated = await this.distribucionRepo.update(ctx, operation.entityId, updateData);
+
+    if (!updated) {
+      throw new Error("Distribución no encontrada");
+    }
+  }
+
+  private async handleDelete(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    _tx?: DbTransaction
+  ): Promise<void> {
+    const existing = await this.distribucionRepo.findById(ctx, operation.entityId);
+    if (!existing) {
+      return;
+    }
+
+    await this.distribucionRepo.delete(ctx, operation.entityId);
+  }
+}

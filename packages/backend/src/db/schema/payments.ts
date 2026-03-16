@@ -46,7 +46,7 @@ export const abonos = pgTable(
     proofImageId: uuid("proof_image_id").references(() => files.id),
 
     // Reference number for reconciliation (Yape/Plin transaction ID)
-    referenceNumber: varchar("reference_number", { length: 50 }),
+    referenceNumber: varchar("reference_number", { length: 50 }).unique(),
 
     // Related sale for cancellation tracking
     relatedSaleId: uuid("related_sale_id").references(() => sales.id),

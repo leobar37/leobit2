@@ -5,9 +5,18 @@ import {
   SYNC_INTERVAL_MS,
   OPERATION_STATUS,
   CONFLICT_STRATEGY,
+  BACKOFF_BASE_MS,
+  BACKOFF_MAX_MS,
   type OperationStatus,
   type ConflictStrategy,
 } from "./config";
+
+/**
+ * Generate a correlation ID for tracking an operation across the stack
+ */
+function generateCorrelationId(): string {
+  return `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 export interface EnqueueParams {
   entity_type: string;
@@ -20,6 +29,7 @@ export interface EnqueueParams {
 
 export interface SyncOperationRecord {
   id: string;
+  business_id: string;
   entity_type: string;
   operation: "insert" | "update" | "delete";
   entity_id: string;
@@ -33,6 +43,20 @@ export interface SyncOperationRecord {
   sync_group_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DeadLetterOperationRecord {
+  id: string;
+  business_id: string;
+  operation_id: string;
+  entity_type: string;
+  operation: "insert" | "update" | "delete";
+  entity_id: string;
+  data: string;
+  error: string;
+  sync_attempts: number;
+  original_error: string | null;
+  created_at: string;
 }
 
 export interface SyncStatus {
@@ -73,9 +97,28 @@ type SyncApiResult = {
   };
 };
 
-function escapeSqlString(value: string): string {
-  return value.replace(/'/g, "''");
-}
+type SyncOperationType = EnqueueParams["operation"];
+
+type CoalescePlan =
+  | {
+      type: "merge";
+      operation: SyncOperationType;
+      payload: Record<string, unknown>;
+    }
+  | {
+      type: "replace";
+      operation: SyncOperationType;
+      payload: Record<string, unknown>;
+    }
+  | {
+      type: "cancel";
+    }
+  | {
+      type: "none";
+    };
+
+const SYNC_STATUS_ENTITY_TABLES = new Set(["sales", "customers"]);
+const SELF_HEAL_INSERTABLE_ENTITIES = new Set(["sales", "customers"]);
 
 function parsePayload(payload: unknown): Record<string, unknown> {
   if (!payload) return {};
@@ -113,12 +156,71 @@ function normalizeStatusKey(status: string): keyof SyncStatus | null {
   }
 }
 
+function buildPlaceholders(count: number, offset: number = 1): string {
+  return Array.from({ length: count }, (_, index) => `$${index + offset}`).join(", ");
+}
+
+function isNotFoundError(error: string): boolean {
+  return (
+    error.includes("no encontrada") ||
+    error.includes("not found") ||
+    error.includes("does not exist")
+  );
+}
+
+function getCoalescePlan(
+  existing: SyncOperationRecord,
+  incoming: EnqueueParams
+): CoalescePlan {
+  const existingPayload = parsePayload(existing.payload);
+
+  if (existing.operation === "insert") {
+    if (incoming.operation === "insert" || incoming.operation === "update") {
+      return {
+        type: "merge",
+        operation: "insert",
+        payload: { ...existingPayload, ...incoming.data },
+      };
+    }
+
+    if (incoming.operation === "delete") {
+      return { type: "cancel" };
+    }
+  }
+
+  if (existing.operation === "update") {
+    if (incoming.operation === "update") {
+      return {
+        type: "merge",
+        operation: "update",
+        payload: { ...existingPayload, ...incoming.data },
+      };
+    }
+
+    if (incoming.operation === "delete") {
+      return {
+        type: "replace",
+        operation: "delete",
+        payload: incoming.data,
+      };
+    }
+  }
+
+  return { type: "none" };
+}
+
+function validateEntityTableName(entityType: string): string | null {
+  return SYNC_STATUS_ENTITY_TABLES.has(entityType) ? entityType : null;
+}
+
 export class SyncService {
   private pg: PGlite;
   private businessId: string;
   private authToken: string;
   private syncIntervalId: ReturnType<typeof setInterval> | null = null;
   private isProcessing = false;
+  private consecutiveFailures = 0;
+  private currentBackoff = 0;
 
   constructor(pg: PGlite, businessId: string, authToken: string) {
     this.pg = pg;
@@ -127,10 +229,29 @@ export class SyncService {
     void this.initTables();
   }
 
+  private getBackoffDelay(): number {
+    if (this.consecutiveFailures === 0) return 0;
+
+    return Math.min(
+      BACKOFF_BASE_MS * Math.pow(2, this.consecutiveFailures - 1),
+      BACKOFF_MAX_MS
+    );
+  }
+
+  private async applyBackoff(): Promise<void> {
+    if (this.currentBackoff > 0) {
+      console.log(
+        `[SyncService] Waiting ${this.currentBackoff}ms due to previous failures`
+      );
+      await new Promise((resolve) => setTimeout(resolve, this.currentBackoff));
+    }
+  }
+
   private async initTables(): Promise<void> {
     await this.pg.exec(`
       CREATE TABLE IF NOT EXISTS sync_operations (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL,
         entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
         sync_group_id TEXT,
@@ -145,6 +266,7 @@ export class SyncService {
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS business_id UUID;
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS entity_id TEXT;
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS sync_group_id TEXT;
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS payload JSONB;
@@ -154,16 +276,23 @@ export class SyncService {
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
-      CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(entity_type, entity_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(status);
-      CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(sync_group_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_operations_business ON sync_operations(business_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(business_id, entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(business_id, status);
+      CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(business_id, sync_group_id);
       CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
       CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
     `);
 
+    await this.pg.query(
+      `UPDATE sync_operations SET business_id = $1 WHERE business_id IS NULL`,
+      [this.businessId]
+    );
+
     await this.pg.exec(`
       CREATE TABLE IF NOT EXISTS sync_dead_letter (
         id TEXT PRIMARY KEY,
+        business_id UUID NOT NULL,
         operation_id TEXT NOT NULL,
         entity_type TEXT NOT NULL,
         operation TEXT NOT NULL,
@@ -172,14 +301,20 @@ export class SyncService {
         error TEXT NOT NULL,
         sync_attempts INTEGER NOT NULL,
         original_error TEXT,
-        created_at INTEGER NOT NULL
+        created_at TEXT NOT NULL
       );
+      ALTER TABLE sync_dead_letter ADD COLUMN IF NOT EXISTS business_id UUID;
+      CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_business ON sync_dead_letter(business_id);
       CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_operation_id ON sync_dead_letter(operation_id);
     `);
+
+    await this.pg.query(
+      `UPDATE sync_dead_letter SET business_id = $1 WHERE business_id IS NULL`,
+      [this.businessId]
+    );
   }
 
   async enqueue(params: EnqueueParams): Promise<string> {
-    // Always generate a proper UUID for the operation ID
     const id = crypto.randomUUID();
     const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
 
@@ -188,53 +323,130 @@ export class SyncService {
       operation: params.operation,
       entityId: params.entityId,
       idempotencyKey,
+      syncGroupId: params.syncGroupId,
+      businessId: this.businessId,
     });
 
-    const existingOp = await this.pg.query<{ id: string }>(
-      `SELECT id
+    const existingOp = await this.pg.query<SyncOperationRecord>(
+      `SELECT *
        FROM sync_operations
-       WHERE idempotency_key = '${escapeSqlString(idempotencyKey)}'
-         AND status != '${OPERATION_STATUS.COMPLETED}'
-       LIMIT 1`
+       WHERE business_id = $1
+         AND entity_type = $2
+         AND entity_id = $3
+         AND status IN ($4, $5)
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [
+        this.businessId,
+        params.entity_type,
+        params.entityId,
+        OPERATION_STATUS.PENDING,
+        OPERATION_STATUS.FAILED,
+      ]
     );
 
     if (existingOp.rows.length > 0) {
-      return existingOp.rows[0].id;
+      const existing = existingOp.rows[0];
+      const plan = getCoalescePlan(existing, params);
+
+      if (plan.type === "cancel") {
+        await this.pg.query(
+          `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
+          [existing.id, this.businessId]
+        );
+        console.log(
+          `[SYNC] Cancelled coalesced operations for ${params.entity_type}:${params.entityId}`
+        );
+        return existing.id;
+      }
+
+      if (plan.type === "merge" || plan.type === "replace") {
+        await this.pg.query(
+          `UPDATE sync_operations
+           SET operation = $1,
+               payload = $2::jsonb,
+               idempotency_key = $3,
+               status = $4,
+               last_error = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $5
+             AND business_id = $6`,
+          [
+            plan.operation,
+            JSON.stringify(plan.payload),
+            idempotencyKey,
+            OPERATION_STATUS.PENDING,
+            existing.id,
+            this.businessId,
+          ]
+        );
+        console.log(
+          `[SYNC] Coalesced ${existing.operation}+${params.operation} for ${params.entity_type}:${params.entityId}`
+        );
+        return existing.id;
+      }
     }
 
-    await this.pg.exec(`
-      INSERT INTO sync_operations (
+    const existingIdempotent = await this.pg.query<{ id: string }>(
+      `SELECT id
+       FROM sync_operations
+       WHERE business_id = $1
+         AND idempotency_key = $2
+         AND status != $3
+       LIMIT 1`,
+      [this.businessId, idempotencyKey, OPERATION_STATUS.COMPLETED]
+    );
+
+    if (existingIdempotent.rows.length > 0) {
+      return existingIdempotent.rows[0].id;
+    }
+
+    await this.pg.query(
+      `INSERT INTO sync_operations (
+         id,
+         business_id,
+         entity_type,
+         operation,
+         entity_id,
+         payload,
+         status,
+         version,
+         sync_attempts,
+         last_error,
+         last_attempt_at,
+         idempotency_key,
+         sync_group_id,
+         created_at,
+         updated_at
+       ) VALUES (
+         $1,
+         $2,
+         $3,
+         $4,
+         $5,
+         $6::jsonb,
+         $7,
+         1,
+         0,
+         NULL,
+         NULL,
+         $8,
+         $9,
+         CURRENT_TIMESTAMP,
+         CURRENT_TIMESTAMP
+       )`,
+      [
         id,
-        entity_type,
-        operation,
-        entity_id,
-        payload,
-        status,
-        version,
-        sync_attempts,
-        last_error,
-        last_attempt_at,
-        idempotency_key,
-        sync_group_id,
-        created_at,
-        updated_at
-      ) VALUES (
-        '${escapeSqlString(id)}',
-        '${escapeSqlString(params.entity_type)}',
-        '${params.operation}',
-        '${escapeSqlString(params.entityId)}',
-        '${escapeSqlString(JSON.stringify(params.data))}'::jsonb,
-        '${OPERATION_STATUS.PENDING}',
-        1,
-        0,
-        NULL,
-        NULL,
-        ${params.idempotencyKey ? `'${escapeSqlString(params.idempotencyKey)}'` : "NULL"},
-        ${params.syncGroupId ? `'${escapeSqlString(params.syncGroupId)}'` : "NULL"},
-        CURRENT_TIMESTAMP,
-        CURRENT_TIMESTAMP
-      )
-    `);
+        this.businessId,
+        params.entity_type,
+        params.operation,
+        params.entityId,
+        JSON.stringify(params.data),
+        OPERATION_STATUS.PENDING,
+        params.idempotencyKey ?? null,
+        params.syncGroupId ?? null,
+      ]
+    );
 
     return id;
   }
@@ -250,16 +462,113 @@ export class SyncService {
     let conflicts = 0;
 
     try {
-      const pendingOps = await this.pg.query<SyncOperationRecord>(`
-        SELECT *
-        FROM sync_operations
-        WHERE status IN ('pending', 'failed')
-          AND sync_attempts < ${MAX_RETRIES}
-        ORDER BY created_at ASC
-        LIMIT ${BATCH_SIZE}
-      `);
+      await this.applyBackoff();
+
+      const pendingOps = await this.pg.query<SyncOperationRecord>(
+        `SELECT *
+         FROM sync_operations
+         WHERE business_id = $1
+           AND status IN ($2, $3)
+           AND sync_attempts < $4
+         ORDER BY created_at ASC
+         LIMIT ${BATCH_SIZE}`,
+        [
+          this.businessId,
+          OPERATION_STATUS.PENDING,
+          OPERATION_STATUS.FAILED,
+          MAX_RETRIES,
+        ]
+      );
+
+      // Group operations by sync_group_id so related ops are sent together
+      const grouped = new Map<string, SyncOperationRecord[]>();
+      const ungrouped: SyncOperationRecord[] = [];
 
       for (const op of pendingOps.rows) {
+        if (op.sync_group_id) {
+          const group = grouped.get(op.sync_group_id);
+          if (group) {
+            group.push(op);
+          } else {
+            grouped.set(op.sync_group_id, [op]);
+          }
+        } else {
+          ungrouped.push(op);
+        }
+      }
+
+      // For grouped operations, also pull in any siblings not yet in the query
+      // (e.g. if BATCH_SIZE cut off part of a group)
+      for (const [groupId, ops] of grouped) {
+        const allGroupOps = await this.pg.query<SyncOperationRecord>(
+          `SELECT *
+           FROM sync_operations
+           WHERE business_id = $1
+             AND sync_group_id = $2
+             AND status IN ($3, $4)
+             AND sync_attempts < $5
+           ORDER BY created_at ASC`,
+          [
+            this.businessId,
+            groupId,
+            OPERATION_STATUS.PENDING,
+            OPERATION_STATUS.FAILED,
+            MAX_RETRIES,
+          ]
+        );
+        // Replace with the complete set (deduplicated)
+        grouped.set(groupId, allGroupOps.rows);
+      }
+
+      // Process each group as a single batch
+      for (const [groupId, ops] of grouped) {
+        try {
+          for (const op of ops) {
+            await this.markProcessing(op.id);
+          }
+
+          console.log(`[SYNC] Sending grouped batch (syncGroupId=${groupId}, count=${ops.length})`);
+          const response = await this.sendBatchToServer(ops);
+
+          for (const op of ops) {
+            const result = response.results.find(
+              (item) => item.idempotencyKey === (op.idempotency_key ?? op.id)
+            );
+
+            if (!result) {
+              await this.markFailed(op.id, "Batch sync returned no result for operation");
+              failed++;
+              continue;
+            }
+
+            if (result.conflict) {
+              await this.markConflict(op.id, result.conflict);
+              conflicts++;
+            } else if (result.success) {
+              await this.markCompleted(op.id);
+              processed++;
+            } else {
+              await this.markFailed(op.id, result.error || "Unknown error");
+              failed++;
+            }
+          }
+
+          // Reset backoff on any group success
+          if (ops.length > 0) {
+            this.consecutiveFailures = 0;
+            this.currentBackoff = 0;
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          for (const op of ops) {
+            await this.markFailed(op.id, errorMessage);
+          }
+          failed += ops.length;
+        }
+      }
+
+      // Process ungrouped operations individually (original behavior)
+      for (const op of ungrouped) {
         try {
           await this.markProcessing(op.id);
           const result = await this.syncOperation(op);
@@ -270,6 +579,8 @@ export class SyncService {
           } else if (result.success) {
             await this.markCompleted(op.id);
             processed++;
+            this.consecutiveFailures = 0;
+            this.currentBackoff = 0;
           } else {
             await this.markFailed(op.id, result.error || "Unknown error");
             failed++;
@@ -279,6 +590,11 @@ export class SyncService {
           await this.markFailed(op.id, errorMessage);
           failed++;
         }
+      }
+
+      if (failed > 0) {
+        this.consecutiveFailures++;
+        this.currentBackoff = this.getBackoffDelay();
       }
     } finally {
       this.isProcessing = false;
@@ -291,9 +607,16 @@ export class SyncService {
     const groupOps = await this.pg.query<SyncOperationRecord>(
       `SELECT *
        FROM sync_operations
-       WHERE sync_group_id = '${escapeSqlString(groupId)}'
-         AND status IN ('pending', 'failed')
-       ORDER BY created_at ASC`
+       WHERE business_id = $1
+         AND sync_group_id = $2
+         AND status IN ($3, $4)
+       ORDER BY created_at ASC`,
+      [
+        this.businessId,
+        groupId,
+        OPERATION_STATUS.PENDING,
+        OPERATION_STATUS.FAILED,
+      ]
     );
 
     if (groupOps.rows.length === 0) {
@@ -367,7 +690,10 @@ export class SyncService {
           await this.markFailed(operationId, result.error || "Client-wins resolution failed");
           return false;
         } catch (error) {
-          await this.markFailed(operationId, error instanceof Error ? error.message : String(error));
+          await this.markFailed(
+            operationId,
+            error instanceof Error ? error.message : String(error)
+          );
           return false;
         }
 
@@ -388,7 +714,10 @@ export class SyncService {
           await this.markFailed(operationId, result.error || "Field-merge resolution failed");
           return false;
         } catch (error) {
-          await this.markFailed(operationId, error instanceof Error ? error.message : String(error));
+          await this.markFailed(
+            operationId,
+            error instanceof Error ? error.message : String(error)
+          );
           return false;
         }
 
@@ -401,13 +730,47 @@ export class SyncService {
   }
 
   async getFailedOperations(): Promise<SyncOperationRecord[]> {
-    const result = await this.pg.query<SyncOperationRecord>(`
-      SELECT *
-      FROM sync_operations
-      WHERE status = 'failed'
-      ORDER BY sync_attempts DESC, updated_at DESC
-      LIMIT 100
-    `);
+    const result = await this.pg.query<SyncOperationRecord>(
+      `SELECT *
+       FROM sync_operations
+       WHERE business_id = $1
+         AND status = $2
+       ORDER BY sync_attempts DESC, updated_at DESC
+       LIMIT 100`,
+      [this.businessId, OPERATION_STATUS.FAILED]
+    );
+    return result.rows;
+  }
+
+  async getProblemOperations(): Promise<SyncOperationRecord[]> {
+    const result = await this.pg.query<SyncOperationRecord>(
+      `SELECT *
+       FROM sync_operations
+       WHERE business_id = $1
+         AND status IN ($2, $3, $4)
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [
+        this.businessId,
+        OPERATION_STATUS.PENDING,
+        OPERATION_STATUS.FAILED,
+        OPERATION_STATUS.CONFLICT,
+      ]
+    );
+
+    return result.rows;
+  }
+
+  async getDeadLetterOperations(): Promise<DeadLetterOperationRecord[]> {
+    const result = await this.pg.query<DeadLetterOperationRecord>(
+      `SELECT *
+       FROM sync_dead_letter
+       WHERE business_id = $1
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [this.businessId]
+    );
+
     return result.rows;
   }
 
@@ -433,12 +796,63 @@ export class SyncService {
     }
   }
 
+  async retryDeadLetterOperation(deadLetterId: string): Promise<boolean> {
+    const record = await this.getDeadLetterOperation(deadLetterId);
+    if (!record) {
+      return false;
+    }
+
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           sync_attempts = 0,
+           last_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+         AND business_id = $3`,
+      [OPERATION_STATUS.PENDING, record.operation_id, this.businessId]
+    );
+
+    await this.pg.query(
+      `DELETE FROM sync_dead_letter WHERE id = $1 AND business_id = $2`,
+      [deadLetterId, this.businessId]
+    );
+
+    return true;
+  }
+
+  async deleteDeadLetterOperation(deadLetterId: string): Promise<boolean> {
+    const record = await this.getDeadLetterOperation(deadLetterId);
+    if (!record) {
+      return false;
+    }
+
+    await this.pg.query(
+      `DELETE FROM sync_dead_letter WHERE id = $1 AND business_id = $2`,
+      [deadLetterId, this.businessId]
+    );
+
+    return true;
+  }
+
+  async clearDeadLetterOperations(): Promise<number> {
+    const records = await this.getDeadLetterOperations();
+    if (records.length === 0) {
+      return 0;
+    }
+
+    await this.pg.query(`DELETE FROM sync_dead_letter WHERE business_id = $1`, [this.businessId]);
+    return records.length;
+  }
+
   async getStatus(): Promise<SyncStatus> {
-    const result = await this.pg.query<{ status: string; count: string }>(`
-      SELECT status, COUNT(*) as count
-      FROM sync_operations
-      GROUP BY status
-    `);
+    const result = await this.pg.query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*) as count
+       FROM sync_operations
+       WHERE business_id = $1
+       GROUP BY status`,
+      [this.businessId]
+    );
 
     const status: SyncStatus = {
       pending: 0,
@@ -464,9 +878,15 @@ export class SyncService {
 
   async deleteOperation(operationId: string): Promise<boolean> {
     try {
-      await this.pg.exec(`
-        DELETE FROM sync_operations WHERE id = '${escapeSqlString(operationId)}'
-      `);
+      const op = await this.getOperation(operationId);
+      if (!op) {
+        return false;
+      }
+
+      await this.pg.query(
+        `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
+        [operationId, this.businessId]
+      );
       return true;
     } catch (error) {
       console.error("Failed to delete operation:", error);
@@ -480,13 +900,13 @@ export class SyncService {
     }
 
     try {
-      const idsSql = operationIds
-        .map((id) => escapeSqlString(id))
-        .join("', '");
-
-      await this.pg.exec(`
-        DELETE FROM sync_operations WHERE id IN ('${idsSql}')
-      `);
+      const placeholders = buildPlaceholders(operationIds.length, 2);
+      await this.pg.query(
+        `DELETE FROM sync_operations
+         WHERE business_id = $1
+           AND id IN (${placeholders})`,
+        [this.businessId, ...operationIds]
+      );
 
       return operationIds.length;
     } catch (error) {
@@ -516,53 +936,79 @@ export class SyncService {
 
   private async getOperation(id: string): Promise<SyncOperationRecord | null> {
     const result = await this.pg.query<SyncOperationRecord>(
-      `SELECT * FROM sync_operations WHERE id = $1`,
-      [id]
+      `SELECT *
+       FROM sync_operations
+       WHERE id = $1
+         AND business_id = $2`,
+      [id, this.businessId]
     );
     return result.rows[0] || null;
   }
 
+  private async getDeadLetterOperation(
+    id: string
+  ): Promise<DeadLetterOperationRecord | null> {
+    const result = await this.pg.query<DeadLetterOperationRecord>(
+      `SELECT *
+       FROM sync_dead_letter
+       WHERE id = $1
+         AND business_id = $2`,
+      [id, this.businessId]
+    );
+
+    return result.rows[0] || null;
+  }
+
   private async markProcessing(id: string): Promise<void> {
-    await this.pg.exec(`
-      UPDATE sync_operations
-      SET status = '${OPERATION_STATUS.PROCESSING}',
-          last_attempt_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = '${escapeSqlString(id)}'
-    `);
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           last_attempt_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+         AND business_id = $3`,
+      [OPERATION_STATUS.PROCESSING, id, this.businessId]
+    );
   }
 
   private async markCompleted(id: string): Promise<void> {
-    // Get operation details to update the entity's sync_status
     const op = await this.getOperation(id);
 
-    await this.pg.exec(`
-      UPDATE sync_operations
-      SET status = '${OPERATION_STATUS.COMPLETED}',
-          last_error = NULL,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = '${escapeSqlString(id)}'
-    `);
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           last_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+         AND business_id = $3`,
+      [OPERATION_STATUS.COMPLETED, id, this.businessId]
+    );
 
-    // Update the entity's sync_status to synced
-    if (op && (op.entity_type === 'sales' || op.entity_type === 'customers')) {
+    const tableName = op ? validateEntityTableName(op.entity_type) : null;
+    if (op && tableName) {
       try {
-        await this.pg.exec(`
-          UPDATE ${op.entity_type}
-          SET sync_status = 'synced',
-              sync_attempts = 0,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = '${escapeSqlString(op.entity_id)}'
-        `);
+        await this.pg.query(
+          `UPDATE ${tableName}
+           SET sync_status = $1,
+               sync_attempts = 0,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2
+             AND business_id = $3`,
+          ["synced", op.entity_id, this.businessId]
+        );
       } catch (error) {
-        // Log error but don't fail the sync operation
-        console.warn(`Failed to update ${op.entity_type} sync_status for ${op.entity_id}:`, error);
+        console.warn(
+          `Failed to update ${op.entity_type} sync_status for ${op.entity_id}:`,
+          error
+        );
       }
     }
   }
 
   private async markFailed(id: string, error: string): Promise<void> {
     const op = await this.getOperation(id);
+
+    const payloadStr = typeof op?.payload === 'string' ? op.payload : JSON.stringify(op?.payload);
 
     console.error(`[SYNC] Operation marked as FAILED:`, {
       operationId: id,
@@ -571,8 +1017,16 @@ export class SyncService {
       entityId: op?.entity_id,
       error,
       attempts: op?.sync_attempts,
+      payload: payloadStr ? payloadStr.substring(0, 1000) : undefined,
+      timestamp: new Date().toISOString(),
     });
+
     if (!op) return;
+
+    const selfHealed = await this.trySelfHealOperation(op, error);
+    if (selfHealed) {
+      return;
+    }
 
     const newAttempts = op.sync_attempts + 1;
 
@@ -581,15 +1035,48 @@ export class SyncService {
       return;
     }
 
-    await this.pg.exec(`
-      UPDATE sync_operations
-      SET status = '${OPERATION_STATUS.FAILED}',
-          sync_attempts = ${newAttempts},
-          last_error = '${escapeSqlString(error)}',
-          last_attempt_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = '${escapeSqlString(id)}'
-    `);
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           sync_attempts = $2,
+           last_error = $3,
+           last_attempt_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+         AND business_id = $5`,
+      [OPERATION_STATUS.FAILED, newAttempts, error, id, this.businessId]
+    );
+  }
+
+  private async trySelfHealOperation(
+    op: SyncOperationRecord,
+    error: string
+  ): Promise<boolean> {
+    if (
+      op.operation !== "update" ||
+      !SELF_HEAL_INSERTABLE_ENTITIES.has(op.entity_type) ||
+      !isNotFoundError(error)
+    ) {
+      return false;
+    }
+
+    console.log(
+      `[SYNC] Self-healing: Converting ${op.entity_type} update to insert for ${op.entity_id}`
+    );
+
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET operation = $1,
+           status = $2,
+           sync_attempts = 0,
+           last_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3
+         AND business_id = $4`,
+      ["insert", OPERATION_STATUS.PENDING, op.id, this.businessId]
+    );
+
+    return true;
   }
 
   private async markConflict(
@@ -599,53 +1086,75 @@ export class SyncService {
       suggestedMerge: Record<string, unknown>;
     }
   ): Promise<void> {
-    await this.pg.exec(`
-      UPDATE sync_operations
-      SET status = '${OPERATION_STATUS.CONFLICT}',
-          last_error = '${escapeSqlString(JSON.stringify(conflictData))}',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = '${escapeSqlString(id)}'
-    `);
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           last_error = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3
+         AND business_id = $4`,
+      [OPERATION_STATUS.CONFLICT, JSON.stringify(conflictData), id, this.businessId]
+    );
   }
 
-  private async moveToDeadLetter(operationId: string, originalError: string): Promise<void> {
+  private async moveToDeadLetter(
+    operationId: string,
+    originalError: string
+  ): Promise<void> {
     const op = await this.getOperation(operationId);
     if (!op) return;
 
     const dlqId = crypto.randomUUID();
 
-    await this.pg.exec(`
-      INSERT INTO sync_dead_letter (
-        id,
-        operation_id,
-        entity_type,
-        operation,
-        entity_id,
-        data,
-        error,
-        sync_attempts,
-        original_error,
-        created_at
-      ) VALUES (
-        '${escapeSqlString(dlqId)}',
-        '${escapeSqlString(operationId)}',
-        '${escapeSqlString(op.entity_type)}',
-        '${op.operation}',
-        '${escapeSqlString(op.entity_id)}',
-        '${escapeSqlString(JSON.stringify(parsePayload(op.payload)))}',
-        'Max retries exceeded',
-        ${op.sync_attempts},
-        '${escapeSqlString(originalError)}',
-        ${Date.now()}
-      )
-    `);
+    await this.pg.query(
+      `INSERT INTO sync_dead_letter (
+         id,
+         business_id,
+         operation_id,
+         entity_type,
+         operation,
+         entity_id,
+         data,
+         error,
+         sync_attempts,
+         original_error,
+         created_at
+       ) VALUES (
+         $1,
+         $2,
+         $3,
+         $4,
+         $5,
+         $6,
+         $7,
+         $8,
+         $9,
+         $10,
+         $11
+       )`,
+      [
+        dlqId,
+        this.businessId,
+        operationId,
+        op.entity_type,
+        op.operation,
+        op.entity_id,
+        JSON.stringify(parsePayload(op.payload)),
+        "Max retries exceeded",
+        op.sync_attempts + 1,
+        originalError,
+        new Date().toISOString(),
+      ]
+    );
 
-    await this.pg.exec(`
-      UPDATE sync_operations
-      SET status = '${OPERATION_STATUS.DEAD_LETTER}',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = '${escapeSqlString(operationId)}'
-    `);
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET status = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+         AND business_id = $3`,
+      [OPERATION_STATUS.DEAD_LETTER, operationId, this.businessId]
+    );
   }
 
   private async syncOperation(
@@ -678,7 +1187,10 @@ export class SyncService {
 
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -687,10 +1199,13 @@ export class SyncService {
   ): Promise<BatchSyncResponse> {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
+    const batchCorrelationId = generateCorrelationId();
+
     console.log(`[SYNC] Sending batch to server:`, {
+      correlationId: batchCorrelationId,
       url: `${apiUrl}/sync/batch`,
       operationsCount: operations.length,
-      operations: operations.map(op => ({
+      operations: operations.map((op) => ({
         idempotencyKey: op.idempotency_key,
         entityType: op.entity_type,
         operation: op.operation,
@@ -704,6 +1219,7 @@ export class SyncService {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.authToken}`,
         "x-business-id": this.businessId,
+        "x-correlation-id": batchCorrelationId,
       },
       body: JSON.stringify({
         operations: operations.map((op) => ({
@@ -714,6 +1230,7 @@ export class SyncService {
           payload: parsePayload(op.payload),
           localVersion: op.version,
           localTimestamp: new Date(op.updated_at).toISOString(),
+          correlationId: generateCorrelationId(),
           ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
         })),
       }),
@@ -741,11 +1258,11 @@ export class SyncService {
     console.log(`[SYNC] Batch response received:`, {
       success: body.success,
       resultsCount: body.data?.results?.length,
-      results: body.data?.results?.map((r: any) => ({
-        idempotencyKey: r.idempotencyKey,
-        success: r.success,
-        error: r.error,
-        hasConflict: !!r.conflict,
+      results: body.data?.results?.map((result: SyncApiResult) => ({
+        idempotencyKey: result.idempotencyKey,
+        success: result.success,
+        error: result.error,
+        hasConflict: !!result.conflict,
       })),
     });
 

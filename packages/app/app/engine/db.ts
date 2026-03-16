@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "./schema";
+import { getLocalDatabaseName } from "~/lib/session-storage";
 
 let pg: import("@electric-sql/pglite").PGlite | null = null;
 let db: ReturnType<typeof drizzle> | null = null;
@@ -126,6 +127,9 @@ export async function initDatabase(): Promise<{
   }
 
   initPromise = (async () => {
+    const databaseName = getLocalDatabaseName();
+    const dataDir = `idb://${databaseName}`;
+
     const [{ PGlite }, { electricSync }] = await Promise.all([
       import("@electric-sql/pglite"),
       import("@electric-sql/pglite-sync"),
@@ -135,9 +139,16 @@ export async function initDatabase(): Promise<{
     const storedVersion = parseInt(localStorage.getItem(VERSION_KEY) || "0", 10);
     const needsReset = storedVersion !== SCHEMA_VERSION;
 
+    // Check if user requested a force reset (via "Limpiar" button)
+    const forceReset = localStorage.getItem("AVILEO_FORCE_RESET") === "true";
+    if (forceReset) {
+      console.log("[DB] Force reset requested - skipping data export");
+      localStorage.removeItem("AVILEO_FORCE_RESET");
+    }
+
     let pendingData: PendingData | null = null;
 
-    if (needsReset && storedVersion > 0) {
+    if (needsReset && storedVersion > 0 && !forceReset) {
       // Export pending data before reset (only if database existed before)
       console.log(`[DB] Schema version changed: ${storedVersion} -> ${SCHEMA_VERSION}. Exporting pending data...`);
       pendingData = await exportPendingData();
@@ -152,7 +163,7 @@ export async function initDatabase(): Promise<{
 
     // Create fresh database instance
     const pgInstance = await PGlite.create({
-      dataDir: "idb://avileo-pg",
+      dataDir,
       extensions: {
         electric: electricSync(),
       },
@@ -188,6 +199,7 @@ export async function initDatabase(): Promise<{
     // Debug: Check if electric extension is loaded
     console.log(`[DB] pg.electric exists:`, 'electric' in pgInstance);
     console.log(`[DB] pg.sync exists:`, 'sync' in pgInstance);
+    console.log(`[DB] Database namespace: ${databaseName}`);
     console.log(`[DB] Database initialized with schema version ${SCHEMA_VERSION}`);
 
     return { pg: pgInstance, db: dbInstance };
@@ -212,7 +224,7 @@ async function exportPendingData(): Promise<PendingData> {
     ]);
 
     const tempPg = await PGlite.create({
-      dataDir: "idb://avileo-pg",
+      dataDir: `idb://${getLocalDatabaseName()}`,
       extensions: { electric: electricSync() },
       locateFile: (file: string) => {
         if (file === "pglite.data") {
@@ -439,6 +451,8 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
 }
 
 async function resetDatabaseInternal(): Promise<void> {
+  const databaseName = getLocalDatabaseName();
+
   if (pg) {
     await pg.close();
     pg = null;
@@ -448,9 +462,9 @@ async function resetDatabaseInternal(): Promise<void> {
 
   // Delete IndexedDB database
   return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase("avileo-pg");
+    const request = indexedDB.deleteDatabase(databaseName);
     request.onsuccess = () => {
-      console.log("[DB] IndexedDB database deleted successfully");
+      console.log(`[DB] IndexedDB database deleted successfully: ${databaseName}`);
       resolve();
     };
     request.onerror = () => {
@@ -461,7 +475,7 @@ async function resetDatabaseInternal(): Promise<void> {
     request.onblocked = () => {
       console.warn("[DB] IndexedDB delete blocked - retrying...");
       setTimeout(() => {
-        const retry = indexedDB.deleteDatabase("avileo-pg");
+        const retry = indexedDB.deleteDatabase(databaseName);
         retry.onsuccess = () => resolve();
         retry.onerror = () => resolve();
       }, 100);
@@ -477,6 +491,20 @@ export function getDatabase(): {
     throw new Error("Database not initialized. Call initDatabase() first.");
   }
   return { pg, db };
+}
+
+export async function disposeDatabase(): Promise<void> {
+  if (pg) {
+    try {
+      await pg.close();
+    } catch (error) {
+      console.warn("[DB] Failed to close database instance:", error);
+    }
+  }
+
+  pg = null;
+  db = null;
+  initPromise = null;
 }
 
 export async function resetDatabase(): Promise<void> {
@@ -782,6 +810,7 @@ async function createTables(pgInstance: import("@electric-sql/pglite").PGlite): 
   await pgInstance.exec(`
     CREATE TABLE IF NOT EXISTS sync_operations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      business_id UUID NOT NULL,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       sync_group_id TEXT,
@@ -796,11 +825,32 @@ async function createTables(pgInstance: import("@electric-sql/pglite").PGlite): 
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-    CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(entity_type, entity_id);
-    CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(status);
-    CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(sync_group_id);
+    ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS business_id UUID;
+    CREATE INDEX IF NOT EXISTS idx_sync_operations_business ON sync_operations(business_id);
+    CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(business_id, entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(business_id, status);
+    CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(business_id, sync_group_id);
     CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
     CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
+  `);
+
+  await pgInstance.exec(`
+    CREATE TABLE IF NOT EXISTS sync_dead_letter (
+      id TEXT PRIMARY KEY,
+      business_id UUID NOT NULL,
+      operation_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      data TEXT NOT NULL,
+      error TEXT NOT NULL,
+      sync_attempts INTEGER NOT NULL,
+      original_error TEXT,
+      created_at TEXT NOT NULL
+    );
+    ALTER TABLE sync_dead_letter ADD COLUMN IF NOT EXISTS business_id UUID;
+    CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_business ON sync_dead_letter(business_id);
+    CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_operation_id ON sync_dead_letter(operation_id);
   `);
 
   await pgInstance.exec(`

@@ -9,7 +9,10 @@ import { saleSyncHook } from "./hooks/sales";
 /**
  * All registered sync hooks
  */
-const registeredHooks: SyncHook[] = [saleSyncHook];
+// TODO: Re-enable saleSyncHook when proper queue blocking is implemented
+const registeredHooks: SyncHook[] = [
+  // saleSyncHook, // Temporarily disabled - blocks entire queue when validation fails
+];
 
 /**
  * Runs all hooks for a given entity type

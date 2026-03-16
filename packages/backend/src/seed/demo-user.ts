@@ -4,6 +4,7 @@ import { businesses, businessUsers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { RequestContext } from "../context/request-context";
 import { services } from "./services";
+import { backfillSyncOperations } from "./backfill-sync-operations";
 
 const DEMO_USER = {
   email: "demo@avileo.com",
@@ -98,7 +99,7 @@ interface SeedProduct {
   variants: Array<{ id: string; name: string }>;
 }
 
-async function seedDemoUser() {
+export async function seedDemoUser() {
   console.log("🌱 Seeding demo user...\n");
 
   // Check if demo user already exists
@@ -191,6 +192,13 @@ async function seedDemoUser() {
   // Seed all demo data
   await seedDemoData(ctx);
 
+  // Run backfill to create sync operations
+  console.log("\n🔄 Running sync operations backfill...");
+  const backfillResults = await backfillSyncOperations(businessId);
+  const totalCreated = backfillResults.reduce((sum, r) => sum + r.created, 0);
+  const totalSkipped = backfillResults.reduce((sum, r) => sum + r.skipped, 0);
+  console.log(`✓ Backfill complete: ${totalCreated} created, ${totalSkipped} skipped`);
+
   console.log("\n✅ Demo user seed completed!");
   console.log("\nLogin credentials:");
   console.log(`  Email: ${DEMO_USER.email}`);
@@ -220,13 +228,12 @@ async function seedDemoData(ctx: RequestContext) {
   const customers = await seedCustomers(ctx);
   console.log(`✓ Seeded ${customers.length} customers`);
 
-  // Seed sales
-  const sales = await seedSales(ctx, customers, products);
-  console.log(`✓ Seeded ${sales.length} sales`);
+  // Skip sales and abonos for cleaner demo
+  // const sales = await seedSales(ctx, customers, products);
+  // console.log(`✓ Seeded ${sales.length} sales`);
 
-  // Seed abonos
-  const abonos = await seedAbonos(ctx, customers);
-  console.log(`✓ Seeded ${abonos.length} abonos`);
+  // const abonos = await seedAbonos(ctx, customers);
+  // console.log(`✓ Seeded ${abonos.length} abonos`);
 }
 
 async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {

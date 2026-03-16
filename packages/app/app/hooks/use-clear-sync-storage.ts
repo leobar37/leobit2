@@ -9,7 +9,7 @@ import { resetDatabase } from "~/engine";
 export interface ClearSyncStorageInput {
   /** Whether to reload the page after clearing (default: true) */
   reload?: boolean;
-  /** Delay in ms before reloading (default: 300) */
+  /** Delay in ms before reloading (default: 1000) */
   reloadDelay?: number;
   /** Whether to keep the current auth session (default: false - logs out user) */
   preserveSession?: boolean;
@@ -20,26 +20,44 @@ export function useClearSyncStorage() {
     mutationFn: async (input: ClearSyncStorageInput = {}) => {
       const {
         reload = true,
-        reloadDelay = 300,
+        reloadDelay = 1000,
         preserveSession = false,
       } = input;
 
       try {
+        console.log("[ClearSync] Starting storage cleanup...");
+
+        // Set flag to force reset and skip data export on next init
+        console.log("[ClearSync] Setting force reset flag...");
+        localStorage.setItem("AVILEO_FORCE_RESET", "true");
+
         // First close PGlite properly to avoid connection issues
+        console.log("[ClearSync] Closing PGlite database...");
         await resetDatabase();
+        console.log("[ClearSync] PGlite database closed");
 
         // Then clear session storage and IndexedDB
+        console.log("[ClearSync] Clearing session storage and other IndexedDBs...");
         await clearSyncStorage({ preserveSession });
+        console.log("[ClearSync] Session storage cleared");
 
         // Reload page to restart sync from offset 0_0
         if (reload && typeof window !== "undefined") {
-          setTimeout(() => {
-            window.location.reload();
-          }, reloadDelay);
+          console.log(`[ClearSync] Waiting ${reloadDelay}ms before reload...`);
+
+          // Wait for the delay before reloading to ensure all cleanup completes
+          await new Promise<void>((resolve) => {
+            setTimeout(() => {
+              console.log("[ClearSync] Reloading page...");
+              window.location.reload();
+              resolve();
+            }, reloadDelay);
+          });
         }
 
         return { success: true };
       } catch (error) {
+        console.error("[ClearSync] Error during cleanup:", error);
         throw error;
       }
     },

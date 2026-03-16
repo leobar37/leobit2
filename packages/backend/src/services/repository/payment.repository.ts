@@ -25,8 +25,9 @@ export class PaymentRepository {
     });
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<Abono | undefined> {
-    return db.query.abonos.findFirst({
+  async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<Abono | undefined> {
+    const executor = tx ?? db;
+    return executor.query.abonos.findFirst({
       where: and(
         eq(abonos.id, id),
         eq(abonos.businessId, ctx.businessId)
@@ -90,8 +91,9 @@ export class PaymentRepository {
     return abono;
   }
 
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db
+  async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
+    const executor = tx ?? db;
+    await executor
       .delete(abonos)
       .where(and(
         eq(abonos.id, id),
@@ -126,7 +128,7 @@ export class PaymentRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber">>,
+    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes">>,
     tx?: DbTransaction
   ): Promise<Abono> {
     const executor = tx ?? db;

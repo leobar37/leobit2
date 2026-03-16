@@ -197,7 +197,7 @@ export class SaleService extends BaseService {
       return null;
     }
 
-    const sale = mapToCamelCaseWithDates<Sale>(saleResult.rows[0]);
+    const sale = mapToCamelCaseWithDates(saleResult.rows[0]) as unknown as Sale;
 
     // Fetch customer data if customerId exists
     let customer: SaleCustomer | null = null;
@@ -207,7 +207,7 @@ export class SaleService extends BaseService {
         [sale.customerId]
       );
       if (customerResult.rows.length > 0) {
-        customer = mapToCamelCase<SaleCustomer>(customerResult.rows[0]);
+        customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
       }
     }
 
@@ -216,7 +216,7 @@ export class SaleService extends BaseService {
       [id, this.businessId]
     );
 
-    const items = itemsResult.rows.map((row) => mapToCamelCase<SaleItem>(row));
+    const items = itemsResult.rows.map((row) => mapToCamelCase(row) as unknown as SaleItem);
 
     return {
       ...sale,
@@ -237,7 +237,7 @@ export class SaleService extends BaseService {
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCaseWithDates<Sale>(row);
+      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -247,7 +247,7 @@ export class SaleService extends BaseService {
           [sale.customerId]
         );
         if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase<SaleCustomer>(customerResult.rows[0]);
+          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
         }
       }
 
@@ -259,7 +259,7 @@ export class SaleService extends BaseService {
       sales.push({
         ...sale,
         customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase<SaleItem>(itemRow)),
+        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
       });
     }
 
@@ -278,7 +278,7 @@ export class SaleService extends BaseService {
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCaseWithDates<Sale>(row);
+      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -288,7 +288,7 @@ export class SaleService extends BaseService {
           [sale.customerId]
         );
         if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase<SaleCustomer>(customerResult.rows[0]);
+          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
         }
       }
 
@@ -300,7 +300,7 @@ export class SaleService extends BaseService {
       sales.push({
         ...sale,
         customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase<SaleItem>(itemRow)),
+        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
       });
     }
 
@@ -319,7 +319,7 @@ export class SaleService extends BaseService {
     const sales: SaleWithItems[] = [];
 
     for (const row of salesResult.rows) {
-      const sale = mapToCamelCaseWithDates<Sale>(row);
+      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists
       let customer: SaleCustomer | null = null;
@@ -329,7 +329,7 @@ export class SaleService extends BaseService {
           [sale.customerId]
         );
         if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase<SaleCustomer>(customerResult.rows[0]);
+          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
         }
       }
 
@@ -341,7 +341,7 @@ export class SaleService extends BaseService {
       sales.push({
         ...sale,
         customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase<SaleItem>(itemRow)),
+        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
       });
     }
 
@@ -419,6 +419,7 @@ export class SaleService extends BaseService {
           netWeight: saleInput.netWeight,
           deliveryDate: saleInput.deliveryDate,
           orderDate: saleInput.orderDate,
+          items: [],
         },
         syncGroupId
       );
@@ -578,6 +579,20 @@ export class SaleService extends BaseService {
   }
 
   /**
+   * Get the syncGroupId from an insert operation for this sale
+   * This ensures confirm/update/item operations are in the same sync group
+   */
+  private async getInsertSyncGroupId(saleId: string): Promise<string | undefined> {
+    const result = await this.pg.query<{ sync_group_id: string }>(
+      `SELECT sync_group_id FROM sync_operations 
+       WHERE entity_id = $1 AND operation = 'insert' 
+       ORDER BY created_at DESC LIMIT 1`,
+      [saleId]
+    );
+    return result.rows[0]?.sync_group_id ?? undefined;
+  }
+
+  /**
    * Confirm a sale (change status from draft to active)
    * For instant_sales
    */
@@ -603,12 +618,16 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id]
     );
 
+    const syncGroupId = await this.getInsertSyncGroupId(id);
+
     await this.queueSync(
       "update",
       id,
       {
         status: "active",
-      }
+        saleType: sale.saleType,
+      },
+      syncGroupId
     );
   }
 
@@ -642,12 +661,16 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id, baseVersion]
     );
 
+    const syncGroupId = await this.getInsertSyncGroupId(id);
+
     await this.queueSync(
       "update",
       id,
       {
         status: "confirmed",
-      }
+        saleType: sale.saleType,
+      },
+      syncGroupId
     );
   }
 
@@ -676,12 +699,16 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id]
     );
 
+    const syncGroupId = await this.getInsertSyncGroupId(id);
+
     await this.queueSync(
       "update",
       id,
       {
         status: "delivered",
-      }
+        saleType: sale.saleType,
+      },
+      syncGroupId
     );
   }
 
@@ -712,6 +739,8 @@ export class SaleService extends BaseService {
       [now, reason, SyncStatus.PENDING, id]
     );
 
+    const syncGroupId = await this.getInsertSyncGroupId(id);
+
     await this.queueSync(
       "update",
       id,
@@ -719,7 +748,8 @@ export class SaleService extends BaseService {
         status: "cancelled",
         cancelReason: reason,
         cancelledAt: now,
-      }
+      },
+      syncGroupId
     );
   }
 
@@ -821,10 +851,13 @@ export class SaleService extends BaseService {
       params
     );
 
+    const syncGroupId = await this.getInsertSyncGroupId(id);
+
     await this.queueSync(
       "update",
       id,
-      input as Record<string, unknown>
+      input as Record<string, unknown>,
+      syncGroupId
     );
   }
 
@@ -875,7 +908,7 @@ export class SaleService extends BaseService {
       `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
       [saleId, this.businessId]
     );
-    const existingItems = existingItemsResult.rows.map((row) => mapToCamelCase<SaleItem>(row));
+    const existingItems = existingItemsResult.rows.map((row) => mapToCamelCase(row) as unknown as SaleItem);
     const existingItem = existingItems.find(
       (i) => i.productId === item.productId && i.variantId === item.variantId
     );
@@ -915,7 +948,9 @@ export class SaleService extends BaseService {
       [item.subtotal, now, SyncStatus.PENDING, saleId]
     );
 
-    // Queue sync for the new item (individual sync, following the same pattern as other entities)
+    // Queue sync for the new item (use same syncGroupId as the sale insert to ensure correct order)
+    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
+    console.log("[SaleService] addItem - saleSyncGroupId:", saleSyncGroupId, "saleId:", saleId);
     await this.queueSync(
       "insert",
       itemId,
@@ -930,7 +965,9 @@ export class SaleService extends BaseService {
         unitPrice: item.unitPrice,
         unitPriceQuoted: item.unitPriceQuoted,
         subtotal: item.subtotal,
-      }
+      },
+      saleSyncGroupId,
+      "sale_items"
     );
 
     // Return the created item
@@ -939,7 +976,7 @@ export class SaleService extends BaseService {
       [itemId]
     );
 
-    return mapToCamelCase<SaleItem>(itemResult.rows[0]);
+    return mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem;
   }
 
   /**
@@ -974,7 +1011,7 @@ export class SaleService extends BaseService {
       throw new Error("Item not found in sale");
     }
 
-    const existingItem = mapToCamelCase<SaleItem>(itemResult.rows[0]);
+    const existingItem = mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem;
     const oldSubtotal = parseFloat(existingItem.subtotal || "0");
     const newSubtotal = data.subtotal ?? oldSubtotal;
     const subtotalDiff = newSubtotal - oldSubtotal;
@@ -1021,7 +1058,7 @@ export class SaleService extends BaseService {
       [itemId]
     );
 
-    return mapToCamelCase<SaleItem>(updatedResult.rows[0]);
+    return mapToCamelCase(updatedResult.rows[0]) as unknown as SaleItem;
   }
 
   /**

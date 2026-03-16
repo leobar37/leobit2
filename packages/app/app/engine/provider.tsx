@@ -1,6 +1,7 @@
 /**
  * Engine Provider
- * Integrates PGlite, Electric sync, and SyncService into the app
+ * Integrates PGlite, PullService, and SyncService into the app
+ * Uses REST-based custom sync (no Electric sync in runtime path)
  */
 import {
   createContext,
@@ -11,10 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import { initDatabase } from "./db";
-import { startSync } from "./electric";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import type { PGliteWithElectric } from "~/lib/sync/sync-shapes";
 
 interface EngineContextValue {
   isInitialized: boolean;
@@ -48,15 +47,14 @@ export function EngineProvider({
   const [error, setError] = useState<Error | null>(null);
   const [schemaError, setSchemaError] = useState<Error | null>(null);
 
-  const pgRef = useRef<PGliteWithElectric | null>(null);
+  const pgRef = useRef<PGlite | null>(null);
   const dbRef = useRef<ReturnType<typeof drizzle> | null>(null);
-  const cleanupSyncRef = useRef<(() => void) | null>(null);
   const isInitializingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const INITIALIZATION_TIMEOUT = 30000;
 
-  // Initialize database and sync
+  // Initialize database (no Electric sync)
   useEffect(() => {
     console.log(`[ENGINE-PROVIDER] useEffect triggered`);
 
@@ -103,32 +101,6 @@ export function EngineProvider({
           console.log("Products for business:", result.rows);
           return result.rows;
         },
-        // Check sync subscription status
-        checkSyncStatus: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          try {
-            const result = await pg.query(`SELECT * FROM electric.sync_status`);
-            console.log("Sync status:", result.rows);
-            return result.rows;
-          } catch (e) {
-            console.log("No sync_status table:", e);
-            return null;
-          }
-        },
-        // Get PGlite schema for products
-        checkProductSchema: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const result = await pg.query(`
-            SELECT column_name, data_type, is_nullable
-            FROM information_schema.columns
-            WHERE table_name = 'products'
-            ORDER BY ordinal_position
-          `);
-          console.log("Products schema:", result.rows);
-          return result.rows;
-        },
         // Raw query
         query: async (sql: string, params?: unknown[]) => {
           const pg = pgRef.current;
@@ -139,6 +111,7 @@ export function EngineProvider({
         },
         forceResync: () => {
           localStorage.removeItem("avileo_schema_version");
+          localStorage.removeItem("avileo_pull_cursor");
           indexedDB.deleteDatabase("avileo-pg");
           location.reload();
         },
@@ -146,50 +119,7 @@ export function EngineProvider({
           console.log("bearer_token:", localStorage.getItem("bearer_token") ? "present" : "missing");
           console.log("current_business_id:", localStorage.getItem("current_business_id"));
           console.log("avileo_schema_version:", localStorage.getItem("avileo_schema_version"));
-        },
-        // Check Electric internal tables
-        checkElectricTables: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          console.log("pg.electric exists:", 'electric' in pg);
-          console.log("pg.sync exists:", 'sync' in pg);
-          try {
-            const tables = ['shape_subscriptions', 'shape_sync_status', 'sync_status'];
-            for (const table of tables) {
-              try {
-                const result = await pg.query(`SELECT COUNT(*) as count FROM electric.${table}`);
-                const row = result.rows[0] as { count: string | number } | undefined;
-                console.log(`electric.${table}: ${row?.count} rows`);
-              } catch (e) {
-                console.log(`electric.${table}: not found`);
-              }
-            }
-          } catch (e) {
-            console.log("Error checking electric tables:", e);
-          }
-          // List all schemas
-          try {
-            const result = await pg.query(`SELECT schema_name FROM information_schema.schemata`);
-            console.log("Schemas:", result.rows.map((r: unknown) => (r as { schema_name: string }).schema_name));
-          } catch (e) {
-            console.log("Error listing schemas:", e);
-          }
-        },
-        // Test insert a product manually
-        testInsertProduct: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          try {
-            await pg.query(`
-              INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, has_variants, sync_status, sync_attempts, created_at, updated_at)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-            `, ['test-id-123', 'a2950eca-4c3f-473b-9e9d-3cb951e4f4ad', 'Test Product', 'pollo', 'kg', '10.00', true, false, 'synced', 0]);
-            console.log("Test insert successful!");
-            await pg.query(`DELETE FROM products WHERE id = 'test-id-123'`);
-            console.log("Test cleanup done");
-          } catch (e) {
-            console.error("Test insert failed:", e);
-          }
+          console.log("avileo_pull_cursor:", localStorage.getItem("avileo_pull_cursor"));
         },
         // Generate and copy diagnostic report to clipboard
         copyDiagnosticReport: async () => {
@@ -200,17 +130,11 @@ export function EngineProvider({
               bearer_token: string;
               current_business_id: string | null;
               avileo_schema_version: string | null;
+              avileo_pull_cursor: string | null;
             };
             pgInitialized: boolean;
-            electric: {
-              exists: boolean;
-              sync: boolean;
-            };
             tables: Record<string, number>;
-            electricTables: Record<string, number>;
             errors: string[];
-            syncStatus?: unknown;
-            schemas?: string[] | string;
           }
           const report: DiagnosticReport = {
             timestamp: new Date().toISOString(),
@@ -218,14 +142,10 @@ export function EngineProvider({
               bearer_token: localStorage.getItem("bearer_token") ? "present" : "missing",
               current_business_id: localStorage.getItem("current_business_id"),
               avileo_schema_version: localStorage.getItem("avileo_schema_version"),
+              avileo_pull_cursor: localStorage.getItem("avileo_pull_cursor"),
             },
             pgInitialized: !!pg,
-            electric: {
-              exists: pg ? 'electric' in pg : false,
-              sync: pg ? 'sync' in pg : false,
-            },
             tables: {},
-            electricTables: {},
             errors: [],
           };
 
@@ -248,34 +168,6 @@ export function EngineProvider({
                 report.tables[table] = -1;
                 report.errors.push(`${table}: ${e instanceof Error ? e.message : String(e)}`);
               }
-            }
-
-            // Check Electric internal tables
-            const electricTables = ['shape_subscriptions', 'shape_sync_status', 'sync_status'];
-            for (const table of electricTables) {
-              try {
-                const result = await pg.query(`SELECT COUNT(*) as count FROM electric.${table}`);
-                const count = result.rows[0] as { count: string | number } | undefined;
-                report.electricTables[table] = Number(count?.count || 0);
-              } catch {
-                report.electricTables[table] = -1;
-              }
-            }
-
-            // Check sync status
-            try {
-              const syncResult = await pg.query(`SELECT * FROM electric.sync_status`);
-              report.syncStatus = syncResult.rows;
-            } catch {
-              report.syncStatus = "not available";
-            }
-
-            // Check schemas
-            try {
-              const schemaResult = await pg.query(`SELECT schema_name FROM information_schema.schemata`);
-              report.schemas = schemaResult.rows.map((r: unknown) => (r as { schema_name: string }).schema_name);
-            } catch {
-              report.schemas = "error fetching";
             }
           }
 
@@ -306,32 +198,17 @@ export function EngineProvider({
       try {
         setIsSyncing(true);
         setError(null);
-        cleanupSyncRef.current?.();
-        cleanupSyncRef.current = null;
 
         console.log(`[ENGINE-PROVIDER] Calling initDatabase()...`);
         const { pg, db } = await initDatabase();
         console.log(`[ENGINE-PROVIDER] initDatabase() completed`);
 
         // Store in refs immediately so they're available even if component re-renders
-        pgRef.current = pg as PGliteWithElectric;
+        pgRef.current = pg;
         dbRef.current = db;
 
-        // Start sync but don't let sync failures block app initialization
-        console.log(`[ENGINE-PROVIDER] Starting sync...`);
-        try {
-          const cleanupSync = await startSync({
-            pg: pg as PGliteWithElectric,
-            businessId,
-            token,
-          });
-          cleanupSyncRef.current = cleanupSync;
-          console.log(`[ENGINE-PROVIDER] Sync started successfully`);
-        } catch (syncError) {
-          // Sync failures should not block the app from loading
-          // The app will work with local data and can retry sync later
-          console.warn("[ENGINE-PROVIDER] Sync failed, app will continue with local data:", syncError);
-        }
+        // Note: PullService and SyncService are managed by ServicesProvider
+        // They will be initialized when ServicesProvider mounts with pg/db
 
         console.log(`[ENGINE-PROVIDER] Setting isInitialized = true`);
         setIsInitialized(true);
@@ -390,8 +267,6 @@ export function EngineProvider({
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      cleanupSyncRef.current?.();
-      cleanupSyncRef.current = null;
       pgRef.current = null;
       dbRef.current = null;
     };
@@ -420,8 +295,6 @@ export function EngineProvider({
     }
     pgRef.current = null;
     dbRef.current = null;
-    cleanupSyncRef.current?.();
-    cleanupSyncRef.current = null;
 
     // Delete IndexedDB database
     const request = indexedDB.deleteDatabase("avileo-pg");
@@ -430,9 +303,10 @@ export function EngineProvider({
       request.onerror = () => reject(request.error);
     });
 
-    // Clear stored auth state
+    // Clear stored auth state and sync cursor
     localStorage.removeItem("bearer_token");
     localStorage.removeItem("current_business_id");
+    localStorage.removeItem("avileo_pull_cursor");
 
     // Redirect to login
     window.location.href = "/login";

@@ -6,12 +6,74 @@ import { createLogger } from "../lib/logger";
 
 const logger = createLogger("SyncRoute");
 
+// Maximum operations per batch request
+const MAX_BATCH_SIZE = 100;
+
+// Maximum limit for /sync/changes
+const MAX_CHANGES_LIMIT = 500;
+const DEFAULT_CHANGES_LIMIT = 100;
+
 export const syncRoutes = new Elysia({ prefix: "/sync" })
   .use(contextPlugin)
   .use(servicesPlugin)
   .post(
     "/batch",
-    async ({ syncService, ctx, body }) => {
+    async ({ syncService, ctx, body, set }) => {
+      // Enforce batch size limit
+      if (body.operations.length > MAX_BATCH_SIZE) {
+        set.status = 400;
+        return {
+          success: false,
+          error: {
+            code: "BATCH_TOO_LARGE",
+            message: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} operations. Received: ${body.operations.length}`,
+            maxBatchSize: MAX_BATCH_SIZE,
+          },
+        };
+      }
+
+      // Validate each operation has required fields
+      for (let i = 0; i < body.operations.length; i++) {
+        const op = body.operations[i];
+        if (!op.idempotencyKey || typeof op.idempotencyKey !== "string") {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "INVALID_OPERATION",
+              message: `Operation at index ${i} missing valid idempotencyKey`,
+              index: i,
+            },
+          };
+        }
+        if (!op.entityId || typeof op.entityId !== "string") {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "INVALID_OPERATION",
+              message: `Operation at index ${i} missing valid entityId`,
+              index: i,
+            },
+          };
+        }
+        // Validate timestamp is parseable
+        if (op.localTimestamp) {
+          const ts = new Date(op.localTimestamp);
+          if (isNaN(ts.getTime())) {
+            set.status = 400;
+            return {
+              success: false,
+              error: {
+                code: "INVALID_OPERATION",
+                message: `Operation at index ${i} has invalid localTimestamp`,
+                index: i,
+              },
+            };
+          }
+        }
+      }
+
       // Log incoming sync batch request
       const salesOps = body.operations.filter((op: { entityType: string }) => op.entityType === "sales");
       const updateOps = salesOps.filter((op: { operation: string }) => op.operation === "update");
@@ -58,34 +120,71 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       body: t.Object({
         operations: t.Array(
           t.Object({
-            idempotencyKey: t.String(),
+            idempotencyKey: t.String({ minLength: 1 }),
             entityType: t.Union([
               t.Literal("customers"),
               t.Literal("sales"),
               t.Literal("sale_items"),
               t.Literal("abonos"),
               t.Literal("distribuciones"),
+              t.Literal("products"),
+              t.Literal("tags"),
+              t.Literal("customer_tags"),
+              t.Literal("purchases"),
+              t.Literal("inventory"),
             ]),
-            entityId: t.String(),
+            entityId: t.String({ minLength: 1 }),
             operation: t.Union([
               t.Literal("create"),
               t.Literal("update"),
               t.Literal("delete"),
             ]),
             payload: t.Record(t.String(), t.Unknown()),
-            localVersion: t.Number(),
+            localVersion: t.Number({ minimum: 0 }),
             localTimestamp: t.String(),
             syncGroupId: t.Optional(t.String()),
-          })
+          }),
+          { minItems: 1, maxItems: MAX_BATCH_SIZE }
         ),
       }),
     }
   )
   .get(
     "/changes",
-    async ({ syncService, ctx, query }) => {
-      const since = query.since ? new Date(query.since) : undefined;
-      const limit = query.limit ? parseInt(query.limit, 10) : undefined;
+    async ({ syncService, ctx, query, set }) => {
+      // Parse and validate since timestamp
+      let since: Date | undefined;
+      if (query.since) {
+        since = new Date(query.since);
+        if (isNaN(since.getTime())) {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "INVALID_SINCE",
+              message: "Invalid 'since' timestamp. Must be a valid ISO 8601 date string.",
+            },
+          };
+        }
+      }
+
+      // Parse and validate limit
+      let limit = DEFAULT_CHANGES_LIMIT;
+      if (query.limit) {
+        const parsedLimit = parseInt(query.limit, 10);
+        if (isNaN(parsedLimit) || parsedLimit < 1) {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "INVALID_LIMIT",
+              message: "Invalid 'limit' parameter. Must be a positive integer.",
+            },
+          };
+        }
+        // Cap limit at maximum
+        limit = Math.min(parsedLimit, MAX_CHANGES_LIMIT);
+      }
 
       const result = await syncService.getChanges(
         ctx as RequestContext,
@@ -100,5 +199,20 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         since: t.Optional(t.String()),
         limit: t.Optional(t.String()),
       }),
+    }
+  )
+  .get(
+    "/health",
+    async ({ ctx }) => {
+      const { syncLogger } = await import("../services/sync/sync-logger");
+
+      return {
+        success: true,
+        data: {
+          metrics: syncLogger.getMetrics(),
+          errorSummary: syncLogger.getErrorSummary(),
+          recentErrors: syncLogger.getRecentErrors(10),
+        },
+      };
     }
   );

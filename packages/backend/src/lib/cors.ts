@@ -46,7 +46,7 @@ export function getCorsConfig(): CorsConfig {
     allowedOrigins,
     credentials: "true",
     methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    headers: "Content-Type, Authorization, Cache-Control, Accept, Accept-Language, x-business-id",
+    headers: "Content-Type, Authorization, Cache-Control, Accept, Accept-Language, x-business-id, x-correlation-id",
     exposeHeaders: defaultExposeHeaders.join(", "),
     maxAge: "86400",
   };

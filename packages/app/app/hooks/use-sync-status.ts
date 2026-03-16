@@ -5,12 +5,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncService } from "~/lib/sync/service-provider";
-import type { SyncStatus, SyncOperationRecord } from "~/lib/sync/sync-service";
+import type {
+  SyncStatus,
+  SyncOperationRecord,
+  DeadLetterOperationRecord,
+} from "~/lib/sync/sync-service";
 import type { ConflictStrategy } from "~/lib/sync/config";
 
 const QUERY_KEYS = {
   syncStatus: ["sync", "status"],
   failedOperations: ["sync", "failed"],
+  deadLetterOperations: ["sync", "dead-letter"],
 } as const;
 
 /**
@@ -22,9 +27,13 @@ export function useSyncStatus() {
   return useQuery({
     queryKey: QUERY_KEYS.syncStatus,
     queryFn: async (): Promise<SyncStatus> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.getStatus();
     },
     refetchInterval: 5000,
+    enabled: !!syncService,
   });
 }
 
@@ -37,8 +46,12 @@ export function useFailedOperations() {
   return useQuery({
     queryKey: QUERY_KEYS.failedOperations,
     queryFn: async (): Promise<SyncOperationRecord[]> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.getFailedOperations();
     },
+    enabled: !!syncService,
   });
 }
 
@@ -51,11 +64,67 @@ export function useRetryOperation() {
 
   return useMutation({
     mutationFn: async (operationId: string): Promise<boolean> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.retryOperation(operationId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncStatus });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.failedOperations });
+    },
+  });
+}
+
+export function useDeadLetterOperations() {
+  const syncService = useSyncService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.deadLetterOperations,
+    queryFn: async (): Promise<DeadLetterOperationRecord[]> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
+      return syncService.getDeadLetterOperations();
+    },
+    enabled: !!syncService,
+  });
+}
+
+export function useRetryDeadLetterOperation() {
+  const syncService = useSyncService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (deadLetterId: string): Promise<boolean> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
+      return syncService.retryDeadLetterOperation(deadLetterId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.failedOperations });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.deadLetterOperations });
+    },
+  });
+}
+
+export function useClearDeadLetterOperations() {
+  const syncService = useSyncService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<number> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
+      return syncService.clearDeadLetterOperations();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.failedOperations });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.deadLetterOperations });
     },
   });
 }
@@ -77,6 +146,9 @@ export function useResolveConflict() {
       resolution: ConflictStrategy;
       mergedData?: Record<string, unknown>;
     }): Promise<boolean> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.resolveConflict(operationId, resolution, mergedData);
     },
     onSuccess: () => {
@@ -99,6 +171,9 @@ export function useForceSync() {
       failed: number;
       conflicts: number;
     }> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.processPending();
     },
     onSuccess: () => {
@@ -119,6 +194,9 @@ export function useProcessGroup() {
     mutationFn: async (
       groupId: string
     ): Promise<{ success: boolean; errors: string[] }> => {
+      if (!syncService) {
+        throw new Error("SyncService not available");
+      }
       return syncService.processGroup(groupId);
     },
     onSuccess: () => {

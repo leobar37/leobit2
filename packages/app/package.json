@@ -49,7 +49,7 @@
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.36.0",
     "isbot": "^5",
-    "jotai": "^2.17.1",
+    "jotai": "^2.18.1",
     "lucide-react": "^0.563.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",

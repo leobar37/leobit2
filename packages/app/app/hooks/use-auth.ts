@@ -1,12 +1,13 @@
-import { useNavigate } from "react-router";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { authClient, useSession, changePassword, refreshSession } from "../lib/auth-client";
 import { api } from "../lib/api-client";
 import {
   clearStoredAuthState,
   clearStoredBusinessId,
+  clearLocalDatabaseNamespace,
   setStoredBusinessId,
-  clearSyncStorage,
+  setLocalDatabaseNamespace,
 } from "../lib/session-storage";
 
 async function hydrateCurrentBusinessId() {
@@ -31,6 +32,10 @@ async function ensureSessionReady() {
   return session;
 }
 
+function buildDatabaseNamespace(userId: string, businessId: string, sessionId?: string) {
+  return [userId, businessId, sessionId ?? "session"].join("__");
+}
+
 export function useAuth() {
   const navigate = useNavigate();
   const { data: session, isPending } = useSession();
@@ -48,8 +53,18 @@ export function useAuth() {
       throw new Error(result.error.message);
     }
 
-    await ensureSessionReady();
-    await hydrateCurrentBusinessId();
+    const sessionState = await ensureSessionReady();
+    const businessId = await hydrateCurrentBusinessId();
+
+    if (businessId && sessionState.user?.id) {
+      setLocalDatabaseNamespace(
+        buildDatabaseNamespace(
+          sessionState.user.id,
+          businessId,
+          sessionState.session?.id,
+        ),
+      );
+    }
 
     return result.data;
   };
@@ -71,7 +86,18 @@ export function useAuth() {
       throw new Error(result.error.message);
     }
 
-    await ensureSessionReady();
+    const sessionState = await ensureSessionReady();
+    const businessId = await hydrateCurrentBusinessId();
+
+    if (businessId && sessionState.user?.id) {
+      setLocalDatabaseNamespace(
+        buildDatabaseNamespace(
+          sessionState.user.id,
+          businessId,
+          sessionState.session?.id,
+        ),
+      );
+    }
 
     return result.data;
   };
@@ -79,9 +105,9 @@ export function useAuth() {
   const logout = async () => {
     setIsLoggingOut(true);
 
-    // Clear local storage and IndexedDB immediately (non-blocking)
-    // This ensures the user can always log out even if the server is down
-    await clearSyncStorage();
+    clearStoredAuthState();
+    clearStoredBusinessId();
+    clearLocalDatabaseNamespace();
 
     // Notify server in background (fire and forget - ignore errors)
     // The local cleanup is already done, so the user is effectively logged out
@@ -89,9 +115,8 @@ export function useAuth() {
       console.warn("Logout server call failed (can be ignored):", error);
     });
 
-    // Navigate immediately - no need to wait for server
-    navigate("/login");
-    setIsLoggingOut(false);
+    navigate("/login", { replace: true });
+    window.location.href = "/login";
   };
 
   const changeUserPassword = async (data: {

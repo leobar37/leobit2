@@ -59,6 +59,9 @@ bun run build                  # Build all packages
 bun run db:generate            # Generate migrations
 bun run db:migrate             # Run migrations
 bun run db:push                # Push schema changes (dev)
+bun run db:reset               # Reset database (keeps demo user)
+bun run db:seed:demo           # Seed demo account data
+bun run db:backfill-sync       # Backfill sync operations from local data
 
 # Testing
 cd packages/app && bun test    # Run Vitest tests
@@ -206,9 +209,12 @@ bun run build        # Build all packages
 
 # Database
 cd packages/backend
-bun run db:generate  # Generate migrations
-bun run db:migrate   # Run migrations
-bun run db:push      # Push schema changes (dev)
+bun run db:generate      # Generate migrations
+bun run db:migrate       # Run migrations
+bun run db:push          # Push schema changes (dev)
+bun run db:reset         # Reset database (keeps demo user)
+bun run db:seed:demo     # Seed demo account data
+bun run db:backfill-sync # Backfill sync operations
 ```
 
 ## Key Conventions
