@@ -57,6 +57,7 @@ export class CustomerSyncHandler extends BaseSyncHandler {
     const parsed = customerCreateSchema.parse(operation.payload);
 
     await this.customerRepo.create(ctx, {
+      id: operation.entityId,
       name: parsed.name,
       dni: parsed.dni,
       phone: parsed.phone,

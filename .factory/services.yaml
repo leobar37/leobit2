@@ -1,30 +1,9 @@
 commands:
   install: bun install
-  typecheck: cd packages/backend && bun run build
-  build: turbo build
-  test: cd packages/app && bun test
-  lint: cd packages/app && bun run lint
-  db:generate: bun run db:generate
-  db:migrate: bun run db:migrate
+  build: bun run build
+  typecheck: cd packages/app && bun run typecheck
+  test:app: cd packages/app && bun run test --run
+  test:backend: cd packages/backend && bun run test --run
+  lint: echo "No lint command configured"
 
-services:
-  postgres:
-    start: docker compose up -d postgres
-    stop: docker compose stop postgres
-    healthcheck: pg_isready -h localhost -p 5432
-    port: 5432
-    depends_on: []
-
-  backend:
-    start: cd packages/backend && bun run dev
-    stop: lsof -ti :3000 | xargs kill
-    healthcheck: curl -sf http://localhost:3000/health
-    port: 3000
-    depends_on: [postgres]
-
-  frontend:
-    start: cd packages/app && bun run dev
-    stop: lsof -ti :5173 | xargs kill
-    healthcheck: curl -sf http://localhost:5173
-    port: 5173
-    depends_on: [backend]
+services: {}

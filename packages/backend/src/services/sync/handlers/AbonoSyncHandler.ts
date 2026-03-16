@@ -56,6 +56,7 @@ export class AbonoSyncHandler extends BaseSyncHandler {
     const parsed = abonoCreateSchema.parse(operation.payload);
 
     await this.paymentRepo.create(ctx, {
+      id: operation.entityId,
       customerId: parsed.customerId,
       amount: String(parsed.amount),
       paymentMethod: parsed.paymentMethod,

@@ -45,13 +45,14 @@ export class StaffInvitationService {
     });
 
     if (existingAccount) {
-      // Check if user already has a membership
-      const existingMembership = await this.businessRepo.findByUserId(
-        ctx.withUserId(existingAccount.id)
+      // Check if user already has a membership in THIS business
+      const existingMembership = await this.businessRepo.findByUserIdAndBusinessId(
+        existingAccount.id,
+        ctx.businessId
       );
 
       if (existingMembership) {
-        throw new ConflictError("Este email ya pertenece a un negocio");
+        throw new ConflictError("Este email ya pertenece a este negocio");
       }
     }
 
@@ -130,14 +131,14 @@ export class StaffInvitationService {
       throw new ValidationError("Invitación expirada");
     }
 
-    // Check if user already has a membership (using a public context for the check)
-    const publicCtx = RequestContext.forPublic();
-    const existingMembership = await this.businessRepo.findByUserId(
-      publicCtx.withUserId(userId)
+    // Check if user already has a membership in THIS business
+    const existingMembership = await this.businessRepo.findByUserIdAndBusinessId(
+      userId,
+      invitation.businessId
     );
 
     if (existingMembership) {
-      throw new ConflictError("El usuario ya pertenece a un negocio");
+      throw new ConflictError("El usuario ya pertenece a este negocio");
     }
 
     // Create the membership
