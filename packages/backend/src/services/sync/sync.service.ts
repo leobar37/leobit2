@@ -16,6 +16,9 @@ import { TagSyncHandler } from "./handlers/TagSyncHandler";
 import { CustomerTagSyncHandler } from "./handlers/CustomerTagSyncHandler";
 import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
 import { InventorySyncHandler } from "./handlers/InventorySyncHandler";
+import { CustomerGroupSyncHandler } from "./handlers/CustomerGroupSyncHandler";
+import { CustomerGroupMemberSyncHandler } from "./handlers/CustomerGroupMemberSyncHandler";
+import { VisitaSyncHandler } from "./handlers/VisitaSyncHandler";
 
 export type {
   SyncEntity,
@@ -73,6 +76,18 @@ export class SyncService {
 
     HandlerRegistry.register("inventory", () => {
       return new InventorySyncHandler(deps.inventoryRepo);
+    });
+
+    HandlerRegistry.register("customer_groups", () => {
+      return new CustomerGroupSyncHandler(deps.customerGroupRepo);
+    });
+
+    HandlerRegistry.register("customer_group_members", () => {
+      return new CustomerGroupMemberSyncHandler(deps.customerGroupRepo);
+    });
+
+    HandlerRegistry.register("visitas", () => {
+      return new VisitaSyncHandler(deps.visitaRepo);
     });
   }
 

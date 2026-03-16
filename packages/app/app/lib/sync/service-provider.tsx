@@ -11,6 +11,8 @@ import { ProductService } from "../services/product-service";
 import { InventoryService } from "../services/inventory-service";
 import { TagService } from "../services/tag-service";
 import { CustomerTagService } from "../services/customer-tag-service";
+import { VisitaService } from "../services/visita-service";
+import { CustomerGroupService } from "../services/customer-group-service";
 import type { ConflictStrategy } from "../sync/config";
 
 export interface ServicesContextValue {
@@ -26,6 +28,8 @@ export interface ServicesContextValue {
   inventoryService: InventoryService;
   tagService: TagService;
   customerTagService: CustomerTagService;
+  visitaService: VisitaService;
+  customerGroupService: CustomerGroupService;
   businessId: string;
   authToken: string;
 }
@@ -88,6 +92,8 @@ export function ServicesProvider({
     const inventoryService = new InventoryService(pg, db, syncService, businessId);
     const tagService = new TagService(pg, db, syncService, businessId);
     const customerTagService = new CustomerTagService(pg, db, syncService, businessId);
+    const visitaService = new VisitaService(pg, db, syncService, businessId);
+    const customerGroupService = new CustomerGroupService(pg, db, syncService, businessId);
 
     return {
       pg,
@@ -102,6 +108,8 @@ export function ServicesProvider({
       inventoryService,
       tagService,
       customerTagService,
+      visitaService,
+      customerGroupService,
       businessId,
       authToken,
     };
@@ -343,6 +351,16 @@ export function useTagService(): TagService {
 export function useCustomerTagService(): CustomerTagService {
   const { customerTagService } = useServices();
   return customerTagService;
+}
+
+export function useVisitaService(): VisitaService {
+  const { visitaService } = useServices();
+  return visitaService;
+}
+
+export function useCustomerGroupService(): CustomerGroupService {
+  const { customerGroupService } = useServices();
+  return customerGroupService;
 }
 
 export function usePGlite(): PGlite {

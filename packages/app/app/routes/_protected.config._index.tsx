@@ -12,6 +12,7 @@ import {
   Flag,
   MessageCircle,
   Tag,
+  UserCog,
 } from "lucide-react";
 import {
   MinimalCard,
@@ -112,6 +113,14 @@ const tagsConfigItem: ConfigItem = {
   iconBg: "bg-indigo-100",
 };
 
+const gruposConfigItem: ConfigItem = {
+  icon: UserCog,
+  title: "Grupos",
+  description: "Gestiona grupos de clientes",
+  href: "/grupos",
+  color: "text-amber-600",
+};
+
 const whatsappConfigItem: ConfigItem = {
   icon: MessageCircle,
   title: "WhatsApp",
@@ -134,6 +143,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        gruposConfigItem,
         tagsConfigItem,
         flagsConfigItem,
         whatsappConfigItem,

@@ -16,6 +16,8 @@ import type { TagRepository } from "../../repository/tag.repository";
 import type { CustomerTagRepository } from "../../repository/customer-tag.repository";
 import type { PurchaseRepository } from "../../repository/purchase.repository";
 import type { InventoryRepository } from "../../repository/inventory.repository";
+import type { CustomerGroupRepository } from "../../repository/customer-group.repository";
+import type { VisitaRepository } from "../../repository/visita.repository";
 import { HandlerRegistry } from "./HandlerRegistry";
 import { ConflictResolverRegistry } from "./ConflictResolver";
 import { syncPipeline } from "./SyncPipeline";
@@ -32,6 +34,8 @@ export interface SyncEngineDeps {
   customerTagRepo: CustomerTagRepository;
   purchaseRepo: PurchaseRepository;
   inventoryRepo: InventoryRepository;
+  customerGroupRepo: CustomerGroupRepository;
+  visitaRepo: VisitaRepository;
 }
 
 export class SyncEngine {

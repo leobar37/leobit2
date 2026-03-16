@@ -8,7 +8,10 @@ export type SyncEntity =
   | "tags"
   | "customer_tags"
   | "purchases"
-  | "inventory";
+  | "inventory"
+  | "customer_groups"
+  | "customer_group_members"
+  | "visitas";
 
 export type SyncOperationType = "create" | "update" | "delete";
 
