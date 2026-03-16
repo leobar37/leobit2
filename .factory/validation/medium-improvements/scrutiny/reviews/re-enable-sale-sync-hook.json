@@ -1,0 +1,15 @@
+{
+  "featureId": "re-enable-sale-sync-hook",
+  "reviewedAt": "2026-03-16T08:20:00Z",
+  "commitId": "d0cb179",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly uncomments the saleSyncHook in registry.ts. The hook validates that sales have either a customer or at least one item before allowing sync - empty sales are blocked with reason 'Venta vacía: sin cliente ni productos'. The change is minimal and correct.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The feature implementation is correct. The worker uncommented the saleSyncHook in registry.ts and removed the TODO comment. The hook logic in hooks/sales.ts correctly validates sales before syncing. Typecheck passes for the modified files (errors from PGlite library are pre-existing). The sync hook infrastructure tests pass (12 tests). The 18 test failures are pre-existing issues unrelated to this change (PullService localStorage tests, session storage tests)."
+}
