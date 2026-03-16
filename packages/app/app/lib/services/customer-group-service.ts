@@ -248,6 +248,17 @@ export class CustomerGroupService extends BaseService {
       throw new Error(`Customer group not found: ${id}`);
     }
 
+    // Query all current members before deleting to sync their deletions individually
+    const members = await this.db
+      .select({ id: customerGroupMembers.id })
+      .from(customerGroupMembers)
+      .where(eq(customerGroupMembers.groupId, id));
+
+    // Queue individual delete sync operations for each member
+    for (const member of members) {
+      await this.queueSync("delete", member.id, {}, undefined, "customer_group_members");
+    }
+
     await this.db
       .delete(customerGroupMembers)
       .where(eq(customerGroupMembers.groupId, id));
