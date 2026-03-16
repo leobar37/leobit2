@@ -106,6 +106,18 @@ export const OrderPaymentStatus = {
 } as const;
 
 // ============================================================================
+// Visita Status
+// ============================================================================
+
+export const VisitaStatus = {
+  PENDIENTE: "pendiente",
+  COMPRO: "compro",
+  NO_COMPRA: "no_compra",
+} as const;
+
+export type VisitaStatus = (typeof VisitaStatus)[keyof typeof VisitaStatus];
+
+// ============================================================================
 // Customers
 // ============================================================================
 
@@ -707,5 +719,114 @@ export const customerTagsRelations = relations(customerTags, ({ one }) => ({
   tag: one(tags, {
     fields: [customerTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+// ============================================================================
+// Customer Groups
+// ============================================================================
+
+export const customerGroups = pgTable(
+  "customer_groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_customer_groups_business_id").on(table.businessId),
+    index("idx_customer_groups_name").on(table.name),
+  ]
+);
+
+export type CustomerGroup = typeof customerGroups.$inferSelect;
+export type NewCustomerGroup = typeof customerGroups.$inferInsert;
+
+// ============================================================================
+// Customer Group Members
+// ============================================================================
+
+export const customerGroupMembers = pgTable(
+  "customer_group_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    groupId: uuid("group_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
+    addedAt: timestamp("added_at").notNull().defaultNow(),
+    addedBy: uuid("added_by"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+  },
+  (table) => [
+    index("idx_customer_group_members_group_id").on(table.groupId),
+    index("idx_customer_group_members_customer_id").on(table.customerId),
+  ]
+);
+
+export type CustomerGroupMember = typeof customerGroupMembers.$inferSelect;
+export type NewCustomerGroupMember = typeof customerGroupMembers.$inferInsert;
+
+// ============================================================================
+// Visitas
+// ============================================================================
+
+export const visitas = pgTable(
+  "visitas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    distribucionId: uuid("distribucion_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
+    vendedorId: uuid("vendedor_id").notNull(),
+    status: text("status").notNull().default(VisitaStatus.PENDIENTE),
+    motivoNoCompra: varchar("motivo_no_compra", { length: 255 }),
+    saleId: uuid("sale_id"),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_visitas_business_id").on(table.businessId),
+    index("idx_visitas_distribucion_id").on(table.distribucionId),
+    index("idx_visitas_customer_id").on(table.customerId),
+    index("idx_visitas_vendedor_id").on(table.vendedorId),
+    index("idx_visitas_status").on(table.status),
+    index("idx_visitas_sale_id").on(table.saleId),
+    index("idx_visitas_sync_status").on(table.syncStatus),
+    index("idx_visitas_created_at").on(table.createdAt),
+  ]
+);
+
+export type Visita = typeof visitas.$inferSelect;
+export type NewVisita = typeof visitas.$inferInsert;
+
+// ============================================================================
+// Relations for Customer Groups and Visitas
+// ============================================================================
+
+export const customerGroupsRelations = relations(customerGroups, ({ many }) => ({
+  members: many(customerGroupMembers),
+}));
+
+export const customerGroupMembersRelations = relations(customerGroupMembers, ({ one }) => ({
+  group: one(customerGroups, {
+    fields: [customerGroupMembers.groupId],
+    references: [customerGroups.id],
+  }),
+  customer: one(customers, {
+    fields: [customerGroupMembers.customerId],
+    references: [customers.id],
+  }),
+}));
+
+export const visitasRelations = relations(visitas, ({ one }) => ({
+  customer: one(customers, {
+    fields: [visitas.customerId],
+    references: [customers.id],
   }),
 }));
