@@ -6,6 +6,8 @@ const PULL_CURSOR_KEY = "avileo_pull_cursor";
 const SCHEMA_VERSION_KEY = "avileo_schema_version";
 const FORCE_RESET_KEY = "AVILEO_FORCE_RESET";
 const CALCULATOR_LAST_KEY = "avileo-calculator-last";
+const LOCAL_DB_NAMESPACE_KEY = "avileo_local_db_namespace";
+const LOCAL_DB_BASE_NAME = "avileo-pg";
 
 export interface ClearSyncStorageOptions {
   preserveSession?: boolean;
@@ -39,6 +41,46 @@ export function clearStoredAuthState() {
   if (!canUseStorage()) return;
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(CURRENT_BUSINESS_ID_KEY);
+}
+
+export function getLocalDatabaseNamespace(): string | null {
+  if (!canUseStorage()) return null;
+  return localStorage.getItem(LOCAL_DB_NAMESPACE_KEY);
+}
+
+export function setLocalDatabaseNamespace(namespace: string) {
+  if (!canUseStorage()) return;
+  localStorage.setItem(LOCAL_DB_NAMESPACE_KEY, namespace);
+}
+
+export function clearLocalDatabaseNamespace() {
+  if (!canUseStorage()) return;
+  localStorage.removeItem(LOCAL_DB_NAMESPACE_KEY);
+}
+
+export function buildLocalDatabaseName(namespace?: string | null) {
+  return namespace ? `${LOCAL_DB_BASE_NAME}-${namespace}` : LOCAL_DB_BASE_NAME;
+}
+
+export function getLocalDatabaseName(): string {
+  return buildLocalDatabaseName(getLocalDatabaseNamespace());
+}
+
+export function getPullCursorStorageKey(namespace?: string | null) {
+  return namespace ? `${PULL_CURSOR_KEY}:${namespace}` : PULL_CURSOR_KEY;
+}
+
+export function clearSyncKeys() {
+  if (!canUseStorage()) return;
+  localStorage.removeItem(PULL_CURSOR_KEY);
+  localStorage.removeItem(SCHEMA_VERSION_KEY);
+  localStorage.removeItem(FORCE_RESET_KEY);
+  localStorage.removeItem(CALCULATOR_LAST_KEY);
+}
+
+export function markLocalDatabaseForReset() {
+  if (!canUseStorage()) return;
+  localStorage.setItem(FORCE_RESET_KEY, "true");
 }
 
 // Known IndexedDB database names used by the app
@@ -146,10 +188,7 @@ export async function clearSyncStorage(
 
   // Always clear sync-related keys (these control sync behavior)
   console.log("[ClearSync] Clearing sync keys...");
-  localStorage.removeItem(PULL_CURSOR_KEY);
-  localStorage.removeItem(SCHEMA_VERSION_KEY);
-  localStorage.removeItem(FORCE_RESET_KEY);
-  localStorage.removeItem(CALCULATOR_LAST_KEY);
+  clearSyncKeys();
   console.log("[ClearSync] Sync keys cleared");
 
   // Clear IndexedDB databases

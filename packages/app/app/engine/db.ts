@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "./schema";
+import { getLocalDatabaseName } from "~/lib/session-storage";
 
 let pg: import("@electric-sql/pglite").PGlite | null = null;
 let db: ReturnType<typeof drizzle> | null = null;
@@ -126,6 +127,9 @@ export async function initDatabase(): Promise<{
   }
 
   initPromise = (async () => {
+    const databaseName = getLocalDatabaseName();
+    const dataDir = `idb://${databaseName}`;
+
     const [{ PGlite }, { electricSync }] = await Promise.all([
       import("@electric-sql/pglite"),
       import("@electric-sql/pglite-sync"),
@@ -159,7 +163,7 @@ export async function initDatabase(): Promise<{
 
     // Create fresh database instance
     const pgInstance = await PGlite.create({
-      dataDir: "idb://avileo-pg",
+      dataDir,
       extensions: {
         electric: electricSync(),
       },
@@ -195,6 +199,7 @@ export async function initDatabase(): Promise<{
     // Debug: Check if electric extension is loaded
     console.log(`[DB] pg.electric exists:`, 'electric' in pgInstance);
     console.log(`[DB] pg.sync exists:`, 'sync' in pgInstance);
+    console.log(`[DB] Database namespace: ${databaseName}`);
     console.log(`[DB] Database initialized with schema version ${SCHEMA_VERSION}`);
 
     return { pg: pgInstance, db: dbInstance };
@@ -219,7 +224,7 @@ async function exportPendingData(): Promise<PendingData> {
     ]);
 
     const tempPg = await PGlite.create({
-      dataDir: "idb://avileo-pg",
+      dataDir: `idb://${getLocalDatabaseName()}`,
       extensions: { electric: electricSync() },
       locateFile: (file: string) => {
         if (file === "pglite.data") {
@@ -446,6 +451,8 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
 }
 
 async function resetDatabaseInternal(): Promise<void> {
+  const databaseName = getLocalDatabaseName();
+
   if (pg) {
     await pg.close();
     pg = null;
@@ -455,9 +462,9 @@ async function resetDatabaseInternal(): Promise<void> {
 
   // Delete IndexedDB database
   return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase("avileo-pg");
+    const request = indexedDB.deleteDatabase(databaseName);
     request.onsuccess = () => {
-      console.log("[DB] IndexedDB database deleted successfully");
+      console.log(`[DB] IndexedDB database deleted successfully: ${databaseName}`);
       resolve();
     };
     request.onerror = () => {
@@ -468,7 +475,7 @@ async function resetDatabaseInternal(): Promise<void> {
     request.onblocked = () => {
       console.warn("[DB] IndexedDB delete blocked - retrying...");
       setTimeout(() => {
-        const retry = indexedDB.deleteDatabase("avileo-pg");
+        const retry = indexedDB.deleteDatabase(databaseName);
         retry.onsuccess = () => resolve();
         retry.onerror = () => resolve();
       }, 100);
@@ -484,6 +491,20 @@ export function getDatabase(): {
     throw new Error("Database not initialized. Call initDatabase() first.");
   }
   return { pg, db };
+}
+
+export async function disposeDatabase(): Promise<void> {
+  if (pg) {
+    try {
+      await pg.close();
+    } catch (error) {
+      console.warn("[DB] Failed to close database instance:", error);
+    }
+  }
+
+  pg = null;
+  db = null;
+  initPromise = null;
 }
 
 export async function resetDatabase(): Promise<void> {

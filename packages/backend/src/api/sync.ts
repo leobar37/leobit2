@@ -127,6 +127,11 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
               t.Literal("sale_items"),
               t.Literal("abonos"),
               t.Literal("distribuciones"),
+              t.Literal("products"),
+              t.Literal("tags"),
+              t.Literal("customer_tags"),
+              t.Literal("purchases"),
+              t.Literal("inventory"),
             ]),
             entityId: t.String({ minLength: 1 }),
             operation: t.Union([

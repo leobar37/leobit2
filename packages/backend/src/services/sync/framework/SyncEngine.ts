@@ -11,6 +11,11 @@ import type { SaleRepository } from "../../repository/sale.repository";
 import type { PaymentRepository } from "../../repository/payment.repository";
 import type { DistribucionRepository } from "../../repository/distribucion.repository";
 import type { DistribucionService } from "../../business/distribucion.service";
+import type { ProductRepository } from "../../repository/product.repository";
+import type { TagRepository } from "../../repository/tag.repository";
+import type { CustomerTagRepository } from "../../repository/customer-tag.repository";
+import type { PurchaseRepository } from "../../repository/purchase.repository";
+import type { InventoryRepository } from "../../repository/inventory.repository";
 import { HandlerRegistry } from "./HandlerRegistry";
 import { ConflictResolverRegistry } from "./ConflictResolver";
 import { syncPipeline } from "./SyncPipeline";
@@ -22,6 +27,11 @@ export interface SyncEngineDeps {
   paymentRepo: PaymentRepository;
   distribucionRepo: DistribucionRepository;
   distribucionService: DistribucionService;
+  productRepo: ProductRepository;
+  tagRepo: TagRepository;
+  customerTagRepo: CustomerTagRepository;
+  purchaseRepo: PurchaseRepository;
+  inventoryRepo: InventoryRepository;
 }
 
 export class SyncEngine {

@@ -7,11 +7,9 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { PULL_INTERVAL_MS, BACKOFF_BASE_MS, BACKOFF_MAX_MS } from "./config";
+import { getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-// localStorage key for persisting pull cursor
-const PULL_CURSOR_KEY = "avileo_pull_cursor";
 
 // Maximum number of retries for applying a single change
 const MAX_APPLY_RETRIES = 3;
@@ -266,6 +264,7 @@ export class PullService {
   private isPullingFlag: boolean = false;
   private lastPullTime: Date | null = null;
   private lastError: string | null = null;
+  private cursorStorageKey: string;
 
   constructor(
     pg: PGlite,
@@ -277,6 +276,7 @@ export class PullService {
     this.db = db;
     this.businessId = businessId;
     this.authToken = authToken;
+    this.cursorStorageKey = getPullCursorStorageKey(getLocalDatabaseNamespace());
     
     // Load persisted cursor from localStorage
     this.loadCursor();
@@ -287,7 +287,7 @@ export class PullService {
    */
   private loadCursor(): void {
     try {
-      const stored = localStorage.getItem(PULL_CURSOR_KEY);
+      const stored = localStorage.getItem(this.cursorStorageKey);
       if (stored) {
         this.lastSince = stored;
         console.log(`[PullService] Loaded cursor from storage:`, this.lastSince);
@@ -302,7 +302,7 @@ export class PullService {
    */
   private saveCursor(cursor: string): void {
     try {
-      localStorage.setItem(PULL_CURSOR_KEY, cursor);
+      localStorage.setItem(this.cursorStorageKey, cursor);
       this.lastSince = cursor;
     } catch (e) {
       console.warn(`[PullService] Failed to save cursor to localStorage:`, e);
@@ -314,7 +314,7 @@ export class PullService {
    */
   clearCursor(): void {
     try {
-      localStorage.removeItem(PULL_CURSOR_KEY);
+      localStorage.removeItem(this.cursorStorageKey);
       this.lastSince = null;
     } catch (e) {
       console.warn(`[PullService] Failed to clear cursor:`, e);

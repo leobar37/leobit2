@@ -7,6 +7,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
+import { purchases } from "@avileo/shared";
+import { eq } from "drizzle-orm";
 import { formatCurrency } from "~/lib/utils";
 
 /** Purchase status type */
@@ -189,7 +191,7 @@ export class PurchaseService extends BaseService {
     }
 
     // Delete from local database
-    await this.pg.exec("DELETE FROM purchases WHERE id = $1", [id]);
+    await this.db.delete(purchases).where(eq(purchases.id, id));
 
     // Queue sync operation
     await this.queueSync("delete", id, {});

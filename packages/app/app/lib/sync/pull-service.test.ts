@@ -1,6 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { PullService, type PullStatus, type PullResult } from "./pull-service";
 
+vi.mock("~/lib/session-storage", () => ({
+  getLocalDatabaseNamespace: () => "scope-1",
+  getPullCursorStorageKey: (namespace?: string | null) =>
+    namespace ? `avileo_pull_cursor:${namespace}` : "avileo_pull_cursor",
+}));
+
 class LocalStorageMock {
   private store: Record<string, string> = {};
   getItem(key: string): string | null { return this.store[key] ?? null; }
@@ -32,7 +38,7 @@ describe("PullService", () => {
 
   describe("constructor", () => {
     it("loads cursor from localStorage if exists", () => {
-      localStorageMock.setItem("avileo_pull_cursor", "2024-01-01T00:00:00Z");
+      localStorageMock.setItem("avileo_pull_cursor:scope-1", "2024-01-01T00:00:00Z");
 
       const service = new PullService(mockPg, mockDb, businessId, authToken);
       
@@ -96,12 +102,12 @@ describe("PullService", () => {
 
   describe("clearCursor", () => {
     it("clears cursor from localStorage and instance", () => {
-      localStorageMock.setItem("avileo_pull_cursor", "2024-01-01T00:00:00Z");
+      localStorageMock.setItem("avileo_pull_cursor:scope-1", "2024-01-01T00:00:00Z");
       const service = new PullService(mockPg, mockDb, businessId, authToken);
 
       service.clearCursor();
 
-      expect(localStorageMock.getItem("avileo_pull_cursor")).toBeNull();
+      expect(localStorageMock.getItem("avileo_pull_cursor:scope-1")).toBeNull();
       expect(service.getStatus().cursor).toBeNull();
     });
   });
@@ -173,7 +179,7 @@ describe("PullService", () => {
         json: () => Promise.resolve(mockResponse),
       });
 
-      localStorageMock.setItem("avileo_pull_cursor", "2024-01-01T00:00:00Z");
+      localStorageMock.setItem("avileo_pull_cursor:scope-1", "2024-01-01T00:00:00Z");
       const service = new PullService(mockPg, mockDb, businessId, authToken);
 
       await service.pull();
@@ -484,7 +490,7 @@ describe("PullService", () => {
 
   describe("getLastSince", () => {
     it("returns current cursor", () => {
-      localStorageMock.setItem("avileo_pull_cursor", "2024-01-01T00:00:00Z");
+      localStorageMock.setItem("avileo_pull_cursor:scope-1", "2024-01-01T00:00:00Z");
       const service = new PullService(mockPg, mockDb, businessId, authToken);
 
       expect(service.getLastSince()).toBe("2024-01-01T00:00:00Z");

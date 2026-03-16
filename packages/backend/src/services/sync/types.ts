@@ -3,7 +3,12 @@ export type SyncEntity =
   | "sales"
   | "sale_items"
   | "abonos"
-  | "distribuciones";
+  | "distribuciones"
+  | "products"
+  | "tags"
+  | "customer_tags"
+  | "purchases"
+  | "inventory";
 
 export type SyncOperationType = "create" | "update" | "delete";
 

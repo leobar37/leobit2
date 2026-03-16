@@ -162,9 +162,70 @@ export const saleItemOperationSchema = z.object({
 
 export type SaleItemOperationInput = z.infer<typeof saleItemOperationSchema>;
 
+export const productCreateSchema = z.object({
+  name: z.string().min(1, "name es requerido"),
+  type: z.enum(["pollo", "huevo", "otro"]).optional(),
+  unit: z.string().optional(),
+  basePrice: z.union([z.string(), z.number()]).optional(),
+  costPrice: z.union([z.string(), z.number()]).optional(),
+  isActive: z.boolean().optional(),
+  imageId: z.string().optional(),
+});
+
+export const productUpdateSchema = productCreateSchema.partial();
+
+export type ProductCreateInput = z.infer<typeof productCreateSchema>;
+export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
+
+export const tagCreateSchema = z.object({
+  name: z.string().min(1, "name es requerido"),
+  color: z.string().optional(),
+});
+
+export const tagUpdateSchema = tagCreateSchema.partial();
+
+export type TagCreateInput = z.infer<typeof tagCreateSchema>;
+export type TagUpdateInput = z.infer<typeof tagUpdateSchema>;
+
+export const customerTagCreateSchema = z.object({
+  customerId: z.string().min(1, "customerId es requerido"),
+  tagId: z.string().min(1, "tagId es requerido"),
+  assignedBy: z.string().optional(),
+});
+
+export type CustomerTagCreateInput = z.infer<typeof customerTagCreateSchema>;
+
+export const purchaseCreateSchema = z.object({
+  supplierId: z.string().optional(),
+  purchaseDate: z.string().optional(),
+  status: z.enum(["pending", "received", "cancelled"]).optional(),
+  totalAmount: z.union([z.string(), z.number()]).optional(),
+  notes: z.string().optional(),
+});
+
+export const purchaseUpdateSchema = purchaseCreateSchema.extend({
+  status: z.enum(["pending", "received", "cancelled"]),
+});
+
+export type PurchaseCreateInput = z.infer<typeof purchaseCreateSchema>;
+export type PurchaseUpdateInput = z.infer<typeof purchaseUpdateSchema>;
+
+export const inventoryCreateSchema = z.object({
+  productId: z.string().min(1, "productId es requerido"),
+  quantity: z.union([z.string(), z.number()]),
+});
+
+export const inventoryUpdateSchema = z.object({
+  productId: z.string().optional(),
+  quantity: z.union([z.string(), z.number()]).optional(),
+});
+
+export type InventoryCreateInput = z.infer<typeof inventoryCreateSchema>;
+export type InventoryUpdateInput = z.infer<typeof inventoryUpdateSchema>;
+
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "inventory"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

@@ -11,6 +11,11 @@ import { SaleSyncHandler } from "./handlers/SaleSyncHandler";
 import { AbonoSyncHandler } from "./handlers/AbonoSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
 import { SaleItemSyncHandler } from "./handlers/SaleItemSyncHandler";
+import { ProductSyncHandler } from "./handlers/ProductSyncHandler";
+import { TagSyncHandler } from "./handlers/TagSyncHandler";
+import { CustomerTagSyncHandler } from "./handlers/CustomerTagSyncHandler";
+import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
+import { InventorySyncHandler } from "./handlers/InventorySyncHandler";
 
 export type {
   SyncEntity,
@@ -48,6 +53,26 @@ export class SyncService {
 
     HandlerRegistry.register("sale_items", () => {
       return new SaleItemSyncHandler(deps.saleRepo);
+    });
+
+    HandlerRegistry.register("products", () => {
+      return new ProductSyncHandler(deps.productRepo);
+    });
+
+    HandlerRegistry.register("tags", () => {
+      return new TagSyncHandler(deps.tagRepo);
+    });
+
+    HandlerRegistry.register("customer_tags", () => {
+      return new CustomerTagSyncHandler(deps.customerTagRepo);
+    });
+
+    HandlerRegistry.register("purchases", () => {
+      return new PurchaseSyncHandler(deps.purchaseRepo);
+    });
+
+    HandlerRegistry.register("inventory", () => {
+      return new InventorySyncHandler(deps.inventoryRepo);
     });
   }
 

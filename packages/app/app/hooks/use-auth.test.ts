@@ -3,6 +3,25 @@ import { Window } from "happy-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "./use-auth";
 
+function createSuccessRequest<T extends Record<string, unknown>>(result?: T) {
+  const request: Record<string, unknown> = {
+    result,
+    error: null,
+    onsuccess: null,
+    onerror: null,
+    onblocked: null,
+  };
+
+  queueMicrotask(() => {
+    const onsuccess = request.onsuccess as
+      | ((event: { target: typeof request }) => void)
+      | null;
+    onsuccess?.({ target: request });
+  });
+
+  return request as unknown as IDBOpenDBRequest;
+}
+
 let navigateMock: ReturnType<typeof vi.fn>;
 let signInEmailMock: ReturnType<typeof vi.fn>;
 let signUpEmailMock: ReturnType<typeof vi.fn>;
@@ -85,6 +104,19 @@ describe("useAuth", () => {
       writable: true,
     });
 
+    Object.defineProperty(window, "indexedDB", {
+      configurable: true,
+      value: {
+        open: vi.fn((dbName: string) =>
+          createSuccessRequest({
+            name: dbName,
+            close: vi.fn(),
+          })
+        ),
+        deleteDatabase: vi.fn(() => createSuccessRequest()),
+      },
+    });
+
     localStorage.clear();
 
     signInEmailMock.mockResolvedValue({
@@ -128,6 +160,7 @@ describe("useAuth", () => {
 
   it("rehydrates the current business after login", async () => {
     localStorage.setItem("current_business_id", "biz-old");
+    localStorage.setItem("avileo_pull_cursor", "cursor-old");
 
     const { result } = renderHook(() => useAuth());
 
@@ -142,6 +175,9 @@ describe("useAuth", () => {
     expect(refreshSessionMock).toHaveBeenCalledTimes(1);
     expect(getBusinessMock).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem("current_business_id")).toBe("biz-new");
+    expect(localStorage.getItem("avileo_local_db_namespace")).toBe(
+      "user-1__biz-new__session-1"
+    );
   });
 
   it("clears the stale business context if hydration fails", async () => {
@@ -176,6 +212,7 @@ describe("useAuth", () => {
   it("clears auth and business storage on logout", async () => {
     localStorage.setItem("bearer_token", "token-1");
     localStorage.setItem("current_business_id", "biz-1");
+    localStorage.setItem("avileo_pull_cursor", "cursor-1");
 
     const { result } = renderHook(() => useAuth());
 
@@ -186,6 +223,7 @@ describe("useAuth", () => {
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem("bearer_token")).toBeNull();
     expect(localStorage.getItem("current_business_id")).toBeNull();
-    expect(navigateMock).toHaveBeenCalledWith("/login");
+    expect(localStorage.getItem("avileo_local_db_namespace")).toBeNull();
+    expect(navigateMock).toHaveBeenCalledWith("/login", { replace: true });
   });
 });
