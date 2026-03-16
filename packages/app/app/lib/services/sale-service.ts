@@ -165,9 +165,10 @@ export class SaleService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   /**

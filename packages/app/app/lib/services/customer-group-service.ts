@@ -40,9 +40,10 @@ export class CustomerGroupService extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, businessId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   getEntityType(): EntityType {
@@ -289,7 +290,7 @@ export class CustomerGroupService extends BaseService {
       id: this.generateId(),
       groupId,
       customerId,
-      addedBy: this.businessId,
+      addedBy: this.businessUserId,
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,
       addedAt: now,
