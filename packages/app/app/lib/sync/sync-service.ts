@@ -484,7 +484,21 @@ export class SyncService {
          WHERE business_id = $1
            AND status IN ($2, $3)
            AND sync_attempts < $4
-         ORDER BY created_at ASC
+         ORDER BY 
+           CASE entity_type
+             WHEN 'customers' THEN 1
+             WHEN 'products' THEN 1
+             WHEN 'product_variants' THEN 1
+             WHEN 'tags' THEN 1
+             WHEN 'customer_groups' THEN 1
+             WHEN 'suppliers' THEN 1
+             WHEN 'sales' THEN 2
+             WHEN 'abonos' THEN 2
+             WHEN 'purchases' THEN 2
+             WHEN 'distribuciones' THEN 2
+             ELSE 3
+           END,
+           created_at ASC
          LIMIT ${BATCH_SIZE}`,
         [
           this.businessId,
