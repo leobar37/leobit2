@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-group-member-entityid",
+  "reviewedAt": "2026-03-16T10:30:00.000Z",
+  "commitId": "fa376e9",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly implements real UUID usage for customer_group_members sync operations. In addMembers(), UUIDs are generated via this.generateId(), stored in memberIds array, and used as entityId in queueSync. In removeMember(), the member row is now looked up first to get its actual UUID before calling queueSync.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Feature implementation verified: (1) addMembers() generates real UUID for each member using this.generateId(), stores it in memberIds array, and uses memberIds[i] as entityId instead of composite string; (2) removeMember() looks up actual member row first to get its UUID, then uses that UUID as entityId; (3) No composite string entityIds found in codebase for customer_group_members. Build passes successfully. Typecheck has pre-existing errors unrelated to this file."
+}

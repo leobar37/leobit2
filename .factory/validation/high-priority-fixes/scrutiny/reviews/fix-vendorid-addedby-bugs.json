@@ -1,0 +1,27 @@
+{
+  "featureId": "fix-vendorid-addedby-bugs",
+  "reviewedAt": "2026-03-16T10:30:00.000Z",
+  "commitId": "a5563bd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses both bugs by adding businessUserId parameter to BaseService and all derived services, updating service-provider.tsx to pass businessUserId, and fixing vendedorId in VisitaService and addedBy in CustomerGroupService to use businessUserId instead of businessId.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "validationAssertions": {
+    "VAL-HIGH-001": {
+      "description": "VisitaService.create() sets vendedorId to businessUserId",
+      "status": "pass",
+      "evidence": "packages/app/app/lib/services/visita-service.ts:171 - vendedorId: this.businessUserId"
+    },
+    "VAL-HIGH-002": {
+      "description": "CustomerGroupService.addMembers() sets addedBy to businessUserId",
+      "status": "pass",
+      "evidence": "packages/app/app/lib/services/customer-group-service.ts:297 - addedBy: this.businessUserId"
+    }
+  },
+  "addressesFailureFrom": null,
+  "summary": "Fix is correctly implemented. All validation assertions pass. BaseService now accepts businessUserId, service-provider passes it to all 10 services, _protected.tsx fetches business context and passes businessUserId to ServicesProvider. Both target methods (visita-service create/createBulk and customer-group-service addMembers) now use businessUserId for their respective fields."
+}
