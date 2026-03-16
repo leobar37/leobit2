@@ -138,15 +138,17 @@ export abstract class BaseService {
    * @param entityId - The ID of the entity being synced
    * @param payload - The data to sync
    * @param syncGroupId - Optional group ID for atomic operations
+   * @param entityTypeOverride - Optional override for entity type (e.g., sale_items for items)
    */
   protected async queueSync(
     action: SyncAction,
     entityId: string,
     payload: Record<string, unknown>,
-    syncGroupId?: string
+    syncGroupId?: string,
+    entityTypeOverride?: EntityType
   ): Promise<void> {
     // Run sync hooks before enqueueing
-    const entityType = this.getEntityType();
+    const entityType = entityTypeOverride ?? this.getEntityType();
     const hookResult = await runSyncHooks(
       entityType,
       {

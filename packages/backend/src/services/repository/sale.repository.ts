@@ -138,6 +138,7 @@ export class SaleRepository {
       await executor.insert(saleItems).values(
         items.map((item) => ({
           saleId: sale.id,
+          businessId: ctx.businessId,
           productId: item.productId,
           variantId: item.variantId,
           productName: item.productName,
@@ -247,12 +248,12 @@ export class SaleRepository {
     },
     tx?: DbTransaction
   ): Promise<Sale> {
-    const executor = tx ?? db;
     const { items, ...saleData } = data;
 
-    return executor.transaction(async (innerTx) => {
+    // Helper function to execute the update logic
+    const executeUpdate = async (executor: DbTransaction) => {
       // Update the sale
-      const [sale] = await innerTx
+      const [sale] = await executor
         .update(sales)
         .set({ ...saleData, updatedAt: new Date() })
         .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)))
@@ -265,7 +266,7 @@ export class SaleRepository {
       // If items are provided, sync them with the database
       if (items !== undefined) {
         // Get existing items
-        const existingItems = await innerTx
+        const existingItems = await executor
           .select({ id: saleItems.id })
           .from(saleItems)
           .innerJoin(sales, eq(sales.id, saleItems.saleId))
@@ -278,7 +279,7 @@ export class SaleRepository {
         for (const item of items) {
           if (item.id && existingItemIds.has(item.id)) {
             // Update existing item
-            await innerTx
+            await executor
               .update(saleItems)
               .set({
                 productId: item.productId,
@@ -295,10 +296,11 @@ export class SaleRepository {
               .where(and(eq(saleItems.id, item.id), eq(saleItems.saleId, id)));
             processedItemIds.add(item.id);
           } else {
-            // Create new item
+            // Create new item - use provided ID for idempotency
             const newItemId = item.id ?? crypto.randomUUID();
-            await innerTx.insert(saleItems).values({
+            await executor.insert(saleItems).values({
               id: newItemId,
+              businessId: ctx.businessId,
               saleId: id,
               productId: item.productId,
               variantId: item.variantId,
@@ -317,7 +319,7 @@ export class SaleRepository {
         // Delete items that are not in the payload
         for (const existingId of existingItemIds) {
           if (!processedItemIds.has(existingId)) {
-            await innerTx
+            await executor
               .delete(saleItems)
               .where(and(eq(saleItems.id, existingId), eq(saleItems.saleId, id)));
           }
@@ -326,12 +328,18 @@ export class SaleRepository {
 
       // Return updated sale with items
       return (
-        (await this.findById(ctx, id, innerTx)) ??
+        (await this.findById(ctx, id, executor)) ??
         (() => {
           throw new Error("Sale not found after update");
         })()
       );
-    });
+    };
+
+    // Use provided transaction or create new one
+    if (tx) {
+      return executeUpdate(tx);
+    }
+    return db.transaction(executeUpdate);
   }
 
   async confirmPreOrder(

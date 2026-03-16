@@ -17,11 +17,13 @@ export function ToolbarActions({ children, className }: ToolbarActionsProps) {
 
   return createPortal(
     <div className={cn(
-      "pointer-events-auto w-full bg-white/95 backdrop-blur-xl border-t border-gray-200",
+      "pointer-events-auto px-3 pb-3 sm:px-4",
       className
     )}>
-      <div className="max-w-lg mx-auto">
-        {children}
+      <div className="mx-auto max-w-lg">
+        <div className="shell-surface rounded-[22px] border shell-divider p-2 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+          {children}
+        </div>
       </div>
     </div>,
     toolbarPortalHost

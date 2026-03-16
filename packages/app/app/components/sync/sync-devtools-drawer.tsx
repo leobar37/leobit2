@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useEngine, getDatabase } from "~/engine";
 import { useClearSyncStorage } from "@/hooks/use-clear-sync-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Sheet,
   SheetContent,
@@ -57,6 +58,18 @@ interface SyncOperation {
   status: string;
   sync_attempts: number;
   last_error: string | null;
+  created_at: string;
+}
+
+interface DeadLetterOperation {
+  id: string;
+  operation_id: string;
+  entity_type: string;
+  entity_id: string;
+  operation: string;
+  error: string;
+  original_error: string | null;
+  sync_attempts: number;
   created_at: string;
 }
 
@@ -115,6 +128,7 @@ const ENTITY_SUMMARY_CONFIG = SHAPES_CONFIG.filter((shape) => shape.enabled !== 
 const OPERATION_TABS = [
   { value: "tables", label: "Tablas" },
   { value: "operations", label: "Operaciones" },
+  { value: "dead-letter", label: "DLQ" },
 ] as const;
 
 type ActiveTab = (typeof OPERATION_TABS)[number]["value"];
@@ -132,7 +146,6 @@ export function SyncDevToolsDrawer({
     actualIsOnline,
     isSimulatedOffline,
     setSimulatedOffline,
-    syncIssue,
   } = useSync();
   const syncService = useSyncService();
   const { confirm, ConfirmDialog: DeleteConfirmDialog } = useConfirmDialog();
@@ -150,6 +163,9 @@ export function SyncDevToolsDrawer({
     total: 0,
   });
   const [operations, setOperations] = useState<SyncOperation[]>([]);
+  const [deadLetterOperations, setDeadLetterOperations] = useState<
+    DeadLetterOperation[]
+  >([]);
   const [entitySummaries, setEntitySummaries] = useState<EntitySyncSummary[]>(
     [],
   );
@@ -181,79 +197,51 @@ export function SyncDevToolsDrawer({
     debounceMs: 150,
   });
 
-  useEffect(() => {
-    if (!isOpen || !isInitialized) return;
+  const {
+    filteredItems: filteredDeadLetterOperations,
+    search: deadLetterSearch,
+    setSearch: setDeadLetterSearch,
+  } = useListSearch({
+    items: deadLetterOperations,
+    searchFields: [
+      (operation) => operation.entity_type,
+      (operation) => operation.entity_id,
+      (operation) => operation.operation,
+      (operation) => operation.error,
+      (operation) => operation.original_error ?? undefined,
+    ],
+    debounceMs: 150,
+  });
 
-    const fetchData = async () => {
-      try {
-        const { db } = getDatabase();
+  const fetchData = useCallback(async () => {
+    if (!isInitialized) return;
 
-        const statusResult = await db.execute(`
-          SELECT status, COUNT(*) as count 
-          FROM sync_operations 
-          GROUP BY status
-        `);
+    try {
+      const newStatus = syncService ? await syncService.getStatus() : status;
+      setStatus(newStatus);
 
-        const newStatus: SyncStatus = {
-          pending: 0,
-          processing: 0,
-          syncing: 0,
-          completed: 0,
-          failed: 0,
-          conflict: 0,
-          deadLetter: 0,
-          total: 0,
-        };
+      if (syncService) {
+        const [problemOps, deadLetterOps] = await Promise.all([
+          syncService.getProblemOperations(),
+          syncService.getDeadLetterOperations(),
+        ]);
 
-        for (const row of statusResult.rows) {
-          const count = parseInt(row.count as string, 10);
-          const key = row.status as keyof SyncStatus;
-          if (key in newStatus) {
-            newStatus[key] = count;
-            newStatus.total += count;
-          }
-        }
-        setStatus(newStatus);
+        setOperations(problemOps as unknown as SyncOperation[]);
+        setDeadLetterOperations(deadLetterOps as unknown as DeadLetterOperation[]);
+      }
 
-        const opsResult = await db.execute(`
-          SELECT id, entity_type, entity_id, operation, status, sync_attempts, last_error, created_at
-          FROM sync_operations
-          WHERE status IN ('pending', 'failed', 'conflict')
-          ORDER BY created_at DESC
-          LIMIT 50
-        `);
-        setOperations(opsResult.rows as unknown as SyncOperation[]);
-
-        const summaryResults = await Promise.all(
-          ENTITY_SUMMARY_CONFIG.map(async ({ table, label, hasSyncStatus }) => {
-            if (hasSyncStatus) {
-              const result = await db.execute(`
-                SELECT
-                  '${table}' AS table_name,
-                  '${label}' AS label,
-                  COUNT(*)::text AS total,
-                  COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
-                  COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
-                  COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
-                FROM ${table}
-              `);
-
-              const row = result.rows[0];
-              return {
-                table: String(row.table_name),
-                label: String(row.label),
-                total: parseInt(String(row.total), 10),
-                pending: parseInt(String(row.pending), 10),
-                synced: parseInt(String(row.synced), 10),
-                error: parseInt(String(row.error), 10),
-              };
-            }
-
+      const { db } = getDatabase();
+      const summaryResults = await Promise.all(
+        ENTITY_SUMMARY_CONFIG.map(async ({ table, label, hasSyncStatus }) => {
+          if (hasSyncStatus) {
             const result = await db.execute(`
               SELECT
                 '${table}' AS table_name,
                 '${label}' AS label,
-                COUNT(*)::text AS total
+                COUNT(*)::text AS total,
+                COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
+                COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
+                COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
               FROM ${table}
             `);
 
@@ -262,23 +250,48 @@ export function SyncDevToolsDrawer({
               table: String(row.table_name),
               label: String(row.label),
               total: parseInt(String(row.total), 10),
-              pending: 0,
-              synced: parseInt(String(row.total), 10),
-              error: 0,
+              pending: parseInt(String(row.pending), 10),
+              synced: parseInt(String(row.synced), 10),
+              error: parseInt(String(row.error), 10),
             };
-          }),
-        );
+          }
 
-        setEntitySummaries(summaryResults);
-      } catch (error) {
-        console.error("[SyncDevTools] Error fetching data:", error);
-      }
-    };
+          const result = await db.execute(`
+            SELECT
+              '${table}' AS table_name,
+              '${label}' AS label,
+              COUNT(*)::text AS total
+            FROM ${table}
+          `);
 
-    fetchData();
-    const interval = setInterval(fetchData, 2000);
+          const row = result.rows[0];
+          return {
+            table: String(row.table_name),
+            label: String(row.label),
+            total: parseInt(String(row.total), 10),
+            pending: 0,
+            synced: parseInt(String(row.total), 10),
+            error: 0,
+          };
+        }),
+      );
+
+      setEntitySummaries(summaryResults);
+    } catch (error) {
+      console.error("[SyncDevTools] Error fetching data:", error);
+    }
+  }, [isInitialized, syncService]);
+
+  useEffect(() => {
+    if (!isOpen || !isInitialized) return;
+
+    void fetchData();
+    const interval = setInterval(() => {
+      void fetchData();
+    }, 2000);
+
     return () => clearInterval(interval);
-  }, [isOpen, isInitialized]);
+  }, [fetchData, isOpen, isInitialized]);
 
   const handleForceSync = async () => {
     if (!isInitialized) return;
@@ -361,13 +374,10 @@ export function SyncDevToolsDrawer({
 
     const success = await syncService.deleteOperation(operationId);
     if (success) {
-      // Refresh the list
-      setOperations((prev) => prev.filter((op) => op.id !== operationId));
-      setStatus((prev) => ({
-        ...prev,
-        total: prev.total - 1,
-        [operationId]: (prev[operationId as keyof SyncStatus] as number) - 1,
-      }));
+      toast.success("Operación eliminada", {
+        description: "La operación se quitó de la cola local.",
+      });
+      await fetchData();
     }
   };
 
@@ -398,20 +408,99 @@ export function SyncDevToolsDrawer({
       toast.success("Operaciones eliminadas", {
         description: `${deletedCount} operaciones eliminadas correctamente.`,
       });
-      // Refresh the list - the operations state will be updated on next fetch
-      setOperations([]);
-      setStatus((prev) => ({
-        ...prev,
-        pending: 0,
-        failed: 0,
-        conflict: 0,
-        total: 0,
-      }));
+      await fetchData();
     } else {
       toast.error("Error", {
         description: "No se pudieron eliminar las operaciones.",
       });
     }
+  };
+
+  const handleRetryDeadLetter = async (deadLetterId: string) => {
+    if (!syncService) {
+      toast.error("Servicio no disponible", {
+        description: "El servicio de sincronización aún no está listo. Intenta de nuevo en unos segundos.",
+      });
+      return;
+    }
+
+    const success = await syncService.retryDeadLetterOperation(deadLetterId);
+    if (success) {
+      toast.success("Operación reencolada", {
+        description: "La operación volvió a la cola pendiente.",
+      });
+      await fetchData();
+      return;
+    }
+
+    toast.error("No se pudo reintentar", {
+      description: "La operación DLQ no pudo reencolarse.",
+    });
+  };
+
+  const handleDeleteDeadLetter = async (deadLetterId: string) => {
+    if (!syncService) {
+      toast.error("Servicio no disponible", {
+        description: "El servicio de sincronización aún no está listo. Intenta de nuevo en unos segundos.",
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Eliminar registro DLQ",
+      description: "¿Estás seguro de eliminar esta operación de dead letter?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const success = await syncService.deleteDeadLetterOperation(deadLetterId);
+    if (success) {
+      toast.success("Registro eliminado", {
+        description: "La operación se quitó del dead letter.",
+      });
+      await fetchData();
+      return;
+    }
+
+    toast.error("No se pudo eliminar", {
+      description: "La operación dead letter no pudo eliminarse.",
+    });
+  };
+
+  const handleClearDeadLetter = async () => {
+    if (!syncService) {
+      toast.error("Servicio no disponible", {
+        description: "El servicio de sincronización aún no está listo. Intenta de nuevo en unos segundos.",
+      });
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Vaciar dead letter",
+      description:
+        "Se eliminarán todas las operaciones apartadas en dead letter para este negocio.",
+      confirmText: "Vaciar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const deletedCount = await syncService.clearDeadLetterOperations();
+    toast.success("Dead letter vaciado", {
+      description:
+        deletedCount > 0
+          ? `Se eliminaron ${deletedCount} operaciones.`
+          : "No había operaciones en dead letter.",
+    });
+    await fetchData();
   };
 
   const getStatusIcon = (status: string) => {
@@ -461,7 +550,7 @@ export function SyncDevToolsDrawer({
     ? "text-muted-foreground"
     : !isOnline
       ? "bg-gray-100 text-gray-500 hover:bg-gray-200"
-      : syncIssue || status.failed > 0 || status.conflict > 0
+      : status.failed > 0 || status.conflict > 0
         ? "bg-red-50 text-red-600 hover:bg-red-100"
         : isSyncing
           ? "bg-orange-50 text-orange-600 hover:bg-orange-100"
@@ -479,13 +568,11 @@ export function SyncDevToolsDrawer({
           !isInitialized && "opacity-50 cursor-not-allowed"
         )}
         title={
-          syncIssue
-            ? `Error de sincronización en ${syncIssue.table}`
-            : status.pending > 0
-              ? `Hay ${status.pending} cambios pendientes`
-              : isOnline
-                ? "Sincronización al día"
-                : "Sin conexión"
+          status.pending > 0
+            ? `Hay ${status.pending} cambios pendientes`
+            : isOnline
+              ? "Sincronización al día"
+              : "Sin conexión"
         }
         disabled={!isInitialized}
       >
@@ -756,7 +843,7 @@ export function SyncDevToolsDrawer({
                       )}
                     </div>
                   </div>
-                ) : (
+                ) : activeTab === "operations" ? (
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
@@ -851,6 +938,105 @@ export function SyncDevToolsDrawer({
                                   {op.last_error}
                                 </div>
                               )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">Dead letter queue</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Operaciones apartadas tras agotar reintentos
+                        </p>
+                      </div>
+                      {deadLetterOperations.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
+                          onClick={handleClearDeadLetter}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Vaciar DLQ
+                        </Button>
+                      )}
+                    </div>
+
+                    <Alert className="mb-3 border-orange-200 bg-orange-50/80 text-orange-900">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Úsalo solo para depuración. Reintentar devuelve la operación a la cola pendiente.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar en DLQ..."
+                        value={deadLetterSearch}
+                        onChange={(e) => setDeadLetterSearch(e.target.value)}
+                        className="h-10 rounded-xl border-stone-200/80 bg-white/75 pl-10 pr-4"
+                      />
+                    </div>
+
+                    <ScrollArea className="min-h-[140px] max-h-[40vh] border rounded-xl">
+                      {filteredDeadLetterOperations.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                          <p>
+                            {deadLetterSearch
+                              ? "No se encontraron operaciones en DLQ"
+                              : "No hay operaciones en dead letter"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {filteredDeadLetterOperations.map((op) => (
+                            <div key={op.id} className="p-3 hover:bg-muted/50 sm:p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                  <span className="font-medium capitalize">{op.entity_type}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {op.operation}
+                                  </Badge>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(op.created_at).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                <span className="font-mono">{op.entity_id}</span>
+                                <span className="ml-2">Intentos: {op.sync_attempts}</span>
+                              </div>
+                              <div className="mt-2 rounded-lg bg-muted/60 p-2 text-xs leading-5 text-red-600">
+                                {op.original_error ?? op.error}
+                              </div>
+                              <div className="mt-3 flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void handleRetryDeadLetter(op.id)}
+                                  disabled={!syncService}
+                                >
+                                  <Play className="h-3.5 w-3.5 mr-1" />
+                                  Reintentar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => void handleDeleteDeadLetter(op.id)}
+                                  disabled={!syncService}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                  Eliminar
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>

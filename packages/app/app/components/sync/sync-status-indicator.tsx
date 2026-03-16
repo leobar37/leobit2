@@ -20,14 +20,13 @@ export function SyncStatusIndicator({
   compact = false,
   onManualSync,
 }: SyncStatusIndicatorProps) {
-  const { isOnline, lastSync, syncIssue } = useSync();
+  const { isOnline, lastSync } = useSync();
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   // Determine sync state based on context
   const getSyncState = useCallback((): SyncState => {
     if (!isOnline) return "offline";
     if (isManualSyncing) return "syncing";
-    if (syncIssue) return "error";
     if (lastSync) {
       const timeSinceSync = Date.now() - lastSync.getTime();
       // If last sync was recent (< 30 seconds), consider synced
@@ -36,7 +35,7 @@ export function SyncStatusIndicator({
       return "pending";
     }
     return "pending";
-  }, [isOnline, isManualSyncing, syncIssue, lastSync]);
+  }, [isOnline, isManualSyncing, lastSync]);
 
   const syncState = getSyncState();
 
@@ -91,9 +90,7 @@ export function SyncStatusIndicator({
       className: "bg-red-100 text-red-700 hover:bg-red-200 border-red-200 cursor-pointer",
       iconClassName: "text-red-600",
       iconContainerClassName: "bg-red-50 hover:bg-red-100",
-      description: syncIssue
-        ? `Error en ${syncIssue.table}. Click para reintentar.`
-        : "Error de sincronización. Click para reintentar.",
+      description: "Error de sincronización. Click para reintentar.",
     },
     offline: {
       icon: CloudOff,
@@ -173,20 +170,19 @@ export function SyncStatusButton({
   onManualSync?: () => Promise<void>;
   className?: string;
 }) {
-  const { isOnline, lastSync, syncIssue } = useSync();
+  const { isOnline, lastSync } = useSync();
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   const getSyncState = useCallback((): SyncState => {
     if (!isOnline) return "offline";
     if (isManualSyncing) return "syncing";
-    if (syncIssue) return "error";
     if (lastSync) {
       const timeSinceSync = Date.now() - lastSync.getTime();
       if (timeSinceSync < 30_000) return "synced";
       return "pending";
     }
     return "pending";
-  }, [isOnline, isManualSyncing, syncIssue, lastSync]);
+  }, [isOnline, isManualSyncing, lastSync]);
 
   const syncState = getSyncState();
 
@@ -203,60 +199,47 @@ export function SyncStatusButton({
     }
   }, [onManualSync, isManualSyncing]);
 
-  const buttonConfig = {
+  const stateConfig = {
     synced: {
       icon: CheckCircle2,
       label: "Sincronizado",
-      variant: "outline" as const,
-      className: "border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800",
-      iconClassName: "text-green-600",
+      className: "bg-green-100 text-green-700 hover:bg-green-200",
     },
     syncing: {
       icon: RefreshCw,
       label: "Sincronizando...",
-      variant: "outline" as const,
-      className: "border-orange-200 text-orange-700 hover:bg-orange-50",
-      iconClassName: "text-orange-600 animate-spin",
+      className: "bg-orange-100 text-orange-700 hover:bg-orange-200",
     },
     pending: {
       icon: Cloud,
-      label: "Sincronizar ahora",
-      variant: "outline" as const,
-      className: "border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800",
-      iconClassName: "text-orange-600",
+      label: "Pendiente",
+      className: "bg-orange-100 text-orange-700 hover:bg-orange-200",
     },
     error: {
       icon: AlertCircle,
-      label: "Reintentar sincronización",
-      variant: "outline" as const,
-      className: "border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800",
-      iconClassName: "text-red-600",
+      label: "Error",
+      className: "bg-red-100 text-red-700 hover:bg-red-200",
     },
     offline: {
       icon: CloudOff,
       label: "Sin conexión",
-      variant: "outline" as const,
-      className: "border-gray-200 text-gray-600 hover:bg-gray-50",
-      iconClassName: "text-gray-500",
+      className: "bg-gray-100 text-gray-600 hover:bg-gray-200",
     },
   };
 
-  const config = buttonConfig[syncState];
+  const config = stateConfig[syncState];
   const Icon = config.icon;
 
   return (
     <Button
-      variant={config.variant}
+      variant="ghost"
       size="sm"
-      className={cn("gap-2 text-xs", config.className, className)}
+      className={cn("gap-2", config.className, className)}
       onClick={handleManualSync}
-      disabled={!onManualSync || isManualSyncing || syncState === "offline"}
+      disabled={isManualSyncing || !onManualSync}
     >
-      <Icon className={cn("h-4 w-4", config.iconClassName)} />
+      <Icon className={cn("h-4 w-4", isManualSyncing && "animate-spin")} />
       {config.label}
     </Button>
   );
 }
-
-export type { SyncState };
-export default SyncStatusIndicator;

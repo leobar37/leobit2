@@ -6,8 +6,11 @@ import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
 import { useListSearch } from "~/hooks/use-list-search";
 import { ProductCard } from "~/components/products/product-card";
+import { useSetLayout } from "~/components/layout/app-layout";
 
 export default function ProductsPage() {
+  useSetLayout({ title: "Catálogo", actions: <SyncStatus /> });
+
   const { data: products, isLoading, error } = useProducts();
 
   const { filteredItems: filteredProducts, search, setSearch } = useListSearch({
@@ -19,67 +22,62 @@ export default function ProductsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-3 sm:px-4">
-          <h1 className="font-bold text-lg">Catálogo</h1>
-          <div className="flex items-center gap-2">
-            <Link to="/productos/nuevo">
-              <Button className="bg-orange-500 hover:bg-orange-600 rounded-xl">
-                <Plus className="h-4 w-4 mr-1" />
-                Nuevo
-              </Button>
+    <>
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar producto..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="shell-field h-12 rounded-[20px] pl-11 pr-4 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
+          />
+        </div>
+
+        {isLoading && (
+          <div className="py-8 text-center">
+            <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="text-muted-foreground">Cargando productos...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="py-8 text-center">
+            <p className="text-red-500">Error al cargar productos</p>
+          </div>
+        )}
+
+        {filteredProducts?.length === 0 && !isLoading && (
+          <div className="py-8 text-center">
+            <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              {search ? "No se encontraron productos" : "No hay productos registrados"}
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {filteredProducts?.map((product) => (
+            <Link
+              key={product.id}
+              to={`/productos/${product.id}`}
+              className="block"
+            >
+              <ProductCard product={product} />
             </Link>
-            <SyncStatus />
-          </div>
+          ))}
         </div>
-      </header>
+      </div>
 
-      <main className="px-3 py-4 sm:px-4 pb-24">
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar producto..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 rounded-xl"
-            />
-          </div>
-
-          {isLoading && (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Cargando productos...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-8">
-              <p className="text-red-500">Error al cargar productos</p>
-            </div>
-          )}
-
-          {filteredProducts?.length === 0 && !isLoading && (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No se encontraron productos</p>
-            </div>
-          )}
-
-          <div className="grid gap-3">
-            {filteredProducts?.map((product) => (
-              <Link
-                key={product.id}
-                to={`/productos/${product.id}`}
-                className="block"
-              >
-                <ProductCard product={product} />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </main>
-    </div>
+      <Button
+        size="icon"
+        asChild
+        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+      >
+        <Link to="/productos/nuevo" aria-label="Nuevo producto">
+          <Plus className="h-6 w-6" />
+        </Link>
+      </Button>
+    </>
   );
 }

@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { User, X, ChevronDown } from "lucide-react";
+import { User, X, ChevronDown, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { useCustomers } from "~/hooks/use-customers";
-import { cn } from "~/lib/utils";
+import { useCustomerBalance } from "~/hooks/use-customer-balance";
+import { getDebtLevel } from "~/lib/debt";
+import { formatCurrency, cn } from "~/lib/utils";
 
 interface CustomerSelectProps {
   value: string | null;
@@ -33,6 +35,7 @@ export function CustomerSelect({
   const { data: customers = [], isLoading } = useCustomers(
     searchQuery ? { search: searchQuery } : undefined,
   );
+  const { data: balanceData } = useCustomerBalance(value);
 
   // Find selected customer - first check props, then search in loaded customers
   const selectedCustomer =
@@ -76,6 +79,14 @@ export function CustomerSelect({
                   <p className="text-sm text-muted-foreground truncate">
                     {selectedCustomer.phone}
                   </p>
+                )}
+                {selectedCustomer && balanceData && balanceData.balanceDue > 0 && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <TrendingUp className={cn("h-3.5 w-3.5", getDebtLevel(balanceData.balanceDue).color)} />
+                    <span className={cn("text-sm font-medium", getDebtLevel(balanceData.balanceDue).color)}>
+                      Debe: S/ {formatCurrency(balanceData.balanceDue)}
+                    </span>
+                  </div>
                 )}
                 {!selectedCustomer && required && (
                   <p className="text-sm text-orange-600">
