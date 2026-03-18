@@ -19,14 +19,15 @@ export const saleItemSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.string().optional(),
-  orderedQuantity: z.string().optional(),
-  unitPrice: z.string().optional(),
-  unitPriceQuoted: z.string().optional(),
-  subtotal: z.string(),
+  quantity: z.union([z.string(), z.number()]).optional(),
+  orderedQuantity: z.union([z.string(), z.number()]).optional(),
+  unitPrice: z.union([z.string(), z.number()]).optional(),
+  unitPriceQuoted: z.union([z.string(), z.number()]).optional(),
+  subtotal: z.union([z.string(), z.number()]),
 });
 
 export const saleCreateSchema = z.object({
+  sellerId: z.string().min(1, "sellerId es requerido"),
   customerId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]),
   saleType: z.enum(["contado", "credito"]),
@@ -69,6 +70,7 @@ export const saleCreateSchema = z.object({
 );
 
 const saleBaseSchema = z.object({
+  sellerId: z.string().optional(),
   customerId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]).optional(),
   saleType: z.enum(["contado", "credito"]).optional(),
@@ -125,6 +127,7 @@ export const distribucionCreateSchema = z.object({
   fecha: z.string().optional(),
   modo: z.enum(["estricto", "acumulativo", "libre"]).optional(),
   confiarEnVendedor: z.boolean().optional(),
+  groupId: z.string().optional(),
   items: z.array(distribucionItemSchema).min(1, "La distribución requiere items"),
 });
 
@@ -138,8 +141,6 @@ const distribucionBaseSchema = z.object({
 });
 
 export const distribucionUpdateSchema = distribucionBaseSchema.extend({
-  kilosAsignados: z.union([z.string(), z.number()]).optional(),
-  kilosVendidos: z.union([z.string(), z.number()]).optional(),
   montoRecaudado: z.union([z.string(), z.number()]).optional(),
   estado: z.enum(["activo", "cerrado", "en_ruta"]).optional(),
 });
@@ -153,11 +154,11 @@ export const saleItemOperationSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.string().optional(),
-  orderedQuantity: z.string().optional(),
-  unitPrice: z.string().optional(),
-  unitPriceQuoted: z.string().optional(),
-  subtotal: z.string(),
+  quantity: z.union([z.string(), z.number()]).optional(),
+  orderedQuantity: z.union([z.string(), z.number()]).optional(),
+  unitPrice: z.union([z.string(), z.number()]).optional(),
+  unitPriceQuoted: z.union([z.string(), z.number()]).optional(),
+  subtotal: z.union([z.string(), z.number()]),
 });
 
 export type SaleItemOperationInput = z.infer<typeof saleItemOperationSchema>;

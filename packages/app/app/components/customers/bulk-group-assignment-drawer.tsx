@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Plus, Users } from "lucide-react";
+import { Check, ChevronDown, Plus, Users, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,15 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createModal } from "~/lib/modal/create-modal";
 import { cn } from "~/lib/utils";
-import { useBulkAssignGroups } from "~/hooks/use-bulk-assign-groups";
-import { useCreateCustomerGroup, useCustomerGroups } from "~/hooks/use-grupos";
+import { useSync } from "~/components/sync/sync-status";
+import {
+  useCustomerGroups,
+  useCreateCustomerGroup,
+  useAddMembersToGroup,
+} from "~/hooks/use-grupos";
 
 interface BulkGroupAssignmentData {
   customerIds: string[];
@@ -25,16 +30,17 @@ function BulkGroupAssignmentDrawerContent({
   customerIds,
   onAssigned,
 }: BulkGroupAssignmentData & { close: () => void }) {
+  const { isOnline } = useSync();
   const { data: groups = [], isLoading } = useCustomerGroups();
-  const assignGroups = useBulkAssignGroups();
   const createGroup = useCreateCustomerGroup();
+  const addMembers = useAddMembersToGroup();
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
   const [isCreateExpanded, setIsCreateExpanded] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
 
   const selectedCount = selectedGroupIds.size;
-  const canSubmit = selectedCount > 0 && !assignGroups.isPending;
-  const canCreateGroup = newGroupName.trim().length > 0 && !createGroup.isPending;
+  const canSubmit = selectedCount > 0 && !createGroup.isPending && !addMembers.isPending && isOnline;
+  const canCreateGroup = newGroupName.trim().length > 0 && !createGroup.isPending && isOnline;
 
   const sortedGroups = useMemo(
     () => [...groups].sort((a, b) => a.name.localeCompare(b.name, "es")),
@@ -57,31 +63,33 @@ function BulkGroupAssignmentDrawerContent({
 
   const handleCreateGroup = async () => {
     const name = newGroupName.trim();
-    if (!name) return;
+    if (!name || !isOnline) return;
 
     try {
       const createdGroup = await createGroup.mutateAsync({ name });
-
       setSelectedGroupIds((prev) => new Set(prev).add(createdGroup.id));
       setNewGroupName("");
       setIsCreateExpanded(false);
       toast.success("Grupo creado y seleccionado");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al crear grupo";
-      toast.error(message);
+      // Error toast is handled by the mutation hook
     }
   };
 
   const handleAssign = async () => {
     const groupIds = Array.from(selectedGroupIds);
 
-    if (groupIds.length === 0) return;
+    if (groupIds.length === 0 || !isOnline) return;
 
     try {
-      await assignGroups.mutateAsync({
-        customerIds,
-        groupIds,
-      });
+      await Promise.all(
+        groupIds.map((groupId) =>
+          addMembers.mutateAsync({
+            customerIds,
+            groupId,
+          })
+        )
+      );
 
       toast.success(
         customerIds.length === 1
@@ -95,8 +103,7 @@ function BulkGroupAssignmentDrawerContent({
       setIsCreateExpanded(false);
       close();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al asignar grupos";
-      toast.error(message);
+      // Error toast is handled by the mutation hook
     }
   };
 
@@ -116,6 +123,17 @@ function BulkGroupAssignmentDrawerContent({
         </DrawerDescription>
       </DrawerHeader>
 
+      {!isOnline && (
+        <div className="px-4">
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              Conéctate a internet para gestionar grupos
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-4">
           <div className="space-y-2">
@@ -125,7 +143,7 @@ function BulkGroupAssignmentDrawerContent({
               </p>
             ) : sortedGroups.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-muted-foreground">
-                Aun no hay grupos. Crea el primero para empezar.
+                Aún no hay grupos. Crea el primero para empezar.
               </p>
             ) : (
               sortedGroups.map((group) => {
@@ -136,11 +154,13 @@ function BulkGroupAssignmentDrawerContent({
                     key={group.id}
                     type="button"
                     onClick={() => toggleGroupSelection(group.id)}
+                    disabled={!isOnline}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                       isSelected
                         ? "border-orange-300 bg-orange-50"
-                        : "border-stone-200 bg-white hover:border-orange-200 hover:bg-orange-50/40"
+                        : "border-stone-200 bg-white hover:border-orange-200 hover:bg-orange-50/40",
+                      !isOnline && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     <div
@@ -174,7 +194,11 @@ function BulkGroupAssignmentDrawerContent({
             <button
               type="button"
               onClick={() => setIsCreateExpanded((prev) => !prev)}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              disabled={!isOnline}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 px-4 py-3 text-left",
+                !isOnline && "opacity-50 cursor-not-allowed"
+              )}
             >
               <span className="flex items-center gap-2 font-medium text-orange-700">
                 <Plus className="h-4 w-4" />
@@ -200,6 +224,7 @@ function BulkGroupAssignmentDrawerContent({
                       void handleCreateGroup();
                     }
                   }}
+                  disabled={!isOnline}
                 />
                 <Button
                   type="button"
@@ -224,7 +249,7 @@ function BulkGroupAssignmentDrawerContent({
           disabled={!canSubmit}
           className="h-12 flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
         >
-          {assignGroups.isPending
+          {addMembers.isPending
             ? "Guardando..."
             : `Agregar a ${selectedCount} grupo${selectedCount === 1 ? "" : "s"}`}
         </Button>

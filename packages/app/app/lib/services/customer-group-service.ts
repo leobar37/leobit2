@@ -8,7 +8,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup, type CustomerGroupMember } from "@avileo/shared";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface CreateCustomerGroupInput {
   name: string;
@@ -61,11 +61,15 @@ export class CustomerGroupService extends BaseService {
   }
 
   async findAll(): Promise<CustomerGroupWithMemberCount[]> {
+    console.log('[DEBUG CustomerGroupService.findAll] businessId:', this.businessId);
+    
     const groups = await this.db
       .select()
       .from(customerGroups)
       .where(eq(customerGroups.businessId, this.businessId))
       .orderBy(desc(customerGroups.createdAt));
+
+    console.log('[DEBUG CustomerGroupService.findAll] Raw groups from DB:', groups.length, groups.map(g => ({ id: g.id, name: g.name })));
 
     const groupsWithCounts = await Promise.all(
       groups.map(async (group) => {
@@ -82,6 +86,7 @@ export class CustomerGroupService extends BaseService {
       })
     );
 
+    console.log('[DEBUG CustomerGroupService.findAll] Returning groups with counts:', groupsWithCounts.length);
     return groupsWithCounts;
   }
 
@@ -127,11 +132,14 @@ export class CustomerGroupService extends BaseService {
     }
 
     const result = await this.db
-      .select({ count: customerGroupMembers.id })
+      .select({ count: sql<number>`count(*)` })
       .from(customerGroupMembers)
-      .where(eq(customerGroupMembers.groupId, groupId));
+      .where(and(
+        eq(customerGroupMembers.groupId, groupId),
+        eq(customerGroupMembers.businessId, this.businessId)
+      ));
 
-    return result.length;
+    return result[0]?.count ?? 0;
   }
 
   async getMembers(groupId: string): Promise<GroupMemberWithCustomer[]> {
@@ -156,7 +164,10 @@ export class CustomerGroupService extends BaseService {
       })
       .from(customerGroupMembers)
       .innerJoin(customers, eq(customerGroupMembers.customerId, customers.id))
-      .where(eq(customerGroupMembers.groupId, groupId));
+      .where(and(
+        eq(customerGroupMembers.groupId, groupId),
+        eq(customerGroupMembers.businessId, this.businessId)
+      ));
 
     return results.map(row => ({
       customerId: row.customerId,
@@ -199,6 +210,7 @@ export class CustomerGroupService extends BaseService {
       updatedAt: now,
     };
 
+    console.log('[DEBUG CustomerGroupService.create] INSERTING group into local DB:', { id, name: input.name, businessId: this.businessId });
     await this.db.insert(customerGroups).values(group as CustomerGroup);
 
     await this.queueSync("insert", id, {
@@ -350,11 +362,12 @@ export class CustomerGroupService extends BaseService {
 
     const now = new Date(this.now());
     const memberIds: string[] = [];
-    const members: Partial<CustomerGroupMember>[] = newCustomerIds.map(customerId => {
+    const members: Record<string, unknown>[] = newCustomerIds.map(customerId => {
       const memberId = this.generateId();
       memberIds.push(memberId);
       return {
         id: memberId,
+        businessId: this.businessId,
         groupId,
         customerId,
         addedBy: this.businessUserId,
@@ -364,7 +377,7 @@ export class CustomerGroupService extends BaseService {
       };
     });
 
-    await this.db.insert(customerGroupMembers).values(members as CustomerGroupMember[]);
+    await this.db.insert(customerGroupMembers).values(members as never[]);
 
     for (let i = 0; i < newCustomerIds.length; i++) {
       await this.queueSync("insert", memberIds[i], {

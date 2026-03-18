@@ -163,6 +163,7 @@ async function backfillSales(businessId?: string): Promise<BackfillResult> {
 
   for (const sale of allSales) {
     const payload = {
+      sellerId: sale.sellerId,
       customerId: sale.customerId,
       type: sale.type,
       saleType: sale.saleType,
@@ -334,8 +335,6 @@ async function backfillDistribuciones(businessId?: string): Promise<BackfillResu
       fecha: dist.fecha,
       estado: dist.estado,
       modo: dist.modo,
-      kilosAsignados: dist.kilosAsignados,
-      kilosVendidos: dist.kilosVendidos,
       montoRecaudado: dist.montoRecaudado,
     };
 

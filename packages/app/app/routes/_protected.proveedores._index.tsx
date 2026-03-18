@@ -6,22 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers } from "~/hooks/use-suppliers";
+import { useBusiness } from "~/hooks/use-business";
 import { useSetLayout } from "~/components/layout/app-layout";
 
 function SupplierCard({ supplier }: { supplier: {
   id: string;
   name: string;
-  type: "generic" | "regular" | "internal";
+  type: string;
   phone: string | null;
   isActive: boolean;
 } }) {
-  const typeLabels = {
+  const typeLabels: Record<string, string> = {
     generic: "Genérico",
     regular: "Regular",
     internal: "Interno",
   };
 
-  const typeColors = {
+  const typeColors: Record<string, string> = {
     generic: "bg-gray-100 text-gray-700",
     regular: "bg-blue-100 text-blue-700",
     internal: "bg-purple-100 text-purple-700",
@@ -67,8 +68,9 @@ function SupplierCard({ supplier }: { supplier: {
 export default function ProveedoresPage() {
   useSetLayout({ title: "Proveedores" });
 
+  const { data: business } = useBusiness();
   const [search, setSearch] = useState("");
-  const { data: suppliers, isLoading } = useSuppliers(search);
+  const { data: suppliers, isLoading } = useSuppliers(business?.id || "");
 
   return (
     <>

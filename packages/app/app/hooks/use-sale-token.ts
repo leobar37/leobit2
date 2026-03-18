@@ -47,16 +47,13 @@ export function useGenerateSaleToken() {
     },
     onSuccess: (_, saleId) => {
       queryClient.invalidateQueries({ queryKey: ["sale-token", saleId] });
-      toast({
-        title: "Token generado",
+      toast.success("Token generado", {
         description: "El enlace para compartir está listo",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo generar el token",
-        variant: "destructive",
       });
     },
   });
@@ -77,16 +74,13 @@ export function useRegenerateSaleToken() {
     },
     onSuccess: (_, saleId) => {
       queryClient.invalidateQueries({ queryKey: ["sale-token", saleId] });
-      toast({
-        title: "Token regenerado",
+      toast.success("Token regenerado", {
         description: "El enlace anterior ya no funciona",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo regenerar el token",
-        variant: "destructive",
       });
     },
   });
@@ -107,18 +101,15 @@ export function useToggleSaleToken() {
     },
     onSuccess: (data, { saleId }) => {
       queryClient.invalidateQueries({ queryKey: ["sale-token", saleId] });
-      toast({
-        title: data.isActive ? "Token activado" : "Token desactivado",
+      toast.success(data.isActive ? "Token activado" : "Token desactivado", {
         description: data.isActive
           ? "El cliente puede editar la venta"
           : "El cliente ya no puede editar la venta",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo cambiar el estado del token",
-        variant: "destructive",
       });
     },
   });
@@ -160,10 +151,8 @@ export function useShareNative() {
         // User cancelled or error - ignore silently
       }
     } else {
-      toast({
-        title: "No soportado",
+      toast.warning("No soportado", {
         description: "Tu navegador no soporta compartir nativo",
-        variant: "destructive",
       });
     }
   };
@@ -176,15 +165,12 @@ export function useCopyToClipboard() {
   return async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast({
-        title: "Copiado",
+      toast.success("Copiado", {
         description: "Enlace copiado al portapapeles",
       });
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "No se pudo copiar el enlace",
-        variant: "destructive",
       });
     }
   };

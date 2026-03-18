@@ -115,6 +115,7 @@ export function useCreateSupplier() {
 interface UpdateSupplierInput {
   id: string;
   name?: string;
+  type?: "generic" | "regular" | "internal";
   ruc?: string;
   address?: string;
   phone?: string;

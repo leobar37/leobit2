@@ -2,7 +2,7 @@
  * Customer Group Repository
  * Data access layer for customer groups
  */
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customerGroups, customerGroupMembers, customers, type CustomerGroup, type NewCustomerGroup, type CustomerGroupMember, type NewCustomerGroupMember } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
@@ -187,6 +187,7 @@ export class CustomerGroupRepository {
     }
 
     const members: Omit<NewCustomerGroupMember, "id">[] = newCustomerIds.map((customerId) => ({
+      businessId: ctx.businessId,
       groupId,
       customerId,
       addedBy: ctx.businessUserId,
@@ -232,5 +233,33 @@ export class CustomerGroupRepository {
     });
 
     return !!result;
+  }
+
+  /**
+   * Find all groups that a customer belongs to
+   */
+  async findByCustomerId(ctx: RequestContext, customerId: string): Promise<Array<{
+    id: string;
+    name: string;
+    syncStatus: string;
+  }>> {
+    const results = await db
+      .select({
+        id: customerGroups.id,
+        name: customerGroups.name,
+        syncStatus: customerGroups.syncStatus,
+      })
+      .from(customerGroupMembers)
+      .innerJoin(
+        customerGroups,
+        eq(customerGroupMembers.groupId, customerGroups.id)
+      )
+      .where(and(
+        eq(customerGroupMembers.customerId, customerId),
+        eq(customerGroups.businessId, ctx.businessId)
+      ))
+      .orderBy(desc(customerGroups.createdAt));
+
+    return results;
   }
 }

@@ -1,11 +1,13 @@
 import { useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EditDistribucionForm } from "~/components/distribucion";
-import { useDistribucion, useUpdateDistribucion, useUpdateDistribucionItems, type Distribucion } from "~/hooks/use-distribuciones";
+import { useDistribucion, useUpdateDistribucion, useUpdateDistribucionItems, useCloseDistribucion, type Distribucion } from "~/hooks/use-distribuciones";
 import { useToastError } from "~/hooks/use-toast-error";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { Loader2 } from "lucide-react";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
+import { useBusiness } from "@/hooks/use-business";
 
 export default function EditarDistribucionPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,10 @@ export default function EditarDistribucionPage() {
   const { goBack: goBackRoute } = useDistribucionParams();
   const updateMutation = useUpdateDistribucion();
   const updateItemsMutation = useUpdateDistribucionItems();
+  const closeMutation = useCloseDistribucion();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { data: business } = useBusiness();
+  const isAdmin = business?.role === "ADMIN_NEGOCIO";
 
   const { data: distribucion, isLoading } = useDistribucion(id || "");
 
@@ -44,9 +50,36 @@ export default function EditarDistribucionPage() {
     }
   };
 
+  const handleClose = async () => {
+    if (!id) return;
+    const confirmed = await confirm({
+      title: "Cerrar distribución",
+      description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer. El stock sobrante será devuelto al inventario.",
+      confirmText: "Cerrar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      try {
+        await closeMutation.mutateAsync(id);
+        showSuccess("Distribución cerrada", {
+          description: "La distribución se ha cerrado exitosamente.",
+        });
+        goBackRoute();
+      } catch (error) {
+        showError("Error", error, {
+          description: "No se pudo cerrar la distribución",
+        });
+      }
+    }
+  };
+
   const handleCancel = () => {
     goBackRoute();
   };
+
+  const isActive = distribucion?.estado === "activo" || distribucion?.estado === "en_ruta";
 
   if (isLoading) {
     return (
@@ -89,6 +122,28 @@ export default function EditarDistribucionPage() {
             onSubmit={handleSubmit} 
             onUpdateItems={handleUpdateItems}
           />
+          
+          {isActive && isAdmin && (
+            <Button
+              variant="outline"
+              className="w-full mt-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={handleClose}
+              disabled={closeMutation.isPending}
+            >
+              {closeMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cerrando...
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Cerrar Distribución
+                </>
+              )}
+            </Button>
+          )}
+          
           <Button
             variant="outline"
             className="w-full mt-4 rounded-xl"
@@ -98,6 +153,8 @@ export default function EditarDistribucionPage() {
           </Button>
         </div>
       </div>
+      
+      <ConfirmDialog />
     </div>
   );
 }

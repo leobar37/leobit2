@@ -88,7 +88,7 @@
     "jsdom": "^28.1.0",
     "msw": "^2.12.10",
     "postcss": "^8.5.6",
-    "react-grab": "^0.1.14",
+    "react-grab": "0.1.28",
     "sharp": "^0.34.5",
     "tailwindcss": "3",
     "tailwindcss-animate": "^1.0.7",

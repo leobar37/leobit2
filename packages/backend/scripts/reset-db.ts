@@ -34,6 +34,8 @@ import {
   systemConfig,
   productUnits,
   variantInventory,
+  customerGroups,
+  customerGroupMembers,
 } from "../src/db/schema";
 import { eq, ne } from "drizzle-orm";
 import { auth } from "../src/lib/auth";
@@ -159,6 +161,8 @@ async function resetDatabase() {
     { name: "Sales", fn: () => db.delete(sales) },
     { name: "Abonos", fn: () => db.delete(abonos) },
     { name: "Customer tags", fn: () => db.delete(customerTags) },
+    { name: "Customer group members", fn: () => db.delete(customerGroupMembers) },
+    { name: "Customer groups", fn: () => db.delete(customerGroups) },
     { name: "Tags", fn: () => db.delete(tags) },
     { name: "Customers", fn: () => db.delete(customers) },
     { name: "Distribucion items", fn: () => db.delete(distribucionItems) },

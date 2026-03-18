@@ -91,12 +91,15 @@ export const purchaseItems = pgTable(
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_purchase_items_business_id").on(table.businessId),
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
     index("idx_purchase_items_product_id").on(table.productId),
     index("idx_purchase_items_variant_id").on(table.variantId),
+    index("idx_purchase_items_sync_status").on(table.syncStatus),
+    index("idx_purchase_items_updated_at").on(table.updatedAt),
   ]
 );
 

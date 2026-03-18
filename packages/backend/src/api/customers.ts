@@ -149,4 +149,17 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         tagIds: t.Array(t.String()),
       }),
     }
+  )
+  // Customer Groups endpoint - get groups for a customer
+  .get(
+    "/:id/groups",
+    async ({ customerGroupRepo, ctx, params }) => {
+      const groups = await customerGroupRepo.findByCustomerId(ctx as RequestContext, params.id);
+      return { success: true, data: groups };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
   );

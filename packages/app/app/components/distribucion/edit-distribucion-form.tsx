@@ -3,17 +3,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FormInput } from "@/components/forms/form-input";
 import { FormNumberInput } from "@/components/forms/form-number-input";
 import { ProductVariantSelector } from "./product-variant-selector";
 import { useProducts } from "~/hooks/use-products";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Package } from "lucide-react";
 import type { Distribucion } from "~/hooks/use-distribuciones";
+import { PuntoVentaSelect } from "./punto-venta-select";
+import { usePuntosVentaActivos, type PuntoVenta } from "~/hooks/use-puntos-venta";
 
 const editDistribucionSchema = z.object({
-  puntoVenta: z.string().min(1, "El punto de venta es requerido"),
-  kilosAsignados: z.number().positive("Los kilos deben ser mayores a 0"),
+  puntoVenta: z.string().optional(),
 });
 
 type EditDistribucionFormData = z.infer<typeof editDistribucionSchema>;
@@ -30,6 +30,7 @@ export function EditDistribucionForm({
   onUpdateItems,
 }: EditDistribucionFormProps) {
   const { data: products } = useProducts();
+  const { data: puntosVenta = [] } = usePuntosVentaActivos();
   const [items, setItems] = useState<Array<{
     variantId: string;
     variantName: string;
@@ -37,14 +38,18 @@ export function EditDistribucionForm({
     cantidadAsignada: number;
     unidad: string;
   }>>([]);
+  
+  const selectedPuntoVenta = puntosVenta.find(pv => pv.id === distribucion.puntoVenta) || puntosVenta.find(pv => pv.name === distribucion.puntoVenta) || null;
+  const [selectedPuntoVentaState, setSelectedPuntoVenta] = useState<PuntoVenta | null>(selectedPuntoVenta);
 
   const form = useForm<EditDistribucionFormData>({
     resolver: zodResolver(editDistribucionSchema),
     defaultValues: {
       puntoVenta: distribucion.puntoVenta,
-      kilosAsignados: distribucion.kilosAsignados,
     },
   });
+
+  const hasItems = Boolean((distribucion as Distribucion & { items?: Array<{ id: string }> }).items?.length);
 
   const handleAddItem = (variant: { id: string; name: string }, product: { name: string } | undefined, cantidad: number) => {
     const existingIndex = items.findIndex((item) => item.variantId === variant.id);
@@ -83,31 +88,32 @@ export function EditDistribucionForm({
   };
 
   const handleSubmit = form.handleSubmit((data) => {
-    onSubmit({ id: distribucion.id, ...data });
+    if (!selectedPuntoVentaState) {
+      form.setError("puntoVentaId" as any, { 
+        message: "Seleccione un punto de venta" 
+      });
+      return;
+    }
+    onSubmit({ 
+      id: distribucion.id, 
+      puntoVenta: selectedPuntoVentaState.name,
+    });
   });
 
   return (
     <FormProvider {...form}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormInput
-          name="puntoVenta"
-          label="Punto de Venta"
-          error={form.formState.errors.puntoVenta?.message}
-        />
-        
-        <FormNumberInput
-          name="kilosAsignados"
-          label="Kilos Asignados"
-          decimals={1}
-          min="0.1"
-          error={form.formState.errors.kilosAsignados?.message as string}
+        <PuntoVentaSelect
+          value={selectedPuntoVentaState?.id || null}
+          selectedPuntoVenta={selectedPuntoVentaState}
+          onChange={setSelectedPuntoVenta}
         />
 
-        {distribucion.items && distribucion.items.length > 0 && (
+        {(distribucion as Distribucion & { items?: Array<{ id: string }> }).items && (distribucion as Distribucion & { items?: Array<{ id: string }> }).items!.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Items Asignados (solo lectura)</label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {distribucion.items.map((item) => (
+              {(distribucion as Distribucion & { items?: Array<{ id: string; cantidadAsignada: string; cantidadVendida: string; unidad: string; variant?: { product?: { name?: string }; name?: string } }> }).items!.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
@@ -124,7 +130,7 @@ export function EditDistribucionForm({
                     <p className="text-sm font-semibold">
                       {item.cantidadAsignada} {item.unidad}
                     </p>
-                    {item.cantidadVendida > 0 && (
+                    {Number(item.cantidadVendida) > 0 && (
                       <p className="text-xs text-muted-foreground">
                         Vendido: {item.cantidadVendida} {item.unidad}
                       </p>
@@ -136,7 +142,7 @@ export function EditDistribucionForm({
           </div>
         )}
 
-        {distribucion.modo === "libre" && (!distribucion.items || distribucion.items.length === 0) && (
+        {distribucion.modo === "libre" && !hasItems && (
           <div className="space-y-4">
             <div className="p-4 bg-orange-50 rounded-xl">
               <div className="flex items-center gap-2 mb-2">

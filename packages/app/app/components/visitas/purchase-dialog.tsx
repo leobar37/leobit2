@@ -1,13 +1,13 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import type { Visita } from "~/hooks/use-visitas";
 
 interface PurchaseDialogProps {
@@ -26,34 +26,34 @@ export function PurchaseDialog({
   onConfirm,
 }: PurchaseDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Confirmar compra</DialogTitle>
-          <DialogDescription>
+    <Drawer open={isOpen} onOpenChange={onOpenChange}>
+      <DrawerContent className="px-4 pb-4">
+        <DrawerHeader>
+          <DrawerTitle>Confirmar compra</DrawerTitle>
+          <DrawerDescription>
             ¿El cliente{" "}
             <span className="font-semibold">
               {visita?.customer?.name}
             </span>{" "}
             realizó una compra?
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
+          </DrawerDescription>
+        </DrawerHeader>
+        <DrawerFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isUpdating}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-orange-500 hover:bg-orange-600"
           >
             {isUpdating && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Sí, compró
+            Sí, bought
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

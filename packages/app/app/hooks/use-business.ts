@@ -8,27 +8,21 @@ import { api } from "~/lib/api-client";
 import { setStoredBusinessId } from "~/lib/session-storage";
 
 async function getBusiness(): Promise<Business> {
-  console.log("[useBusiness] Step 1: getBusiness() called");
 
-  console.log("[useBusiness] Step 2: Creating API request...");
   const request = api.businesses.me.get();
 
-  console.log("[useBusiness] Step 3: Awaiting response...");
   const { data, error } = await request;
 
-  console.log("[useBusiness] Step 4: Got response:", { data, error });
 
   if (error) {
-    console.error("[useBusiness] Step 5: API error:", error);
+
     throw new Error(String(error.value));
   }
   if (!data?.success || !data.data) {
-    console.error("[useBusiness] Step 5: No data or success=false:", data);
     throw new Error("Failed to fetch business");
   }
 
   const business = data.data as unknown as Business;
-  console.log("[useBusiness] Step 6: Business fetched:", business.id, business.name);
 
   // Store business ID for multi-business support in API requests
   if (business.id) {

@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, type SQL } from "drizzle-orm";
 import { db } from "../../lib/db";
 import {
   distribuciones,
@@ -159,12 +159,6 @@ export class DistribucionRepository {
         ...(data.puntoVenta !== undefined && {
           puntoVenta: data.puntoVenta,
         }),
-        ...(data.kilosAsignados !== undefined && {
-          kilosAsignados: data.kilosAsignados,
-        }),
-        ...(data.kilosVendidos !== undefined && {
-          kilosVendidos: data.kilosVendidos,
-        }),
         ...(data.montoRecaudado !== undefined && {
           montoRecaudado: data.montoRecaudado,
         }),
@@ -186,13 +180,11 @@ export class DistribucionRepository {
   async updateMetrics(
     ctx: RequestContext,
     id: string,
-    kilosVendidos: string,
     montoRecaudado: string
   ): Promise<Distribucion | undefined> {
     const [distribucion] = await db
       .update(distribuciones)
       .set({
-        kilosVendidos,
         montoRecaudado,
       })
       .where(
@@ -234,18 +226,23 @@ export class DistribucionRepository {
   async existsForVendedorAndFecha(
     ctx: RequestContext,
     vendedorId: string,
-    fecha: string
+    fecha: string,
+    estados?: Array<"activo" | "cerrado" | "en_ruta">
   ): Promise<boolean> {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(distribuciones.businessId, ctx.businessId),
+      eq(distribuciones.vendedorId, vendedorId),
+      eq(distribuciones.fecha, fecha),
+    ];
+    
+    if (estados && estados.length > 0) {
+      conditions.push(inArray(distribuciones.estado, estados));
+    }
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(distribuciones)
-      .where(
-        and(
-          eq(distribuciones.businessId, ctx.businessId),
-          eq(distribuciones.vendedorId, vendedorId),
-          eq(distribuciones.fecha, fecha)
-        )
-      );
+      .where(and(...conditions.filter(Boolean)));
 
     return (result[0]?.count ?? 0) > 0;
   }

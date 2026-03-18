@@ -16,10 +16,10 @@ export class CustomerSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    const schema = customerCreateSchema;
-    schema.parse(payload);
+    this.validatePayload(payload, customerCreateSchema, customerUpdateSchema, operation);
   }
 
   async execute(

@@ -34,13 +34,18 @@ export const customerTags = pgTable(
     // Sync status for offline support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.customerId, table.tagId] }),
     customerIdx: index("idx_customer_tags_customer_id").on(table.customerId),
     tagIdx: index("idx_customer_tags_tag_id").on(table.tagId),
-  })
-);
+    syncStatusIdx: index("idx_customer_tags_sync_status").on(table.syncStatus),
+    updatedAtIdx: index("idx_customer_tags_updated_at").on(table.updatedAt),
+  }));
 
 // Type exports
 export type CustomerTag = typeof customerTags.$inferSelect;

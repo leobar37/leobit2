@@ -33,7 +33,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginInput) => {
     try {
       await login(data.email, data.password);
-      navigate("/dashboard");
+      // Redirect to sync page to ensure data is loaded before showing dashboard
+      navigate("/sync");
     } catch (error) {
       form.setError("root", {
         message: error instanceof Error ? error.message : "Error al iniciar sesión",

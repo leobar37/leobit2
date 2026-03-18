@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
+import { useBusiness } from "~/hooks/use-business";
 import { cn } from "~/lib/utils";
 
 interface SupplierSelectorProps {
@@ -18,9 +19,10 @@ export function SupplierSelector({
   onSelectSupplier,
   disabled = false,
 }: SupplierSelectorProps) {
+  const { data: business } = useBusiness();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: suppliers = [], isLoading } = useSuppliers(searchQuery);
+  const { data: suppliers = [], isLoading } = useSuppliers(business?.id || "");
 
   const handleSelectSupplier = (supplier: Supplier) => {
     onSelectSupplier(supplier);

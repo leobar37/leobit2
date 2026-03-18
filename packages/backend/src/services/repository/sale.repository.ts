@@ -8,7 +8,10 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface CreateSaleInput {
   id?: string;
+  sellerId?: string;
   customerId?: string;
+  distribucionId?: string;
+  visitaId?: string;
   type?: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   totalAmount: string;
@@ -105,12 +108,14 @@ export class SaleRepository {
     const start = Date.now();
     logger.info({ id: data.id, businessId: ctx.businessId, saleType: data.saleType, totalAmount: data.totalAmount }, "📝 SaleRepository.create");
 
-    const { items, id, customerId, type, saleType, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate } = data;
+    const { items, id, sellerId, customerId, distribucionId, visitaId, type, saleType, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate } = data;
 
     const executor = tx ?? db;
 
     const saleValues = {
       customerId: customerId ?? null,
+      distribucionId: distribucionId ?? null,
+      visitaId: visitaId ?? null,
       type: type ?? "instant_sale",
       saleType,
       totalAmount,
@@ -122,7 +127,7 @@ export class SaleRepository {
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
       orderDate: orderDate ? new Date(orderDate) : null,
       businessId: ctx.businessId,
-      sellerId: ctx.businessUserId,
+      sellerId: sellerId ?? ctx.businessUserId,
       ...(id ? { id } : {}),
     } as typeof sales.$inferInsert;
 

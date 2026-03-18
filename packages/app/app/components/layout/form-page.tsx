@@ -41,7 +41,9 @@ export function FormPage({
 
     return (
       <div className={maxWidthClasses[maxWidth]}>
-        {children}
+        <div className={toolbar ? "pb-20" : ""}>
+          {children}
+        </div>
         {toolbar && <ToolbarActions>{toolbar}</ToolbarActions>}
       </div>
     );

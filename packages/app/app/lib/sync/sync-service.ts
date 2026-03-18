@@ -467,6 +467,7 @@ export class SyncService {
 
   async processPending(): Promise<{ processed: number; failed: number; conflicts: number }> {
     if (this.isProcessing) {
+      console.log(`[SYNC] ⏳ Already processing, skipping`);
       return { processed: 0, failed: 0, conflicts: 0 };
     }
 
@@ -478,26 +479,29 @@ export class SyncService {
     try {
       await this.applyBackoff();
 
+      console.log(`[SYNC] 📥 Fetching pending operations...`);
+
       const pendingOps = await this.pg.query<SyncOperationRecord>(
         `SELECT *
          FROM sync_operations
          WHERE business_id = $1
            AND status IN ($2, $3)
            AND sync_attempts < $4
-         ORDER BY 
-           CASE entity_type
-             WHEN 'customers' THEN 1
-             WHEN 'products' THEN 1
-             WHEN 'product_variants' THEN 1
-             WHEN 'tags' THEN 1
-             WHEN 'customer_groups' THEN 1
-             WHEN 'suppliers' THEN 1
-             WHEN 'sales' THEN 2
-             WHEN 'abonos' THEN 2
-             WHEN 'purchases' THEN 2
-             WHEN 'distribuciones' THEN 2
-             ELSE 3
-           END,
+          ORDER BY
+            CASE entity_type
+              WHEN 'customers' THEN 1
+              WHEN 'products' THEN 1
+              WHEN 'product_variants' THEN 1
+              WHEN 'tags' THEN 1
+              WHEN 'customer_groups' THEN 1
+              WHEN 'customer_group_members' THEN 2
+              WHEN 'suppliers' THEN 1
+              WHEN 'sales' THEN 3
+              WHEN 'abonos' THEN 3
+              WHEN 'purchases' THEN 3
+              WHEN 'distribuciones' THEN 3
+              ELSE 4
+            END,
            created_at ASC
          LIMIT ${BATCH_SIZE}`,
         [
@@ -505,8 +509,25 @@ export class SyncService {
           OPERATION_STATUS.PENDING,
           OPERATION_STATUS.FAILED,
           MAX_RETRIES,
-        ]
+         ]
       );
+
+      // Log queue status
+      const entityCounts = pendingOps.rows.reduce((acc, op) => {
+        acc[op.entity_type] = (acc[op.entity_type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      console.log(`[SYNC] 📋 Queue status:`, {
+        total: pendingOps.rows.length,
+        byEntity: entityCounts,
+        maxRetries: MAX_RETRIES,
+      });
+
+      if (pendingOps.rows.length === 0) {
+        console.log(`[SYNC] ✅ No pending operations`);
+        return { processed: 0, failed: 0, conflicts: 0 };
+      }
 
       // Group operations by sync_group_id so related ops are sent together
       const grouped = new Map<string, SyncOperationRecord[]>();
@@ -546,6 +567,26 @@ export class SyncService {
         );
         // Replace with the complete set (deduplicated)
         grouped.set(groupId, allGroupOps.rows);
+      }
+
+      // Sort operations within each group to ensure correct dependency order
+      // Parent entities must be processed before child entities
+      const entityPriority: Record<string, number> = {
+        'customer_groups': 1,
+        'customer_group_members': 2,
+      };
+      
+      for (const [groupId, ops] of grouped) {
+        const sortedOps = [...ops].sort((a, b) => {
+          const priorityA = entityPriority[a.entity_type] ?? 99;
+          const priorityB = entityPriority[b.entity_type] ?? 99;
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+          }
+          // If same priority, maintain creation order
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+        grouped.set(groupId, sortedOps);
       }
 
       // Process each group as a single batch
@@ -624,6 +665,14 @@ export class SyncService {
         this.consecutiveFailures++;
         this.currentBackoff = this.getBackoffDelay();
       }
+
+      console.log(`[SYNC] 📤 Processing complete:`, {
+        processed,
+        failed,
+        conflicts,
+        consecutiveFailures: this.consecutiveFailures,
+        backoffMs: this.currentBackoff,
+      });
     } finally {
       this.isProcessing = false;
     }
@@ -904,6 +953,46 @@ export class SyncService {
     return status;
   }
 
+  async logDetailedStatus(): Promise<void> {
+    console.log(`[SYNC] 📊 Detailed Queue Status for business: ${this.businessId}`);
+
+    const status = await this.getStatus();
+    console.log(`[SYNC] Summary:`, status);
+
+    const byEntity = await this.pg.query<{ entity_type: string; status: string; count: string }>(
+      `SELECT entity_type, status, COUNT(*) as count
+       FROM sync_operations
+       WHERE business_id = $1
+       GROUP BY entity_type, status
+       ORDER BY entity_type, status`,
+      [this.businessId]
+    );
+
+    const entityStatus: Record<string, Record<string, number>> = {};
+    for (const row of byEntity.rows) {
+      if (!entityStatus[row.entity_type]) {
+        entityStatus[row.entity_type] = {};
+      }
+      entityStatus[row.entity_type][row.status] = parseInt(row.count, 10);
+    }
+    console.log(`[SYNC] By Entity:`, entityStatus);
+
+    const recentOps = await this.pg.query<SyncOperationRecord>(
+      `SELECT * FROM sync_operations
+       WHERE business_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [this.businessId]
+    );
+    console.log(`[SYNC] Recent Operations:`, recentOps.rows.map(op => ({
+      id: op.id.slice(0, 8),
+      entity: op.entity_type,
+      operation: op.operation,
+      status: op.status,
+      createdAt: op.created_at,
+    })));
+  }
+
   async deleteOperation(operationId: string): Promise<boolean> {
     try {
       const op = await this.getOperation(operationId);
@@ -1011,6 +1100,10 @@ export class SyncService {
          AND business_id = $3`,
       [OPERATION_STATUS.COMPLETED, id, this.businessId]
     );
+
+    if (op) {
+      console.log(`[SYNC] ✅ Completed: ${op.entity_type}:${op.entity_id} (${op.operation})`);
+    }
 
     const tableName = op ? validateEntityTableName(op.entity_type) : null;
     if (op && tableName) {

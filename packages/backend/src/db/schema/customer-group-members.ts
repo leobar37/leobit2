@@ -21,6 +21,9 @@ export const customerGroupMembers = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
+    // Multi-tenancy
+    businessId: uuid("business_id").notNull(),
+
     // Foreign keys
     groupId: uuid("group_id")
       .notNull()
@@ -36,11 +39,17 @@ export const customerGroupMembers = pgTable(
     // Sync status for offline support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_customer_group_members_business_id").on(table.businessId),
     index("idx_customer_group_members_group_id").on(table.groupId),
     index("idx_customer_group_members_customer_id").on(table.customerId),
-    index("idx_customer_group_members_business_id").on(table.groupId), // For filtering by business through group
+    index("idx_customer_group_members_sync_status").on(table.syncStatus),
+    index("idx_customer_group_members_updated_at").on(table.updatedAt),
   ]
 );
 

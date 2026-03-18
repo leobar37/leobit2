@@ -41,6 +41,7 @@ const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
           <Input
             ref={ref}
             type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
             data-testid={props.name ? `input-${props.name}` : "input-password"}
             className={cn(
               "shell-field h-12 rounded-[20px] px-4 pr-12",

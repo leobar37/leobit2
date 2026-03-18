@@ -82,16 +82,13 @@ export function useAddItemToPublicSale() {
     },
     onSuccess: (_, { token }) => {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
-      toast({
-        title: "Producto agregado",
+      toast.success("Producto agregado", {
         description: "El producto fue agregado a tu pedido",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo agregar el producto",
-        variant: "destructive",
       });
     },
   });
@@ -127,10 +124,8 @@ export function useUpdatePublicSaleItem() {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo actualizar la cantidad",
-        variant: "destructive",
       });
     },
   });
@@ -161,16 +156,13 @@ export function useDeletePublicSaleItem() {
     },
     onSuccess: (_, { token }) => {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
-      toast({
-        title: "Producto eliminado",
+      toast.success("Producto eliminado", {
         description: "El producto fue eliminado de tu pedido",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo eliminar el producto",
-        variant: "destructive",
       });
     },
   });
@@ -208,16 +200,13 @@ export function useConfirmPublicSale() {
     },
     onSuccess: (_, { token }) => {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
-      toast({
-        title: "Pedido confirmado",
+      toast.success("Pedido confirmado", {
         description: "Tu pedido ha sido confirmado exitosamente",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo confirmar el pedido",
-        variant: "destructive",
       });
     },
   });
@@ -238,16 +227,13 @@ export function useCancelPublicSale() {
     },
     onSuccess: (_, { token }) => {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
-      toast({
-        title: "Pedido cancelado",
+      toast.success("Pedido cancelado", {
         description: "Tu pedido ha sido cancelado",
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "No se pudo cancelar el pedido",
-        variant: "destructive",
       });
     },
   });

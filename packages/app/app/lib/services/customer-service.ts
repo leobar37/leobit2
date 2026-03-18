@@ -133,7 +133,7 @@ export class CustomerService extends BaseService {
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,
       businessId: this.businessId,
-      createdBy: null,
+      createdBy: this.businessUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -146,6 +146,7 @@ export class CustomerService extends BaseService {
       phone: input.phone,
       address: input.address,
       notes: input.notes,
+      createdBy: this.businessUserId,
     });
 
     return customer;

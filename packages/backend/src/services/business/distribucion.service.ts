@@ -10,8 +10,11 @@ import {
   ForbiddenError,
   ConflictError,
 } from "../../errors";
+import { and, eq } from "drizzle-orm";
 import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem } from "../../db/schema";
+import { db, syncOperations } from "../../lib/db";
+import { sales, visitas } from "../../db/schema";
 
 interface DistribucionWithItems extends Distribucion {
   items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
@@ -79,6 +82,7 @@ export class DistribucionService {
     data: {
       vendedorId: string;
       puntoVenta: string;
+      puntoVentaId?: string;
       fecha?: string;
       modo?: "estricto" | "acumulativo" | "libre";
       confiarEnVendedor?: boolean;
@@ -131,12 +135,13 @@ export class DistribucionService {
     const exists = await this.repository.existsForVendedorAndFecha(
       ctx,
       data.vendedorId,
-      fecha
+      fecha,
+      ["activo", "en_ruta"]
     );
 
     if (exists) {
       throw new ConflictError(
-        "Ya existe una distribución para este vendedor en la fecha especificada"
+        "Ya existe una distribución activa para este vendedor en la fecha especificada"
       );
     }
 
@@ -145,21 +150,38 @@ export class DistribucionService {
     const distribucion = await this.repository.create(ctx, {
       vendedorId: data.vendedorId,
       puntoVenta: data.puntoVenta,
-      kilosAsignados: totalKilos.toString(),
-      kilosVendidos: "0",
+      puntoVentaId: data.puntoVentaId,
       montoRecaudado: "0",
       fecha,
       estado: "activo",
       modo: data.modo || "estricto",
-      confiarEnVendedor: data.confiarEnVendedor || false,
-      pesoConfirmado: !data.confiarEnVendedor,
       syncStatus: "synced",
       syncAttempts: 0,
     });
 
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-create-distribucion-${distribucion.id}`,
+      entity: "distribuciones",
+      action: "create",
+      entityId: distribucion.id,
+      payload: {
+        id: distribucion.id,
+        vendedorId: distribucion.vendedorId,
+        puntoVenta: distribucion.puntoVenta,
+        montoRecaudado: distribucion.montoRecaudado,
+        fecha: distribucion.fecha,
+        estado: distribucion.estado,
+        modo: distribucion.modo,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
+
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
-        await this.itemRepository.create(ctx, {
+        const createdItem = await this.itemRepository.create(ctx, {
           distribucionId: distribucion.id,
           variantId: item.variantId,
           cantidadAsignada: item.cantidadAsignada.toString(),
@@ -168,6 +190,25 @@ export class DistribucionService {
           syncStatus: "synced",
           syncAttempts: 0,
         });
+
+        await db.insert(syncOperations).values({
+          businessId: ctx.businessId,
+          operationId: `api-create-distribucion-item-${createdItem.id}`,
+          entity: "distribucion_items",
+          action: "create",
+          entityId: createdItem.id,
+          payload: {
+            id: createdItem.id,
+            distribucionId: createdItem.distribucionId,
+            variantId: createdItem.variantId,
+            cantidadAsignada: createdItem.cantidadAsignada,
+            cantidadVendida: createdItem.cantidadVendida,
+            unidad: createdItem.unidad,
+          },
+          status: "processed",
+          clientTimestamp: new Date(),
+          processedAt: new Date(),
+        });
       }
     }
 
@@ -175,10 +216,31 @@ export class DistribucionService {
       const group = await this.customerGroupRepository.findByIdWithMembers(ctx, data.groupId);
       if (group && group.members.length > 0) {
         const customerIds = group.members.map(m => m.customerId);
-        await this.visitaRepository.bulkCreate(ctx, {
+        const createdVisitas = await this.visitaRepository.bulkCreate(ctx, {
           distribucionId: distribucion.id,
           customerIds,
         });
+
+        // Register sync operations for each created visita
+        for (const visita of createdVisitas) {
+          await db.insert(syncOperations).values({
+            businessId: ctx.businessId,
+            operationId: `api-create-visita-${visita.id}`,
+            entity: "visitas",
+            action: "create",
+            entityId: visita.id,
+            payload: {
+              id: visita.id,
+              distribucionId: visita.distribucionId,
+              customerId: visita.customerId,
+              vendedorId: visita.vendedorId,
+              status: visita.status,
+            },
+            status: "processed",
+            clientTimestamp: new Date(),
+            processedAt: new Date(),
+          });
+        }
       }
     }
 
@@ -195,7 +257,6 @@ export class DistribucionService {
     id: string,
     data: {
       puntoVenta?: string;
-      kilosAsignados?: number;
       estado?: "activo" | "cerrado" | "en_ruta";
     }
   ): Promise<Distribucion> {
@@ -218,21 +279,30 @@ export class DistribucionService {
       throw new ValidationError("El punto de venta debe tener al menos 2 caracteres");
     }
 
-    if (data.kilosAsignados !== undefined && data.kilosAsignados <= 0) {
-      throw new ValidationError("Los kilos asignados deben ser mayores a 0");
-    }
-
     const updated = await this.repository.update(ctx, id, {
       ...(data.puntoVenta !== undefined && { puntoVenta: data.puntoVenta }),
-      ...(data.kilosAsignados !== undefined && {
-        kilosAsignados: data.kilosAsignados.toString(),
-      }),
       ...(data.estado !== undefined && { estado: data.estado }),
     });
 
     if (!updated) {
       throw new NotFoundError("Distribución");
     }
+
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-update-distribucion-${updated.id}`,
+      entity: "distribuciones",
+      action: "update",
+      entityId: updated.id,
+      payload: {
+        id: updated.id,
+        puntoVenta: updated.puntoVenta,
+        estado: updated.estado,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
 
     return updated;
   }
@@ -269,6 +339,22 @@ export class DistribucionService {
     if (!updated) {
       throw new NotFoundError("Distribución");
     }
+
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-close-distribucion-${updated.id}`,
+      entity: "distribuciones",
+      action: "update",
+      entityId: updated.id,
+      payload: {
+        id: updated.id,
+        estado: updated.estado,
+        montoRecaudado: updated.montoRecaudado,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
 
     return updated;
   }
@@ -354,8 +440,10 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
-    const asignado = parseFloat(distribucion.kilosAsignados);
-    const vendido = parseFloat(distribucion.kilosVendidos);
+    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucionId);
+    
+    const asignado = distribucionWithItems?.items?.reduce((sum, item) => sum + parseFloat(item.cantidadAsignada), 0) || 0;
+    const vendido = distribucionWithItems?.items?.reduce((sum, item) => sum + parseFloat(item.cantidadVendida), 0) || 0;
     const disponible = asignado - vendido;
 
     return {
@@ -375,12 +463,70 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
-    // Solo admin puede eliminar
+    if (existing.estado === "cerrado") {
+      throw new ConflictError("No se puede eliminar una distribución cerrada");
+    }
+
+    const salesCount = await db
+      .select({ count: db.$count(sales) })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.distribucionId, id),
+          eq(sales.businessId, ctx.businessId)
+        )
+      );
+    
+    if (salesCount[0]?.count > 0) {
+      throw new ConflictError(
+        `No se puede eliminar la distribución porque tiene ${salesCount[0].count} venta(s) asociada(s)`
+      );
+    }
+
     if (!ctx.isAdmin()) {
       throw new ForbiddenError("Solo admin puede eliminar distribuciones");
     }
 
+    // Find and delete associated visitas
+    const associatedVisitas = await this.visitaRepository.findByDistribucionId(ctx, id);
+
+    for (const visita of associatedVisitas) {
+      await db.insert(syncOperations).values({
+        businessId: ctx.businessId,
+        operationId: `api-delete-visita-${visita.id}`,
+        entity: "visitas",
+        action: "delete",
+        entityId: visita.id,
+        payload: { id: visita.id },
+        status: "processed",
+        clientTimestamp: new Date(),
+        processedAt: new Date(),
+      });
+    }
+
+    // Delete visitas from database
+    await db
+      .delete(visitas)
+      .where(
+        and(
+          eq(visitas.distribucionId, id),
+          eq(visitas.businessId, ctx.businessId)
+        )
+      );
+
     await this.repository.delete(ctx, id);
+
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-delete-distribucion-${id}`,
+      entity: "distribuciones",
+      action: "delete",
+      entityId: id,
+      payload: { id },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
   }
 
   async replaceDistribucionItems(
@@ -433,11 +579,6 @@ export class DistribucionService {
         syncAttempts: 0,
       });
     }
-
-    const totalKilos = items.reduce((sum, item) => sum + item.cantidadAsignada, 0);
-    await this.repository.update(ctx, distribucionId, {
-      kilosAsignados: totalKilos.toString(),
-    });
 
     const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucionId);
     if (!distribucionWithItems) {

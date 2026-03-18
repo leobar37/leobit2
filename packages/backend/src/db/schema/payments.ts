@@ -57,6 +57,7 @@ export const abonos = pgTable(
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_abonos_business_id").on(table.businessId),
@@ -67,6 +68,7 @@ export const abonos = pgTable(
     index("idx_abonos_related_sale_id").on(table.relatedSaleId),
     index("idx_abonos_sync_status").on(table.syncStatus),
     index("idx_abonos_created_at").on(table.createdAt),
+    index("idx_abonos_updated_at").on(table.updatedAt),
   ]
 );
 

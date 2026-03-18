@@ -15,9 +15,9 @@ export class VisitaSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
   ): Promise<void> {
-    const schema = visitaCreateSchema;
-    schema.parse(payload);
+    this.validatePayload(payload, visitaCreateSchema, visitaUpdateSchema, operation);
   }
 
   async execute(

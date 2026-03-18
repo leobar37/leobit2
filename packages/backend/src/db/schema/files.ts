@@ -39,12 +39,16 @@ export const files = pgTable(
     // Sync status for offline-first (for payment proofs, etc.)
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Timestamps
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_files_business_id").on(table.businessId),
     index("idx_files_created_at").on(table.createdAt),
     index("idx_files_deleted_at").on(table.deletedAt),
     index("idx_files_sync_status").on(table.syncStatus),
+    index("idx_files_updated_at").on(table.updatedAt),
   ]
 );
 

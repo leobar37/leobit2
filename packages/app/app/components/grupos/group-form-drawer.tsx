@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/drawer";
 import { Loader2 } from "lucide-react";
 import { createModal } from "~/lib/modal/create-modal";
+import { useSync } from "~/components/sync/sync-status";
 
 interface GroupFormData {
   mode: "create" | "edit";
@@ -25,6 +26,8 @@ function GroupFormDrawerContent({
   onSubmit,
   isSubmitting,
 }: GroupFormData & { close: () => void }) {
+  const { isOnline } = useSync();
+
   return (
     <>
       <DrawerHeader className="px-4 pb-3 pt-2">
@@ -41,8 +44,9 @@ function GroupFormDrawerContent({
           placeholder="Nombre del grupo"
           value={groupName}
           onChange={(e) => onGroupNameChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+          onKeyDown={(e) => e.key === "Enter" && isOnline && onSubmit()}
           autoFocus
+          disabled={!isOnline}
         />
       </div>
 
@@ -57,8 +61,8 @@ function GroupFormDrawerContent({
         </Button>
         <Button
           onClick={onSubmit}
-          disabled={!groupName.trim() || isSubmitting}
-          className="h-12 flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
+          disabled={!groupName.trim() || isSubmitting || !isOnline}
+          className="h-12 flex-1 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === "create" ? "Crear grupo" : "Guardar cambios"}

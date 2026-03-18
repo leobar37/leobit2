@@ -5,7 +5,6 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 import { useVisitaService, useCustomerGroupService } from "~/lib/sync/service-provider";
 import { toast } from "sonner";
 

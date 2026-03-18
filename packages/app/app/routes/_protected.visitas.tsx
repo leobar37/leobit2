@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { AlertCircle, Search, Users, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Drawer } from "@/components/ui/drawer";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { useCustomers } from "~/hooks/use-customers";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
@@ -20,7 +20,6 @@ import { isOnline } from "~/lib/file-queue/utils";
 import { useVisitaDialogs } from "~/hooks/use-visita-dialogs";
 import { VisitaCard } from "~/components/visitas/visita-card";
 import { SelectionDialog } from "~/components/visitas/selection-dialog";
-import { PurchaseDialog } from "~/components/visitas/purchase-dialog";
 import { NoPurchaseDialog } from "~/components/visitas/no-purchase-dialog";
 import { DistributionHeader } from "~/components/visitas/distribution-header";
 import { toast } from "sonner";
@@ -44,9 +43,6 @@ export default function VisitasPage() {
     isCreating,
     setIsCreating,
     resetSelectionState,
-    purchaseModal,
-    isUpdatingPurchase,
-    setIsUpdatingPurchase,
     noPurchaseModal,
     selectedReason,
     setSelectedReason,
@@ -125,26 +121,6 @@ export default function VisitasPage() {
     }
   }
 
-  async function handleMarkAsPurchased() {
-    const visita = purchaseModal.data;
-    if (!visita) return;
-
-    setIsUpdatingPurchase(true);
-    try {
-      await updateVistaMutation.mutateAsync({
-        id: visita.id,
-        status: "compro",
-      });
-      purchaseModal.close();
-      toast.success("Visita marcada como comprada");
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("Error al actualizar estado");
-    } finally {
-      setIsUpdatingPurchase(false);
-    }
-  }
-
   async function handleMarkAsNotPurchased() {
     const visita = noPurchaseModal.data;
     if (!visita) return;
@@ -186,16 +162,21 @@ export default function VisitasPage() {
       const sale = await createDraftSale.mutateAsync({
         customerId: visita.customerId,
         distribucionId: visita.distribucionId,
+        visitaId: visita.id,
       });
+
+      // Mark attendance: update visita status to "compro" with the sale link
+      await updateVistaMutation.mutateAsync({
+        id: visita.id,
+        status: "compro",
+        saleId: sale.id,
+      });
+
       navigate(`/ventas/${sale.id}/editar?visitaId=${visita.id}`);
     } catch (err) {
       console.error("Error creating sale:", err);
       showError("Error al crear venta", err);
     }
-  }
-
-  function handleMarkAsPurchasedClick(visita: Visita) {
-    purchaseModal.open(visita);
   }
 
   function handleMarkAsNotPurchasedClick(visita: Visita) {
@@ -266,7 +247,6 @@ export default function VisitasPage() {
             <VisitaCard
               key={visita.id}
               visita={visita}
-              onMarkAsPurchased={handleMarkAsPurchasedClick}
               onMarkAsNotPurchased={handleMarkAsNotPurchasedClick}
               onGenerateSale={handleGenerateSale}
             />
@@ -276,16 +256,13 @@ export default function VisitasPage() {
 
       {distribucion && (
         <div className="fixed bottom-28 right-4 z-50">
-          <Dialog open={selectionModal.isOpen} onOpenChange={selectionModal.close}>
-            <DialogTrigger asChild>
-              <Button
-                size="icon"
-                className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-              >
-                <Plus className="h-6 w-6" />
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          <Button
+            size="icon"
+            className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+            onClick={() => selectionModal.open()}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
         </div>
       )}
 
@@ -303,14 +280,6 @@ export default function VisitasPage() {
         isCreating={isCreating}
         onCreateSingle={handleCreateSingleVisita}
         onCreateGroup={handleCreateGroupVisitas}
-      />
-
-      <PurchaseDialog
-        visita={purchaseModal.data}
-        isOpen={purchaseModal.isOpen}
-        onOpenChange={purchaseModal.close}
-        isUpdating={isUpdatingPurchase}
-        onConfirm={handleMarkAsPurchased}
       />
 
       <NoPurchaseDialog

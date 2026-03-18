@@ -1,9 +1,11 @@
 import { Outlet, useLocation } from "react-router";
 import { formatKilos } from "~/lib/utils";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { getToday } from "~/lib/date-utils";
 import { useBusiness } from "@/hooks/use-business";
 import {
@@ -19,6 +21,8 @@ import { z } from "zod";
 import { FormDate } from "@/components/forms/form-date";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { useSync } from "~/components/sync/sync-status";
+import { useTeam } from "~/hooks/use-team";
 
 const distribucionFilterSchema = z.object({
   fecha: z.string(),
@@ -30,8 +34,8 @@ export default function DistribucionesPage() {
   const location = useLocation();
   const isIndexRoute = location.pathname === "/distribuciones";
   const { data: business } = useBusiness();
+  const { data: team = [] } = useTeam();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
-  console.log("[Distribuciones] isAdmin:", isAdmin, "business:", business);
   const { navigateToCreate, navigateToEdit } = useDistribucionParams();
 
   const filterForm = useForm<DistribucionFilterData>({
@@ -50,31 +54,37 @@ export default function DistribucionesPage() {
   const closeMutation = useCloseDistribucion();
   const deleteMutation = useDeleteDistribucion();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { isOnline } = useSync();
+  const { toast } = useToast();
 
-  const distribuciones = distribucionesData ?? [];
-  const totalAsignado = distribuciones.reduce(
-    (sum, d) => sum + Number(d.kilosAsignados || 0),
-    0
-  );
-  const totalVendido = distribuciones.reduce(
-    (sum, d) => sum + Number(d.kilosVendidos || 0),
-    0
-  );
+  const distribuciones = (distribucionesData ?? []).map((distribucion) => {
+    const vendedor = team.find((member) => member.id === distribucion.vendedorId);
+
+    return {
+      ...distribucion,
+      vendedorName: vendedor?.name ?? null,
+    };
+  });
+
+  const distribucionesActivas = distribuciones.filter((d) => d.estado === "activo").length;
+  const distribucionesCerradas = distribuciones.filter((d) => d.estado === "cerrado").length;
 
   const handleNavigateToCreate = () => {
-    console.log("[Distribuciones] handleNavigateToCreate clicked, fecha:", selectedDate);
     navigateToCreate({ fecha: selectedDate });
-    console.log("[Distribuciones] navigateToCreate called");
   };
 
   const handleNavigateToEdit = (distribucion: Distribucion) => {
-    console.log("[Distribuciones] handleNavigateToEdit clicked, id:", distribucion.id);
     navigateToEdit(distribucion.id);
   };
 
   const handleClose = async (distribucion: Distribucion) => {
-    console.log("[Distribuciones] handleClose clicked for id:", distribucion.id);
-    
+    if (!isOnline) {
+      toast.error("Sin conexión", {
+        description: "Se requiere conexión a internet para cerrar una distribución.",
+      });
+      return;
+    }
+
     const confirmed = await confirm({
       title: "Cerrar distribución",
       description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer.",
@@ -84,10 +94,8 @@ export default function DistribucionesPage() {
     });
 
     if (confirmed) {
-      console.log("[Distribuciones] Confirmed, calling closeMutation.mutateAsync...");
       try {
         await closeMutation.mutateAsync(distribucion.id);
-        console.log("[Distribuciones] Close successful!");
       } catch (error) {
         console.error("[Distribuciones] Close failed:", error);
       }
@@ -95,7 +103,13 @@ export default function DistribucionesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    console.log("[Distribuciones] handleDelete clicked for id:", id);
+    if (!isOnline) {
+      toast.error("Sin conexión", {
+        description: "Se requiere conexión a internet para eliminar una distribución.",
+      });
+      return;
+    }
+
     const confirmed = await confirm({
       title: "Eliminar distribución",
       description: "¿Estás seguro de eliminar esta distribución? Esta acción no se puede deshacer.",
@@ -105,10 +119,8 @@ export default function DistribucionesPage() {
     });
 
     if (confirmed) {
-      console.log("[Distribuciones] Confirmed, calling deleteMutation.mutateAsync...");
       try {
         await deleteMutation.mutateAsync(id);
-        console.log("[Distribuciones] Delete successful!");
       } catch (error) {
         console.error("[Distribuciones] Delete failed:", error);
       }
@@ -116,7 +128,7 @@ export default function DistribucionesPage() {
   };
 
   useSetLayout({
-    title: "Distribuciones",
+    title: "Distribuciones del día",
     showBottomNav: true,
     showBackButton: true,
     backHref: "/config",
@@ -130,51 +142,73 @@ export default function DistribucionesPage() {
   return (
     <>
       <div className="space-y-4 pb-24">
-        <Card className="rounded-2xl border border-stone-200/80 bg-gradient-to-br from-orange-500/10 to-orange-600/5 shadow-[0_4px_14px_rgba(15,23,42,0.05)]">
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-orange-600" />
-              <span className="font-medium">{selectedDate}</span>
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              Sin conexión a internet. Algunas acciones como crear, eliminar o cerrar distribuciones requieren conexión.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <FormProvider {...filterForm}>
+          <div className="shell-card-flat rounded-[22px] border border-stone-200/85 p-3">
+            <FormDate
+              name="fecha"
+              quickActionLabels={["Hoy", "Mañana"]}
+            />
+          </div>
+        </FormProvider>
+
+        <Card className="shell-card-flat rounded-[24px] border-stone-200/85">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Resumen del día</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="shell-block-muted rounded-[18px] p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-600">
+                  {distribuciones.length}
+                </span>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">distribuciones</p>
+              </div>
+              <div className="shell-block-muted rounded-[18px] p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Activas</p>
+                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-emerald-600">
+                  {distribucionesActivas}
+                </span>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">en ruta</p>
+              </div>
+              <div className="rounded-[18px] border border-orange-200/80 bg-orange-50/80 p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-orange-700">Cerradas</p>
+                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-700">
+                  {distribucionesCerradas}
+                </span>
+                <p className="mt-0.5 text-[11px] text-orange-700/80">finalizadas</p>
+              </div>
             </div>
-            <FormProvider {...filterForm}>
-              <FormDate
-                name="fecha"
-                label="Seleccionar fecha"
-                quickActionLabels={["Hoy", "Mañana"]}
-              />
-            </FormProvider>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-stone-200/80 shadow-[0_4px_14px_rgba(15,23,42,0.05)]">
-          <CardHeader>
-            <CardTitle className="text-base">Resumen del Día</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <span className="text-xl font-bold text-orange-600">
-                  {formatKilos(totalAsignado, 0)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Asignado (kg)</p>
-              </div>
-              <div className="text-center p-3 bg-green-50 rounded-xl">
-                <span className="text-xl font-bold text-green-600">
-                  {formatKilos(totalVendido, 0)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Vendido (kg)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-base font-semibold text-foreground">Asignaciones</p>
+            <p className="text-sm text-muted-foreground">
+              {distribuciones.length > 0
+                ? `${distribuciones.length} distribución${distribuciones.length === 1 ? "" : "es"} para esta fecha`
+                : "Aún no hay distribuciones registradas para esta fecha"}
+            </p>
+          </div>
+        </div>
 
         <DistribucionTable
-        distribuciones={distribuciones}
-        onEdit={handleNavigateToEdit}
-        onClose={handleClose}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
+          distribuciones={distribuciones}
+          onEdit={handleNavigateToEdit}
+          onClose={handleClose}
+          onDelete={handleDelete}
+          isLoading={isLoading}
+        />
 
         <ConfirmDialog />
       </div>

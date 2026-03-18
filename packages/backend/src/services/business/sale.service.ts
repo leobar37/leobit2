@@ -3,6 +3,7 @@ import type { PaymentRepository } from "../repository/payment.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { BusinessRepository } from "../repository/business.repository";
+import type { VisitaRepository } from "../repository/visita.repository";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
@@ -18,7 +19,8 @@ export class SaleService {
     private paymentRepository: PaymentRepository,
     private distribucionRepository: DistribucionRepository,
     private distribucionItemRepository: DistribucionItemRepository,
-    private businessRepository: BusinessRepository
+    private businessRepository: BusinessRepository,
+    private visitaRepository: VisitaRepository
   ) {}
 
   async getSales(
@@ -47,6 +49,8 @@ export class SaleService {
     data: {
       id?: string;
       customerId?: string;
+      distribucionId?: string;
+      visitaId?: string;
       type?: "instant_sale" | "pre_order";
       saleType: "contado" | "credito";
       totalAmount: number;
@@ -145,6 +149,8 @@ export class SaleService {
 
     const salePayload: CreateSaleInput = {
       customerId: data.customerId,
+      distribucionId: data.distribucionId,
+      visitaId: data.visitaId,
       type: data.type || "instant_sale",
       saleType: data.saleType,
       totalAmount: totalAmount.toFixed(2),
@@ -171,6 +177,16 @@ export class SaleService {
 
     return db.transaction(async (tx) => {
       const sale = await this.repository.create(ctx, salePayload, tx);
+
+      // If sale was created from a visita, update the visita status to "compro"
+      if (data.visitaId) {
+        await this.visitaRepository.updateStatus(
+          ctx,
+          data.visitaId,
+          { status: "compro", saleId: sale.id },
+          tx
+        );
+      }
 
       if (!isEmptyDraft && distribucion && distribucion.modo !== "libre" && !isPreOrder) {
         const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(

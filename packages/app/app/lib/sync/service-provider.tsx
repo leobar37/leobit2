@@ -13,6 +13,7 @@ import { TagService } from "../services/tag-service";
 import { CustomerTagService } from "../services/customer-tag-service";
 import { VisitaService } from "../services/visita-service";
 import { CustomerGroupService } from "../services/customer-group-service";
+import { DistribucionService } from "../services/distribucion-service";
 import type { ConflictStrategy } from "../sync/config";
 
 export interface ServicesContextValue {
@@ -30,6 +31,7 @@ export interface ServicesContextValue {
   customerTagService: CustomerTagService;
   visitaService: VisitaService;
   customerGroupService: CustomerGroupService;
+  distribucionService: DistribucionService;
   businessId: string;
   businessUserId: string;
   authToken: string;
@@ -97,6 +99,7 @@ export function ServicesProvider({
     const customerTagService = new CustomerTagService(pg, db, syncService, businessId, businessUserId);
     const visitaService = new VisitaService(pg, db, syncService, businessId, businessUserId);
     const customerGroupService = new CustomerGroupService(pg, db, syncService, businessId, businessUserId);
+    const distribucionService = new DistribucionService(pg, db, syncService, businessId, businessUserId);
 
     return {
       pg,
@@ -113,6 +116,7 @@ export function ServicesProvider({
       customerTagService,
       visitaService,
       customerGroupService,
+      distribucionService,
       businessId,
       businessUserId,
       authToken,
@@ -365,6 +369,11 @@ export function useVisitaService(): VisitaService {
 export function useCustomerGroupService(): CustomerGroupService {
   const { customerGroupService } = useServices();
   return customerGroupService;
+}
+
+export function useDistribucionService(): DistribucionService {
+  const { distribucionService } = useServices();
+  return distribucionService;
 }
 
 export function usePGlite(): PGlite {

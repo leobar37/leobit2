@@ -15,6 +15,14 @@ import type {
   UpdateSaleInput,
 } from "~/lib/services/sale-service";
 
+export type { Sale, SaleWithItems, SaleStatus, CreateSaleInput, CreateSaleItemInput, UpdateSaleInput };
+
+export interface CancelSaleInput {
+  id: string;
+  reason: string;
+  refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
+}
+
 const QUERY_KEYS = {
   sales: ["sales-new"],
   sale: (id: string) => ["sales-new", id],
@@ -128,6 +136,7 @@ export function useCreateDraftSale() {
     mutationFn: async (options?: {
       customerId?: string;
       distribucionId?: string;
+      visitaId?: string;
     }): Promise<Sale> => {
       console.log("[useCreateDraftSale] Mutation started");
       console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
@@ -146,6 +155,7 @@ export function useCreateDraftSale() {
         saleType: "contado",
         customerId: options?.customerId,
         distribucionId: options?.distribucionId,
+        visitaId: options?.visitaId,
       });
       console.log("[useCreateDraftSale] Sale created with id:", sale.id);
       return sale;

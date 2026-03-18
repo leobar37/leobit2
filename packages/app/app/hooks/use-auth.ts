@@ -22,6 +22,22 @@ async function hydrateCurrentBusinessId() {
   return data.data.id;
 }
 
+/**
+ * Check if the database has any data for the given business
+ * Returns true if data exists, false if empty
+ */
+async function checkDatabaseHasData(businessId: string): Promise<boolean> {
+  try {
+    // Simple check: try to get any customer or product count
+    const result = await api.customers.list.get({
+      headers: { "x-business-id": businessId },
+    });
+    return result.data?.success && (result.data.data?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 async function ensureSessionReady() {
   const session = await refreshSession();
 

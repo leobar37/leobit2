@@ -15,9 +15,9 @@ export class CustomerGroupSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
   ): Promise<void> {
-    const schema = customerGroupCreateSchema;
-    schema.parse(payload);
+    this.validatePayload(payload, customerGroupCreateSchema, customerGroupUpdateSchema, operation);
   }
 
   async execute(

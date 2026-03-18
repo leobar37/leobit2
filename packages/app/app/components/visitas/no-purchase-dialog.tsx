@@ -2,13 +2,13 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import {
   Select,
   SelectContent,
@@ -56,18 +56,18 @@ export function NoPurchaseDialog({
     (selectedReason === "Otro" && !customReason);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>¿Por qué no compró?</DialogTitle>
-          <DialogDescription>
+    <Drawer open={isOpen} onOpenChange={onOpenChange}>
+      <DrawerContent className="px-4 pb-4">
+        <DrawerHeader>
+          <DrawerTitle>¿Por qué no compró?</DrawerTitle>
+          <DrawerDescription>
             Selecciona el motivo por el cual{" "}
             <span className="font-semibold">
               {visita?.customer?.name}
             </span>{" "}
             no realizó la compra
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
         <div className="space-y-4 py-4">
           <Select
@@ -95,7 +95,7 @@ export function NoPurchaseDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DrawerFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -109,8 +109,8 @@ export function NoPurchaseDialog({
             )}
             Confirmar
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

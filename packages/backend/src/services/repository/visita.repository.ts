@@ -159,7 +159,12 @@ export class VisitaRepository {
   /**
    * Update visit status
    */
-  async updateStatus(ctx: RequestContext, visitId: string, data: UpdateVisitaStatusData): Promise<Visita> {
+  async updateStatus(
+    ctx: RequestContext,
+    visitId: string,
+    data: UpdateVisitaStatusData,
+    tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]
+  ): Promise<Visita> {
     const updateData: Partial<Visita> = {
       status: data.status,
       updatedAt: new Date(),
@@ -173,7 +178,9 @@ export class VisitaRepository {
       updateData.saleId = data.saleId;
     }
 
-    const [visit] = await db
+    const dbOrTx = tx || db;
+
+    const [visit] = await dbOrTx
       .update(visitas)
       .set(updateData)
       .where(and(

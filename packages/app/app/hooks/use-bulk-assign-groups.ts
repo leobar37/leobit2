@@ -1,5 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCustomerGroupService } from "~/lib/sync/service-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { api, extractData } from "~/lib/api-client";
+import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 
 export interface BulkAssignGroupsInput {
   customerIds: string[];
@@ -7,24 +8,24 @@ export interface BulkAssignGroupsInput {
 }
 
 export function useBulkAssignGroups() {
-  const customerGroupService = useCustomerGroupService();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useOfflineAwareMutation({
     mutationFn: async ({ customerIds, groupIds }: BulkAssignGroupsInput) => {
       await Promise.all(
-        groupIds.map((groupId) => customerGroupService.addMembers(groupId, customerIds))
+        groupIds.map(async (groupId) => {
+          await api.groups({ id: groupId }).members.post({ customerIds });
+        })
       );
     },
-    onSuccess: async (_, { groupIds }) => {
-      await queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
-      await queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
+    offlineMessage: "Se requiere conexión a internet para asignar grupos",
+    onSuccess: (_, { groupIds }) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
 
-      await Promise.all(
-        groupIds.map((groupId) =>
-          queryClient.invalidateQueries({ queryKey: ["customer-groups", groupId] })
-        )
-      );
+      groupIds.forEach((groupId) => {
+        queryClient.invalidateQueries({ queryKey: ["customer-groups", groupId] });
+      });
     },
   });
 }

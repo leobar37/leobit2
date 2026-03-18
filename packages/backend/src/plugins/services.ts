@@ -48,6 +48,7 @@ import { TagRepository } from "../services/repository/tag.repository";
 import { TagService } from "../services/business/tag.service";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
 import { CustomerTagService } from "../services/business/customer-tag.service";
+import { PuntoVentaRepository } from "../services/repository/punto-venta.repository";
 import { CustomerGroupRepository } from "../services/repository/customer-group.repository";
 import { CustomerGroupService } from "../services/business/customer-group.service";
 import { VisitaRepository } from "../services/repository/visita.repository";
@@ -88,7 +89,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const paymentService = new PaymentService(paymentRepo, customerRepo);
     const inventoryService = new InventoryService(inventoryRepo);
     const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
-    const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo);
+    const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
     const closingService = new ClosingService(closingRepo);
     const syncService = new SyncService({
       customerRepo,
@@ -127,6 +128,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
     const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
     const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo);
+    const puntoVentaRepo = new PuntoVentaRepository();
 
     return {
       businessRepo,
@@ -181,5 +183,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       customerGroupService,
       visitaRepo,
       visitaService,
+      puntoVentaRepo,
     };
   });

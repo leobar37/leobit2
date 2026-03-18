@@ -105,6 +105,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       const distribucion = await distribucionService.createDistribucion(ctx, {
         vendedorId: body.vendedorId,
         puntoVenta: body.puntoVenta,
+        puntoVentaId: body.puntoVentaId,
         fecha: body.fecha,
         modo: body.modo,
         confiarEnVendedor: body.confiarEnVendedor,
@@ -120,6 +121,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       body: t.Object({
         vendedorId: t.String(),
         puntoVenta: t.String({ minLength: 2 }),
+        puntoVentaId: t.Optional(t.String()),
         fecha: t.Optional(t.String()),
         modo: t.Optional(t.Union([t.Literal("estricto"), t.Literal("acumulativo"), t.Literal("libre")])),
         confiarEnVendedor: t.Optional(t.Boolean()),
@@ -144,7 +146,6 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
     async ({ ctx, params, body, distribucionService }) => {
       const distribucion = await distribucionService.updateDistribucion(ctx, params.id, {
         puntoVenta: body.puntoVenta,
-        kilosAsignados: body.kilosAsignados,
         estado: body.estado as "activo" | "cerrado" | "en_ruta" | undefined,
       });
       return {
@@ -158,7 +159,6 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       }),
       body: t.Object({
         puntoVenta: t.Optional(t.String({ minLength: 2 })),
-        kilosAsignados: t.Optional(t.Number({ minimum: 0.001 })),
         estado: t.Optional(t.String()),
       }),
       detail: {
@@ -243,12 +243,9 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
   )
   .delete(
     "/:id",
-    async ({ ctx, params, distribucionService }) => {
+    async ({ ctx, params, distribucionService, set }) => {
       await distribucionService.deleteDistribucion(ctx, params.id);
-      return {
-        success: true,
-        message: "Distribución eliminada correctamente",
-      };
+      set.status = 204;
     },
     {
       params: t.Object({

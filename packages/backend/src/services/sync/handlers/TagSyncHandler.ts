@@ -16,10 +16,10 @@ export class TagSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    const schema = tagCreateSchema;
-    schema.parse(payload);
+    this.validatePayload(payload, tagCreateSchema, tagUpdateSchema, operation);
   }
 
   async execute(

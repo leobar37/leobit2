@@ -16,9 +16,10 @@ export class AbonoSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    abonoCreateSchema.parse(payload);
+    this.validatePayload(payload, abonoCreateSchema, abonoUpdateSchema, operation);
   }
 
   async execute(

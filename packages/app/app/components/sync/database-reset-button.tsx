@@ -27,8 +27,7 @@ export function DatabaseResetButton() {
         request.onerror = () => reject(request.error);
       });
 
-      toast({
-        title: "Base de datos reseteada",
+      toast.success("Base de datos reseteada", {
         description: "La página se recargará para aplicar los cambios.",
       });
 
@@ -37,11 +36,9 @@ export function DatabaseResetButton() {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      toast({
-        title: "Error al resetear",
+      toast.error("Error al resetear", {
         description:
           error instanceof Error ? error.message : "Error desconocido",
-        variant: "destructive",
       });
       setIsResetting(false);
     }

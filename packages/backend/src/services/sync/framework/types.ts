@@ -48,6 +48,7 @@ export interface ISyncHandler {
   validateBusinessRules(
     ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     tx?: DbTransaction
   ): Promise<void>;
   execute(

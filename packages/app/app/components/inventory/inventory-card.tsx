@@ -1,7 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Package } from "lucide-react";
-import { formatKilos } from "~/lib/utils";
+import { Package, ShoppingBag, MapPin, Clock } from "lucide-react";
 import {
   MinimalCard,
   MinimalCardContent,
@@ -10,25 +8,63 @@ import {
 } from "~/components/cards";
 
 interface InventoryCardProps {
-  kilosAsignados: number;
-  kilosVendidos: number;
   puntoVenta: string;
+  modo: "estricto" | "acumulativo" | "libre";
+  estado: "activo" | "cerrado" | "en_ruta";
+  cantidadItems?: number;
   className?: string;
 }
 
 export function InventoryCard({
-  kilosAsignados,
-  kilosVendidos,
   puntoVenta,
+  modo,
+  estado,
+  cantidadItems = 0,
   className,
 }: InventoryCardProps) {
-  const asignados = Number(kilosAsignados) || 0;
-  const vendidos = Number(kilosVendidos) || 0;
+  const getModoLabel = (m: string) => {
+    switch (m) {
+      case "libre":
+        return "Modo Libre";
+      case "acumulativo":
+        return "Modo Acumulativo";
+      default:
+        return "Modo Estricto";
+    }
+  };
 
-  const porcentajeVendido =
-    asignados > 0 ? Math.min(Math.round((vendidos / asignados) * 100), 100) : 0;
+  const getModoDescription = (m: string, items: number) => {
+    if (m === "libre") {
+      return "Sin productos pre-asignados";
+    }
+    if (items === 0) {
+      return "Sin productos asignados";
+    }
+    return `${items} producto${items !== 1 ? "s" : ""} asignado${items !== 1 ? "s" : ""}`;
+  };
 
-  const kilosDisponibles = Math.max(asignados - vendidos, 0);
+  const getEstadoBadge = (e: string) => {
+    switch (e) {
+      case "cerrado":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+            Cerrado
+          </Badge>
+        );
+      case "en_ruta":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+            En ruta
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+            Activo
+          </Badge>
+        );
+    }
+  };
 
   return (
     <MinimalCard variant="filled" tone="primary" padding="lg" radius="lg" className={className}>
@@ -42,45 +78,32 @@ export function InventoryCard({
               className="bg-orange-100"
             />
             <div>
-              <MinimalCardTitle className="text-base">Mi Asignación</MinimalCardTitle>
+              <MinimalCardTitle className="text-base">Mi Distribución</MinimalCardTitle>
               <p className="text-xs text-muted-foreground">Hoy</p>
             </div>
           </div>
-          <Badge
-            variant="secondary"
-            className="bg-orange-100 text-orange-700 hover:bg-orange-100"
-          >
-            {puntoVenta}
-          </Badge>
+          {getEstadoBadge(estado)}
         </div>
 
-        <div className="text-center py-2">
-          <span className="text-4xl font-bold text-foreground">
-            {formatKilos(asignados)}
-          </span>
-          <span className="text-lg text-muted-foreground ml-1">kg</span>
-          <p className="text-sm text-muted-foreground mt-1">asignados</p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4" />
+          <span>{puntoVenta}</span>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              Vendido: {formatKilos(kilosVendidos)} kg
-            </span>
-            <span className="font-medium text-orange-600">
-              {porcentajeVendido}%
+        <div className="py-3 px-4 bg-orange-50 rounded-xl">
+          <div className="flex items-center gap-2 mb-1">
+            {modo === "libre" ? (
+              <Clock className="h-4 w-4 text-orange-600" />
+            ) : (
+              <ShoppingBag className="h-4 w-4 text-orange-600" />
+            )}
+            <span className="font-medium text-orange-700">
+              {getModoLabel(modo)}
             </span>
           </div>
-          <Progress value={porcentajeVendido} className="h-2 bg-orange-100" />
-        </div>
-
-        <div className="pt-2 border-t border-gray-100">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Disponible</span>
-            <span className="text-lg font-semibold text-green-600">
-              {formatKilos(kilosDisponibles)} kg
-            </span>
-          </div>
+          <p className="text-sm text-orange-600/80">
+            {getModoDescription(modo, cantidadItems)}
+          </p>
         </div>
       </MinimalCardContent>
     </MinimalCard>

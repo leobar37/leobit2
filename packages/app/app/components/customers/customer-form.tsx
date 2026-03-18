@@ -11,7 +11,12 @@ import type { Customer } from "~/lib/db/schema";
 const customerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   dni: z.string().nullable(),
-  phone: z.string().nullable(),
+  phone: z.string()
+    .nullable()
+    .refine((val) => {
+      if (!val) return true;
+      return /^9\d{8}$/.test(val);
+    }, "Debe ser un celular válido (9 dígitos comenzando con 9)"),
   address: z.string().nullable(),
   notes: z.string().nullable(),
 });
@@ -103,6 +108,9 @@ export function CustomerForm({ onSubmit, isLoading, customer }: CustomerFormProp
             {...register("phone")}
             className="rounded-xl"
           />
+          {errors.phone && (
+            <p className="text-sm text-red-500">{errors.phone.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -36,7 +36,6 @@ import { useSyncService } from "~/lib/sync/service-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { runManualSync } from "~/lib/sync/manual-sync";
 import { useToast } from "~/hooks/use-toast";
-import { SHAPES_CONFIG } from "~/lib/sync/shape-config";
 import { useListSearch } from "~/hooks/use-list-search";
 
 interface SyncStatus {
@@ -117,13 +116,34 @@ const TABLES_WITH_SYNC_STATUS = new Set([
   "customer_tags",
 ]);
 
-const ENTITY_SUMMARY_CONFIG = SHAPES_CONFIG.filter((shape) => shape.enabled !== false).map(
-  (shape) => ({
-    table: shape.table,
-    label: ENTITY_LABELS[shape.table] ?? shape.table,
-    hasSyncStatus: TABLES_WITH_SYNC_STATUS.has(shape.table),
-  }),
-);
+// Tables synced from server (pull sync)
+const SYNCED_TABLES = [
+  "customers",
+  "products",
+  "suppliers",
+  "product_variants",
+  "inventory",
+  "variant_inventory",
+  "sales",
+  "purchases",
+  "abonos",
+  "sale_items",
+  "purchase_items",
+  "distribuciones",
+  "distribucion_items",
+  "closings",
+  "tags",
+  "customer_tags",
+  "customer_groups",
+  "customer_group_members",
+  "visitas",
+] as const;
+
+const ENTITY_SUMMARY_CONFIG = SYNCED_TABLES.map((table) => ({
+  table,
+  label: ENTITY_LABELS[table] ?? table,
+  hasSyncStatus: TABLES_WITH_SYNC_STATUS.has(table),
+}));
 
 const OPERATION_TABS = [
   { value: "tables", label: "Tablas" },

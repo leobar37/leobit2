@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Tag,
   UserCog,
+  MapPin,
 } from "lucide-react";
 import {
   MinimalCard,
@@ -113,6 +114,15 @@ const tagsConfigItem: ConfigItem = {
   iconBg: "bg-indigo-100",
 };
 
+const puntosVentaConfigItem: ConfigItem = {
+  icon: MapPin,
+  title: "Puntos de Venta",
+  description: "Gestiona puntos de venta para distribuciones",
+  href: "/config/puntos-venta",
+  color: "text-orange-600",
+  iconBg: "bg-orange-100",
+};
+
 const gruposConfigItem: ConfigItem = {
   icon: UserCog,
   title: "Grupos",
@@ -143,6 +153,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        puntosVentaConfigItem,
         gruposConfigItem,
         tagsConfigItem,
         flagsConfigItem,

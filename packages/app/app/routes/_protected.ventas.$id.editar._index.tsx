@@ -44,9 +44,16 @@ function HeaderTotal() {
 
 export default function SaleEditorPage() {
   const navigate = useNavigate();
-  const { saleId } = useNewSaleContext();
+  const { saleId, returnTo, setLinkedVisitaId } = useNewSaleContext();
 
   const { data: sale, isLoading } = useSale(saleId);
+
+  // Set linked visitaId from sale data when available
+  useEffect(() => {
+    if (sale?.visitaId) {
+      setLinkedVisitaId(sale.visitaId);
+    }
+  }, [sale?.visitaId, setLinkedVisitaId]);
 
   if (!saleId) {
     return <Navigate to="/ventas" replace />;
@@ -79,7 +86,7 @@ export default function SaleEditorPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate("/ventas")}
+              onClick={() => navigate(returnTo)}
               className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5" />

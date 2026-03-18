@@ -271,3 +271,13 @@ export {
   type Visita,
   type NewVisita,
 } from "./visitas";
+
+// Puntos de Venta
+export {
+  puntosVenta,
+  puntosVentaRelations,
+  type PuntoVenta,
+  type NewPuntoVenta,
+  puntoVentaTypes,
+  type PuntoVentaType,
+} from "./puntos-venta";

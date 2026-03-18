@@ -184,6 +184,7 @@ export default function CustomersPage() {
                 selectable
                 selected={selectedCustomerIds.has(customer.id)}
                 onSelect={() => toggleCustomerSelection(customer.id)}
+                onNavigate={() => navigate(`/clientes/${customer.id}`)}
                 showTags
               />
             ))}

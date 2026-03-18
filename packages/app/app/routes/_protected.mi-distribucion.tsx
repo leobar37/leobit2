@@ -142,8 +142,6 @@ export default function MiDistribucionPage() {
     );
   }
 
-  const kilosDisponibles =
-    distribucion.kilosAsignados - distribucion.kilosVendidos;
   const isCerrado = distribucion.estado === "cerrado";
 
   return (
@@ -168,9 +166,10 @@ export default function MiDistribucionPage() {
 
       <main className="p-4 pb-24 space-y-4">
         <InventoryCard
-          kilosAsignados={distribucion.kilosAsignados}
-          kilosVendidos={distribucion.kilosVendidos}
           puntoVenta={distribucion.puntoVenta}
+          modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
+          estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
+          cantidadItems={distribucion.items?.length || 0}
         />
 
         {distribucion.modo === "libre" && (!distribucion.items || distribucion.items.length === 0) && (
@@ -239,28 +238,11 @@ export default function MiDistribucionPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-orange-50 rounded-xl">
-                <span className="text-2xl font-bold text-orange-600">
-                  {formatKilos(distribucion.kilosAsignados)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Kg Asignados</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-xl">
-                <span className="text-2xl font-bold text-green-600">
-                  {formatKilos(kilosDisponibles)}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">Kg Disponibles</p>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Monto Recaudado</span>
-                <span className="text-lg font-semibold">
-                  S/ {formatCurrency(distribucion.montoRecaudado)}
-                </span>
-              </div>
+            <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
+              <span className="text-sm text-muted-foreground">Monto Recaudado</span>
+              <span className="text-xl font-bold text-green-600">
+                S/ {formatCurrency(distribucion.montoRecaudado)}
+              </span>
             </div>
           </CardContent>
         </Card>

@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const hasPending = syncStatus?.pending ? syncStatus.pending > 0 : false;
 
   const usarDistribucion = business?.usarDistribucion ?? true;
-  const tieneDistribucion = !!distribucion && distribucion.kilosAsignados != null && distribucion.kilosAsignados > 0;
+  const tieneDistribucion = !!distribucion && distribucion.estado === "activo";
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
 
   const debtorsCount = debtorsSummary?.debtorsCount ?? 0;
@@ -83,9 +83,10 @@ export default function DashboardPage() {
       {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
         <Link to="/mi-distribucion" className="block">
           <InventoryCard
-            kilosAsignados={Number(distribucion.kilosAsignados)}
-            kilosVendidos={Number(distribucion.kilosVendidos)}
             puntoVenta={distribucion.puntoVenta}
+            modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
+            estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
+            cantidadItems={distribucion.items?.length || 0}
           />
         </Link>
       )}

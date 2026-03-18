@@ -477,14 +477,11 @@ export const distribuciones = pgTable(
     businessId: uuid("business_id").notNull(),
     vendedorId: uuid("vendedor_id").notNull(),
     puntoVenta: varchar("punto_venta", { length: 100 }).notNull(),
-    kilosAsignados: decimal("kilos_asignados", { precision: 10, scale: 3 }).notNull(),
-    kilosVendidos: decimal("kilos_vendidos", { precision: 10, scale: 3 }).notNull().default("0"),
+    puntoVentaId: uuid("punto_venta_id"),
     montoRecaudado: decimal("monto_recaudado", { precision: 12, scale: 2 }).notNull().default("0"),
     fecha: date("fecha").notNull(),
     estado: text("estado").notNull().default(DistribucionStatus.ACTIVO),
     modo: text("modo").notNull().default("estricto"),
-    confiarEnVendedor: boolean("confiar_en_vendedor").notNull().default(false),
-    pesoConfirmado: boolean("peso_confirmado").notNull().default(true),
     syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
     syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -494,6 +491,7 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_business_id").on(table.businessId),
     index("idx_distribuciones_vendedor_id").on(table.vendedorId),
     index("idx_distribuciones_sync_status").on(table.syncStatus),
+    index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
   ]
 );
 
@@ -508,6 +506,7 @@ export const distribucionItems = pgTable(
   "distribucion_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
     distribucionId: uuid("distribucion_id").notNull(),
     variantId: uuid("variant_id").notNull(),
     cantidadAsignada: decimal("cantidad_asignada", { precision: 10, scale: 3 }).notNull(),
@@ -519,6 +518,7 @@ export const distribucionItems = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_distribucion_items_business_id").on(table.businessId),
     index("idx_distribucion_items_distribucion_id").on(table.distribucionId),
   ]
 );
@@ -754,6 +754,7 @@ export const customerGroupMembers = pgTable(
   "customer_group_members",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
     groupId: uuid("group_id").notNull(),
     customerId: uuid("customer_id").notNull(),
     addedAt: timestamp("added_at").notNull().defaultNow(),
@@ -762,6 +763,7 @@ export const customerGroupMembers = pgTable(
     syncAttempts: integer("sync_attempts").notNull().default(0),
   },
   (table) => [
+    index("idx_customer_group_members_business_id").on(table.businessId),
     index("idx_customer_group_members_group_id").on(table.groupId),
     index("idx_customer_group_members_customer_id").on(table.customerId),
   ]

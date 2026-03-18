@@ -124,6 +124,7 @@ export function EngineProvider({
         // Generate and copy diagnostic report to clipboard
         copyDiagnosticReport: async () => {
           const pg = pgRef.current;
+          
           interface DiagnosticReport {
             timestamp: string;
             localStorage: {
@@ -134,6 +135,7 @@ export function EngineProvider({
             };
             pgInitialized: boolean;
             tables: Record<string, number>;
+            pullCursor: string | null;
             errors: string[];
           }
           const report: DiagnosticReport = {
@@ -146,6 +148,7 @@ export function EngineProvider({
             },
             pgInitialized: !!pg,
             tables: {},
+            pullCursor: localStorage.getItem("avileo_pull_cursor"),
             errors: [],
           };
 
@@ -157,7 +160,8 @@ export function EngineProvider({
               'products', 'customers', 'sales', 'abonos', 'inventory',
               'suppliers', 'tags', 'product_variants', 'purchases',
               'sale_items', 'purchase_items', 'distribuciones',
-              'distribucion_items', 'closings', 'variant_inventory', 'customer_tags'
+              'distribucion_items', 'closings', 'variant_inventory', 'customer_tags',
+              'customer_groups', 'customer_group_members', 'visitas', 'sync_operations'
             ];
             for (const table of tables) {
               try {

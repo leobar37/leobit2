@@ -16,8 +16,10 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
+    // SaleItem uses custom validation - keep existing logic but add operation param
     if (!payload.saleId) {
       throw new Error("saleId es requerido");
     }

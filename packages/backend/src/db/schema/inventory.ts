@@ -24,6 +24,7 @@ import {
 import { businesses, businessUsers } from "./businesses";
 import { sales, saleItems } from "./sales";
 import { assets } from "./assets";
+import { puntosVenta } from "./puntos-venta";
 
 // Products table
 export const products = pgTable(
@@ -110,10 +111,10 @@ export const distribuciones = pgTable(
       .notNull()
       .references(() => businessUsers.id),
 
-    // Distribution info
-    puntoVenta: varchar("punto_venta", { length: 100 }).notNull(), // Carro A, Casa, etc.
-    kilosAsignados: decimal("kilos_asignados", { precision: 10, scale: 3 }).notNull(),
-    kilosVendidos: decimal("kilos_vendidos", { precision: 10, scale: 3 }).notNull().default("0"),
+    // Punto de venta (snapshot + reference)
+    puntoVenta: varchar("punto_venta", { length: 100 }).notNull(), // Snapshot del nombre al crear
+    puntoVentaId: uuid("punto_venta_id").references(() => puntosVenta.id, { onDelete: "set null" }),
+
     montoRecaudado: decimal("monto_recaudado", { precision: 12, scale: 2 }).notNull().default("0"),
 
     // Dates and status
@@ -121,8 +122,6 @@ export const distribuciones = pgTable(
     estado: distribucionStatusEnum("estado").notNull().default("activo"),
 
     modo: varchar("modo", { length: 20 }).notNull().default("estricto"),
-    confiarEnVendedor: boolean("confiar_en_vendedor").notNull().default(false),
-    pesoConfirmado: boolean("peso_confirmado").notNull().default(true),
 
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
@@ -130,6 +129,7 @@ export const distribuciones = pgTable(
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_distribuciones_business_id").on(table.businessId),
@@ -138,6 +138,7 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_estado").on(table.estado),
     index("idx_distribuciones_modo").on(table.modo),
     index("idx_distribuciones_sync_status").on(table.syncStatus),
+    index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
     index("idx_distribuciones_vendedor_fecha").on(table.vendedorId, table.fecha),
   ]
 );
@@ -168,6 +169,7 @@ export const distribucionItems = pgTable(
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_distribucion_items_business_id").on(table.businessId),
@@ -285,6 +287,10 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
   vendedor: one(businessUsers, {
     fields: [distribuciones.vendedorId],
     references: [businessUsers.id],
+  }),
+  puntoVentaRef: one(puntosVenta, {
+    fields: [distribuciones.puntoVentaId],
+    references: [puntosVenta.id],
   }),
   items: many(distribucionItems),
   sales: many(sales),

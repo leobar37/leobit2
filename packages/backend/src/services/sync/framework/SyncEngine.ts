@@ -182,6 +182,14 @@ export class SyncEngine {
       };
     }
 
+    if (existingOp?.status === "pending" || existingOp?.status === "failed") {
+      logger.info({
+        msg: "🔄 Retrying existing pending/failed operation",
+        idempotencyKey: operation.idempotencyKey,
+        existingStatus: existingOp.status,
+      });
+    }
+
     const conflictResolver = ConflictResolverRegistry.getResolver(operation.entityType);
     const conflict = await conflictResolver.checkConflict(ctx, operation, tx);
 
@@ -197,26 +205,99 @@ export class SyncEngine {
       };
     }
 
+    const [currentOp] = await tx
+      .select()
+      .from(syncOperations)
+      .where(
+        and(
+          eq(syncOperations.businessId, ctx.businessId),
+          eq(syncOperations.operationId, operation.idempotencyKey)
+        )
+      )
+      .limit(1);
+
     try {
-      await tx.insert(syncOperations).values({
-        businessId: ctx.businessId,
-        operationId: operation.idempotencyKey,
-        entity: operation.entityType,
-        action: operation.operation,
-        entityId: operation.entityId,
-        payload: operation.payload,
-        status: "pending",
-        clientTimestamp: new Date(operation.localTimestamp),
-      });
+      if (currentOp?.status === "pending" || currentOp?.status === "failed") {
+        await tx
+          .update(syncOperations)
+          .set({
+            entity: operation.entityType,
+            action: operation.operation,
+            entityId: operation.entityId,
+            payload: operation.payload,
+            status: "pending",
+            clientTimestamp: new Date(operation.localTimestamp),
+            error: null,
+            processedAt: null,
+          })
+          .where(
+            and(
+              eq(syncOperations.businessId, ctx.businessId),
+              eq(syncOperations.operationId, operation.idempotencyKey)
+            )
+          );
+        logger.info({
+          msg: "🔄 Updated existing pending sync operation",
+          idempotencyKey: operation.idempotencyKey,
+        });
+      } else {
+        await tx.insert(syncOperations).values({
+          businessId: ctx.businessId,
+          operationId: operation.idempotencyKey,
+          entity: operation.entityType,
+          action: operation.operation,
+          entityId: operation.entityId,
+          payload: operation.payload,
+          status: "pending",
+          clientTimestamp: new Date(operation.localTimestamp),
+        });
+      }
     } catch (insertError) {
       if (this.isUniqueConstraintViolation(insertError)) {
-        return {
-          idempotencyKey: operation.idempotencyKey,
-          success: true,
-          serverTimestamp: nowIso,
-        };
+        const [existing] = await tx
+          .select()
+          .from(syncOperations)
+          .where(
+            and(
+              eq(syncOperations.businessId, ctx.businessId),
+              eq(syncOperations.operationId, operation.idempotencyKey)
+            )
+          )
+          .limit(1);
+
+        if (existing?.status === "pending" || existing?.status === "failed") {
+          await tx
+            .update(syncOperations)
+            .set({
+              entity: operation.entityType,
+              action: operation.operation,
+              entityId: operation.entityId,
+              payload: operation.payload,
+              status: "pending",
+              clientTimestamp: new Date(operation.localTimestamp),
+              error: null,
+              processedAt: null,
+            })
+            .where(
+              and(
+                eq(syncOperations.businessId, ctx.businessId),
+                eq(syncOperations.operationId, operation.idempotencyKey)
+              )
+            );
+          logger.info({
+            msg: "🔄 Recovered and updated existing pending sync operation",
+            idempotencyKey: operation.idempotencyKey,
+          });
+        } else {
+          return {
+            idempotencyKey: operation.idempotencyKey,
+            success: true,
+            serverTimestamp: nowIso,
+          };
+        }
+      } else {
+        throw insertError;
       }
-      throw insertError;
     }
 
     const handler = HandlerRegistry.getHandler(operation.entityType, this.deps);

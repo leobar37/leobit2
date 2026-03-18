@@ -1,13 +1,13 @@
 import { Users, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import {
   Select,
   SelectContent,
@@ -61,14 +61,14 @@ export function SelectionDialog({
   onCreateGroup,
 }: SelectionDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Agregar Visita</DialogTitle>
-          <DialogDescription>
+    <Drawer open={isOpen} onOpenChange={onOpenChange}>
+      <DrawerContent className="px-4 pb-4 max-h-[85vh]">
+        <DrawerHeader>
+          <DrawerTitle>Agregar Visita</DrawerTitle>
+          <DrawerDescription>
             Selecciona un cliente individual o un grupo
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
         <div className="flex gap-2 py-4">
           <Button
@@ -116,7 +116,7 @@ export function SelectionDialog({
               </SelectContent>
             </Select>
 
-            <DialogFooter>
+            <DrawerFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
@@ -130,7 +130,7 @@ export function SelectionDialog({
                 )}
                 Crear visita
               </Button>
-            </DialogFooter>
+            </DrawerFooter>
           </div>
         )}
 
@@ -152,7 +152,7 @@ export function SelectionDialog({
               </SelectContent>
             </Select>
 
-            <DialogFooter>
+            <DrawerFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
@@ -166,10 +166,10 @@ export function SelectionDialog({
                 )}
                 Crear visitas para todo el grupo
               </Button>
-            </DialogFooter>
+            </DrawerFooter>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

@@ -4,7 +4,7 @@
  * 
  * Migration from TanStack DB to PGlite
  */
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { eq, and, gte, desc, like, or } from "drizzle-orm";
 import { getDatabase } from "~/engine";
 import {
@@ -14,12 +14,40 @@ import {
   type DistribucionItem,
   DistribucionStatus,
 } from "~/engine/schema";
-import { api, extractData } from "~/lib/api-client";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
+import { useDistribucionService } from "~/lib/sync/service-provider";
+import type { CreateDistribucionInput } from "~/lib/services/distribucion-service";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+import { useManualSync } from "./use-manual-sync";
+import { api, extractData } from "~/lib/api-client";
 
 const DISTRIBUCIONES_QUERY_KEY = "distribuciones";
+
+/**
+ * Helper to extract error message from API response
+ * Backend returns errors in format: { success: false, error: { code: "...", message: "..." } }
+ * or { success: false, error: "string message" }
+ */
+function handleApiError(response: { data?: { success?: boolean; error?: string | { code?: string; message?: string } } | null; error?: { value?: unknown } | null }): never {
+  // Network/fetch error
+  if (response.error) {
+    throw new Error(String(response.error.value));
+  }
+
+  // Business logic error from backend
+  if (response.data?.error) {
+    const errorData = response.data.error;
+    if (typeof errorData === 'string') {
+      throw new Error(errorData);
+    }
+    if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+      throw new Error(String(errorData.message));
+    }
+  }
+
+  throw new Error("Error desconocido");
+}
 
 /**
  * Get all distribuciones for a business (with optional filters)
@@ -36,7 +64,11 @@ export function useDistribuciones(params?: {
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, businessId, params],
     queryFn: async () => {
-      if (!businessId) return [];
+      console.log("[useDistribuciones] Fetching from PGlite...", { businessId, params });
+      if (!businessId) {
+        console.log("[useDistribuciones] No businessId, returning empty");
+        return [];
+      }
       
       const { db } = getDatabase();
       
@@ -54,11 +86,14 @@ export function useDistribuciones(params?: {
         conditions.push(eq(distribuciones.estado, params.estado));
       }
       
-      return db
+      const result = await db
         .select()
         .from(distribuciones)
         .where(and(...conditions))
         .orderBy(desc(distribuciones.fecha), desc(distribuciones.createdAt));
+      
+      console.log("[useDistribuciones] Found", result.length, "distribuciones");
+      return result;
     },
     enabled: !!businessId,
   });
@@ -171,14 +206,19 @@ export function useDistribucion(id: string | null) {
   });
 }
 
-interface CreateDistribucionInput {
+
+
+/**
+ * Input type for creating a distribucion via API
+ */
+export interface CreateDistribucionApiInput {
   vendedorId: string;
   puntoVenta: string;
+  puntoVentaId?: string;
   fecha?: string;
   modo?: "estricto" | "acumulativo" | "libre";
-  confiarEnVendedor?: boolean;
   groupId?: string;
-  items?: Array<{
+  items: Array<{
     variantId: string;
     cantidadAsignada: number;
     unidad: string;
@@ -187,32 +227,37 @@ interface CreateDistribucionInput {
 
 /**
  * Create a new distribucion
- * Requires internet connection
+ * ONLINE-ONLY: Requires internet connection
  */
 export function useCreateDistribucion() {
   const queryClient = useQueryClient();
+  const { pullNow } = useManualSync();
 
   return useOfflineAwareMutation({
-    mutationFn: async (input: CreateDistribucionInput) => {
-      console.log("[Distribuciones] useCreateDistribucion called with:", input);
-      const today = input.fecha || new Date().toISOString().split("T")[0];
-      const payload = {
-        vendedorId: input.vendedorId,
-        puntoVenta: input.puntoVenta,
-        fecha: today,
-        modo: input.modo || "estricto",
-        confiarEnVendedor: input.confiarEnVendedor || false,
-        items: input.items || [],
-      };
-      console.log("[Distribuciones] useCreateDistribucion payload:", payload);
-      const result = await extractData(api.distribuciones.post(payload));
-      console.log("[Distribuciones] useCreateDistribucion result:", result);
-      return result;
+    mutationFn: async (input: CreateDistribucionApiInput) => {
+      console.log("[useCreateDistribucion] Creating distribucion via API...", input);
+      const response = await (api.distribuciones as any).post(input);
+      console.log("[useCreateDistribucion] API response:", response);
+      if (!response.data?.success || response.error) {
+        handleApiError(response);
+      }
+      return response.data.data;
     },
     offlineMessage: "Se requiere conexión a internet para crear una distribución",
-    onSuccess: () => {
+    onSuccess: async () => {
+      console.log("[useCreateDistribucion] onSuccess - pulling changes immediately");
+      // Force pull immediately to sync new distribucion from server to PGlite
+      await pullNow();
+
+      console.log("[useCreateDistribucion] onSuccess - invalidating queries");
+      // Invalidate both distribuciones and visitas since creating a distribucion
+      // automatically creates visitas on the backend
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
+      });
+      // Use predicate to invalidate all visit queries regardless of distribucionId
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "visitas",
       });
     },
   });
@@ -224,16 +269,23 @@ export function useCreateDistribucion() {
  */
 export function useCloseDistribucion() {
   const queryClient = useQueryClient();
+  const { pullNow } = useManualSync();
 
   return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
       console.log("[Distribuciones] useCloseDistribucion - calling API for id:", id);
-      const result = await extractData(api.distribuciones({ id }).close.post());
-      console.log("[Distribuciones] useCloseDistribucion - API response:", result);
-      return result;
+      const response = await (api.distribuciones({ id }).close as any).patch();
+      console.log("[Distribuciones] useCloseDistribucion - API response:", response);
+      if (!response.data?.success || response.error) {
+        handleApiError(response);
+      }
+      return response.data.data;
     },
     offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
-    onSuccess: (_, id) => {
+    onSuccess: async (_, id) => {
+      // Force pull immediately to sync closure from server to PGlite
+      await pullNow();
+
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
       });
@@ -263,10 +315,11 @@ export function useUpdateDistribucionItems() {
         unidad: string;
       }>;
     }) => {
-      const result = await extractData(
-        api.distribuciones({ id }).items.put({ items })
-      );
-      return result;
+      const response = await (api.distribuciones({ id }).items as any).put({ items });
+      if (!response.data?.success || response.error) {
+        handleApiError(response);
+      }
+      return response.data.data;
     },
     offlineMessage: "Se requiere conexión a internet para actualizar los items de distribución",
     onSuccess: (_, variables) => {
@@ -290,8 +343,11 @@ export function useUpdateDistribucion() {
   return useOfflineAwareMutation({
     mutationFn: async (data: { id: string; [key: string]: unknown }) => {
       const { id, ...changes } = data;
-      const result = await extractData(api.distribuciones({ id }).put(changes));
-      return result;
+      const response = await (api.distribuciones({ id }) as any).put(changes);
+      if (!response.data?.success || response.error) {
+        handleApiError(response);
+      }
+      return response.data.data;
     },
     offlineMessage: "Se requiere conexión a internet para actualizar la distribución",
     onSuccess: (_, variables) => {
@@ -311,18 +367,30 @@ export function useUpdateDistribucion() {
  */
 export function useDeleteDistribucion() {
   const queryClient = useQueryClient();
+  const { pullNow } = useManualSync();
 
   return useOfflineAwareMutation({
     mutationFn: async (id: string) => {
       console.log("[Distribuciones] useDeleteDistribucion - calling API for id:", id);
-      const result = await extractData(api.distribuciones({ id }).delete());
-      console.log("[Distribuciones] useDeleteDistribucion - API response:", result);
-      return result;
+      const response = await api.distribuciones({ id }).delete();
+      if (response.error) {
+        handleApiError(response);
+      }
+      console.log("[Distribuciones] useDeleteDistribucion - deleted successfully");
     },
     offlineMessage: "Se requiere conexión a internet para eliminar la distribución",
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Force pull immediately to sync deletion from server to PGlite
+      await pullNow();
+
+      // Invalidate both distribuciones and visitas since deleting a distribucion
+      // also deletes associated visitas on the backend
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
+      });
+      // Use predicate to invalidate all visit queries regardless of distribucionId
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "visitas",
       });
     },
   });

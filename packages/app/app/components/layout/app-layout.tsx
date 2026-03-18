@@ -128,7 +128,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ config, setConfig, toolbarPortalHost }}>
-      <div className="min-h-screen app-shell">
+      <div className="h-screen h-dvh app-shell flex flex-col">
         <header className="sticky top-0 z-50 border-b shell-surface">
           <div className="flex items-center justify-between h-16 px-3 sm:px-4">
             <div className="flex min-w-0 items-center gap-3">
@@ -236,7 +236,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
         </header>
 
         <main
-          className={`px-3 py-5 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}
+          className={`flex-1 overflow-y-auto overscroll-y-contain px-3 py-5 sm:px-4 ${showBottomNav ? "pb-24" : "pb-8"}`}
         >
           {children}
         </main>

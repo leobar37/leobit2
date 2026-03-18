@@ -145,106 +145,106 @@
     {
       "idx": 20,
       "version": "7",
-      "when": 1772900000000,
-      "tag": "0017_add_order_payment_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 21,
-      "version": "7",
       "when": 1772930000000,
       "tag": "0017_cold_adam_destine",
       "breakpoints": true
     },
     {
-      "idx": 22,
+      "idx": 21,
       "version": "7",
       "when": 1772955442097,
       "tag": "0017_eminent_groot",
       "breakpoints": true
     },
     {
-      "idx": 23,
+      "idx": 22,
       "version": "7",
       "when": 1773000000000,
       "tag": "0018_add_whatsapp_tables",
       "breakpoints": true
     },
     {
-      "idx": 24,
+      "idx": 23,
       "version": "7",
       "when": 1773100000000,
       "tag": "0019_add_allow_customer_edit",
       "breakpoints": true
     },
     {
-      "idx": 25,
+      "idx": 24,
       "version": "7",
       "when": 1741540800000,
       "tag": "0020_add_replica_identity",
       "breakpoints": true
     },
     {
-      "idx": 26,
+      "idx": 25,
       "version": "7",
       "when": 1741600000000,
       "tag": "0021_make_client_id_nullable",
       "breakpoints": true
     },
     {
-      "idx": 27,
+      "idx": 26,
       "version": "7",
       "when": 1741650000000,
       "tag": "0022_add_suppliers_purchases_sync",
       "breakpoints": true
     },
     {
-      "idx": 28,
+      "idx": 27,
       "version": "7",
       "when": 1741700000000,
       "tag": "0023_unify_sales_orders",
       "breakpoints": true
     },
     {
-      "idx": 29,
+      "idx": 28,
       "version": "7",
       "when": 1741750000000,
       "tag": "0024_add_sale_tokens",
       "breakpoints": true
     },
     {
-      "idx": 30,
+      "idx": 29,
       "version": "7",
       "when": 1741800000000,
       "tag": "0025_rename_client_to_customer",
       "breakpoints": true
     },
     {
-      "idx": 31,
+      "idx": 30,
       "version": "7",
       "when": 1741850000000,
       "tag": "0027_add_missing_replica_identity",
       "breakpoints": true
     },
     {
-      "idx": 32,
+      "idx": 31,
       "version": "7",
       "when": 1773521265525,
       "tag": "0032_sync_status_defaults",
       "breakpoints": true
     },
     {
-      "idx": 33,
+      "idx": 32,
       "version": "7",
       "when": 1773600000000,
       "tag": "0035_add_customer_groups",
       "breakpoints": true
     },
     {
-      "idx": 34,
+      "idx": 33,
       "version": "7",
       "when": 1773610000000,
       "tag": "0036_add_visitas_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1773700000000,
+      "tag": "0038_add_visita_id_to_sales",
       "breakpoints": true
     }
   ]

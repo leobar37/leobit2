@@ -16,10 +16,10 @@ export class InventorySyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    const schema = inventoryCreateSchema;
-    schema.parse(payload);
+    this.validatePayload(payload, inventoryCreateSchema, inventoryUpdateSchema, operation);
   }
 
   async execute(

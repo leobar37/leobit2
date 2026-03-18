@@ -69,6 +69,7 @@ export interface Sale {
   customer?: SaleCustomer | null;
   sellerId: string;
   distribucionId: string | null;
+  visitaId: string | null;
   type: SaleType;
   saleType: SalePaymentType;
   paymentMode: string | null;
@@ -114,6 +115,7 @@ export interface CreateSaleInput {
   customerId?: string;
   sellerId: string;
   distribucionId?: string;
+  visitaId?: string;
   type?: SaleType;
   saleType?: SalePaymentType;
   totalAmount: number;
@@ -369,18 +371,19 @@ export class SaleService extends BaseService {
     try {
       await this.pg.query(
         `INSERT INTO sales (
-          id, business_id, customer_id, seller_id, distribucion_id,
+          id, business_id, customer_id, seller_id, distribucion_id, visita_id,
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
           sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $22)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
         [
           saleId,
           this.businessId,
           saleInput.customerId || null,
           sellerId,
           saleInput.distribucionId || null,
+          saleInput.visitaId || null,
           saleInput.type || "instant_sale",
           saleInput.saleType || "contado",
           saleInput.paymentMode || null,
@@ -410,6 +413,7 @@ export class SaleService extends BaseService {
           customerId: saleInput.customerId,
           sellerId,
           distribucionId: saleInput.distribucionId,
+          visitaId: saleInput.visitaId,
           type: saleInput.type || "instant_sale",
           saleType: saleInput.saleType || "contado",
           paymentMode: saleInput.paymentMode,
@@ -475,18 +479,19 @@ export class SaleService extends BaseService {
       // Insert sale record
       await this.pg.query(
         `INSERT INTO sales (
-          id, business_id, customer_id, seller_id, distribucion_id,
+          id, business_id, customer_id, seller_id, distribucion_id, visita_id,
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
           sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $22)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
         [
           saleId,
           this.businessId,
           saleInput.customerId || null,
           sellerId,
           saleInput.distribucionId || null,
+          saleInput.visitaId || null,
           saleInput.type || "instant_sale",
           saleInput.saleType || "contado",
           saleInput.paymentMode || null,
@@ -540,6 +545,7 @@ export class SaleService extends BaseService {
           customerId: saleInput.customerId,
           sellerId,
           distribucionId: saleInput.distribucionId,
+          visitaId: saleInput.visitaId,
           type: saleInput.type || "instant_sale",
           saleType: saleInput.saleType || "contado",
           paymentMode: saleInput.paymentMode,
@@ -733,11 +739,12 @@ export class SaleService extends BaseService {
       `UPDATE sales SET
         status = 'cancelled',
         cancelled_at = $1,
-        cancel_reason = $2,
+        cancelled_by = $2,
+        cancel_reason = $3,
         updated_at = $1,
-        sync_status = $3
-      WHERE id = $4`,
-      [now, reason, SyncStatus.PENDING, id]
+        sync_status = $4
+      WHERE id = $5`,
+      [now, this.businessUserId, reason, SyncStatus.PENDING, id]
     );
 
     const syncGroupId = await this.getInsertSyncGroupId(id);
@@ -749,6 +756,7 @@ export class SaleService extends BaseService {
         status: "cancelled",
         cancelReason: reason,
         cancelledAt: now,
+        cancelledBy: this.businessUserId,
       },
       syncGroupId
     );

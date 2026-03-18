@@ -1,4 +1,4 @@
-import { Clock, CheckCircle, XCircle, Check, X, ShoppingCart } from "lucide-react";
+import { Clock, CheckCircle, XCircle, X, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "~/lib/utils";
@@ -42,14 +42,12 @@ const statusLabels: Record<VisitaStatus, string> = {
 
 interface VisitaCardProps {
   visita: Visita;
-  onMarkAsPurchased: (visita: Visita) => void;
   onMarkAsNotPurchased: (visita: Visita) => void;
   onGenerateSale: (visita: Visita) => void;
 }
 
 export function VisitaCard({
   visita,
-  onMarkAsPurchased,
   onMarkAsNotPurchased,
   onGenerateSale,
 }: VisitaCardProps) {
@@ -103,14 +101,6 @@ export function VisitaCard({
         <div className="mt-3 flex gap-2 pl-3">
           <Button
             size="sm"
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            onClick={() => onMarkAsPurchased(visita)}
-          >
-            <Check className="mr-1 h-4 w-4" />
-            Compró
-          </Button>
-          <Button
-            size="sm"
             variant="outline"
             className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
             onClick={() => onMarkAsNotPurchased(visita)}
@@ -120,12 +110,11 @@ export function VisitaCard({
           </Button>
           <Button
             size="sm"
-            variant="outline"
-            className="border-orange-200 text-orange-600 hover:bg-orange-50"
+            className="flex-1 border-orange-200 bg-orange-500 text-white hover:bg-orange-600"
             onClick={() => onGenerateSale(visita)}
-            title="Generar venta"
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="mr-1 h-4 w-4" />
+            Generar venta
           </Button>
         </div>
       )}

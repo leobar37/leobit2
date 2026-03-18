@@ -14,7 +14,9 @@ interface PullSyncWrapperProps {
 
 export function PullSyncWrapper({ children }: PullSyncWrapperProps) {
   const { pg, isInitialized } = useEngine();
-  const { db, businessId, authToken } = useServices();
+  const services = useServices();
+
+  const { db, businessId, authToken } = services;
 
   // Enable pull sync for sales, customers, and other key entities
   const { isPulling, lastPullResult, forcePull } = usePullSync(

@@ -21,9 +21,10 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    distribucionCreateSchema.parse(payload);
+    this.validatePayload(payload, distribucionCreateSchema, distribucionUpdateSchema, operation);
   }
 
   async execute(
@@ -66,6 +67,7 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
       fecha: parsed.fecha ?? getToday(),
       modo: parsed.modo,
       confiarEnVendedor: parsed.confiarEnVendedor,
+      groupId: parsed.groupId,
       items: parsed.items.map(item => ({
         variantId: item.variantId,
         cantidadAsignada: Number(item.cantidadAsignada),
@@ -83,8 +85,6 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
     const updateData: Parameters<typeof this.distribucionRepo.update>[2] = {};
 
     if (parsed.puntoVenta !== undefined) updateData.puntoVenta = parsed.puntoVenta;
-    if (parsed.kilosAsignados !== undefined) updateData.kilosAsignados = String(parsed.kilosAsignados);
-    if (parsed.kilosVendidos !== undefined) updateData.kilosVendidos = String(parsed.kilosVendidos);
     if (parsed.montoRecaudado !== undefined) updateData.montoRecaudado = String(parsed.montoRecaudado);
     if (parsed.fecha !== undefined) updateData.fecha = parsed.fecha;
     if (parsed.estado !== undefined) updateData.estado = parsed.estado;

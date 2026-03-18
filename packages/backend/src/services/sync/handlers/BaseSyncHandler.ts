@@ -5,6 +5,7 @@ import type { ISyncHandler, SyncHandlerResult } from "../framework/types";
 import { logger } from "../../../lib/logger";
 import { syncLogger } from "../sync-logger";
 import { toISODate, now } from "../../../lib/date-utils";
+import { z } from "zod";
 
 export abstract class BaseSyncHandler implements ISyncHandler {
   abstract readonly entityType: SyncEntity;
@@ -135,5 +136,23 @@ export abstract class BaseSyncHandler implements ISyncHandler {
       error,
       serverTimestamp: toISODate(now()),
     };
+  }
+
+  protected validatePayload(
+    payload: Record<string, unknown>,
+    createSchema: z.ZodType<unknown>,
+    updateSchema?: z.ZodType<unknown>,
+    operation?: string
+  ): void {
+    // For update/delete operations, validation is handled in execute method
+    if (operation === "update" && updateSchema) {
+      updateSchema.parse(payload);
+    } else if (operation === "delete") {
+      // No validation needed for delete - entity existence checked in execute
+      return;
+    } else {
+      // For create or when no specific schema available, use create schema
+      createSchema.parse(payload);
+    }
   }
 }

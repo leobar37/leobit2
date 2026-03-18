@@ -37,6 +37,103 @@ const VALID_TABLES = new Set([
   "visitas",
 ]);
 
+// Valid columns per table - used to filter out invalid fields like "items" from sales
+const VALID_COLUMNS: Record<string, Set<string>> = {
+  sales: new Set([
+    "id", "business_id", "customer_id", "seller_id", "distribucion_id", "visita_id",
+    "type", "sale_type", "payment_mode", "total_amount", "amount_paid", "balance_due",
+    "tara", "net_weight", "sale_date", "delivery_date", "order_date", "status",
+    "version", "confirmed_snapshot", "delivered_snapshot", "allow_customer_edit",
+    "sync_status", "sync_attempts", "cancelled_at", "cancelled_by", "cancel_reason",
+    "refund_amount", "refund_date", "refund_method", "refund_reference", "refund_notes",
+    "advance_payment_method", "advance_reference_number", "advance_proof_image_id",
+    "created_at", "updated_at"
+  ]),
+  sale_items: new Set([
+    "id", "sale_id", "product_id", "variant_id", "business_id",
+    "product_name", "variant_name", "quantity", "ordered_quantity", "delivered_quantity",
+    "unit_price", "unit_price_quoted", "unit_price_final", "cost_price_snapshot",
+    "subtotal", "is_modified", "original_quantity", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customers: new Set([
+    "id", "business_id", "name", "dni", "phone", "address", "notes", "reference",
+    "balance", "credit_limit", "is_active", "sync_status", "sync_attempts", "sync_version",
+    "created_by", "created_at", "updated_at"
+  ]),
+  products: new Set([
+    "id", "business_id", "name", "type", "description", "is_active",
+    "image_url", "image_id", "has_variants", "base_price", "cost_price",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  product_variants: new Set([
+    "id", "product_id", "business_id", "name", "sku", "unit_quantity", "price", "cost_price",
+    "stock", "sort_order", "is_active", "sync_status", "sync_attempts", "sync_version",
+    "created_at", "updated_at"
+  ]),
+  abonos: new Set([
+    "id", "customer_id", "seller_id", "business_id", "related_sale_id",
+    "amount", "payment_method", "reference_number", "proof_image_id", "notes",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  distribuciones: new Set([
+    "id", "business_id", "vendedor_id", "punto_venta", "punto_venta_id",
+    "monto_recaudado", "fecha", "estado", "modo", "group_id",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  distribucion_items: new Set([
+    "id", "distribucion_id", "variant_id", "business_id",
+    "cantidad_asignada", "cantidad_vendida", "unidad",
+    "sync_status", "sync_attempts", "sync_version",
+    "created_at", "updated_at"
+  ]),
+  purchases: new Set([
+    "id", "business_id", "supplier_id", "purchase_date", "invoice_number",
+    "receipt_image_id", "status", "total_amount", "notes",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  purchase_items: new Set([
+    "id", "purchase_id", "product_id", "variant_id", "unit_id", "business_id",
+    "product_name", "variant_name", "quantity", "unit_cost", "total_cost", "subtotal",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  suppliers: new Set([
+    "id", "business_id", "name", "type", "dni", "ruc", "phone", "address", "email", "notes",
+    "is_active", "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
+  ]),
+  inventory: new Set([
+    "id", "product_id", "business_id", "quantity", "updated_at"
+  ]),
+  variant_inventory: new Set([
+    "id", "variant_id", "business_id", "quantity", "updated_at"
+  ]),
+  closings: new Set([
+    "id", "business_id", "seller_id", "closing_date", "total_sales",
+    "total_amount", "cash_amount", "total_credit", "total_kilos", "backdate_reason",
+    "status", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  tags: new Set([
+    "id", "business_id", "name", "color", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_tags: new Set([
+    "id", "customer_id", "tag_id", "business_id", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_groups: new Set([
+    "id", "business_id", "name", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_group_members: new Set([
+    "id", "group_id", "customer_id", "business_id", "added_at"
+  ]),
+  visitas: new Set([
+    "id", "distribucion_id", "customer_id", "vendedor_id", "business_id",
+    "status", "motivo_no_compra", "sale_id",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+};
+
 export interface PullChange {
   idempotencyKey: string;
   entityType: string;
@@ -136,6 +233,19 @@ async function applyChange(
       case "create": {
         const data = toSnakeCase(change.payload);
         
+        // Filter out invalid columns that don't exist in the target table
+        // This prevents errors when the server sends extra fields like "items" for sales
+        const validColumns = VALID_COLUMNS[tableName];
+        if (validColumns) {
+          const invalidColumns = Object.keys(data).filter(col => !validColumns.has(col));
+          if (invalidColumns.length > 0) {
+            console.warn(`[Pull] Filtering out invalid columns for ${tableName}:`, invalidColumns);
+            for (const col of invalidColumns) {
+              delete data[col];
+            }
+          }
+        }
+        
         // Inject required fields if missing from payload
         // id: always use entityId from the change record
         if (!data.id) {
@@ -181,31 +291,53 @@ async function applyChange(
 
       case "update": {
         const data = toSnakeCase(change.payload);
-        
+
+        // Filter out invalid columns that don't exist in the target table
+        const validColumns = VALID_COLUMNS[tableName];
+        if (validColumns) {
+          const invalidColumns = Object.keys(data).filter(col => !validColumns.has(col));
+          if (invalidColumns.length > 0) {
+            console.warn(`[Pull] Filtering out invalid columns for ${tableName} update:`, invalidColumns);
+            for (const col of invalidColumns) {
+              delete data[col];
+            }
+          }
+        }
+
         if (Object.keys(data).length === 0) {
           return { success: false, error: "Empty payload for update operation" };
         }
 
-        // Ensure id and business_id are set before building the query
+        // Ensure id is set
         if (!data.id) {
           data.id = change.entityId;
         }
-        if (!data.business_id) {
-          data.business_id = businessId;
+
+        // Check if record exists
+        const existing = await pg.query<{ id: string }>(
+          `SELECT id FROM "${tableName}" WHERE id = $1`,
+          [change.entityId]
+        );
+
+        if (existing.rows.length === 0) {
+          // Record doesn't exist locally - this is a partial update for a missing record
+          // Skip it silently - the full record will come later via initial sync
+          console.warn(`[Pull] Update for non-existent record skipped: ${tableName}:${change.entityId}`);
+          return { success: true };
         }
 
-        const columns = Object.keys(data);
-        const values = Object.values(data).map(formatSqlValue);
-
-        // Always use UPSERT: insert if not exists, update if exists
-        // This handles the case where local DB was cleared but server has the record
-        const setClauses = columns
-          .filter((col) => col !== "id")
-          .map((col) => `${col} = EXCLUDED.${col}`)
+        // Build partial UPDATE - only update fields that are in the payload
+        const setClauses = Object.entries(data)
+          .filter(([col]) => col !== "id") // Never update id
+          .map(([col, val]) => `${col} = ${formatSqlValue(val)}`)
           .join(", ");
 
+        if (!setClauses) {
+          return { success: true }; // Nothing to update
+        }
+
         await pg.exec(
-          `INSERT INTO "${tableName}" (${columns.join(", ")}) VALUES (${values.join(", ")}) ON CONFLICT (id) DO UPDATE SET ${setClauses}`
+          `UPDATE "${tableName}" SET ${setClauses} WHERE id = '${data.id}'`
         );
         break;
       }
@@ -432,6 +564,30 @@ export class PullService {
 
       const { changes, nextSince, hasMore = false, serverTimestamp } = body.data;
 
+      const entityCounts = changes.reduce((acc, c) => {
+        acc[c.entityType] = (acc[c.entityType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      console.log(`[PULL] 📥 Received changes:`, {
+        count: changes.length,
+        cursor: this.lastSince,
+        nextSince,
+        hasMore,
+        serverTimestamp,
+        entityTypes: entityCounts,
+        ALL_CHANGES: changes.map(c => ({ entityType: c.entityType, operation: c.operation, entityId: c.entityId, name: c.payload?.name })),
+      });
+
+      if (changes.length === 0) {
+        console.log(`[PULL] ✅ No new changes`);
+        return {
+          success: true,
+          changesApplied: 0,
+          hasMore,
+        };
+      }
+
       // Update last pull time
       this.lastPullTime = serverTimestamp ? new Date(serverTimestamp) : new Date();
 
@@ -469,6 +625,8 @@ export class PullService {
       // Log summary if there were failures
       if (failedChanges.length > 0) {
         console.warn(`[Pull] Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
+      } else {
+        console.log(`[Pull] ✅ Applied all ${appliedCount} changes successfully`);
       }
 
       return {

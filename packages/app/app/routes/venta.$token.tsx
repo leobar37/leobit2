@@ -112,7 +112,7 @@ export default function PublicSalePage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const { data: products } = useProducts();
-  const { data: variants } = useVariantsByProduct(selectedProductId);
+  const { data: variants } = useVariantsByProduct(selectedProductId || "");
 
   if (isLoading) {
     return (
@@ -150,10 +150,8 @@ export default function PublicSalePage() {
     if (!token) return;
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
-      toast({
-        title: "Cantidad inválida",
+      toast.error("Cantidad inválida", {
         description: "Ingresa una cantidad válida",
-        variant: "destructive",
       });
       return;
     }
@@ -511,8 +509,7 @@ export default function PublicSalePage() {
               }
               onClick={() => {
                 // TODO: Implement confirmation
-                toast({
-                  title: "Próximamente",
+                toast.info("Próximamente", {
                   description: "La confirmación estará disponible pronto",
                 });
                 setShowConfirmDialog(false);

@@ -54,6 +54,8 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       const result = await saleService.createSale(ctx as RequestContext, {
         id: body.id,
         customerId: body.customerId,
+        distribucionId: body.distribucionId,
+        visitaId: body.visitaId,
         type: body.type,
         saleType: body.saleType,
         totalAmount: body.totalAmount,
@@ -71,6 +73,8 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       body: t.Object({
         id: t.Optional(t.String()),
         customerId: t.Optional(t.String()),
+        distribucionId: t.Optional(t.String()),
+        visitaId: t.Optional(t.String()),
         type: t.Optional(t.Union([t.Literal("instant_sale"), t.Literal("pre_order")])),
         saleType: t.Union([t.Literal("contado"), t.Literal("credito")]),
         totalAmount: t.Number(),

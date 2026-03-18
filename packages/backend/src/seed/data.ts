@@ -105,8 +105,6 @@ export const ABONOS: AbonoData[] = [];
 
 export interface DistribucionData {
   puntoVenta: string;
-  kilosAsignados: number;
-  kilosVendidos: number;
   montoRecaudado: number;
   fecha: string; // YYYY-MM-DD
   estado: "activo" | "cerrado" | "en_ruta";

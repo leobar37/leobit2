@@ -32,7 +32,7 @@ function validateBusinessRules(
   handler: ISyncHandler
 ): SyncHandlerResult | null {
   try {
-    handler.validateBusinessRules(context.ctx, operation.payload);
+    handler.validateBusinessRules(context.ctx, operation.payload, operation.operation);
     return null;
   } catch (error) {
     return {

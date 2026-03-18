@@ -20,24 +20,35 @@ interface CustomerCardProps {
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (selected: boolean) => void;
+  onNavigate?: () => void;
 }
 
-export function CustomerCard({ 
-  customer, 
-  showDebt = false, 
+export function CustomerCard({
+  customer,
+  showDebt = false,
   showTags = true,
   compact = false,
   selectable = false,
   selected = false,
   onSelect,
+  onNavigate,
 }: CustomerCardProps) {
   const isPending = customer.syncStatus === "pending";
   const { data: customerTags } = useCustomerTagsWithDetails(customer.id);
   const { data: customerGroups } = useCustomerGroupsWithDetails(customer.id);
 
-  const handleClick = () => {
+  const handleSelectClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (selectable && onSelect) {
       onSelect(!selected);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (selectable && selected && onSelect) {
+      onSelect(false);
+    } else if (onNavigate) {
+      onNavigate();
     }
   };
 
@@ -52,15 +63,17 @@ export function CustomerCard({
         selectable && "cursor-pointer",
         selected && "border border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)]"
       )}
-      onClick={handleClick}
+      onClick={handleCardClick}
     >
       <MinimalCardContent className={cn(compact ? "p-3" : "p-4")}>
         <div className="flex items-start gap-3">
           {selectable ? (
-            <div 
-              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                selected 
-                  ? "bg-orange-500 text-white" 
+            <button
+              type="button"
+              onClick={handleSelectClick}
+              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                selected
+                  ? "bg-orange-500 text-white"
                   : "bg-orange-100 text-orange-600"
               }`}
             >
@@ -69,7 +82,7 @@ export function CustomerCard({
               ) : (
                 <User className="h-5 w-5" />
               )}
-            </div>
+            </button>
           ) : (
             <MinimalCardMedia 
               icon={User} 

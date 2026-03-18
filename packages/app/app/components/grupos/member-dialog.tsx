@@ -1,4 +1,4 @@
-import { Check, Loader2, UserMinus, UserPlus } from "lucide-react";
+import { Check, Loader2, UserMinus, UserPlus, WifiOff } from "lucide-react";
 
 import {
   Dialog,
@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSync } from "~/components/sync/sync-status";
 
 interface Member {
   customerId: string;
@@ -49,6 +51,8 @@ export function MemberDialog({
   onAddMembers,
   isManagingMembers,
 }: MemberDialogProps) {
+  const { isOnline } = useSync();
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col">
@@ -58,6 +62,15 @@ export function MemberDialog({
             {groupName} - {members.length} miembro{members.length !== 1 ? "s" : ""}
           </DialogDescription>
         </DialogHeader>
+
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              Conéctate a internet para gestionar miembros
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
           <div className="space-y-2">
@@ -83,10 +96,11 @@ export function MemberDialog({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500"
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500 disabled:opacity-50"
                       onClick={() =>
                         onRemoveMember(member.customerId, member.customerName)
                       }
+                      disabled={!isOnline}
                       title="Eliminar del grupo"
                     >
                       <UserMinus className="h-4 w-4" />
@@ -110,8 +124,10 @@ export function MemberDialog({
                 {availableCustomers.map((customer) => (
                   <div
                     key={customer.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border border-stone-200 bg-white p-3 hover:border-orange-300"
-                    onClick={() => onToggleCustomerSelection(customer.id)}
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border border-stone-200 bg-white p-3 hover:border-orange-300 ${
+                      !isOnline ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    onClick={() => isOnline && onToggleCustomerSelection(customer.id)}
                   >
                     <div
                       className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
@@ -145,8 +161,8 @@ export function MemberDialog({
           </Button>
           <Button
             onClick={onAddMembers}
-            disabled={selectedCustomerIds.size === 0 || isManagingMembers}
-            className="bg-orange-500 hover:bg-orange-600"
+            disabled={selectedCustomerIds.size === 0 || isManagingMembers || !isOnline}
+            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
           >
             {isManagingMembers ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

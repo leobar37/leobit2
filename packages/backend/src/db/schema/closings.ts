@@ -44,12 +44,14 @@ export const closings = pgTable(
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_closings_business_id").on(table.businessId),
     index("idx_closings_seller_id").on(table.sellerId),
     index("idx_closings_date").on(table.closingDate),
     index("idx_closings_sync_status").on(table.syncStatus),
+    index("idx_closings_updated_at").on(table.updatedAt),
     uniqueIndex("uq_closings_business_seller_date").on(
       table.businessId,
       table.sellerId,

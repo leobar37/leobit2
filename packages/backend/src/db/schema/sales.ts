@@ -22,6 +22,7 @@ import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
 import { files } from "./files";
+import { visitas } from "./visitas";
 
 // Sales table - Unified for instant_sales and pre_orders
 export const sales = pgTable(
@@ -41,6 +42,7 @@ export const sales = pgTable(
     distribucionId: uuid("distribucion_id").references(
       () => distribuciones.id
     ),
+    visitaId: uuid("visita_id").references(() => visitas.id),
 
     // Transaction type: instant_sale (venta inmediata) or pre_order (pedido)
     type: transactionTypeEnum("type").notNull().default("instant_sale"),
@@ -104,6 +106,7 @@ export const sales = pgTable(
     index("idx_sales_customer_id").on(table.customerId),
     index("idx_sales_seller_id").on(table.sellerId),
     index("idx_sales_distribucion_id").on(table.distribucionId),
+    index("idx_sales_visita_id").on(table.visitaId),
     index("idx_sales_type").on(table.type),
     index("idx_sales_sale_type").on(table.saleType),
     index("idx_sales_sync_status").on(table.syncStatus),
@@ -198,6 +201,10 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
   distribucion: one(distribuciones, {
     fields: [sales.distribucionId],
     references: [distribuciones.id],
+  }),
+  visita: one(visitas, {
+    fields: [sales.visitaId],
+    references: [visitas.id],
   }),
   advanceProofImage: one(files, {
     fields: [sales.advanceProofImageId],

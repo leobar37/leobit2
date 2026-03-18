@@ -21,9 +21,10 @@ export class SaleSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    saleCreateSchema.parse(payload);
+    this.validatePayload(payload, saleCreateSchema, saleUpdateSchema, operation);
   }
 
   async execute(
