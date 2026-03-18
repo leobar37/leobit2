@@ -196,12 +196,24 @@ export const customerTagCreateSchema = z.object({
 
 export type CustomerTagCreateInput = z.infer<typeof customerTagCreateSchema>;
 
+export const purchaseItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string(),
+  variantId: z.string().optional(),
+  unitId: z.string().optional(),
+  packs: z.union([z.string(), z.number()]).optional(),
+  quantity: z.union([z.string(), z.number()]),
+  unitCost: z.union([z.string(), z.number()]),
+});
+
 export const purchaseCreateSchema = z.object({
-  supplierId: z.string().optional(),
+  supplierId: z.string().min(1, "supplierId es requerido"),
   purchaseDate: z.string().optional(),
   status: z.enum(["pending", "received", "cancelled"]).optional(),
   totalAmount: z.union([z.string(), z.number()]).optional(),
   notes: z.string().optional(),
+  receiptImageId: z.string().optional(),
+  items: z.array(purchaseItemSchema).optional(),
 });
 
 export const purchaseUpdateSchema = purchaseCreateSchema.extend({

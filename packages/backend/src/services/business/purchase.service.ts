@@ -29,6 +29,7 @@ export interface CreatePurchaseInput {
   invoiceNumber?: string;
   receiptImageId?: string;
   notes?: string;
+  status?: "pending" | "received" | "cancelled";
   items: CreatePurchaseItemInput[];
 }
 
@@ -129,6 +130,7 @@ export class PurchaseService {
       totalAmount += totalCost;
 
       validatedItems.push({
+        businessId: ctx.businessId,
         productId: item.productId,
         variantId: finalVariantId,
         quantity: finalQuantity.toString(),
@@ -143,7 +145,7 @@ export class PurchaseService {
         supplierId: data.supplierId,
         purchaseDate: data.purchaseDate,
         totalAmount: totalAmount.toString(),
-        status: "received",
+        status: data.status ?? "pending",
         invoiceNumber: data.invoiceNumber || null,
         receiptImageId: data.receiptImageId || null,
         notes: data.notes || null,

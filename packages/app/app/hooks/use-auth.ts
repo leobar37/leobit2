@@ -8,6 +8,7 @@ import {
   clearLocalDatabaseNamespace,
   setStoredBusinessId,
   setLocalDatabaseNamespace,
+  clearSyncKeys,
 } from "../lib/session-storage";
 
 async function hydrateCurrentBusinessId() {
@@ -124,6 +125,7 @@ export function useAuth() {
     clearStoredAuthState();
     clearStoredBusinessId();
     clearLocalDatabaseNamespace();
+    clearSyncKeys();
 
     // Notify server in background (fire and forget - ignore errors)
     // The local cleanup is already done, so the user is effectively logged out

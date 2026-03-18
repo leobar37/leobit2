@@ -232,14 +232,15 @@ export class SaleService extends BaseService {
    * Find all sales for the business
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
-    const salesResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE business_id = $1`,
-      [this.businessId]
-    );
+    const salesResult = await this.db
+      .select()
+      .from(sales)
+      .where(eq(sales.businessId, this.businessId))
+      .orderBy(sql`${sales.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
-    for (const row of salesResult.rows) {
+    for (const row of salesResult) {
       const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists
@@ -273,14 +274,15 @@ export class SaleService extends BaseService {
    * Find sales by customer ID
    */
   async findByCustomerId(customerId: string): Promise<SaleWithItems[]> {
-    const salesResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE customer_id = $1 AND business_id = $2 ORDER BY sale_date DESC`,
-      [customerId, this.businessId]
-    );
+    const salesResult = await this.db
+      .select()
+      .from(sales)
+      .where(and(eq(sales.customerId, customerId), eq(sales.businessId, this.businessId)))
+      .orderBy(sql`${sales.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
-    for (const row of salesResult.rows) {
+    for (const row of salesResult) {
       const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists
@@ -314,14 +316,15 @@ export class SaleService extends BaseService {
    * Find sales by status
    */
   async findByStatus(status: SaleStatus): Promise<SaleWithItems[]> {
-    const salesResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE status = $1 AND business_id = $2 ORDER BY sale_date DESC`,
-      [status, this.businessId]
-    );
+    const salesResult = await this.db
+      .select()
+      .from(sales)
+      .where(and(eq(sales.status, status), eq(sales.businessId, this.businessId)))
+      .orderBy(sql`${sales.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
-    for (const row of salesResult.rows) {
+    for (const row of salesResult) {
       const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
 
       // Fetch customer data if customerId exists

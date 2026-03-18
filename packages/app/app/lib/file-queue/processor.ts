@@ -10,6 +10,67 @@ import {
   type PendingFileUpload,
 } from "./storage";
 
+/**
+ * Mapping from file-queue entity types to sync engine entity types
+ */
+const ENTITY_TYPE_MAP: Record<string, string> = {
+  "payment": "abonos",
+  "order": "purchases",
+  "business": "businesses",
+  "profile": "user_profiles",
+};
+
+/**
+ * Updates the payload of an existing sync operation to include the fileId
+ * This ensures the sync engine sends the correct fileId when processing the entity
+ */
+async function updateSyncOperationPayload(
+  entityId: string,
+  entityType: string,
+  fieldName: string,
+  fileId: string
+): Promise<void> {
+  const { pg } = getDatabase();
+
+  try {
+    // Find the most recent pending/failed sync operation for this entity
+    const existing = await pg.query<{ id: string; payload: unknown }>(
+      `SELECT id, payload FROM sync_operations
+       WHERE entity_id = $1 AND entity_type = $2
+       AND status IN ('pending', 'failed')
+       ORDER BY created_at DESC LIMIT 1`,
+      [entityId, entityType]
+    );
+
+    if (existing.rows.length === 0) {
+      console.log(`[FileQueue] No pending sync operation found for ${entityType}:${entityId}`);
+      return;
+    }
+
+    const op = existing.rows[0];
+    const payload = typeof op.payload === 'string'
+      ? JSON.parse(op.payload)
+      : op.payload as Record<string, unknown>;
+
+    // Update the field with the fileId
+    payload[fieldName] = fileId;
+
+    // Escape for SQL safety
+    const escapedPayload = JSON.stringify(payload).replace(/'/g, "''");
+
+    await pg.exec(
+      `UPDATE sync_operations
+       SET payload = '${escapedPayload}'
+       WHERE id = '${op.id}'`
+    );
+
+    console.log(`[FileQueue] Updated sync operation ${op.id} with ${fieldName}=${fileId}`);
+  } catch (error) {
+    console.error(`[FileQueue] Failed to update sync operation:`, error);
+    // Don't throw - this is a best-effort operation
+  }
+}
+
 export interface FileUploadResult {
   uploadId: string;
   fileId?: string;
@@ -100,6 +161,19 @@ export async function processFileUpload(upload: PendingFileUpload): Promise<File
     }>("/files/upload", formData);
 
     await updateEntityWithFileId(upload, data.id);
+
+    // Update the sync operation payload with the fileId
+    // This ensures the sync engine sends the correct fileId when processing the entity
+    const syncEntityType = ENTITY_TYPE_MAP[upload.entityType];
+    if (syncEntityType && upload.entityId) {
+      await updateSyncOperationPayload(
+        upload.entityId,
+        syncEntityType,
+        upload.fieldName,
+        data.id
+      );
+    }
+
     await removePendingUpload(upload.id);
 
     return {

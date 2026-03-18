@@ -572,8 +572,10 @@ export class SyncService {
       // Sort operations within each group to ensure correct dependency order
       // Parent entities must be processed before child entities
       const entityPriority: Record<string, number> = {
-        'customer_groups': 1,
-        'customer_group_members': 2,
+        'sales': 1,
+        'sale_items': 2,
+        'customer_groups': 3,
+        'customer_group_members': 4,
       };
       
       for (const [groupId, ops] of grouped) {

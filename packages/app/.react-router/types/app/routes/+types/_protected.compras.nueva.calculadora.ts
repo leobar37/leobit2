@@ -16,6 +16,9 @@ type Matches = [{
   id: "routes/_protected";
   module: typeof import("../_protected.js");
 }, {
+  id: "routes/_protected.compras";
+  module: typeof import("../_protected.compras.js");
+}, {
   id: "routes/_protected.compras.nueva";
   module: typeof import("../_protected.compras.nueva.js");
 }, {

@@ -72,7 +72,20 @@ export function getPullCursorStorageKey(namespace?: string | null) {
 
 export function clearSyncKeys() {
   if (!canUseStorage()) return;
+  
+  // Remove base cursor key
   localStorage.removeItem(PULL_CURSOR_KEY);
+  
+  // Remove all cursor keys with namespace (avileo_pull_cursor:*)
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(`${PULL_CURSOR_KEY}:`)) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  
   localStorage.removeItem(SCHEMA_VERSION_KEY);
   localStorage.removeItem(FORCE_RESET_KEY);
   localStorage.removeItem(CALCULATOR_LAST_KEY);

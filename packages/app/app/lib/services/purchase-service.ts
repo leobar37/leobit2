@@ -7,8 +7,6 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { purchases } from "@avileo/shared";
-import { eq } from "drizzle-orm";
 import { formatCurrency } from "~/lib/utils";
 
 /** Purchase status type */
@@ -31,14 +29,24 @@ export interface Purchase {
   updated_at: string;
 }
 
+/** Purchase item for creation */
+export interface CreatePurchaseItemInput {
+  productId: string;
+  variantId?: string;
+  unitId?: string;
+  quantity: number;
+  unitCost: number;
+}
+
 /** Input for creating a new purchase */
 export interface CreatePurchaseInput {
-  supplier_id: string;
-  purchase_date: string;
-  total_amount: number;
-  invoice_number?: string;
+  supplierId: string;
+  purchaseDate: string;
+  totalAmount: number;
+  invoiceNumber?: string;
   notes?: string;
-  receipt_image_id?: string;
+  receiptImageId?: string;
+  items: CreatePurchaseItemInput[];
 }
 
 /** Input for updating purchase status */
@@ -113,16 +121,16 @@ export class PurchaseService extends BaseService {
   }
 
   /**
-   * Create a new purchase
+   * Create a new purchase with items
    */
   async create(input: CreatePurchaseInput): Promise<Purchase> {
     const id = this.generateId();
     const now = this.now();
+    const totalAmount = formatCurrency(input.totalAmount);
+    const syncGroupId = this.generateSyncGroup();
 
-    // Format amount as decimal string using project utility
-    const totalAmount = formatCurrency(input.total_amount);
-
-    await this.pg.exec(
+    // Insert purchase using pg.query with parameterized values
+    await this.pg.query(
       `INSERT INTO purchases (
         id, business_id, supplier_id, purchase_date, total_amount,
         status, invoice_number, receipt_image_id, notes,
@@ -131,12 +139,12 @@ export class PurchaseService extends BaseService {
       [
         id,
         this.businessId,
-        input.supplier_id,
-        input.purchase_date,
+        input.supplierId,
+        new Date(input.purchaseDate),
         totalAmount,
         "pending",
-        input.invoice_number ?? null,
-        input.receipt_image_id ?? null,
+        input.invoiceNumber ?? null,
+        input.receiptImageId ?? null,
         input.notes ?? null,
         "pending",
         0,
@@ -145,17 +153,70 @@ export class PurchaseService extends BaseService {
       ]
     );
 
-    // Queue sync operation
-    await this.queueSync("insert", id, {
-      supplier_id: input.supplier_id,
-      purchase_date: input.purchase_date,
-      total_amount: totalAmount,
-      invoice_number: input.invoice_number,
-      notes: input.notes,
-      receipt_image_id: input.receipt_image_id,
-    } as Record<string, unknown>);
+    // Insert each item and queue sync
+    const itemSyncPayloads: Record<string, unknown>[] = [];
+    for (const item of input.items) {
+      const itemId = this.generateId();
+      const itemTotalCost = formatCurrency(item.quantity * item.unitCost);
 
-    // Return the created purchase
+      await this.pg.query(
+        `INSERT INTO purchase_items (
+          id, business_id, purchase_id, product_id, variant_id, unit_id,
+          quantity, unit_cost, total_cost,
+          sync_status, sync_attempts, sync_version, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [
+          itemId,
+          this.businessId,
+          id,
+          item.productId,
+          item.variantId ?? null,
+          item.unitId ?? null,
+          String(item.quantity),
+          formatCurrency(item.unitCost),
+          itemTotalCost,
+          "pending",
+          0,
+          1,
+          now,
+          now,
+        ]
+      );
+
+      itemSyncPayloads.push({
+        id: itemId,
+        productId: item.productId,
+        variantId: item.variantId ?? null,
+        unitId: item.unitId ?? null,
+        quantity: String(item.quantity),
+        unitCost: formatCurrency(item.unitCost),
+        totalCost: itemTotalCost,
+      });
+    }
+
+    // Queue sync for purchase
+    await this.queueSync("insert", id, {
+      supplierId: input.supplierId,
+      purchaseDate: input.purchaseDate,
+      totalAmount,
+      invoiceNumber: input.invoiceNumber,
+      notes: input.notes,
+      receiptImageId: input.receiptImageId,
+      items: itemSyncPayloads,
+    } as Record<string, unknown>, syncGroupId);
+
+    // Queue sync for each item with same syncGroupId
+    for (let i = 0; i < input.items.length; i++) {
+      const itemPayload = itemSyncPayloads[i];
+      await this.queueSync(
+        "insert",
+        itemPayload.id as string,
+        itemPayload,
+        syncGroupId,
+        "purchase_items"
+      );
+    }
+
     return (await this.findById(id)) as Purchase;
   }
 
@@ -170,12 +231,11 @@ export class PurchaseService extends BaseService {
 
     const now = this.now();
 
-    await this.pg.exec(
+    await this.pg.query(
       "UPDATE purchases SET status = $1, updated_at = $2 WHERE id = $3",
       [status, now, id]
     );
 
-    // Queue sync operation
     await this.queueSync("update", id, {
       status,
     } as Record<string, unknown>);
@@ -185,16 +245,13 @@ export class PurchaseService extends BaseService {
    * Delete a purchase
    */
   async delete(id: string): Promise<void> {
-    // Get the purchase data before deletion for sync
     const purchase = await this.findById(id);
     if (!purchase) {
       return;
     }
 
-    // Delete from local database
-    await this.db.delete(purchases).where(eq(purchases.id, id));
+    await this.pg.query("DELETE FROM purchases WHERE id = $1", [id]);
 
-    // Queue sync operation
     await this.queueSync("delete", id, {});
   }
 }
@@ -207,5 +264,5 @@ export function createPurchaseService(
   syncService: SyncService,
   businessId: string
 ): PurchaseService {
-  return new PurchaseService(pg, null, syncService, businessId);
+  return new PurchaseService(pg, null as unknown as ReturnType<typeof drizzle>, syncService, businessId, "");
 }

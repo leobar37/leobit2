@@ -207,6 +207,7 @@ CREATE INDEX IF NOT EXISTS idx_purchases_sync_status ON purchases(sync_status);
 
 CREATE TABLE IF NOT EXISTS purchase_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL,
   purchase_id UUID NOT NULL,
   product_id UUID NOT NULL,
   variant_id UUID,
@@ -220,6 +221,7 @@ CREATE TABLE IF NOT EXISTS purchase_items (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_purchase_items_business_id ON purchase_items(business_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON purchase_items(purchase_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_sync_status ON purchase_items(sync_status);
 

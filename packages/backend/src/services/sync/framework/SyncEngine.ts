@@ -1,9 +1,9 @@
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { db, syncOperations } from "../../../lib/db";
+import { db } from "../../../lib/db";
 import { logger } from "../../../lib/logger";
 import { toISODate, now } from "../../../lib/date-utils";
-import { and, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { SyncOperationInput, SyncOperationResult, SyncBatchResult } from "../types";
 import type { SyncContext } from "./types";
 import type { CustomerRepository } from "../../repository/customer.repository";
@@ -22,6 +22,8 @@ import { HandlerRegistry } from "./HandlerRegistry";
 import { ConflictResolverRegistry } from "./ConflictResolver";
 import { syncPipeline } from "./SyncPipeline";
 import { syncLogger } from "../sync-logger";
+import { SyncOperationRepository } from "./SyncOperationRepository";
+import { OperationSorter } from "./OperationSorter";
 
 export interface SyncEngineDeps {
   customerRepo: CustomerRepository;
@@ -40,9 +42,13 @@ export interface SyncEngineDeps {
 
 export class SyncEngine {
   private deps: SyncEngineDeps;
+  private syncOpRepo: SyncOperationRepository;
+  private operationSorter: OperationSorter;
 
   constructor(deps: SyncEngineDeps) {
     this.deps = deps;
+    this.syncOpRepo = new SyncOperationRepository();
+    this.operationSorter = new OperationSorter();
   }
 
   async processBatch(
@@ -50,6 +56,7 @@ export class SyncEngine {
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
     const batchCorrelationId = syncLogger.generateCorrelationId();
+    const nowIso = toISODate(now());
 
     logger.info({
       msg: "📥 Sync batch received",
@@ -59,16 +66,22 @@ export class SyncEngine {
       userId: ctx.businessUserId,
     });
 
-    const results: SyncOperationResult[] = [];
-    const nowIso = toISODate(now());
+    const { operations: sortedOperations, groupCount } = this.operationSorter.sort(operations);
 
-    // Process ALL operations in a single transaction with SAVEPOINTs per operation.
-    // SAVEPOINTs allow individual operation failures to be rolled back without
-    // aborting the entire PostgreSQL transaction (which enters "aborted" state on any error).
+    logger.info({
+      msg: "📥 Sync batch sorted",
+      correlationId: batchCorrelationId,
+      totalOperations: sortedOperations.length,
+      uniqueGroups: groupCount,
+      priorityMap: this.operationSorter.getPriorityMap(),
+    });
+
+    const results: SyncOperationResult[] = [];
+
     try {
       await db.transaction(async (tx) => {
-        for (let i = 0; i < operations.length; i++) {
-          const operation = operations[i];
+        for (let i = 0; i < sortedOperations.length; i++) {
+          const operation = sortedOperations[i];
           const correlationId = operation.correlationId || syncLogger.generateCorrelationId();
           const savepointName = `sp_op_${i}`;
 
@@ -84,20 +97,18 @@ export class SyncEngine {
 
           try {
             await tx.execute(sql.raw(`SAVEPOINT ${savepointName}`));
-            const result = await this.processOperation(ctx, operation, correlationId, batchCorrelationId, tx, nowIso);
+            const result = await this.processOperation(
+              ctx,
+              operation,
+              correlationId,
+              batchCorrelationId,
+              tx,
+              nowIso
+            );
             await tx.execute(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
             results.push(result);
           } catch (opError) {
-            // Rollback to savepoint so the transaction stays usable for subsequent operations
-            try {
-              await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
-            } catch (rollbackError) {
-              logger.error({
-                msg: "Failed to rollback savepoint",
-                savepointName,
-                error: rollbackError,
-              });
-            }
+            await this.rollbackSavepoint(tx, savepointName);
 
             const errorMessage = opError instanceof Error ? opError.message : String(opError);
 
@@ -127,7 +138,7 @@ export class SyncEngine {
       });
 
       const processedKeys = new Set(results.map((r) => r.idempotencyKey));
-      for (const op of operations) {
+      for (const op of sortedOperations) {
         if (!processedKeys.has(op.idempotencyKey)) {
           results.push({
             idempotencyKey: op.idempotencyKey,
@@ -159,6 +170,18 @@ export class SyncEngine {
     };
   }
 
+  private async rollbackSavepoint(tx: DbTransaction, savepointName: string): Promise<void> {
+    try {
+      await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
+    } catch (rollbackError) {
+      logger.error({
+        msg: "Failed to rollback savepoint",
+        savepointName,
+        error: rollbackError,
+      });
+    }
+  }
+
   private async processOperation(
     ctx: RequestContext,
     operation: SyncOperationInput,
@@ -167,12 +190,11 @@ export class SyncEngine {
     tx: DbTransaction,
     nowIso: string
   ): Promise<SyncOperationResult> {
-    const existingOp = await tx.query.syncOperations.findFirst({
-      where: and(
-        eq(syncOperations.businessId, ctx.businessId),
-        eq(syncOperations.operationId, operation.idempotencyKey)
-      ),
-    });
+    const existingOp = await this.syncOpRepo.findByIdempotencyKey(
+      ctx,
+      operation.idempotencyKey,
+      tx
+    );
 
     if (existingOp?.status === "processed") {
       return {
@@ -205,99 +227,14 @@ export class SyncEngine {
       };
     }
 
-    const [currentOp] = await tx
-      .select()
-      .from(syncOperations)
-      .where(
-        and(
-          eq(syncOperations.businessId, ctx.businessId),
-          eq(syncOperations.operationId, operation.idempotencyKey)
-        )
-      )
-      .limit(1);
+    const persistResult = await this.syncOpRepo.insertOrUpdate(ctx, operation, tx);
 
-    try {
-      if (currentOp?.status === "pending" || currentOp?.status === "failed") {
-        await tx
-          .update(syncOperations)
-          .set({
-            entity: operation.entityType,
-            action: operation.operation,
-            entityId: operation.entityId,
-            payload: operation.payload,
-            status: "pending",
-            clientTimestamp: new Date(operation.localTimestamp),
-            error: null,
-            processedAt: null,
-          })
-          .where(
-            and(
-              eq(syncOperations.businessId, ctx.businessId),
-              eq(syncOperations.operationId, operation.idempotencyKey)
-            )
-          );
-        logger.info({
-          msg: "🔄 Updated existing pending sync operation",
-          idempotencyKey: operation.idempotencyKey,
-        });
-      } else {
-        await tx.insert(syncOperations).values({
-          businessId: ctx.businessId,
-          operationId: operation.idempotencyKey,
-          entity: operation.entityType,
-          action: operation.operation,
-          entityId: operation.entityId,
-          payload: operation.payload,
-          status: "pending",
-          clientTimestamp: new Date(operation.localTimestamp),
-        });
-      }
-    } catch (insertError) {
-      if (this.isUniqueConstraintViolation(insertError)) {
-        const [existing] = await tx
-          .select()
-          .from(syncOperations)
-          .where(
-            and(
-              eq(syncOperations.businessId, ctx.businessId),
-              eq(syncOperations.operationId, operation.idempotencyKey)
-            )
-          )
-          .limit(1);
-
-        if (existing?.status === "pending" || existing?.status === "failed") {
-          await tx
-            .update(syncOperations)
-            .set({
-              entity: operation.entityType,
-              action: operation.operation,
-              entityId: operation.entityId,
-              payload: operation.payload,
-              status: "pending",
-              clientTimestamp: new Date(operation.localTimestamp),
-              error: null,
-              processedAt: null,
-            })
-            .where(
-              and(
-                eq(syncOperations.businessId, ctx.businessId),
-                eq(syncOperations.operationId, operation.idempotencyKey)
-              )
-            );
-          logger.info({
-            msg: "🔄 Recovered and updated existing pending sync operation",
-            idempotencyKey: operation.idempotencyKey,
-          });
-        } else {
-          return {
-            idempotencyKey: operation.idempotencyKey,
-            success: true,
-            serverTimestamp: nowIso,
-          };
-        }
-      } else {
-        throw insertError;
-      }
+    if (persistResult === "already-processed") {
+      return {
+        idempotencyKey: operation.idempotencyKey,
+        success: true,
+        serverTimestamp: nowIso,
+      };
     }
 
     const handler = HandlerRegistry.getHandler(operation.entityType, this.deps);
@@ -317,19 +254,13 @@ export class SyncEngine {
 
     const result = await syncPipeline.execute(context, operation, handler);
 
-    await tx
-      .update(syncOperations)
-      .set({
-        status: result.success ? "processed" : "failed",
-        error: result.error ?? null,
-        processedAt: now(),
-      })
-      .where(
-        and(
-          eq(syncOperations.businessId, ctx.businessId),
-          eq(syncOperations.operationId, operation.idempotencyKey)
-        )
-      );
+    await this.syncOpRepo.updateStatus(
+      ctx,
+      operation.idempotencyKey,
+      result.success ? "processed" : "failed",
+      result.error ?? null,
+      tx
+    );
 
     return {
       idempotencyKey: operation.idempotencyKey,
@@ -337,13 +268,5 @@ export class SyncEngine {
       error: result.error,
       serverTimestamp: nowIso,
     };
-  }
-
-  private isUniqueConstraintViolation(error: unknown): boolean {
-    if (error && typeof error === "object") {
-      const pgError = error as { code?: string };
-      return pgError.code === "23505";
-    }
-    return false;
   }
 }

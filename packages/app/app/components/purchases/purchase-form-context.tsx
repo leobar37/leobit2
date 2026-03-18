@@ -13,6 +13,7 @@ interface PurchaseItem {
   id: string;
   productId: string;
   variantId: string | null;
+  unitId?: string;
   productName: string;
   variantName: string;
   quantity: string;
@@ -162,22 +163,21 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const createPurchase = useMutation({
     mutationFn: async () => {
       const purchaseDate = form.getValues("purchaseDate");
-      
+
       let receiptImageId: string | undefined;
       if (receiptFile) {
-        setFileUploadStatus((prev) => ({ ...prev, isUploading: true }));
         try {
           const result = await uploadReceiptFile.mutateAsync(receiptFile);
-          receiptImageId = (result as { isOffline?: boolean }).isOffline 
-            ? undefined 
+          receiptImageId = (result as { isOffline?: boolean }).isOffline
+            ? undefined
             : (result as { id: string }).id;
-          
-          if ((result as { isOffline?: boolean }).isOffline) {
-            setFileUploadStatus((prev) => ({ ...prev, isPending: true, isUploading: false }));
+
+          if (!(result as { isOffline?: boolean }).isOffline) {
+            setFileUploadStatus((prev) => ({ ...prev, isPending: true }));
           }
         } catch (error) {
           console.error("Error uploading file:", error);
-          setFileUploadStatus((prev) => ({ ...prev, isUploading: false, isError: true }));
+          setFileUploadStatus((prev) => ({ ...prev, isError: true }));
           throw error;
         }
       }
@@ -185,12 +185,19 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       const total = items.reduce((sum, item) => sum + parseFloat(item.totalCost), 0);
 
       const result = await createPurchaseMutation.mutateAsync({
-        supplier_id: supplier?.id || "",
-        purchase_date: purchaseDate,
-        total_amount: total,
-        invoice_number: form.getValues("invoiceNumber") || undefined,
-        receipt_image_id: receiptImageId,
+        supplierId: supplier?.id || "",
+        purchaseDate: purchaseDate,
+        totalAmount: total,
+        invoiceNumber: form.getValues("invoiceNumber") || undefined,
+        receiptImageId: receiptImageId,
         notes: form.getValues("notes") || undefined,
+        items: items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId || undefined,
+          unitId: item.unitId || undefined,
+          quantity: parseFloat(item.quantity),
+          unitCost: parseFloat(item.unitCost),
+        })),
       });
 
       return result.id;

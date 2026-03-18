@@ -13,6 +13,7 @@ export abstract class BaseSyncHandler implements ISyncHandler {
   abstract validateBusinessRules(
     ctx: RequestContext,
     payload: Record<string, unknown>,
+    operation?: string,
     tx?: DbTransaction
   ): Promise<void>;
 

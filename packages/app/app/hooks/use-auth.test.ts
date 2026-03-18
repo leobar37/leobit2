@@ -213,6 +213,8 @@ describe("useAuth", () => {
     localStorage.setItem("bearer_token", "token-1");
     localStorage.setItem("current_business_id", "biz-1");
     localStorage.setItem("avileo_pull_cursor", "cursor-1");
+    localStorage.setItem("avileo_pull_cursor:user-1__biz-1__session-1", "cursor-2");
+    localStorage.setItem("avileo_pull_cursor:user-2__biz-2__session-2", "cursor-3");
 
     const { result } = renderHook(() => useAuth());
 
@@ -224,6 +226,9 @@ describe("useAuth", () => {
     expect(localStorage.getItem("bearer_token")).toBeNull();
     expect(localStorage.getItem("current_business_id")).toBeNull();
     expect(localStorage.getItem("avileo_local_db_namespace")).toBeNull();
+    expect(localStorage.getItem("avileo_pull_cursor")).toBeNull();
+    expect(localStorage.getItem("avileo_pull_cursor:user-1__biz-1__session-1")).toBeNull();
+    expect(localStorage.getItem("avileo_pull_cursor:user-2__biz-2__session-2")).toBeNull();
     expect(navigateMock).toHaveBeenCalledWith("/login", { replace: true });
   });
 });
