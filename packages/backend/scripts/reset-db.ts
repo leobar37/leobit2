@@ -36,6 +36,7 @@ import {
   variantInventory,
   customerGroups,
   customerGroupMembers,
+  visitas,
 } from "../src/db/schema";
 import { eq, ne } from "drizzle-orm";
 import { auth } from "../src/lib/auth";
@@ -158,6 +159,7 @@ async function resetDatabase() {
   // Delete in correct order to respect FK constraints
   const deletions = [
     { name: "Sale items", fn: () => db.delete(saleItems) },
+    { name: "Visitas", fn: () => db.delete(visitas) },
     { name: "Sales", fn: () => db.delete(sales) },
     { name: "Abonos", fn: () => db.delete(abonos) },
     { name: "Customer tags", fn: () => db.delete(customerTags) },
