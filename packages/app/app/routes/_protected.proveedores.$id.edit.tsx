@@ -10,7 +10,7 @@ import { useSupplier, useUpdateSupplier } from "~/hooks/use-suppliers";
 
 const editSupplierSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  type: z.enum(["regular", "internal"]),
+  type: z.enum(["generic", "regular", "internal"]),
   ruc: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
@@ -29,7 +29,7 @@ export default function EditProveedorPage() {
 
   const form = useForm<EditSupplierFormData>({
     resolver: zodResolver(editSupplierSchema),
-    mode: "onChange",
+    mode: "all",
     defaultValues: {
       name: "",
       type: "regular",
@@ -43,7 +43,7 @@ export default function EditProveedorPage() {
     values: supplier
       ? {
           name: supplier.name,
-          type: (supplier.type === "generic" ? "regular" : supplier.type) as "regular" | "internal",
+          type: supplier.type as "generic" | "regular" | "internal",
           ruc: supplier.ruc || "",
           phone: supplier.phone || "",
           email: supplier.email || "",
@@ -60,14 +60,16 @@ export default function EditProveedorPage() {
     try {
       await updateSupplier.mutateAsync({
         id,
-        name: data.name,
-        type: data.type,
-        ruc: data.ruc || undefined,
-        phone: data.phone || undefined,
-        email: data.email || undefined,
-        address: data.address || undefined,
-        notes: data.notes || undefined,
-        isActive: data.isActive,
+        input: {
+          name: data.name,
+          type: data.type,
+          ruc: data.ruc || undefined,
+          phone: data.phone || undefined,
+          email: data.email || undefined,
+          address: data.address || undefined,
+          notes: data.notes || undefined,
+          isActive: data.isActive,
+        },
       });
       navigate(`/proveedores/${id}`);
     } catch (error) {
@@ -135,7 +137,6 @@ export default function EditProveedorPage() {
           name="name"
           label="Nombre del proveedor"
           placeholder="Ej: Granja El Sol"
-          required
         />
 
         <div className="space-y-2">
@@ -146,6 +147,7 @@ export default function EditProveedorPage() {
           >
             <option value="regular">Regular</option>
             <option value="internal">Interno</option>
+            <option value="generic">Genérico</option>
           </select>
         </div>
 

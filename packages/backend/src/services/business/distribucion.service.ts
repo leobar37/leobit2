@@ -15,6 +15,7 @@ import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem } from "../../db/schema";
 import { db, syncOperations } from "../../lib/db";
 import { sales, visitas } from "../../db/schema";
+import { distribucionMachine } from "../transitions";
 
 interface DistribucionWithItems extends Distribucion {
   items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
@@ -249,6 +250,9 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
+    // Execute state machine transition: null → activo (reserve inventory)
+    await distribucionMachine.executeTransition(ctx, distribucionWithItems, null, "activo");
+
     return distribucionWithItems;
   }
 
@@ -322,15 +326,10 @@ export class DistribucionService {
       throw new ForbiddenError("No puede cerrar esta distribución");
     }
 
-    for (const item of existing.items) {
-      const asignada = parseFloat(item.cantidadAsignada);
-      const vendida = parseFloat(item.cantidadVendida);
-      const sobrante = asignada - vendida;
+    const previousState = existing.estado as "activo" | "en_ruta" | "cerrado";
 
-      if (sobrante > 0) {
-        await this.variantRepository.adjustInventory(ctx, item.variantId, sobrante);
-      }
-    }
+    // Execute state machine transition: activo/en_ruta → cerrado (return inventory)
+    await distribucionMachine.executeTransition(ctx, existing, previousState, "cerrado");
 
     const updated = await this.repository.update(ctx, id, {
       estado: "cerrado",

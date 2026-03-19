@@ -87,6 +87,41 @@ export interface ConflictResolution {
   mergedData?: Record<string, unknown>;
 }
 
+export interface BackendConflict {
+  id: string;
+  businessId: string;
+  operationId: string;
+  entityType: string;
+  entityId: string;
+  localData: Record<string, unknown>;
+  serverData: Record<string, unknown>;
+  localVersion: number;
+  serverVersion: number;
+  status: "pending" | "resolved";
+  resolution: "server" | "local" | "merge" | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+export interface BackendConflictListResponse {
+  success: boolean;
+  data: {
+    conflicts: BackendConflict[];
+    pendingCount: number;
+    pagination: {
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  };
+}
+
+export interface BackendConflictResponse {
+  success: boolean;
+  data: BackendConflict;
+}
+
 type SyncApiResult = {
   idempotencyKey: string;
   success: boolean;
@@ -1402,5 +1437,92 @@ export class SyncService {
           : undefined,
       })),
     };
+  }
+
+  /**
+   * Fetch pending conflicts from the backend API
+   */
+  async getBackendConflicts(options?: {
+    status?: string;
+    entityType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<BackendConflictListResponse> {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+    const params = new URLSearchParams();
+
+    if (options?.status) params.set("status", options.status);
+    if (options?.entityType) params.set("entityType", options.entityType);
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.offset) params.set("offset", String(options.offset));
+
+    const url = `${apiUrl}/sync/conflicts${params.toString() ? `?${params}` : ""}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.authToken}`,
+        "x-business-id": this.businessId,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch conflicts: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<BackendConflictListResponse>;
+  }
+
+  /**
+   * Fetch a single conflict from the backend API
+   */
+  async getBackendConflict(conflictId: string): Promise<BackendConflictResponse> {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+
+    const response = await fetch(`${apiUrl}/sync/conflicts/${conflictId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.authToken}`,
+        "x-business-id": this.businessId,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch conflict: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<BackendConflictResponse>;
+  }
+
+  /**
+   * Resolve a conflict via the backend API
+   */
+  async resolveBackendConflict(
+    conflictId: string,
+    resolution: "server" | "local" | "merge",
+    mergedData?: Record<string, unknown>
+  ): Promise<BackendConflictResponse> {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+
+    const response = await fetch(`${apiUrl}/sync/conflicts/${conflictId}/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.authToken}`,
+        "x-business-id": this.businessId,
+      },
+      body: JSON.stringify({
+        resolution,
+        ...(mergedData ? { mergedData } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to resolve conflict: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<BackendConflictResponse>;
   }
 }

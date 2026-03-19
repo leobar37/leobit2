@@ -15,6 +15,7 @@
 
 import { db } from "../lib/db";
 import { syncOperations, products, productVariants } from "../db/schema";
+import { suppliers } from "../db/schema";
 import { customers, sales, saleItems, abonos, distribuciones } from "../db/schema";
 import { eq, and, isNull, not, inArray } from "drizzle-orm";
 import { now, toISODate } from "../lib/date-utils";
@@ -455,6 +456,54 @@ async function backfillProductVariants(businessId?: string): Promise<BackfillRes
 }
 
 /**
+ * Backfill sync_operations for suppliers.
+ */
+async function backfillSuppliers(businessId?: string): Promise<BackfillResult> {
+  console.log("\n📋 Backfilling suppliers...");
+  
+  const where = businessId 
+    ? and(eq(suppliers.businessId, businessId), eq(suppliers.syncStatus, "synced"))
+    : eq(suppliers.syncStatus, "synced");
+  
+  const allSuppliers = await db.query.suppliers.findMany({ where });
+  
+  let created = 0;
+  let skipped = 0;
+
+  for (const supplier of allSuppliers) {
+    const payload = {
+      name: supplier.name,
+      type: supplier.type,
+      ruc: supplier.ruc,
+      address: supplier.address,
+      phone: supplier.phone,
+      email: supplier.email,
+      notes: supplier.notes,
+    };
+
+    const wasCreated = await createSyncOperation(
+      supplier.businessId,
+      "suppliers",
+      supplier.id,
+      payload,
+      supplier.updatedAt || supplier.createdAt
+    );
+
+    if (wasCreated) {
+      created++;
+      if (!DRY_RUN && created % 50 === 0) {
+        console.log(`  ✓ ${created} suppliers processed...`);
+      }
+    } else {
+      skipped++;
+    }
+  }
+
+  console.log(`  ✓ Suppliers: ${created} created, ${skipped} skipped`);
+  return { entity: "suppliers", created, skipped };
+}
+
+/**
  * Main backfill function.
  */
 export async function backfillSyncOperations(businessId?: string): Promise<BackfillResult[]> {
@@ -480,6 +529,7 @@ export async function backfillSyncOperations(businessId?: string): Promise<Backf
   results.push(await backfillSaleItems(businessId));
   results.push(await backfillAbonos(businessId));
   results.push(await backfillDistribuciones(businessId));
+  results.push(await backfillSuppliers(businessId));
 
   // Summary
   const totalCreated = results.reduce((sum, r) => sum + r.created, 0);

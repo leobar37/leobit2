@@ -4,6 +4,7 @@
  */
 
 import type { PgTable } from "drizzle-orm/pg-core";
+import * as schema from "@avileo/shared";
 
 // Valid table names that can be synced (whitelist for safety)
 export const VALID_TABLES = new Set([
@@ -28,43 +29,28 @@ export const VALID_TABLES = new Set([
   "visitas",
 ]);
 
-// Lazy-loaded table map to avoid circular dependencies during tests
-let TABLE_MAP: Record<string, PgTable> | null = null;
-
-function getTableMap(): Record<string, PgTable> {
-  if (TABLE_MAP) return TABLE_MAP;
-
-  // Dynamic import to avoid issues during testing
-  try {
-    const schema = require("@avileo/backend/src/db/schema");
-    TABLE_MAP = {
-      customers: schema.customers,
-      products: schema.products,
-      product_variants: schema.productVariants,
-      sales: schema.sales,
-      sale_items: schema.saleItems,
-      abonos: schema.abonos,
-      purchases: schema.purchases,
-      purchase_items: schema.purchaseItems,
-      suppliers: schema.suppliers,
-      inventory: schema.inventory,
-      variant_inventory: schema.variantInventory,
-      distribuciones: schema.distribuciones,
-      distribucion_items: schema.distribucionItems,
-      closings: schema.closings,
-      tags: schema.tags,
-      customer_tags: schema.customerTags,
-      customer_groups: schema.customerGroups,
-      customer_group_members: schema.customerGroupMembers,
-      visitas: schema.visitas,
-    };
-  } catch {
-    // Fallback for tests - return empty map
-    TABLE_MAP = {};
-  }
-
-  return TABLE_MAP;
-}
+// Static table map using shared schema
+const TABLE_MAP: Record<string, PgTable> = {
+  customers: schema.customers,
+  products: schema.products,
+  product_variants: schema.productVariants,
+  sales: schema.sales,
+  sale_items: schema.saleItems,
+  abonos: schema.abonos,
+  purchases: schema.purchases,
+  purchase_items: schema.purchaseItems,
+  suppliers: schema.suppliers,
+  inventory: schema.inventory,
+  variant_inventory: schema.variantInventory,
+  distribuciones: schema.distribuciones,
+  distribucion_items: schema.distribucionItems,
+  closings: schema.closings,
+  tags: schema.tags,
+  customer_tags: schema.customerTags,
+  customer_groups: schema.customerGroups,
+  customer_group_members: schema.customerGroupMembers,
+  visitas: schema.visitas,
+};
 
 /**
  * Validate that a table name is safe to use
@@ -81,7 +67,7 @@ export function isValidTableName(tableName: string): boolean {
  * @returns Drizzle table or null if not found
  */
 export function getTableForEntity(entityType: string): PgTable | null {
-  return getTableMap()[entityType] ?? null;
+  return TABLE_MAP[entityType] ?? null;
 }
 
 /**
@@ -99,8 +85,16 @@ export function toSnakeCase(obj: Record<string, unknown>): Record<string, unknow
 }
 
 /**
- * Filter payload to only include valid columns for a table
- * Uses Drizzle table schema to determine valid columns
+ * Filter payload to only include valid columns for a table.
+ *
+ * IMPORTANT: Drizzle tables from @avileo/shared use camelCase column names
+ * (e.g., businessId, syncStatus) but the local PGlite database uses snake_case
+ * (e.g., business_id, sync_status). This mismatch means Drizzle column keys
+ * do NOT match SQL column names, so we skip column filtering entirely.
+ *
+ * The database will enforce constraints via SQL errors if invalid columns are
+ * passed. This avoids the bug where valid columns were incorrectly removed.
+ *
  * @param tableName - Name of the table
  * @param payload - Payload to filter
  * @returns Filtered payload with only valid columns
@@ -109,25 +103,12 @@ export function filterValidColumns(
   tableName: string,
   payload: Record<string, unknown>
 ): Record<string, unknown> {
-  const table = getTableForEntity(tableName);
+  const table = TABLE_MAP[tableName];
   if (!table) {
     return payload;
   }
 
-  // Get column names from Drizzle table
-  const columns = Object.keys(table);
-  const filtered: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(payload)) {
-    if (columns.includes(key)) {
-      filtered[key] = value;
-    }
-  }
-
-  const removedKeys = Object.keys(payload).filter((key) => !columns.includes(key));
-  if (removedKeys.length > 0) {
-    console.warn(`[SchemaMapper] Filtering out invalid columns for ${tableName}:`, removedKeys);
-  }
-
-  return filtered;
+  // Skip column filtering due to Drizzle (camelCase) vs local SQL (snake_case) mismatch.
+  // The database will reject invalid columns via SQL constraints.
+  return payload;
 }

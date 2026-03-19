@@ -871,17 +871,24 @@ async function seedDistribuciones(ctx: RequestContext, businessUserId: string, p
   return distribuciones;
 }
 
-async function seedInventory(ctx: RequestContext, products: Array<{ id: string }>) {
-  const existing = await services.inventory.getInventory(ctx);
-  if (existing.length > 0) {
-    console.log(`⚠ ${existing.length} inventory items already exist, skipping`);
-    return existing;
-  }
-
+async function seedInventory(ctx: RequestContext, products: SeedProduct[]) {
+  // Seed variant inventory instead of deprecated product-level inventory
   const inventoryItems = [];
   for (const product of products) {
-    const created = await services.inventory.updateStock(ctx, product.id, 100);
-    inventoryItems.push(created);
+    for (const variant of product.variants) {
+      // Check if variant inventory already exists
+      const existing = await services.productVariant.getInventory(ctx, variant.id);
+      if (existing) {
+        console.log(`⚠ Variant ${variant.name} already has inventory, skipping`);
+        continue;
+      }
+      // Create variant inventory with initial stock of 100
+      const created = await services.productVariant.createInventory(ctx, {
+        variantId: variant.id,
+        quantity: "100",
+      });
+      inventoryItems.push(created);
+    }
   }
 
   return inventoryItems;
@@ -1030,7 +1037,7 @@ async function clearExistingData() {
   await db.delete(purchases);
   await db.delete(suppliersSchema);
   await db.delete(inventory);
-  await db.delete(productVariantsSchema);
+  await db.delete(productVariantsSchema); // Also clears variant_inventory via CASCADE
   await db.delete(productsSchema);
   await db.delete(businessPaymentSettings);
   console.log("✓ Cleared existing data\n");

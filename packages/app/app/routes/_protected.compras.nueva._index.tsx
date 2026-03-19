@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatCurrency } from "~/lib/utils";
+import { cn, formatCurrency } from "~/lib/utils";
 import { useNavigate, useLocation } from "react-router";
 import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ function PurchaseFormInner() {
     handleReceiptSelect,
     handleReceiptClear,
     fileUploadStatus,
+    purchaseError,
+    clearPurchaseError,
     onSubmit,
     cartItemsCount,
     form,
@@ -41,8 +43,8 @@ function PurchaseFormInner() {
     setSupplier(newSupplier);
   };
 
-  const hasError = !!form.formState.errors.root;
-  const errorMessage = form.formState.errors.root?.message;
+  const hasError = !!purchaseError;
+  const errorMessage = purchaseError;
 
   return (
     <>
@@ -167,7 +169,12 @@ export default function NuevaCompraIndexPage() {
             onClick={onSubmit}
             disabled={isPending || fileUploadStatus.isUploading || !isFormValid}
             data-testid="save-purchase-button"
-            className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+            className={cn(
+              "w-full h-14 rounded-xl text-lg font-semibold transition-colors",
+              isPending || fileUploadStatus.isUploading || !isFormValid
+                ? "bg-orange-300 text-white/70 cursor-not-allowed"
+                : "bg-orange-500 hover:bg-orange-600 text-white"
+            )}
           >
             {isPending || fileUploadStatus.isUploading ? (
               <>

@@ -238,7 +238,7 @@ export type InventoryUpdateInput = z.infer<typeof inventoryUpdateSchema>;
 
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "inventory", "customer_groups", "customer_group_members", "visitas"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "purchase_items", "inventory", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),
@@ -290,3 +290,21 @@ export const visitaUpdateSchema = z.object({
 
 export type VisitaCreateInput = z.infer<typeof visitaCreateSchema>;
 export type VisitaUpdateInput = z.infer<typeof visitaUpdateSchema>;
+
+// Supplier schemas
+export const supplierCreateSchema = z.object({
+  name: z.string().min(1, "name es requerido"),
+  type: z.enum(["generic", "regular", "internal"]).optional(),
+  ruc: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const supplierUpdateSchema = supplierCreateSchema.partial().extend({
+  isActive: z.boolean().optional(),
+});
+
+export type SupplierCreateInput = z.infer<typeof supplierCreateSchema>;
+export type SupplierUpdateInput = z.infer<typeof supplierUpdateSchema>;

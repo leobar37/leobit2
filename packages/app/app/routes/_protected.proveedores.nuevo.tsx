@@ -5,12 +5,13 @@ import { z } from "zod";
 import { Building2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
+import { FieldInfo } from "@/components/ui/field-info";
 import { useCreateSupplier } from "~/hooks/use-suppliers";
 import { FormPage } from "~/components/layout/form-page";
 
 const supplierSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  type: z.enum(["regular", "internal"]),
+  type: z.enum(["generic", "regular", "internal"]),
   ruc: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
@@ -28,7 +29,7 @@ export default function NuevoProveedorPage() {
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
-    mode: "onChange",
+    mode: "all",
     defaultValues: {
       name: "",
       type: "regular",
@@ -82,21 +83,21 @@ export default function NuevoProveedorPage() {
             name="name"
             label="Nombre del proveedor"
             placeholder="Ej: Granja El Sol"
-            required
           />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Tipo de proveedor
-            </label>
+          <FieldInfo
+            label="Tipo de proveedor"
+            description='Los tipos de proveedor son: Regular (granjas y proveedores comerciales externos), Interno (granjas propias o departamentos de la empresa) y Genérico (para compras misceláneas sin proveedor específico).'
+          >
             <select
               {...form.register("type")}
               className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
             >
               <option value="regular">Regular</option>
               <option value="internal">Interno</option>
+              <option value="generic">Genérico</option>
             </select>
-          </div>
+          </FieldInfo>
 
           <FormInput
             name="ruc"

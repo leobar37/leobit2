@@ -1,13 +1,13 @@
 /**
  * Change Applier
- * Applies sync changes to the local PGlite database using Drizzle ORM
+ * Applies sync changes to the local PGlite database using raw SQL
+ * (Drizzle ORM has issues with schema mismatch between @avileo/shared camelCase
+ * and local PGlite snake_case column names)
  */
 
-import { eq } from "drizzle-orm";
 import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
-import type { PullChange, ChangeApplicationResult, SyncOperation } from "./types";
-import { getTableForEntity, isValidTableName, toSnakeCase, filterValidColumns } from "./schema-mapper";
+import type { PullChange, ChangeApplicationResult } from "./types";
+import { isValidTableName, toSnakeCase } from "./schema-mapper";
 import { isTransientError, sleep } from "./backoff";
 
 // Maximum number of retries for applying a single change
@@ -15,8 +15,8 @@ const MAX_APPLY_RETRIES = 3;
 
 /**
  * Apply a single change to the local database with retry logic
- * @param pg - PGlite instance for raw queries when needed
- * @param db - Drizzle instance for ORM operations
+ * @param pg - PGlite instance for raw queries
+ * @param _db - Unused (kept for API compatibility)
  * @param change - Change to apply
  * @param businessId - Business ID for multi-tenancy
  * @param retriesLeft - Number of retries remaining
@@ -24,7 +24,7 @@ const MAX_APPLY_RETRIES = 3;
  */
 export async function applyChange(
   pg: PGlite,
-  db: ReturnType<typeof drizzle>,
+  _db: unknown,
   change: PullChange,
   businessId: string,
   retriesLeft: number = MAX_APPLY_RETRIES
@@ -36,22 +36,17 @@ export async function applyChange(
     return { success: false, error: `Invalid table name: ${tableName}` };
   }
 
-  const table = getTableForEntity(tableName);
-  if (!table) {
-    return { success: false, error: `Table not found: ${tableName}` };
-  }
-
   try {
     switch (change.operation) {
       case "insert":
       case "create":
-        return await applyInsert(db, table, change, businessId);
+        return await applyInsert(pg, tableName, change, businessId);
 
       case "update":
-        return await applyUpdate(db, table, change, businessId);
+        return await applyUpdate(pg, tableName, change, businessId);
 
       case "delete":
-        return await applyDelete(db, table, change);
+        return await applyDelete(pg, tableName, change);
 
       default:
         return { success: false, error: `Unknown operation: ${change.operation}` };
@@ -63,7 +58,7 @@ export async function applyChange(
     if (retriesLeft > 0 && isTransientError(errorMessage)) {
       console.warn(`[ChangeApplier] Retrying change for ${tableName}:${change.entityId} (${retriesLeft} retries left)`);
       await sleep(100);
-      return applyChange(pg, db, change, businessId, retriesLeft - 1);
+      return applyChange(pg, _db, change, businessId, retriesLeft - 1);
     }
 
     return { success: false, error: errorMessage };
@@ -71,118 +66,116 @@ export async function applyChange(
 }
 
 /**
- * Apply an insert operation using Drizzle ORM
+ * Apply an insert operation using raw SQL
  */
 async function applyInsert(
-  db: ReturnType<typeof drizzle>,
-  table: any,
+  pg: PGlite,
+  tableName: string,
   change: PullChange,
   businessId: string
 ): Promise<ChangeApplicationResult> {
   const data = toSnakeCase(change.payload);
 
-  // Filter out invalid columns
-  const tableName = change.entityType;
-  const filteredData = filterValidColumns(tableName, data);
+  // Inject required fields
+  const id = change.entityId;
+  const business_id = businessId;
 
-  // Inject required fields if missing
-  if (!filteredData.id) {
-    filteredData.id = change.entityId;
-  }
-  if (!filteredData.business_id) {
-    filteredData.business_id = businessId;
+  // Build column/value pairs
+  const columns: string[] = ["id", "business_id"];
+  const values: unknown[] = [id, business_id];
+  let paramIndex = 3;
+
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "id" || key === "business_id") continue;
+    columns.push(key);
+    values.push(value);
+    paramIndex++;
   }
 
-  if (Object.keys(filteredData).length === 0) {
-    return { success: false, error: "Empty payload for insert operation" };
-  }
+  const setClause = columns.map((col, i) => {
+    if (i < 2) return `${col} = $${i + 1}`;
+    return `${col} = $${i + 1}`;
+  }).join(", ");
 
   // Check if record exists
-  const existing = await db.select({ id: table.id })
-    .from(table)
-    .where(eq(table.id, change.entityId))
-    .limit(1);
+  const existingResult = await pg.query(`SELECT id FROM "${tableName}" WHERE id = $1`, [id]);
+  if (existingResult.rows.length > 0) {
+    // Record exists - do upsert
+    const updateCols = columns.filter(c => c !== "id" && c !== "business_id");
+    const updateSets = updateCols.map((col, i) => `${col} = $${i + 1}`).join(", ");
+    const updateValues = updateCols.map((col) => data[col as keyof typeof data]);
 
-  if (existing.length === 0) {
-    // Insert new record
-    await db.insert(table).values(filteredData);
+    const upsertSql = `
+      UPDATE "${tableName}" SET ${updateSets}
+      WHERE id = $${updateCols.length + 1}
+    `;
+
+    await pg.query(upsertSql, [...updateValues, id]);
   } else {
-    // Record exists, do an upsert
-    const { id, ...updateData } = filteredData;
-    if (Object.keys(updateData).length > 0) {
-      await db.insert(table)
-        .values(filteredData)
-        .onConflictDoUpdate({
-          target: table.id,
-          set: updateData,
-        });
-    }
+    // Insert new record
+    const insertSql = `
+      INSERT INTO "${tableName}" (${columns.map(c => `"${c}"`).join(", ")})
+      VALUES (${columns.map((_, i) => `$${i + 1}`).join(", ")})
+    `;
+
+    await pg.query(insertSql, values);
   }
 
   return { success: true };
 }
 
 /**
- * Apply an update operation using Drizzle ORM
+ * Apply an update operation using raw SQL
  */
 async function applyUpdate(
-  db: ReturnType<typeof drizzle>,
-  table: any,
+  pg: PGlite,
+  tableName: string,
   change: PullChange,
   businessId: string
 ): Promise<ChangeApplicationResult> {
   const data = toSnakeCase(change.payload);
 
-  // Filter out invalid columns
-  const tableName = change.entityType;
-  const filteredData = filterValidColumns(tableName, data);
-
-  if (Object.keys(filteredData).length === 0) {
+  if (Object.keys(data).length === 0) {
     return { success: false, error: "Empty payload for update operation" };
   }
 
-  // Ensure id is set
-  if (!filteredData.id) {
-    filteredData.id = change.entityId;
-  }
+  const id = change.entityId;
 
   // Check if record exists
-  const existing = await db.select({ id: table.id })
-    .from(table)
-    .where(eq(table.id, change.entityId))
-    .limit(1);
-
-  if (existing.length === 0) {
-    // Record doesn't exist locally - skip it silently
-    // The full record will come later via initial sync
-    console.warn(`[ChangeApplier] Update for non-existent record skipped: ${tableName}:${change.entityId}`);
+  const existingResult = await pg.query(`SELECT id FROM "${tableName}" WHERE id = $1`, [id]);
+  if (existingResult.rows.length === 0) {
+    console.warn(`[ChangeApplier] Update for non-existent record skipped: ${tableName}:${id}`);
     return { success: true };
   }
 
-  // Build update - only update fields that are in the payload
-  const { id, ...updateData } = filteredData;
-
-  if (Object.keys(updateData).length === 0) {
-    return { success: true }; // Nothing to update
+  // Build SET clause
+  const updateCols = Object.keys(data).filter(k => k !== "id");
+  if (updateCols.length === 0) {
+    return { success: true };
   }
 
-  await db.update(table)
-    .set(updateData)
-    .where(eq(table.id, change.entityId));
+  const setClause = updateCols.map((col, i) => `"${col}" = $${i + 1}`).join(", ");
+  const updateValues = updateCols.map((col) => data[col as keyof typeof data]);
+
+  const sql = `
+    UPDATE "${tableName}" SET ${setClause}
+    WHERE id = $${updateCols.length + 1}
+  `;
+
+  await pg.query(sql, [...updateValues, id]);
 
   return { success: true };
 }
 
 /**
- * Apply a delete operation using Drizzle ORM
+ * Apply a delete operation using raw SQL
  */
 async function applyDelete(
-  db: ReturnType<typeof drizzle>,
-  table: any,
+  pg: PGlite,
+  tableName: string,
   change: PullChange
 ): Promise<ChangeApplicationResult> {
-  await db.delete(table)
-    .where(eq(table.id, change.entityId));
-
+  const id = change.entityId;
+  await pg.query(`DELETE FROM "${tableName}" WHERE id = $1`, [id]);
   return { success: true };
 }

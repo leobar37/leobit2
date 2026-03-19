@@ -15,14 +15,16 @@ import type { ProductRepository } from "../../repository/product.repository";
 import type { TagRepository } from "../../repository/tag.repository";
 import type { CustomerTagRepository } from "../../repository/customer-tag.repository";
 import type { PurchaseRepository } from "../../repository/purchase.repository";
-import type { InventoryRepository } from "../../repository/inventory.repository";
+import type { ProductVariantRepository } from "../../repository/product-variant.repository";
 import type { CustomerGroupRepository } from "../../repository/customer-group.repository";
 import type { VisitaRepository } from "../../repository/visita.repository";
+import type { SupplierRepository } from "../../repository/supplier.repository";
 import { HandlerRegistry } from "./HandlerRegistry";
 import { ConflictResolverRegistry } from "./ConflictResolver";
 import { syncPipeline } from "./SyncPipeline";
 import { syncLogger } from "../sync-logger";
 import { SyncOperationRepository } from "./SyncOperationRepository";
+import { SyncConflictRepository } from "./SyncConflictRepository";
 import { OperationSorter } from "./OperationSorter";
 
 export interface SyncEngineDeps {
@@ -35,19 +37,23 @@ export interface SyncEngineDeps {
   tagRepo: TagRepository;
   customerTagRepo: CustomerTagRepository;
   purchaseRepo: PurchaseRepository;
-  inventoryRepo: InventoryRepository;
+  variantRepo: ProductVariantRepository;
   customerGroupRepo: CustomerGroupRepository;
   visitaRepo: VisitaRepository;
+  supplierRepo: SupplierRepository;
+  syncConflictRepo?: SyncConflictRepository;
 }
 
 export class SyncEngine {
   private deps: SyncEngineDeps;
   private syncOpRepo: SyncOperationRepository;
+  private syncConflictRepo: SyncConflictRepository;
   private operationSorter: OperationSorter;
 
   constructor(deps: SyncEngineDeps) {
     this.deps = deps;
     this.syncOpRepo = new SyncOperationRepository();
+    this.syncConflictRepo = deps.syncConflictRepo ?? new SyncConflictRepository();
     this.operationSorter = new OperationSorter();
   }
 
@@ -216,6 +222,33 @@ export class SyncEngine {
     const conflict = await conflictResolver.checkConflict(ctx, operation, tx);
 
     if (conflict.hasConflict) {
+      logger.info({
+        msg: "⚠️ Conflict detected, persisting for admin resolution",
+        correlationId,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        serverVersion: conflict.serverVersion,
+        localVersion: operation.localVersion,
+      });
+
+      try {
+        await this.syncConflictRepo.create(ctx, {
+          operationId: operation.idempotencyKey,
+          entityType: operation.entityType,
+          entityId: operation.entityId,
+          localData: operation.payload,
+          serverData: conflict.serverData!,
+          localVersion: operation.localVersion,
+          serverVersion: conflict.serverVersion!,
+        }, tx);
+      } catch (persistError) {
+        logger.error({
+          msg: "Failed to persist conflict",
+          correlationId,
+          error: persistError instanceof Error ? persistError.message : String(persistError),
+        });
+      }
+
       return {
         idempotencyKey: operation.idempotencyKey,
         success: false,

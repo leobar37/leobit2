@@ -75,7 +75,6 @@ export const services = {
   supplier: new SupplierService(repositories.supplier),
   purchase: new PurchaseService(
     repositories.purchase,
-    repositories.inventory,
     repositories.supplier,
     repositories.productVariant,
     repositories.productUnit,

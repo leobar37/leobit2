@@ -3,6 +3,7 @@ import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
 import { createLogger } from "../lib/logger";
+import { SyncConflictRepository } from "../services/sync/framework/SyncConflictRepository";
 
 const logger = createLogger("SyncRoute");
 
@@ -131,10 +132,12 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
               t.Literal("tags"),
               t.Literal("customer_tags"),
               t.Literal("purchases"),
+              t.Literal("purchase_items"),
               t.Literal("inventory"),
               t.Literal("customer_groups"),
               t.Literal("customer_group_members"),
               t.Literal("visitas"),
+              t.Literal("suppliers"),
             ]),
             entityId: t.String({ minLength: 1 }),
             operation: t.Union([
@@ -217,5 +220,164 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
           recentErrors: syncLogger.getRecentErrors(10),
         },
       };
+    }
+  )
+  .get(
+    "/conflicts",
+    async ({ ctx, query }) => {
+      const conflictRepo = new SyncConflictRepository();
+
+      let limit = 50;
+      if (query.limit) {
+        const parsedLimit = parseInt(query.limit, 10);
+        if (!isNaN(parsedLimit) && parsedLimit > 0) {
+          limit = Math.min(parsedLimit, 100);
+        }
+      }
+
+      let offset = 0;
+      if (query.offset) {
+        const parsedOffset = parseInt(query.offset, 10);
+        if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+          offset = parsedOffset;
+        }
+      }
+
+      const conflicts = await conflictRepo.findByBusiness(
+        ctx as RequestContext,
+        {
+          status: query.status || "pending",
+          entityType: query.entityType,
+          limit,
+          offset,
+        }
+      );
+
+      const pendingCount = await conflictRepo.countPending(ctx as RequestContext);
+
+      return {
+        success: true,
+        data: {
+          conflicts,
+          pendingCount,
+          pagination: {
+            limit,
+            offset,
+            hasMore: conflicts.length === limit,
+          },
+        },
+      };
+    },
+    {
+      query: t.Object({
+        status: t.Optional(t.String()),
+        entityType: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
+    "/conflicts/:id",
+    async ({ ctx, params }) => {
+      const conflictRepo = new SyncConflictRepository();
+
+      const conflict = await conflictRepo.findById(
+        ctx as RequestContext,
+        params.id
+      );
+
+      if (!conflict) {
+        return {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Conflict not found",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: conflict,
+      };
+    }
+  )
+  .post(
+    "/conflicts/:id/resolve",
+    async ({ ctx, params, body, set }) => {
+      const conflictRepo = new SyncConflictRepository();
+
+      const conflict = await conflictRepo.findById(
+        ctx as RequestContext,
+        params.id
+      );
+
+      if (!conflict) {
+        set.status = 404;
+        return {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Conflict not found",
+          },
+        };
+      }
+
+      if (conflict.status !== "pending") {
+        set.status = 400;
+        return {
+          success: false,
+          error: {
+            code: "ALREADY_RESOLVED",
+            message: `Conflict already resolved with strategy: ${conflict.resolution}`,
+          },
+        };
+      }
+
+      const validResolutions = ["server", "local", "merge"];
+      if (!validResolutions.includes(body.resolution)) {
+        set.status = 400;
+        return {
+          success: false,
+          error: {
+            code: "INVALID_RESOLUTION",
+            message: `Invalid resolution. Must be one of: ${validResolutions.join(", ")}`,
+          },
+        };
+      }
+
+      const resolvedConflict = await conflictRepo.resolve(
+        ctx as RequestContext,
+        params.id,
+        {
+          resolution: body.resolution,
+          mergedData: body.mergedData,
+        }
+      );
+
+      logger.info({
+        msg: "✅ Conflict resolved by admin",
+        conflictId: params.id,
+        entityType: conflict.entityType,
+        entityId: conflict.entityId,
+        resolution: body.resolution,
+        resolvedBy: ctx.businessUserId,
+      });
+
+      return {
+        success: true,
+        data: resolvedConflict,
+      };
+    },
+    {
+      body: t.Object({
+        resolution: t.Union([
+          t.Literal("server"),
+          t.Literal("local"),
+          t.Literal("merge"),
+        ]),
+        mergedData: t.Optional(t.Record(t.String(), t.Unknown())),
+      }),
     }
   );

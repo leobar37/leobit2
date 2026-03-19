@@ -72,7 +72,7 @@ export default function NewCustomerPage() {
       }
     >
       <FormProvider {...form}>
-        <CustomerFormContent form={form} />
+        <CustomerFormContent />
       </FormProvider>
     </FormPage>
   );

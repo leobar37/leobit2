@@ -1,10 +1,38 @@
+/**
+ * Suppliers Hook (Service-based)
+ * Reactively fetch and mutate suppliers using PGlite services
+ */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, ilike } from "drizzle-orm";
 import { getDatabase } from "~/engine";
-import { suppliers, type Supplier, SupplierType } from "~/engine/schema";
-import { api } from "~/lib/api-client";
+import { suppliers, type Supplier } from "~/engine/schema";
+import { useSupplierService } from "~/lib/sync/service-provider";
 
 export type { Supplier };
+
+/** Input for creating a new supplier */
+export interface CreateSupplierInput {
+  name: string;
+  type?: "generic" | "regular" | "internal";
+  ruc?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+
+/** Input for updating an existing supplier */
+export interface UpdateSupplierInput {
+  name?: string;
+  type?: "generic" | "regular" | "internal";
+  ruc?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  isActive?: boolean;
+}
 
 const SUPPLIERS_QUERY_KEY = "suppliers";
 
@@ -84,27 +112,16 @@ export function useSupplier(id: string | null) {
   });
 }
 
-interface CreateSupplierInput {
-  name: string;
-  type?: "generic" | "regular" | "internal";
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-}
-
 /**
  * Create a new supplier
  */
 export function useCreateSupplier() {
+  const supplierService = useSupplierService();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateSupplierInput) => {
-      const { data, error } = await api.suppliers.post(input);
-      if (error) throw new Error(String(error));
-      return data;
+      return supplierService.create(input);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });
@@ -112,30 +129,16 @@ export function useCreateSupplier() {
   });
 }
 
-interface UpdateSupplierInput {
-  id: string;
-  name?: string;
-  type?: "generic" | "regular" | "internal";
-  ruc?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  isActive?: boolean;
-}
-
 /**
  * Update a supplier
  */
 export function useUpdateSupplier() {
+  const supplierService = useSupplierService();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateSupplierInput) => {
-      const { id, ...data } = input;
-      const { data: result, error } = await api.suppliers({ id }).put(data);
-      if (error) throw new Error(String(error));
-      return result;
+    mutationFn: async ({ id, input }: { id: string; input: UpdateSupplierInput }) => {
+      return supplierService.update(id, input);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -150,13 +153,12 @@ export function useUpdateSupplier() {
  * Delete a supplier
  */
 export function useDeleteSupplier() {
+  const supplierService = useSupplierService();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.suppliers({ id }).delete();
-      if (error) throw new Error(String(error));
-      return data;
+      return supplierService.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });

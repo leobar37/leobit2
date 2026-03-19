@@ -1,10 +1,13 @@
 /**
  * Inventory Hook (Service-based)
  * Reactively fetch and validate inventory using PGlite services (offline-first)
+ *
+ * @deprecated Use useVariantInventory, useVariantInventoryItem, useValidateVariantStock instead
+ * Product-level inventory (inventory table) is deprecated. All operations should use variantInventory.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useInventoryService, useProductService } from "~/lib/sync/service-provider";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useInventoryService } from "~/lib/sync/service-provider";
 import type {
   InventoryItem,
   VariantInventoryItem,
@@ -12,40 +15,26 @@ import type {
 } from "~/lib/services/inventory-service";
 
 const QUERY_KEYS = {
-  inventory: ["inventory"],
-  inventoryItem: (productId: string) => ["inventory", productId],
   variantInventory: (variantId: string) => ["variant-inventory", variantId],
   allVariantInventory: ["variant-inventory"],
 } as const;
 
 /**
- * Get all inventory items for the business
+ * @deprecated Use useVariantInventory instead
+ * Product-level inventory is deprecated
  */
 export function useInventory() {
-  const inventoryService = useInventoryService();
-
-  return useQuery({
-    queryKey: QUERY_KEYS.inventory,
-    queryFn: async () => {
-      return inventoryService.getAllInventory();
-    },
-  });
+  console.warn("useInventory is deprecated. Use useVariantInventory instead.");
+  return useVariantInventory();
 }
 
 /**
- * Get inventory for a specific product
+ * @deprecated Use useVariantInventoryItem with variantId instead
+ * Product-level inventory is deprecated
  */
 export function useInventoryItem(productId: string | null) {
-  const inventoryService = useInventoryService();
-
-  return useQuery({
-    queryKey: productId ? QUERY_KEYS.inventoryItem(productId) : ["inventory", "detail"],
-    queryFn: async () => {
-      if (!productId) return null;
-      return inventoryService.getInventoryForProduct(productId);
-    },
-    enabled: !!productId,
-  });
+  console.warn("useInventoryItem is deprecated. Use useVariantInventoryItem with variantId instead.");
+  return useVariantInventoryItem(null);
 }
 
 /**
@@ -98,22 +87,12 @@ export function useValidateVariantStock() {
 }
 
 /**
- * Validate stock availability for a product
+ * @deprecated Use useValidateVariantStock with variantId instead
+ * Product-level stock validation is deprecated
  */
 export function useValidateProductStock() {
-  const inventoryService = useInventoryService();
-
-  return useMutation({
-    mutationFn: async ({
-      productId,
-      requestedQty,
-    }: {
-      productId: string;
-      requestedQty: number;
-    }): Promise<StockValidationResult> => {
-      return inventoryService.validateProductStock(productId, requestedQty);
-    },
-  });
+  console.warn("useValidateProductStock is deprecated. Use useValidateVariantStock with variantId instead.");
+  return useValidateVariantStock();
 }
 
 /**

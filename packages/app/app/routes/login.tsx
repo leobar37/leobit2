@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router";
 import { Store, Loader2 } from "lucide-react";
@@ -64,7 +64,8 @@ export default function LoginPage() {
           </div>
         </CardHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4 px-5 pb-2 sm:px-6">
             <FormInput
               label="Correo electrónico"
@@ -108,6 +109,7 @@ export default function LoginPage() {
 
           </CardFooter>
         </form>
+        </FormProvider>
       </Card>
     </div>
   );

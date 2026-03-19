@@ -1,10 +1,12 @@
 import { forwardRef } from "react";
+import { useFormContext } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { FormFieldShell } from "./form-field-shell";
 
 export interface FormInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "name"> {
+  name: string;
   description?: string;
   label?: string;
   error?: string;
@@ -20,27 +22,34 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       error,
       helperText,
       label,
+      name,
       reserveMessageSpace = true,
       ...props
     },
     ref
   ) => {
+    const { register, formState: { errors } } = useFormContext();
+
+    const fieldError = errors[name]?.message as string | undefined;
+    const displayError = error ?? fieldError;
+
     return (
       <FormFieldShell
         description={description}
-        error={error}
+        error={displayError}
         helperText={helperText}
         label={label}
         reserveMessageSpace={reserveMessageSpace}
       >
         <Input
           ref={ref}
-          data-testid={props.name ? `input-${props.name}` : undefined}
+          data-testid={`input-${name}`}
           className={cn(
             "shell-field h-12 rounded-[20px] px-4",
-            error && "border-destructive focus-visible:ring-destructive",
+            displayError && "border-destructive focus-visible:ring-destructive",
             className
           )}
+          {...register(name)}
           {...props}
         />
       </FormFieldShell>

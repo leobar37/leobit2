@@ -4,9 +4,9 @@ import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/p
 import { useBusiness } from "~/hooks/use-business";
 
 const QUERY_KEYS = {
-  payments: ["payments-new"],
-  customerPayments: (customerId: string) => ["payments-new", "customer", customerId],
-  businessPayments: ["payments-new", "business"],
+  payments: ["payments"],
+  customerPayments: (customerId: string) => ["payments", "customer", customerId],
+  businessPayments: ["payments", "business"],
 } as const;
 
 export function usePayments() {

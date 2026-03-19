@@ -2,14 +2,18 @@ import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
-import type { InventoryRepository } from "../../repository/inventory.repository";
+import type { ProductVariantRepository } from "../../repository/product-variant.repository";
 import { BaseSyncHandler } from "./BaseSyncHandler";
-import { inventoryCreateSchema, inventoryUpdateSchema } from "../schemas";
+import { z } from "zod";
 
+/**
+ * @deprecated Use ProductVariantSyncHandler for variant inventory operations
+ * This handler is kept for backwards compatibility with legacy inventory sync
+ */
 export class InventorySyncHandler extends BaseSyncHandler {
   readonly entityType = "inventory" as const;
 
-  constructor(private inventoryRepo: InventoryRepository) {
+  constructor(private variantRepo: ProductVariantRepository) {
     super();
   }
 
@@ -19,7 +23,13 @@ export class InventorySyncHandler extends BaseSyncHandler {
     operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    this.validatePayload(payload, inventoryCreateSchema, inventoryUpdateSchema, operation);
+    // Legacy schema validation - only accepts productId and quantity for backwards compatibility
+    const legacySchema = z.object({
+      productId: z.string().optional(),
+      variantId: z.string().optional(),
+      quantity: z.union([z.string(), z.number()]),
+    });
+    legacySchema.parse(payload);
   }
 
   async execute(
@@ -30,10 +40,8 @@ export class InventorySyncHandler extends BaseSyncHandler {
     this.logStart(ctx, operation);
 
     try {
-      if (operation.operation === "create") {
-        await this.handleCreate(ctx, operation, tx);
-      } else if (operation.operation === "update") {
-        await this.handleUpdate(ctx, operation, tx);
+      if (operation.operation === "create" || operation.operation === "update") {
+        await this.handleUpsert(ctx, operation, tx);
       } else if (operation.operation === "delete") {
         await this.handleDelete(ctx, operation, tx);
       } else {
@@ -49,34 +57,30 @@ export class InventorySyncHandler extends BaseSyncHandler {
     }
   }
 
-  private async handleCreate(
+  private async handleUpsert(
     ctx: RequestContext,
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
-    const parsed = inventoryCreateSchema.parse(operation.payload);
+    const payload = operation.payload as { variantId?: string; productId?: string; quantity?: string | number };
 
-    await this.inventoryRepo.create(ctx, {
-      productId: parsed.productId,
-      quantity: String(parsed.quantity),
-    }, tx);
-  }
+    // Legacy support: if variantId is not provided but productId is, we can't determine the variant
+    // This is a limitation of the old inventory table design
+    if (!payload.variantId) {
+      // For backwards compatibility, skip if no variantId (old clients sent productId only)
+      console.warn("InventorySyncHandler: Skipping inventory sync - no variantId provided (legacy payload)");
+      return;
+    }
 
-  private async handleUpdate(
-    ctx: RequestContext,
-    operation: SyncOperationInput,
-    tx?: DbTransaction
-  ): Promise<void> {
-    const parsed = inventoryUpdateSchema.parse(operation.payload);
-    const updateData: Parameters<typeof this.inventoryRepo.update>[2] = {};
+    const variantId = payload.variantId;
+    const quantity = String(payload.quantity ?? "0");
 
-    if (parsed.productId !== undefined) updateData.productId = parsed.productId;
-    if (parsed.quantity !== undefined) updateData.quantity = String(parsed.quantity);
+    const existing = await this.variantRepo.getInventory(ctx, variantId);
 
-    const updated = await this.inventoryRepo.update(ctx, operation.entityId, updateData, tx);
-
-    if (!updated) {
-      throw new Error("Inventario no encontrado");
+    if (existing) {
+      await this.variantRepo.updateInventory(ctx, variantId, quantity, tx);
+    } else {
+      await this.variantRepo.createInventory(ctx, { variantId, quantity }, tx);
     }
   }
 
@@ -85,11 +89,10 @@ export class InventorySyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     _tx?: DbTransaction
   ): Promise<void> {
-    const existing = await this.inventoryRepo.findById(ctx, operation.entityId);
-    if (!existing) {
-      return;
-    }
+    // Inventory deletion - set quantity to 0 instead of deleting
+    const payload = operation.payload as { variantId?: string };
+    if (!payload.variantId) return;
 
-    await this.inventoryRepo.delete(ctx, operation.entityId);
+    await this.variantRepo.updateInventory(ctx, payload.variantId, "0");
   }
 }

@@ -11,6 +11,7 @@ import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
+import { saleMachine } from "../transitions";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
@@ -485,9 +486,24 @@ export class SaleService {
       return sale;
     }
 
-    const amountPaid = parseFloat(sale.amountPaid);
+    const previousStatus = sale.status as "draft" | "confirmed" | "active" | "delivered";
+    
+    // Get sale items for the transition hook
+    const saleItems = await this.repository.findSaleItems(ctx, id);
+    const saleWithItems = { ...sale, items: saleItems };
 
     return db.transaction(async (tx) => {
+      // Execute state machine transition first (for active status, handles side effects)
+      if (previousStatus === "active") {
+        // Temporarily attach refund data to sale for the hook
+        (saleWithItems as any)._refundData = {
+          refundAmount: data.refundAmount,
+          refundMethod: data.refundMethod,
+          refundReference: data.refundReference,
+        };
+        await saleMachine.executeTransition(ctx, saleWithItems, previousStatus, "cancelled", tx);
+      }
+
       const updateData: Partial<Sale> = {
         status: "cancelled",
         cancelledAt: new Date(),
@@ -501,61 +517,9 @@ export class SaleService {
         updateData.refundMethod = data.refundMethod as any;
         updateData.refundReference = data.refundReference;
         updateData.refundNotes = data.refundNotes;
-
-        if (data.refundMethod === "saldo" && sale.customerId) {
-          await this.paymentRepository.createReversal(
-            ctx,
-            {
-              customerId: sale.customerId,
-              amount: (-data.refundAmount).toFixed(2),
-              paymentMethod: "saldo",
-              notes: `Saldo a favor por cancelación de venta #${sale.id}`,
-              relatedSaleId: sale.id,
-            },
-            tx
-          );
-        } else if (sale.customerId) {
-          await this.paymentRepository.createReversal(
-            ctx,
-            {
-              customerId: sale.customerId,
-              amount: (-data.refundAmount).toFixed(2),
-              paymentMethod: data.refundMethod || "efectivo",
-              referenceNumber: data.refundReference,
-              notes: `Reembolso por cancelación de venta #${sale.id}`,
-              relatedSaleId: sale.id,
-            },
-            tx
-          );
-        }
       }
 
       const cancelledSale = await this.repository.update(ctx, id, updateData, tx);
-
-      if (sale.distribucionId) {
-        const saleItems = await this.repository.findSaleItems(ctx, id, tx);
-        const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
-          ctx,
-          sale.distribucionId
-        );
-
-        for (const saleItem of saleItems) {
-          const distItem = distribucionItems.find(
-            (di) => di.variantId === saleItem.variantId
-          );
-
-          if (distItem) {
-            const currentVendida = parseFloat(distItem.cantidadVendida);
-            const newVendida = Math.max(currentVendida - parseFloat(saleItem.quantity), 0);
-            await this.distribucionItemRepository.updateVendido(
-              ctx,
-              distItem.id,
-              newVendida.toString(),
-              tx
-            );
-          }
-        }
-      }
 
       return cancelledSale;
     });

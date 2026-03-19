@@ -217,6 +217,13 @@ export {
 } from "./sync-operations";
 
 export {
+  syncConflicts,
+  syncConflictsRelations,
+  type SyncConflict,
+  type NewSyncConflict,
+} from "./sync-conflicts";
+
+export {
   suppliers,
   suppliersRelations,
   type Supplier,

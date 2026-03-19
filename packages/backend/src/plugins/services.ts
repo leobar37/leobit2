@@ -53,6 +53,7 @@ import { CustomerGroupRepository } from "../services/repository/customer-group.r
 import { CustomerGroupService } from "../services/business/customer-group.service";
 import { VisitaRepository } from "../services/repository/visita.repository";
 import { VisitaService } from "../services/business/visita.service";
+import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
   .as("global")
@@ -83,6 +84,16 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerGroupRepo = new CustomerGroupRepository();
     const visitaRepo = new VisitaRepository();
 
+    // Initialize state machines with their transitions
+    initializeStateMachines({ 
+      variantRepo: productVariantRepo,
+      saleDeps: {
+        paymentRepository: paymentRepo,
+        distribucionItemRepository: distribucionItemRepo,
+        saleRepository: saleRepo,
+      }
+    });
+
     const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo);
     const customerService = new CustomerService(customerRepo);
     const productService = new ProductService(productRepo, productVariantRepo);
@@ -101,16 +112,17 @@ export const servicesPlugin = new Elysia({ name: "services" })
       tagRepo,
       customerTagRepo,
       purchaseRepo,
-      inventoryRepo,
+      variantRepo: productVariantRepo,
       customerGroupRepo,
       visitaRepo,
+      supplierRepo,
     });
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
     const productVariantService = new ProductVariantService(productVariantRepo);
     const productUnitService = new ProductUnitService(productUnitRepo);
     const supplierService = new SupplierService(supplierRepo);
-    const purchaseService = new PurchaseService(purchaseRepo, inventoryRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
+    const purchaseService = new PurchaseService(purchaseRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const saleTokenService = new SaleTokenService(saleTokenRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);

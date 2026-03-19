@@ -194,7 +194,7 @@ export class PurchaseService extends BaseService {
       });
     }
 
-    // Queue sync for purchase
+    // Queue sync for purchase (items synced separately via purchase_items operations)
     await this.queueSync("insert", id, {
       supplierId: input.supplierId,
       purchaseDate: input.purchaseDate,
@@ -202,7 +202,6 @@ export class PurchaseService extends BaseService {
       invoiceNumber: input.invoiceNumber,
       notes: input.notes,
       receiptImageId: input.receiptImageId,
-      items: itemSyncPayloads,
     } as Record<string, unknown>, syncGroupId);
 
     // Queue sync for each item with same syncGroupId

@@ -5,3 +5,4 @@ export { FormCalculatorInput } from "./form-calculator-input";
 export { FormAssetPicker } from "./form-asset-picker";
 export { FormFieldShell } from "./form-field-shell";
 export { FormDate } from "./form-date";
+export { FormSelect } from "./form-select";

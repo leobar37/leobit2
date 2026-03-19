@@ -1,104 +1,57 @@
 import type { InventoryRepository } from "../repository/inventory.repository";
 import type { RequestContext } from "../../context/request-context";
-import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
-import {
-  NotFoundError,
-  ValidationError,
-  ForbiddenError,
-} from "../../errors";
-import type { Inventory } from "../../db/schema";
+import { ForbiddenError } from "../../errors";
 
+/**
+ * @deprecated InventoryService is deprecated
+ * Use ProductVariantRepository for variant inventory operations
+ * This service is kept only for getMissingInventoryReport
+ */
 export class InventoryService {
   constructor(private repository: InventoryRepository) {}
 
-  async getInventory(ctx: RequestContext): Promise<Inventory[]> {
-    if (!ctx.hasPermission("inventory.read")) {
-      throw new ForbiddenError("No tiene permisos para ver inventario");
-    }
-
-    return this.repository.findMany(ctx);
+  /**
+   * @deprecated Use ProductVariantRepository.getInventory() instead
+   */
+  async getInventory(_ctx: RequestContext): Promise<unknown[]> {
+    throw new Error("InventoryService.getInventory is deprecated. Use ProductVariantRepository instead.");
   }
 
-  async getInventoryItem(
-    ctx: RequestContext,
-    productId: string
-  ): Promise<Inventory> {
-    if (!ctx.hasPermission("inventory.read")) {
-      throw new ForbiddenError("No tiene permisos para ver inventario");
-    }
-
-    const item = await this.repository.findByProductId(ctx, productId);
-    if (!item) {
-      throw new NotFoundError("Item de inventario");
-    }
-
-    return item;
+  /**
+   * @deprecated Use ProductVariantRepository.getInventory() with variantId instead
+   */
+  async getInventoryItem(_ctx: RequestContext, _productId: string): Promise<unknown> {
+    throw new Error("InventoryService.getInventoryItem is deprecated. Use ProductVariantRepository instead.");
   }
 
-  async updateStock(
-    ctx: RequestContext,
-    productId: string,
-    quantity: number
-  ): Promise<MutationResult<Inventory>> {
-    if (!ctx.hasPermission("inventory.write")) {
-      throw new ForbiddenError("No tiene permisos para modificar inventario");
-    }
-
-    if (quantity < 0) {
-      throw new ValidationError("La cantidad no puede ser negativa");
-    }
-
-    return db.transaction(async (tx) => {
-      const item = await this.repository.updateQuantity(
-        ctx,
-        productId,
-        quantity.toString(),
-        tx
-      );
-
-      if (!item) {
-        throw new NotFoundError("Item de inventario");
-      }
-
-      return {
-        data: item,
-        txid: await getTxid(tx),
-      };
-    });
+  /**
+   * @deprecated Inventory is now managed through purchases
+   */
+  async updateStock(_ctx: RequestContext, _productId: string, _quantity: number): Promise<unknown> {
+    throw new Error("InventoryService.updateStock is deprecated. Inventory is now managed through purchases.");
   }
 
+  /**
+   * @deprecated Use ProductVariantRepository.getInventory() and check quantity instead
+   */
   async validateStockAvailability(
-    ctx: RequestContext,
-    productId: string,
-    requestedQty: number
+    _ctx: RequestContext,
+    _productId: string,
+    _requestedQty: number
   ): Promise<{ available: boolean; currentStock: number }> {
-    if (!ctx.hasPermission("inventory.read")) {
-      throw new ForbiddenError("No tiene permisos para ver inventario");
-    }
-
-    const item = await this.repository.findByProductId(ctx, productId);
-    const currentStock = item ? parseFloat(item.quantity) : 0;
-
-    return {
-      available: currentStock >= requestedQty,
-      currentStock,
-    };
+    throw new Error("InventoryService.validateStockAvailability is deprecated. Use ProductVariantRepository instead.");
   }
 
-  async deleteInventoryItem(ctx: RequestContext, id: string): Promise<void> {
-    if (!ctx.hasPermission("inventory.write")) {
-      throw new ForbiddenError("No tiene permisos para eliminar inventario");
-    }
-
-    const existing = await this.repository.findById(ctx, id);
-    if (!existing) {
-      throw new NotFoundError("Item de inventario");
-    }
-
-    await this.repository.delete(ctx, id);
+  /**
+   * @deprecated Inventory items are managed through purchases
+   */
+  async deleteInventoryItem(_ctx: RequestContext, _id: string): Promise<void> {
+    throw new Error("InventoryService.deleteInventoryItem is deprecated. Inventory is managed through purchases.");
   }
 
+  /**
+   * Get missing inventory report - only method still in use
+   */
   async getMissingInventoryReport(
     ctx: RequestContext,
     filters?: { startDate?: Date; endDate?: Date }

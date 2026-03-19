@@ -60,24 +60,15 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
       throw new Error("supplierId es requerido para crear una compra");
     }
 
-    const items = (parsed.items || []).map((item) => ({
-      businessId: ctx.businessId,
-      productId: item.productId,
-      variantId: item.variantId || undefined,
-      unitId: item.unitId || undefined,
-      quantity: String(item.quantity),
-      unitCost: String(item.unitCost),
-      totalCost: String(Number(item.quantity) * Number(item.unitCost)),
-    }));
-
-    await this.purchaseRepo.create(ctx, {
+    // Create purchase only (items will be created by PurchaseItemSyncHandler)
+    const purchase = await this.purchaseRepo.create(ctx, {
       supplierId: parsed.supplierId,
       purchaseDate: parsed.purchaseDate ?? new Date().toISOString().split("T")[0],
       status: parsed.status ?? "pending",
       totalAmount: parsed.totalAmount ? String(parsed.totalAmount) : "0",
       notes: parsed.notes ?? undefined,
       receiptImageId: parsed.receiptImageId ?? null,
-    }, items);
+    }, []); // Empty items - will be created via PurchaseItemSyncHandler
   }
 
   private async handleUpdate(

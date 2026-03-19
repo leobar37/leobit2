@@ -300,14 +300,21 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
 }
 
 async function seedInventory(ctx: RequestContext, products: SeedProduct[]) {
-  const existing = await services.inventory.getInventory(ctx);
-  if (existing.length > 0) {
-    console.log(`⚠ ${existing.length} inventory items already exist, skipping`);
-    return existing;
-  }
-
+  // Seed variant inventory instead of deprecated product-level inventory
   for (const product of products) {
-    await services.inventory.updateStock(ctx, product.id, 100);
+    for (const variant of product.variants) {
+      // Check if variant inventory already exists
+      const existing = await services.productVariant.getInventory(ctx, variant.id);
+      if (existing) {
+        console.log(`⚠ Variant ${variant.name} already has inventory, skipping`);
+        continue;
+      }
+      // Create variant inventory with initial stock of 100
+      await services.productVariant.createInventory(ctx, {
+        variantId: variant.id,
+        quantity: "100",
+      });
+    }
   }
 }
 

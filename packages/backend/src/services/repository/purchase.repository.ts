@@ -60,9 +60,11 @@ export class PurchaseRepository {
 
   async findById(
     ctx: RequestContext,
-    id: string
+    id: string,
+    tx?: DbTransaction
   ): Promise<PurchaseWithItems | undefined> {
-    const purchase = await db.query.purchases.findFirst({
+    const dbOrTx = tx || db;
+    const purchase = await dbOrTx.query.purchases.findFirst({
       where: and(
         eq(purchases.id, id),
         eq(purchases.businessId, ctx.businessId)
@@ -152,5 +154,86 @@ export class PurchaseRepository {
       .where(eq(purchases.businessId, ctx.businessId));
 
     return result[0]?.count ?? 0;
+  }
+
+  async addItem(
+    ctx: RequestContext,
+    purchaseId: string,
+    item: {
+      id?: string;
+      productId: string;
+      variantId?: string | null;
+      unitId?: string | null;
+      quantity: string;
+      unitCost: string;
+      totalCost: string;
+    },
+    tx?: DbTransaction
+  ): Promise<PurchaseItem> {
+    const dbOrTx = tx || db;
+
+    const [insertedItem] = await dbOrTx
+      .insert(purchaseItems)
+      .values({
+        ...(item.id ? { id: item.id } : {}),
+        purchaseId,
+        businessId: ctx.businessId,
+        productId: item.productId,
+        variantId: item.variantId ?? null,
+        unitId: item.unitId ?? null,
+        quantity: item.quantity,
+        unitCost: item.unitCost,
+        totalCost: item.totalCost,
+      })
+      .returning();
+
+    return insertedItem;
+  }
+
+  async findItemById(
+    ctx: RequestContext,
+    purchaseId: string,
+    itemId: string,
+    tx?: DbTransaction
+  ): Promise<PurchaseItem | undefined> {
+    const dbOrTx = tx || db;
+
+    const [item] = await dbOrTx
+      .select()
+      .from(purchaseItems)
+      .where(
+        and(
+          eq(purchaseItems.id, itemId),
+          eq(purchaseItems.purchaseId, purchaseId),
+          eq(purchaseItems.businessId, ctx.businessId)
+        )
+      );
+
+    return item;
+  }
+
+  async updateTotal(
+    ctx: RequestContext,
+    purchaseId: string,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const dbOrTx = tx || db;
+
+    const items = await dbOrTx
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.purchaseId, purchaseId));
+
+    const total = items.reduce((sum, item) => {
+      return sum + parseFloat(item.totalCost || "0");
+    }, 0);
+
+    await dbOrTx
+      .update(purchases)
+      .set({
+        totalAmount: total.toFixed(2),
+        updatedAt: new Date(),
+      })
+      .where(eq(purchases.id, purchaseId));
   }
 }

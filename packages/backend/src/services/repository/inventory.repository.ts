@@ -1,115 +1,13 @@
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { inventory, variantInventory, type Inventory, type NewInventory, sales, saleItems, products, productVariants } from "../../db/schema";
+import { variantInventory, sales, saleItems, products, productVariants } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
+/**
+ * @deprecated Use ProductVariantRepository for variant inventory operations
+ * This repository is kept only for getMissingInventoryReport
+ */
 export class InventoryRepository {
-  async findMany(ctx: RequestContext): Promise<Inventory[]> {
-    return db.query.inventory.findMany({
-      with: {
-        product: true,
-      },
-      orderBy: desc(inventory.updatedAt),
-    });
-  }
-
-  async findById(
-    ctx: RequestContext,
-    id: string
-  ): Promise<Inventory | undefined> {
-    return db.query.inventory.findFirst({
-      where: eq(inventory.id, id),
-      with: {
-        product: true,
-      },
-    });
-  }
-
-  async findByProductId(
-    ctx: RequestContext,
-    productId: string
-  ): Promise<Inventory | undefined> {
-    return db.query.inventory.findFirst({
-      where: eq(inventory.productId, productId),
-      with: {
-        product: true,
-      },
-    });
-  }
-
-  async create(
-    ctx: RequestContext,
-    data: Omit<NewInventory, "id" | "updatedAt" | "businessId">,
-    tx?: DbTransaction
-  ): Promise<Inventory> {
-    const dbOrTx = tx || db;
-    const [item] = await dbOrTx.insert(inventory).values({
-      ...data,
-      businessId: ctx.businessId,
-    }).returning();
-    return item;
-  }
-
-  async update(
-    ctx: RequestContext,
-    id: string,
-    data: Partial<Omit<NewInventory, "id" | "updatedAt">>,
-    tx?: DbTransaction
-  ): Promise<Inventory | undefined> {
-    const dbOrTx = tx || db;
-    const [item] = await dbOrTx
-      .update(inventory)
-      .set({
-        ...(data.productId !== undefined && { productId: data.productId }),
-        ...(data.quantity !== undefined && { quantity: data.quantity }),
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.id, id))
-      .returning();
-
-    return item;
-  }
-
-  async updateQuantity(
-    ctx: RequestContext,
-    productId: string,
-    quantity: string,
-    tx?: DbTransaction
-  ): Promise<Inventory | undefined> {
-    const dbOrTx = tx || db;
-    const existing = await this.findByProductId(ctx, productId);
-
-    if (existing) {
-      const [item] = await dbOrTx
-        .update(inventory)
-        .set({
-          quantity,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.id, existing.id))
-        .returning();
-      return item;
-    }
-
-    return this.create(ctx, {
-      productId,
-      quantity,
-    }, tx);
-  }
-
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db.delete(inventory).where(eq(inventory.id, id));
-  }
-
-  async count(ctx: RequestContext): Promise<number> {
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(inventory);
-
-    return result[0]?.count ?? 0;
-  }
-
   async getMissingInventoryReport(
     ctx: RequestContext,
     filters?: { startDate?: Date; endDate?: Date }
@@ -141,8 +39,8 @@ export class InventoryRepository {
       .groupBy(saleItems.productId, saleItems.variantId)
       .as("sold");
 
-    // Main query: products with sold quantities and inventory
-    // Uses variantInventory for variant-level stock, inventory table for products without variants
+    // Main query: products with sold quantities and variant inventory
+    // Only uses variantInventory (no product-level inventory)
     const result = await db
       .select({
         productId: products.id,
@@ -150,15 +48,10 @@ export class InventoryRepository {
         variantId: productVariants.id,
         variantName: productVariants.name,
         totalSold: sql<string>`coalesce(${soldSubquery.totalSold}, '0')`,
-        // Use variantInventory when variant exists, otherwise use inventory table
-        currentStock: sql<string>`coalesce(
-          ${variantInventory.quantity},
-          ${inventory.quantity},
-          '0'
-        )`,
+        currentStock: sql<string>`coalesce(${variantInventory.quantity}, '0')`,
         needed: sql<string>`greatest(
-          coalesce(${soldSubquery.totalSold}, '0')::decimal - 
-          coalesce(${variantInventory.quantity}, ${inventory.quantity}, '0')::decimal, 
+          coalesce(${soldSubquery.totalSold}, '0')::decimal -
+          coalesce(${variantInventory.quantity}, '0')::decimal,
           0
         )`,
       })
@@ -171,7 +64,6 @@ export class InventoryRepository {
           eq(soldSubquery.variantId, productVariants.id)
         )
       )
-      .leftJoin(inventory, eq(inventory.productId, products.id))
       .leftJoin(variantInventory, eq(variantInventory.variantId, productVariants.id))
       .where(and(
         eq(products.businessId, ctx.businessId),

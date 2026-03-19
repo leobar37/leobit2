@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
@@ -44,6 +44,8 @@ interface PurchaseFormContextType {
     isPending: boolean;
     isError: boolean;
   };
+  purchaseError: string | null;
+  clearPurchaseError: () => void;
   form: ReturnType<typeof useForm<PurchaseFormValues>>;
   totalAmount: number;
   cartItemsCount: number;
@@ -79,6 +81,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     isPending: false,
     isError: false,
   });
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const form = useForm<PurchaseFormValues>({
     defaultValues: {
@@ -142,6 +145,10 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     });
   }, [receiptPreview]);
 
+  const clearPurchaseError = useCallback(() => {
+    setPurchaseError(null);
+  }, []);
+
   const totalAmount = useMemo(() => {
     return items.reduce((sum, item) => {
       return sum + (parseFloat(item.totalCost) || 0);
@@ -151,8 +158,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const cartItemsCount = items.length;
 
   const isFormValid = useMemo(() => {
-    return items.length > 0 && business !== undefined;
-  }, [items.length, business]);
+    return items.length > 0 && business !== undefined && supplier !== null;
+  }, [items.length, business, supplier]);
 
   const createPurchaseMutation = useCreatePurchase();
   const uploadReceiptFile = useUploadFile({
@@ -163,6 +170,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const createPurchase = useMutation({
     mutationFn: async () => {
       const purchaseDate = form.getValues("purchaseDate");
+      const supplierId = supplier?.id || "";
 
       let receiptImageId: string | undefined;
       if (receiptFile) {
@@ -205,13 +213,20 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     onSuccess: () => {
       navigate("/compras");
     },
-    onError: () => {
-      setFileUploadStatus((prev) => ({ ...prev, isUploading: false, isError: true }));
+    onError: (error) => {
+      console.error("[CREATE PURCHASE MUTATION] Error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error al guardar la compra";
+      setPurchaseError(errorMessage);
     },
   });
 
   const onSubmit = useCallback(async () => {
-    await createPurchase.mutateAsync();
+    try {
+      await createPurchase.mutateAsync();
+    } catch (error) {
+      console.error("[PURCHASE FORM] mutation error:", error);
+      throw error;
+    }
   }, [createPurchase]);
 
   const value: PurchaseFormContextType = {
@@ -227,6 +242,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     handleReceiptSelect,
     handleReceiptClear,
     fileUploadStatus,
+    purchaseError,
+    clearPurchaseError,
     form,
     totalAmount,
     cartItemsCount,
@@ -237,7 +254,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   return (
     <PurchaseFormContext.Provider value={value}>
-      {children}
+      <FormProvider {...form}>{children}</FormProvider>
     </PurchaseFormContext.Provider>
   );
 }

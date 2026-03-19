@@ -14,6 +14,8 @@ import {
   Tag,
   UserCog,
   MapPin,
+  Building2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   MinimalCard,
@@ -123,6 +125,15 @@ const puntosVentaConfigItem: ConfigItem = {
   iconBg: "bg-orange-100",
 };
 
+const proveedoresConfigItem: ConfigItem = {
+  icon: Building2,
+  title: "Proveedores",
+  description: "Gestiona proveedores y contactos",
+  href: "/proveedores",
+  color: "text-amber-600",
+  iconBg: "bg-amber-100",
+};
+
 const gruposConfigItem: ConfigItem = {
   icon: UserCog,
   title: "Grupos",
@@ -140,6 +151,15 @@ const whatsappConfigItem: ConfigItem = {
   iconBg: "bg-green-100",
 };
 
+const conflictosConfigItem: ConfigItem = {
+  icon: AlertTriangle,
+  title: "Conflictos",
+  description: "Resuelve conflictos de sincronización",
+  href: "/config/conflictos",
+  color: "text-orange-600",
+  iconBg: "bg-orange-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -154,10 +174,12 @@ export default function ConfigIndexPage() {
         distribucionesConfigItem,
         comprasConfigItem,
         puntosVentaConfigItem,
+        proveedoresConfigItem,
         gruposConfigItem,
         tagsConfigItem,
         flagsConfigItem,
         whatsappConfigItem,
+        conflictosConfigItem,
         ...baseConfigItems.slice(2),
       ]
     : baseConfigItems;

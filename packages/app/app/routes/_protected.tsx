@@ -115,7 +115,33 @@ export default function ProtectedLayout() {
   }, []);
 
   const handleResolveConflict = async (resolution: ConflictResolution) => {
-    setActiveConflict(null);
+    if (!activeConflict) return;
+
+    try {
+      const response = await fetch(`/sync/conflicts/${activeConflict.id}/resolve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getStoredAuthToken()}`,
+          "x-business-id": getStoredBusinessId(),
+        },
+        body: JSON.stringify({
+          resolution: resolution.resolution,
+          mergedData: resolution.mergedData,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to resolve conflict:", await response.text());
+        return;
+      }
+
+      console.log("Conflict resolved successfully");
+    } catch (error) {
+      console.error("Error resolving conflict:", error);
+    } finally {
+      setActiveConflict(null);
+    }
   };
 
   const hasToken = !!getStoredAuthToken();

@@ -1,5 +1,4 @@
 import type { PurchaseRepository, PurchaseWithItems } from "../repository/purchase.repository";
-import type { InventoryRepository } from "../repository/inventory.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { ProductUnitRepository } from "../repository/product-unit.repository";
@@ -13,6 +12,7 @@ import {
   ForbiddenError,
 } from "../../errors";
 import type { Purchase, NewPurchaseItem } from "../../db/schema";
+import { purchaseMachine } from "../transitions";
 
 export interface CreatePurchaseItemInput {
   productId: string;
@@ -36,7 +36,6 @@ export interface CreatePurchaseInput {
 export class PurchaseService {
   constructor(
     private repository: PurchaseRepository,
-    private inventoryRepo: InventoryRepository,
     private supplierRepo: SupplierRepository,
     private variantRepo: ProductVariantRepository,
     private unitRepo: ProductUnitRepository,
@@ -153,30 +152,8 @@ export class PurchaseService {
       validatedItems
     );
 
-    for (let i = 0; i < data.items.length; i++) {
-      const item = data.items[i];
-      const validatedItem = validatedItems[i];
-
-      const finalQuantity = parseFloat(validatedItem.quantity);
-      const finalVariantId = validatedItem.variantId;
-
-      const existingInventory = await this.inventoryRepo.findByProductId(ctx, item.productId);
-
-      if (existingInventory) {
-        const currentQty = parseFloat(existingInventory.quantity);
-        const newQty = currentQty + finalQuantity;
-        await this.inventoryRepo.updateQuantity(ctx, item.productId, newQty.toString());
-      } else {
-        await this.inventoryRepo.create(ctx, {
-          productId: item.productId,
-          quantity: finalQuantity.toString(),
-        });
-      }
-
-      if (finalVariantId) {
-        await this.updateVariantInventory(ctx, finalVariantId, finalQuantity);
-      }
-    }
+    // Note: Inventory is updated when purchase status changes to "received"
+    // via state machine transition, not at creation time
 
     return {
       data: purchase,
@@ -202,40 +179,13 @@ export class PurchaseService {
       throw new ValidationError("No se puede modificar una compra cancelada");
     }
 
-    if (status === "cancelled" && existing.status === "received") {
-      for (const item of existing.items) {
-        const existingInventory = await this.inventoryRepo.findByProductId(
-          ctx,
-          item.productId
-        );
+    const previousStatus = existing.status as "pending" | "received" | "cancelled";
 
-        if (existingInventory) {
-          const currentQty = parseFloat(existingInventory.quantity);
-          const itemQty = parseFloat(item.quantity);
-          const newQty = Math.max(0, currentQty - itemQty);
-          await this.inventoryRepo.updateQuantity(
-            ctx,
-            item.productId,
-            newQty.toString()
-          );
-        }
-
-        if (item.variantId) {
-          const existingVariantInventory = await this.variantRepo.getInventory(
-            ctx,
-            item.variantId
-          );
-          if (existingVariantInventory) {
-            const currentQty = parseFloat(existingVariantInventory.quantity);
-            const itemQty = parseFloat(item.quantity);
-            const newQty = Math.max(0, currentQty - itemQty);
-            await this.variantRepo.updateInventory(
-              ctx,
-              item.variantId,
-              newQty.toString()
-            );
-          }
-        }
+    // Execute state machine transition for inventory updates
+    if (previousStatus !== status) {
+      const purchaseWithItems = await this.repository.findById(ctx, id);
+      if (purchaseWithItems) {
+        await purchaseMachine.executeTransition(ctx, purchaseWithItems, previousStatus, status);
       }
     }
 

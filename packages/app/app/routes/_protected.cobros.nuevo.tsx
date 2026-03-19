@@ -175,6 +175,14 @@ export default function NuevoCobroPage() {
     }
   }, [customerId, currentDebt, setValue]);
 
+  useEffect(() => {
+    return () => {
+      if (proofPreview) {
+        URL.revokeObjectURL(proofPreview);
+      }
+    };
+  }, [proofPreview]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -185,12 +193,18 @@ export default function NuevoCobroPage() {
       return;
     }
 
+    if (proofPreview) {
+      URL.revokeObjectURL(proofPreview);
+    }
     setProofImage(file);
     setProofPreview(URL.createObjectURL(file));
     setSubmitError(null);
   };
 
   const clearImage = () => {
+    if (proofPreview) {
+      URL.revokeObjectURL(proofPreview);
+    }
     setProofImage(null);
     setProofPreview(null);
     if (fileInputRef.current) {
