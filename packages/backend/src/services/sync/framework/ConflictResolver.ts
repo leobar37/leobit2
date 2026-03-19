@@ -1,7 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { customers, sales } from "../../../db/schema";
+import { customers, sales, abonos, products, tags, visitas, purchases, suppliers, closings } from "../../../db/schema";
+import { customerGroups } from "../../../db/schema/customer-groups";
+import { customerTags } from "../../../db/schema/customer-tags";
+import { customerGroupMembers } from "../../../db/schema/customer-group-members";
+import { puntosVenta } from "../../../db/schema/puntos-venta";
+import { productUnits } from "../../../db/schema/product-units";
+import { variantInventory } from "../../../db/schema/inventory";
+import { files } from "../../../db/schema/files";
 import type { SyncOperationInput, SyncEntity } from "../types";
 import type { IConflictResolver } from "./types";
 import { logger } from "../../../lib/logger";
@@ -12,7 +19,15 @@ export interface ConflictCheckResult {
   serverData?: Record<string, unknown>;
 }
 
-class TimestampConflictResolver implements IConflictResolver {
+// Base class for timestamp-based conflict detection
+abstract class BaseTimestampConflictResolver implements IConflictResolver {
+  protected abstract getEntityName(): string;
+  protected abstract getTable(): any;
+  protected abstract getIdField(): string;
+  protected abstract getBusinessIdField(): string;
+  protected abstract getUpdatedAtField(): string;
+  protected abstract getServerDataFields(record: any): Record<string, unknown>;
+
   async checkConflict(
     ctx: RequestContext,
     operation: SyncOperationInput,
@@ -22,32 +37,37 @@ class TimestampConflictResolver implements IConflictResolver {
       return { hasConflict: false };
     }
 
-    const customer = await tx.query.customers.findFirst({
+    const table = this.getTable();
+    const idField = this.getIdField();
+    const businessIdField = this.getBusinessIdField();
+    const updatedAtField = this.getUpdatedAtField();
+
+    const record = await tx.query[table.name].findFirst({
       where: and(
-        eq(customers.id, operation.entityId),
-        eq(customers.businessId, ctx.businessId)
+        eq(table[idField], operation.entityId),
+        eq(table[businessIdField], ctx.businessId)
       ),
     });
 
-    if (!customer) {
+    if (!record) {
       return { hasConflict: false };
     }
 
-    const serverTimestamp = customer.updatedAt.getTime();
+    const serverTimestamp = new Date(record[updatedAtField]).getTime();
     const localTimestamp = new Date(operation.localTimestamp).getTime();
 
     if (serverTimestamp > localTimestamp) {
+      logger.warn({
+        msg: `⚠️ ${this.getEntityName()} conflict detected`,
+        entityId: operation.entityId,
+        serverTimestamp: new Date(serverTimestamp).toISOString(),
+        clientTimestamp: operation.localTimestamp,
+      });
+
       return {
         hasConflict: true,
         serverVersion: Math.floor(serverTimestamp / 1000),
-        serverData: {
-          name: customer.name,
-          dni: customer.dni,
-          phone: customer.phone,
-          address: customer.address,
-          notes: customer.notes,
-          updatedAt: customer.updatedAt.toISOString(),
-        },
+        serverData: this.getServerDataFields(record),
       };
     }
 
@@ -55,6 +75,272 @@ class TimestampConflictResolver implements IConflictResolver {
   }
 }
 
+// Entity-specific resolvers
+class CustomerConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Customer"; }
+  protected getTable() { return customers; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      dni: record.dni,
+      phone: record.phone,
+      address: record.address,
+      notes: record.notes,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class AbonoConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Abono"; }
+  protected getTable() { return abonos; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      customerId: record.customerId,
+      amount: record.amount,
+      paymentMethod: record.paymentMethod,
+      notes: record.notes,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class ProductConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Product"; }
+  protected getTable() { return products; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      type: record.type,
+      unit: record.unit,
+      basePrice: record.basePrice,
+      isActive: record.isActive,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class TagConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Tag"; }
+  protected getTable() { return tags; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      color: record.color,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class CustomerTagConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "CustomerTag"; }
+  protected getTable() { return customerTags; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      customerId: record.customerId,
+      tagId: record.tagId,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class CustomerGroupConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "CustomerGroup"; }
+  protected getTable() { return customerGroups; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      color: record.color,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class CustomerGroupMemberConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "CustomerGroupMember"; }
+  protected getTable() { return customerGroupMembers; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      groupId: record.groupId,
+      customerId: record.customerId,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class VisitaConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Visita"; }
+  protected getTable() { return visitas; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      distribucionId: record.distribucionId,
+      customerId: record.customerId,
+      status: record.status,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class PurchaseConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Purchase"; }
+  protected getTable() { return purchases; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      supplierId: record.supplierId,
+      purchaseDate: record.purchaseDate,
+      status: record.status,
+      totalAmount: record.totalAmount,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class SupplierConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Supplier"; }
+  protected getTable() { return suppliers; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      type: record.type,
+      ruc: record.ruc,
+      phone: record.phone,
+      email: record.email,
+      isActive: record.isActive,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class ClosingConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Closing"; }
+  protected getTable() { return closings; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      sellerId: record.sellerId,
+      closingDate: record.closingDate,
+      totalSales: record.totalSales,
+      totalCash: record.totalCash,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class PuntoVentaConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "PuntoVenta"; }
+  protected getTable() { return puntosVenta; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      type: record.type,
+      address: record.address,
+      isActive: record.isActive,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class ProductUnitConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "ProductUnit"; }
+  protected getTable() { return productUnits; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      variantId: record.variantId,
+      name: record.name,
+      quantity: record.quantity,
+      unidad: record.unidad,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class VariantInventoryConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "VariantInventory"; }
+  protected getTable() { return variantInventory; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      variantId: record.variantId,
+      quantity: record.quantity,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class FileConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "File"; }
+  protected getTable() { return files; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      mimeType: record.mimeType,
+      size: record.size,
+      url: record.url,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class InventoryConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Inventory"; }
+  protected getTable() { return products; } // Using products table
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      type: record.type,
+      isActive: record.isActive,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+// Version-based resolver for Sales (existing)
 class VersionConflictResolver implements IConflictResolver {
   async checkConflict(
     ctx: RequestContext,
@@ -109,12 +395,28 @@ class NoOpConflictResolver implements IConflictResolver {
   }
 }
 
+// Registry with entity-specific resolvers
 const resolvers: Record<string, IConflictResolver> = {
-  customers: new TimestampConflictResolver(),
+  customers: new CustomerConflictResolver(),
   sales: new VersionConflictResolver(),
+  abonos: new AbonoConflictResolver(),
+  distribuciones: new InventoryConflictResolver(), // Uses products for distribucion inventory
+  products: new ProductConflictResolver(),
+  tags: new TagConflictResolver(),
+  customer_tags: new CustomerTagConflictResolver(),
+  customer_groups: new CustomerGroupConflictResolver(),
+  customer_group_members: new CustomerGroupMemberConflictResolver(),
+  visitas: new VisitaConflictResolver(),
+  purchases: new PurchaseConflictResolver(),
+  purchase_items: new PurchaseConflictResolver(), // Uses purchase table
+  suppliers: new SupplierConflictResolver(),
+  closings: new ClosingConflictResolver(),
+  puntos_venta: new PuntoVentaConflictResolver(),
+  product_units: new ProductUnitConflictResolver(),
+  variant_inventory: new VariantInventoryConflictResolver(),
+  files: new FileConflictResolver(),
   sale_items: new NoOpConflictResolver(),
-  abonos: new NoOpConflictResolver(),
-  distribuciones: new NoOpConflictResolver(),
+  inventory: new InventoryConflictResolver(),
 };
 
 export class ConflictResolverRegistry {
@@ -127,4 +429,4 @@ export class ConflictResolverRegistry {
   }
 }
 
-export { TimestampConflictResolver, VersionConflictResolver, NoOpConflictResolver };
+export { VersionConflictResolver, NoOpConflictResolver };

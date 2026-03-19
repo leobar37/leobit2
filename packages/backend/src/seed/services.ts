@@ -16,6 +16,8 @@ import { PaymentMethodConfigRepository } from "../services/repository/payment-me
 import { TagRepository } from "../services/repository/tag.repository";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
 import { FileRepository } from "../services/repository/file.repository";
+import { VisitaRepository } from "../services/repository/visita.repository";
+import { CustomerGroupRepository } from "../services/repository/customer-group.repository";
 import { BusinessService } from "../services/business/business.service";
 import { ProductService } from "../services/business/product.service";
 import { ProductVariantService } from "../services/business/product-variant.service";
@@ -23,7 +25,6 @@ import { CustomerService } from "../services/business/customer.service";
 import { SaleService } from "../services/business/sale.service";
 import { PaymentService } from "../services/business/payment.service";
 import { DistribucionService } from "../services/business/distribucion.service";
-import { InventoryService } from "../services/business/inventory.service";
 import { ClosingService } from "../services/business/closing.service";
 import { SupplierService } from "../services/business/supplier.service";
 import { PurchaseService } from "../services/business/purchase.service";
@@ -50,6 +51,8 @@ export const repositories = {
   customerTag: new CustomerTagRepository(),
   whatsAppTemplate: new WhatsAppTemplateRepository(),
   file: new FileRepository(),
+  visita: new VisitaRepository(),
+  customerGroup: new CustomerGroupRepository(),
 };
 
 export const services = {
@@ -62,15 +65,17 @@ export const services = {
     repositories.payment,
     repositories.distribucion,
     repositories.distribucionItem,
-    repositories.business
+    repositories.business,
+    repositories.visita
   ),
   payment: new PaymentService(repositories.payment, repositories.customer),
   distribucion: new DistribucionService(
     repositories.distribucion,
     repositories.distribucionItem,
-    repositories.productVariant
+    repositories.productVariant,
+    repositories.customerGroup,
+    repositories.visita
   ),
-  inventory: new InventoryService(repositories.inventory),
   closing: new ClosingService(repositories.closing),
   supplier: new SupplierService(repositories.supplier),
   purchase: new PurchaseService(
