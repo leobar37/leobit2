@@ -13,7 +13,6 @@ import { customerGroupRoutes } from "./api/customer-groups";
 import { visitaRoutes } from "./api/visitas";
 import { productRoutes } from "./api/products";
 import { paymentRoutes } from "./api/payments";
-import { inventoryRoutes } from "./api/inventory";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
 import { publicSaleRoutes } from "./api/public-sales";
@@ -80,7 +79,6 @@ export const app = new Elysia()
   .use(visitaRoutes)
   .use(productRoutes)
   .use(paymentRoutes)
-  .use(inventoryRoutes)
   .use(distribucionRoutes)
   .use(saleRoutes)
   .use(publicSaleRoutes)

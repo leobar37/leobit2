@@ -39,8 +39,8 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
   )
   .get(
     "/missing-inventory",
-    async ({ inventoryService, ctx, query }) => {
-      const report = await inventoryService.getMissingInventoryReport(
+    async ({ productVariantRepo, ctx, query }) => {
+      const report = await productVariantRepo.getMissingInventoryReport(
         ctx as RequestContext,
         {
           startDate: query.startDate ? new Date(query.startDate) : undefined,

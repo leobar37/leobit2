@@ -8,7 +8,6 @@ import { SaleRepository } from "../services/repository/sale.repository";
 import { PaymentRepository } from "../services/repository/payment.repository";
 import { DistribucionRepository } from "../services/repository/distribucion.repository";
 import { DistribucionItemRepository } from "../services/repository/distribucion-item.repository";
-import { InventoryRepository } from "../services/repository/inventory.repository";
 import { ClosingRepository } from "../services/repository/closing.repository";
 import { SupplierRepository } from "../services/repository/supplier.repository";
 import { PurchaseRepository } from "../services/repository/purchase.repository";
@@ -42,7 +41,6 @@ export const repositories = {
   payment: new PaymentRepository(),
   distribucion: new DistribucionRepository(),
   distribucionItem: new DistribucionItemRepository(),
-  inventory: new InventoryRepository(),
   closing: new ClosingRepository(),
   supplier: new SupplierRepository(),
   purchase: new PurchaseRepository(),

@@ -1,6 +1,6 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { productVariants, variantInventory, type ProductVariant, type NewProductVariant, type VariantInventory, type NewVariantInventory } from "../../db/schema";
+import { productVariants, variantInventory, sales, saleItems, products, type ProductVariant, type NewProductVariant, type VariantInventory, type NewVariantInventory } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import type { DbTransaction } from "../../lib/txid";
 
@@ -217,5 +217,68 @@ export class ProductVariantRepository {
     const newQty = Math.max(0, currentQty + adjustment);
 
     return this.updateInventory(ctx, variantId, newQty.toString(), tx);
+  }
+
+  async getMissingInventoryReport(
+    ctx: RequestContext,
+    filters?: { startDate?: Date; endDate?: Date }
+  ): Promise<Array<{
+    productId: string;
+    productName: string;
+    variantId: string | null;
+    variantName: string | null;
+    totalSold: string;
+    currentStock: string;
+    needed: string;
+  }>> {
+    const soldSubquery = db
+      .select({
+        productId: saleItems.productId,
+        variantId: saleItems.variantId,
+        totalSold: sql<string>`sum(${saleItems.quantity})`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .where(
+        and(
+          eq(sales.businessId, ctx.businessId),
+          filters?.startDate ? gte(sales.saleDate, filters.startDate) : undefined,
+          filters?.endDate ? lte(sales.saleDate, filters.endDate) : undefined
+        )
+      )
+      .groupBy(saleItems.productId, saleItems.variantId)
+      .as("sold");
+
+    const result = await db
+      .select({
+        productId: products.id,
+        productName: products.name,
+        variantId: productVariants.id,
+        variantName: productVariants.name,
+        totalSold: sql<string>`coalesce(${soldSubquery.totalSold}, '0')`,
+        currentStock: sql<string>`coalesce(${variantInventory.quantity}, '0')`,
+        needed: sql<string>`greatest(
+          coalesce(${soldSubquery.totalSold}, '0')::decimal -
+          coalesce(${variantInventory.quantity}, '0')::decimal,
+          0
+        )`,
+      })
+      .from(products)
+      .leftJoin(productVariants, eq(productVariants.productId, products.id))
+      .leftJoin(
+        soldSubquery,
+        and(
+          eq(soldSubquery.productId, products.id),
+          eq(soldSubquery.variantId, productVariants.id)
+        )
+      )
+      .leftJoin(variantInventory, eq(variantInventory.variantId, productVariants.id))
+      .where(and(
+        eq(products.businessId, ctx.businessId),
+        eq(products.isActive, true)
+      ))
+      .orderBy(desc(sql`needed`));
+
+    return result;
   }
 }

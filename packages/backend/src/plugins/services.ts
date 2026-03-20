@@ -7,8 +7,6 @@ import { ProductRepository } from "../services/repository/product.repository";
 import { ProductService } from "../services/business/product.service";
 import { PaymentRepository } from "../services/repository/payment.repository";
 import { PaymentService } from "../services/business/payment.service";
-import { InventoryRepository } from "../services/repository/inventory.repository";
-import { InventoryService } from "../services/business/inventory.service";
 import { DistribucionRepository } from "../services/repository/distribucion.repository";
 import { DistribucionItemRepository } from "../services/repository/distribucion-item.repository";
 import { DistribucionService } from "../services/business/distribucion.service";
@@ -62,7 +60,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerRepo = new CustomerRepository();
     const productRepo = new ProductRepository();
     const paymentRepo = new PaymentRepository();
-    const inventoryRepo = new InventoryRepository();
     const distribucionRepo = new DistribucionRepository();
     const distribucionItemRepo = new DistribucionItemRepository();
     const saleRepo = new SaleRepository();
@@ -98,7 +95,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerService = new CustomerService(customerRepo);
     const productService = new ProductService(productRepo, productVariantRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo);
-    const inventoryService = new InventoryService(inventoryRepo);
     const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
     const closingService = new ClosingService(closingRepo);
@@ -151,8 +147,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       productService,
       paymentRepo,
       paymentService,
-      inventoryRepo,
-      inventoryService,
       distribucionRepo,
       distribucionItemRepo,
       distribucionService,
