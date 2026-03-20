@@ -66,20 +66,20 @@ export class SaleSyncHandler extends BaseSyncHandler {
       id: operation.entityId,
       type: parsed.type ?? "instant_sale",
       saleType: parsed.saleType,
-      totalAmount: String(parsed.totalAmount),
-      amountPaid: String(parsed.amountPaid ?? (parsed.saleType === "contado" ? parsed.totalAmount : 0)),
-      balanceDue: parsed.saleType === "credito" 
+      totalAmount: parsed.totalAmount,
+      amountPaid: parsed.amountPaid ?? (parsed.saleType === "contado" ? parsed.totalAmount : "0"),
+      balanceDue: parsed.saleType === "credito"
         ? String(Math.max(Number(parsed.totalAmount) - Number(parsed.amountPaid || 0), 0))
         : "0",
-      tara: parsed.tara?.toString(),
-      netWeight: parsed.netWeight?.toString(),
+      tara: parsed.tara,
+      netWeight: parsed.netWeight,
       items: parsed.items.map(item => ({
         ...item,
-        quantity: item.quantity?.toString(),
-        orderedQuantity: item.orderedQuantity?.toString(),
-        unitPrice: item.unitPrice?.toString(),
-        unitPriceQuoted: item.unitPriceQuoted?.toString(),
-        subtotal: String(item.subtotal),
+        quantity: item.quantity,
+        orderedQuantity: item.orderedQuantity,
+        unitPrice: item.unitPrice,
+        unitPriceQuoted: item.unitPriceQuoted,
+        subtotal: item.subtotal,
       })),
     } as Parameters<typeof this.saleRepo.create>[1];
 
@@ -137,16 +137,16 @@ export class SaleSyncHandler extends BaseSyncHandler {
         id: operation.entityId,
         type: parsed.type ?? "instant_sale",
         saleType: parsed.saleType ?? "contado",
-        totalAmount: String(parsed.totalAmount ?? 0),
+        totalAmount: parsed.totalAmount ?? "0",
         amountPaid: "0",
         balanceDue: "0",
         items: (parsed.items || []).map((item: Record<string, unknown>) => ({
           ...item,
-          quantity: String(item.quantity ?? ""),
-          orderedQuantity: String(item.orderedQuantity ?? ""),
-          unitPrice: String(item.unitPrice ?? ""),
-          unitPriceQuoted: String(item.unitPriceQuoted ?? ""),
-          subtotal: String(item.subtotal ?? ""),
+          quantity: (item.quantity as string) ?? "",
+          orderedQuantity: (item.orderedQuantity as string) ?? "",
+          unitPrice: (item.unitPrice as string) ?? "",
+          unitPriceQuoted: (item.unitPriceQuoted as string) ?? "",
+          subtotal: (item.subtotal as string) ?? "",
         })),
       } as Parameters<typeof this.saleRepo.create>[1];
 
@@ -184,7 +184,7 @@ export class SaleSyncHandler extends BaseSyncHandler {
         status: "cancelled",
         cancelledAt: now(),
         cancelReason: parsed.cancelReason || "Cancelación",
-        refundAmount: parsed.refundAmount?.toString(),
+        refundAmount: parsed.refundAmount,
         refundMethod: parsed.refundMethod as "efectivo" | "yape" | "plin" | "transferencia" | undefined,
         version: existing.version + 1,
       }, tx);
@@ -196,7 +196,7 @@ export class SaleSyncHandler extends BaseSyncHandler {
       ...(parsed.customerId !== undefined && { customerId: parsed.customerId }),
       ...(parsed.deliveryDate !== undefined && { deliveryDate: parsed.deliveryDate }),
       ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
-      ...(parsed.totalAmount !== undefined && { totalAmount: String(parsed.totalAmount) }),
+      ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
     };
 
     if (Array.isArray(parsed.items)) {
@@ -206,11 +206,11 @@ export class SaleSyncHandler extends BaseSyncHandler {
         productName: item.productName,
         variantId: item.variantId,
         variantName: item.variantName,
-        quantity: item.quantity?.toString(),
-        orderedQuantity: item.orderedQuantity?.toString(),
-        unitPrice: item.unitPrice?.toString(),
-        unitPriceQuoted: item.unitPriceQuoted?.toString(),
-        subtotal: String(item.subtotal),
+        quantity: item.quantity,
+        orderedQuantity: item.orderedQuantity,
+        unitPrice: item.unitPrice,
+        unitPriceQuoted: item.unitPriceQuoted,
+        subtotal: item.subtotal,
       }));
 
       await this.saleRepo.updateWithItems(ctx, operation.entityId, {

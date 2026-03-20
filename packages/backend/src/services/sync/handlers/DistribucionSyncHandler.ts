@@ -85,7 +85,7 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
     const updateData: Parameters<typeof this.distribucionRepo.update>[2] = {};
 
     if (parsed.puntoVenta !== undefined) updateData.puntoVenta = parsed.puntoVenta;
-    if (parsed.montoRecaudado !== undefined) updateData.montoRecaudado = String(parsed.montoRecaudado);
+    if (parsed.montoRecaudado !== undefined) updateData.montoRecaudado = parsed.montoRecaudado;
     if (parsed.fecha !== undefined) updateData.fecha = parsed.fecha;
     if (parsed.estado !== undefined) updateData.estado = parsed.estado;
 

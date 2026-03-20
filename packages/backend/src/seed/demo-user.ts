@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { businesses, businessUsers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { RequestContext } from "../context/request-context";
-import { services } from "./services";
+import { services, repositories } from "./services";
 import { backfillSyncOperations } from "./backfill-sync-operations";
 
 const DEMO_USER = {
@@ -304,13 +304,13 @@ async function seedInventory(ctx: RequestContext, products: SeedProduct[]) {
   for (const product of products) {
     for (const variant of product.variants) {
       // Check if variant inventory already exists
-      const existing = await services.productVariant.getInventory(ctx, variant.id);
+      const existing = await repositories.productVariant.getInventory(ctx, variant.id);
       if (existing) {
         console.log(`⚠ Variant ${variant.name} already has inventory, skipping`);
         continue;
       }
       // Create variant inventory with initial stock of 100
-      await services.productVariant.createInventory(ctx, {
+      await repositories.productVariant.createInventory(ctx, {
         variantId: variant.id,
         quantity: "100",
       });

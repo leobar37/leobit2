@@ -74,11 +74,11 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
         productName: parsed.productName,
         variantId: parsed.variantId,
         variantName: parsed.variantName,
-        quantity: parsed.quantity?.toString(),
-        orderedQuantity: parsed.orderedQuantity?.toString(),
-        unitPrice: parsed.unitPrice?.toString(),
-        unitPriceQuoted: parsed.unitPriceQuoted?.toString(),
-        subtotal: String(parsed.subtotal),
+        quantity: parsed.quantity,
+        orderedQuantity: parsed.orderedQuantity,
+        unitPrice: parsed.unitPrice,
+        unitPriceQuoted: parsed.unitPriceQuoted,
+        subtotal: parsed.subtotal,
       }, executor);
     };
 
@@ -110,14 +110,14 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
 
       const oldSubtotal = parseFloat(existingItem.subtotal);
       const newSubtotal = parsed.subtotal !== undefined
-        ? parseFloat(String(parsed.subtotal))
+        ? parseFloat(parsed.subtotal)
         : oldSubtotal;
       const subtotalDiff = newSubtotal - oldSubtotal;
 
       await this.saleRepo.updateItem(ctx, parsed.saleId, operation.entityId, {
-        quantity: parsed.quantity?.toString(),
-        unitPrice: parsed.unitPrice?.toString(),
-        subtotal: parsed.subtotal?.toString(),
+        quantity: parsed.quantity,
+        unitPrice: parsed.unitPrice,
+        subtotal: parsed.subtotal,
         isModified: true,
       }, executor);
 

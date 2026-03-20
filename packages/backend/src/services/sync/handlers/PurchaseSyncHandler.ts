@@ -65,7 +65,7 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
       supplierId: parsed.supplierId,
       purchaseDate: parsed.purchaseDate ?? new Date().toISOString().split("T")[0],
       status: parsed.status ?? "pending",
-      totalAmount: parsed.totalAmount ? String(parsed.totalAmount) : "0",
+      totalAmount: parsed.totalAmount ?? "0",
       notes: parsed.notes ?? undefined,
       receiptImageId: parsed.receiptImageId ?? null,
     }, []); // Empty items - will be created via PurchaseItemSyncHandler

@@ -60,8 +60,8 @@ export class ProductSyncHandler extends BaseSyncHandler {
       name: parsed.name,
       type: parsed.type ?? "otro",
       unit: (parsed.unit ?? "kg") as "kg" | "unidad",
-      basePrice: parsed.basePrice ? String(parsed.basePrice) : "0",
-      costPrice: parsed.costPrice ? String(parsed.costPrice) : "0",
+      basePrice: parsed.basePrice ?? "0",
+      costPrice: parsed.costPrice ?? "0",
       isActive: parsed.isActive ?? true,
       imageId: parsed.imageId,
     }, tx);
@@ -78,7 +78,7 @@ export class ProductSyncHandler extends BaseSyncHandler {
     if (parsed.name !== undefined) updateData.name = parsed.name;
     if (parsed.type !== undefined) updateData.type = parsed.type;
     if (parsed.unit !== undefined) updateData.unit = parsed.unit as "kg" | "unidad";
-    if (parsed.basePrice !== undefined) updateData.basePrice = String(parsed.basePrice);
+    if (parsed.basePrice !== undefined) updateData.basePrice = parsed.basePrice;
     if (parsed.isActive !== undefined) updateData.isActive = parsed.isActive;
     if (parsed.imageId !== undefined) updateData.imageId = parsed.imageId;
 

@@ -59,7 +59,7 @@ export class AbonoSyncHandler extends BaseSyncHandler {
     await this.paymentRepo.create(ctx, {
       id: operation.entityId,
       customerId: parsed.customerId,
-      amount: String(parsed.amount),
+      amount: parsed.amount,
       paymentMethod: parsed.paymentMethod,
       notes: parsed.notes,
     }, tx);

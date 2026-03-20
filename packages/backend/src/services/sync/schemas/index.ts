@@ -1,5 +1,52 @@
 import { z } from "zod";
 
+// ============================================================================
+// Numeric String Transformation Helpers
+// ============================================================================
+
+/**
+ * Transforms a number or numeric string to a string.
+ * Throws if value is not a finite number.
+ */
+const numericStringTransform = z.union([z.string(), z.number()]).transform((val) => {
+  if (typeof val === "number") {
+    if (!Number.isFinite(val)) {
+      throw new Error("Invalid number: must be finite");
+    }
+    return val.toString();
+  }
+  const parsed = Number(val);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("Invalid number string");
+  }
+  return parsed.toString();
+});
+
+/**
+ * Transforms an optional number or numeric string to a string or undefined.
+ */
+const optionalNumericStringTransform = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined) {
+      return undefined;
+    }
+    if (typeof val === "number") {
+      if (!Number.isFinite(val)) {
+        return undefined;
+      }
+      return val.toString();
+    }
+    const parsed = Number(val);
+    if (!Number.isFinite(parsed)) {
+      return undefined;
+    }
+    return parsed.toString();
+  });
+
+export { numericStringTransform, optionalNumericStringTransform };
+
 export const customerCreateSchema = z.object({
   name: z.string().min(1, "name es requerido"),
   dni: z.string().optional(),
@@ -19,11 +66,11 @@ export const saleItemSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.union([z.string(), z.number()]).optional(),
-  orderedQuantity: z.union([z.string(), z.number()]).optional(),
-  unitPrice: z.union([z.string(), z.number()]).optional(),
-  unitPriceQuoted: z.union([z.string(), z.number()]).optional(),
-  subtotal: z.union([z.string(), z.number()]),
+  quantity: optionalNumericStringTransform,
+  orderedQuantity: optionalNumericStringTransform,
+  unitPrice: optionalNumericStringTransform,
+  unitPriceQuoted: optionalNumericStringTransform,
+  subtotal: numericStringTransform,
 });
 
 export const saleCreateSchema = z.object({
@@ -31,11 +78,11 @@ export const saleCreateSchema = z.object({
   customerId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]),
   saleType: z.enum(["contado", "credito"]),
-  totalAmount: z.union([z.string(), z.number()]),
-  amountPaid: z.union([z.string(), z.number()]).optional(),
-  balanceDue: z.union([z.string(), z.number()]).optional(),
-  tara: z.union([z.string(), z.number()]).optional(),
-  netWeight: z.union([z.string(), z.number()]).optional(),
+  totalAmount: numericStringTransform,
+  amountPaid: optionalNumericStringTransform,
+  balanceDue: optionalNumericStringTransform,
+  tara: optionalNumericStringTransform,
+  netWeight: optionalNumericStringTransform,
   deliveryDate: z.string().optional(),
   orderDate: z.string().optional(),
   items: z.array(saleItemSchema),
@@ -51,7 +98,7 @@ export const saleCreateSchema = z.object({
   (data) => {
     if (data.saleType === "contado") {
       const total = Number(data.totalAmount);
-      const paid = Number(data.amountPaid ?? total);
+      const paid = Number(data.amountPaid ?? data.totalAmount);
       return Math.abs(paid - total) <= 0.01;
     }
     return true;
@@ -74,11 +121,11 @@ const saleBaseSchema = z.object({
   customerId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]).optional(),
   saleType: z.enum(["contado", "credito"]).optional(),
-  totalAmount: z.union([z.string(), z.number()]).optional(),
-  amountPaid: z.union([z.string(), z.number()]).optional(),
-  balanceDue: z.union([z.string(), z.number()]).optional(),
-  tara: z.union([z.string(), z.number()]).optional(),
-  netWeight: z.union([z.string(), z.number()]).optional(),
+  totalAmount: optionalNumericStringTransform,
+  amountPaid: optionalNumericStringTransform,
+  balanceDue: optionalNumericStringTransform,
+  tara: optionalNumericStringTransform,
+  netWeight: optionalNumericStringTransform,
   deliveryDate: z.string().optional(),
   orderDate: z.string().optional(),
   items: z.array(saleItemSchema).optional(),
@@ -87,7 +134,7 @@ const saleBaseSchema = z.object({
 export const saleUpdateSchema = saleBaseSchema.extend({
   status: z.enum(["draft", "active", "confirmed", "delivered", "cancelled"]).optional(),
   version: z.number().optional(),
-  refundAmount: z.union([z.string(), z.number()]).optional(),
+  refundAmount: optionalNumericStringTransform,
   cancelReason: z.string().optional(),
   refundMethod: z.string().optional(),
 });
@@ -97,7 +144,7 @@ export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
 
 export const abonoCreateSchema = z.object({
   customerId: z.string().min(1, "customerId es requerido"),
-  amount: z.union([z.string(), z.number()]).refine(
+  amount: numericStringTransform.refine(
     (val) => Number(val) > 0,
     { message: "amount es requerido y debe ser mayor a 0" }
   ),
@@ -117,7 +164,7 @@ export type AbonoUpdateInput = z.infer<typeof abonoUpdateSchema>;
 
 export const distribucionItemSchema = z.object({
   variantId: z.string(),
-  cantidadAsignada: z.union([z.string(), z.number()]),
+  cantidadAsignada: numericStringTransform,
   unidad: z.string(),
 });
 
@@ -141,7 +188,7 @@ const distribucionBaseSchema = z.object({
 });
 
 export const distribucionUpdateSchema = distribucionBaseSchema.extend({
-  montoRecaudado: z.union([z.string(), z.number()]).optional(),
+  montoRecaudado: optionalNumericStringTransform,
   estado: z.enum(["activo", "cerrado", "en_ruta"]).optional(),
 });
 
@@ -154,11 +201,11 @@ export const saleItemOperationSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.union([z.string(), z.number()]).optional(),
-  orderedQuantity: z.union([z.string(), z.number()]).optional(),
-  unitPrice: z.union([z.string(), z.number()]).optional(),
-  unitPriceQuoted: z.union([z.string(), z.number()]).optional(),
-  subtotal: z.union([z.string(), z.number()]),
+  quantity: optionalNumericStringTransform,
+  orderedQuantity: optionalNumericStringTransform,
+  unitPrice: optionalNumericStringTransform,
+  unitPriceQuoted: optionalNumericStringTransform,
+  subtotal: numericStringTransform,
 });
 
 export type SaleItemOperationInput = z.infer<typeof saleItemOperationSchema>;
@@ -167,8 +214,8 @@ export const productCreateSchema = z.object({
   name: z.string().min(1, "name es requerido"),
   type: z.enum(["pollo", "huevo", "otro"]).optional(),
   unit: z.string().optional(),
-  basePrice: z.union([z.string(), z.number()]).optional(),
-  costPrice: z.union([z.string(), z.number()]).optional(),
+  basePrice: optionalNumericStringTransform,
+  costPrice: optionalNumericStringTransform,
   isActive: z.boolean().optional(),
   imageId: z.string().optional(),
 });
@@ -201,16 +248,16 @@ export const purchaseItemSchema = z.object({
   productId: z.string(),
   variantId: z.string().optional(),
   unitId: z.string().optional(),
-  packs: z.union([z.string(), z.number()]).optional(),
-  quantity: z.union([z.string(), z.number()]),
-  unitCost: z.union([z.string(), z.number()]),
+  packs: optionalNumericStringTransform,
+  quantity: numericStringTransform,
+  unitCost: numericStringTransform,
 });
 
 export const purchaseCreateSchema = z.object({
   supplierId: z.string().min(1, "supplierId es requerido"),
   purchaseDate: z.string().optional(),
   status: z.enum(["pending", "received", "cancelled"]).optional(),
-  totalAmount: z.union([z.string(), z.number()]).optional(),
+  totalAmount: optionalNumericStringTransform,
   notes: z.string().optional(),
   receiptImageId: z.string().optional(),
   items: z.array(purchaseItemSchema).optional(),
@@ -223,14 +270,33 @@ export const purchaseUpdateSchema = purchaseCreateSchema.extend({
 export type PurchaseCreateInput = z.infer<typeof purchaseCreateSchema>;
 export type PurchaseUpdateInput = z.infer<typeof purchaseUpdateSchema>;
 
+// Purchase Item schemas for sync handlers (use transforms for numeric fields)
+export const purchaseItemCreateSchema = z.object({
+  id: z.string().optional(),
+  purchaseId: z.string(),
+  productId: z.string(),
+  variantId: z.string().optional().nullable(),
+  unitId: z.string().optional().nullable(),
+  quantity: numericStringTransform,
+  unitCost: numericStringTransform,
+  totalCost: optionalNumericStringTransform,
+});
+
+export const purchaseItemUpdateSchema = z.object({
+  purchaseId: z.string(),
+  quantity: optionalNumericStringTransform,
+  unitCost: optionalNumericStringTransform,
+  totalCost: optionalNumericStringTransform,
+});
+
 export const inventoryCreateSchema = z.object({
   productId: z.string().min(1, "productId es requerido"),
-  quantity: z.union([z.string(), z.number()]),
+  quantity: numericStringTransform,
 });
 
 export const inventoryUpdateSchema = z.object({
   productId: z.string().optional(),
-  quantity: z.union([z.string(), z.number()]).optional(),
+  quantity: optionalNumericStringTransform,
 });
 
 export type InventoryCreateInput = z.infer<typeof inventoryCreateSchema>;

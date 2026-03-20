@@ -4,25 +4,7 @@ import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
 import type { PurchaseRepository } from "../../repository/purchase.repository";
 import { BaseSyncHandler } from "./BaseSyncHandler";
-import { z } from "zod";
-
-const purchaseItemCreateSchema = z.object({
-  id: z.string().optional(),
-  purchaseId: z.string(),
-  productId: z.string(),
-  variantId: z.string().optional().nullable(),
-  unitId: z.string().optional().nullable(),
-  quantity: z.union([z.number(), z.string()]),
-  unitCost: z.union([z.number(), z.string()]),
-  totalCost: z.union([z.number(), z.string()]).optional(),
-});
-
-const purchaseItemUpdateSchema = z.object({
-  purchaseId: z.string(),
-  quantity: z.union([z.number(), z.string()]).optional(),
-  unitCost: z.union([z.number(), z.string()]).optional(),
-  totalCost: z.union([z.number(), z.string()]).optional(),
-});
+import { purchaseItemCreateSchema, purchaseItemUpdateSchema } from "../schemas";
 
 export class PurchaseItemSyncHandler extends BaseSyncHandler {
   readonly entityType = "purchase_items" as const;
@@ -97,6 +79,7 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
     }
 
     // Create item with the ID from operation.entityId
+    // Note: totalCost falls back to calculated value if not provided
     await this.purchaseRepo.addItem(
       ctx,
       purchaseId,
@@ -105,9 +88,9 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
         productId: parsed.productId,
         variantId: parsed.variantId ?? null,
         unitId: parsed.unitId ?? null,
-        quantity: String(parsed.quantity),
-        unitCost: String(parsed.unitCost),
-        totalCost: parsed.totalCost ? String(parsed.totalCost) : String(Number(parsed.quantity) * Number(parsed.unitCost)),
+        quantity: parsed.quantity,
+        unitCost: parsed.unitCost,
+        totalCost: parsed.totalCost ?? String(Number(parsed.quantity) * Number(parsed.unitCost)),
       },
       tx
     );
@@ -136,15 +119,15 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
       throw new Error("Item no encontrado");
     }
 
-    // Update the item
+    // Update the item - values are already strings from schema transform
     await this.purchaseRepo.updateItem(
       ctx,
       purchaseId,
       operation.entityId,
       {
-        quantity: parsed.quantity !== undefined ? String(parsed.quantity) : undefined,
-        unitCost: parsed.unitCost !== undefined ? String(parsed.unitCost) : undefined,
-        totalCost: parsed.totalCost !== undefined ? String(parsed.totalCost) : undefined,
+        quantity: parsed.quantity,
+        unitCost: parsed.unitCost,
+        totalCost: parsed.totalCost,
       },
       tx
     );

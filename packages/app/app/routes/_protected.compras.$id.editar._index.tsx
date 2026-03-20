@@ -11,8 +11,9 @@ import { PurchaseItemEditModal } from "~/components/purchases/purchase-item-edit
 export default function CompraEditarIndexPage() {
   const navigate = useNavigate();
   const {
-    purchaseId,
     items,
+    addItem,
+    updateItem,
     removeItem,
     supplier,
     totalAmount,
@@ -187,14 +188,10 @@ export default function CompraEditarIndexPage() {
         <PurchaseItemEditModal
           item={items.find((i) => i.id === editingItem)!}
           onSave={(updates) => {
-            // Update local state - the actual save happens when clicking "Guardar Cambios"
-            const item = items.find((i) => i.id === editingItem);
-            if (item) {
-              const qty = updates.quantity || parseFloat(item.quantity);
-              const cost = updates.unitCost || parseFloat(item.unitCost);
-              // Store pending changes somewhere? For now, just update display
-              // The real save happens on onSave
-            }
+            updateItem(editingItem, {
+              quantity: updates.quantity.toString(),
+              unitCost: updates.unitCost.toString(),
+            });
             setEditingItem(null);
           }}
           onClose={() => setEditingItem(null)}
@@ -205,20 +202,19 @@ export default function CompraEditarIndexPage() {
         <PurchaseItemEditModal
           isNew
           onSave={(updates) => {
-            // Add new item locally - will be created on server when saving
+            const qty = parseFloat(updates.quantity?.toString() || "0") || 0;
+            const cost = parseFloat(updates.unitCost?.toString() || "0") || 0;
             const newItem = {
               id: crypto.randomUUID(),
               productId: updates.productId || "",
               variantId: updates.variantId || null,
               productName: updates.productName || "Producto",
               variantName: updates.variantName || "",
-              quantity: updates.quantity?.toString() || "0",
-              unitCost: updates.unitCost?.toString() || "0",
-              totalCost: (
-                (parseFloat(updates.quantity?.toString() || "0") || 0) *
-                (parseFloat(updates.unitCost?.toString() || "0") || 0)
-              ).toFixed(2),
+              quantity: qty.toString(),
+              unitCost: cost.toString(),
+              totalCost: (qty * cost).toFixed(2),
             };
+            addItem(newItem);
             setShowAddModal(false);
           }}
           onClose={() => setShowAddModal(false)}
