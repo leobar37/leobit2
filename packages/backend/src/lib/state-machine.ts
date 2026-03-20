@@ -10,10 +10,16 @@ export interface TransitionConfig<Entity> {
   hooks: TransitionHook<Entity>[];
 }
 
+export interface TransitionRule<State extends string> {
+  from: State | null;
+  to: State;
+}
+
 export interface StateMachineConfig<Entity, State extends string> {
   name: string;
   initialState: State;
   states: State[];
+  allowedTransitions?: TransitionRule<State>[];
 }
 
 export class StateMachine<Entity, State extends string> {
@@ -21,11 +27,17 @@ export class StateMachine<Entity, State extends string> {
   private initialState: State;
   private states: Set<State>;
   private transitions: Map<string, TransitionConfig<Entity>[]> = new Map();
+  private allowedTransitions: Set<string>;
 
   constructor(config: StateMachineConfig<Entity, State>) {
     this.name = config.name;
     this.initialState = config.initialState;
     this.states = new Set(config.states);
+    this.allowedTransitions = new Set(
+      (config.allowedTransitions ?? []).map(
+        (rule) => this.getTransitionKey(rule.from, rule.to)
+      )
+    );
   }
 
   onTransition(from: State | null, to: State, hook: TransitionHook<Entity>): this {
@@ -50,6 +62,17 @@ export class StateMachine<Entity, State extends string> {
     to: State,
     tx?: unknown
   ): Promise<void> {
+    // Validate transition if rules are defined
+    if (this.allowedTransitions.size > 0) {
+      const key = this.getTransitionKey(from, to);
+      if (!this.allowedTransitions.has(key)) {
+        throw new Error(
+          `Invalid transition for ${this.name}: ${from ?? "null"} → ${to}. ` +
+          `Allowed transitions: ${Array.from(this.allowedTransitions).join(", ")}`
+        );
+      }
+    }
+
     const key = this.getTransitionKey(from, to);
     const transitionConfigs = this.transitions.get(key);
 

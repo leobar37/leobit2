@@ -212,6 +212,67 @@ export class PurchaseRepository {
     return item;
   }
 
+  async updateItem(
+    ctx: RequestContext,
+    purchaseId: string,
+    itemId: string,
+    data: {
+      quantity?: string;
+      unitCost?: string;
+      totalCost?: string;
+    },
+    tx?: DbTransaction
+  ): Promise<PurchaseItem> {
+    const dbOrTx = tx || db;
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (data.quantity !== undefined) {
+      updateData.quantity = data.quantity;
+    }
+    if (data.unitCost !== undefined) {
+      updateData.unitCost = data.unitCost;
+    }
+    if (data.totalCost !== undefined) {
+      updateData.totalCost = data.totalCost;
+    }
+
+    const [item] = await dbOrTx
+      .update(purchaseItems)
+      .set(updateData)
+      .where(
+        and(
+          eq(purchaseItems.id, itemId),
+          eq(purchaseItems.purchaseId, purchaseId),
+          eq(purchaseItems.businessId, ctx.businessId)
+        )
+      )
+      .returning();
+
+    return item;
+  }
+
+  async deleteItem(
+    ctx: RequestContext,
+    purchaseId: string,
+    itemId: string,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const dbOrTx = tx || db;
+
+    await dbOrTx
+      .delete(purchaseItems)
+      .where(
+        and(
+          eq(purchaseItems.id, itemId),
+          eq(purchaseItems.purchaseId, purchaseId),
+          eq(purchaseItems.businessId, ctx.businessId)
+        )
+      );
+  }
+
   async updateTotal(
     ctx: RequestContext,
     purchaseId: string,

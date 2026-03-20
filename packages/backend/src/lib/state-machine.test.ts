@@ -218,3 +218,105 @@ describe("createMachine", () => {
     expect(machine.getName()).toBe("test");
   });
 });
+
+describe("StateMachine with allowedTransitions", () => {
+  let machine: StateMachine<TestEntity, TestState>;
+
+  beforeEach(() => {
+    machine = createMachine<TestEntity, TestState>({
+      name: "test",
+      initialState: "draft",
+      states: ["draft", "pending", "approved", "rejected"],
+      allowedTransitions: [
+        { from: "draft", to: "pending" },
+        { from: "pending", to: "approved" },
+        { from: "pending", to: "rejected" },
+      ],
+    });
+  });
+
+  it("allows valid transitions", async () => {
+    const hook = vi.fn();
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    machine.onTransition("draft", "pending", hook);
+    await machine.executeTransition(ctx, entity, "draft", "pending");
+
+    expect(hook).toHaveBeenCalledOnce();
+  });
+
+  it("throws error for disallowed transitions", async () => {
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    await expect(
+      machine.executeTransition(ctx, entity, "draft", "rejected")
+    ).rejects.toThrow("Invalid transition for test: draft → rejected");
+  });
+
+  it("throws error for reverse disallowed transitions", async () => {
+    const entity: TestEntity = { id: "1", status: "approved", items: [] };
+    const ctx = {} as any;
+
+    await expect(
+      machine.executeTransition(ctx, entity, "approved", "pending")
+    ).rejects.toThrow("Invalid transition for test: approved → pending");
+  });
+
+  it("includes allowed transitions in error message", async () => {
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    await expect(
+      machine.executeTransition(ctx, entity, "draft", "rejected")
+    ).rejects.toThrow(/Allowed transitions:/);
+  });
+
+  it("executes hooks for allowed transition with null from state", async () => {
+    const machineWithNull = createMachine<TestEntity, TestState>({
+      name: "test",
+      initialState: "draft",
+      states: ["draft", "pending", "approved", "rejected"],
+      allowedTransitions: [
+        { from: null, to: "draft" },
+        { from: "draft", to: "pending" },
+      ],
+    });
+
+    const hook = vi.fn();
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    machineWithNull.onTransition(null, "draft", hook);
+    await machineWithNull.executeTransition(ctx, entity, null, "draft");
+
+    expect(hook).toHaveBeenCalledOnce();
+  });
+
+  it("throws for null from state not in allowed transitions", async () => {
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    await expect(
+      machine.executeTransition(ctx, entity, null, "draft")
+    ).rejects.toThrow("Invalid transition for test: null → draft");
+  });
+
+  it("backward compatible: machines without allowedTransitions accept any transition", async () => {
+    const openMachine = createMachine<TestEntity, TestState>({
+      name: "open",
+      initialState: "draft",
+      states: ["draft", "pending", "approved", "rejected"],
+    });
+
+    const hook = vi.fn();
+    const entity: TestEntity = { id: "1", status: "draft", items: [] };
+    const ctx = {} as any;
+
+    openMachine.onTransition("draft", "rejected", hook);
+    await openMachine.executeTransition(ctx, entity, "draft", "rejected");
+
+    expect(hook).toHaveBeenCalledOnce();
+  });
+});

@@ -29,24 +29,49 @@ export const distribucionMachine = createMachine<DistribucionWithItems, Distribu
   name: "distribucion",
   initialState: "activo",
   states: ["activo", "en_ruta", "cerrado"],
+  allowedTransitions: [
+    { from: null, to: "activo" },
+    { from: "activo", to: "cerrado" },
+    { from: "activo", to: "en_ruta" },
+    { from: "en_ruta", to: "cerrado" },
+  ],
 });
 
 export const purchaseMachine = createMachine<PurchaseWithItems, PurchaseState>({
   name: "purchase",
   initialState: "pending",
   states: ["pending", "received", "cancelled"],
+  allowedTransitions: [
+    { from: "pending", to: "received" },
+    { from: "pending", to: "cancelled" },
+    { from: "received", to: "cancelled" },
+  ],
 });
 
 export const saleMachine = createMachine<SaleWithItems, SaleState>({
   name: "sale",
   initialState: "draft",
   states: ["draft", "confirmed", "active", "delivered", "cancelled"],
+  allowedTransitions: [
+    { from: "draft", to: "active" },
+    { from: "draft", to: "confirmed" },
+    { from: "draft", to: "cancelled" },
+    { from: "confirmed", to: "delivered" },
+    { from: "confirmed", to: "cancelled" },
+    { from: "active", to: "cancelled" },
+  ],
 });
 
 export const staffInvitationMachine = createMachine<StaffInvitation, InvitationState>({
   name: "staffInvitation",
   initialState: "pending",
   states: ["pending", "accepted", "rejected", "cancelled", "expired"],
+  allowedTransitions: [
+    { from: "pending", to: "accepted" },
+    { from: "pending", to: "rejected" },
+    { from: "pending", to: "cancelled" },
+    { from: "pending", to: "expired" },
+  ],
 });
 
 export interface StateMachineDependencies {

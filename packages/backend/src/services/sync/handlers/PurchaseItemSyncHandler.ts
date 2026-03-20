@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const purchaseItemCreateSchema = z.object({
   id: z.string().optional(),
+  purchaseId: z.string(),
   productId: z.string(),
   variantId: z.string().optional().nullable(),
   unitId: z.string().optional().nullable(),
@@ -17,6 +18,7 @@ const purchaseItemCreateSchema = z.object({
 });
 
 const purchaseItemUpdateSchema = z.object({
+  purchaseId: z.string(),
   quantity: z.union([z.number(), z.string()]).optional(),
   unitCost: z.union([z.number(), z.string()]).optional(),
   totalCost: z.union([z.number(), z.string()]).optional(),
@@ -46,11 +48,8 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
     this.logStart(ctx, operation);
 
     try {
-      // Extract purchaseId from syncGroupId (format: "pur_xxx")
-      const purchaseId = this.extractPurchaseIdFromSyncGroup(operation.syncGroupId);
-      if (!purchaseId) {
-        throw new Error("No se puede determinar la compra asociada al item");
-      }
+      const parsed = purchaseItemCreateSchema.parse(operation.payload);
+      const purchaseId = parsed.purchaseId;
 
       if (operation.operation === "create") {
         await this.handleCreate(ctx, operation, purchaseId, tx);
@@ -69,13 +68,6 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
       this.logError(ctx, operation, err);
       return this.createErrorResult(operation, err.message);
     }
-  }
-
-  private extractPurchaseIdFromSyncGroup(syncGroupId?: string): string | null {
-    if (!syncGroupId) return null;
-    // syncGroupId format: "pur_xxx" - same as purchase id
-    // Items are synced with the same syncGroupId as their parent purchase
-    return syncGroupId;
   }
 
   private async handleCreate(
@@ -144,9 +136,21 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
       throw new Error("Item no encontrado");
     }
 
-    // Note: Purchase item updates are handled by recreating the item
-    // For now, we just acknowledge the update without changes
-    // If you need to support item updates, add an updateItem method to the repository
+    // Update the item
+    await this.purchaseRepo.updateItem(
+      ctx,
+      purchaseId,
+      operation.entityId,
+      {
+        quantity: parsed.quantity !== undefined ? String(parsed.quantity) : undefined,
+        unitCost: parsed.unitCost !== undefined ? String(parsed.unitCost) : undefined,
+        totalCost: parsed.totalCost !== undefined ? String(parsed.totalCost) : undefined,
+      },
+      tx
+    );
+
+    // Recalculate purchase total
+    await this.purchaseRepo.updateTotal(ctx, purchaseId, tx);
   }
 
   private async handleDelete(
@@ -172,7 +176,10 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
       return;
     }
 
-    // Note: Purchase item deletion is not currently implemented
-    // Add a deleteItem method to the repository if needed
+    // Delete the item
+    await this.purchaseRepo.deleteItem(ctx, purchaseId, operation.entityId, tx);
+
+    // Recalculate purchase total
+    await this.purchaseRepo.updateTotal(ctx, purchaseId, tx);
   }
 }

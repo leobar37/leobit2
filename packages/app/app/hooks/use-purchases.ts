@@ -9,6 +9,7 @@ import type {
   Purchase,
   PurchaseStatus,
   CreatePurchaseInput,
+  CreatePurchaseItemInput,
 } from "~/lib/services/purchase-service";
 
 const QUERY_KEYS = {
@@ -145,6 +146,90 @@ export function useDeletePurchase() {
       queryClient.invalidateQueries({
         queryKey: ["purchases-new", "status"],
       });
+    },
+  });
+}
+
+/**
+ * Update a purchase item
+ */
+export function useUpdatePurchaseItem() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      purchaseId,
+      itemId,
+      data,
+    }: {
+      purchaseId: string;
+      itemId: string;
+      data: {
+        quantity?: number;
+        unitCost?: number;
+        totalCost?: number;
+      };
+    }): Promise<void> => {
+      return purchaseService.updateItem(purchaseId, itemId, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+    },
+  });
+}
+
+/**
+ * Delete a purchase item
+ */
+export function useDeletePurchaseItem() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      purchaseId,
+      itemId,
+    }: {
+      purchaseId: string;
+      itemId: string;
+    }): Promise<void> => {
+      return purchaseService.deleteItem(purchaseId, itemId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+    },
+  });
+}
+
+/**
+ * Add an item to an existing purchase
+ */
+export function useAddPurchaseItem() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      purchaseId,
+      item,
+    }: {
+      purchaseId: string;
+      item: CreatePurchaseItemInput;
+    }): Promise<void> => {
+      return purchaseService.addItemToPurchase(purchaseId, item);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
     },
   });
 }

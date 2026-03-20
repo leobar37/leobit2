@@ -185,6 +185,7 @@ export class PurchaseService extends BaseService {
 
       itemSyncPayloads.push({
         id: itemId,
+        purchaseId: id,
         productId: item.productId,
         variantId: item.variantId ?? null,
         unitId: item.unitId ?? null,
@@ -252,6 +253,188 @@ export class PurchaseService extends BaseService {
     await this.pg.query("DELETE FROM purchases WHERE id = $1", [id]);
 
     await this.queueSync("delete", id, {});
+  }
+
+  /**
+   * Update an item in a purchase
+   */
+  async updateItem(
+    purchaseId: string,
+    itemId: string,
+    data: {
+      quantity?: number;
+      unitCost?: number;
+      totalCost?: number;
+    }
+  ): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    const now = this.now();
+    const totalCost = data.totalCost ?? (data.quantity && data.unitCost ? data.quantity * data.unitCost : undefined);
+
+    await this.pg.query(
+      `UPDATE purchase_items SET
+        quantity = COALESCE($1, quantity),
+        unit_cost = COALESCE($2, unit_cost),
+        total_cost = COALESCE($3, total_cost),
+        updated_at = $4,
+        sync_status = $5
+      WHERE id = $6 AND purchase_id = $7`,
+      [
+        data.quantity !== undefined ? String(data.quantity) : null,
+        data.unitCost !== undefined ? formatCurrency(data.unitCost) : null,
+        totalCost !== undefined ? formatCurrency(totalCost) : null,
+        now,
+        "pending",
+        itemId,
+        purchaseId,
+      ]
+    );
+
+    // Recalculate purchase total
+    const itemsResult = await this.pg.query<{ total: string }>(
+      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
+      [purchaseId]
+    );
+    const newTotal = itemsResult.rows[0]?.total || "0";
+
+    await this.pg.query(
+      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
+      [newTotal, now, "pending", purchaseId]
+    );
+
+    // Get sync group ID for the purchase insert to maintain consistency
+    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
+      `SELECT sync_group_id FROM sync_operations
+       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
+       ORDER BY created_at DESC LIMIT 1`,
+      [purchaseId]
+    );
+    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
+
+    await this.queueSync("update", itemId, {
+      purchaseId,
+      quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
+      unitCost: data.unitCost !== undefined ? formatCurrency(data.unitCost) : undefined,
+      totalCost: totalCost !== undefined ? formatCurrency(totalCost) : undefined,
+    } as Record<string, unknown>, syncGroupId, "purchase_items");
+  }
+
+  /**
+   * Delete an item from a purchase
+   */
+  async deleteItem(purchaseId: string, itemId: string): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    const now = this.now();
+
+    await this.pg.query(
+      `DELETE FROM purchase_items WHERE id = $1 AND purchase_id = $2`,
+      [itemId, purchaseId]
+    );
+
+    // Recalculate purchase total
+    const itemsResult = await this.pg.query<{ total: string }>(
+      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
+      [purchaseId]
+    );
+    const newTotal = itemsResult.rows[0]?.total || "0";
+
+    await this.pg.query(
+      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
+      [newTotal, now, "pending", purchaseId]
+    );
+
+    // Get sync group ID for the purchase insert to maintain consistency
+    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
+      `SELECT sync_group_id FROM sync_operations
+       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
+       ORDER BY created_at DESC LIMIT 1`,
+      [purchaseId]
+    );
+    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
+
+    await this.queueSync("delete", itemId, {
+      purchaseId,
+    } as Record<string, unknown>, syncGroupId, "purchase_items");
+  }
+
+  /**
+   * Add an item to an existing purchase
+   */
+  async addItemToPurchase(
+    purchaseId: string,
+    item: CreatePurchaseItemInput
+  ): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    const now = this.now();
+    const itemId = this.generateId();
+    const itemTotalCost = formatCurrency(item.quantity * item.unitCost);
+
+    await this.pg.query(
+      `INSERT INTO purchase_items (
+        id, business_id, purchase_id, product_id, variant_id, unit_id,
+        quantity, unit_cost, total_cost,
+        sync_status, sync_attempts, sync_version, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        itemId,
+        this.businessId,
+        purchaseId,
+        item.productId,
+        item.variantId ?? null,
+        item.unitId ?? null,
+        String(item.quantity),
+        formatCurrency(item.unitCost),
+        itemTotalCost,
+        "pending",
+        0,
+        1,
+        now,
+        now,
+      ]
+    );
+
+    // Recalculate purchase total
+    const itemsResult = await this.pg.query<{ total: string }>(
+      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
+      [purchaseId]
+    );
+    const newTotal = itemsResult.rows[0]?.total || "0";
+
+    await this.pg.query(
+      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
+      [newTotal, now, "pending", purchaseId]
+    );
+
+    // Get sync group ID for the purchase insert to maintain consistency
+    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
+      `SELECT sync_group_id FROM sync_operations
+       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
+       ORDER BY created_at DESC LIMIT 1`,
+      [purchaseId]
+    );
+    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
+
+    await this.queueSync("insert", itemId, {
+      purchaseId,
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      unitId: item.unitId ?? null,
+      quantity: String(item.quantity),
+      unitCost: formatCurrency(item.unitCost),
+      totalCost: itemTotalCost,
+    } as Record<string, unknown>, syncGroupId, "purchase_items");
   }
 }
 
