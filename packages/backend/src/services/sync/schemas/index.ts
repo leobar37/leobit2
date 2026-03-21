@@ -289,22 +289,9 @@ export const purchaseItemUpdateSchema = z.object({
   totalCost: optionalNumericStringTransform,
 });
 
-export const inventoryCreateSchema = z.object({
-  productId: z.string().min(1, "productId es requerido"),
-  quantity: numericStringTransform,
-});
-
-export const inventoryUpdateSchema = z.object({
-  productId: z.string().optional(),
-  quantity: optionalNumericStringTransform,
-});
-
-export type InventoryCreateInput = z.infer<typeof inventoryCreateSchema>;
-export type InventoryUpdateInput = z.infer<typeof inventoryUpdateSchema>;
-
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "purchase_items", "inventory", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

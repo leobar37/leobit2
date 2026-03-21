@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { customers, sales, abonos, products, tags, visitas, purchases, suppliers, closings } from "../../../db/schema";
+import { customers, sales, abonos, products, tags, visitas, purchases, suppliers, closings, distribuciones } from "../../../db/schema";
 import { customerGroups } from "../../../db/schema/customer-groups";
 import { customerTags } from "../../../db/schema/customer-tags";
 import { customerGroupMembers } from "../../../db/schema/customer-group-members";
@@ -189,6 +189,22 @@ class CustomerGroupMemberConflictResolver extends BaseTimestampConflictResolver 
   }
 }
 
+class DistribucionConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "Distribucion"; }
+  protected getTable() { return distribuciones; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      estado: record.estado,
+      montoRecaudado: record.montoRecaudado,
+      fecha: record.fecha,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
 class VisitaConflictResolver extends BaseTimestampConflictResolver {
   protected getEntityName() { return "Visita"; }
   protected getTable() { return visitas; }
@@ -324,22 +340,6 @@ class FileConflictResolver extends BaseTimestampConflictResolver {
   }
 }
 
-class InventoryConflictResolver extends BaseTimestampConflictResolver {
-  protected getEntityName() { return "Inventory"; }
-  protected getTable() { return products; } // Using products table
-  protected getIdField() { return "id"; }
-  protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
-  protected getServerDataFields(record: any) {
-    return {
-      name: record.name,
-      type: record.type,
-      isActive: record.isActive,
-      updatedAt: record.updatedAt?.toISOString(),
-    };
-  }
-}
-
 // Version-based resolver for Sales (existing)
 class VersionConflictResolver implements IConflictResolver {
   async checkConflict(
@@ -400,7 +400,7 @@ const resolvers: Record<string, IConflictResolver> = {
   customers: new CustomerConflictResolver(),
   sales: new VersionConflictResolver(),
   abonos: new AbonoConflictResolver(),
-  distribuciones: new InventoryConflictResolver(), // Uses products for distribucion inventory
+  distribuciones: new DistribucionConflictResolver(),
   products: new ProductConflictResolver(),
   tags: new TagConflictResolver(),
   customer_tags: new CustomerTagConflictResolver(),
@@ -416,7 +416,6 @@ const resolvers: Record<string, IConflictResolver> = {
   variant_inventory: new VariantInventoryConflictResolver(),
   files: new FileConflictResolver(),
   sale_items: new NoOpConflictResolver(),
-  inventory: new InventoryConflictResolver(),
 };
 
 export class ConflictResolverRegistry {

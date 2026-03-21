@@ -1,22 +1,18 @@
 import { Navigate, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { CalculatorContent } from "~/components/sales/new-sale";
-import { useNewSaleContext } from "~/components/sales/new-sale-context";
-import { useSaleItems } from "~/hooks/use-sales-db";
-import { getSaleEditorPath } from "~/lib/sales/navigation";
+import { PurchaseCalculatorContent } from "~/components/purchases/calculator/purchase-calculator-content";
+import { usePurchaseEdit } from "~/components/purchases/purchase-edit-context";
+import { getPurchaseEditorPath } from "~/lib/purchases/navigation";
 
-export default function SaleEditorCalculatorPage() {
+export default function CompraEditorCalculadoraPage() {
   const navigate = useNavigate();
-  const { saleId, editingItemId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(saleId);
-  
-  const editingItem = editingItemId ? items.find((i) => i.id === editingItemId) : null;
+  const { purchaseId, editingItem } = usePurchaseEdit();
 
-  if (!saleId) {
-    return <Navigate to="/ventas" replace />;
+  if (!purchaseId) {
+    return <Navigate to="/compras" replace />;
   }
 
-  const returnPath = getSaleEditorPath(saleId);
+  const returnPath = getPurchaseEditorPath(purchaseId);
 
   return (
     <div className="app-shell flex min-h-screen flex-col">
@@ -36,8 +32,8 @@ export default function SaleEditorCalculatorPage() {
       </header>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <CalculatorContent
-          key={editingItemId || "new"}
+        <PurchaseCalculatorContent
+          key={editingItem?.itemId || "new"}
           returnPath={returnPath}
         />
       </div>

@@ -69,34 +69,6 @@ export const products = pgTable(
   ]
 );
 
-// Inventory table
-export const inventory = pgTable(
-  "inventory",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-
-    // Multi-tenancy - required for Electric sync filtering
-    businessId: uuid("business_id")
-      .notNull()
-      .references(() => businesses.id),
-
-    // Relations
-    productId: uuid("product_id")
-      .notNull()
-      .references(() => products.id),
-
-    // Stock
-    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
-
-    // Timestamps
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => [
-    index("idx_inventory_business_id").on(table.businessId),
-    index("idx_inventory_product_id").on(table.productId),
-  ]
-);
-
 // Distribuciones table (asignacion diaria a vendedores)
 export const distribuciones = pgTable(
   "distribuciones",
@@ -247,8 +219,6 @@ export const variantInventory = pgTable(
 // Type exports
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
-export type Inventory = typeof inventory.$inferSelect;
-export type NewInventory = typeof inventory.$inferInsert;
 export type Distribucion = typeof distribuciones.$inferSelect;
 export type NewDistribucion = typeof distribuciones.$inferInsert;
 export type DistribucionItem = typeof distribucionItems.$inferSelect;
@@ -258,19 +228,7 @@ export type NewProductVariant = typeof productVariants.$inferInsert;
 export type VariantInventory = typeof variantInventory.$inferSelect;
 export type NewVariantInventory = typeof variantInventory.$inferInsert;
 
-export const inventoryRelations = relations(inventory, ({ one }) => ({
-  business: one(businesses, {
-    fields: [inventory.businessId],
-    references: [businesses.id],
-  }),
-  product: one(products, {
-    fields: [inventory.productId],
-    references: [products.id],
-  }),
-}));
-
 export const productsRelations = relations(products, ({ many, one }) => ({
-  inventory: many(inventory),
   saleItems: many(saleItems),
   image: one(assets, {
     fields: [products.imageId],

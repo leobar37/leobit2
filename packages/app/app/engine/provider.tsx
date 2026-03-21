@@ -80,7 +80,7 @@ export function EngineProvider({
         checkAllTables: async () => {
           const pg = pgRef.current;
           if (!pg) return console.error("PG not initialized");
-          const tables = ['products', 'customers', 'sales', 'abonos', 'inventory', 'suppliers', 'tags', 'product_variants', 'purchases'];
+          const tables = ['products', 'customers', 'sales', 'abonos', 'suppliers', 'tags', 'product_variants', 'purchases'];
           for (const table of tables) {
             try {
               const result = await pg.query(`SELECT COUNT(*) as count FROM "${table}"`);
@@ -157,7 +157,7 @@ export function EngineProvider({
           } else {
             // Check all main tables
             const tables = [
-              'products', 'customers', 'sales', 'abonos', 'inventory',
+              'products', 'customers', 'sales', 'abonos',
               'suppliers', 'tags', 'product_variants', 'purchases',
               'sale_items', 'purchase_items', 'distribuciones',
               'distribucion_items', 'closings', 'variant_inventory', 'customer_tags',

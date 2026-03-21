@@ -357,19 +357,6 @@ CREATE INDEX IF NOT EXISTS idx_customer_tags_customer_id ON customer_tags(custom
 CREATE INDEX IF NOT EXISTS idx_customer_tags_tag_id ON customer_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_customer_tags_sync_status ON customer_tags(sync_status);
 
-CREATE TABLE IF NOT EXISTS inventory (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id UUID NOT NULL,
-  product_id UUID NOT NULL,
-  quantity DECIMAL(10,3) NOT NULL DEFAULT '0',
-  sync_status TEXT NOT NULL DEFAULT 'synced',
-  sync_attempts INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_inventory_business_id ON inventory(business_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_product_id ON inventory(product_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_sync_status ON inventory(sync_status);
-
 CREATE TABLE IF NOT EXISTS variant_inventory (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL,

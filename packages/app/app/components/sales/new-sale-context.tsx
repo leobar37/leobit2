@@ -1,22 +1,12 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
-
-interface EditingItem {
-  itemId: string;
-  productId: string;
-  variantId: string;
-  productName: string;
-  variantName: string;
-  quantity: number;
-  unitPrice: number;
-  subtotal: number;
-}
+import { useSaleEditorState } from "~/hooks/use-sale-editor-state";
 
 interface NewSaleContextType {
   saleId: string | null;
-  editingItem: EditingItem | null;
-  setEditingItem: (item: EditingItem | null) => void;
+  editingItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
   visitaId: string | null;
   setLinkedVisitaId: (id: string | null) => void;
   returnTo: string;
@@ -33,7 +23,7 @@ interface NewSaleProviderProps {
 export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaId }: NewSaleProviderProps) {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
+  const { editingItemId, setEditingItemId } = useSaleEditorState();
   const [linkedVisitaId, setLinkedVisitaId] = useState<string | null>(initialLinkedVisitaId ?? null);
 
   const urlVisitaId = searchParams.get("visitaId");
@@ -53,13 +43,13 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
   const value = useMemo(
     () => ({
       saleId: id ?? null,
-      editingItem,
-      setEditingItem,
+      editingItemId,
+      setEditingItemId,
       visitaId: effectiveVisitaId,
       setLinkedVisitaId,
       returnTo,
     }),
-    [id, editingItem, effectiveVisitaId, returnTo]
+    [id, editingItemId, effectiveVisitaId, returnTo]
   );
 
   return (

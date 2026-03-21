@@ -157,6 +157,11 @@ type Pages = {
       "id": string;
     };
   };
+  "/compras/:id/editar/calculadora": {
+    params: {
+      "id": string;
+    };
+  };
   "/profile": {
     params: {};
   };
@@ -182,9 +187,6 @@ type Pages = {
     params: {};
   };
   "/config/conflictos": {
-    params: {};
-  };
-  "/config/inventory": {
     params: {};
   };
   "/config/security": {
@@ -222,7 +224,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/venta/:token" | "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/inventory" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team" | "/landing" | "/login" | "/sync";
+    page: "/" | "/invitations/:token" | "/venta/:token" | "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team" | "/landing" | "/login" | "/sync";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -234,7 +236,7 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/inventory" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team";
+    page: "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team";
   };
   "routes/_protected.reportes.cuentas-por-cobrar.tsx": {
     id: "routes/_protected.reportes.cuentas-por-cobrar";
@@ -366,7 +368,7 @@ type RouteFiles = {
   };
   "routes/_protected.compras.tsx": {
     id: "routes/_protected.compras";
-    page: "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar";
+    page: "/compras" | "/compras/nueva" | "/compras/nueva/calculadora" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora";
   };
   "routes/_protected.compras._index.tsx": {
     id: "routes/_protected.compras._index";
@@ -386,11 +388,15 @@ type RouteFiles = {
   };
   "routes/_protected.compras.$id.tsx": {
     id: "routes/_protected.compras.$id";
-    page: "/compras/:id" | "/compras/:id/editar";
+    page: "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora";
   };
   "routes/_protected.compras.$id.editar.tsx": {
     id: "routes/_protected.compras.$id.editar";
-    page: "/compras/:id/editar";
+    page: "/compras/:id/editar" | "/compras/:id/editar/calculadora";
+  };
+  "routes/_protected.compras.$id.editar.calculadora.tsx": {
+    id: "routes/_protected.compras.$id.editar.calculadora";
+    page: "/compras/:id/editar/calculadora";
   };
   "routes/_protected.compras.$id.editar._index.tsx": {
     id: "routes/_protected.compras.$id.editar._index";
@@ -410,7 +416,7 @@ type RouteFiles = {
   };
   "routes/_protected.config.tsx": {
     id: "routes/_protected.config";
-    page: "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/inventory" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags";
+    page: "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags";
   };
   "routes/_protected.config.payment-methods.tsx": {
     id: "routes/_protected.config.payment-methods";
@@ -431,10 +437,6 @@ type RouteFiles = {
   "routes/_protected.config.conflictos.tsx": {
     id: "routes/_protected.config.conflictos";
     page: "/config/conflictos";
-  };
-  "routes/_protected.config.inventory.tsx": {
-    id: "routes/_protected.config.inventory";
-    page: "/config/inventory";
   };
   "routes/_protected.config.security.tsx": {
     id: "routes/_protected.config.security";
@@ -530,6 +532,7 @@ type RouteModules = {
   "routes/_protected.compras.nueva._index": typeof import("./app/routes/_protected.compras.nueva._index.tsx");
   "routes/_protected.compras.$id": typeof import("./app/routes/_protected.compras.$id.tsx");
   "routes/_protected.compras.$id.editar": typeof import("./app/routes/_protected.compras.$id.editar.tsx");
+  "routes/_protected.compras.$id.editar.calculadora": typeof import("./app/routes/_protected.compras.$id.editar.calculadora.tsx");
   "routes/_protected.compras.$id.editar._index": typeof import("./app/routes/_protected.compras.$id.editar._index.tsx");
   "routes/_protected.profile": typeof import("./app/routes/_protected.profile.tsx");
   "routes/_protected.visitas": typeof import("./app/routes/_protected.visitas.tsx");
@@ -540,7 +543,6 @@ type RouteModules = {
   "routes/_protected.config.puntos-venta": typeof import("./app/routes/_protected.config.puntos-venta.tsx");
   "routes/_protected.config.appearance": typeof import("./app/routes/_protected.config.appearance.tsx");
   "routes/_protected.config.conflictos": typeof import("./app/routes/_protected.config.conflictos.tsx");
-  "routes/_protected.config.inventory": typeof import("./app/routes/_protected.config.inventory.tsx");
   "routes/_protected.config.security": typeof import("./app/routes/_protected.config.security.tsx");
   "routes/_protected.config.whatsapp": typeof import("./app/routes/_protected.config.whatsapp.tsx");
   "routes/_protected.config.whatsapp.templates": typeof import("./app/routes/_protected.config.whatsapp.templates.tsx");

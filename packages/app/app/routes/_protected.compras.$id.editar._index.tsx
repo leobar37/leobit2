@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Loader2, Plus, Trash2, Edit2, ShoppingCart } from "lucide-react";
 import { formatCurrency, formatKilos } from "~/lib/utils";
@@ -6,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePurchaseEdit } from "~/components/purchases/purchase-edit-context";
-import { PurchaseItemEditModal } from "~/components/purchases/purchase-item-edit-modal";
+import { getPurchaseCalculatorPath } from "~/lib/purchases/navigation";
 
 export default function CompraEditarIndexPage() {
   const navigate = useNavigate();
   const {
+    purchaseId,
     items,
-    addItem,
-    updateItem,
     removeItem,
     supplier,
     totalAmount,
@@ -21,10 +19,9 @@ export default function CompraEditarIndexPage() {
     isSaving,
     onSave,
     onCancel,
+    editingItem,
+    setEditingItem,
   } = usePurchaseEdit();
-
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -91,7 +88,7 @@ export default function CompraEditarIndexPage() {
               <Button
                 size="sm"
                 className="rounded-xl bg-orange-500 hover:bg-orange-600"
-                onClick={() => setShowAddModal(true)}
+                onClick={() => navigate(getPurchaseCalculatorPath(purchaseId))}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Agregar
@@ -123,7 +120,19 @@ export default function CompraEditarIndexPage() {
                     </span>
                     <div className="flex gap-1">
                       <button
-                        onClick={() => setEditingItem(item.id)}
+                        onClick={() => {
+                          setEditingItem({
+                            itemId: item.id,
+                            productId: item.productId,
+                            variantId: item.variantId || "",
+                            productName: item.productName,
+                            variantName: item.variantName,
+                            quantity: parseFloat(item.quantity),
+                            unitCost: parseFloat(item.unitCost),
+                            totalCost: parseFloat(item.totalCost),
+                          });
+                          navigate(getPurchaseCalculatorPath(purchaseId));
+                        }}
                         className="rounded-lg p-2 text-muted-foreground hover:bg-orange-100 hover:text-orange-600 transition-colors"
                       >
                         <Edit2 className="h-4 w-4" />
@@ -146,7 +155,7 @@ export default function CompraEditarIndexPage() {
                   </p>
                   <Button
                     className="rounded-xl bg-orange-500 hover:bg-orange-600"
-                    onClick={() => setShowAddModal(true)}
+                    onClick={() => navigate(getPurchaseCalculatorPath(purchaseId))}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Agregar Producto
@@ -183,43 +192,6 @@ export default function CompraEditarIndexPage() {
           </Button>
         </div>
       </div>
-
-      {editingItem && (
-        <PurchaseItemEditModal
-          item={items.find((i) => i.id === editingItem)!}
-          onSave={(updates) => {
-            updateItem(editingItem, {
-              quantity: updates.quantity.toString(),
-              unitCost: updates.unitCost.toString(),
-            });
-            setEditingItem(null);
-          }}
-          onClose={() => setEditingItem(null)}
-        />
-      )}
-
-      {showAddModal && (
-        <PurchaseItemEditModal
-          isNew
-          onSave={(updates) => {
-            const qty = parseFloat(updates.quantity?.toString() || "0") || 0;
-            const cost = parseFloat(updates.unitCost?.toString() || "0") || 0;
-            const newItem = {
-              id: crypto.randomUUID(),
-              productId: updates.productId || "",
-              variantId: updates.variantId || null,
-              productName: updates.productName || "Producto",
-              variantName: updates.variantName || "",
-              quantity: qty.toString(),
-              unitCost: cost.toString(),
-              totalCost: (qty * cost).toFixed(2),
-            };
-            addItem(newItem);
-            setShowAddModal(false);
-          }}
-          onClose={() => setShowAddModal(false)}
-        />
-      )}
     </div>
   );
 }

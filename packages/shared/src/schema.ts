@@ -334,28 +334,6 @@ export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
 
 // ============================================================================
-// Inventory (Simple)
-// ============================================================================
-
-export const inventory = pgTable(
-  "inventory",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id").notNull(),
-    productId: uuid("product_id").notNull(),
-    quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => [
-    index("idx_inventory_business_id").on(table.businessId),
-    index("idx_inventory_product_id").on(table.productId),
-  ]
-);
-
-export type Inventory = typeof inventory.$inferSelect;
-export type NewInventory = typeof inventory.$inferInsert;
-
-// ============================================================================
 // Variant Inventory (for products with variants)
 // ============================================================================
 
@@ -596,7 +574,6 @@ export const abonosRelations = relations(abonos, ({ one }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   variants: many(productVariants),
-  inventory: many(inventory),
 }));
 
 export const productVariantsRelations = relations(productVariants, ({ one }) => ({
@@ -607,13 +584,6 @@ export const productVariantsRelations = relations(productVariants, ({ one }) => 
   inventory: one(variantInventory, {
     fields: [productVariants.id],
     references: [variantInventory.variantId],
-  }),
-}));
-
-export const inventoryRelations = relations(inventory, ({ one }) => ({
-  product: one(products, {
-    fields: [inventory.productId],
-    references: [products.id],
   }),
 }));
 

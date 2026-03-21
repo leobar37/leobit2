@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router";
 import { usePurchase, useUpdatePurchaseItem, useDeletePurchaseItem, useAddPurchaseItem } from "~/hooks/use-purchases";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { useBusiness } from "~/hooks/use-business";
+import { useReturnNavigation } from "~/hooks/use-return-navigation";
+import { usePurchaseEditorState } from "~/hooks/use-purchase-editor-state";
 import type { CreatePurchaseItemInput } from "~/lib/services/purchase-service";
 
-// Extended purchase type with items (matches runtime behavior)
 interface PurchaseWithItems {
   id: string;
   business_id: string;
@@ -56,6 +57,9 @@ interface PurchaseEditContextType {
   isSaving: boolean;
   onSave: () => Promise<void>;
   onCancel: () => void;
+  editingItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
+  returnTo: string;
 }
 
 const PurchaseEditContext = createContext<PurchaseEditContextType | null>(null);
@@ -77,16 +81,20 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
   const navigate = useNavigate();
 
   const { data: purchaseData, isLoading } = usePurchase(id!);
-  // The runtime structure is an array where [0] has .purchase and .supplier
   const purchase = (purchaseData as unknown as Array<{ purchase: PurchaseWithItems }>)?.[0]?.purchase;
   const { data: business } = useBusiness();
-  // Use a fixed invalid UUID that won't match any real supplier (empty string causes issues)
   const supplierQueryId = business?.id && business.id.length > 0 ? business.id : "00000000-0000-0000-0000-000000000000";
   const { data: suppliers } = useSuppliers(supplierQueryId);
 
+  const { editingItemId, setEditingItemId } = usePurchaseEditorState();
+
+  const { returnTo } = useReturnNavigation({
+    config: {},
+    defaultPath: "/compras",
+  });
+
   const [items, setItems] = useState<PurchaseItem[]>([]);
 
-  // Initialize items from purchase data
   useEffect(() => {
     if (purchase?.items) {
       const mappedItems: PurchaseItem[] = purchase.items.map((item) => ({
@@ -147,13 +155,8 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
     const originalItems = purchase.items?.map((item) => item.id) || [];
     const currentItems = items.map((item) => item.id);
 
-    // Find items to add (in current but not in original)
     const itemsToAdd = items.filter((item) => !originalItems.includes(item.id));
-
-    // Find items to delete (in original but not in current)
     const itemsToDelete = originalItems.filter((origId: string) => !currentItems.includes(origId));
-
-    // Find items to update (in both, but changed)
     const itemsToUpdate = items.filter((item) => {
       const original = purchase.items?.find((i) => i.id === item.id);
       if (!original) return false;
@@ -163,12 +166,10 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
       );
     });
 
-    // Execute deletions first
     for (const itemId of itemsToDelete) {
       await deleteMutation.mutateAsync({ purchaseId: id, itemId });
     }
 
-    // Execute updates
     for (const item of itemsToUpdate) {
       await updateMutation.mutateAsync({
         purchaseId: id,
@@ -181,7 +182,6 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
       });
     }
 
-    // Execute additions
     for (const item of itemsToAdd) {
       const newItem: CreatePurchaseItemInput = {
         productId: item.productId,
@@ -212,6 +212,9 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
     isSaving: updateMutation.isPending || deleteMutation.isPending || addMutation.isPending,
     onSave,
     onCancel,
+    editingItemId,
+    setEditingItemId,
+    returnTo,
   };
 
   return (

@@ -32,19 +32,18 @@ import {
   CUSTOMER_TAGS as CLIENT_CUSTOMER_TAGS,
   CLOSINGS as CLIENT_CLOSINGS,
 } from "./client-data";
-import { 
-  inventory, 
-  saleItems as saleItemsSchema, 
-  sales as salesSchema, 
-  abonos as abonosSchema, 
-  distribuciones, 
-  customers as customersSchema, 
-  products as productsSchema, 
+import {
+  saleItems as saleItemsSchema,
+  sales as salesSchema,
+  abonos as abonosSchema,
+  distribuciones,
+  customers as customersSchema,
+  products as productsSchema,
   productVariants as productVariantsSchema,
-  suppliers as suppliersSchema, 
-  purchaseItems, 
-  purchases, 
-  businessPaymentSettings 
+  suppliers as suppliersSchema,
+  purchaseItems,
+  purchases,
+  businessPaymentSettings
 } from "../db/schema";
 
 const FORCE_MODE = process.argv.includes("--force");
@@ -216,8 +215,8 @@ export async function seedDatabase(): Promise<SeedResult> {
     const purchases = await seedPurchases(ctx, suppliers, seededProducts, currentPurchases);
     console.log(`✓ Seeded ${purchases.length} purchases\n`);
 
-    const inventoryItems = await seedInventory(ctx, seededProducts);
-    console.log(`✓ Seeded ${inventoryItems.length} inventory items\n`);
+    const inventoryItems = await seedVariantInventory(ctx, seededProducts);
+    console.log(`✓ Seeded ${inventoryItems.length} variant inventory items\n`);
 
     seededCustomers = await seedCustomers(ctx, currentCustomers);
     console.log(`✓ Seeded ${seededCustomers.length} customers\n`);
@@ -871,18 +870,15 @@ async function seedDistribuciones(ctx: RequestContext, businessUserId: string, p
   return distribuciones;
 }
 
-async function seedInventory(ctx: RequestContext, products: SeedProduct[]) {
-  // Seed variant inventory instead of deprecated product-level inventory
+async function seedVariantInventory(ctx: RequestContext, products: SeedProduct[]) {
   const inventoryItems = [];
   for (const product of products) {
     for (const variant of product.variants) {
-      // Check if variant inventory already exists
       const existing = await services.productVariant.getInventory(ctx, variant.id);
       if (existing) {
         console.log(`⚠ Variant ${variant.name} already has inventory, skipping`);
         continue;
       }
-      // Create variant inventory with initial stock of 100
       const created = await services.productVariant.createInventory(ctx, {
         variantId: variant.id,
         quantity: "100",
@@ -1036,7 +1032,6 @@ async function clearExistingData() {
   await db.delete(purchaseItems);
   await db.delete(purchases);
   await db.delete(suppliersSchema);
-  await db.delete(inventory);
   await db.delete(productVariantsSchema); // Also clears variant_inventory via CASCADE
   await db.delete(productsSchema);
   await db.delete(businessPaymentSettings);

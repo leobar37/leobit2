@@ -256,7 +256,7 @@ export function PaymentModeSection() {
 
 function CartItemRow({ itemId }: { itemId: string }) {
   const navigate = useNavigate();
-  const { saleId, setEditingItem } = useNewSaleContext();
+  const { saleId, setEditingItemId } = useNewSaleContext();
   const { data: items = [] } = useSaleItems(saleId);
   const removeItem = useRemoveSaleItem();
 
@@ -264,16 +264,7 @@ function CartItemRow({ itemId }: { itemId: string }) {
   if (!item) return null;
 
   const handleEdit = () => {
-    setEditingItem({
-      itemId: item.id,
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      variantName: item.variantName,
-      quantity: parseFloat(item.quantity ?? "0"),
-      unitPrice: parseFloat(item.unitPrice ?? "0"),
-      subtotal: parseFloat(item.subtotal),
-    });
+    setEditingItemId(item.id);
     navigate(`/ventas/${saleId}/editar/calculadora`);
   };
 
@@ -480,9 +471,11 @@ interface CalculatorContentProps {
 
 export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const navigate = useNavigate();
-  const { saleId, editingItem, setEditingItem } = useNewSaleContext();
+  const { saleId, editingItemId, setEditingItemId } = useNewSaleContext();
+  const { data: saleItems = [] } = useSaleItems(saleId);
   
-  // Initialize state from editingItem - available immediately on first render due to key prop
+  const editingItem = editingItemId ? saleItems.find((i) => i.id === editingItemId) : null;
+  
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     editingItem?.productId ?? null
   );
@@ -511,20 +504,16 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   });
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
 
-  const { data: saleItems = [] } = useSaleItems(saleId);
-
   const calculatorSettings = settings?.calculators?.sales;
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
 
   const isEditMode = !!editingItem;
 
-  // Compute initial values for edit mode - independent of selectedProduct
-  // The isKgProduct will be determined by the product once it loads
-  const editingInitialValues = isEditMode ? {
-    quantity: editingItem.quantity.toString(),
-    unitPrice: editingItem.unitPrice.toString(),
-    subtotal: editingItem.subtotal.toString(),
+  const editingInitialValues = isEditMode && editingItem ? {
+    quantity: String(editingItem.quantity),
+    unitPrice: String(editingItem.unitPrice),
+    subtotal: String(editingItem.subtotal),
   } : undefined;
 
   const {
@@ -554,9 +543,9 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     if (currentQuantity && currentQuantity !== "0") return;
 
     // Set the calculator values from editingItem
-    setFieldValue("quantity", editingItem.quantity.toString());
-    setFieldValue("unitPrice", editingItem.unitPrice.toString());
-    setFieldValue("subtotal", editingItem.subtotal.toString());
+    setFieldValue("quantity", String(editingItem.quantity));
+    setFieldValue("unitPrice", String(editingItem.unitPrice));
+    setFieldValue("subtotal", String(editingItem.subtotal));
   }, [isEditMode, editingItem, selectedProduct, form, setFieldValue]);
 
   const handleSave = async () => {
@@ -574,14 +563,14 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
         // Update existing item
         await updateItem.mutateAsync({
           saleId,
-          itemId: editingItem.itemId,
+          itemId: editingItem.id,
           data: {
             quantity: calculation.quantity,
             unitPrice: calculation.unitPrice,
             subtotal: calculation.subtotal,
           },
         });
-        setEditingItem(null);
+        setEditingItemId(null);
       } else {
         // Add new item
         await addItem.mutateAsync({
@@ -607,7 +596,7 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   };
 
   const handleCancel = () => {
-    setEditingItem(null);
+    setEditingItemId(null);
     navigate(returnPath || getSaleEditorPath(saleId!));
   };
 

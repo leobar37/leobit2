@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { useCreatePurchase } from "~/hooks/use-purchases";
 import { useUploadFile } from "~/hooks/use-files";
 import { generateId } from "~/lib/utils";
 import type { CreatePurchaseInput } from "~/lib/db/schema";
+import { usePurchaseEditorState } from "~/hooks/use-purchase-editor-state";
 
 interface PurchaseItem {
   id: string;
@@ -71,9 +72,29 @@ interface PurchaseFormProviderProps {
 export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
   const { data: business } = useBusiness();
-  
-  const [supplier, setSupplier] = useState<Supplier | null>(null);
-  const [items, setItems] = useState<PurchaseItem[]>([]);
+  const { data: suppliers } = useSuppliers(business?.id || "");
+
+  // Use nuqs for persistent state in URL
+  const {
+    items,
+    setItems,
+    supplierId,
+    setSupplierId,
+    formValues: persistedFormValues,
+    setFormValues,
+    clearState,
+  } = usePurchaseEditorState();
+
+  // Find supplier from ID
+  const supplier = useMemo(() => {
+    if (!supplierId || !suppliers) return null;
+    return suppliers.find((s) => s.id === supplierId) || null;
+  }, [supplierId, suppliers]);
+
+  const setSupplier = useCallback((newSupplier: Supplier | null) => {
+    setSupplierId(newSupplier?.id || null);
+  }, [setSupplierId]);
+
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [fileUploadStatus, setFileUploadStatus] = useState({
@@ -84,12 +105,20 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const form = useForm<PurchaseFormValues>({
-    defaultValues: {
-      purchaseDate: new Date().toISOString().split("T")[0],
-      invoiceNumber: "",
-      notes: "",
-    },
+    defaultValues: persistedFormValues,
   });
+
+  // Sync form values with nuqs state when they change
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setFormValues({
+        purchaseDate: value.purchaseDate || new Date().toISOString().split("T")[0],
+        invoiceNumber: value.invoiceNumber || "",
+        notes: value.notes || "",
+      });
+    });
+    return () => subscription.unsubscribe();
+  }, [form, setFormValues]);
 
   const addItem = useCallback((item: Omit<PurchaseItem, "id">) => {
     const newItem: PurchaseItem = {
@@ -97,11 +126,11 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       id: generateId(),
     };
     setItems((prev) => [...prev, newItem]);
-  }, []);
+  }, [setItems]);
 
   const removeItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+  }, [setItems]);
 
   const updateItem = useCallback((id: string, updates: Partial<Omit<PurchaseItem, "id">>) => {
     setItems((prev) =>
@@ -116,11 +145,11 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         return updated;
       })
     );
-  }, []);
+  }, [setItems]);
 
   const clearItems = useCallback(() => {
     setItems([]);
-  }, []);
+  }, [setItems]);
 
   const handleReceiptSelect = useCallback((file: File) => {
     setReceiptFile(file);
@@ -211,6 +240,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       return result.id;
     },
     onSuccess: () => {
+      clearState();
       navigate("/compras");
     },
     onError: (error) => {

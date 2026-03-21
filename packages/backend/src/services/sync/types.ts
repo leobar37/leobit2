@@ -9,7 +9,6 @@ export type SyncEntity =
   | "customer_tags"
   | "purchases"
   | "purchase_items"
-  | "inventory"
   | "customer_groups"
   | "customer_group_members"
   | "visitas"
