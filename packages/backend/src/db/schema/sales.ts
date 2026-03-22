@@ -81,6 +81,9 @@ export const sales = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
+    // Sync group ID for grouping related operations (create, update, confirm)
+    syncGroupId: varchar("sync_group_id", { length: 100 }),
+
     // Cancellation fields
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: uuid("cancelled_by").references(() => businessUsers.id),

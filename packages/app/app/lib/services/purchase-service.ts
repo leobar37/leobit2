@@ -1,23 +1,25 @@
 /**
  * Purchase Service
- * Local-first service for managing supplier purchase orders
+ * Local-first service for managing supplier purchase orders with draft support
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
+import { purchases, purchaseItems } from "@avileo/shared";
 import { formatCurrency } from "~/lib/utils";
 
 /** Purchase status type */
-export type PurchaseStatus = "pending" | "received" | "cancelled";
+export type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";
 
 /** Purchase entity type */
 export interface Purchase {
   id: string;
   business_id: string;
-  supplier_id: string;
-  purchase_date: string;
+  supplier_id: string | null;
+  purchase_date: string | null;
   total_amount: string;
   status: PurchaseStatus;
   invoice_number: string | null;
@@ -57,18 +59,23 @@ export interface CreatePurchaseItemInput {
 
 /** Input for creating a new purchase */
 export interface CreatePurchaseInput {
-  supplierId: string;
-  purchaseDate: string;
-  totalAmount: number;
+  supplierId?: string;
+  purchaseDate?: string;
+  totalAmount?: number;
   invoiceNumber?: string;
   notes?: string;
   receiptImageId?: string;
-  items: CreatePurchaseItemInput[];
+  items?: CreatePurchaseItemInput[];
 }
 
-/** Input for updating purchase status */
-export interface UpdatePurchaseStatusInput {
-  status: PurchaseStatus;
+/** Input for updating a purchase */
+export interface UpdatePurchaseInput {
+  supplierId?: string;
+  purchaseDate?: string;
+  totalAmount?: number;
+  invoiceNumber?: string;
+  notes?: string;
+  receiptImageId?: string;
 }
 
 /**
@@ -101,7 +108,7 @@ export class PurchaseService extends BaseService {
   }
 
   /**
-   * Find a purchase by ID
+   * Find a purchase by ID with its items
    */
   async findById(id: string): Promise<PurchaseWithItems | null> {
     const result = await this.pg.query<Purchase>(
@@ -133,13 +140,26 @@ export class PurchaseService extends BaseService {
   }
 
   /**
-   * Find all purchases for the current business
+   * Find all purchases for the current business (excluding drafts)
    */
   async findByBusiness(): Promise<Purchase[]> {
     const result = await this.pg.query<Purchase>(
       `SELECT * FROM purchases
-       WHERE business_id = $1
-       ORDER BY purchase_date DESC, created_at DESC`,
+       WHERE business_id = $1 AND status != 'draft'
+       ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
+      [this.businessId]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Find all drafts for the current business
+   */
+  async findDrafts(): Promise<Purchase[]> {
+    const result = await this.pg.query<Purchase>(
+      `SELECT * FROM purchases
+       WHERE business_id = $1 AND status = 'draft'
+       ORDER BY updated_at DESC`,
       [this.businessId]
     );
     return result.rows;
@@ -151,136 +171,165 @@ export class PurchaseService extends BaseService {
   async findBySupplier(supplierId: string): Promise<Purchase[]> {
     const result = await this.pg.query<Purchase>(
       `SELECT * FROM purchases
-       WHERE supplier_id = $1 AND business_id = $2
-       ORDER BY purchase_date DESC, created_at DESC`,
+       WHERE supplier_id = $1 AND business_id = $2 AND status != 'draft'
+       ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
       [supplierId, this.businessId]
     );
     return result.rows;
   }
 
   /**
-   * Create a new purchase with items
+   * Create a new purchase (starts as draft by default)
    */
-  async create(input: CreatePurchaseInput): Promise<Purchase> {
+  async create(input: CreatePurchaseInput = {}): Promise<Purchase> {
     const id = this.generateId();
-    const now = this.now();
-    const totalAmount = formatCurrency(input.totalAmount);
+    const now = new Date();
     const syncGroupId = this.generateSyncGroup();
 
-    // Insert purchase using pg.query with parameterized values
+    // Calculate total from items if provided
+    const totalAmount = input.items?.reduce(
+      (sum, item) => sum + item.quantity * item.unitCost,
+      0
+    ) ?? 0;
+
+    // Insert purchase using raw query (Drizzle doesn't allow specifying id with defaultRandom)
     await this.pg.query(
       `INSERT INTO purchases (
         id, business_id, supplier_id, purchase_date, total_amount,
         status, invoice_number, receipt_image_id, notes,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        sync_status, sync_attempts, sync_group_id, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         id,
         this.businessId,
-        input.supplierId,
-        new Date(input.purchaseDate),
-        totalAmount,
-        "pending",
+        input.supplierId ?? null,
+        input.purchaseDate ?? null,
+        formatCurrency(totalAmount),
+        "draft",
         input.invoiceNumber ?? null,
         input.receiptImageId ?? null,
         input.notes ?? null,
         "pending",
         0,
-        now,
-        now,
+        syncGroupId,
+        now.toISOString(),
+        now.toISOString(),
       ]
     );
 
-    // Insert each item and queue sync
-    const itemSyncPayloads: Record<string, unknown>[] = [];
-    for (const item of input.items) {
-      const itemId = this.generateId();
-      const itemTotalCost = formatCurrency(item.quantity * item.unitCost);
-
-      await this.pg.query(
-        `INSERT INTO purchase_items (
-          id, business_id, purchase_id, product_id, variant_id, unit_id,
-          quantity, unit_cost, total_cost,
-          sync_status, sync_attempts, sync_version, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-        [
-          itemId,
-          this.businessId,
-          id,
-          item.productId,
-          item.variantId ?? null,
-          item.unitId ?? null,
-          String(item.quantity),
-          formatCurrency(item.unitCost),
-          itemTotalCost,
-          "pending",
-          0,
-          1,
-          now,
-          now,
-        ]
-      );
-
-      itemSyncPayloads.push({
-        id: itemId,
-        purchaseId: id,
-        productId: item.productId,
-        variantId: item.variantId ?? null,
-        unitId: item.unitId ?? null,
-        quantity: String(item.quantity),
-        unitCost: formatCurrency(item.unitCost),
-        totalCost: itemTotalCost,
-      });
-    }
-
-    // Queue sync for purchase (items synced separately via purchase_items operations)
+    // Sync the draft
     await this.queueSync("insert", id, {
       supplierId: input.supplierId,
       purchaseDate: input.purchaseDate,
-      totalAmount,
+      totalAmount: formatCurrency(totalAmount),
+      status: "draft",
       invoiceNumber: input.invoiceNumber,
       notes: input.notes,
       receiptImageId: input.receiptImageId,
-    } as Record<string, unknown>, syncGroupId);
+    }, syncGroupId);
 
-    // Queue sync for each item with same syncGroupId
-    for (let i = 0; i < input.items.length; i++) {
-      const itemPayload = itemSyncPayloads[i];
-      await this.queueSync(
-        "insert",
-        itemPayload.id as string,
-        itemPayload,
-        syncGroupId,
-        "purchase_items"
-      );
+    // Sync items with same itemId used in DB insert
+    if (input.items?.length) {
+      for (const item of input.items) {
+        const itemId = this.generateId();
+        await this.pg.query(
+          `INSERT INTO purchase_items (
+            id, business_id, purchase_id, product_id, variant_id, unit_id,
+            quantity, unit_cost, total_cost,
+            sync_status, sync_attempts, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          [
+            itemId,
+            this.businessId,
+            id,
+            item.productId,
+            item.variantId ?? null,
+            item.unitId ?? null,
+            String(item.quantity),
+            formatCurrency(item.unitCost),
+            formatCurrency(item.quantity * item.unitCost),
+            "pending",
+            0,
+            now.toISOString(),
+            now.toISOString(),
+          ]
+        );
+        await this.queueSync("insert", itemId, {
+          purchaseId: id,
+          productId: item.productId,
+          variantId: item.variantId,
+          unitId: item.unitId,
+          quantity: String(item.quantity),
+          unitCost: formatCurrency(item.unitCost),
+          totalCost: formatCurrency(item.quantity * item.unitCost),
+        }, syncGroupId, "purchase_items");
+      }
     }
 
-    return (await this.findById(id)) as Purchase;
+    return (await this.findById(id)) as PurchaseWithItems;
+  }
+
+  /**
+   * Update a purchase (works for any status including drafts)
+   */
+  async update(id: string, input: UpdatePurchaseInput): Promise<void> {
+    const updateData: { [key: string]: unknown } = {
+      updatedAt: new Date(),
+      syncStatus: "pending",
+    };
+
+    if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
+    if (input.purchaseDate !== undefined) updateData.purchaseDate = input.purchaseDate;
+    if (input.totalAmount !== undefined) updateData.totalAmount = formatCurrency(input.totalAmount);
+    if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
+    if (input.receiptImageId !== undefined) updateData.receiptImageId = input.receiptImageId;
+    if (input.notes !== undefined) updateData.notes = input.notes;
+
+    await this.db
+      .update(purchases)
+      .set(updateData)
+      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
+
+    await this.queueSync("update", id, input as Record<string, unknown>);
   }
 
   /**
    * Update the status of a purchase
+   * Validates required fields when confirming (draft -> pending)
    */
   async updateStatus(id: string, status: PurchaseStatus): Promise<void> {
     const purchase = await this.findById(id);
     if (!purchase) {
-      return;
+      throw new Error("Purchase not found");
     }
 
-    const now = this.now();
+    // Validate when confirming a draft
+    if (purchase.status === "draft" && status === "pending") {
+      if (!purchase.supplier_id) {
+        throw new Error("Se requiere un proveedor para confirmar la compra");
+      }
+      if (!purchase.purchase_date) {
+        throw new Error("Se requiere una fecha para confirmar la compra");
+      }
+      if (purchase.items.length === 0) {
+        throw new Error("Se requiere al menos un item para confirmar la compra");
+      }
+    }
 
-    await this.pg.query(
-      "UPDATE purchases SET status = $1, updated_at = $2 WHERE id = $3",
-      [status, now, id]
-    );
+    await this.db
+      .update(purchases)
+      .set({
+        status,
+        updatedAt: new Date(),
+        syncStatus: "pending",
+      })
+      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
 
-    await this.queueSync("update", id, {
-      status,
-    } as Record<string, unknown>);
+    await this.queueSync("update", id, { status });
   }
 
   /**
-   * Delete a purchase
+   * Delete a purchase (only drafts can be deleted)
    */
   async delete(id: string): Promise<void> {
     const purchase = await this.findById(id);
@@ -288,15 +337,218 @@ export class PurchaseService extends BaseService {
       return;
     }
 
-    await this.pg.query("DELETE FROM purchases WHERE id = $1", [id]);
+    // Only allow deleting drafts
+    if (purchase.status !== "draft") {
+      throw new Error("Solo los borradores pueden ser eliminados");
+    }
+
+    // Delete items first (cascade will handle this, but we need to sync)
+    for (const item of purchase.items) {
+      await this.queueSync("delete", item.id, { purchaseId: id }, undefined, "purchase_items");
+    }
+
+    await this.db
+      .delete(purchases)
+      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
 
     await this.queueSync("delete", id, {});
   }
 
   /**
-   * Update an item in a purchase
+   * Add an item to a purchase (only drafts)
+   */
+  async addItem(purchaseId: string, item: CreatePurchaseItemInput): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    // Only allow adding items to drafts
+    if (purchase.status !== "draft") {
+      throw new Error("Solo los borradores pueden ser editados");
+    }
+
+    const now = new Date();
+    const itemId = this.generateId();
+
+    await this.pg.query(
+      `INSERT INTO purchase_items (
+        id, business_id, purchase_id, product_id, variant_id, unit_id,
+        quantity, unit_cost, total_cost,
+        sync_status, sync_attempts, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        itemId,
+        this.businessId,
+        purchaseId,
+        item.productId,
+        item.variantId ?? null,
+        item.unitId ?? null,
+        String(item.quantity),
+        formatCurrency(item.unitCost),
+        formatCurrency(item.quantity * item.unitCost),
+        "pending",
+        0,
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
+
+    // Recalculate total
+    await this.recalculateTotal(purchaseId);
+
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    await this.queueSync("insert", itemId, {
+      purchaseId,
+      productId: item.productId,
+      variantId: item.variantId,
+      unitId: item.unitId,
+      quantity: String(item.quantity),
+      unitCost: formatCurrency(item.unitCost),
+      totalCost: formatCurrency(item.quantity * item.unitCost),
+    }, purchaseSyncGroupId, "purchase_items");
+  }
+
+  /**
+   * Update an item in a purchase (only drafts)
    */
   async updateItem(
+    purchaseId: string,
+    itemId: string,
+    data: {
+      quantity?: number;
+      unitCost?: number;
+    }
+  ): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    // Only allow updating items in drafts
+    if (purchase.status !== "draft") {
+      throw new Error("Solo los borradores pueden ser editados");
+    }
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+      syncStatus: "pending",
+    };
+
+    if (data.quantity !== undefined) {
+      updateData.quantity = String(data.quantity);
+    }
+    if (data.unitCost !== undefined) {
+      updateData.unitCost = formatCurrency(data.unitCost);
+    }
+
+    // Calculate new total cost if both values are provided
+    if (data.quantity !== undefined && data.unitCost !== undefined) {
+      updateData.totalCost = formatCurrency(data.quantity * data.unitCost);
+    }
+
+    await this.db
+      .update(purchaseItems)
+      .set(updateData)
+      .where(and(
+        eq(purchaseItems.id, itemId),
+        eq(purchaseItems.purchaseId, purchaseId)
+      ));
+
+    // Recalculate total
+    await this.recalculateTotal(purchaseId);
+
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    await this.queueSync("update", itemId, {
+      purchaseId,
+      quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
+      unitCost: data.unitCost !== undefined ? formatCurrency(data.unitCost) : undefined,
+    }, purchaseSyncGroupId, "purchase_items");
+  }
+
+  /**
+   * Delete an item from a purchase (only drafts)
+   */
+  async removeItem(purchaseId: string, itemId: string): Promise<void> {
+    const purchase = await this.findById(purchaseId);
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+
+    // Only allow removing items from drafts
+    if (purchase.status !== "draft") {
+      throw new Error("Solo los borradores pueden ser editados");
+    }
+
+    await this.db
+      .delete(purchaseItems)
+      .where(and(
+        eq(purchaseItems.id, itemId),
+        eq(purchaseItems.purchaseId, purchaseId)
+      ));
+
+    // Recalculate total
+    await this.recalculateTotal(purchaseId);
+
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    await this.queueSync("delete", itemId, { purchaseId }, purchaseSyncGroupId, "purchase_items");
+  }
+
+  /**
+   * Add an item to an existing purchase (for editing confirmed purchases)
+   * Does NOT check for draft status - use with caution
+   */
+  async addItemToPurchase(purchaseId: string, item: CreatePurchaseItemInput): Promise<void> {
+    const now = new Date();
+    const itemId = this.generateId();
+
+    await this.pg.query(
+      `INSERT INTO purchase_items (
+        id, business_id, purchase_id, product_id, variant_id, unit_id,
+        quantity, unit_cost, total_cost,
+        sync_status, sync_attempts, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        itemId,
+        this.businessId,
+        purchaseId,
+        item.productId,
+        item.variantId ?? null,
+        item.unitId ?? null,
+        String(item.quantity),
+        formatCurrency(item.unitCost),
+        formatCurrency(item.quantity * item.unitCost),
+        "pending",
+        0,
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
+
+    // Recalculate total
+    await this.recalculateTotal(purchaseId);
+
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    await this.queueSync("insert", itemId, {
+      purchaseId,
+      productId: item.productId,
+      variantId: item.variantId,
+      unitId: item.unitId,
+      quantity: String(item.quantity),
+      unitCost: formatCurrency(item.unitCost),
+      totalCost: formatCurrency(item.quantity * item.unitCost),
+    }, purchaseSyncGroupId, "purchase_items");
+  }
+
+  /**
+   * Update an item in a purchase (for editing confirmed purchases)
+   * Does NOT check for draft status - use with caution
+   */
+  async updateItemInPurchase(
     purchaseId: string,
     itemId: string,
     data: {
@@ -305,12 +557,7 @@ export class PurchaseService extends BaseService {
       totalCost?: number;
     }
   ): Promise<void> {
-    const purchase = await this.findById(purchaseId);
-    if (!purchase) {
-      throw new Error("Purchase not found");
-    }
-
-    const now = this.now();
+    const now = new Date();
     const totalCost = data.totalCost ?? (data.quantity && data.unitCost ? data.quantity * data.unitCost : undefined);
 
     await this.pg.query(
@@ -325,7 +572,7 @@ export class PurchaseService extends BaseService {
         data.quantity !== undefined ? String(data.quantity) : null,
         data.unitCost !== undefined ? formatCurrency(data.unitCost) : null,
         totalCost !== undefined ? formatCurrency(totalCost) : null,
-        now,
+        now.toISOString(),
         "pending",
         itemId,
         purchaseId,
@@ -333,44 +580,24 @@ export class PurchaseService extends BaseService {
     );
 
     // Recalculate purchase total
-    const itemsResult = await this.pg.query<{ total: string }>(
-      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
-      [purchaseId]
-    );
-    const newTotal = itemsResult.rows[0]?.total || "0";
+    await this.recalculateTotal(purchaseId);
 
-    await this.pg.query(
-      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
-      [newTotal, now, "pending", purchaseId]
-    );
-
-    // Get sync group ID for the purchase insert to maintain consistency
-    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM sync_operations
-       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
-       ORDER BY created_at DESC LIMIT 1`,
-      [purchaseId]
-    );
-    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
-
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
     await this.queueSync("update", itemId, {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
       unitCost: data.unitCost !== undefined ? formatCurrency(data.unitCost) : undefined,
       totalCost: totalCost !== undefined ? formatCurrency(totalCost) : undefined,
-    } as Record<string, unknown>, syncGroupId, "purchase_items");
+    }, purchaseSyncGroupId, "purchase_items");
   }
 
   /**
-   * Delete an item from a purchase
+   * Delete an item from a purchase (for editing confirmed purchases)
+   * Does NOT check for draft status - use with caution
    */
-  async deleteItem(purchaseId: string, itemId: string): Promise<void> {
-    const purchase = await this.findById(purchaseId);
-    if (!purchase) {
-      throw new Error("Purchase not found");
-    }
-
-    const now = this.now();
+  async deleteItemFromPurchase(purchaseId: string, itemId: string): Promise<void> {
+    const now = new Date();
 
     await this.pg.query(
       `DELETE FROM purchase_items WHERE id = $1 AND purchase_id = $2`,
@@ -378,101 +605,43 @@ export class PurchaseService extends BaseService {
     );
 
     // Recalculate purchase total
-    const itemsResult = await this.pg.query<{ total: string }>(
-      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
-      [purchaseId]
-    );
-    const newTotal = itemsResult.rows[0]?.total || "0";
+    await this.recalculateTotal(purchaseId);
 
-    await this.pg.query(
-      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
-      [newTotal, now, "pending", purchaseId]
-    );
-
-    // Get sync group ID for the purchase insert to maintain consistency
-    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM sync_operations
-       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
-       ORDER BY created_at DESC LIMIT 1`,
-      [purchaseId]
-    );
-    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
-
-    await this.queueSync("delete", itemId, {
-      purchaseId,
-    } as Record<string, unknown>, syncGroupId, "purchase_items");
+    // Sync with parent's syncGroupId
+    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    await this.queueSync("delete", itemId, { purchaseId }, purchaseSyncGroupId, "purchase_items");
   }
 
   /**
-   * Add an item to an existing purchase
+   * Get the sync group ID for a purchase (used to group related sync operations)
    */
-  async addItemToPurchase(
-    purchaseId: string,
-    item: CreatePurchaseItemInput
-  ): Promise<void> {
-    const purchase = await this.findById(purchaseId);
-    if (!purchase) {
-      throw new Error("Purchase not found");
-    }
-
-    const now = this.now();
-    const itemId = this.generateId();
-    const itemTotalCost = formatCurrency(item.quantity * item.unitCost);
-
-    await this.pg.query(
-      `INSERT INTO purchase_items (
-        id, business_id, purchase_id, product_id, variant_id, unit_id,
-        quantity, unit_cost, total_cost,
-        sync_status, sync_attempts, sync_version, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-      [
-        itemId,
-        this.businessId,
-        purchaseId,
-        item.productId,
-        item.variantId ?? null,
-        item.unitId ?? null,
-        String(item.quantity),
-        formatCurrency(item.unitCost),
-        itemTotalCost,
-        "pending",
-        0,
-        1,
-        now,
-        now,
-      ]
+  private async getPurchaseSyncGroupId(purchaseId: string): Promise<string | undefined> {
+    const result = await this.pg.query<{ sync_group_id: string }>(
+      `SELECT sync_group_id FROM purchases WHERE id = $1 AND business_id = $2`,
+      [purchaseId, this.businessId]
     );
+    return result.rows[0]?.sync_group_id ?? undefined;
+  }
 
-    // Recalculate purchase total
-    const itemsResult = await this.pg.query<{ total: string }>(
-      `SELECT COALESCE(SUM(total_cost::numeric), 0) as total FROM purchase_items WHERE purchase_id = $1`,
-      [purchaseId]
-    );
-    const newTotal = itemsResult.rows[0]?.total || "0";
+  /**
+   * Recalculate the total amount of a purchase based on its items
+   */
+  private async recalculateTotal(purchaseId: string): Promise<void> {
+    const result = await this.db
+      .select({
+        total: sql<string>`COALESCE(SUM(CAST(${purchaseItems.totalCost} AS DECIMAL)), 0)`,
+      })
+      .from(purchaseItems)
+      .where(eq(purchaseItems.purchaseId, purchaseId));
 
-    await this.pg.query(
-      `UPDATE purchases SET total_amount = $1, updated_at = $2, sync_status = $3 WHERE id = $4`,
-      [newTotal, now, "pending", purchaseId]
-    );
-
-    // Get sync group ID for the purchase insert to maintain consistency
-    const syncGroupResult = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM sync_operations
-       WHERE entity_id = $1 AND entity_type = 'purchases' AND operation = 'insert'
-       ORDER BY created_at DESC LIMIT 1`,
-      [purchaseId]
-    );
-    const syncGroupId = syncGroupResult.rows[0]?.sync_group_id;
-
-    await this.queueSync("insert", itemId, {
-      purchaseId,
-      productId: item.productId,
-      variantId: item.variantId ?? null,
-      unitId: item.unitId ?? null,
-      quantity: String(item.quantity),
-      unitCost: formatCurrency(item.unitCost),
-      totalCost: itemTotalCost,
-    } as Record<string, unknown>, syncGroupId, "purchase_items");
+    await this.db
+      .update(purchases)
+      .set({
+        totalAmount: result[0]?.total ?? "0",
+        updatedAt: new Date(),
+        syncStatus: "pending",
+      })
+      .where(eq(purchases.id, purchaseId));
   }
 }
 
@@ -481,8 +650,9 @@ export class PurchaseService extends BaseService {
  */
 export function createPurchaseService(
   pg: PGlite,
+  db: ReturnType<typeof drizzle>,
   syncService: SyncService,
   businessId: string
 ): PurchaseService {
-  return new PurchaseService(pg, null as unknown as ReturnType<typeof drizzle>, syncService, businessId, "");
+  return new PurchaseService(pg, db, syncService, businessId, "");
 }

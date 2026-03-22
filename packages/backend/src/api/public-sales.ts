@@ -233,6 +233,7 @@ export const publicSaleRoutes = new Elysia({
         );
 
         await db.insert(saleItems).values({
+          businessId: saleData.businessId,
           saleId: saleData.id,
           productId: variant.variant.productId,
           variantId: body.variantId,
@@ -613,5 +614,82 @@ export const publicSaleRoutes = new Elysia({
     },
     {
       params: t.Object({ token: t.String() }),
+    }
+  )
+  .post(
+    "/:token/confirmar",
+    async ({ params, body }) => {
+      const { token } = params;
+
+      if (!isValidTokenFormat(token)) {
+        throw new ValidationError("Token inválido");
+      }
+
+      const [tokenRecord] = await db
+        .select({
+          token: saleTokens,
+        })
+        .from(saleTokens)
+        .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+        .where(and(eq(saleTokens.token, token)));
+
+      if (!tokenRecord) {
+        throw new NotFoundError("Token de la venta");
+      }
+
+      const tokenData = tokenRecord.token;
+
+      if (!tokenData.isActive) {
+        throw new ForbiddenError("El token no está activo");
+      }
+
+      const [saleData] = await db
+        .select()
+        .from(sales)
+        .where(eq(sales.id, tokenData.saleId));
+
+      if (!saleData) {
+        throw new NotFoundError("Venta");
+      }
+
+      if (!saleData.allowCustomerEdit) {
+        throw new ForbiddenError("La edición por cliente no está permitida");
+      }
+
+      if (saleData.status !== "draft") {
+        throw new ValidationError("Solo se pueden confirmar ventas en borrador");
+      }
+
+      // Determine new status based on sale type
+      const newStatus = saleData.type === "pre_order" ? "confirmed" : "active";
+
+      await db
+        .update(sales)
+        .set({
+          status: newStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(sales.id, saleData.id));
+
+      // Optionally deactivate token after confirmation
+      // await db.update(saleTokens).set({ isActive: false }).where(eq(saleTokens.id, tokenData.id));
+
+      return {
+        success: true,
+        data: {
+          message: newStatus === "confirmed" ? "Pedido confirmado exitosamente" : "Venta confirmada exitosamente",
+          saleId: saleData.id,
+          status: newStatus,
+        },
+      };
+    },
+    {
+      params: t.Object({ token: t.String() }),
+      body: t.Object({
+        customerName: t.Optional(t.String()),
+        customerPhone: t.Optional(t.String()),
+        deliveryDate: t.Optional(t.String()),
+        notes: t.Optional(t.String()),
+      }),
     }
   );

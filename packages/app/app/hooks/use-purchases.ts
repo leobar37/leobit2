@@ -152,7 +152,7 @@ export function useDeletePurchase() {
 }
 
 /**
- * Update a purchase item
+ * Update a purchase item (for editing confirmed purchases)
  */
 export function useUpdatePurchaseItem() {
   const purchaseService = usePurchaseService();
@@ -172,7 +172,7 @@ export function useUpdatePurchaseItem() {
         totalCost?: number;
       };
     }): Promise<void> => {
-      return purchaseService.updateItem(purchaseId, itemId, data);
+      return purchaseService.updateItemInPurchase(purchaseId, itemId, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -183,34 +183,10 @@ export function useUpdatePurchaseItem() {
   });
 }
 
-/**
- * Delete a purchase item
- */
-export function useDeletePurchaseItem() {
-  const purchaseService = usePurchaseService();
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({
-      purchaseId,
-      itemId,
-    }: {
-      purchaseId: string;
-      itemId: string;
-    }): Promise<void> => {
-      return purchaseService.deleteItem(purchaseId, itemId);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
-      });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
-    },
-  });
-}
 
 /**
- * Add an item to an existing purchase
+ * Add an item to an existing purchase (for editing confirmed purchases)
  */
 export function useAddPurchaseItem() {
   const purchaseService = usePurchaseService();
@@ -229,6 +205,72 @@ export function useAddPurchaseItem() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+    },
+  });
+}
+
+/**
+ * Remove an item from a purchase (for editing confirmed purchases)
+ */
+export function useRemovePurchaseItem() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      purchaseId,
+      itemId,
+    }: {
+      purchaseId: string;
+      itemId: string;
+    }): Promise<void> => {
+      return purchaseService.deleteItemFromPurchase(purchaseId, itemId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+    },
+  });
+}
+
+/**
+ * Get all drafts for the current business
+ */
+export function usePurchaseDrafts() {
+  const purchaseService = usePurchaseService();
+
+  return useQuery({
+    queryKey: ["purchases-new", "drafts"],
+    queryFn: async (): Promise<Purchase[]> => {
+      return purchaseService.findDrafts();
+    },
+  });
+}
+
+/**
+ * Update a purchase (any field)
+ */
+export function useUpdatePurchase() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: Parameters<typeof purchaseService.update>[1];
+    }): Promise<void> => {
+      return purchaseService.update(id, input);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.purchase(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
     },

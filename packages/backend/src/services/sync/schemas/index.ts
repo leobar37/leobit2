@@ -6,6 +6,7 @@ import { z } from "zod";
 
 /**
  * Transforms a number or numeric string to a string.
+ * Preserves precision by avoiding Number() conversion for string inputs.
  * Throws if value is not a finite number.
  */
 const numericStringTransform = z.union([z.string(), z.number()]).transform((val) => {
@@ -15,15 +16,17 @@ const numericStringTransform = z.union([z.string(), z.number()]).transform((val)
     }
     return val.toString();
   }
-  const parsed = Number(val);
-  if (!Number.isFinite(parsed)) {
-    throw new Error("Invalid number string");
+  // Validate string format without Number() to preserve precision
+  // Accepts: "100", "100.50", "0.5", etc.
+  if (!/^\d+(\.\d+)?$/.test(val)) {
+    throw new Error("Invalid numeric string format");
   }
-  return parsed.toString();
+  return val;
 });
 
 /**
  * Transforms an optional number or numeric string to a string or undefined.
+ * Preserves precision by avoiding Number() conversion for string inputs.
  */
 const optionalNumericStringTransform = z
   .union([z.string(), z.number()])
@@ -38,11 +41,11 @@ const optionalNumericStringTransform = z
       }
       return val.toString();
     }
-    const parsed = Number(val);
-    if (!Number.isFinite(parsed)) {
+    // Validate string format without Number() to preserve precision
+    if (!/^\d+(\.\d+)?$/.test(val)) {
       return undefined;
     }
-    return parsed.toString();
+    return val;
   });
 
 export { numericStringTransform, optionalNumericStringTransform };
@@ -254,9 +257,10 @@ export const purchaseItemSchema = z.object({
 });
 
 export const purchaseCreateSchema = z.object({
-  supplierId: z.string().min(1, "supplierId es requerido"),
+  supplierId: z.string().optional(),
   purchaseDate: z.string().optional(),
-  status: z.enum(["pending", "received", "cancelled"]).optional(),
+  invoiceNumber: z.string().optional(),
+  status: z.enum(["draft", "pending", "received", "cancelled"]).optional(),
   totalAmount: optionalNumericStringTransform,
   notes: z.string().optional(),
   receiptImageId: z.string().optional(),
@@ -264,7 +268,7 @@ export const purchaseCreateSchema = z.object({
 });
 
 export const purchaseUpdateSchema = purchaseCreateSchema.extend({
-  status: z.enum(["pending", "received", "cancelled"]),
+  status: z.enum(["draft", "pending", "received", "cancelled"]),
 });
 
 export type PurchaseCreateInput = z.infer<typeof purchaseCreateSchema>;

@@ -1,19 +1,21 @@
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { PurchaseCalculatorContent } from "~/components/purchases/calculator/purchase-calculator-content";
-import { usePurchaseEdit } from "~/components/purchases/purchase-edit-context";
+import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
 import { getPurchaseEditorPath } from "~/lib/purchases/navigation";
 
 export default function CompraEditorCalculadoraPage() {
   const navigate = useNavigate();
-  const { purchaseId, editingItemId, items } = usePurchaseEdit();
-  const editingItem = editingItemId ? items.find(i => i.id === editingItemId) ?? null : null;
+  const { id } = useParams<{ id: string }>();
+  const { purchaseId } = usePurchaseForm();
 
-  if (!purchaseId) {
+  const currentPurchaseId = id || purchaseId;
+
+  if (!currentPurchaseId) {
     return <Navigate to="/compras" replace />;
   }
 
-  const returnPath = getPurchaseEditorPath(purchaseId);
+  const returnPath = getPurchaseEditorPath(currentPurchaseId);
 
   return (
     <div className="app-shell flex min-h-screen flex-col">
@@ -27,14 +29,13 @@ export default function CompraEditorCalculadoraPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="ml-1 text-lg font-bold tracking-tight">
-            {editingItemId ? "Editar Producto" : "Calculadora"}
+            Calculadora
           </h1>
         </div>
       </header>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <PurchaseCalculatorContent
-          key={editingItemId || "new"}
           returnPath={returnPath}
         />
       </div>

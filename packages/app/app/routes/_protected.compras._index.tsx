@@ -12,17 +12,23 @@ import { useSetLayout } from "~/components/layout/app-layout";
 import type { Purchase } from "~/lib/services/purchase-service";
 
 function PurchaseCard({ purchase }: { purchase: Purchase }) {
-  const statusLabels = {
+  const statusLabels: Record<Purchase["status"], string> = {
+    draft: "Borrador",
     pending: "Pendiente",
     received: "Recibido",
     cancelled: "Cancelado",
   };
 
-  const statusColors = {
+  const statusColors: Record<Purchase["status"], string> = {
+    draft: "bg-gray-100 text-gray-700",
     pending: "bg-yellow-100 text-yellow-700",
     received: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700",
   };
+
+  const displayDate = purchase.purchase_date
+    ? new Date(purchase.purchase_date).toLocaleDateString("es-PE")
+    : "Sin fecha";
 
   return (
     <Card className="rounded-[24px] border border-stone-200/80 bg-white/80 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90">
@@ -35,10 +41,10 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold">{"Sin proveedor"}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(purchase.purchase_date).toLocaleDateString("es-PE")}
-                </p>
+                <h3 className="font-semibold">
+                  {purchase.supplier_id ? "Proveedor seleccionado" : "Sin proveedor"}
+                </h3>
+                <p className="text-sm text-muted-foreground">{displayDate}</p>
               </div>
               <Badge variant="secondary" className={statusColors[purchase.status]}>
                 {statusLabels[purchase.status]}

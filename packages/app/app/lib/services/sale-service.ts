@@ -378,8 +378,8 @@ export class SaleService extends BaseService {
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
-          sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
+          sync_status, sync_attempts, sync_group_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)`,
         [
           saleId,
           this.businessId,
@@ -403,6 +403,7 @@ export class SaleService extends BaseService {
           true,
           SyncStatus.PENDING,
           0,
+          syncGroupId, // Store syncGroupId on the sale record
           now,
         ]
       );
@@ -486,8 +487,8 @@ export class SaleService extends BaseService {
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
-          sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
+          sync_status, sync_attempts, sync_group_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)`,
         [
           saleId,
           this.businessId,
@@ -511,6 +512,7 @@ export class SaleService extends BaseService {
           true,
           SyncStatus.PENDING,
           0,
+          syncGroupId, // Store syncGroupId on the sale record
           now,
         ]
       );
@@ -589,15 +591,13 @@ export class SaleService extends BaseService {
   }
 
   /**
-   * Get the syncGroupId from an insert operation for this sale
-   * This ensures confirm/update/item operations are in the same sync group
+   * Get the syncGroupId from the sale record directly
+   * This is more reliable than querying sync_operations which may not be committed yet
    */
-  private async getInsertSyncGroupId(saleId: string): Promise<string | undefined> {
+  private async getSaleSyncGroupId(saleId: string): Promise<string | undefined> {
     const result = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM sync_operations 
-       WHERE entity_id = $1 AND operation = 'insert' 
-       ORDER BY created_at DESC LIMIT 1`,
-      [saleId]
+      `SELECT sync_group_id FROM sales WHERE id = $1 AND business_id = $2`,
+      [saleId, this.businessId]
     );
     return result.rows[0]?.sync_group_id ?? undefined;
   }
@@ -628,7 +628,7 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id]
     );
 
-    const syncGroupId = await this.getInsertSyncGroupId(id);
+    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     await this.queueSync(
       "update",
@@ -671,7 +671,7 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id, baseVersion]
     );
 
-    const syncGroupId = await this.getInsertSyncGroupId(id);
+    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     await this.queueSync(
       "update",
@@ -709,7 +709,7 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id]
     );
 
-    const syncGroupId = await this.getInsertSyncGroupId(id);
+    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     await this.queueSync(
       "update",
@@ -750,7 +750,7 @@ export class SaleService extends BaseService {
       [now, this.businessUserId, reason, SyncStatus.PENDING, id]
     );
 
-    const syncGroupId = await this.getInsertSyncGroupId(id);
+    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     await this.queueSync(
       "update",
@@ -863,7 +863,7 @@ export class SaleService extends BaseService {
       params
     );
 
-    const syncGroupId = await this.getInsertSyncGroupId(id);
+    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     await this.queueSync(
       "update",
@@ -961,7 +961,7 @@ export class SaleService extends BaseService {
     );
 
     // Queue sync for the new item (use same syncGroupId as the sale insert to ensure correct order)
-    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
+    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
     console.log("[SaleService] addItem - saleSyncGroupId:", saleSyncGroupId, "saleId:", saleId);
     await this.queueSync(
       "insert",
@@ -1053,7 +1053,7 @@ export class SaleService extends BaseService {
     }
 
     // Queue sync for the updated item with same syncGroupId as the sale insert
-    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
+    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
     await this.queueSync(
       "update",
       itemId,
@@ -1118,7 +1118,7 @@ export class SaleService extends BaseService {
     );
 
     // Queue sync for the deleted item with same syncGroupId as the sale insert
-    const saleSyncGroupId = await this.getInsertSyncGroupId(saleId);
+    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
     await this.queueSync(
       "delete",
       itemId,
@@ -1163,13 +1163,17 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found after payment");
     }
 
+    // Get syncGroupId to ensure payment is grouped with the sale operations
+    const syncGroupId = await this.getSaleSyncGroupId(saleId);
+
     await this.queueSync(
       "update",
       saleId,
       {
         amountPaid: parseFloat(updatedSale.amountPaid),
         balanceDue: parseFloat(updatedSale.balanceDue),
-      }
+      },
+      syncGroupId
     );
   }
 

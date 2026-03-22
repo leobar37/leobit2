@@ -27,14 +27,13 @@ export const purchases = pgTable(
       .references(() => businesses.id),
 
     supplierId: uuid("supplier_id")
-      .notNull()
       .references(() => suppliers.id),
 
-    purchaseDate: date("purchase_date").notNull(),
+    purchaseDate: date("purchase_date"),
 
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
 
-    status: purchaseStatusEnum("status").notNull().default("pending"),
+    status: purchaseStatusEnum("status").notNull().default("draft"),
 
     invoiceNumber: varchar("invoice_number", { length: 50 }),
 
@@ -45,6 +44,7 @@ export const purchases = pgTable(
     // Sync fields for offline-first support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    syncGroupId: varchar("sync_group_id", { length: 100 }),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -55,6 +55,7 @@ export const purchases = pgTable(
     index("idx_purchases_purchase_date").on(table.purchaseDate),
     index("idx_purchases_status").on(table.status),
     index("idx_purchases_receipt_image_id").on(table.receiptImageId),
+    index("idx_purchases_sync_group_id").on(table.syncGroupId),
   ]
 );
 

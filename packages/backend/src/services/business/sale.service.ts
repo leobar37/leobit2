@@ -138,6 +138,10 @@ export class SaleService {
     const isPreOrder = data.type === "pre_order";
 
     if (!isEmptyDraft && distribucion) {
+      // NOTE: Pre-orders skip stock validation at confirmation time because:
+      // 1. Pre-orders are typically confirmed before inventory is allocated to the route
+      // 2. Stock is validated at delivery time (confirmed → delivered transition)
+      // 3. Business logic allows reserving stock without immediate inventory deduction
       if (!isPreOrder) {
         await this.validarStockEstricto(ctx, distribucion.id, items);
       }
@@ -812,27 +816,6 @@ export class SaleService {
           `Stock insuficiente para ${saleItem.variantName}. Disponible: ${disponible}, Venta: ${saleItem.quantity}`
         );
       }
-    }
-  }
-
-  private async validarStockAcumulativo(
-    ctx: RequestContext,
-    distribucionId: string,
-    items: Array<{
-      variantId: string;
-      variantName: string;
-      quantity: number;
-    }>
-  ): Promise<void> {
-    const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
-      ctx,
-      distribucionId
-    );
-
-    for (const saleItem of items) {
-      const distItem = distribucionItems.find(
-        (di) => di.variantId === saleItem.variantId
-      );
     }
   }
 }

@@ -25,19 +25,22 @@ import { useBusiness } from "~/hooks/use-business";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
+  draft: "Borrador",
   pending: "Pendiente",
   received: "Recibido",
   cancelled: "Cancelado",
 };
 
-const statusColors = {
+const statusColors: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700",
   pending: "bg-yellow-100 text-yellow-700",
   received: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-700",
 };
 
-const statusIcons = {
+const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  draft: Package,
   pending: Calendar,
   received: CheckCircle2,
   cancelled: RotateCcw,
@@ -168,7 +171,9 @@ export default function PurchaseDetailPage() {
                   <span>Fecha</span>
                 </div>
                 <p className="font-medium">
-                  {new Date(purchase.purchase_date).toLocaleDateString("es-PE")}
+                  {purchase.purchase_date
+                    ? new Date(purchase.purchase_date).toLocaleDateString("es-PE")
+                    : "Sin fecha"}
                 </p>
               </div>
 

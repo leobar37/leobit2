@@ -1,14 +1,17 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
+/**
+ * Purchase Form Context - Simplified
+ * Single flow for both new purchases (draft) and editing existing purchases
+ */
+
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useForm, FormProvider } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
-import { useCreatePurchase } from "~/hooks/use-purchases";
 import { useUploadFile } from "~/hooks/use-files";
-import { generateId } from "~/lib/utils";
-import type { CreatePurchaseInput } from "~/lib/db/schema";
-import { usePurchaseEditorState } from "~/hooks/use-purchase-editor-state";
+import { usePurchaseService } from "~/lib/sync/service-provider";
+import type { PurchaseWithItems } from "~/lib/services/purchase-service";
 
 interface PurchaseItem {
   id: string;
@@ -29,13 +32,14 @@ interface PurchaseFormValues {
 }
 
 interface PurchaseFormContextType {
+  purchaseId: string | null;
+  purchase: PurchaseWithItems | null;
   supplier: Supplier | null;
   setSupplier: (supplier: Supplier | null) => void;
   items: PurchaseItem[];
-  addItem: (item: Omit<PurchaseItem, "id">) => void;
-  removeItem: (id: string) => void;
-  updateItem: (id: string, updates: Partial<Omit<PurchaseItem, "id">>) => void;
-  clearItems: () => void;
+  addItem: (item: Omit<PurchaseItem, "id">) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
+  updateItem: (id: string, updates: Partial<Omit<PurchaseItem, "id">>) => Promise<void>;
   receiptFile: File | null;
   receiptPreview: string | null;
   handleReceiptSelect: (file: File) => void;
@@ -51,8 +55,10 @@ interface PurchaseFormContextType {
   totalAmount: number;
   cartItemsCount: number;
   isFormValid: boolean;
-  onSubmit: () => Promise<void>;
+  canEdit: boolean;
+  onSave: () => Promise<void>;
   isPending: boolean;
+  isLoading: boolean;
 }
 
 const PurchaseFormContext = createContext<PurchaseFormContextType | null>(null);
@@ -71,42 +77,29 @@ interface PurchaseFormProviderProps {
 
 export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { id: urlId } = useParams<{ id: string }>();
+  const purchaseId = urlId || null;
+  
   const { data: business } = useBusiness();
   const { data: suppliers } = useSuppliers(business?.id || "");
+  const purchaseService = usePurchaseService();
 
-  // Use nuqs for persistent state in URL
-  const { editingItemId, setEditingItemId, clearEditingItem } = usePurchaseEditorState();
-
-  // Local state for form data (usePurchaseEditorState only handles editingItemId)
-  const [items, setItems] = useState<PurchaseItem[]>([]);
-  const [supplierId, setSupplierId] = useState<string | null>(null);
-  const [formValues, setFormValues] = useState<PurchaseFormValues>({
-    purchaseDate: new Date().toISOString().split("T")[0],
-    invoiceNumber: "",
-    notes: "",
+  // Load purchase if editing, or null if creating new
+  const { data: purchaseData, isLoading } = useQuery({
+    queryKey: ["purchase-form", purchaseId],
+    queryFn: async () => {
+      if (!purchaseId) return null;
+      return purchaseService.findById(purchaseId);
+    },
+    enabled: !!purchaseId,
   });
-  const persistedFormValues = formValues;
 
-  const clearState = useCallback(() => {
-    setItems([]);
-    setSupplierId(null);
-    setFormValues({
-      purchaseDate: new Date().toISOString().split("T")[0],
-      invoiceNumber: "",
-      notes: "",
-    });
-  }, []);
+  const purchase = purchaseData || null;
+  const isDraft = purchase?.status === "draft";
+  const canEdit = !purchase || isDraft || purchase.status === "pending";
 
-  // Find supplier from ID
-  const supplier = useMemo(() => {
-    if (!supplierId || !suppliers) return null;
-    return suppliers.find((s) => s.id === supplierId) || null;
-  }, [supplierId, suppliers]);
-
-  const setSupplier = useCallback((newSupplier: Supplier | null) => {
-    setSupplierId(newSupplier?.id || null);
-  }, [setSupplierId]);
-
+  // Form state
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [fileUploadStatus, setFileUploadStatus] = useState({
@@ -117,168 +110,168 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const form = useForm<PurchaseFormValues>({
-    defaultValues: persistedFormValues,
+    defaultValues: {
+      purchaseDate: purchase?.purchase_date || new Date().toISOString().split("T")[0],
+      invoiceNumber: purchase?.invoice_number || "",
+      notes: purchase?.notes || "",
+    },
+    values: {
+      purchaseDate: purchase?.purchase_date || new Date().toISOString().split("T")[0],
+      invoiceNumber: purchase?.invoice_number || "",
+      notes: purchase?.notes || "",
+    },
   });
 
-  // Sync form values with nuqs state when they change
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      setFormValues({
-        purchaseDate: value.purchaseDate || new Date().toISOString().split("T")[0],
-        invoiceNumber: value.invoiceNumber || "",
-        notes: value.notes || "",
+  // Items from purchase or empty
+  const items = useMemo(() => {
+    if (!purchase?.items) return [];
+    return purchase.items.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      variantId: item.variantId,
+      unitId: undefined as string | undefined,
+      productName: item.productName,
+      variantName: item.variantName,
+      quantity: String(item.quantity),
+      unitCost: String(item.unitCost),
+      totalCost: String(item.totalCost),
+    }));
+  }, [purchase?.items]);
+
+  const supplier = useMemo(() => {
+    if (!purchase?.supplier_id || !suppliers) return null;
+    return suppliers.find(s => s.id === purchase.supplier_id) || null;
+  }, [purchase?.supplier_id, suppliers]);
+
+  const setSupplier = useCallback(async (newSupplier: Supplier | null) => {
+    if (!purchase) return;
+    try {
+      await purchaseService.update(purchase.id, { supplierId: newSupplier?.id });
+      queryClient.invalidateQueries({ queryKey: ["purchase-form", purchase.id] });
+    } catch (error) {
+      console.error("Error updating supplier:", error);
+    }
+  }, [purchase, purchaseService, queryClient]);
+
+  const addItem = useCallback(async (item: Omit<PurchaseItem, "id">) => {
+    if (!purchase) {
+      // Create new purchase (draft) first
+      const newPurchase = await purchaseService.create({
+        supplierId: supplier?.id,
+        purchaseDate: form.getValues("purchaseDate"),
+        invoiceNumber: form.getValues("invoiceNumber"),
+        notes: form.getValues("notes"),
       });
-    });
-    return () => subscription.unsubscribe();
-  }, [form, setFormValues]);
+      // Add item to new purchase
+      await purchaseService.addItemToPurchase(newPurchase.id, {
+        productId: item.productId,
+        variantId: item.variantId || undefined,
+        unitId: item.unitId,
+        quantity: parseFloat(item.quantity),
+        unitCost: parseFloat(item.unitCost),
+      });
+      // Navigate to edit URL
+      navigate(`/compras/${newPurchase.id}/editar`, { replace: true });
+    } else {
+      // Add to existing purchase
+      await purchaseService.addItemToPurchase(purchase.id, {
+        productId: item.productId,
+        variantId: item.variantId || undefined,
+        unitId: item.unitId,
+        quantity: parseFloat(item.quantity),
+        unitCost: parseFloat(item.unitCost),
+      });
+      queryClient.invalidateQueries({ queryKey: ["purchase-form", purchase.id] });
+    }
+  }, [purchase, purchaseService, supplier, form, navigate, queryClient]);
 
-  const addItem = useCallback((item: Omit<PurchaseItem, "id">) => {
-    const newItem: PurchaseItem = {
-      ...item,
-      id: generateId(),
-    };
-    setItems((prev) => [...prev, newItem]);
-  }, [setItems]);
+  const removeItem = useCallback(async (itemId: string) => {
+    if (!purchase) return;
+    await purchaseService.deleteItemFromPurchase(purchase.id, itemId);
+    queryClient.invalidateQueries({ queryKey: ["purchase-form", purchase.id] });
+  }, [purchase, purchaseService, queryClient]);
 
-  const removeItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, [setItems]);
-
-  const updateItem = useCallback((id: string, updates: Partial<Omit<PurchaseItem, "id">>) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const updated = { ...item, ...updates };
-        if (updates.quantity !== undefined || updates.unitCost !== undefined) {
-          const qty = parseFloat(updated.quantity) || 0;
-          const cost = parseFloat(updated.unitCost) || 0;
-          updated.totalCost = (qty * cost).toString();
-        }
-        return updated;
-      })
-    );
-  }, [setItems]);
-
-  const clearItems = useCallback(() => {
-    setItems([]);
-  }, [setItems]);
+  const updateItem = useCallback(async (itemId: string, updates: Partial<Omit<PurchaseItem, "id">>) => {
+    if (!purchase) return;
+    const quantity = updates.quantity !== undefined ? parseFloat(updates.quantity) : undefined;
+    const unitCost = updates.unitCost !== undefined ? parseFloat(updates.unitCost) : undefined;
+    await purchaseService.updateItemInPurchase(purchase.id, itemId, { quantity, unitCost });
+    queryClient.invalidateQueries({ queryKey: ["purchase-form", purchase.id] });
+  }, [purchase, purchaseService, queryClient]);
 
   const handleReceiptSelect = useCallback((file: File) => {
     setReceiptFile(file);
     setReceiptPreview(URL.createObjectURL(file));
-    setFileUploadStatus({
-      isUploading: false,
-      isPending: true,
-      isError: false,
-    });
+    setFileUploadStatus({ isUploading: false, isPending: true, isError: false });
   }, []);
 
   const handleReceiptClear = useCallback(() => {
-    if (receiptPreview) {
-      URL.revokeObjectURL(receiptPreview);
-    }
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
     setReceiptFile(null);
     setReceiptPreview(null);
-    setFileUploadStatus({
-      isUploading: false,
-      isPending: false,
-      isError: false,
-    });
+    setFileUploadStatus({ isUploading: false, isPending: false, isError: false });
   }, [receiptPreview]);
 
-  const clearPurchaseError = useCallback(() => {
-    setPurchaseError(null);
-  }, []);
+  const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
 
   const totalAmount = useMemo(() => {
-    return items.reduce((sum, item) => {
-      return sum + (parseFloat(item.totalCost) || 0);
-    }, 0);
+    return items.reduce((sum, item) => sum + (parseFloat(item.totalCost) || 0), 0);
   }, [items]);
 
-  const cartItemsCount = items.length;
+  const isFormValid = items.length > 0 && supplier !== null && !!form.getValues("purchaseDate");
 
-  const isFormValid = useMemo(() => {
-    return items.length > 0 && business !== undefined && supplier !== null;
-  }, [items.length, business, supplier]);
+  const uploadReceiptFile = useUploadFile({ entityType: "order", fieldName: "receiptImageId" });
 
-  const createPurchaseMutation = useCreatePurchase();
-  const uploadReceiptFile = useUploadFile({
-    entityType: "order",
-    fieldName: "receiptImageId",
-  });
-
-  const createPurchase = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async () => {
-      const purchaseDate = form.getValues("purchaseDate");
-      const supplierId = supplier?.id || "";
+      if (!purchase) throw new Error("No purchase");
 
+      // Upload receipt if provided
       let receiptImageId: string | undefined;
       if (receiptFile) {
-        try {
-          const result = await uploadReceiptFile.mutateAsync(receiptFile);
-          receiptImageId = (result as { isOffline?: boolean }).isOffline
-            ? undefined
-            : (result as { id: string }).id;
-
-          if (!(result as { isOffline?: boolean }).isOffline) {
-            setFileUploadStatus((prev) => ({ ...prev, isPending: true }));
-          }
-        } catch (error) {
-          console.error("Error uploading file:", error);
-          setFileUploadStatus((prev) => ({ ...prev, isError: true }));
-          throw error;
+        const result = await uploadReceiptFile.mutateAsync(receiptFile);
+        receiptImageId = (result as { isOffline?: boolean }).isOffline ? undefined : (result as { id: string }).id;
+        if (receiptImageId) {
+          await purchaseService.update(purchase.id, { receiptImageId });
         }
       }
 
-      const total = items.reduce((sum, item) => sum + parseFloat(item.totalCost), 0);
-
-      const result = await createPurchaseMutation.mutateAsync({
-        supplierId: supplier?.id || "",
-        purchaseDate: purchaseDate,
-        totalAmount: total,
-        invoiceNumber: form.getValues("invoiceNumber") || undefined,
-        receiptImageId: receiptImageId,
-        notes: form.getValues("notes") || undefined,
-        items: items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId || undefined,
-          unitId: item.unitId || undefined,
-          quantity: parseFloat(item.quantity),
-          unitCost: parseFloat(item.unitCost),
-        })),
+      // Update purchase fields
+      await purchaseService.update(purchase.id, {
+        purchaseDate: form.getValues("purchaseDate"),
+        invoiceNumber: form.getValues("invoiceNumber"),
+        notes: form.getValues("notes"),
       });
 
-      return result.id;
+      // If draft, confirm it (change status to pending)
+      if (purchase.status === "draft") {
+        await purchaseService.updateStatus(purchase.id, "pending");
+      }
+
+      return purchase.id;
     },
     onSuccess: () => {
-      clearState();
+      queryClient.invalidateQueries({ queryKey: ["purchases-new"] });
       navigate("/compras");
     },
     onError: (error) => {
-      console.error("[CREATE PURCHASE MUTATION] Error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Error al guardar la compra";
-      setPurchaseError(errorMessage);
+      setPurchaseError(error instanceof Error ? error.message : "Error al guardar");
     },
   });
 
-  const onSubmit = useCallback(async () => {
-    try {
-      await createPurchase.mutateAsync();
-    } catch (error) {
-      console.error("[PURCHASE FORM] mutation error:", error);
-      throw error;
-    }
-  }, [createPurchase]);
+  const onSave = useCallback(async () => {
+    await saveMutation.mutateAsync();
+  }, [saveMutation]);
 
   const value: PurchaseFormContextType = {
+    purchaseId,
+    purchase,
     supplier,
     setSupplier,
     items,
     addItem,
     removeItem,
     updateItem,
-    clearItems,
     receiptFile,
     receiptPreview,
     handleReceiptSelect,
@@ -288,10 +281,12 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     clearPurchaseError,
     form,
     totalAmount,
-    cartItemsCount,
+    cartItemsCount: items.length,
     isFormValid,
-    onSubmit,
-    isPending: createPurchase.isPending,
+    canEdit,
+    onSave,
+    isPending: saveMutation.isPending,
+    isLoading,
   };
 
   return (

@@ -56,18 +56,20 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
   ): Promise<void> {
     const parsed = purchaseCreateSchema.parse(operation.payload);
 
-    if (!parsed.supplierId) {
+    // Only require supplierId for non-draft purchases
+    if (!parsed.supplierId && parsed.status !== "draft") {
       throw new Error("supplierId es requerido para crear una compra");
     }
 
     // Create purchase only (items will be created by PurchaseItemSyncHandler)
     const purchase = await this.purchaseRepo.create(ctx, {
-      supplierId: parsed.supplierId,
+      supplierId: parsed.supplierId ?? null,
       purchaseDate: parsed.purchaseDate ?? new Date().toISOString().split("T")[0],
-      status: parsed.status ?? "pending",
+      status: parsed.status ?? "draft",
       totalAmount: parsed.totalAmount ?? "0",
       notes: parsed.notes ?? undefined,
       receiptImageId: parsed.receiptImageId ?? null,
+      invoiceNumber: parsed.invoiceNumber ?? null,
     }, []); // Empty items - will be created via PurchaseItemSyncHandler
   }
 

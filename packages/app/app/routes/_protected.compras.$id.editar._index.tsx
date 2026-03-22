@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router";
-import { ArrowLeft, Loader2, Plus, Trash2, Edit2, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Edit2, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { formatCurrency, formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { usePurchaseEdit } from "~/components/purchases/purchase-edit-context";
+import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
 import { getPurchaseCalculatorPath } from "~/lib/purchases/navigation";
 
 export default function CompraEditarIndexPage() {
@@ -16,11 +16,9 @@ export default function CompraEditarIndexPage() {
     supplier,
     totalAmount,
     isLoading,
-    isSaving,
+    isPending,
     onSave,
-    onCancel,
-    setEditingItemId,
-  } = usePurchaseEdit();
+  } = usePurchaseForm();
 
   if (isLoading) {
     return (
@@ -40,7 +38,7 @@ export default function CompraEditarIndexPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => navigate(`/compras/${purchaseId}`)}
               className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -87,7 +85,7 @@ export default function CompraEditarIndexPage() {
               <Button
                 size="sm"
                 className="rounded-xl bg-orange-500 hover:bg-orange-600"
-                onClick={() => navigate(getPurchaseCalculatorPath(purchaseId))}
+                onClick={() => navigate(getPurchaseCalculatorPath(purchaseId!))}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Agregar
@@ -120,8 +118,7 @@ export default function CompraEditarIndexPage() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => {
-                          setEditingItemId(item.id);
-                          navigate(getPurchaseCalculatorPath(purchaseId));
+                          navigate(getPurchaseCalculatorPath(purchaseId!));
                         }}
                         className="rounded-lg p-2 text-muted-foreground hover:bg-orange-100 hover:text-orange-600 transition-colors"
                       >
@@ -145,7 +142,7 @@ export default function CompraEditarIndexPage() {
                   </p>
                   <Button
                     className="rounded-xl bg-orange-500 hover:bg-orange-600"
-                    onClick={() => navigate(getPurchaseCalculatorPath(purchaseId))}
+                    onClick={() => navigate(getPurchaseCalculatorPath(purchaseId!))}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Agregar Producto
@@ -161,24 +158,20 @@ export default function CompraEditarIndexPage() {
         <div className="max-w-lg mx-auto space-y-2">
           <Button
             onClick={onSave}
-            disabled={isSaving || items.length === 0}
+            disabled={isPending}
             className="w-full h-14 rounded-xl text-lg font-semibold bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300"
           >
-            {isSaving ? (
+            {isPending ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 Guardando...
               </>
             ) : (
-              "Guardar Cambios"
+              <>
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                Guardar Compra
+              </>
             )}
-          </Button>
-          <Button
-            onClick={onCancel}
-            variant="outline"
-            className="w-full h-12 rounded-xl"
-          >
-            Cancelar
           </Button>
         </div>
       </div>

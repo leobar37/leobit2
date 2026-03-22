@@ -90,10 +90,43 @@ export function setupSaleTransitions(
       // - Sending notifications
       // - Updating visita status
       // - Creating delivery tracking
-      
+
       if (sale.visitaId) {
         // Update visita status to indicate purchase was made
         // This would require visitaRepository dependency
+      }
+    })
+
+    // confirmed → cancelled: Return inventory to distribución for pre_orders
+    .onTransition("confirmed", "cancelled", async (ctx: RequestContext, sale: SaleWithItems, tx?: unknown) => {
+      // For pre_orders, when cancelled at confirmed stage, return allocated inventory
+      // No payment reversal needed since no payment was made at confirmation
+      if (sale.distribucionId) {
+        const saleItems = await deps.saleRepository.findSaleItems(ctx, sale.id, tx as any);
+        const distribucionItems = await deps.distribucionItemRepository.findByDistribucionId(
+          ctx,
+          sale.distribucionId
+        );
+
+        for (const saleItem of saleItems) {
+          const distItem = distribucionItems.find(
+            (di) => di.variantId === saleItem.variantId
+          );
+
+          // For pre-orders, we track orderedQuantity not quantity
+          const orderedQty = saleItem.orderedQuantity || saleItem.quantity;
+          if (distItem && orderedQty) {
+            const currentVendida = parseFloat(distItem.cantidadVendida);
+            const newVendida = Math.max(currentVendida - parseFloat(orderedQty), 0);
+
+            await deps.distribucionItemRepository.updateVendido(
+              ctx,
+              distItem.id,
+              newVendida.toString(),
+              tx as any
+            );
+          }
+        }
       }
     });
 }

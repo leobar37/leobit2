@@ -93,6 +93,9 @@ export const saleSchema = z.object({
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   syncAttempts: z.number().int().nonnegative().default(0),
 
+  // Sync group ID for grouping related operations
+  syncGroupId: z.string().nullable().optional(),
+
   // Cancellation
   cancelledAt: z.coerce.date().nullable().optional(),
   cancelledBy: z.string().nullable().optional(),

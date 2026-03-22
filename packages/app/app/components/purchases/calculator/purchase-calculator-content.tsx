@@ -15,7 +15,6 @@ import { formatCurrency, formatKilos, cn } from "~/lib/utils";
 import type { Product } from "~/lib/db/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import { usePurchaseForm } from "../purchase-form-context";
-import { usePurchaseEdit } from "../purchase-edit-context";
 import { useUpdatePurchaseItem, useAddPurchaseItem } from "~/hooks/use-purchases";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -28,31 +27,10 @@ interface PurchaseCalculatorContentProps {
 export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: PurchaseCalculatorContentProps) {
   const navigate = useNavigate();
 
-  const isEditMode = !!returnPath;
+  const { addItem } = usePurchaseForm();
 
-  const editContext = usePurchaseEdit();
-  const { addItem: addItemToForm } = usePurchaseForm();
-  const updateItemMutation = useUpdatePurchaseItem();
-  const addItemMutation = useAddPurchaseItem();
-
-  const editingItem = editContext.editingItemId 
-    ? editContext.items.find(i => i.id === editContext.editingItemId) ?? null
-    : null;
-
-  const editValues = isEditMode && editContext ? {
-    purchaseId: editContext.purchaseId,
-    editingItem,
-    setEditingItemId: editContext.setEditingItemId,
-    addItem: editContext.addItem,
-  } : null;
-
-  const addItem = editValues ? editValues.addItem : addItemToForm;
-
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    editValues?.editingItem?.productId ?? null
-  );
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(editValues?.editingItem?.variantId ?? null
-  );
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   const {
     data: products = [],
@@ -71,11 +49,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: Purchas
   const selectedVariant = variants.find(v => v.id === selectedVariantId);
 
   // Compute initial values for edit mode
-  const editingInitialValues = isEditMode && editValues?.editingItem ? {
-    quantity: editValues.editingItem.quantity,
-    unitPrice: editValues.editingItem.unitCost,
-    subtotal: editValues.editingItem.totalCost,
-  } : undefined;
+  const editingInitialValues = undefined;
 
   const {
     form,
@@ -94,59 +68,30 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: Purchas
     initialValues: editingInitialValues,
   });
 
-  // Populate calculator values when editing and product loads
-  useEffect(() => {
-    if (!isEditMode || !editValues?.editingItem || !selectedProduct) return;
 
-    // Check if form already has values to avoid overwriting
-    const currentQuantity = form.getValues("quantity");
-    if (currentQuantity && currentQuantity !== "0") return;
-
-    // Set the calculator values from editingItem
-    setFieldValue("quantity", editValues.editingItem.quantity);
-    setFieldValue("unitPrice", editValues.editingItem.unitCost);
-    setFieldValue("subtotal", editValues.editingItem.totalCost);
-  }, [isEditMode, editValues, selectedProduct, form, setFieldValue]);
 
   const handleSave = async () => {
     if (!selectedVariant || !calculation.isValid) return;
 
     try {
-      if (isEditMode && editValues?.editingItem) {
-        // Update existing item
-        await updateItemMutation.mutateAsync({
-          purchaseId: editValues.purchaseId,
-          itemId: editValues.editingItem.id,
-          data: {
-            quantity: calculation.quantity,
-            unitCost: calculation.unitPrice,
-            totalCost: calculation.subtotal,
-          },
-        });
-        editValues.setEditingItemId(null);
-        navigate(returnPath!);
-      } else {
-        // Add new item
-        addItem({
-          id: crypto.randomUUID(),
-          productId: selectedProduct!.id,
-          variantId: selectedVariant.id,
-          productName: selectedProduct!.name,
-          variantName: selectedVariant.name,
-          quantity: calculation.quantity.toString(),
-          unitCost: calculation.unitPrice.toString(),
-          totalCost: calculation.subtotal.toString(),
-        });
+      await addItem({
+        productId: selectedProduct!.id,
+        variantId: selectedVariant.id,
+        productName: selectedProduct!.name,
+        variantName: selectedVariant.name,
+        quantity: calculation.quantity.toString(),
+        unitCost: calculation.unitPrice.toString(),
+        totalCost: calculation.subtotal.toString(),
+      });
 
-        if (isEditMode) {
-          navigate(returnPath!);
-        } else {
-          setSelectedProductId(null);
-          setSelectedVariantId(null);
-          handleClear();
-          if (onAddedToCart) {
-            onAddedToCart();
-          }
+      if (returnPath) {
+        navigate(returnPath);
+      } else {
+        setSelectedProductId(null);
+        setSelectedVariantId(null);
+        handleClear();
+        if (onAddedToCart) {
+          onAddedToCart();
         }
       }
     } catch (error) {
@@ -155,9 +100,8 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: Purchas
   };
 
   const handleCancel = () => {
-    if (isEditMode && editValues) {
-      editValues.setEditingItemId(null);
-      navigate(returnPath!);
+    if (returnPath) {
+      navigate(returnPath);
     } else {
       setSelectedProductId(null);
       setSelectedVariantId(null);
@@ -461,14 +405,14 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: Purchas
             className="h-12 w-full rounded-2xl bg-orange-500 shadow-[0_14px_28px_rgba(249,115,22,0.2)] hover:bg-orange-600 disabled:bg-orange-300"
           >
             <Plus className="h-4 w-4 mr-1" />
-            {isEditMode ? "Guardar Cambios" : "Agregar al carrito"} · S/ {formatCurrency(calculation.subtotal)}
+            Agregar al carrito · S/ {formatCurrency(calculation.subtotal)}
           </Button>
           <Button
             variant="outline"
             onClick={handleCancel}
             className="h-12 w-full rounded-2xl border-white/70 bg-white/76 shadow-sm hover:bg-white"
           >
-            {isEditMode ? "Cancelar" : "Limpiar"}
+            Limpiar
           </Button>
         </div>
       )}

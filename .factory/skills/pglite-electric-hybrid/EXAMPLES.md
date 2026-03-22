@@ -1,489 +1,372 @@
 # PGlite + Electric + Drizzle Examples
 
-> **Data flows, decision trees, and architectural examples**
+> **Real Avileo data flows for the current hybrid sync implementation**
 
-## Example 1: Creating a Sale (Online Mode)
-
-### User Story
-User creates a sale with 3 items and makes a partial payment while online.
-
-### Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  TIMELINE                                                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  T+0ms   User clicks "Create Sale"                             │
-│          ↓                                                      │
-│          POST /api/sales {                                      │
-│            customerId: "cust-123",                              │
-│            items: [...],                                        │
-│            total: 150.00                                        │
-│          }                                                      │
-│                                                                 │
-│  T+50ms  Backend receives request                               │
-│          ↓                                                      │
-│          Transaction BEGIN                                       │
-│            INSERT INTO sales (...)                              │
-│            INSERT INTO sale_items (3 rows)                      │
-│            INSERT INTO payments (...)                           │
-│          Transaction COMMIT                                     │
-│          ↓                                                      │
-│          Response: { id: "sale-456", ... }                      │
-│                                                                 │
-│  T+100ms Backend returns 200 OK                                 │
-│          UI shows success message                               │
-│                                                                 │
-│  T+150ms Electric detects change in Postgres                    │
-│          (via logical replication)                              │
-│          ↓                                                      │
-│          Electric publishes change to subscribers               │
-│                                                                 │
-│  T+200ms Client receives update via WebSocket                   │
-│          ↓                                                      │
-│          PGlite applies INSERT to local sales table             │
-│          PGlite applies INSERTs to sale_items                   │
-│          PGlite applies INSERT to payments                      │
-│          ↓                                                      │
-│          useLiveQuery re-runs automatically                     │
-│          ↓                                                      │
-│          UI updates with new sale (already visible)             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Key Points
-- Write goes through API (validation, business logic)
-- Read sync is automatic via Electric
-- UI shows optimistic update or waits for confirmation
-- Local PGlite always has latest data
-
----
-
-## Example 2: Creating a Sale (Offline Mode)
+## Example 1: Draft Sale Creation + Items + Confirm
 
 ### User Story
-User creates a sale while on the road with no connection.
+The vendor starts a draft sale offline, adds two items, then confirms it. All operations must sync in order when connectivity returns.
 
-### Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  TIMELINE                                                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  T+0s    User clicks "Create Sale"                             │
-│          ↓                                                      │
-│          Check: navigator.onLine?                               │
-│          Result: false (offline)                                │
-│          ↓                                                      │
-│          Show "Creating..." state                               │
-│          ↓                                                      │
-│          POST /api/sales { ... }                               │
-│          ↓                                                      │
-│          fetch() fails with "Network Error"                     │
-│          ↓                                                      │
-│          Save to IndexedDB:                                     │
-│          {                                                      │
-│            id: "pending-789",                                   │
-│            endpoint: "/api/sales",                              │
-│            method: "POST",                                      │
-│            body: { customerId, items, total },                  │
-│            attempts: 0,                                         │
-│            createdAt: Date.now()                                │
-│          }                                                      │
-│          ↓                                                      │
-│          UI shows "Pending - Will sync when online"             │
-│          Sale appears in list with "pending" badge              │
-│                                                                 │
-│  +5min   Connection restored (user enters wifi zone)            │
-│          ↓                                                      │
-│          window 'online' event fires                            │
-│          ↓                                                      │
-│          Process queue:                                         │
-│          - Read pending writes from IndexedDB                   │
-│          - POST /api/sales (retry)                              │
-│          - Success! Remove from IndexedDB                       │
-│          ↓                                                      │
-│          Electric detects change in Postgres                    │
-│          ↓                                                      │
-│          Syncs to client, UI updates                            │
-│          Badge changes from "pending" to synced                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Decision Tree
+### Local Flow
 
 ```
-User Action (Create/Update/Delete)
+T+0ms   User taps "Nueva venta"
+        ↓
+        INSERT INTO sales (... status='draft', sync_status='pending')
+        ↓
+        INSERT INTO sync_operations
+          (entity_type='sales', operation='create', sync_group_id='G1')
+
+T+50ms  User adds item 1
+        ↓
+        INSERT INTO sale_items (... sync_status='pending')
+        ↓
+        INSERT INTO sync_operations
+          (entity_type='sale_items', operation='create', sync_group_id='G1')
+
+T+80ms  User adds item 2
+        ↓
+        INSERT INTO sale_items (... sync_status='pending')
+        ↓
+        INSERT INTO sync_operations
+          (entity_type='sale_items', operation='create', sync_group_id='G1')
+
+T+100ms User confirms sale
+        ↓
+        UPDATE sales SET status='active', sync_status='pending'
+        ↓
+        INSERT INTO sync_operations
+          (entity_type='sales', operation='update', sync_group_id='G1')
+```
+
+### SyncService.processPending()
+
+```typescript
+// grouped by sync_group_id
+G1 => [sale create, item create, item create, sale update]
+```
+
+Then the client sends one batch:
+
+```json
+[
+  { "entityType": "sales", "operation": "create", "entityId": "sale-uuid", "syncGroupId": "G1" },
+  { "entityType": "sale_items", "operation": "create", "entityId": "item-1-uuid", "syncGroupId": "G1" },
+  { "entityType": "sale_items", "operation": "create", "entityId": "item-2-uuid", "syncGroupId": "G1" },
+  { "entityType": "sales", "operation": "update", "entityId": "sale-uuid", "syncGroupId": "G1" }
+]
+```
+
+### Backend Flow
+
+```
+POST /api/sync/batch
     ↓
-Is Online?
-    ↓ Yes                    ↓ No
-    ↓                        ↓
-Call API                   Queue in IndexedDB
-    ↓                        ↓
-Success?                   Show "Pending" UI
-    ↓                        ↓
-Yes → Done                 Wait for connection
-    ↓                        ↓
-No → Queue it              On 'online' event:
-    ↓                        Process queue
-Show retry UI              ↓
-                           Sync via Electric
-                           ↓
-                           UI updates
+SyncEngine.processBatch()
+    ↓
+BEGIN
+  SAVEPOINT sp_op_0  -> SaleSyncHandler.create()
+  RELEASE SAVEPOINT sp_op_0
+
+  SAVEPOINT sp_op_1  -> SaleItemSyncHandler.create()
+  RELEASE SAVEPOINT sp_op_1
+
+  SAVEPOINT sp_op_2  -> SaleItemSyncHandler.create()
+  RELEASE SAVEPOINT sp_op_2
+
+  SAVEPOINT sp_op_3  -> SaleSyncHandler.update()
+  RELEASE SAVEPOINT sp_op_3
+COMMIT
 ```
+
+### Why It Works
+- same `syncGroupId` keeps the flow together
+- parent sale exists before item inserts are processed
+- same `entityId` is preserved on backend
+- later status transition targets the same sale row
 
 ---
 
-## Example 3: Conflict Resolution
+## Example 2: One Operation Fails But Batch Continues
 
 ### Scenario
-Two users (A and B) edit the same customer simultaneously.
+A grouped batch contains one duplicate payment reference, but the rest of the operations are valid.
 
-### Timeline
+### Batch Timeline
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  CONFLICT SCENARIO                                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  User A (Offline)          │  User B (Online)                   │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│                            │                                     │
-│  1. Changes customer       │  1. Changes same customer          │
-│     phone number           │     address                        │
-│     (offline)              │     (online)                       │
-│                            │                                     │
-│  2. Saves locally          │  2. POST /api/customers/123        │
-│                            │     → Success                      │
-│                            │                                     │
-│  3. Queue write            │  3. Electric syncs to all          │
-│                            │     clients                        │
-│                            │                                     │
-│  4. Comes online           │  4. User A receives update         │
-│                            │     (different field)              │
-│  5. Queue processes        │                                     │
-│     POST /api/customers    │                                     │
-│     → Success              │                                     │
-│                            │                                     │
-│  Result: Both changes saved (different fields)                  │
-│  Last-write-wins on timestamp                                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+BEGIN
+
+SAVEPOINT sp_op_0
+  create sale              -> success
+RELEASE SAVEPOINT sp_op_0
+
+SAVEPOINT sp_op_1
+  create initial payment   -> fails (duplicate reference_number)
+ROLLBACK TO SAVEPOINT sp_op_1
+
+SAVEPOINT sp_op_2
+  update customer notes    -> success
+RELEASE SAVEPOINT sp_op_2
+
+COMMIT
 ```
 
-### Conflict Types
+### Result Object
 
-| Scenario | Resolution |
-|----------|-----------|
-| Different fields | ✅ Both changes saved |
-| Same field (A before B) | ✅ B wins (last write) |
-| Same field (A offline, B online) | ✅ A wins if newer timestamp |
-| Delete vs Update | ⚠️ Depends on business logic |
+```json
+{
+  "results": [
+    { "idempotencyKey": "k1", "success": true },
+    { "idempotencyKey": "k2", "success": false, "error": "duplicate key value violates unique constraint" },
+    { "idempotencyKey": "k3", "success": true }
+  ],
+  "summary": {
+    "total": 3,
+    "succeeded": 2,
+    "failed": 1,
+    "conflicts": 0
+  }
+}
+```
+
+### Why SAVEPOINTs Matter
+Without SAVEPOINTs, operation 1 would abort the entire transaction and operation 2 would never run.
 
 ---
 
-## Example 4: Multi-Table Transaction
-
-### User Story
-Create a sale with items and update inventory atomically.
-
-### Flow
-
-```
-User: "Create Sale"
-    ↓
-Frontend Validation
-    ↓
-POST /api/sales/commit
-    ↓
-Backend Transaction BEGIN
-    ↓
-┌─────────────────────────────┐
-│ INSERT INTO sales (...)     │
-│                             │
-│ INSERT INTO sale_items      │
-│   (item 1)                  │
-│   (item 2)                  │
-│   (item 3)                  │
-│                             │
-│ UPDATE inventory            │
-│   SET quantity = quantity - 3│
-│   WHERE product_id = 'X'    │
-│                             │
-│ INSERT INTO payments (...)  │
-└─────────────────────────────┘
-    ↓
-COMMIT (all succeed or all fail)
-    ↓
-Response: { saleId: "sale-789", ... }
-    ↓
-Electric detects 4 changes:
-  - 1 sales row
-  - 3 sale_items rows
-  - 1 inventory row
-  - 1 payments row
-    ↓
-Syncs to client as atomic batch
-    ↓
-UI updates with complete sale
-```
-
-### Why This Pattern?
-- Atomicity: All or nothing
-- Consistency: Inventory matches sales
-- Electric syncs as single transaction
-- Client sees consistent state
-
----
-
-## Example 5: Shape Configuration
+## Example 3: Sale ID Preservation
 
 ### Scenario
-App needs to sync only this business's data.
+The client creates a sale locally with ID `550e8400-e29b-41d4-a716-446655440000`. Items and later updates reference that same ID.
 
-### Shape Definition
+### Correct Backend Behavior
 
-```
-Business: "Pollos El Buen Sabor"
-Business ID: "biz-abc-123"
-
-Shapes to Sync:
-├── customers
-│   └── WHERE business_id = 'biz-abc-123'
-│
-├── sales
-│   └── WHERE business_id = 'biz-abc-123'
-│
-├── sale_items (via sale join)
-│   └── WHERE sale.business_id = 'biz-abc-123'
-│
-├── products (read-only)
-│   └── WHERE business_id = 'biz-abc-123'
-│
-├── payments
-│   └── WHERE business_id = 'biz-abc-123'
-│
-└── suppliers
-    └── WHERE business_id = 'biz-abc-123'
-
-NOT Synced:
-├── users (auth handled separately)
-├── audit_logs (server-only)
-├── other_businesses' data
-└── admin_settings (unless relevant)
+```typescript
+const saleWithId = {
+  ...parsed,
+  id: operation.entityId,
+};
 ```
 
-### Performance Considerations
+### Why This Is Required
 
-| Table | Rows | Sync Strategy |
-|-------|------|---------------|
-| customers | ~500 | Full sync |
-| sales (last 30 days) | ~1000 | Time-filtered |
-| sale_items | ~3000 | Via parent |
-| products | ~50 | Full sync |
-| payments | ~1000 | Time-filtered |
+```
+Client sale row      -> id = S1
+Client item row      -> sale_id = S1
+Confirm update       -> entityId = S1
+
+If backend creates S2 instead:
+- item sync fails because sale S1 does not exist on server
+- confirm sync targets S1, not S2
+- local/server graph diverges
+```
+
+### Rule
+In offline-first sync, the server must usually accept the client-generated UUID as the canonical ID for locally created rows.
 
 ---
 
-## Example 6: Offline-First UX States
+## Example 4: Draft Sale With Empty Items
 
-### UI States for Pending Actions
+### Scenario
+The user starts a sale first, then adds items later.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Sale List Item                                              │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  🟢 Synced (online, synced)                                  │
-│  ┌────────────────────────────────────────┐                  │
-│  │ Sale #123                    S/. 150.00│                  │
-│  │ Client: Juan Perez                     │                  │
-│  └────────────────────────────────────────┘                  │
-│                                                              │
-│  🟡 Pending (offline, queued)                                │
-│  ┌────────────────────────────────────────┐                  │
-│  │ Sale #124 (Pendiente)        S/. 200.00│                  │
-│  │ Client: Maria Garcia                   │                  │
-│  │ ⏳ Se sincronizará cuando haya conexión│                  │
-│  └────────────────────────────────────────┘                  │
-│                                                              │
-│  🔴 Error (failed after retries)                             │
-│  ┌────────────────────────────────────────┐                  │
-│  │ Sale #125 (Error)            S/. 175.00│                  │
-│  │ Client: Pedro Lopez                    │                  │
-│  │ ❌ Error: Cliente no existe            │                  │
-│  │ [Reintentar]  [Cancelar]               │                  │
-│  └────────────────────────────────────────┘                  │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+### Valid Payload
+
+```json
+{
+  "type": "instant_sale",
+  "saleType": "contado",
+  "totalAmount": 0,
+  "amountPaid": 0,
+  "items": []
+}
 ```
 
-### Global Sync Status
+### Why This Must Pass
+Avileo's UX flow is:
+1. create draft sale
+2. add items one by one
+3. confirm sale
 
+Rejecting the initial empty-items insert breaks the entire flow.
+
+### Correct Schema Shape
+
+```typescript
+items: z.array(saleItemSchema)
 ```
-┌──────────────────────────────────┐
-│  Sync Status Bar                 │
-├──────────────────────────────────┤
-│                                  │
-│  🟢 Sincronizado                 │
-│  última vez: hace 2 minutos      │
-│                                  │
-│  ─────────────────────────────   │
-│                                  │
-│  🟡 Sincronizando...             │
-│  3 cambios pendientes            │
-│                                  │
-│  ─────────────────────────────   │
-│                                  │
-│  🔴 Sin conexión                 │
-│  5 cambios pendientes            │
-│  Se sincronizará automáticamente │
-│                                  │
-└──────────────────────────────────┘
-```
+
+An empty array is valid. Do not add a refinement such as `items.length > 0` for draft creation.
 
 ---
 
-## Example 7: Data Migration Strategy
+## Example 5: Sale Item Create Without Double Counting
 
-### From TanStack DB to PGlite + Electric
+### Scenario
+An item is synced after the parent sale already exists.
 
+### Correct Create Handler
+
+```typescript
+await this.saleRepo.addItem(ctx, parsed.saleId, {
+  id: operation.entityId,
+  productId: parsed.productId,
+  subtotal: String(parsed.subtotal),
+}, executor);
 ```
-Phase 1: Preparation
-├── Export existing IndexedDB data
-├── Transform to match new schema
-└── Validate data integrity
 
-Phase 2: PGlite Setup
-├── Initialize PGlite instance
-├── Create Drizzle schema
-├── Import historical data
-└── Mark all as "synced"
+### Incorrect Pattern
 
-Phase 3: Electric Sync
-├── Start Electric shapes
-├── Initial sync from server
-├── Resolve any conflicts
-└── Verify data consistency
+```typescript
+await this.saleRepo.addItem(...);
 
-Phase 4: Cutover
-├── Switch reads to PGlite
-├── Switch writes to API
-├── Monitor for issues
-└── Remove TanStack DB
-
-Phase 5: Cleanup
-├── Remove old code
-├── Update tests
-└── Document new patterns
+await this.saleRepo.update(ctx, parsed.saleId, {
+  totalAmount: newTotal,
+});
 ```
+
+### Why Incorrect
+If `addItem()` already updates sale totals, updating them again in the handler will duplicate the subtotal.
 
 ---
 
-## Decision Flowcharts
+## Example 6: Group Fetch Beyond BATCH_SIZE
 
-### When to Use This Architecture?
+### Scenario
+`BATCH_SIZE = 50`, but one sync group has 60 operations.
 
-```
-Building offline-first app?
-    ↓ Yes
-Need real-time sync from server?
-    ↓ Yes
-Have ElectricSQL infrastructure?
-    ↓ Yes
-Using Drizzle ORM?
-    ↓ Yes
-✅ PERFECT MATCH - Use this pattern
-
-Any "No" above:
-    Consider alternatives:
-    - No offline? → Direct API calls
-    - No real-time? → Polling
-    - No Electric? → Custom sync or tRPC
-    - No Drizzle? → Prisma or raw SQL
-```
-
-### Which Write Strategy?
+### Wrong Behavior
 
 ```
-Need offline support?
-    ↓ No
-    Use direct API calls (simple)
-    
-    ↓ Yes
-    
-Can users lose data if offline?
-    ↓ No (nice-to-have)
-    Use optimistic UI only
-    
-    ↓ Yes (critical data)
-    
-Need complex conflict resolution?
-    ↓ No
-    Use queue + auto-retry
-    
-    ↓ Yes
-    Use queue + manual conflict UI
+SELECT first 50 pending ops
+    ↓
+send only 50 rows from group G1
+    ↓
+group is split across multiple batches
 ```
+
+### Correct Behavior In Avileo
+
+```
+SELECT first 50 pending ops
+    ↓
+detect G1 present
+    ↓
+SELECT all rows WHERE sync_group_id = G1
+    ↓
+send complete sibling set together
+```
+
+### Why
+Atomic logical units must not be split just because the initial pending query was capped.
 
 ---
 
-## Testing Scenarios
+## Example 7: Credit Sale With Initial Payment
 
-### Critical Test Cases
+### Scenario
+User creates a credit sale with a partial upfront payment.
 
-1. **Offline → Online Transition**
-   - Create 5 items offline
-   - Restore connection
-   - Verify all sync
-   - Verify order preserved
+### Backend Handler Flow
 
-2. **Conflict Resolution**
-   - Edit offline (User A)
-   - Edit online (User B)
-   - A comes online
-   - Verify resolution correct
+```typescript
+const createdSale = await this.saleRepo.create(ctx, saleWithId, tx);
 
-3. **Shape Filter**
-   - Login as Business A
-   - Verify only A's data visible
-   - Switch to Business B
-   - Verify B's data, not A's
+if (parsed.saleType === "credito" && parsed.customerId && Number(parsed.amountPaid || 0) > 0) {
+  const initialPaymentReference = `init-sale:${createdSale.id}`;
+  await this.paymentRepo.createInitialPayment(ctx, {
+    customerId: parsed.customerId,
+    amount: Number(parsed.amountPaid || 0).toFixed(2),
+    referenceNumber: initialPaymentReference,
+  }, tx);
+}
+```
 
-4. **Large Dataset**
-   - 10k customers
-   - Shape filtered by business
-   - Initial sync time < 5s
-   - Memory usage reasonable
-
-5. **Error Recovery**
-   - API returns 500
-   - Queue retry
-   - Eventually succeeds
-   - No data loss
+### Why The Reference Must Be Stable
+- retries should be idempotent
+- repeated sync attempts must not create duplicate initial payments
+- `abonos.reference_number` is unique, so a stable value prevents duplication
 
 ---
 
-## Metrics to Track
+## Example 8: Conflict Result Returned To Client
 
-| Metric | Target | Alert If |
-|--------|--------|----------|
-| Initial sync time | < 5s | > 10s |
-| Live query latency | < 100ms | > 500ms |
-| Write queue depth | < 50 | > 100 |
-| Failed writes | 0 | > 5/day |
-| PGlite memory | < 100MB | > 200MB |
-| Sync errors | 0 | Any |
+### Scenario
+The server has a newer version of a sale than the local operation expects.
+
+### Backend Flow
+
+```typescript
+const conflict = await conflictResolver.checkConflict(ctx, operation, tx);
+
+if (conflict.hasConflict) {
+  return {
+    idempotencyKey: operation.idempotencyKey,
+    success: false,
+    conflict: {
+      serverVersion: conflict.serverVersion!,
+      serverData: conflict.serverData!,
+    },
+  };
+}
+```
+
+### Client Reaction
+
+```
+batch result says conflict
+    ↓
+mark local operation as conflict
+    ↓
+surface conflict UI or retry decision later
+```
+
+This is different from a generic failed operation.
 
 ---
 
-## Resources
+## Example 9: Mental Model Of The Whole System
 
-- **ElectricSQL Docs**: https://electric-sql.com/docs
-- **PGlite Docs**: https://pglite.dev/docs/
-- **Drizzle ORM**: https://orm.drizzle.team/
-- **Example App**: Linearlite (ElectricSQL examples)
+```
+Writes:
+UI
+  ↓
+Service layer
+  ↓
+PGlite local entity tables + sync_operations
+  ↓
+SyncService.processPending()
+  ↓
+POST /api/sync/batch
+  ↓
+SyncEngine + handlers
+  ↓
+PostgreSQL
+
+Reads:
+PostgreSQL
+  ↓
+ElectricSQL
+  ↓
+PGlite
+  ↓
+useLiveQuery / UI
+```
+
+### Rule Of Thumb
+- write path is custom and queue-based
+- read path is Electric-based
+- do not mix their responsibilities in documentation or code
+
+---
+
+## Testing Scenarios To Prioritize
+
+1. **Draft -> item add -> confirm** with same `syncGroupId`
+2. **Offline -> online replay** with full grouped batch
+3. **One failing op inside batch** and later ops still succeed
+4. **Credit sale retry** does not duplicate initial payment
+5. **Client UUID preservation** across sale + sale items
+6. **Conflict result** is marked as conflict, not generic failed

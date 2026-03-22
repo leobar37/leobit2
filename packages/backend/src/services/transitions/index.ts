@@ -13,7 +13,7 @@ import { setupSaleTransitions, type SaleWithItems } from "./sale";
 import { setupStaffInvitationTransitions } from "./staff-invitation";
 
 export type DistribucionState = "activo" | "en_ruta" | "cerrado";
-export type PurchaseState = "pending" | "received" | "cancelled";
+export type PurchaseState = "draft" | "pending" | "received" | "cancelled";
 export type SaleState = "draft" | "confirmed" | "active" | "delivered" | "cancelled";
 export type InvitationState = "pending" | "accepted" | "rejected" | "cancelled" | "expired";
 
@@ -39,9 +39,10 @@ export const distribucionMachine = createMachine<DistribucionWithItems, Distribu
 
 export const purchaseMachine = createMachine<PurchaseWithItems, PurchaseState>({
   name: "purchase",
-  initialState: "pending",
-  states: ["pending", "received", "cancelled"],
+  initialState: "draft",
+  states: ["draft", "pending", "received", "cancelled"],
   allowedTransitions: [
+    { from: "draft", to: "pending" },
     { from: "pending", to: "received" },
     { from: "pending", to: "cancelled" },
     { from: "received", to: "cancelled" },

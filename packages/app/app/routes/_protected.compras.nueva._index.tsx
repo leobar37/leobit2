@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn, formatCurrency } from "~/lib/utils";
 import { useNavigate, useLocation } from "react-router";
-import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight } from "lucide-react";
+import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
@@ -11,6 +11,30 @@ import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
 import { PurchaseCartSection } from "~/components/purchases/calculator";
 import { FormPage } from "~/components/layout/form-page";
 import type { Supplier } from "~/hooks/use-suppliers";
+
+function DraftIndicator() {
+  const { purchase, isLoading } = usePurchaseForm();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Cargando...
+      </div>
+    );
+  }
+
+  if (!purchase || purchase.status !== "draft") return null;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+      <FileEdit className="h-4 w-4 text-blue-600" />
+      <span className="text-sm text-blue-700">
+        Modo borrador - Los cambios se guardan automáticamente
+      </span>
+    </div>
+  );
+}
 
 function PurchaseFormInner() {
   const {
@@ -23,7 +47,7 @@ function PurchaseFormInner() {
     fileUploadStatus,
     purchaseError,
     clearPurchaseError,
-    onSubmit,
+    onSave,
     cartItemsCount,
     form,
   } = usePurchaseForm();
@@ -48,7 +72,9 @@ function PurchaseFormInner() {
 
   return (
     <>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+        <DraftIndicator />
+
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -150,7 +176,7 @@ function PurchaseFormInner() {
 }
 
 export default function NuevaCompraIndexPage() {
-  const { onSubmit, isPending, fileUploadStatus, isFormValid, totalAmount } =
+  const { onSave, isPending, fileUploadStatus, isFormValid, totalAmount } =
     usePurchaseForm();
 
   return (

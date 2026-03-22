@@ -93,6 +93,7 @@ export const SupplierType = {
 } as const;
 
 export const PurchaseStatus = {
+  DRAFT: "draft",
   PENDING: "pending",
   RECEIVED: "received",
   CANCELLED: "cancelled",
@@ -395,15 +396,16 @@ export const purchases = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     businessId: uuid("business_id").notNull(),
-    supplierId: uuid("supplier_id").notNull(),
-    purchaseDate: date("purchase_date").notNull(),
+    supplierId: uuid("supplier_id"),
+    purchaseDate: date("purchase_date"),
     totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-    status: text("status").notNull().default(PurchaseStatus.PENDING),
+    status: text("status").notNull().default(PurchaseStatus.DRAFT),
     invoiceNumber: varchar("invoice_number", { length: 50 }),
     receiptImageId: uuid("receipt_image_id"),
     notes: text("notes"),
     syncStatus: text("sync_status").notNull().default(SyncStatus.PENDING),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    syncGroupId: varchar("sync_group_id", { length: 100 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -425,6 +427,7 @@ export const purchaseItems = pgTable(
   "purchase_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
     purchaseId: uuid("purchase_id").notNull(),
     productId: uuid("product_id").notNull(),
     variantId: uuid("variant_id"),
@@ -437,6 +440,7 @@ export const purchaseItems = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
+    index("idx_purchase_items_business_id").on(table.businessId),
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
   ]
 );

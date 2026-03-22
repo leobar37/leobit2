@@ -11,6 +11,7 @@ import {
   useUpdatePublicSaleItem,
   useDeletePublicSaleItem,
   useCancelPublicSale,
+  useConfirmPublicSale,
 } from "~/hooks/use-public-sale";
 import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
@@ -109,6 +110,7 @@ export default function PublicSalePage() {
   const updateItem = useUpdatePublicSaleItem();
   const deleteItem = useDeletePublicSaleItem();
   const cancelSale = useCancelPublicSale();
+  const confirmSale = useConfirmPublicSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const { data: products } = useProducts();
@@ -505,17 +507,28 @@ export default function PublicSalePage() {
               disabled={
                 !customerName ||
                 !customerPhone ||
-                (sale.type === "pre_order" && !deliveryDate)
+                (sale.type === "pre_order" && !deliveryDate) ||
+                confirmSale.isPending
               }
               onClick={() => {
-                // TODO: Implement confirmation
-                toast.info("Próximamente", {
-                  description: "La confirmación estará disponible pronto",
-                });
-                setShowConfirmDialog(false);
+                if (!token) return;
+                confirmSale.mutate(
+                  {
+                    token,
+                    customerName,
+                    customerPhone,
+                    deliveryDate,
+                    notes,
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowConfirmDialog(false);
+                    },
+                  }
+                );
               }}
             >
-              Confirmar pedido
+              {confirmSale.isPending ? "Confirmando..." : "Confirmar pedido"}
             </Button>
           </DialogFooter>
         </DialogContent>

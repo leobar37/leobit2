@@ -75,6 +75,7 @@ export const supplierTypeEnum = pgEnum("supplier_type", [
 ]);
 
 export const purchaseStatusEnum = pgEnum("purchase_status", [
+  "draft",
   "pending",
   "received",
   "cancelled",

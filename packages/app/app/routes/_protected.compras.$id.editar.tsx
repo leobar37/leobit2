@@ -1,10 +1,10 @@
 import { Outlet } from "react-router";
-import { PurchaseEditProvider } from "~/components/purchases/purchase-edit-context";
+import { PurchaseFormProvider } from "~/components/purchases/purchase-form-context";
 
 export default function CompraEditorLayout() {
   return (
-    <PurchaseEditProvider>
+    <PurchaseFormProvider>
       <Outlet />
-    </PurchaseEditProvider>
+    </PurchaseFormProvider>
   );
 }

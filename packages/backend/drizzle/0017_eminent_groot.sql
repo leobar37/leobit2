@@ -1,4 +1,4 @@
-CREATE TABLE "business_user_whatsapp_settings" (
+CREATE TABLE IF NOT EXISTS "business_user_whatsapp_settings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"business_user_id" uuid NOT NULL,
 	"business_id" uuid NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE "business_user_whatsapp_settings" (
 	CONSTRAINT "business_user_whatsapp_settings_business_user_id_unique" UNIQUE("business_user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "customer_tags" (
+CREATE TABLE IF NOT EXISTS "customer_tags" (
 	"customer_id" uuid NOT NULL,
 	"tag_id" uuid NOT NULL,
 	"assigned_at" timestamp DEFAULT now() NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE "customer_tags" (
 	CONSTRAINT "customer_tags_customer_id_tag_id_pk" PRIMARY KEY("customer_id","tag_id")
 );
 --> statement-breakpoint
-CREATE TABLE "order_tokens" (
+CREATE TABLE IF NOT EXISTS "order_tokens" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"order_id" uuid NOT NULL,
 	"token" varchar(12) NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE "order_tokens" (
 	CONSTRAINT "order_tokens_order_id_unique" UNIQUE("order_id")
 );
 --> statement-breakpoint
-CREATE TABLE "tags" (
+CREATE TABLE IF NOT EXISTS "tags" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(100) NOT NULL,
 	"color" varchar(20) DEFAULT '#f97316' NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE "tags" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "whatsapp_messages" (
+CREATE TABLE IF NOT EXISTS "whatsapp_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"business_user_id" uuid NOT NULL,
 	"business_id" uuid NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE "whatsapp_messages" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "whatsapp_templates" (
+CREATE TABLE IF NOT EXISTS "whatsapp_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"business_user_id" uuid NOT NULL,
 	"business_id" uuid NOT NULL,
@@ -64,7 +64,8 @@ CREATE TABLE "whatsapp_templates" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "orders" ADD COLUMN "allow_customer_edit" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+-- orders table was renamed to sales in migration 0023_unify_sales_orders
+-- ALTER TABLE "orders" ADD COLUMN "allow_customer_edit" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "business_user_whatsapp_settings" ADD CONSTRAINT "business_user_whatsapp_settings_business_user_id_business_users_id_fk" FOREIGN KEY ("business_user_id") REFERENCES "public"."business_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "business_user_whatsapp_settings" ADD CONSTRAINT "business_user_whatsapp_settings_business_id_businesses_id_fk" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer_tags" ADD CONSTRAINT "customer_tags_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

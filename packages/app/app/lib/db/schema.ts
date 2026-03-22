@@ -338,10 +338,10 @@ export type PurchaseItem = z.infer<typeof purchaseItemSchema>;
 export const purchaseSchema = z.object({
   id: z.string(),
   businessId: z.string(),
-  supplierId: z.string(),
-  purchaseDate: z.string(),
+  supplierId: z.string().nullable(),
+  purchaseDate: z.string().nullable(),
   totalAmount: z.string(),
-  status: z.enum(["pending", "received", "cancelled"]),
+  status: z.enum(["draft", "pending", "received", "cancelled"]),
   invoiceNumber: z.string().nullable(),
   receiptImageId: z.string().nullable(),
   notes: z.string().nullable(),

@@ -142,12 +142,42 @@ export function ServicesProvider({
     pullService.startAutoPull();
     console.log("[ServicesProvider] PullService auto-pull started");
 
+    // Cleanup old drafts on startup
+    const cleanupDrafts = async () => {
+      try {
+        const purchaseService = services.purchaseService;
+        const drafts = await purchaseService.findDrafts();
+        const now = new Date();
+        const maxAgeDays = 30;
+
+        const oldDrafts = drafts.filter(draft => {
+          const updatedAt = new Date(draft.updated_at);
+          const daysDiff = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+          return daysDiff > maxAgeDays;
+        });
+
+        if (oldDrafts.length > 0) {
+          console.log(`[ServicesProvider] Cleaning up ${oldDrafts.length} old drafts`);
+          for (const draft of oldDrafts) {
+            try {
+              await purchaseService.delete(draft.id);
+            } catch (err) {
+              console.error(`[ServicesProvider] Failed to delete draft ${draft.id}:`, err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[ServicesProvider] Draft cleanup error:", err);
+      }
+    };
+    cleanupDrafts();
+
     return () => {
       syncService.stopAutoSync();
       pullService.stopAutoPull();
       console.log("[ServicesProvider] Sync services stopped");
     };
-  }, []);
+  }, [services.purchaseService]);
 
   return (
     <ServicesContext.Provider value={services}>
