@@ -29,6 +29,23 @@ export interface Purchase {
   updated_at: string;
 }
 
+/** Purchase item enriched with product/variant names (returned by findById) */
+export interface PurchaseItemEnriched {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  quantity: string;
+  unitCost: string;
+  totalCost: string;
+  productName: string;
+  variantName: string;
+}
+
+/** Purchase with its items joined from purchase_items table */
+export interface PurchaseWithItems extends Purchase {
+  items: PurchaseItemEnriched[];
+}
+
 /** Purchase item for creation */
 export interface CreatePurchaseItemInput {
   productId: string;
@@ -86,12 +103,33 @@ export class PurchaseService extends BaseService {
   /**
    * Find a purchase by ID
    */
-  async findById(id: string): Promise<Purchase | null> {
+  async findById(id: string): Promise<PurchaseWithItems | null> {
     const result = await this.pg.query<Purchase>(
       "SELECT * FROM purchases WHERE id = $1",
       [id]
     );
-    return result.rows[0] || null;
+    const purchase = result.rows[0];
+    if (!purchase) return null;
+
+    const itemsResult = await this.pg.query<PurchaseItemEnriched>(
+      `SELECT
+        pi.id,
+        pi.product_id as "productId",
+        pi.variant_id as "variantId",
+        pi.quantity,
+        pi.unit_cost as "unitCost",
+        pi.total_cost as "totalCost",
+        COALESCE(p.name, 'Producto') as "productName",
+        COALESCE(pv.name, '') as "variantName"
+      FROM purchase_items pi
+      LEFT JOIN products p ON pi.product_id = p.id
+      LEFT JOIN product_variants pv ON pi.variant_id = pv.id
+      WHERE pi.purchase_id = $1 AND pi.business_id = $2
+      ORDER BY pi.created_at ASC`,
+      [id, this.businessId]
+    );
+
+    return { ...purchase, items: itemsResult.rows };
   }
 
   /**

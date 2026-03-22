@@ -5,33 +5,7 @@ import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { useBusiness } from "~/hooks/use-business";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
 import { usePurchaseEditorState } from "~/hooks/use-purchase-editor-state";
-import type { CreatePurchaseItemInput } from "~/lib/services/purchase-service";
-
-interface PurchaseWithItems {
-  id: string;
-  business_id: string;
-  supplier_id: string;
-  purchase_date: string;
-  total_amount: string;
-  status: string;
-  invoice_number: string | null;
-  receipt_image_id: string | null;
-  notes: string | null;
-  sync_status: string;
-  sync_attempts: number;
-  created_at: string;
-  updated_at: string;
-  items?: Array<{
-    id: string;
-    productId: string;
-    variantId: string | null;
-    quantity: string | number;
-    unitCost: string | number;
-    totalCost: string | number;
-    product?: { name: string } | null;
-    variant?: { name: string } | null;
-  }>;
-}
+import type { CreatePurchaseItemInput, PurchaseWithItems } from "~/lib/services/purchase-service";
 
 interface PurchaseItem {
   id: string;
@@ -81,7 +55,7 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
   const navigate = useNavigate();
 
   const { data: purchaseData, isLoading } = usePurchase(id!);
-  const purchase = (purchaseData as unknown as Array<{ purchase: PurchaseWithItems }>)?.[0]?.purchase;
+  const purchase = purchaseData ?? null;
   const { data: business } = useBusiness();
   const supplierQueryId = business?.id && business.id.length > 0 ? business.id : "00000000-0000-0000-0000-000000000000";
   const { data: suppliers } = useSuppliers(supplierQueryId);
@@ -101,8 +75,8 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
         id: item.id,
         productId: item.productId,
         variantId: item.variantId,
-        productName: item.product?.name || "Producto",
-        variantName: item.variant?.name || "",
+        productName: item.productName,
+        variantName: item.variantName,
         quantity: String(item.quantity),
         unitCost: String(item.unitCost),
         totalCost: String(item.totalCost),
@@ -185,7 +159,7 @@ export function PurchaseEditProvider({ children }: PurchaseEditProviderProps) {
     for (const item of itemsToAdd) {
       const newItem: CreatePurchaseItemInput = {
         productId: item.productId,
-        variantId: item.variantId || undefined,
+        variantId: item.variantId ?? undefined,
         quantity: parseFloat(item.quantity),
         unitCost: parseFloat(item.unitCost),
       };

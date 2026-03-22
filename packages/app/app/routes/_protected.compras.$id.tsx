@@ -11,7 +11,6 @@ import {
   ImageIcon,
   Pencil,
 } from "lucide-react";
-import { useState } from "react";
 import { formatCurrency, formatWeight } from "~/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +20,8 @@ import {
   useUpdatePurchaseStatus,
   useDeletePurchase,
 } from "~/hooks/use-purchases";
+import { useSuppliers } from "~/hooks/use-suppliers";
+import { useBusiness } from "~/hooks/use-business";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSetLayout } from "~/components/layout/app-layout";
 
@@ -45,7 +46,6 @@ const statusIcons = {
 export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [showImageModal, setShowImageModal] = useState(false);
 
   useSetLayout({
     title: "Detalle de Compra",
@@ -53,10 +53,13 @@ export default function PurchaseDetailPage() {
     backHref: "/compras",
   });
 
-  const { data: purchaseData, isLoading } = usePurchase(id!);
-  const purchaseRow = purchaseData?.[0];
-  const purchase = purchaseRow?.purchase;
-  const supplier = purchaseRow?.supplier;
+  const { data: purchase, isLoading } = usePurchase(id!);
+  const { data: business } = useBusiness();
+  const businessId = business?.id || "";
+  const { data: suppliers } = useSuppliers(businessId);
+  const supplier = purchase?.supplier_id && suppliers
+    ? suppliers.find((s: { id: string }) => s.id === purchase.supplier_id)
+    : null;
   const updateStatus = useUpdatePurchaseStatus();
   const deletePurchase = useDeletePurchase();
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -146,7 +149,7 @@ export default function PurchaseDetailPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="truncate text-lg font-bold text-foreground">
-                  {purchase.supplier?.name || "Sin proveedor"}
+                  {supplier?.name || "Sin proveedor"}
                 </h2>
                 <Badge
                   className={`mt-2 ${statusColors[purchase.status]}`}
@@ -165,7 +168,7 @@ export default function PurchaseDetailPage() {
                   <span>Fecha</span>
                 </div>
                 <p className="font-medium">
-                  {new Date(purchase.purchaseDate).toLocaleDateString("es-PE")}
+                  {new Date(purchase.purchase_date).toLocaleDateString("es-PE")}
                 </p>
               </div>
 
@@ -175,7 +178,7 @@ export default function PurchaseDetailPage() {
                   <span>Factura</span>
                 </div>
                 <p className="font-medium">
-                  {purchase.invoiceNumber || "—"}
+                  {purchase.invoice_number || "—"}
                 </p>
               </div>
             </div>
@@ -183,7 +186,7 @@ export default function PurchaseDetailPage() {
             <div className="shell-block-muted flex items-center justify-between rounded-[20px] p-4">
               <span className="font-medium">Total:</span>
               <span className="text-xl font-bold text-orange-600">
-                S/ {formatCurrency(purchase.totalAmount)}
+                S/ {formatCurrency(purchase.total_amount)}
               </span>
             </div>
 
@@ -197,28 +200,16 @@ export default function PurchaseDetailPage() {
               </div>
             )}
 
-            {/* Receipt Image */}
-            {purchase.receiptImage && (
-              <div className="space-y-2">
+            {/* Receipt Image - requires image URL lookup, showing ID for now */}
+            {purchase.receipt_image_id && (
+              <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ImageIcon className="h-4 w-4" />
                   <span>Comprobante</span>
                 </div>
-                <div
-                  className="relative cursor-pointer group"
-                  onClick={() => setShowImageModal(true)}
-                >
-                  <img
-                    src={purchase.receiptImage.url}
-                    alt="Comprobante de compra"
-                    className="w-full h-32 object-cover rounded-xl"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-xl flex items-center justify-center">
-                    <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium drop-shadow-lg">
-                      Ver completo
-                    </span>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  ID: {purchase.receipt_image_id}
+                </p>
               </div>
             )}
           </CardContent>
@@ -240,11 +231,11 @@ export default function PurchaseDetailPage() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">
-                      {index + 1}. {item.product?.name || "Producto"}
+                      {index + 1}. {item.productName || "Producto"}
                     </p>
-                    {item.variant?.name && (
+                    {item.variantName && (
                       <p className="text-sm text-muted-foreground">
-                        {item.variant.name}
+                        {item.variantName}
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
@@ -314,30 +305,6 @@ export default function PurchaseDetailPage() {
           )}
         </div>
       </main>
-
-      {/* Image Modal */}
-      {showImageModal && purchase?.receiptImage?.url && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div className="relative max-w-4xl w-full">
-            <img
-              src={purchase.receiptImage.url}
-              alt="Comprobante de compra"
-              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-            />
-            <button
-              className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2"
-              onClick={() => setShowImageModal(false)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       <ConfirmDialog />
     </div>

@@ -6,7 +6,8 @@ import { getPurchaseEditorPath } from "~/lib/purchases/navigation";
 
 export default function CompraEditorCalculadoraPage() {
   const navigate = useNavigate();
-  const { purchaseId, editingItem } = usePurchaseEdit();
+  const { purchaseId, editingItemId, items } = usePurchaseEdit();
+  const editingItem = editingItemId ? items.find(i => i.id === editingItemId) ?? null : null;
 
   if (!purchaseId) {
     return <Navigate to="/compras" replace />;
@@ -26,14 +27,14 @@ export default function CompraEditorCalculadoraPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="ml-1 text-lg font-bold tracking-tight">
-            {editingItem ? "Editar Producto" : "Calculadora"}
+            {editingItemId ? "Editar Producto" : "Calculadora"}
           </h1>
         </div>
       </header>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <PurchaseCalculatorContent
-          key={editingItem?.itemId || "new"}
+          key={editingItemId || "new"}
           returnPath={returnPath}
         />
       </div>

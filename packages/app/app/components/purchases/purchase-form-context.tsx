@@ -75,15 +75,27 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const { data: suppliers } = useSuppliers(business?.id || "");
 
   // Use nuqs for persistent state in URL
-  const {
-    items,
-    setItems,
-    supplierId,
-    setSupplierId,
-    formValues: persistedFormValues,
-    setFormValues,
-    clearState,
-  } = usePurchaseEditorState();
+  const { editingItemId, setEditingItemId, clearEditingItem } = usePurchaseEditorState();
+
+  // Local state for form data (usePurchaseEditorState only handles editingItemId)
+  const [items, setItems] = useState<PurchaseItem[]>([]);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<PurchaseFormValues>({
+    purchaseDate: new Date().toISOString().split("T")[0],
+    invoiceNumber: "",
+    notes: "",
+  });
+  const persistedFormValues = formValues;
+
+  const clearState = useCallback(() => {
+    setItems([]);
+    setSupplierId(null);
+    setFormValues({
+      purchaseDate: new Date().toISOString().split("T")[0],
+      invoiceNumber: "",
+      notes: "",
+    });
+  }, []);
 
   // Find supplier from ID
   const supplier = useMemo(() => {

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePurchaseService } from "~/lib/sync/service-provider";
 import type {
   Purchase,
+  PurchaseWithItems,
   PurchaseStatus,
   CreatePurchaseInput,
   CreatePurchaseItemInput,
@@ -41,7 +42,7 @@ export function usePurchase(id: string | null) {
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.purchase(id) : ["purchases-new", "detail"],
-    queryFn: async (): Promise<Purchase | null> => {
+    queryFn: async (): Promise<PurchaseWithItems | null> => {
       if (!id) return null;
       return purchaseService.findById(id);
     },

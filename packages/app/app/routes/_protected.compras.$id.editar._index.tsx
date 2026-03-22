@@ -19,8 +19,7 @@ export default function CompraEditarIndexPage() {
     isSaving,
     onSave,
     onCancel,
-    editingItem,
-    setEditingItem,
+    setEditingItemId,
   } = usePurchaseEdit();
 
   if (isLoading) {
@@ -121,16 +120,7 @@ export default function CompraEditarIndexPage() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => {
-                          setEditingItem({
-                            itemId: item.id,
-                            productId: item.productId,
-                            variantId: item.variantId || "",
-                            productName: item.productName,
-                            variantName: item.variantName,
-                            quantity: parseFloat(item.quantity),
-                            unitCost: parseFloat(item.unitCost),
-                            totalCost: parseFloat(item.totalCost),
-                          });
+                          setEditingItemId(item.id);
                           navigate(getPurchaseCalculatorPath(purchaseId));
                         }}
                         className="rounded-lg p-2 text-muted-foreground hover:bg-orange-100 hover:text-orange-600 transition-colors"

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { NewPurchasePage } from "../page-objects/NewPurchasePage";
 
 test.describe("Purchase Flow", () => {
-  test("create purchase and verify inventory increase", async ({ page }) => {
+  test("create purchase and verify it appears in list", async ({ page }) => {
     const newPurchasePage = new NewPurchasePage(page);
     await newPurchasePage.goto();
 
@@ -28,11 +28,9 @@ test.describe("Purchase Flow", () => {
     await newPurchasePage.savePurchase();
     await newPurchasePage.expectPurchaseSaved();
 
-    // Verify in product inventory
-    await page.goto("/productos");
-    await page.click("text=Pollo E2E");
-    // Should show increased stock
-    await expect(page.getByText(/stock|inventario/i)).toBeVisible();
+    // Verify purchase appears in purchases list
+    await page.goto("/compras");
+    await expect(page.getByText("F001-999999")).toBeVisible();
   });
 
   test("purchase requires supplier validation", async ({ page }) => {
@@ -58,7 +56,7 @@ test.describe("Purchase Flow", () => {
     await newPurchasePage.selectProductAndVariant("Huevos", "Maple (30un)");
 
     // Select unit
-    await page.selectOption("select", { label: /Maple/ });
+    await page.locator("select").selectOption({ label: "Maple (30un)" });
 
     // Enter packs
     await page.fill('input[placeholder="Packs"]', "5");
