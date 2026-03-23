@@ -1,11 +1,11 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { formatCurrency } from "~/lib/utils";
-import { Search, Plus, ShoppingCart } from "lucide-react";
+import { Search, Plus, ShoppingCart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { usePurchases } from "~/hooks/use-purchases";
+import { usePurchases, useCreateDraftPurchase } from "~/hooks/use-purchases";
 import { useListSearch } from "~/hooks/use-list-search";
 import { useSetLayout } from "~/components/layout/app-layout";
 
@@ -66,7 +66,20 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
 export default function ComprasPage() {
   useSetLayout({ title: "Compras" });
 
+  const navigate = useNavigate();
   const { data: purchases, isLoading } = usePurchases();
+  const createDraftPurchase = useCreateDraftPurchase();
+
+  const handleCreatePurchase = async () => {
+    if (createDraftPurchase.isPending) return;
+
+    try {
+      const purchase = await createDraftPurchase.mutateAsync(undefined);
+      navigate(`/compras/nueva/${purchase.id}`);
+    } catch (error) {
+      console.error("Failed to create draft purchase:", error);
+    }
+  };
 
   const { filteredItems, search, setSearch } = useListSearch({
     items: purchases,
@@ -115,17 +128,18 @@ export default function ComprasPage() {
         </div>
       </div>
 
-      <Link
-        to="/compras/nueva"
-        className="fixed bottom-28 right-4 z-50"
+      <Button
+        size="icon"
+        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+        onClick={handleCreatePurchase}
+        disabled={createDraftPurchase.isPending}
       >
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-        >
+        {createDraftPurchase.isPending ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : (
           <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+        )}
+      </Button>
     </>
   );
 }

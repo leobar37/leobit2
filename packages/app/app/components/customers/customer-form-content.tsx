@@ -1,3 +1,4 @@
+import { useFormContext } from "react-hook-form";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
@@ -18,6 +19,8 @@ interface CustomerFormContentProps {
 }
 
 export function CustomerFormContent({ customer }: CustomerFormContentProps) {
+  const { register } = useFormContext();
+
   return (
     <Card className="border-0 shadow-lg rounded-3xl">
       <CardHeader>
@@ -49,6 +52,7 @@ export function CustomerFormContent({ customer }: CustomerFormContentProps) {
             Notas (opcional)
           </label>
           <textarea
+            {...register("notes")}
             placeholder="Notas adicionales sobre el cliente..."
             className="w-full min-h-[100px] px-4 py-3 rounded-xl border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
           />

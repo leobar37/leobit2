@@ -159,6 +159,7 @@ const SYNC_STATUS_ENTITY_TABLES = new Set([
   "customer_group_members",
   "visitas",
   "abonos",
+  "purchases",
 ]);
 
 const SELF_HEAL_INSERTABLE_ENTITIES = new Set([
@@ -167,6 +168,8 @@ const SELF_HEAL_INSERTABLE_ENTITIES = new Set([
   "customer_groups",
   "visitas",
   "abonos",
+  "purchases",
+  "purchase_items",
 ]);
 
 function parsePayload(payload: unknown): Record<string, unknown> {
@@ -611,6 +614,10 @@ export class SyncService {
         'sale_items': 2,
         'customer_groups': 3,
         'customer_group_members': 4,
+        'purchases': 1,
+        'purchase_items': 2,
+        'distribucion': 1,
+        'distribucion_items': 2,
       };
       
       for (const [groupId, ops] of grouped) {

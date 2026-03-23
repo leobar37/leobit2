@@ -12,7 +12,7 @@ import { purchaseSyncHook } from "./hooks/purchases";
  */
 const registeredHooks: SyncHook[] = [
   saleSyncHook,
-  purchaseSyncHook,
+  // purchaseSyncHook removed - drafts now sync with items
 ];
 
 /**

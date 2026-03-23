@@ -29,7 +29,7 @@ export const AmountPaidInput = memo(function AmountPaidInput({
 
     setIsUpdating(true);
     try {
-      await onUpdate(value, newBalanceDue.toFixed(2));
+      await onUpdate(value, formatCurrency(newBalanceDue));
     } finally {
       setIsUpdating(false);
     }

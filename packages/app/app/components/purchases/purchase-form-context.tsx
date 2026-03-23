@@ -78,8 +78,8 @@ interface PurchaseFormProviderProps {
 export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { id: urlId } = useParams<{ id: string }>();
-  const purchaseId = urlId || null;
+  const { draftId } = useParams<{ draftId: string }>();
+  const purchaseId = draftId || null;
   
   const { data: business } = useBusiness();
   const { data: suppliers } = useSuppliers(business?.id || "");
@@ -170,8 +170,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         quantity: parseFloat(item.quantity),
         unitCost: parseFloat(item.unitCost),
       });
-      // Navigate to edit URL
-      navigate(`/compras/${newPurchase.id}/editar`, { replace: true });
+      // Navigate to nueva URL with draftId
+      navigate(`/compras/nueva/${newPurchase.id}`, { replace: true });
     } else {
       // Add to existing purchase
       await purchaseService.addItemToPurchase(purchase.id, {
@@ -236,11 +236,11 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         }
       }
 
-      // Update purchase fields
+      // Update purchase fields (normalize empty strings to undefined)
       await purchaseService.update(purchase.id, {
         purchaseDate: form.getValues("purchaseDate"),
-        invoiceNumber: form.getValues("invoiceNumber"),
-        notes: form.getValues("notes"),
+        invoiceNumber: form.getValues("invoiceNumber") || undefined,
+        notes: form.getValues("notes") || undefined,
       });
 
       // If draft, confirm it (change status to pending)

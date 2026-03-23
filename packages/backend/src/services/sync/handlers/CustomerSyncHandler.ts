@@ -90,13 +90,13 @@ export class CustomerSyncHandler extends BaseSyncHandler {
   private async handleDelete(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    tx?: DbTransaction
   ): Promise<void> {
-    const existing = await this.customerRepo.findById(ctx, operation.entityId);
+    const existing = await this.customerRepo.findById(ctx, operation.entityId, tx);
     if (!existing) {
       return;
     }
 
-    await this.customerRepo.delete(ctx, operation.entityId);
+    await this.customerRepo.delete(ctx, operation.entityId, tx);
   }
 }

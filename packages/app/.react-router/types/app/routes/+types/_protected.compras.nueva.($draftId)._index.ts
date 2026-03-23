@@ -2,10 +2,10 @@
 
 import type { GetInfo, GetAnnotations } from "react-router/internal";
 
-type Module = typeof import("../_protected.compras.nueva.calculadora.js")
+type Module = typeof import("../_protected.compras.nueva.($draftId)._index.js")
 
 type Info = GetInfo<{
-  file: "routes/_protected.compras.nueva.calculadora.tsx",
+  file: "routes/_protected.compras.nueva.($draftId)._index.tsx",
   module: Module
 }>
 
@@ -22,8 +22,8 @@ type Matches = [{
   id: "routes/_protected.compras.nueva";
   module: typeof import("../_protected.compras.nueva.js");
 }, {
-  id: "routes/_protected.compras.nueva.calculadora";
-  module: typeof import("../_protected.compras.nueva.calculadora.js");
+  id: "routes/_protected.compras.nueva.($draftId)._index";
+  module: typeof import("../_protected.compras.nueva.($draftId)._index.js");
 }];
 
 type Annotations = GetAnnotations<Info & { module: Module, matches: Matches }, false>;

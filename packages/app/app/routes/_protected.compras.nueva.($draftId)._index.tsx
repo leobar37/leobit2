@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn, formatCurrency } from "~/lib/utils";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, useParams } from "react-router";
 import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
@@ -54,6 +54,7 @@ function PurchaseFormInner() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { draftId } = useParams<{ draftId: string }>();
 
   useEffect(() => {
     const stateSupplier = location.state?.supplier as Supplier | undefined;
@@ -102,7 +103,7 @@ function PurchaseFormInner() {
         <div className="space-y-4">
           <button
             type="button"
-            onClick={() => navigate("/compras/nueva/calculadora")}
+            onClick={() => navigate(`/compras/nueva/${draftId}/calculadora`)}
             className="w-full flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-2xl hover:bg-orange-100 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -192,7 +193,7 @@ export default function NuevaCompraIndexPage() {
             <span className="text-lg font-bold">S/ {formatCurrency(totalAmount)}</span>
           </div>
           <Button
-            onClick={onSubmit}
+            onClick={onSave}
             disabled={isPending || fileUploadStatus.isUploading || !isFormValid}
             data-testid="save-purchase-button"
             className={cn(

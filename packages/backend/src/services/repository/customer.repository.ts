@@ -47,8 +47,9 @@ export class CustomerRepository {
     return query;
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<Customer | undefined> {
-    const customer = await db.query.customers.findFirst({
+  async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<Customer | undefined> {
+    const executor = tx ?? db;
+    const customer = await executor.query.customers.findFirst({
       where: and(
         eq(customers.id, id),
         eq(customers.businessId, ctx.businessId)
@@ -128,8 +129,9 @@ export class CustomerRepository {
     return customer;
   }
 
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db
+  async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
+    const executor = tx ?? db;
+    await executor
       .delete(customers)
       .where(and(
         eq(customers.id, id),

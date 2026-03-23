@@ -16,6 +16,7 @@ import { CustomerGroupService } from "../services/customer-group-service";
 import { DistribucionService } from "../services/distribucion-service";
 import { SupplierService } from "../services/supplier-service";
 import type { ConflictStrategy } from "../sync/config";
+import { registerDebugServices } from "~/lib/debug";
 
 export interface ServicesContextValue {
   pg: PGlite;
@@ -171,6 +172,13 @@ export function ServicesProvider({
       }
     };
     cleanupDrafts();
+
+    // Register debug utilities for browser console access
+    registerDebugServices({
+      purchaseService: services.purchaseService,
+      supplierService: services.supplierService,
+      syncService: services.syncService,
+    });
 
     return () => {
       syncService.stopAutoSync();

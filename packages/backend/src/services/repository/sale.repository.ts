@@ -198,15 +198,29 @@ export class SaleRepository {
         | "customerId"
       >
     >,
-    tx?: DbTransaction
+    tx?: DbTransaction,
+    expectedVersion?: number
   ): Promise<Sale> {
     const executor = tx ?? db;
+
+    const conditions = [
+      eq(sales.id, id),
+      eq(sales.businessId, ctx.businessId)
+    ];
+
+    if (expectedVersion !== undefined) {
+      conditions.push(eq(sales.version, expectedVersion));
+    }
 
     const [sale] = await executor
       .update(sales)
       .set({ ...data, updatedAt: new Date() })
-      .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)))
+      .where(and(...conditions))
       .returning();
+
+    if (expectedVersion !== undefined && !sale) {
+      throw new Error(`Version conflict: expected ${expectedVersion}`);
+    }
 
     return sale;
   }
@@ -251,20 +265,33 @@ export class SaleRepository {
         subtotal: string;
       }>;
     },
-    tx?: DbTransaction
+    tx?: DbTransaction,
+    expectedVersion?: number
   ): Promise<Sale> {
     const { items, ...saleData } = data;
 
     // Helper function to execute the update logic
     const executeUpdate = async (executor: DbTransaction) => {
+      const conditions = [
+        eq(sales.id, id),
+        eq(sales.businessId, ctx.businessId)
+      ];
+
+      if (expectedVersion !== undefined) {
+        conditions.push(eq(sales.version, expectedVersion));
+      }
+
       // Update the sale
       const [sale] = await executor
         .update(sales)
         .set({ ...saleData, updatedAt: new Date() })
-        .where(and(eq(sales.id, id), eq(sales.businessId, ctx.businessId)))
+        .where(and(...conditions))
         .returning();
 
       if (!sale) {
+        if (expectedVersion !== undefined) {
+          throw new Error(`Version conflict: expected ${expectedVersion}`);
+        }
         throw new Error("Sale not found");
       }
 
@@ -620,6 +647,40 @@ export class SaleRepository {
       .update(sales)
       .set({
         totalAmount,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(sales.id, saleId),
+          eq(sales.businessId, ctx.businessId)
+        )
+      );
+  }
+
+  /**
+   * Recalculate sale totals atomically using SQL.
+   * This prevents race conditions by calculating the sum directly in the database.
+   */
+  async recalculateTotalsAtomically(
+    ctx: RequestContext,
+    saleId: string,
+    tx?: DbTransaction
+  ): Promise<void> {
+    const executor = tx ?? db;
+
+    await executor
+      .update(sales)
+      .set({
+        totalAmount: sql`(
+          SELECT COALESCE(SUM(${saleItems.subtotal}), 0)
+          FROM ${saleItems}
+          WHERE ${saleItems.saleId} = ${saleId}
+        )`,
+        balanceDue: sql`GREATEST((
+          SELECT COALESCE(SUM(${saleItems.subtotal}), 0)
+          FROM ${saleItems}
+          WHERE ${saleItems.saleId} = ${saleId}
+        ) - ${sales.amountPaid}, 0)`,
         updatedAt: new Date(),
       })
       .where(

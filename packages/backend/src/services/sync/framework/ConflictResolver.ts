@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableName } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { customers, sales, abonos, products, tags, visitas, purchases, suppliers, closings, distribuciones } from "../../../db/schema";
+import { customers, sales, abonos, products, tags, visitas, purchases, purchaseItems, suppliers, closings, distribuciones, saleItems } from "../../../db/schema";
 import { customerGroups } from "../../../db/schema/customer-groups";
 import { customerTags } from "../../../db/schema/customer-tags";
 import { customerGroupMembers } from "../../../db/schema/customer-group-members";
@@ -42,7 +42,8 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
     const businessIdField = this.getBusinessIdField();
     const updatedAtField = this.getUpdatedAtField();
 
-    const record = await tx.query[table.name].findFirst({
+    const tableName = getTableName(table);
+    const record = await (tx.query as Record<string, any>)[tableName].findFirst({
       where: and(
         eq(table[idField], operation.entityId),
         eq(table[businessIdField], ctx.businessId)
@@ -238,6 +239,25 @@ class PurchaseConflictResolver extends BaseTimestampConflictResolver {
   }
 }
 
+class PurchaseItemConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "PurchaseItem"; }
+  protected getTable() { return purchaseItems; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getServerDataFields(record: any) {
+    return {
+      purchaseId: record.purchaseId,
+      productId: record.productId,
+      variantId: record.variantId,
+      quantity: record.quantity,
+      unitCost: record.unitCost,
+      totalCost: record.totalCost,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
 class SupplierConflictResolver extends BaseTimestampConflictResolver {
   protected getEntityName() { return "Supplier"; }
   protected getTable() { return suppliers; }
@@ -389,6 +409,67 @@ class VersionConflictResolver implements IConflictResolver {
   }
 }
 
+// Sale item conflict resolver using parent sale's version
+class SaleItemConflictResolver implements IConflictResolver {
+  async checkConflict(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx: DbTransaction
+  ): Promise<ConflictCheckResult> {
+    if (operation.operation === "create" || operation.operation === "delete") {
+      return { hasConflict: false };
+    }
+
+    // Get the sale item
+    const item = await tx.query.saleItems.findFirst({
+      where: and(
+        eq(saleItems.id, operation.entityId),
+        eq(saleItems.businessId, ctx.businessId)
+      ),
+    });
+
+    if (!item) {
+      return { hasConflict: false };
+    }
+
+    // Get the parent sale for version checking
+    const sale = await tx.query.sales.findFirst({
+      where: and(
+        eq(sales.id, item.saleId),
+        eq(sales.businessId, ctx.businessId)
+      ),
+    });
+
+    if (!sale) {
+      return { hasConflict: false };
+    }
+
+    // Use parent sale's version for conflict detection
+    if (sale.version > operation.localVersion) {
+      logger.warn({
+        msg: "⚠️ SaleItem conflict detected (parent sale modified)",
+        entityId: operation.entityId,
+        saleId: sale.id,
+        serverVersion: sale.version,
+        clientVersion: operation.localVersion,
+      });
+
+      return {
+        hasConflict: true,
+        serverVersion: sale.version,
+        serverData: {
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          updatedAt: item.updatedAt?.toISOString(),
+        },
+      };
+    }
+
+    return { hasConflict: false };
+  }
+}
+
 class NoOpConflictResolver implements IConflictResolver {
   async checkConflict(): Promise<ConflictCheckResult> {
     return { hasConflict: false };
@@ -408,14 +489,14 @@ const resolvers: Record<string, IConflictResolver> = {
   customer_group_members: new CustomerGroupMemberConflictResolver(),
   visitas: new VisitaConflictResolver(),
   purchases: new PurchaseConflictResolver(),
-  purchase_items: new PurchaseConflictResolver(), // Uses purchase table
+  purchase_items: new PurchaseItemConflictResolver(),
   suppliers: new SupplierConflictResolver(),
   closings: new ClosingConflictResolver(),
   puntos_venta: new PuntoVentaConflictResolver(),
   product_units: new ProductUnitConflictResolver(),
   variant_inventory: new VariantInventoryConflictResolver(),
   files: new FileConflictResolver(),
-  sale_items: new NoOpConflictResolver(),
+  sale_items: new SaleItemConflictResolver(),
 };
 
 export class ConflictResolverRegistry {

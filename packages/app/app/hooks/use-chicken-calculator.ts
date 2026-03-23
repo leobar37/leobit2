@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { formatNumber } from "~/lib/utils";
 
 export interface CalculatorState {
 	totalAmount: string;
@@ -209,7 +210,7 @@ export function useChickenCalculator(
 		if (activeField === "tara" && price > 0 && kg > 0) {
 			setValues((prev) => ({
 				...prev,
-				totalAmount: (price * kgNetoValue).toFixed(2),
+				totalAmount: formatNumber(price * kgNetoValue),
 			}));
 			return;
 		}
@@ -226,12 +227,12 @@ export function useChickenCalculator(
 			if (!totalAmount && price > 0 && kgNetoValue > 0) {
 				setValues((prev) => ({
 					...prev,
-					totalAmount: (price * kgNetoValue).toFixed(2),
+					totalAmount: formatNumber(price * kgNetoValue),
 				}));
 			} else if (!pricePerKg && total > 0 && kgNetoValue > 0) {
 				setValues((prev) => ({
 					...prev,
-					pricePerKg: (total / kgNetoValue).toFixed(2),
+					pricePerKg: formatNumber(total / kgNetoValue),
 				}));
 			} else if (!kilos && total > 0 && price > 0) {
 				const kgBruto = total / price + taraNum;

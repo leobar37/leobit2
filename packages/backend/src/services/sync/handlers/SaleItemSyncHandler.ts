@@ -60,34 +60,29 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
+    if (!tx) {
+      throw new Error("Transaction is required for sale item operations");
+    }
+
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const executeCreate = async (executor: DbTransaction) => {
-      const sale = await this.saleRepo.findById(ctx, parsed.saleId, executor);
-      if (!sale) {
-        throw new Error(`Venta ${parsed.saleId} no encontrada`);
-      }
-
-      await this.saleRepo.addItem(ctx, parsed.saleId, {
-        id: operation.entityId,
-        productId: parsed.productId,
-        productName: parsed.productName,
-        variantId: parsed.variantId,
-        variantName: parsed.variantName,
-        quantity: parsed.quantity,
-        orderedQuantity: parsed.orderedQuantity,
-        unitPrice: parsed.unitPrice,
-        unitPriceQuoted: parsed.unitPriceQuoted,
-        subtotal: parsed.subtotal,
-      }, executor);
-    };
-
-    if (tx) {
-      await executeCreate(tx);
-    } else {
-      const { db: dbInstance } = await import("../../../lib/db");
-      await dbInstance.transaction(executeCreate);
+    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
+    if (!sale) {
+      throw new Error(`Venta ${parsed.saleId} no encontrada`);
     }
+
+    await this.saleRepo.addItem(ctx, parsed.saleId, {
+      id: operation.entityId,
+      productId: parsed.productId,
+      productName: parsed.productName,
+      variantId: parsed.variantId,
+      variantName: parsed.variantName,
+      quantity: parsed.quantity,
+      orderedQuantity: parsed.orderedQuantity,
+      unitPrice: parsed.unitPrice,
+      unitPriceQuoted: parsed.unitPriceQuoted,
+      subtotal: parsed.subtotal,
+    }, tx);
   }
 
   private async handleUpdate(
@@ -95,49 +90,30 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
+    if (!tx) {
+      throw new Error("Transaction is required for sale item operations");
+    }
+
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const executeUpdate = async (executor: DbTransaction) => {
-      const sale = await this.saleRepo.findById(ctx, parsed.saleId, executor);
-      if (!sale) {
-        throw new Error(`Venta ${parsed.saleId} no encontrada`);
-      }
-
-      const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, executor);
-      if (!existingItem) {
-        throw new Error("Item no encontrado");
-      }
-
-      const oldSubtotal = parseFloat(existingItem.subtotal);
-      const newSubtotal = parsed.subtotal !== undefined
-        ? parseFloat(parsed.subtotal)
-        : oldSubtotal;
-      const subtotalDiff = newSubtotal - oldSubtotal;
-
-      await this.saleRepo.updateItem(ctx, parsed.saleId, operation.entityId, {
-        quantity: parsed.quantity,
-        unitPrice: parsed.unitPrice,
-        subtotal: parsed.subtotal,
-        isModified: true,
-      }, executor);
-
-      if (Math.abs(subtotalDiff) > 0.01) {
-        const newTotal = parseFloat(sale.totalAmount) + subtotalDiff;
-        const newBalanceDue = Math.max(newTotal - parseFloat(sale.amountPaid), 0);
-
-        await this.saleRepo.update(ctx, parsed.saleId, {
-          totalAmount: newTotal.toFixed(2),
-          balanceDue: newBalanceDue.toFixed(2),
-        }, executor);
-      }
-    };
-
-    if (tx) {
-      await executeUpdate(tx);
-    } else {
-      const { db: dbInstance } = await import("../../../lib/db");
-      await dbInstance.transaction(executeUpdate);
+    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
+    if (!sale) {
+      throw new Error(`Venta ${parsed.saleId} no encontrada`);
     }
+
+    const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, tx);
+    if (!existingItem) {
+      throw new Error("Item no encontrado");
+    }
+
+    await this.saleRepo.updateItem(ctx, parsed.saleId, operation.entityId, {
+      quantity: parsed.quantity,
+      unitPrice: parsed.unitPrice,
+      subtotal: parsed.subtotal,
+      isModified: true,
+    }, tx);
+
+    await this.saleRepo.recalculateTotalsAtomically(ctx, parsed.saleId, tx);
   }
 
   private async handleDelete(
@@ -145,37 +121,23 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
+    if (!tx) {
+      throw new Error("Transaction is required for sale item operations");
+    }
+
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const executeDelete = async (executor: DbTransaction) => {
-      const sale = await this.saleRepo.findById(ctx, parsed.saleId, executor);
-      if (!sale) {
-        throw new Error(`Venta ${parsed.saleId} no encontrada`);
-      }
-
-      const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, executor);
-      if (!existingItem) {
-        return;
-      }
-
-      const subtotal = parseFloat(existingItem.subtotal);
-
-      await this.saleRepo.deleteItem(ctx, parsed.saleId, operation.entityId, executor);
-
-      const newTotal = parseFloat(sale.totalAmount) - subtotal;
-      const newBalanceDue = Math.max(newTotal - parseFloat(sale.amountPaid), 0);
-
-      await this.saleRepo.update(ctx, parsed.saleId, {
-        totalAmount: newTotal.toFixed(2),
-        balanceDue: newBalanceDue.toFixed(2),
-      }, executor);
-    };
-
-    if (tx) {
-      await executeDelete(tx);
-    } else {
-      const { db: dbInstance } = await import("../../../lib/db");
-      await dbInstance.transaction(executeDelete);
+    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
+    if (!sale) {
+      throw new Error(`Venta ${parsed.saleId} no encontrada`);
     }
+
+    const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, tx);
+    if (!existingItem) {
+      return;
+    }
+
+    await this.saleRepo.deleteItem(ctx, parsed.saleId, operation.entityId, tx);
+    await this.saleRepo.recalculateTotalsAtomically(ctx, parsed.saleId, tx);
   }
 }

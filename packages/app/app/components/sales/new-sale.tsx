@@ -33,7 +33,7 @@ import {
 } from "~/hooks/use-sales-db";
 import { useUpdateSale } from "~/hooks/use-sales";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
-import { formatCurrency, formatKilos, cn } from "~/lib/utils";
+import { formatCurrency, formatKilos, formatNumber, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
@@ -153,7 +153,7 @@ export function PaymentModeSection() {
   const handleSetPaymentMode = async (mode: PaymentMode) => {
     if (!saleId) return;
 
-    const totalAmount = calculations.totalAmount.toFixed(2);
+    const totalAmount = formatNumber(calculations.totalAmount);
     const amountPaid =
       mode === "pago_total"
         ? totalAmount
@@ -169,7 +169,7 @@ export function PaymentModeSection() {
           saleType: mode === "pago_total" ? "contado" : "credito",
           totalAmount,
           amountPaid,
-          balanceDue: calculations.balanceDue.toFixed(2),
+          balanceDue: formatNumber(calculations.balanceDue),
         },
       });
     } catch {

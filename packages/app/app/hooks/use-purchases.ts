@@ -99,6 +99,24 @@ export function useCreatePurchase() {
 }
 
 /**
+ * Create a draft purchase (for immediate editing)
+ */
+export function useCreateDraftPurchase() {
+  const purchaseService = usePurchaseService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input?: CreatePurchaseInput): Promise<Purchase> => {
+      return purchaseService.create(input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: ["purchases-new", "drafts"] });
+    },
+  });
+}
+
+/**
  * Update purchase status
  */
 export function useUpdatePurchaseStatus() {

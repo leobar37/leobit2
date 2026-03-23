@@ -64,9 +64,9 @@ export default function CierreDiaPage() {
 
   const selectedStats = {
     count: selectedSales.length,
-    total: selectedSales
-      .reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0)
-      .toFixed(2),
+    total: formatCurrency(
+      selectedSales.reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0)
+    ),
   };
 
   const totalKilos = selectedSales.reduce((sum, sale) => {

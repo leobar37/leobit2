@@ -256,14 +256,22 @@ export const purchaseItemSchema = z.object({
   unitCost: numericStringTransform,
 });
 
+/**
+ * Transforms empty strings to null for optional UUID/string fields
+ * that shouldn't accept "" as a valid value (especially UUID FKs).
+ * Using null instead of undefined so the handler's ?? null fallback works correctly.
+ */
+const emptyStringToNull = z.string().transform((val) => (val === "" ? null : val));
+
 export const purchaseCreateSchema = z.object({
-  supplierId: z.string().optional(),
+  supplierId: emptyStringToNull.optional(),
   purchaseDate: z.string().optional(),
-  invoiceNumber: z.string().optional(),
+  invoiceNumber: emptyStringToNull.optional(),
   status: z.enum(["draft", "pending", "received", "cancelled"]).optional(),
   totalAmount: optionalNumericStringTransform,
-  notes: z.string().optional(),
-  receiptImageId: z.string().optional(),
+  notes: emptyStringToNull.optional(),
+  receiptImageId: emptyStringToNull.optional(),
+  syncGroupId: z.string().optional().nullable(),
   items: z.array(purchaseItemSchema).optional(),
 });
 

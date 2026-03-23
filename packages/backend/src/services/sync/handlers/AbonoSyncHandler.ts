@@ -3,13 +3,17 @@ import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
 import type { PaymentRepository } from "../../repository/payment.repository";
+import type { CustomerRepository } from "../../repository/customer.repository";
 import { BaseSyncHandler } from "./BaseSyncHandler";
 import { abonoCreateSchema, abonoUpdateSchema } from "../schemas";
 
 export class AbonoSyncHandler extends BaseSyncHandler {
   readonly entityType = "abonos" as const;
 
-  constructor(private paymentRepo: PaymentRepository) {
+  constructor(
+    private paymentRepo: PaymentRepository,
+    private customerRepo: CustomerRepository
+  ) {
     super();
   }
 
@@ -55,6 +59,11 @@ export class AbonoSyncHandler extends BaseSyncHandler {
     tx?: DbTransaction
   ): Promise<void> {
     const parsed = abonoCreateSchema.parse(operation.payload);
+
+    const customer = await this.customerRepo.findById(ctx, parsed.customerId, tx);
+    if (!customer) {
+      throw new Error(`Cliente ${parsed.customerId} no encontrado`);
+    }
 
     await this.paymentRepo.create(ctx, {
       id: operation.entityId,

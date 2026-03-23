@@ -165,7 +165,7 @@ export class SaleSyncHandler extends BaseSyncHandler {
       await this.saleRepo.update(ctx, operation.entityId, {
         status: "active",
         version: existing.version + 1,
-      }, tx);
+      }, tx, existing.version);
       return;
     }
 
@@ -187,7 +187,7 @@ export class SaleSyncHandler extends BaseSyncHandler {
         refundAmount: parsed.refundAmount,
         refundMethod: parsed.refundMethod as "efectivo" | "yape" | "plin" | "transferencia" | undefined,
         version: existing.version + 1,
-      }, tx);
+      }, tx, existing.version);
       return;
     }
 
@@ -216,9 +216,9 @@ export class SaleSyncHandler extends BaseSyncHandler {
       await this.saleRepo.updateWithItems(ctx, operation.entityId, {
         ...updateData,
         items,
-      } as Parameters<typeof this.saleRepo.updateWithItems>[2], tx);
+      } as Parameters<typeof this.saleRepo.updateWithItems>[2], tx, existing.version);
     } else {
-      await this.saleRepo.update(ctx, operation.entityId, updateData as Parameters<typeof this.saleRepo.update>[2], tx);
+      await this.saleRepo.update(ctx, operation.entityId, updateData as Parameters<typeof this.saleRepo.update>[2], tx, existing.version);
     }
   }
 

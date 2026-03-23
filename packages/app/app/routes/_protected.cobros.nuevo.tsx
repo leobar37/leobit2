@@ -1,4 +1,5 @@
 import { useSearchParams, useNavigate } from "react-router";
+import { formatNumber } from "~/lib/utils";
 import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
@@ -360,7 +361,7 @@ export default function NuevoCobroPage() {
                   key={amt}
                   amount={amt}
                   disabled={amt > currentDebt}
-                  onClick={() => setValue("amount", Math.min(amt, currentDebt).toFixed(2))}
+                  onClick={() => setValue("amount", formatNumber(Math.min(amt, currentDebt)))}
                 />
               ))}
             </div>

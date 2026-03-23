@@ -1,4 +1,5 @@
 import type { Product } from "~/lib/db/schema";
+import { formatNumber } from "~/lib/utils";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import type { CartItem } from "./types";
 import { parseNumber } from "./calculator-schema";
@@ -167,7 +168,7 @@ export function autoCalculateKgField(
 	// If user is editing tara, recalculate total
 	if (activeField === "tara" && price > 0 && kgNeto > 0) {
 		return {
-			totalAmount: (price * kgNeto).toFixed(2),
+			totalAmount: formatNumber(price * kgNeto),
 		};
 	}
 
@@ -183,12 +184,12 @@ export function autoCalculateKgField(
 
 	// Calculate missing total
 	if (!values.totalAmount && price > 0 && kgNeto > 0) {
-		return { totalAmount: (price * kgNeto).toFixed(2) };
+		return { totalAmount: formatNumber(price * kgNeto) };
 	}
 
 	// Calculate missing price per kg
 	if (!values.pricePerKg && total > 0 && kgNeto > 0) {
-		return { pricePerKg: (total / kgNeto).toFixed(2) };
+		return { pricePerKg: formatNumber(total / kgNeto) };
 	}
 
 	// Calculate missing kilos

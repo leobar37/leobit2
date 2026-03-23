@@ -1,4 +1,5 @@
 import type { PurchaseCartItem } from "~/stores/purchase.store";
+import { formatNumber } from "~/lib/utils";
 
 export interface PurchaseCalculationInput {
   packs?: number;
@@ -131,13 +132,13 @@ export function autoCalculatePurchaseField(
   // Calculate total if we have quantity and unit cost
   if (activeField === "unitCost" && effectiveQuantity > 0 && unitCost > 0) {
     return {
-      totalAmount: (effectiveQuantity * unitCost).toFixed(2),
+      totalAmount: formatNumber(effectiveQuantity * unitCost),
     };
   }
 
   if (activeField === "quantity" && unitCost > 0 && effectiveQuantity > 0) {
     return {
-      totalAmount: (effectiveQuantity * unitCost).toFixed(2),
+      totalAmount: formatNumber(effectiveQuantity * unitCost),
     };
   }
 

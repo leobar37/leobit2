@@ -85,7 +85,7 @@ export default function SalesPage() {
     const total = allSales.reduce((sum, sale) => {
       return sum + Number(sale.totalAmount || 0);
     }, 0);
-    return { count: allSales.length, total: total.toFixed(2) };
+    return { count: allSales.length, total: formatCurrency(total) };
   }, [allSales]);
 
   return (

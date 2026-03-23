@@ -198,7 +198,7 @@ export class PurchaseService extends BaseService {
         id, business_id, supplier_id, purchase_date, total_amount,
         status, invoice_number, receipt_image_id, notes,
         sync_status, sync_attempts, sync_group_id, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         id,
         this.businessId,
@@ -217,18 +217,8 @@ export class PurchaseService extends BaseService {
       ]
     );
 
-    // Sync the draft
-    await this.queueSync("insert", id, {
-      supplierId: input.supplierId,
-      purchaseDate: input.purchaseDate,
-      totalAmount: formatCurrency(totalAmount),
-      status: "draft",
-      invoiceNumber: input.invoiceNumber,
-      notes: input.notes,
-      receiptImageId: input.receiptImageId,
-    }, syncGroupId);
-
-    // Sync items with same itemId used in DB insert
+    // Insert all items first (before sync hooks run)
+    const itemIds: { id: string; item: CreatePurchaseItemInput }[] = [];
     if (input.items?.length) {
       for (const item of input.items) {
         const itemId = this.generateId();
@@ -254,16 +244,33 @@ export class PurchaseService extends BaseService {
             now.toISOString(),
           ]
         );
-        await this.queueSync("insert", itemId, {
-          purchaseId: id,
-          productId: item.productId,
-          variantId: item.variantId,
-          unitId: item.unitId,
-          quantity: String(item.quantity),
-          unitCost: formatCurrency(item.unitCost),
-          totalCost: formatCurrency(item.quantity * item.unitCost),
-        }, syncGroupId, "purchase_items");
+        itemIds.push({ id: itemId, item });
       }
+    }
+
+    // Sync the purchase after items are in DB (so hook can validate)
+    await this.queueSync("insert", id, {
+      supplierId: input.supplierId,
+      purchaseDate: input.purchaseDate,
+      totalAmount: formatCurrency(totalAmount),
+      status: "draft",
+      invoiceNumber: input.invoiceNumber,
+      notes: input.notes,
+      receiptImageId: input.receiptImageId,
+      syncGroupId,
+    }, syncGroupId);
+
+    // Sync items after purchase (same sync group)
+    for (const { id: itemId, item } of itemIds) {
+      await this.queueSync("insert", itemId, {
+        purchaseId: id,
+        productId: item.productId,
+        variantId: item.variantId,
+        unitId: item.unitId,
+        quantity: String(item.quantity),
+        unitCost: formatCurrency(item.unitCost),
+        totalCost: formatCurrency(item.quantity * item.unitCost),
+      }, syncGroupId, "purchase_items");
     }
 
     return (await this.findById(id)) as PurchaseWithItems;
@@ -290,7 +297,8 @@ export class PurchaseService extends BaseService {
       .set(updateData)
       .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
 
-    await this.queueSync("update", id, input as Record<string, unknown>);
+    const existingSyncGroupId = await this.getPurchaseSyncGroupId(id);
+    await this.queueSync("update", id, input as Record<string, unknown>, existingSyncGroupId);
   }
 
   /**

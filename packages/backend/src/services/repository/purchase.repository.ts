@@ -15,6 +15,18 @@ export interface PurchaseWithItems extends Purchase {
   items: PurchaseItem[];
 }
 
+export interface CreatePurchaseInput {
+  id?: string;
+  supplierId?: string | null;
+  purchaseDate?: string;
+  status?: "draft" | "pending" | "received" | "cancelled";
+  totalAmount?: string;
+  notes?: string;
+  receiptImageId?: string | null;
+  invoiceNumber?: string | null;
+  syncGroupId?: string | null;
+}
+
 export class PurchaseRepository {
   async findMany(
     ctx: RequestContext,
@@ -86,42 +98,62 @@ export class PurchaseRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewPurchase, "businessId" | "id" | "createdAt" | "updatedAt">,
-    items: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt">[]
+    data: CreatePurchaseInput,
+    items: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt" | "businessId" | "updatedAt">[]
   ): Promise<PurchaseWithItems> {
     return await db.transaction(async (tx) => {
-      const [purchase] = await tx
-        .insert(purchases)
-        .values({
-          ...data,
-          businessId: ctx.businessId,
-        })
-        .returning();
-
-      const insertedItems: PurchaseItem[] = [];
-
-      for (const item of items) {
-        const [insertedItem] = await tx
-          .insert(purchaseItems)
-          .values({
-            ...item,
-            purchaseId: purchase.id,
-          })
-          .returning();
-        insertedItems.push(insertedItem);
-      }
-
-      return {
-        ...purchase,
-        items: insertedItems,
+      const insertValues = {
+        ...(data.id ? { id: data.id } : {}),
+        supplierId: data.supplierId ?? null,
+        purchaseDate: data.purchaseDate ?? null,
+        status: data.status ?? "draft",
+        totalAmount: data.totalAmount ?? "0",
+        notes: data.notes ?? null,
+        receiptImageId: data.receiptImageId ?? null,
+        invoiceNumber: data.invoiceNumber ?? null,
+        businessId: ctx.businessId,
+        syncGroupId: data.syncGroupId ?? null,
       };
+      try {
+        const [purchase] = await tx
+          .insert(purchases)
+          .values(insertValues)
+          .returning();
+        const insertedItems: PurchaseItem[] = [];
+        for (const item of items) {
+          const [insertedItem] = await tx
+            .insert(purchaseItems)
+            .values({
+              ...item,
+              purchaseId: purchase.id,
+              businessId: ctx.businessId,
+            })
+            .returning();
+          insertedItems.push(insertedItem);
+        }
+        return {
+          ...purchase,
+          items: insertedItems,
+        };
+      } catch (err) {
+        const pgErr = (err as any);
+        console.error("[PurchaseRepo] DB ERROR:", {
+          message: pgErr.message,
+          code: pgErr.code,
+          detail: pgErr.detail,
+          routine: pgErr.routine,
+          table: pgErr.table,
+          constraint: pgErr.constraint,
+        });
+        throw err;
+      }
     });
   }
 
   async updateStatus(
     ctx: RequestContext,
     id: string,
-    status: "pending" | "received" | "cancelled",
+    status: "draft" | "pending" | "received" | "cancelled",
     tx?: DbTransaction
   ): Promise<Purchase | undefined> {
     const dbOrTx = tx || db;

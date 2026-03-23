@@ -59,12 +59,21 @@ export abstract class BaseSyncHandler implements ISyncHandler {
   ): void {
     const correlationId = operation.correlationId || syncLogger.generateCorrelationId();
 
+    // Extract the underlying PostgreSQL error from DrizzleQueryError.cause
+    const pgError = (error as any).cause?.cause ?? (error as any).cause ?? error;
+    const pgErrorCode = pgError.code || null;
+    const pgErrorDetail = pgError.detail || null;
+    const pgErrorRoutine = pgError.routine || null;
+
     logger.error({
       msg: `❌ ${this.entityType} operation failed`,
       correlationId,
       operation: operation.operation,
       entityId: operation.entityId,
       error: error.message,
+      pgErrorCode,
+      pgErrorDetail,
+      pgErrorRoutine,
       stack: error.stack,
       ...details,
     });

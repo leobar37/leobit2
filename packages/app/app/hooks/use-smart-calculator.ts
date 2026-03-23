@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
+import { formatNumber } from "~/lib/utils";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -251,10 +252,10 @@ export function useSmartCalculator(
 				const total = parseNumber(v.totalAmount);
 
 				if (targetField === "total" && price > 0 && kgNeto > 0) {
-					return { totalAmount: (price * kgNeto).toFixed(2) } as Partial<CalculatorFormData>;
+					return { totalAmount: formatNumber(price * kgNeto) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "price" && total > 0 && kgNeto > 0) {
-					return { pricePerKg: (total / kgNeto).toFixed(2) } as Partial<CalculatorFormData>;
+					return { pricePerKg: formatNumber(total / kgNeto) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "quantity" && total > 0 && price > 0) {
 					const taraNum = parseNumber(v.tara);
@@ -269,11 +270,11 @@ export function useSmartCalculator(
 				const unitQuantity = Math.max(1, parseInt(variant?.unitQuantity || "1", 10) || 1);
 
 				if (targetField === "total" && pricePerPack > 0 && packs > 0) {
-					return { totalAmount: (packs * pricePerPack).toFixed(2) } as Partial<CalculatorFormData>;
+					return { totalAmount: formatNumber(packs * pricePerPack) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "price" && total > 0 && packs > 0) {
 					const unitPrice = total / (packs * unitQuantity);
-					return { pricePerPack: (unitPrice * unitQuantity).toFixed(2) } as Partial<CalculatorFormData>;
+					return { pricePerPack: formatNumber(unitPrice * unitQuantity) } as Partial<CalculatorFormData>;
 				}
 				if (targetField === "quantity" && total > 0 && pricePerPack > 0) {
 					const totalUnits = total / (pricePerPack / unitQuantity);

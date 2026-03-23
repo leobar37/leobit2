@@ -48,7 +48,7 @@ export class SyncService {
     });
 
     HandlerRegistry.register("abonos", () => {
-      return new AbonoSyncHandler(deps.paymentRepo);
+      return new AbonoSyncHandler(deps.paymentRepo, deps.customerRepo);
     });
 
     HandlerRegistry.register("distribuciones", () => {
@@ -71,8 +71,8 @@ export class SyncService {
       return new CustomerTagSyncHandler(deps.customerTagRepo);
     });
 
-    HandlerRegistry.register("purchases", () => {
-      return new PurchaseSyncHandler(deps.purchaseRepo);
+    HandlerRegistry.register("purchases", (deps) => {
+      return new PurchaseSyncHandler(deps);
     });
 
     HandlerRegistry.register("purchase_items", () => {

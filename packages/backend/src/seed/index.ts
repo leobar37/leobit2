@@ -874,12 +874,12 @@ async function seedVariantInventory(ctx: RequestContext, products: SeedProduct[]
   const inventoryItems = [];
   for (const product of products) {
     for (const variant of product.variants) {
-      const existing = await services.productVariant.getInventory(ctx, variant.id);
+      const existing = await repositories.productVariant.getInventory(ctx, variant.id);
       if (existing) {
         console.log(`⚠ Variant ${variant.name} already has inventory, skipping`);
         continue;
       }
-      const created = await services.productVariant.createInventory(ctx, {
+      const created = await repositories.productVariant.createInventory(ctx, {
         variantId: variant.id,
         quantity: "100",
       });

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Package, DollarSign, Percent } from "lucide-react";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency, formatNumber } from "~/lib/utils";
 
 interface ProfitItem {
   productName: string;
@@ -107,7 +107,7 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
                     <p className="text-muted-foreground">Cantidad</p>
-                    <p className="font-medium">{item.quantity.toFixed(2)}</p>
+                    <p className="font-medium">{formatNumber(item.quantity)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Precio</p>

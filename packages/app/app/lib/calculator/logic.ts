@@ -5,6 +5,7 @@ import type {
 	AutoCalculateInput,
 	KgCalculatorFieldName,
 } from "./types";
+import { formatNumber } from "~/lib/utils";
 
 /**
  * Parse a string to number, returning 0 if invalid
@@ -136,7 +137,7 @@ export function autoCalculateKgField(
 	// If user is editing tara, recalculate total
 	if (activeField === "tara" && price > 0 && kgNeto > 0) {
 		return {
-			totalAmount: (price * kgNeto).toFixed(2),
+			totalAmount: formatNumber(price * kgNeto),
 		};
 	}
 
@@ -156,12 +157,12 @@ export function autoCalculateKgField(
 
 		// Calculate missing total
 		if (missingField === "totalAmount" && price > 0 && kgNeto > 0) {
-			return { totalAmount: (price * kgNeto).toFixed(2) };
+			return { totalAmount: formatNumber(price * kgNeto) };
 		}
 
 		// Calculate missing price per kg
 		if (missingField === "pricePerKg" && total > 0 && kgNeto > 0) {
-			return { pricePerKg: (total / kgNeto).toFixed(2) };
+			return { pricePerKg: formatNumber(total / kgNeto) };
 		}
 
 		// Calculate missing kilos
@@ -189,11 +190,11 @@ export function autoCalculateKgField(
 
 		// Recalculate the oldest field based on the other two
 		if (oldestField.name === "totalAmount" && price > 0 && kgNeto > 0) {
-			return { totalAmount: (price * kgNeto).toFixed(2) };
+			return { totalAmount: formatNumber(price * kgNeto) };
 		}
 
 		if (oldestField.name === "pricePerKg" && total > 0 && kgNeto > 0) {
-			return { pricePerKg: (total / kgNeto).toFixed(2) };
+			return { pricePerKg: formatNumber(total / kgNeto) };
 		}
 
 		if (oldestField.name === "kilos" && total > 0 && price > 0) {
@@ -242,14 +243,14 @@ export function autoCalculateUnitField(
 		if (missingField === "totalAmount" && pricePerPack > 0 && packs > 0) {
 			const totalUnits = packs * unitsPerPack;
 			const unitPrice = pricePerPack / unitsPerPack;
-			return { totalAmount: (totalUnits * unitPrice).toFixed(2) };
+			return { totalAmount: formatNumber(totalUnits * unitPrice) };
 		}
 
 		// Calculate missing pricePerPack
 		if (missingField === "pricePerPack" && total > 0 && packs > 0) {
 			const totalUnits = packs * unitsPerPack;
 			const unitPrice = total / totalUnits;
-			return { pricePerPack: (unitPrice * unitsPerPack).toFixed(2) };
+			return { pricePerPack: formatNumber(unitPrice * unitsPerPack) };
 		}
 
 		// Calculate missing packs
@@ -281,7 +282,7 @@ export function autoCalculateUnitField(
 	if (activeField === "units" && units > 0 && packs > 0 && total > 0 && pricePerPack === 0) {
 		const totalUnits = packs * unitsPerPack;
 		const unitPrice = total / totalUnits;
-		return { pricePerPack: (unitPrice * unitsPerPack).toFixed(2) };
+		return { pricePerPack: formatNumber(unitPrice * unitsPerPack) };
 	}
 
 	// Case 2: All 4 fields filled + timestamps available - smart recalculate
@@ -304,13 +305,13 @@ export function autoCalculateUnitField(
 		if (oldestField.name === "totalAmount" && packs > 0 && pricePerPack > 0) {
 			const totalUnits = packs * unitsPerPack;
 			const unitPrice = pricePerPack / unitsPerPack;
-			return { totalAmount: (totalUnits * unitPrice).toFixed(2) };
+			return { totalAmount: formatNumber(totalUnits * unitPrice) };
 		}
 
 		if (oldestField.name === "pricePerPack" && total > 0 && packs > 0) {
 			const totalUnits = packs * unitsPerPack;
 			const unitPrice = total / totalUnits;
-			return { pricePerPack: (unitPrice * unitsPerPack).toFixed(2) };
+			return { pricePerPack: formatNumber(unitPrice * unitsPerPack) };
 		}
 
 		if (oldestField.name === "packs" && total > 0 && pricePerPack > 0) {

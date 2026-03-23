@@ -155,7 +155,7 @@ export class PaymentService extends BaseService {
 
     if (amount > debt + OVERPAYMENT_TOLERANCE) {
       throw new Error(
-        `El monto del abono (S/ ${amount.toFixed(2)}) excede la deuda pendiente (S/ ${debt.toFixed(2)})`
+        `El monto del abono (S/ ${formatCurrency(amount)}) excede la deuda pendiente (S/ ${formatCurrency(debt)})`
       );
     }
   }

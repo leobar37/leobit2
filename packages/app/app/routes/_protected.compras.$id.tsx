@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
+import { getPurchaseEditorPath } from "~/lib/purchases/navigation";
 import {
   ShoppingCart,
   Calendar,
@@ -264,9 +265,9 @@ export default function PurchaseDetailPage() {
         </Card>
 
         <div className="space-y-3">
-          {purchase.status === "pending" && (
+          {(purchase.status === "pending" || purchase.status === "draft") && (
             <Button
-              onClick={() => navigate(`/compras/${id}/editar`)}
+              onClick={() => id && navigate(getPurchaseEditorPath(id, purchase.status === "draft"))}
               className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
             >
               <Pencil className="h-4 w-4 mr-2" />
