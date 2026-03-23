@@ -47,12 +47,12 @@ export function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register">
-              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg px-8 py-6 h-14 rounded-xl shadow-lg shadow-orange-500/25 transition-all hover:shadow-orange-500/40">
+            <Button size="lg" asChild className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg px-8 py-6 h-14 rounded-xl shadow-lg shadow-orange-500/25 transition-all hover:shadow-orange-500/40">
+              <Link to="/register">
                 Comenzar prueba gratis
                 <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <a href="#how-it-works" className="inline-flex items-center justify-center gap-2 text-slate-300 hover:text-white text-lg px-8 py-3 h-14 transition-colors group">
               Ver como funciona
               <ArrowRight className="w-5 h-5 rotate-90 group-hover:translate-y-1 transition-transform" />

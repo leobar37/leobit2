@@ -19,16 +19,12 @@ export function Navigation() {
             <a href="#pricing" className="text-slate-300 hover:text-white transition-colors">Precios</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/login">
-              <Button variant="ghost" className="text-slate-300 hover:text-white">
-                Iniciar sesion
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-                Prueba gratis
-              </Button>
-            </Link>
+            <Button variant="ghost" asChild className="text-slate-300 hover:text-white">
+              <Link to="/login">Iniciar sesion</Link>
+            </Button>
+            <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Link to="/register">Prueba gratis</Link>
+            </Button>
           </div>
         </div>
       </div>

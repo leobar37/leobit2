@@ -19,19 +19,7 @@ import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/landing" replace />;
-  }
+  const { user, isLoading, login } = useAuth();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -41,6 +29,18 @@ export default function LoginPage() {
       password: isDevelopment() ? DEV_CREDENTIALS.password : "",
     },
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/sync" replace />;
+  }
 
   const onSubmit = async (data: LoginInput) => {
     try {

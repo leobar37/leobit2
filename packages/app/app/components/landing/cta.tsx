@@ -19,12 +19,12 @@ export function CTASection() {
           <p className="text-slate-400 text-lg mb-8">
             Empieza hoy mismo con tu prueba gratis de 14 dias. Sin compromiso.
           </p>
-          <Link to="/register">
-            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-12 py-6 h-14 rounded-xl">
+          <Button size="lg" asChild className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-12 py-6 h-14 rounded-xl">
+            <Link to="/register">
               Comenzar prueba gratis
               <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <p className="text-slate-500 mt-4 text-sm">
             No se requiere tarjeta de credito
           </p>
