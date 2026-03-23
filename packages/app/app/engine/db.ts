@@ -630,6 +630,10 @@ export async function initDatabase(): Promise<{
       await resetDatabaseInternal();
     }
 
+    // Save schema hash BEFORE attempting database operations to prevent infinite reset loops
+    // If WASM load fails, we don't want to keep trying to reset
+    localStorage.setItem(VERSION_KEY, currentHash);
+
     // Create fresh database instance
     const pgInstance = await PGlite.create({
       dataDir,
@@ -637,11 +641,11 @@ export async function initDatabase(): Promise<{
         electric: electricSync(),
       },
       locateFile: (file: string) => {
-        if (file === "pglite.data") {
-          return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.data";
+        if (file === "postgres.data") {
+          return "/pglite.data";
         }
-        if (file === "pglite.wasm") {
-          return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
+        if (file === "postgres.wasm") {
+          return "/pglite.wasm";
         }
         return file;
       },
@@ -655,9 +659,6 @@ export async function initDatabase(): Promise<{
       console.log("[DB] Importing pending data...");
       await importPendingData(pgInstance, pendingData);
     }
-
-    // Save new schema hash
-    localStorage.setItem(VERSION_KEY, currentHash);
 
     // Initialize Drizzle
     const dbInstance = drizzle(pgInstance, { schema });
@@ -699,11 +700,11 @@ async function exportPendingData(): Promise<PendingData> {
       dataDir: `idb://${getLocalDatabaseName()}`,
       extensions: { electric: electricSync() },
       locateFile: (file: string) => {
-        if (file === "pglite.data") {
-          return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.data";
+        if (file === "postgres.data") {
+          return "/pglite.data";
         }
-        if (file === "pglite.wasm") {
-          return "https://unpkg.com/@electric-sql/pglite@0.3.15/dist/pglite.wasm";
+        if (file === "postgres.wasm") {
+          return "/pglite.wasm";
         }
         return file;
       },

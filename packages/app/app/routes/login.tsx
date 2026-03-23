@@ -1,6 +1,6 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router";
+import { useNavigate, Navigate } from "react-router";
 import { Store, Loader2 } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,7 +19,19 @@ import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/landing" replace />;
+  }
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),

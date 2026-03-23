@@ -22,14 +22,22 @@ const server = serve({
       const file = readFileSync(filePath);
       const contentType = getContentType(path);
       return new Response(file, {
-        headers: { "Content-Type": contentType },
+        headers: {
+          "Content-Type": contentType,
+          "Cross-Origin-Embedder-Policy": "credentialless",
+          "Cross-Origin-Opener-Policy": "same-origin",
+        },
       });
     } catch (e) {
       // If file not found, serve index.html for client-side routing
       try {
         const indexFile = readFileSync(join(BUILD_DIR, "index.html"));
         return new Response(indexFile, {
-          headers: { "Content-Type": "text/html" },
+          headers: {
+            "Content-Type": "text/html",
+            "Cross-Origin-Embedder-Policy": "credentialless",
+            "Cross-Origin-Opener-Policy": "same-origin",
+          },
         });
       } catch {
         return new Response("Not Found", { status: 404 });
@@ -46,6 +54,8 @@ function getContentType(path) {
   if (path.endsWith(".png")) return "image/png";
   if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
   if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".wasm")) return "application/wasm";
+  if (path.endsWith(".data")) return "application/octet-stream";
   return "text/plain";
 }
 
