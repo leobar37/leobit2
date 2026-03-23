@@ -48,6 +48,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wasm,data}"],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB to accommodate PGlite WASM files
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
