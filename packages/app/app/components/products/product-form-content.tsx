@@ -11,7 +11,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 export const productSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  type: z.enum(["pollo", "huevo", "otro"]),
+  type: z.enum(["pollo", "huevo", "otro"]).optional(),
   unit: z.enum(["kg", "unidad"]),
   basePrice: z.string().min(1, "El precio es requerido"),
   isActive: z.boolean(),
@@ -68,10 +68,10 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="hidden space-y-2">
           <Label htmlFor="type" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Tipo *
+            Tipo
           </Label>
           <select
             id="type"

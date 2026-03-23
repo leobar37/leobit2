@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from "react";
-import { Plus, Search, Users, Trash2, Loader2, WifiOff } from "lucide-react";
+import { Plus, Search, Users, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,9 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { useSync } from "~/components/sync/sync-status";
 import { useGrupoDialogs } from "~/hooks/use-grupo-dialogs";
 import {
   useCustomerGroups,
@@ -33,7 +31,6 @@ import { MemberDialog } from "~/components/grupos/member-dialog";
 export default function GroupsPage() {
   useSetLayout({ title: "Grupos de Clientes" });
 
-  const { isOnline } = useSync();
   const { data: groups, isLoading } = useCustomerGroups();
   const { data: customers } = useCustomers();
 
@@ -165,15 +162,6 @@ export default function GroupsPage() {
 
   return (
     <div className="space-y-4">
-      {!isOnline && (
-        <Alert variant="destructive">
-          <WifiOff className="h-4 w-4" />
-          <AlertDescription>
-            Conéctate a internet para gestionar grupos
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="relative">
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -192,8 +180,7 @@ export default function GroupsPage() {
           </p>
           {!search && (
             <Button
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
-              disabled={!isOnline}
+              className="bg-orange-500 hover:bg-orange-600"
               onClick={() => {
                 dialogs.resetFormState();
                 dialogs.formModal.open();
@@ -227,8 +214,7 @@ export default function GroupsPage() {
       <div className="fixed bottom-28 right-4 z-50">
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600 disabled:opacity-50"
-          disabled={!isOnline}
+          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
           onClick={() => {
             dialogs.resetFormState();
             dialogs.setDialogMode("create");

@@ -1,12 +1,10 @@
 /**
  * Customer Groups Hook
- * Online-only: All operations require internet connection
- * Uses REST API directly instead of local sync
+ * Local-first: All operations use CustomerGroupService for offline support
  */
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
-import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCustomerGroupService } from "~/lib/sync/service-provider";
 import { toast } from "sonner";
 
 export interface GroupMember {
@@ -33,141 +31,147 @@ const QUERY_KEYS = {
 };
 
 /**
- * Get all customer groups for the current business (online-only)
+ * Get all customer groups for the current business
  */
 export function useCustomerGroups() {
+  const customerGroupService = useCustomerGroupService();
+
   return useQuery({
     queryKey: QUERY_KEYS.groups,
-    queryFn: async () => {
-      const response = await api.groups.get();
-      return extractData<CustomerGroup[]>(response, "Error al cargar grupos");
-    },
+    queryFn: () => customerGroupService.findAll(),
+    staleTime: 1000 * 60,
   });
 }
 
 /**
- * Get a single customer group by ID with members (online-only)
+ * Get a single customer group by ID with members
  */
 export function useCustomerGroup(id: string | null) {
+  const customerGroupService = useCustomerGroupService();
+
   return useQuery({
     queryKey: QUERY_KEYS.group(id || ""),
-    queryFn: async () => {
+    queryFn: () => {
       if (!id) return null;
-      const response = await api.groups({ id }).get();
-      return extractData<CustomerGroup | null>(response, "Error al cargar grupo");
+      return customerGroupService.findById(id);
     },
     enabled: !!id,
+    staleTime: 1000 * 60,
   });
 }
 
 /**
- * Create a new customer group (online-only)
+ * Create a new customer group
  */
 export function useCreateCustomerGroup() {
   const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: { name: string }) => {
-      const response = await api.groups.post({ name: input.name });
-      return extractData<CustomerGroup>(response, "Error al crear grupo");
+      return customerGroupService.create({ name: input.name });
     },
-    offlineMessage: "Se requiere conexión a internet para crear grupos",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       toast.success("Grupo creado correctamente");
     },
+    onError: (error) => {
+      toast.error(`Error al crear grupo: ${error.message}`);
+    },
   });
 }
 
 /**
- * Update an existing customer group (online-only)
+ * Update an existing customer group
  */
 export function useUpdateCustomerGroup() {
   const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: { id: string; name: string }) => {
-      const response = await api.groups({ id: input.id }).put({ name: input.name });
-      return extractData<CustomerGroup>(response, "Error al actualizar grupo");
+      return customerGroupService.update(input.id, { name: input.name });
     },
-    offlineMessage: "Se requiere conexión a internet para actualizar grupos",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.id) });
       toast.success("Grupo actualizado correctamente");
     },
+    onError: (error) => {
+      toast.error(`Error al actualizar grupo: ${error.message}`);
+    },
   });
 }
 
 /**
- * Delete a customer group (online-only)
+ * Delete a customer group
  */
 export function useDeleteCustomerGroup() {
   const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: { id: string }) => {
-      await api.groups({ id: input.id }).delete();
+      return customerGroupService.delete(input.id);
     },
-    offlineMessage: "Se requiere conexión a internet para eliminar grupos",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       toast.success("Grupo eliminado correctamente");
     },
+    onError: (error) => {
+      toast.error(`Error al eliminar grupo: ${error.message}`);
+    },
   });
 }
 
 /**
- * Add customers to a group (online-only)
+ * Add customers to a group
  */
 export function useAddMembersToGroup() {
   const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: { groupId: string; customerIds: string[] }) => {
-      const response = await api.groups({ id: input.groupId }).members.post({
-        customerIds: input.customerIds,
-      });
-      return extractData<{ message: string }>(response, "Error al agregar miembros");
+      return customerGroupService.addMembers(input.groupId, input.customerIds);
     },
-    offlineMessage: "Se requiere conexión a internet para agregar miembros al grupo",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
-      // Invalidate all customer-groups-with-details queries
-      // This will refresh which groups each customer belongs to
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groupsWithDetails,
         exact: false,
       });
       toast.success("Miembros agregados correctamente");
     },
+    onError: (error) => {
+      toast.error(`Error al agregar miembros: ${error.message}`);
+    },
   });
 }
 
 /**
- * Remove a customer from a group (online-only)
+ * Remove a customer from a group
  */
 export function useRemoveMemberFromGroup() {
   const queryClient = useQueryClient();
+  const customerGroupService = useCustomerGroupService();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: { groupId: string; customerId: string }) => {
-      await api
-        .groups({ id: input.groupId })
-        .members({ customerId: input.customerId })
-        .delete();
+      return customerGroupService.removeMember(input.groupId, input.customerId);
     },
-    offlineMessage: "Se requiere conexión a internet para eliminar miembros del grupo",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
-      // Invalidate all customer-groups-with-details queries
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groupsWithDetails,
         exact: false,
       });
       toast.success("Miembro eliminado correctamente");
+    },
+    onError: (error) => {
+      toast.error(`Error al eliminar miembro: ${error.message}`);
     },
   });
 }

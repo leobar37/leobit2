@@ -166,6 +166,7 @@ const SELF_HEAL_INSERTABLE_ENTITIES = new Set([
   "sales",
   "customers",
   "customer_groups",
+  "customer_group_members",
   "visitas",
   "abonos",
   "purchases",

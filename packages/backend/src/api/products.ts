@@ -54,7 +54,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     {
       body: t.Object({
         name: t.String({ minLength: 2 }),
-        type: t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")]),
+        type: t.Optional(t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")])),
         unit: t.Union([t.Literal("kg"), t.Literal("unidad")]),
         basePrice: t.String(),
         costPrice: t.Optional(t.String()),

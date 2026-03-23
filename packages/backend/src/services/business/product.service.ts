@@ -58,7 +58,7 @@ export class ProductService {
     ctx: RequestContext,
     data: {
       name: string;
-      type: "pollo" | "huevo" | "otro";
+      type?: "pollo" | "huevo" | "otro";
       unit: "kg" | "unidad";
       basePrice: number;
       costPrice?: number;
