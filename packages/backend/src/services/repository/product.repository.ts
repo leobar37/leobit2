@@ -122,6 +122,7 @@ export class ProductRepository {
         ...(data.type !== undefined && { type: data.type }),
         ...(data.unit !== undefined && { unit: data.unit }),
         ...(data.basePrice !== undefined && { basePrice: data.basePrice }),
+        ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.imageId !== undefined && { imageId: data.imageId }),
       })

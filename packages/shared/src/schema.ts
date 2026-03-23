@@ -442,11 +442,13 @@ export const purchaseItems = pgTable(
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    syncGroupId: varchar("sync_group_id", { length: 100 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_purchase_items_business_id").on(table.businessId),
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
+    index("idx_purchase_items_sync_group_id").on(table.syncGroupId),
   ]
 );
 

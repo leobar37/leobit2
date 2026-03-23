@@ -5,14 +5,12 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { SyncHook, SyncHookContext, SyncHookResult } from "./create-sync-hook";
 import { saleSyncHook } from "./hooks/sales";
-import { purchaseSyncHook } from "./hooks/purchases";
 
 /**
  * All registered sync hooks
  */
 const registeredHooks: SyncHook[] = [
   saleSyncHook,
-  // purchaseSyncHook removed - drafts now sync with items
 ];
 
 /**

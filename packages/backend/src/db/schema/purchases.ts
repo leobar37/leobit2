@@ -90,6 +90,7 @@ export const purchaseItems = pgTable(
     // Sync fields for offline-first support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    syncGroupId: varchar("sync_group_id", { length: 100 }),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -100,6 +101,7 @@ export const purchaseItems = pgTable(
     index("idx_purchase_items_product_id").on(table.productId),
     index("idx_purchase_items_variant_id").on(table.variantId),
     index("idx_purchase_items_sync_status").on(table.syncStatus),
+    index("idx_purchase_items_sync_group_id").on(table.syncGroupId),
     index("idx_purchase_items_updated_at").on(table.updatedAt),
   ]
 );

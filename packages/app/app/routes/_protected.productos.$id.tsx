@@ -61,7 +61,7 @@ export default function ProductDetailPage() {
 
     await updateProduct.mutateAsync({
       id,
-      ...data,
+      input: data,
     });
 
     navigate(`/productos/${id}`);

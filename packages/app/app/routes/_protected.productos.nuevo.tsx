@@ -36,6 +36,7 @@ export default function NuevoProductoPage() {
         unit: data.unit,
         basePrice: data.basePrice,
         isActive: data.isActive,
+        imageId: data.imageId,
       });
       navigate("/productos");
     } catch (error) {
