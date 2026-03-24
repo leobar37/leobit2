@@ -4,13 +4,11 @@
  */
 import type { PGlite } from "@electric-sql/pglite";
 import type { SyncHook, SyncHookContext, SyncHookResult } from "./create-sync-hook";
-import { saleSyncHook } from "./hooks/sales";
-
 /**
  * All registered sync hooks
  */
 const registeredHooks: SyncHook[] = [
-  saleSyncHook,
+  // TODO: add hooks here
 ];
 
 /**

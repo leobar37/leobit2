@@ -10,8 +10,13 @@ import type { PullChange, ChangeApplicationResult } from "./types";
 import { isValidTableName, toSnakeCase } from "./schema-mapper";
 import { isTransientError, sleep } from "./backoff";
 
-// Maximum number of retries for applying a single change
 const MAX_APPLY_RETRIES = 3;
+
+const RELATION_FIELDS = new Set([
+  "items", "customer", "seller", "business", "distribucion", "visita",
+  "sale", "product", "variant", "supplier", "purchase",
+  "advanceProofImage", "cancelledBy", "createdBy", "updatedBy",
+]);
 
 /**
  * Apply a single change to the local database with retry logic
@@ -38,7 +43,6 @@ export async function applyChange(
 
   try {
     switch (change.operation) {
-      case "insert":
       case "create":
         return await applyInsert(pg, tableName, change, businessId);
 
@@ -87,6 +91,7 @@ async function applyInsert(
 
   for (const [key, value] of Object.entries(data)) {
     if (key === "id" || key === "business_id") continue;
+    if (RELATION_FIELDS.has(key)) continue;
     columns.push(key);
     values.push(value);
     paramIndex++;
@@ -149,7 +154,7 @@ async function applyUpdate(
   }
 
   // Build SET clause
-  const updateCols = Object.keys(data).filter(k => k !== "id");
+  const updateCols = Object.keys(data).filter(k => k !== "id" && !RELATION_FIELDS.has(k));
   if (updateCols.length === 0) {
     return { success: true };
   }

@@ -45,7 +45,7 @@ export const visitas = pgTable(
     motivoNoCompra: varchar("motivo_no_compra", { length: 255 }),
 
     // Optional link to sale if customer purchased
-    saleId: uuid("sale_id").references(() => sales.id),
+    saleId: uuid("sale_id").references(() => sales.id, { onDelete: "set null" }),
 
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),

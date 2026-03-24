@@ -137,6 +137,7 @@ export function useCreateDraftSale() {
       customerId?: string;
       distribucionId?: string;
       visitaId?: string;
+      type?: "instant_sale" | "pre_order";
     }): Promise<Sale> => {
       console.log("[useCreateDraftSale] Mutation started");
       console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
@@ -151,7 +152,7 @@ export function useCreateDraftSale() {
       console.log("[useCreateDraftSale] Calling saleService.createDraft with sellerId:", sellerId);
       const sale = await saleService.createDraft({
         sellerId,
-        type: "instant_sale",
+        type: options?.type ?? "instant_sale",
         saleType: "contado",
         customerId: options?.customerId,
         distribucionId: options?.distribucionId,

@@ -8,7 +8,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, sales, saleItems } from "@avileo/shared";
+import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates, normalizeRow } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray } from "drizzle-orm";
@@ -234,9 +234,9 @@ export class SaleService extends BaseService {
   async findByBusiness(): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(sales)
-      .where(eq(sales.businessId, this.businessId))
-      .orderBy(sql`${sales.saleDate} DESC`);
+      .from(salesTable)
+      .where(eq(salesTable.businessId, this.businessId))
+      .orderBy(sql`${salesTable.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
@@ -276,9 +276,9 @@ export class SaleService extends BaseService {
   async findByCustomerId(customerId: string): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(sales)
-      .where(and(eq(sales.customerId, customerId), eq(sales.businessId, this.businessId)))
-      .orderBy(sql`${sales.saleDate} DESC`);
+      .from(salesTable)
+      .where(and(eq(salesTable.customerId, customerId), eq(salesTable.businessId, this.businessId)))
+      .orderBy(sql`${salesTable.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
@@ -318,9 +318,9 @@ export class SaleService extends BaseService {
   async findByStatus(status: SaleStatus): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(sales)
-      .where(and(eq(sales.status, status), eq(sales.businessId, this.businessId)))
-      .orderBy(sql`${sales.saleDate} DESC`);
+      .from(salesTable)
+      .where(and(eq(salesTable.status, status), eq(salesTable.businessId, this.businessId)))
+      .orderBy(sql`${salesTable.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
 
@@ -522,7 +522,7 @@ export class SaleService extends BaseService {
         const item = items[i];
         const itemId = itemIds[i];
 
-        await this.db.insert(saleItems).values({
+        await this.db.insert(saleItemsTable).values({
           id: itemId,
           businessId: this.businessId,
           saleId: saleId,
@@ -888,7 +888,7 @@ export class SaleService extends BaseService {
     }
 
     // Delete sale items first using Drizzle (cascade on server will handle the sync)
-    await this.db.delete(saleItems).where(eq(saleItems.saleId, id));
+    await this.db.delete(saleItemsTable).where(eq(saleItemsTable.saleId, id));
 
     // Delete the sale
     await this.pg.query(`DELETE FROM sales WHERE id = $1`, [id]);
@@ -933,7 +933,7 @@ export class SaleService extends BaseService {
     const now = this.now();
 
     // Use Drizzle to insert the item
-    await this.db.insert(saleItems).values({
+    await this.db.insert(saleItemsTable).values({
       id: itemId,
       businessId: this.businessId,
       saleId: saleId,
@@ -1030,14 +1030,14 @@ export class SaleService extends BaseService {
     const now = this.now();
 
     // Update the item using Drizzle
-    await this.db.update(saleItems)
+    await this.db.update(saleItemsTable)
       .set({
         quantity: data.quantity?.toString() ?? existingItem.quantity,
         unitPrice: data.unitPrice?.toString() ?? existingItem.unitPrice,
         subtotal: data.subtotal?.toString() ?? existingItem.subtotal,
         isModified: true,
       })
-      .where(eq(saleItems.id, itemId));
+      .where(eq(saleItemsTable.id, itemId));
 
     // Update sale total if subtotal changed
     if (Math.abs(subtotalDiff) > 0.01) {
@@ -1104,7 +1104,7 @@ export class SaleService extends BaseService {
     const now = this.now();
 
     // Delete the item using Drizzle
-    await this.db.delete(saleItems).where(eq(saleItems.id, itemId));
+    await this.db.delete(saleItemsTable).where(eq(saleItemsTable.id, itemId));
 
     // Update sale total atomically to prevent race conditions
     await this.pg.query(
@@ -1221,22 +1221,22 @@ export class SaleService extends BaseService {
 
     // Build where conditions
     const conditions = [
-      eq(sales.businessId, this.businessId),
-      inArray(sales.status, ["active", "delivered"]),
-      gte(sales.saleDate, startDate),
+      eq(salesTable.businessId, this.businessId),
+      inArray(salesTable.status, ["active", "delivered"]),
+      gte(salesTable.saleDate, startDate),
     ];
 
     if (period.endDate) {
-      conditions.push(lte(sales.saleDate, new Date(period.endDate)));
+      conditions.push(lte(salesTable.saleDate, new Date(period.endDate)));
     }
 
     const result = await this.db
       .select({
-        amount: sql<string>`COALESCE(SUM(${sales.totalAmount}), 0)`,
-        kilos: sql<string>`COALESCE(SUM(${sales.netWeight}), 0)`,
+        amount: sql<string>`COALESCE(SUM(${salesTable.totalAmount}), 0)`,
+        kilos: sql<string>`COALESCE(SUM(${salesTable.netWeight}), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(sales)
+      .from(salesTable)
       .where(and(...conditions));
 
     const row = result[0];
@@ -1256,16 +1256,16 @@ export class SaleService extends BaseService {
   }> {
     const result = await this.db
       .select({
-        totalDebt: sql<string>`COALESCE(SUM(${sales.balanceDue}), 0)`,
-        debtorsCount: sql<number>`COUNT(DISTINCT ${sales.customerId})`,
+        totalDebt: sql<string>`COALESCE(SUM(${salesTable.balanceDue}), 0)`,
+        debtorsCount: sql<number>`COUNT(DISTINCT ${salesTable.customerId})`,
       })
-      .from(sales)
+      .from(salesTable)
       .where(
         and(
-          eq(sales.businessId, this.businessId),
-          sql`${sales.balanceDue} > 0`,
-          sql`${sales.status} NOT IN ('cancelled', 'draft')`,
-          sql`${sales.customerId} IS NOT NULL`
+          eq(salesTable.businessId, this.businessId),
+          sql`${salesTable.balanceDue} > 0`,
+          sql`${salesTable.status} NOT IN ('cancelled', 'draft')`,
+          sql`${salesTable.customerId} IS NOT NULL`
         )
       );
 
@@ -1287,25 +1287,25 @@ export class SaleService extends BaseService {
 
     // Build where conditions
     const conditions = [
-      eq(sales.businessId, this.businessId),
-      inArray(sales.status, ["active", "delivered"]),
-      gte(sales.saleDate, startDate),
+      eq(salesTable.businessId, this.businessId),
+      inArray(salesTable.status, ["active", "delivered"]),
+      gte(salesTable.saleDate, startDate),
     ];
 
     if (period.endDate) {
-      conditions.push(lte(sales.saleDate, new Date(period.endDate)));
+      conditions.push(lte(salesTable.saleDate, new Date(period.endDate)));
     }
 
     // Get daily sales totals using Drizzle
     const result = await this.db
       .select({
-        date: sql<string>`DATE(${sales.saleDate})`,
-        total: sql<string>`COALESCE(SUM(${sales.totalAmount}), 0)`,
+        date: sql<string>`DATE(${salesTable.saleDate})`,
+        total: sql<string>`COALESCE(SUM(${salesTable.totalAmount}), 0)`,
       })
-      .from(sales)
+      .from(salesTable)
       .where(and(...conditions))
-      .groupBy(sql`DATE(${sales.saleDate})`)
-      .orderBy(sql`DATE(${sales.saleDate})`);
+      .groupBy(sql`DATE(${salesTable.saleDate})`)
+      .orderBy(sql`DATE(${salesTable.saleDate})`);
 
     const labels: string[] = [];
     const data: number[] = [];

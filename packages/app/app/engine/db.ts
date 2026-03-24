@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   original_quantity DECIMAL(10,3),
   sync_status TEXT NOT NULL DEFAULT 'synced',
   sync_attempts INTEGER NOT NULL DEFAULT 0,
+  sync_group_id TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -103,6 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_business_id ON sale_items(business_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sync_status ON sale_items(sync_status);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sync_group_id ON sale_items(sync_group_id);
 
 CREATE TABLE IF NOT EXISTS abonos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -220,12 +222,14 @@ CREATE TABLE IF NOT EXISTS purchase_items (
   sync_status TEXT NOT NULL DEFAULT 'pending',
   sync_attempts INTEGER NOT NULL DEFAULT 0,
   sync_version INTEGER NOT NULL DEFAULT 1,
+  sync_group_id TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_purchase_items_business_id ON purchase_items(business_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON purchase_items(purchase_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_sync_status ON purchase_items(sync_status);
+CREATE INDEX IF NOT EXISTS idx_purchase_items_sync_group_id ON purchase_items(sync_group_id);
 
 CREATE TABLE IF NOT EXISTS distribuciones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -491,6 +495,7 @@ interface PendingSaleItem {
   original_quantity: string | null;
   sync_status: string;
   sync_attempts: number;
+  sync_group_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -869,7 +874,7 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
             id, sale_id, product_id, variant_id, business_id, product_name, variant_name,
             quantity, ordered_quantity, delivered_quantity, unit_price, unit_price_quoted,
             unit_price_final, cost_price_snapshot, subtotal, is_modified, original_quantity,
-            sync_status, sync_attempts, created_at, updated_at
+            sync_status, sync_attempts, sync_group_id, created_at, updated_at
           ) VALUES (
             '${item.id}',
             '${item.sale_id}',
@@ -890,6 +895,7 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
             ${item.original_quantity ? `'${item.original_quantity}'` : "NULL"},
             '${item.sync_status}',
             ${item.sync_attempts},
+            ${item.sync_group_id ? `'${item.sync_group_id}'` : "NULL"},
             '${item.created_at}',
             '${item.updated_at}'
           )

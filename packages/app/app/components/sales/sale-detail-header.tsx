@@ -21,9 +21,10 @@ interface SaleDetailHeaderProps {
   canCancel: boolean;
   onBack: () => void;
   sale?: Sale | null;
+  title?: string;
 }
 
-export function SaleDetailHeader({ canCancel, onBack, sale }: SaleDetailHeaderProps) {
+export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailHeaderProps) {
   const { open } = useCancelSaleDialog();
 
   const canShare = sale?.status === "draft" || sale?.status === "confirmed";
@@ -41,7 +42,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale }: SaleDetailHeaderPr
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold tracking-tight">Detalle de venta</h1>
+          <h1 className="truncate text-lg font-bold tracking-tight">{title ?? "Detalle de venta"}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {sale && canReschedule && (

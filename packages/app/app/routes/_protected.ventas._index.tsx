@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { formatCurrency } from "~/lib/utils";
 import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
@@ -19,6 +19,13 @@ export default function SalesPage() {
   const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const navigate = useNavigate();
+
+  // Log any query errors for debugging
+  useEffect(() => {
+    if (error) {
+      console.error("[SalesPage] Error loading sales:", error);
+    }
+  }, [error]);
 
   const handleCreateSale = async () => {
     console.log("[SalesPage] handleCreateSale called");
