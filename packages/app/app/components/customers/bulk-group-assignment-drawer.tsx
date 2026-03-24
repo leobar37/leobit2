@@ -66,7 +66,7 @@ function BulkGroupAssignmentDrawerContent({
     if (!name || !isOnline) return;
 
     try {
-      const createdGroup = await createGroup.mutateAsync({ name });
+      const { group: createdGroup } = await createGroup.mutateAsync({ name });
       setSelectedGroupIds((prev) => new Set(prev).add(createdGroup.id));
       setNewGroupName("");
       setIsCreateExpanded(false);

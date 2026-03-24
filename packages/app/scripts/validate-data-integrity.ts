@@ -341,7 +341,7 @@ function validateData(data: Record<string, unknown[]>, backupPath: string): Inte
         // Common enums
         syncOperations: {
           entity: ["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items", "files", "assets", "suppliers", "purchases", "purchase_items"],
-          operation: ["insert", "update", "delete"],
+          operation: ["create", "update", "delete"],
         },
       };
       

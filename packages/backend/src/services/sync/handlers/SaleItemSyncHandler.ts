@@ -66,10 +66,12 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
 
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
-    if (!sale) {
-      throw new Error(`Venta ${parsed.saleId} no encontrada`);
-    }
+    // Use registry-aware parent check to avoid DB query when sale was created in same batch
+    await this.ensureParentExists(
+      parsed.saleId,
+      () => this.saleRepo.findById(ctx, parsed.saleId, tx),
+      "Venta"
+    );
 
     await this.saleRepo.addItem(ctx, parsed.saleId, {
       id: operation.entityId,
@@ -96,10 +98,12 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
 
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
-    if (!sale) {
-      throw new Error(`Venta ${parsed.saleId} no encontrada`);
-    }
+    // Use registry-aware parent check
+    await this.ensureParentExists(
+      parsed.saleId,
+      () => this.saleRepo.findById(ctx, parsed.saleId, tx),
+      "Venta"
+    );
 
     const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, tx);
     if (!existingItem) {
@@ -127,9 +131,13 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
 
     const parsed = saleItemOperationSchema.parse(operation.payload);
 
-    const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
-    if (!sale) {
-      throw new Error(`Venta ${parsed.saleId} no encontrada`);
+    // For delete, if sale doesn't exist, item can't exist either - skip silently
+    // Use registry to check if sale was created in this batch
+    if (!this.registry?.wasCreated(parsed.saleId)) {
+      const sale = await this.saleRepo.findById(ctx, parsed.saleId, tx);
+      if (!sale) {
+        return;
+      }
     }
 
     const existingItem = await this.saleRepo.findItemById(ctx, parsed.saleId, operation.entityId, tx);

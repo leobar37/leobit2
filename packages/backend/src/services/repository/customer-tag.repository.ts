@@ -6,6 +6,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customerTags, tags, customers, type CustomerTag, type NewCustomerTag, type Tag } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface CustomerTagWithDetails extends CustomerTag {
   tag: Tag;
@@ -61,9 +62,11 @@ export class CustomerTagRepository {
   async addTag(
     ctx: RequestContext,
     customerId: string,
-    tagId: string
+    tagId: string,
+    tx?: DbTransaction
   ): Promise<CustomerTag> {
-    const [assignment] = await db
+    const executor = tx ?? db;
+    const [assignment] = await executor
       .insert(customerTags)
       .values({
         customerId,
@@ -81,9 +84,11 @@ export class CustomerTagRepository {
   async removeTag(
     ctx: RequestContext,
     customerId: string,
-    tagId: string
+    tagId: string,
+    tx?: DbTransaction
   ): Promise<void> {
-    await db
+    const executor = tx ?? db;
+    await executor
       .delete(customerTags)
       .where(and(
         eq(customerTags.customerId, customerId),

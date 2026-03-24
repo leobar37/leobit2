@@ -20,7 +20,7 @@ function generateCorrelationId(): string {
 
 export interface EnqueueParams {
   entity_type: string;
-  operation: "insert" | "update" | "delete";
+  operation: "create" | "update" | "delete";
   entityId: string;
   data: Record<string, unknown>;
   idempotencyKey?: string;
@@ -31,7 +31,7 @@ export interface SyncOperationRecord {
   id: string;
   business_id: string;
   entity_type: string;
-  operation: "insert" | "update" | "delete";
+  operation: "create" | "update" | "delete";
   entity_id: string;
   payload: unknown;
   status: OperationStatus;
@@ -50,7 +50,7 @@ export interface DeadLetterOperationRecord {
   business_id: string;
   operation_id: string;
   entity_type: string;
-  operation: "insert" | "update" | "delete";
+  operation: "create" | "update" | "delete";
   entity_id: string;
   data: string;
   error: string;
@@ -227,11 +227,11 @@ function getCoalescePlan(
 ): CoalescePlan {
   const existingPayload = parsePayload(existing.payload);
 
-  if (existing.operation === "insert") {
-    if (incoming.operation === "insert" || incoming.operation === "update") {
+  if (existing.operation === "create") {
+    if (incoming.operation === "create" || incoming.operation === "update") {
       return {
         type: "merge",
-        operation: "insert",
+        operation: "create",
         payload: { ...existingPayload, ...incoming.data },
       };
     }
@@ -1227,7 +1227,7 @@ export class SyncService {
     }
 
     console.log(
-      `[SYNC] Self-healing: Converting ${op.entity_type} update to insert for ${op.entity_id}`
+      `[SYNC] Self-healing: Converting ${op.entity_type} update to create for ${op.entity_id}`
     );
 
     await this.pg.query(
@@ -1239,7 +1239,7 @@ export class SyncService {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
          AND business_id = $4`,
-      ["insert", OPERATION_STATUS.PENDING, op.id, this.businessId]
+      ["create", OPERATION_STATUS.PENDING, op.id, this.businessId]
     );
 
     return true;
@@ -1392,7 +1392,7 @@ export class SyncService {
           idempotencyKey: op.idempotency_key ?? op.id,
           entityType: op.entity_type,
           entityId: op.entity_id,
-          operation: op.operation === "insert" ? "create" : op.operation,
+          operation: op.operation,
           payload: parsePayload(op.payload),
           localVersion: op.version,
           localTimestamp: new Date(op.updated_at).toISOString(),

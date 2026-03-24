@@ -1,4 +1,5 @@
 import type { SyncOperationInput } from "../types";
+import type { DbTransaction } from "../../../lib/txid";
 import type {
   SyncContext,
   SyncHandlerResult,
@@ -47,16 +48,18 @@ function validateBusinessRules(
 async function executeHandler(
   context: SyncContext,
   operation: SyncOperationInput,
-  handler: ISyncHandler
+  handler: ISyncHandler,
+  tx?: DbTransaction
 ): Promise<SyncHandlerResult> {
-  return handler.execute(context.ctx, operation);
+  return handler.execute(context.ctx, operation, tx);
 }
 
 export class SyncPipeline {
   async execute(
     context: SyncContext,
     operation: SyncOperationInput,
-    handler: ISyncHandler
+    handler: ISyncHandler,
+    tx?: DbTransaction
   ): Promise<SyncHandlerResult> {
     let result = validateStructure(context, operation);
     if (result) return result;
@@ -64,7 +67,7 @@ export class SyncPipeline {
     result = validateBusinessRules(context, operation, handler);
     if (result) return result;
 
-    return executeHandler(context, operation, handler);
+    return executeHandler(context, operation, handler, tx);
   }
 }
 

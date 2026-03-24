@@ -9,6 +9,7 @@ export interface GroupCardProps {
 	onEdit: (group: CustomerGroup) => void;
 	onDelete: (group: CustomerGroup) => void;
 	onManageMembers: (group: CustomerGroup) => void;
+	onClick?: () => void;
 }
 
 export function GroupCard({
@@ -16,9 +17,13 @@ export function GroupCard({
 	onEdit,
 	onDelete,
 	onManageMembers,
+	onClick,
 }: GroupCardProps) {
 	return (
-		<Card className="group relative flex items-center gap-3 rounded-[24px] border border-stone-200/80 bg-white/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90">
+		<Card
+			onClick={onClick}
+			className="group relative flex items-center gap-3 rounded-[24px] border border-stone-200/80 bg-white/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90 cursor-pointer"
+		>
 			<div className="flex flex-1 items-center justify-between gap-3">
 				<div className="min-w-0 flex-1">
 					<p className="truncate text-[1.05rem] font-semibold text-foreground sm:text-lg">
@@ -36,7 +41,10 @@ export function GroupCard({
 						variant="ghost"
 						size="icon"
 						className="h-8 w-8 rounded-full text-muted-foreground hover:text-orange-500"
-						onClick={() => onManageMembers(group)}
+						onClick={(e) => {
+							e.stopPropagation();
+							onManageMembers(group);
+						}}
 						title="Gestionar miembros"
 					>
 						<UserPlus className="h-4 w-4" />
@@ -46,7 +54,10 @@ export function GroupCard({
 						variant="ghost"
 						size="icon"
 						className="h-8 w-8 rounded-full text-muted-foreground hover:text-orange-500"
-						onClick={() => onEdit(group)}
+						onClick={(e) => {
+							e.stopPropagation();
+							onEdit(group);
+						}}
 						title="Editar"
 					>
 						<ChevronRight className="h-4 w-4 rotate-180" />
@@ -56,7 +67,10 @@ export function GroupCard({
 						variant="ghost"
 						size="icon"
 						className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500"
-						onClick={() => onDelete(group)}
+						onClick={(e) => {
+							e.stopPropagation();
+							onDelete(group);
+						}}
 						title="Eliminar"
 					>
 						<Trash2 className="h-4 w-4" />

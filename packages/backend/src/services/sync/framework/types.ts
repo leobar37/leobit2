@@ -1,6 +1,7 @@
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncEntity, SyncOperationInput } from "../types";
+import type { EntityRegistry } from "./EntityRegistry";
 
 export type {
   SyncEntity,
@@ -56,6 +57,8 @@ export interface ISyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<SyncHandlerResult>;
+  /** Optional: Set entity registry for tracking batch operations */
+  setRegistry?(registry: EntityRegistry): void;
 }
 
 export interface IPipelineStage {
@@ -64,7 +67,8 @@ export interface IPipelineStage {
     context: SyncContext,
     operation: SyncOperationInput,
     handler: ISyncHandler,
-    tx?: DbTransaction
+    tx?: DbTransaction,
+    registry?: EntityRegistry
   ): Promise<SyncHandlerResult>;
 }
 

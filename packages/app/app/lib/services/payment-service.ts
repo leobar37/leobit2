@@ -217,7 +217,7 @@ export class PaymentService extends BaseService {
       );
 
       // Queue sync operation
-      await this.queueSync("insert", id, {
+      await this.queueSync("create", id, {
         customerId: input.customerId,
         sellerId: input.sellerId,
         amount,

@@ -3,6 +3,7 @@ import { ArrowLeft, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToolbarActions } from "./toolbar-actions";
 import { useSetLayout } from "./app-layout";
+import { cn } from "~/lib/utils";
 import type { ReactNode } from "react";
 
 interface FormPageProps {
@@ -40,7 +41,7 @@ export function FormPage({
     });
 
     return (
-      <div className={maxWidthClasses[maxWidth]}>
+      <div className={cn("h-full overflow-y-auto mx-auto", maxWidthClasses[maxWidth])}>
         <div className={toolbar ? "pb-20" : ""}>
           {children}
         </div>

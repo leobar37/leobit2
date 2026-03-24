@@ -434,7 +434,7 @@ export class ProductService extends BaseService {
     await this.updateSyncStatus("products", id, SyncStatus.PENDING);
 
     // Queue for server sync
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       name: input.name,
       type: input.type,
       unit: input.unit,
@@ -597,7 +597,7 @@ export class ProductService extends BaseService {
     );
 
     // Queue for server sync
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       productId: input.productId,
       name: input.name,
       sku: input.sku,

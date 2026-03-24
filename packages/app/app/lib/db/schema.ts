@@ -176,7 +176,7 @@ export type Asset = z.infer<typeof assetSchema>;
 export const syncOperationSchema = z.object({
   id: z.string(),
   entity: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "orders", "order_items", "files", "assets", "suppliers", "purchases", "purchase_items"]),
-  operation: z.enum(["insert", "update", "delete"]),
+  operation: z.enum(["create", "update", "delete"]),
   entityId: z.string(),
   data: z.record(z.string(), z.unknown()),
   timestamp: z.number(),

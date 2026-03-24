@@ -22,7 +22,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "test-id",
         data: { name: "test" },
       };
@@ -43,7 +43,7 @@ describe("createHook", () => {
       const hook = createHook("sales").build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "test-id",
         data: {},
       };
@@ -66,7 +66,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "test-id",
         data: {},
       };
@@ -89,7 +89,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "sale-1",
         data: { customerId: "cust-1" },
       };
@@ -108,7 +108,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "sale-1",
         data: {},
       };
@@ -182,7 +182,7 @@ describe("createHook", () => {
 
       const testData = { customerId: "cust-1", totalAmount: 100 };
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "sale-1",
         data: testData,
       };
@@ -206,7 +206,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "sale-1",
         data: {},
       };
@@ -234,7 +234,7 @@ describe("createHook", () => {
         .build();
 
       const context: SyncHookContext = {
-        operation: "insert" as SyncOperation,
+        operation: "create" as SyncOperation,
         entityId: "sale-1",
         data: {},
       };

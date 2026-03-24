@@ -60,11 +60,12 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
   ): Promise<void> {
     const parsed = purchaseItemCreateSchema.parse(operation.payload);
 
-    // Verify purchase exists
-    const purchase = await this.purchaseRepo.findById(ctx, purchaseId, tx);
-    if (!purchase) {
-      throw new Error(`Compra ${purchaseId} no encontrada`);
-    }
+    // Use registry-aware parent check to avoid DB query when purchase was created in same batch
+    await this.ensureParentExists(
+      purchaseId,
+      () => this.purchaseRepo.findById(ctx, purchaseId, tx),
+      "Compra"
+    );
 
     // Check if item already exists (idempotency)
     const existingItem = await this.purchaseRepo.findItemById(
@@ -94,6 +95,9 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
       },
       tx
     );
+
+    // Recalculate purchase total after adding item
+    await this.purchaseRepo.updateTotal(ctx, purchaseId, tx);
   }
 
   private async handleUpdate(
@@ -104,10 +108,12 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
   ): Promise<void> {
     const parsed = purchaseItemUpdateSchema.parse(operation.payload);
 
-    const purchase = await this.purchaseRepo.findById(ctx, purchaseId, tx);
-    if (!purchase) {
-      throw new Error(`Compra ${purchaseId} no encontrada`);
-    }
+    // Use registry-aware parent check
+    await this.ensureParentExists(
+      purchaseId,
+      () => this.purchaseRepo.findById(ctx, purchaseId, tx),
+      "Compra"
+    );
 
     const existingItem = await this.purchaseRepo.findItemById(
       ctx,
@@ -142,10 +148,13 @@ export class PurchaseItemSyncHandler extends BaseSyncHandler {
     purchaseId: string,
     tx?: DbTransaction
   ): Promise<void> {
-    const purchase = await this.purchaseRepo.findById(ctx, purchaseId, tx);
-    if (!purchase) {
-      // Purchase doesn't exist, item can't exist either
-      return;
+    // For delete, if purchase doesn't exist, item can't exist either - skip silently
+    // Use registry to check if purchase was created in this batch
+    if (!this.registry?.wasCreated(purchaseId)) {
+      const purchase = await this.purchaseRepo.findById(ctx, purchaseId, tx);
+      if (!purchase) {
+        return;
+      }
     }
 
     const existingItem = await this.purchaseRepo.findItemById(

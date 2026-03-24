@@ -2,6 +2,7 @@ import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput, SyncEntity } from "../types";
 import type { ISyncHandler, SyncHandlerResult } from "../framework/types";
+import type { EntityRegistry } from "../framework/EntityRegistry";
 import { logger } from "../../../lib/logger";
 import { syncLogger } from "../sync-logger";
 import { toISODate, now } from "../../../lib/date-utils";
@@ -9,6 +10,11 @@ import { z } from "zod";
 
 export abstract class BaseSyncHandler implements ISyncHandler {
   abstract readonly entityType: SyncEntity;
+  protected registry?: EntityRegistry;
+
+  setRegistry(registry: EntityRegistry): void {
+    this.registry = registry;
+  }
 
   abstract validateBusinessRules(
     ctx: RequestContext,
@@ -163,6 +169,27 @@ export abstract class BaseSyncHandler implements ISyncHandler {
     } else {
       // For create or when no specific schema available, use create schema
       createSchema.parse(payload);
+    }
+  }
+
+  /**
+   * Check if a parent entity exists, using registry first to avoid DB queries
+   * when parent was created in the same batch
+   */
+  protected async ensureParentExists(
+    parentId: string,
+    findInDb: () => Promise<unknown>,
+    parentName: string
+  ): Promise<void> {
+    // If parent was created in this batch, skip DB query
+    if (this.registry?.wasCreated(parentId)) {
+      return;
+    }
+
+    // Otherwise verify in database
+    const parent = await findInDb();
+    if (!parent) {
+      throw new Error(`${parentName} ${parentId} no encontrado`);
     }
   }
 }

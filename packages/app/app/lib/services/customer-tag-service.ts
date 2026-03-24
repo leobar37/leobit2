@@ -84,7 +84,7 @@ export class CustomerTagService extends BaseService {
           syncAttempts: 0,
         });
 
-        await this.queueSync("insert", id, {
+        await this.queueSync("create", id, {
           customerId,
           tagId,
         });
@@ -124,7 +124,7 @@ export class CustomerTagService extends BaseService {
       syncAttempts: 0,
     });
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       customerId,
       tagId,
     });
@@ -178,7 +178,7 @@ export class CustomerTagService extends BaseService {
         });
 
         await this.queueSync(
-          "insert",
+          "create",
           id,
           {
             customerId,

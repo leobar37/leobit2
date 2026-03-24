@@ -56,7 +56,7 @@ const VALID_TABLE_NAMES: readonly string[] = [
 ] as const;
 
 /** Sync action types */
-export type SyncAction = "insert" | "update" | "delete";
+export type SyncAction = "create" | "update" | "delete";
 
 /** Base input for create operations */
 export interface BaseCreateInput {

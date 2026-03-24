@@ -141,6 +141,15 @@ export default function PurchaseDetailPage() {
   }
 
   const StatusIcon = statusIcons[purchase.status];
+  const calculatedTotal = purchase.items?.reduce((sum, item) => {
+    return sum + (parseFloat(item.totalCost) || 0);
+  }, 0) ?? 0;
+  const storedTotal = parseFloat(purchase.total_amount) || 0;
+  const displayTotal = purchase.items?.length
+    ? Math.abs(storedTotal - calculatedTotal) > 0.009
+      ? calculatedTotal
+      : storedTotal
+    : storedTotal;
 
   return (
     <div className="min-h-screen app-shell">
@@ -192,7 +201,7 @@ export default function PurchaseDetailPage() {
             <div className="shell-block-muted flex items-center justify-between rounded-[20px] p-4">
               <span className="font-medium">Total:</span>
               <span className="text-xl font-bold text-orange-600">
-                S/ {formatCurrency(purchase.total_amount)}
+                S/ {formatCurrency(displayTotal)}
               </span>
             </div>
 

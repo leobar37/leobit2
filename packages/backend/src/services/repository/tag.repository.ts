@@ -16,8 +16,9 @@ export class TagRepository {
     });
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<Tag | undefined> {
-    return db.query.tags.findFirst({
+  async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<Tag | undefined> {
+    const executor = tx ?? db;
+    return executor.query.tags.findFirst({
       where: and(
         eq(tags.id, id),
         eq(tags.businessId, ctx.businessId)

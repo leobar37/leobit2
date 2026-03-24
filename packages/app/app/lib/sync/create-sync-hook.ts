@@ -4,7 +4,7 @@
  */
 import type { PGlite } from "@electric-sql/pglite";
 
-export type SyncOperation = "insert" | "update" | "delete";
+export type SyncOperation = "create" | "update" | "delete";
 
 export interface SyncHookContext {
   operation: SyncOperation;
@@ -42,7 +42,7 @@ interface SyncHookBuilder {
  * @example
  * const saleHook = createHook('sales')
  *   .onBeforeSync(async ({ operation, data }) => {
- *     if (operation === 'insert' && !data.customerId) {
+ *     if (operation === 'create' && !data.customerId) {
  *       return { allow: false, reason: 'Venta sin cliente' };
  *     }
  *     return { allow: true };

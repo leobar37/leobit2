@@ -411,7 +411,7 @@ export class SaleService extends BaseService {
       await this.pg.exec("COMMIT");
 
       await this.queueSync(
-        "insert",
+        "create",
         saleId,
         {
           customerId: saleInput.customerId,
@@ -544,7 +544,7 @@ export class SaleService extends BaseService {
 
       // Queue sync operation for sale with items included in payload
       await this.queueSync(
-        "insert",
+        "create",
         saleId,
         {
           customerId: saleInput.customerId,
@@ -964,7 +964,7 @@ export class SaleService extends BaseService {
     const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
     console.log("[SaleService] addItem - saleSyncGroupId:", saleSyncGroupId, "saleId:", saleId);
     await this.queueSync(
-      "insert",
+      "create",
       itemId,
       {
         saleId,

@@ -95,7 +95,7 @@ export class TagService extends BaseService {
 
     await this.db.insert(tags).values(tag);
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       name: input.name,
       color: input.color,
     });

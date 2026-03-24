@@ -62,6 +62,11 @@ type Pages = {
       "id": string;
     };
   };
+  "/grupos/:id": {
+    params: {
+      "id": string;
+    };
+  };
   "/proveedores/nuevo": {
     params: {};
   };
@@ -113,6 +118,9 @@ type Pages = {
     params: {};
   };
   "/cobros": {
+    params: {};
+  };
+  "/grupos": {
     params: {};
   };
   "/productos/:id": {
@@ -211,9 +219,6 @@ type Pages = {
   "/config/tags": {
     params: {};
   };
-  "/grupos": {
-    params: {};
-  };
   "/team": {
     params: {};
   };
@@ -231,7 +236,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/invitations/:token" | "/venta/:token" | "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/:draftId?/calculadora" | "/compras/nueva/:draftId?" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team" | "/landing" | "/login" | "/sync";
+    page: "/" | "/invitations/:token" | "/venta/:token" | "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/grupos/:id" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/grupos" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/:draftId?/calculadora" | "/compras/nueva/:draftId?" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/team" | "/landing" | "/login" | "/sync";
   };
   "routes/invitations.$token.tsx": {
     id: "routes/invitations.$token";
@@ -243,7 +248,7 @@ type RouteFiles = {
   };
   "routes/_protected.tsx": {
     id: "routes/_protected";
-    page: "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/:draftId?/calculadora" | "/compras/nueva/:draftId?" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/grupos" | "/team";
+    page: "/reportes/cuentas-por-cobrar" | "/reportes/compras-sugeridas" | "/proveedores/:id" | "/proveedores/:id/edit" | "/ayuda/:module/:slug" | "/clientes/:id" | "/proveedores" | "/whatsapp/historial" | "/clientes/:id/edit" | "/grupos/:id" | "/proveedores/nuevo" | "/ventas/:id" | "/ventas/:id/editar" | "/ventas/:id/editar/calculadora" | "/productos" | "/business/create" | "/clientes" | "/mi-distribucion" | "/productos/nuevo" | "/clientes/nuevo" | "/distribuciones" | "/distribuciones/:id/editar" | "/distribuciones/nueva" | "/business/edit" | "/cobros" | "/grupos" | "/productos/:id" | "/ventas" | "/ayuda" | "/cobros/nuevo" | "/invitations" | "/dashboard" | "/activos" | "/compras" | "/compras/nueva" | "/compras/nueva/:draftId?/calculadora" | "/compras/nueva/:draftId?" | "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora" | "/profile" | "/visitas" | "/cierre" | "/config" | "/config/payment-methods" | "/config/notifications" | "/config/puntos-venta" | "/config/appearance" | "/config/conflictos" | "/config/security" | "/config/whatsapp" | "/config/whatsapp/templates" | "/config/flags" | "/config/tags" | "/team";
   };
   "routes/_protected.reportes.cuentas-por-cobrar.tsx": {
     id: "routes/_protected.reportes.cuentas-por-cobrar";
@@ -280,6 +285,10 @@ type RouteFiles = {
   "routes/_protected.clientes.$id.edit.tsx": {
     id: "routes/_protected.clientes.$id.edit";
     page: "/clientes/:id/edit";
+  };
+  "routes/_protected.grupos.$id._index.tsx": {
+    id: "routes/_protected.grupos.$id._index";
+    page: "/grupos/:id";
   };
   "routes/_protected.proveedores.nuevo.tsx": {
     id: "routes/_protected.proveedores.nuevo";
@@ -344,6 +353,10 @@ type RouteFiles = {
   "routes/_protected.cobros._index.tsx": {
     id: "routes/_protected.cobros._index";
     page: "/cobros";
+  };
+  "routes/_protected.grupos._index.tsx": {
+    id: "routes/_protected.grupos._index";
+    page: "/grupos";
   };
   "routes/_protected.productos.$id.tsx": {
     id: "routes/_protected.productos.$id";
@@ -469,10 +482,6 @@ type RouteFiles = {
     id: "routes/_protected.config.tags";
     page: "/config/tags";
   };
-  "routes/_protected.grupos.tsx": {
-    id: "routes/_protected.grupos";
-    page: "/grupos";
-  };
   "routes/_protected.team.tsx": {
     id: "routes/_protected.team";
     page: "/team";
@@ -509,6 +518,7 @@ type RouteModules = {
   "routes/_protected.proveedores._index": typeof import("./app/routes/_protected.proveedores._index.tsx");
   "routes/_protected.whatsapp.historial": typeof import("./app/routes/_protected.whatsapp.historial.tsx");
   "routes/_protected.clientes.$id.edit": typeof import("./app/routes/_protected.clientes.$id.edit.tsx");
+  "routes/_protected.grupos.$id._index": typeof import("./app/routes/_protected.grupos.$id._index.tsx");
   "routes/_protected.proveedores.nuevo": typeof import("./app/routes/_protected.proveedores.nuevo.tsx");
   "routes/_protected.ventas.$id._index": typeof import("./app/routes/_protected.ventas.$id._index.tsx");
   "routes/_protected.ventas.$id.editar": typeof import("./app/routes/_protected.ventas.$id.editar.tsx");
@@ -525,6 +535,7 @@ type RouteModules = {
   "routes/_protected.distribuciones.nueva._index": typeof import("./app/routes/_protected.distribuciones.nueva._index.tsx");
   "routes/_protected.business.edit": typeof import("./app/routes/_protected.business.edit.tsx");
   "routes/_protected.cobros._index": typeof import("./app/routes/_protected.cobros._index.tsx");
+  "routes/_protected.grupos._index": typeof import("./app/routes/_protected.grupos._index.tsx");
   "routes/_protected.productos.$id": typeof import("./app/routes/_protected.productos.$id.tsx");
   "routes/_protected.ventas._index": typeof import("./app/routes/_protected.ventas._index.tsx");
   "routes/_protected.ayuda._index": typeof import("./app/routes/_protected.ayuda._index.tsx");
@@ -556,7 +567,6 @@ type RouteModules = {
   "routes/_protected.config._index": typeof import("./app/routes/_protected.config._index.tsx");
   "routes/_protected.config.flags": typeof import("./app/routes/_protected.config.flags.tsx");
   "routes/_protected.config.tags": typeof import("./app/routes/_protected.config.tags.tsx");
-  "routes/_protected.grupos": typeof import("./app/routes/_protected.grupos.tsx");
   "routes/_protected.team": typeof import("./app/routes/_protected.team.tsx");
   "routes/landing": typeof import("./app/routes/landing.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");

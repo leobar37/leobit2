@@ -26,6 +26,7 @@ import { syncLogger } from "../sync-logger";
 import { SyncOperationRepository } from "./SyncOperationRepository";
 import { SyncConflictRepository } from "./SyncConflictRepository";
 import { OperationSorter } from "./OperationSorter";
+import { EntityRegistry } from "./EntityRegistry";
 
 export interface SyncEngineDeps {
   customerRepo: CustomerRepository;
@@ -83,6 +84,7 @@ export class SyncEngine {
     });
 
     const results: SyncOperationResult[] = [];
+    const registry = new EntityRegistry();
 
     try {
       await db.transaction(async (tx) => {
@@ -109,10 +111,16 @@ export class SyncEngine {
               correlationId,
               batchCorrelationId,
               tx,
-              nowIso
+              nowIso,
+              registry
             );
             await tx.execute(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
             results.push(result);
+
+            // Register successful operation in entity registry
+            if (result.success) {
+              registry.register(operation.operation, operation.entityId);
+            }
           } catch (opError) {
             await this.rollbackSavepoint(tx, savepointName);
 
@@ -194,7 +202,8 @@ export class SyncEngine {
     correlationId: string,
     batchCorrelationId: string,
     tx: DbTransaction,
-    nowIso: string
+    nowIso: string,
+    registry: EntityRegistry
   ): Promise<SyncOperationResult> {
     const existingOp = await this.syncOpRepo.findByIdempotencyKey(
       ctx,
@@ -272,6 +281,11 @@ export class SyncEngine {
 
     const handler = HandlerRegistry.getHandler(operation.entityType, this.deps);
 
+    // Pass registry to handler if it supports it
+    if (handler.setRegistry) {
+      handler.setRegistry(registry);
+    }
+
     const context: SyncContext = {
       ctx,
       correlationId,
@@ -285,7 +299,7 @@ export class SyncEngine {
       entityId: operation.entityId,
     });
 
-    const result = await syncPipeline.execute(context, operation, handler);
+    const result = await syncPipeline.execute(context, operation, handler, tx);
 
     await this.syncOpRepo.updateStatus(
       ctx,

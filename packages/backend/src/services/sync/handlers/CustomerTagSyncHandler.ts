@@ -3,13 +3,19 @@ import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
 import type { CustomerTagRepository } from "../../repository/customer-tag.repository";
+import type { CustomerRepository } from "../../repository/customer.repository";
+import type { TagRepository } from "../../repository/tag.repository";
 import { BaseSyncHandler } from "./BaseSyncHandler";
 import { customerTagCreateSchema } from "../schemas";
 
 export class CustomerTagSyncHandler extends BaseSyncHandler {
   readonly entityType = "customer_tags" as const;
 
-  constructor(private customerTagRepo: CustomerTagRepository) {
+  constructor(
+    private customerTagRepo: CustomerTagRepository,
+    private customerRepo: CustomerRepository,
+    private tagRepo: TagRepository
+  ) {
     super();
   }
 
@@ -51,20 +57,36 @@ export class CustomerTagSyncHandler extends BaseSyncHandler {
   private async handleCreate(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    tx?: DbTransaction
   ): Promise<void> {
     const parsed = customerTagCreateSchema.parse(operation.payload);
 
-    await this.customerTagRepo.addTag(ctx, parsed.customerId, parsed.tagId);
+    // Verificar customer usando registry (evita query si fue creado en este batch)
+    if (!this.registry?.wasCreated(parsed.customerId)) {
+      const customer = await this.customerRepo.findById(ctx, parsed.customerId, tx);
+      if (!customer) {
+        throw new Error(`Cliente ${parsed.customerId} no encontrado`);
+      }
+    }
+
+    // Verificar tag usando registry (evita query si fue creado en este batch)
+    if (!this.registry?.wasCreated(parsed.tagId)) {
+      const tag = await this.tagRepo.findById(ctx, parsed.tagId, tx);
+      if (!tag) {
+        throw new Error(`Etiqueta ${parsed.tagId} no encontrada`);
+      }
+    }
+
+    await this.customerTagRepo.addTag(ctx, parsed.customerId, parsed.tagId, tx);
   }
 
   private async handleDelete(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    tx?: DbTransaction
   ): Promise<void> {
     const parsed = customerTagCreateSchema.parse(operation.payload);
 
-    await this.customerTagRepo.removeTag(ctx, parsed.customerId, parsed.tagId);
+    await this.customerTagRepo.removeTag(ctx, parsed.customerId, parsed.tagId, tx);
   }
 }

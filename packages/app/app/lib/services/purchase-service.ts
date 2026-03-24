@@ -112,8 +112,8 @@ export class PurchaseService extends BaseService {
    */
   async findById(id: string): Promise<PurchaseWithItems | null> {
     const result = await this.pg.query<Purchase>(
-      "SELECT * FROM purchases WHERE id = $1",
-      [id]
+      "SELECT * FROM purchases WHERE id = $1 AND business_id = $2",
+      [id, this.businessId]
     );
     const purchase = result.rows[0];
     if (!purchase) return null;
@@ -135,6 +135,19 @@ export class PurchaseService extends BaseService {
       ORDER BY pi.created_at ASC`,
       [id, this.businessId]
     );
+
+    const calculatedTotal = itemsResult.rows.reduce((sum, item) => {
+      return sum + (parseFloat(item.totalCost) || 0);
+    }, 0);
+    const storedTotal = parseFloat(purchase.total_amount) || 0;
+
+    if (
+      itemsResult.rows.length > 0 &&
+      Math.abs(storedTotal - calculatedTotal) > 0.009
+    ) {
+      await this.recalculateTotal(id);
+      purchase.total_amount = formatCurrency(calculatedTotal);
+    }
 
     return { ...purchase, items: itemsResult.rows };
   }
@@ -249,7 +262,7 @@ export class PurchaseService extends BaseService {
     }
 
     // Sync the purchase after items are in DB (so hook can validate)
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       supplierId: input.supplierId,
       purchaseDate: input.purchaseDate,
       totalAmount: formatCurrency(totalAmount),
@@ -262,7 +275,7 @@ export class PurchaseService extends BaseService {
 
     // Sync items after purchase (same sync group)
     for (const { id: itemId, item } of itemIds) {
-      await this.queueSync("insert", itemId, {
+      await this.queueSync("create", itemId, {
         purchaseId: id,
         productId: item.productId,
         variantId: item.variantId,
@@ -407,7 +420,7 @@ export class PurchaseService extends BaseService {
 
     // Sync with parent's syncGroupId
     const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
-    await this.queueSync("insert", itemId, {
+    await this.queueSync("create", itemId, {
       purchaseId,
       productId: item.productId,
       variantId: item.variantId,
@@ -541,7 +554,7 @@ export class PurchaseService extends BaseService {
 
     // Sync with parent's syncGroupId
     const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
-    await this.queueSync("insert", itemId, {
+    await this.queueSync("create", itemId, {
       purchaseId,
       productId: item.productId,
       variantId: item.variantId,
@@ -640,7 +653,12 @@ export class PurchaseService extends BaseService {
         total: sql<string>`COALESCE(SUM(CAST(${purchaseItems.totalCost} AS DECIMAL)), 0)`,
       })
       .from(purchaseItems)
-      .where(eq(purchaseItems.purchaseId, purchaseId));
+      .where(
+        and(
+          eq(purchaseItems.purchaseId, purchaseId),
+          eq(purchaseItems.businessId, this.businessId)
+        )
+      );
 
     await this.db
       .update(purchases)
@@ -649,7 +667,9 @@ export class PurchaseService extends BaseService {
         updatedAt: new Date(),
         syncStatus: "pending",
       })
-      .where(eq(purchases.id, purchaseId));
+      .where(
+        and(eq(purchases.id, purchaseId), eq(purchases.businessId, this.businessId))
+      );
   }
 }
 

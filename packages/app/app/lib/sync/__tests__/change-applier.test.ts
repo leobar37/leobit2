@@ -64,12 +64,12 @@ describe("applyChange", () => {
     };
   });
 
-  describe("insert operation", () => {
-    it("inserts new record successfully", async () => {
+  describe("create operation", () => {
+    it("creates new record successfully", async () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -87,7 +87,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -104,7 +104,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -123,7 +123,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "Updated Name" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -132,7 +132,7 @@ describe("applyChange", () => {
 
       const result = await applyChange(mockPg, mockDb, change, businessId);
 
-      // Should succeed because insert path is taken (mock returns no existing records)
+      // Should succeed because create path is taken (mock returns no existing records)
       expect(result.success).toBe(true);
     });
   });
@@ -217,12 +217,12 @@ describe("applyChange", () => {
     });
   });
 
-  describe("create operation (alias for insert)", () => {
-    it("treats create as insert", async () => {
+  describe("backward compatibility", () => {
+    it("still handles 'insert' for backward compatibility with old server responses", async () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "create",
+        operation: "insert",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -241,7 +241,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "invalid_table",
-        operation: "insert",
+        operation: "create",
         entityId: "entity-1",
         payload: { name: "Test" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -286,7 +286,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -305,7 +305,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",
@@ -324,7 +324,7 @@ describe("applyChange", () => {
       const change: PullChange = {
         idempotencyKey: "key-1",
         entityType: "customers",
-        operation: "insert",
+        operation: "create",
         entityId: "customer-1",
         payload: { name: "John Doe" },
         localTimestamp: "2024-01-01T00:00:00Z",

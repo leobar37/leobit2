@@ -179,7 +179,7 @@ export class VisitaService extends BaseService {
 
     await this.db.insert(visitas).values(visita as Visita);
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       distribucionId: input.distribucionId,
       customerId: input.customerId,
       status: "pendiente",
@@ -213,7 +213,7 @@ export class VisitaService extends BaseService {
 
       await this.db.insert(visitas).values(visita as Visita);
 
-      await this.queueSync("insert", visita.id!, {
+      await this.queueSync("create", visita.id!, {
         distribucionId,
         customerId,
         status: "pendiente",

@@ -128,7 +128,7 @@ export class DistribucionService extends BaseService {
     await this.db.insert(distribuciones).values(distribucion);
 
     // Queue for sync to server
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       vendedorId: input.vendedorId,
       puntoVenta: input.puntoVenta,
       puntoVentaId: input.puntoVentaId,

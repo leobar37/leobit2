@@ -6,6 +6,7 @@ import { eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customerGroups, customerGroupMembers, customers, type CustomerGroup, type NewCustomerGroup, type CustomerGroupMember, type NewCustomerGroupMember } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface CustomerGroupWithMemberCount extends CustomerGroup {
   memberCount: number;
@@ -63,8 +64,9 @@ export class CustomerGroupRepository {
   /**
    * Find a single customer group by ID
    */
-  async findById(ctx: RequestContext, groupId: string): Promise<CustomerGroup | null> {
-    const group = await db.query.customerGroups.findFirst({
+  async findById(ctx: RequestContext, groupId: string, tx?: DbTransaction): Promise<CustomerGroup | null> {
+    const executor = tx ?? db;
+    const group = await executor.query.customerGroups.findFirst({
       where: and(
         eq(customerGroups.id, groupId),
         eq(customerGroups.businessId, ctx.businessId)
@@ -163,15 +165,17 @@ export class CustomerGroupRepository {
   /**
    * Add customers to a group
    */
-  async addMembers(ctx: RequestContext, groupId: string, customerIds: string[]): Promise<CustomerGroupMember[]> {
+  async addMembers(ctx: RequestContext, groupId: string, customerIds: string[], tx?: DbTransaction): Promise<CustomerGroupMember[]> {
+    const executor = tx ?? db;
+
     // Verify group exists and belongs to business
-    const group = await this.findById(ctx, groupId);
+    const group = await this.findById(ctx, groupId, tx);
     if (!group) {
       throw new Error("Group not found");
     }
 
     // Get existing member IDs to avoid duplicates
-    const existingMembers = await db
+    const existingMembers = await executor
       .select({ customerId: customerGroupMembers.customerId })
       .from(customerGroupMembers)
       .where(and(
@@ -195,7 +199,7 @@ export class CustomerGroupRepository {
       syncAttempts: 0,
     }));
 
-    const result = await db
+    const result = await executor
       .insert(customerGroupMembers)
       .values(members)
       .returning();
@@ -206,14 +210,16 @@ export class CustomerGroupRepository {
   /**
    * Remove a customer from a group
    */
-  async removeMember(ctx: RequestContext, groupId: string, customerId: string): Promise<void> {
+  async removeMember(ctx: RequestContext, groupId: string, customerId: string, tx?: DbTransaction): Promise<void> {
+    const executor = tx ?? db;
+
     // Verify group exists and belongs to business
-    const group = await this.findById(ctx, groupId);
+    const group = await this.findById(ctx, groupId, tx);
     if (!group) {
       throw new Error("Group not found");
     }
 
-    await db
+    await executor
       .delete(customerGroupMembers)
       .where(and(
         eq(customerGroupMembers.groupId, groupId),

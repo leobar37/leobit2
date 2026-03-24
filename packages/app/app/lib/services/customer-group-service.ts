@@ -196,9 +196,11 @@ export class CustomerGroupService extends BaseService {
     return results;
   }
 
-  async create(input: CreateCustomerGroupInput, syncGroupId?: string): Promise<CustomerGroup> {
+  async create(input: CreateCustomerGroupInput, syncGroupId?: string): Promise<{ group: CustomerGroup; syncGroupId: string }> {
     const id = this.generateId();
     const now = new Date(this.now());
+    // Always generate a syncGroupId to ensure group and members are synced together
+    const groupSyncGroupId = syncGroupId || this.generateSyncGroup();
 
     const group: Partial<CustomerGroup> = {
       id,
@@ -210,12 +212,12 @@ export class CustomerGroupService extends BaseService {
       updatedAt: now,
     };
 
-    console.log('[DEBUG CustomerGroupService.create] INSERTING group into local DB:', { id, name: input.name, businessId: this.businessId });
+    console.log('[DEBUG CustomerGroupService.create] INSERTING group into local DB:', { id, name: input.name, businessId: this.businessId, syncGroupId: groupSyncGroupId });
     await this.db.insert(customerGroups).values(group as CustomerGroup);
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       name: input.name,
-    }, syncGroupId);
+    }, groupSyncGroupId);
 
     const created = await this.db
       .select()
@@ -227,7 +229,7 @@ export class CustomerGroupService extends BaseService {
       throw new Error("Failed to create customer group");
     }
 
-    return created[0];
+    return { group: created[0], syncGroupId: groupSyncGroupId };
   }
 
   /**
@@ -237,23 +239,13 @@ export class CustomerGroupService extends BaseService {
   async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<CustomerGroup> {
     const syncGroupId = this.generateSyncGroup();
 
-    await this.create(input, syncGroupId);
-
-    const groups = await this.db
-      .select()
-      .from(customerGroups)
-      .where(eq(customerGroups.name, input.name))
-      .limit(1);
-
-    if (groups.length === 0) {
-      throw new Error("Failed to create customer group");
-    }
+    const { group } = await this.create(input, syncGroupId);
 
     if (customerIds.length > 0) {
-      await this.addMembers(groups[0].id, customerIds, syncGroupId);
+      await this.addMembers(group.id, customerIds, syncGroupId);
     }
 
-    return groups[0];
+    return group;
   }
 
   async update(id: string, input: UpdateCustomerGroupInput): Promise<CustomerGroup> {
@@ -348,6 +340,29 @@ export class CustomerGroupService extends BaseService {
       throw new Error(`Customer group not found: ${groupId}`);
     }
 
+    // If no syncGroupId provided, look up the group's syncGroupId from pending sync operations
+    // This ensures members use the same syncGroupId as the group creation
+    let groupSyncGroupId = syncGroupId;
+    if (!groupSyncGroupId) {
+      const pendingOp = await this.pg.query<{ sync_group_id: string | null }>(
+        `SELECT sync_group_id FROM sync_operations
+         WHERE business_id = $1
+           AND entity_type = 'customer_groups'
+           AND entity_id = $2
+           AND status IN ('pending', 'failed')
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [this.businessId, groupId]
+      );
+      if (pendingOp.rows.length > 0 && pendingOp.rows[0].sync_group_id) {
+        groupSyncGroupId = pendingOp.rows[0].sync_group_id;
+        console.log(`[DEBUG CustomerGroupService.addMembers] Reusing syncGroupId from group creation: ${groupSyncGroupId}`);
+      }
+    }
+
+    // If still no syncGroupId, generate a new one for consistency
+    const memberSyncGroupId = groupSyncGroupId || this.generateSyncGroup();
+
     const existingMembers = await this.db
       .select({ customerId: customerGroupMembers.customerId })
       .from(customerGroupMembers)
@@ -380,10 +395,10 @@ export class CustomerGroupService extends BaseService {
     await this.db.insert(customerGroupMembers).values(members as never[]);
 
     for (let i = 0; i < newCustomerIds.length; i++) {
-      await this.queueSync("insert", memberIds[i], {
+      await this.queueSync("create", memberIds[i], {
         groupId,
         customerId: newCustomerIds[i],
-      }, syncGroupId, "customer_group_members");
+      }, memberSyncGroupId, "customer_group_members");
     }
   }
 

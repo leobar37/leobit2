@@ -361,7 +361,7 @@ describe("PullService", () => {
           changes: [{
             idempotencyKey: "key-1",
             entityType: "customers",
-            operation: "insert",
+            operation: "create",
             entityId: "entity-1",
             payload: { name: "Test" },
             localTimestamp: "2024-01-01T00:00:00Z",

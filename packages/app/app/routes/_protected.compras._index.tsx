@@ -11,6 +11,10 @@ import { useSetLayout } from "~/components/layout/app-layout";
 
 import type { Purchase } from "~/lib/services/purchase-service";
 
+function getPurchaseDisplayTotal(purchase: Purchase) {
+  return parseFloat(purchase.total_amount) || 0;
+}
+
 function PurchaseCard({ purchase }: { purchase: Purchase }) {
   const statusLabels: Record<Purchase["status"], string> = {
     draft: "Borrador",
@@ -53,7 +57,7 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
 
             <div className="mt-2">
               <span className="font-medium">
-                S/ {formatCurrency(purchase.total_amount)}
+                S/ {formatCurrency(getPurchaseDisplayTotal(purchase))}
               </span>
             </div>
           </div>

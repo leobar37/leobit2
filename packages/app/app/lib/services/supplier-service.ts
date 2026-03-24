@@ -129,7 +129,7 @@ export class SupplierService extends BaseService {
 
     await this.db.insert(suppliers).values(supplier);
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       name: input.name,
       type: input.type || "regular",
       ruc: input.ruc,

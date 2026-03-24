@@ -6,7 +6,7 @@
 export interface PullChange {
   idempotencyKey: string;
   entityType: string;
-  operation: "insert" | "update" | "delete" | "create";
+  operation: "create" | "update" | "delete";
   entityId: string;
   payload: Record<string, unknown>;
   localTimestamp: string;
@@ -40,4 +40,4 @@ export interface ChangeApplicationResult {
   error?: string;
 }
 
-export type SyncOperation = "insert" | "update" | "delete" | "create";
+export type SyncOperation = "create" | "update" | "delete";

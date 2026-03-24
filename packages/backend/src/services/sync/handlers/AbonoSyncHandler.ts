@@ -60,10 +60,12 @@ export class AbonoSyncHandler extends BaseSyncHandler {
   ): Promise<void> {
     const parsed = abonoCreateSchema.parse(operation.payload);
 
-    const customer = await this.customerRepo.findById(ctx, parsed.customerId, tx);
-    if (!customer) {
-      throw new Error(`Cliente ${parsed.customerId} no encontrado`);
-    }
+    // Use registry-aware parent check to avoid DB query when customer was created in same batch
+    await this.ensureParentExists(
+      parsed.customerId,
+      () => this.customerRepo.findById(ctx, parsed.customerId, tx),
+      "Cliente"
+    );
 
     await this.paymentRepo.create(ctx, {
       id: operation.entityId,

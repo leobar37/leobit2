@@ -13,8 +13,8 @@ import { createHook, type SyncHookContext } from "../create-sync-hook";
  */
 export const saleSyncHook = createHook("sales")
   .onBeforeSync(async (context: SyncHookContext, options: { pg: PGlite; businessId: string }) => {
-    // Only check on insert operations
-    if (context.operation !== "insert") {
+    // Only check on create operations
+    if (context.operation !== "create") {
       return { allow: true };
     }
 

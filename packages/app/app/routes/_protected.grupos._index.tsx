@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState } from "react";
-import { Plus, Search, Users, Trash2, Loader2 } from "lucide-react";
+import { Search, Users, Trash2, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,39 +15,32 @@ import { useSetLayout } from "~/components/layout/app-layout";
 import { useGrupoDialogs } from "~/hooks/use-grupo-dialogs";
 import {
   useCustomerGroups,
-  useCreateCustomerGroup,
   useUpdateCustomerGroup,
   useDeleteCustomerGroup,
-  useAddMembersToGroup,
-  useRemoveMemberFromGroup,
-  useCustomerGroup,
   type CustomerGroup,
-  type GroupMember,
 } from "~/hooks/use-grupos";
-import { useCustomers } from "~/hooks/use-customers";
 import { GroupCard } from "~/components/grupos/group-card";
 import { GroupFormDrawer } from "~/components/grupos/group-form-drawer";
 import { MemberDialog } from "~/components/grupos/member-dialog";
+import { useMemberManagement } from "~/hooks/use-member-management";
 
 export default function GroupsPage() {
   useSetLayout({ title: "Grupos de Clientes" });
+  const navigate = useNavigate();
 
   const { data: groups, isLoading } = useCustomerGroups();
-  const { data: customers } = useCustomers();
 
-  const createMutation = useCreateCustomerGroup();
   const updateMutation = useUpdateCustomerGroup();
   const deleteMutation = useDeleteCustomerGroup();
-  const addMembersMutation = useAddMembersToGroup();
-  const removeMemberMutation = useRemoveMemberFromGroup();
 
   const dialogs = useGrupoDialogs();
 
   const [search, setSearch] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-  const { data: selectedGroupWithMembers, isLoading: isLoadingMembers } =
-    useCustomerGroup(selectedGroupId);
+  const memberManagement = useMemberManagement({
+    onOpenMemberModal: dialogs.memberModal.open,
+    onResetMemberState: dialogs.resetMemberState,
+  });
 
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groups || [];
@@ -55,43 +49,6 @@ export default function GroupsPage() {
       group.name.toLowerCase().includes(lowerSearch)
     );
   }, [groups, search]);
-
-  const groupMembers = useMemo<GroupMember[]>(
-    () => (selectedGroupWithMembers?.members as GroupMember[]) || [],
-    [selectedGroupWithMembers]
-  );
-
-  const memberCustomerIds = useMemo(
-    () => new Set(groupMembers.map((m) => m.customerId)),
-    [groupMembers]
-  );
-
-  const availableCustomers = useMemo(
-    () =>
-      (customers || []).filter(
-        (c) => c.id && !memberCustomerIds.has(c.id)
-      ),
-    [customers, memberCustomerIds]
-  );
-
-  const handleManageMembers = useCallback((group: CustomerGroup) => {
-    setSelectedGroupId(group.id);
-    dialogs.memberModal.open(group);
-    dialogs.resetMemberState();
-  }, [dialogs]);
-
-  const handleCreateGroup = useCallback(async () => {
-    if (!dialogs.groupName.trim()) return;
-
-    dialogs.setIsSubmitting(true);
-    try {
-      await createMutation.mutateAsync({ name: dialogs.groupName.trim() });
-      dialogs.resetFormState();
-      dialogs.formModal.close();
-    } finally {
-      dialogs.setIsSubmitting(false);
-    }
-  }, [dialogs, createMutation]);
 
   const handleUpdateGroup = useCallback(async () => {
     const editingGroup = dialogs.formModal.data as CustomerGroup | undefined;
@@ -123,34 +80,11 @@ export default function GroupsPage() {
     }
   }, [dialogs, deleteMutation]);
 
-  const handleAddMembers = useCallback(async () => {
-    const selectedGroup = dialogs.memberModal.data;
-    if (!selectedGroup || dialogs.selectedCustomerIds.size === 0) return;
-
-    dialogs.setIsManagingMembers(true);
-    try {
-      await addMembersMutation.mutateAsync({
-        groupId: selectedGroup.id,
-        customerIds: Array.from(dialogs.selectedCustomerIds),
-      });
-      dialogs.resetMemberState();
-    } finally {
-      dialogs.setIsManagingMembers(false);
-    }
-  }, [dialogs, addMembersMutation]);
-
-  const handleRemoveMember = useCallback(
-    async (customerId: string, _customerName: string) => {
-      const selectedGroup = dialogs.memberModal.data;
-      if (!selectedGroup) return;
-
-      await removeMemberMutation.mutateAsync({
-        groupId: selectedGroup.id,
-        customerId,
-      });
-    },
-    [dialogs, removeMemberMutation]
-  );
+  const handleCloseMemberDialog = useCallback(() => {
+    dialogs.memberModal.close();
+    dialogs.resetMemberState();
+    memberManagement.setSelectedGroupId(null);
+  }, [dialogs, memberManagement]);
 
   if (isLoading) {
     return (
@@ -175,21 +109,9 @@ export default function GroupsPage() {
       {filteredGroups.length === 0 && !isLoading && (
         <div className="py-8 text-center">
           <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="mb-4 text-muted-foreground">
+          <p className="text-muted-foreground">
             {search ? "No se encontraron grupos" : "No hay grupos de clientes"}
           </p>
-          {!search && (
-            <Button
-              className="bg-orange-500 hover:bg-orange-600"
-              onClick={() => {
-                dialogs.resetFormState();
-                dialogs.formModal.open();
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Crear primer grupo
-            </Button>
-          )}
         </div>
       )}
 
@@ -199,31 +121,18 @@ export default function GroupsPage() {
             <GroupCard
               key={group.id}
               group={group}
+              onClick={() => navigate(`/grupos/${group.id}`)}
               onEdit={(g) => {
                 dialogs.setDialogMode("edit");
                 dialogs.setGroupName(g.name);
                 dialogs.formModal.open(g);
               }}
               onDelete={(g) => dialogs.deleteModal.open(g)}
-              onManageMembers={handleManageMembers}
+              onManageMembers={memberManagement.handleManageMembers}
             />
           ))}
         </div>
       )}
-
-      <div className="fixed bottom-28 right-4 z-50">
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-          onClick={() => {
-            dialogs.resetFormState();
-            dialogs.setDialogMode("create");
-            dialogs.formModal.open();
-          }}
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </div>
 
       <GroupFormDrawer
         isOpen={dialogs.formModal.isOpen}
@@ -231,10 +140,7 @@ export default function GroupsPage() {
           mode: dialogs.dialogMode,
           groupName: dialogs.groupName,
           onGroupNameChange: dialogs.setGroupName,
-          onSubmit:
-            dialogs.dialogMode === "create"
-              ? handleCreateGroup
-              : handleUpdateGroup,
+          onSubmit: handleUpdateGroup,
           isSubmitting: dialogs.isSubmitting,
         }}
         onClose={() => {
@@ -294,20 +200,18 @@ export default function GroupsPage() {
         isOpen={dialogs.memberModal.isOpen}
         onOpenChange={(open) => {
           if (!open) {
-            dialogs.memberModal.close();
-            dialogs.resetMemberState();
-            setSelectedGroupId(null);
+            handleCloseMemberDialog();
           }
         }}
         groupName={dialogs.memberModal.data?.name || ""}
-        members={groupMembers}
-        isLoadingMembers={isLoadingMembers}
-        availableCustomers={availableCustomers}
-        selectedCustomerIds={dialogs.selectedCustomerIds}
-        onToggleCustomerSelection={dialogs.toggleCustomerSelection}
-        onRemoveMember={handleRemoveMember}
-        onAddMembers={handleAddMembers}
-        isManagingMembers={dialogs.isManagingMembers}
+        members={memberManagement.members}
+        isLoadingMembers={memberManagement.isLoadingMembers}
+        availableCustomers={memberManagement.availableCustomers}
+        selectedCustomerIds={memberManagement.selectedCustomerIds}
+        onToggleCustomerSelection={memberManagement.toggleCustomerSelection}
+        onRemoveMember={memberManagement.handleRemoveMember}
+        onAddMembers={memberManagement.handleAddMembers}
+        isManagingMembers={memberManagement.isManagingMembers}
       />
     </div>
   );

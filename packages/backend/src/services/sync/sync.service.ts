@@ -68,7 +68,7 @@ export class SyncService {
     });
 
     HandlerRegistry.register("customer_tags", () => {
-      return new CustomerTagSyncHandler(deps.customerTagRepo);
+      return new CustomerTagSyncHandler(deps.customerTagRepo, deps.customerRepo, deps.tagRepo);
     });
 
     HandlerRegistry.register("purchases", (deps) => {

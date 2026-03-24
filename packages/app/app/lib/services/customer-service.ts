@@ -140,7 +140,7 @@ export class CustomerService extends BaseService {
 
     await this.db.insert(customers).values(customer);
 
-    await this.queueSync("insert", id, {
+    await this.queueSync("create", id, {
       name: input.name,
       dni: input.dni,
       phone: input.phone,
