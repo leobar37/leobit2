@@ -9,6 +9,7 @@ import {
   setStoredBusinessId,
   setLocalDatabaseNamespace,
   clearSyncKeys,
+  getStoredAuthToken,
 } from "../lib/session-storage";
 
 async function hydrateCurrentBusinessId() {
@@ -23,22 +24,6 @@ async function hydrateCurrentBusinessId() {
   return data.data.id;
 }
 
-/**
- * Check if the database has any data for the given business
- * Returns true if data exists, false if empty
- */
-async function checkDatabaseHasData(businessId: string): Promise<boolean> {
-  try {
-    // Simple check: try to get any customer or product count
-    const result = await api.customers.list.get({
-      headers: { "x-business-id": businessId },
-    });
-    return result.data?.success && (result.data.data?.length ?? 0) > 0;
-  } catch {
-    return false;
-  }
-}
-
 async function ensureSessionReady() {
   const session = await refreshSession();
 
@@ -51,6 +36,17 @@ async function ensureSessionReady() {
 
 function buildDatabaseNamespace(userId: string, businessId: string, sessionId?: string) {
   return [userId, businessId, sessionId ?? "session"].join("__");
+}
+
+async function waitForToken(maxRetries = 10, delayMs = 200): Promise<string | null> {
+  for (let i = 0; i < maxRetries; i++) {
+    const token = getStoredAuthToken();
+    if (token) {
+      return token;
+    }
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  return null;
 }
 
 export function useAuth() {
@@ -70,10 +66,23 @@ export function useAuth() {
       throw new Error(result.error.message);
     }
 
+    // Wait for the token to be stored by the onSuccess callback in auth-client.ts
+    // This handles potential race conditions where navigation happens before storage is updated
+    const token = await waitForToken();
+    if (!token) {
+      console.error("[useAuth] Token not stored after sign-in");
+      throw new Error("Error al procesar la sesión. Por favor, intenta nuevamente.");
+    }
+
     const sessionState = await ensureSessionReady();
     const businessId = await hydrateCurrentBusinessId();
 
-    if (businessId && sessionState.user?.id) {
+    if (!businessId) {
+      console.error("[useAuth] Business ID not found after login");
+      throw new Error("No se encontró el negocio asociado a tu cuenta.");
+    }
+
+    if (sessionState.user?.id) {
       setLocalDatabaseNamespace(
         buildDatabaseNamespace(
           sessionState.user.id,
@@ -103,10 +112,22 @@ export function useAuth() {
       throw new Error(result.error.message);
     }
 
+    // Wait for the token to be stored by the onSuccess callback in auth-client.ts
+    const token = await waitForToken();
+    if (!token) {
+      console.error("[useAuth] Token not stored after sign-up");
+      throw new Error("Error al procesar la sesión. Por favor, intenta nuevamente.");
+    }
+
     const sessionState = await ensureSessionReady();
     const businessId = await hydrateCurrentBusinessId();
 
-    if (businessId && sessionState.user?.id) {
+    if (!businessId) {
+      console.error("[useAuth] Business ID not found after registration");
+      throw new Error("No se encontró el negocio asociado a tu cuenta.");
+    }
+
+    if (sessionState.user?.id) {
       setLocalDatabaseNamespace(
         buildDatabaseNamespace(
           sessionState.user.id,

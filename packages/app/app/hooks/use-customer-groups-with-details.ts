@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
+import { useCustomerGroupService } from "~/lib/sync/service-provider";
 
 export interface CustomerGroupBadgeItem {
   id: string;
@@ -13,9 +13,11 @@ const QUERY_KEYS = {
 } as const;
 
 /**
- * Get groups that a customer belongs to (online-only)
+ * Get groups that a customer belongs to (local-first, offline-ready)
  */
 export function useCustomerGroupsWithDetails(customerId: string | null) {
+  const customerGroupService = useCustomerGroupService();
+
   return useQuery({
     queryKey: customerId
       ? QUERY_KEYS.customerGroupsWithDetails(customerId)
@@ -23,8 +25,7 @@ export function useCustomerGroupsWithDetails(customerId: string | null) {
     queryFn: async () => {
       if (!customerId) return [];
 
-      const response = await api.customers({ id: customerId }).groups.get();
-      return extractData<CustomerGroupBadgeItem[]>(response, "Error al cargar grupos del cliente");
+      return customerGroupService.getCustomerGroups(customerId);
     },
     enabled: !!customerId,
   });

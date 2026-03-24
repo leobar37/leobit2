@@ -212,7 +212,6 @@ export class CustomerGroupService extends BaseService {
       updatedAt: now,
     };
 
-    console.log('[DEBUG CustomerGroupService.create] INSERTING group into local DB:', { id, name: input.name, businessId: this.businessId, syncGroupId: groupSyncGroupId });
     await this.db.insert(customerGroups).values(group as CustomerGroup);
 
     await this.queueSync("create", id, {
@@ -236,7 +235,7 @@ export class CustomerGroupService extends BaseService {
    * Create a group with initial members atomically
    * Uses syncGroupId to ensure group and members are synced together
    */
-  async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<CustomerGroup> {
+  async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<{ group: CustomerGroup }> {
     const syncGroupId = this.generateSyncGroup();
 
     const { group } = await this.create(input, syncGroupId);
@@ -245,7 +244,7 @@ export class CustomerGroupService extends BaseService {
       await this.addMembers(group.id, customerIds, syncGroupId);
     }
 
-    return group;
+    return { group };
   }
 
   async update(id: string, input: UpdateCustomerGroupInput): Promise<CustomerGroup> {
@@ -340,28 +339,9 @@ export class CustomerGroupService extends BaseService {
       throw new Error(`Customer group not found: ${groupId}`);
     }
 
-    // If no syncGroupId provided, look up the group's syncGroupId from pending sync operations
-    // This ensures members use the same syncGroupId as the group creation
-    let groupSyncGroupId = syncGroupId;
-    if (!groupSyncGroupId) {
-      const pendingOp = await this.pg.query<{ sync_group_id: string | null }>(
-        `SELECT sync_group_id FROM sync_operations
-         WHERE business_id = $1
-           AND entity_type = 'customer_groups'
-           AND entity_id = $2
-           AND status IN ('pending', 'failed')
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [this.businessId, groupId]
-      );
-      if (pendingOp.rows.length > 0 && pendingOp.rows[0].sync_group_id) {
-        groupSyncGroupId = pendingOp.rows[0].sync_group_id;
-        console.log(`[DEBUG CustomerGroupService.addMembers] Reusing syncGroupId from group creation: ${groupSyncGroupId}`);
-      }
-    }
-
-    // If still no syncGroupId, generate a new one for consistency
-    const memberSyncGroupId = groupSyncGroupId || this.generateSyncGroup();
+    // Always generate a new syncGroupId for member operations
+    // This ensures members sync properly even if the group creation has already completed
+    const memberSyncGroupId = syncGroupId || this.generateSyncGroup();
 
     const existingMembers = await this.db
       .select({ customerId: customerGroupMembers.customerId })

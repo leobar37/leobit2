@@ -62,13 +62,17 @@ export function useCustomerGroup(id: string | null) {
 
 /**
  * Create a new customer group
+ * Supports optional customerIds to add members atomically using createWithMembers
  */
 export function useCreateCustomerGroup() {
   const queryClient = useQueryClient();
   const customerGroupService = useCustomerGroupService();
 
   return useMutation({
-    mutationFn: async (input: { name: string }) => {
+    mutationFn: async (input: { name: string; customerIds?: string[] }) => {
+      if (input.customerIds && input.customerIds.length > 0) {
+        return customerGroupService.createWithMembers({ name: input.name }, input.customerIds);
+      }
       return customerGroupService.create({ name: input.name });
     },
     onSuccess: () => {

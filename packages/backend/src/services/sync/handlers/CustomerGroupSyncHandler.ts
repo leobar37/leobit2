@@ -54,6 +54,7 @@ export class CustomerGroupSyncHandler extends BaseSyncHandler {
 
     await this.customerGroupRepo.create(ctx, {
       name: parsed.name,
+      id: operation.entityId, // Use the client's entityId to ensure members can find this group
     });
   }
 

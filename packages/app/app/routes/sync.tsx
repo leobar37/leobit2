@@ -22,19 +22,38 @@ export default function SyncPage() {
   const [error, setError] = useState<string | null>(null);
   const syncAttempted = useRef(false);
 
+  const waitForAuth = async (maxRetries = 10, delayMs = 300): Promise<{ token: string; businessId: string } | null> => {
+    for (let i = 0; i < maxRetries; i++) {
+      const token = getStoredAuthToken();
+      const businessId = getStoredBusinessId();
+      if (token && businessId) {
+        return { token, businessId };
+      }
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    return null;
+  };
+
   useEffect(() => {
     // Prevent double execution in React StrictMode
     if (syncAttempted.current) return;
     syncAttempted.current = true;
 
     async function performInitialSync() {
-      const token = getStoredAuthToken();
-      const businessId = getStoredBusinessId();
+      setSyncProgress({
+        stage: "initializing",
+        message: "Verificando sesión...",
+        progress: 5,
+      });
 
-      if (!token || !businessId) {
+      const authData = await waitForAuth();
+
+      if (!authData) {
         setError("No hay sesión activa. Por favor, inicia sesión nuevamente.");
         return;
       }
+
+      const { token, businessId } = authData;
 
       try {
         // Step 1: Initialize database

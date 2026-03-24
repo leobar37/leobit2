@@ -117,10 +117,11 @@ export class CustomerGroupRepository {
   /**
    * Create a new customer group
    */
-  async create(ctx: RequestContext, data: { name: string }): Promise<CustomerGroup> {
+  async create(ctx: RequestContext, data: { name: string; id?: string }): Promise<CustomerGroup> {
     const [group] = await db
       .insert(customerGroups)
       .values({
+        id: data.id, // Use provided ID (from sync entityId) or generate new
         name: data.name,
         businessId: ctx.businessId,
         syncStatus: "synced",

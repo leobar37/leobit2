@@ -61,6 +61,9 @@ export function usePullSync(
         return [["abonos"]];
       case "distribuciones":
         return [["distribuciones"]];
+      case "customer_groups":
+      case "customer_group_members":
+        return [["customer-groups"]];
       default:
         return [];
     }
@@ -69,8 +72,6 @@ export function usePullSync(
   // Callback when changes are applied
   const handleChangesApplied = useCallback(
     (entityTypes: string[]) => {
-      console.log("[usePullSync] Changes applied for entities:", entityTypes);
-
       // Filter to watched entities if specified
       const entitiesToInvalidate =
         watchedEntities.length > 0
