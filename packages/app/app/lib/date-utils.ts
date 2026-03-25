@@ -254,6 +254,37 @@ export function formatRelativeDate(date: Date | string): string {
 }
 
 /**
+ * Formats a delivery date as a countdown relative to today
+ * Shows days remaining until delivery or days overdue
+ * 
+ * @example
+ * formatDeliveryCountdown("2026-03-25") // "Entrega hoy"
+ * formatDeliveryCountdown("2026-03-26") // "Entrega mañana"
+ * formatDeliveryCountdown("2026-03-28") // "Entrega en 3 días"
+ * formatDeliveryCountdown("2026-03-20") // "Atrasado 5 días"
+ */
+export function formatDeliveryCountdown(date: Date | string | null | undefined): string {
+  if (!date) return "Sin fecha de entrega";
+  
+  const d = normalizeDateInput(date);
+  const today = startOfDay(now());
+  const target = startOfDay(d);
+  
+  if (Number.isNaN(target.getTime())) {
+    return "Sin fecha de entrega";
+  }
+  
+  const diffTime = target.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return `Atrasado ${Math.abs(diffDays)}d`;
+  if (diffDays === 0) return "Entrega hoy";
+  if (diffDays === 1) return "Entrega mañana";
+  if (diffDays <= 7) return `Entrega en ${diffDays}d`;
+  return `Entrega ${formatDisplayDate(d)}`;
+}
+
+/**
  * Formats a recent date with relative text for the last 48 hours.
  * Older dates fall back to an absolute date-time string.
  */
@@ -262,7 +293,15 @@ export function formatRecentDateTime(date: Date | string | null | undefined): st
     return "Sin fecha";
   }
 
-  const targetDate = date instanceof Date ? date : normalizeDateInput(date);
+  // Handle Date objects directly (e.g., from PGlite TIMESTAMP columns)
+  let targetDate: Date;
+  if (date instanceof Date) {
+    targetDate = date;
+  } else if (typeof date === "string") {
+    targetDate = normalizeDateInput(date);
+  } else {
+    return "Sin fecha";
+  }
 
   if (Number.isNaN(targetDate.getTime())) {
     return "Sin fecha";

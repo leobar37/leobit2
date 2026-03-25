@@ -67,6 +67,7 @@ export function useCreatePayment() {
         queryKey: QUERY_KEYS.customerPayments(variables.customerId),
       });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
     },
   });
 
@@ -107,6 +108,7 @@ export function useDeletePayment() {
         queryKey: ["payments-new", "customer"],
       });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
     },
   });
 }
@@ -126,6 +128,7 @@ export function useUpdatePayment() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["payments-new", "detail", variables.id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       if (data?.customer_id) {
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.customerPayments(data.customer_id),

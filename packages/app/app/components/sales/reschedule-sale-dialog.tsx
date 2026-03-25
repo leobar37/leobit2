@@ -5,21 +5,22 @@
 import { useState } from "react";
 import { Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { formatDateForInput } from "~/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useUpdateSale } from "~/hooks/use-sales";
 
 interface RescheduleSaleDialogProps {
   saleId: string;
-  currentDeliveryDate?: Date | null;
+  currentDeliveryDate?: string | null;
   trigger?: React.ReactNode;
 }
 
@@ -53,6 +54,14 @@ export function RescheduleSaleDialog({
       return;
     }
 
+    const selectedDate = new Date(newDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      toast.error("La fecha de entrega no puede ser en el pasado");
+      return;
+    }
+
     try {
       await updateSale.mutateAsync({
         id: saleId,
@@ -73,14 +82,14 @@ export function RescheduleSaleDialog({
       <div onClick={handleOpen} className="cursor-pointer">
         {trigger}
       </div>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reprogramar entrega</DialogTitle>
-            <DialogDescription>
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+          <SheetHeader className="text-left">
+            <SheetTitle>Reprogramar entrega</SheetTitle>
+            <SheetDescription>
               Selecciona la nueva fecha de entrega para esta venta
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
           <div className="py-4">
             <Label htmlFor="deliveryDate">Fecha de entrega</Label>
@@ -103,29 +112,21 @@ export function RescheduleSaleDialog({
             )}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancelar
-            </Button>
+          <SheetFooter className="flex-row-reverse gap-2">
             <Button onClick={handleSubmit} disabled={updateSale.isPending}>
               {updateSale.isPending ? "Guardando..." : "Guardar"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancelar
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
 
-function formatDateForInput(date: Date): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatDateDisplay(date: Date): string {
+function formatDateDisplay(date: Date | string): string {
   return new Date(date).toLocaleDateString("es-PE", {
     weekday: "long",
     year: "numeric",

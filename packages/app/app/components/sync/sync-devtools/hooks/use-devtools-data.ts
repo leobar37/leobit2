@@ -58,15 +58,35 @@ export function useDevToolsData(isOpen: boolean, isInitialized: boolean): UseDev
       const { db } = getDatabase();
       const summaryResults = await Promise.all(
         ENTITY_SUMMARY_CONFIG.map(async ({ table, label, hasSyncStatus }) => {
-          if (hasSyncStatus) {
+          try {
+            if (hasSyncStatus) {
+              const result = await db.execute(`
+                SELECT
+                  '${table}' AS table_name,
+                  '${label}' AS label,
+                  COUNT(*)::text AS total,
+                  COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
+                  COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
+                  COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
+                FROM ${table}
+              `);
+
+              const row = result.rows[0];
+              return {
+                table: String(row.table_name),
+                label: String(row.label),
+                total: parseInt(String(row.total), 10),
+                pending: parseInt(String(row.pending), 10),
+                synced: parseInt(String(row.synced), 10),
+                error: parseInt(String(row.error), 10),
+              };
+            }
+
             const result = await db.execute(`
               SELECT
                 '${table}' AS table_name,
                 '${label}' AS label,
-                COUNT(*)::text AS total,
-                COUNT(*) FILTER (WHERE sync_status = 'pending')::text AS pending,
-                COUNT(*) FILTER (WHERE sync_status = 'synced')::text AS synced,
-                COUNT(*) FILTER (WHERE sync_status = 'error')::text AS error
+                COUNT(*)::text AS total
               FROM ${table}
             `);
 
@@ -75,29 +95,22 @@ export function useDevToolsData(isOpen: boolean, isInitialized: boolean): UseDev
               table: String(row.table_name),
               label: String(row.label),
               total: parseInt(String(row.total), 10),
-              pending: parseInt(String(row.pending), 10),
-              synced: parseInt(String(row.synced), 10),
-              error: parseInt(String(row.error), 10),
+              pending: 0,
+              synced: parseInt(String(row.total), 10),
+              error: 0,
+            };
+          } catch {
+            // Table doesn't exist in local DB (e.g., inventory, variant_inventory)
+            // Return zeros instead of crashing the entire sync admin page
+            return {
+              table,
+              label,
+              total: 0,
+              pending: 0,
+              synced: 0,
+              error: 0,
             };
           }
-
-          const result = await db.execute(`
-            SELECT
-              '${table}' AS table_name,
-              '${label}' AS label,
-              COUNT(*)::text AS total
-            FROM ${table}
-          `);
-
-          const row = result.rows[0];
-          return {
-            table: String(row.table_name),
-            label: String(row.label),
-            total: parseInt(String(row.total), 10),
-            pending: 0,
-            synced: parseInt(String(row.total), 10),
-            error: 0,
-          };
         }),
       );
 

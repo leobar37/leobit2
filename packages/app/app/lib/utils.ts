@@ -194,3 +194,15 @@ export function calculateBalanceDue(total: number, paid: number): number {
   const result = total - paid;
   return result < 0 ? 0 : Math.round(result * 100) / 100;
 }
+
+/**
+ * Formats a Date to YYYY-MM-DD string for <input type="date">
+ * Accepts both Date objects and ISO string dates
+ */
+export function formatDateForInput(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

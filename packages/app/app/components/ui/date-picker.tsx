@@ -4,7 +4,7 @@ import * as React from "react";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { cn } from "~/lib/utils";
 import { parseDateString, toDateString, formatDisplayDate } from "~/lib/date-utils";
 
@@ -109,6 +109,9 @@ export function DatePicker({
                 <X className="h-5 w-5 text-gray-500" />
               </Button>
             </div>
+            <DrawerDescription className="text-left text-sm text-muted-foreground">
+              Selecciona la fecha de entrega para el pedido
+            </DrawerDescription>
           </DrawerHeader>
 
           <div className="px-4 pt-3 pb-2 flex-shrink-0">

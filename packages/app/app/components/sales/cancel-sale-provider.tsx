@@ -112,6 +112,7 @@ export function CancelSaleProvider({
 
   const submit = form.handleSubmit(async (values) => {
     const payload: CancelSaleInput = {
+      id: saleId,
       reason: values.reason,
     };
 
@@ -129,7 +130,7 @@ export function CancelSaleProvider({
 
     try {
       setIsCancelling(true);
-      await cancelSale(saleId, payload);
+      await cancelSale.mutateAsync(payload);
       close();
     } finally {
       if (isMountedRef.current) {

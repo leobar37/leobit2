@@ -73,10 +73,10 @@ export const saleSchema = z.object({
   tara: z.string().nullable().optional(),
   netWeight: z.string().nullable().optional(),
 
-  // Dates
-  saleDate: z.coerce.date(),
-  deliveryDate: z.coerce.date().nullable().optional(), // For pre_orders
-  orderDate: z.coerce.date().nullable().optional(),    // For pre_orders
+  // Dates - stored as ISO strings for offline-first sync
+  saleDate: z.string(),
+  deliveryDate: z.string().nullable().optional(), // For pre_orders
+  orderDate: z.string().nullable().optional(),    // For pre_orders
 
   // Status workflow
   status: saleStatusSchema.default("draft"),
@@ -97,13 +97,13 @@ export const saleSchema = z.object({
   syncGroupId: z.string().nullable().optional(),
 
   // Cancellation
-  cancelledAt: z.coerce.date().nullable().optional(),
+  cancelledAt: z.string().nullable().optional(),
   cancelledBy: z.string().nullable().optional(),
   cancelReason: z.string().nullable().optional(),
 
   // Refund tracking
   refundAmount: z.string().nullable().optional(),
-  refundDate: z.coerce.date().nullable().optional(),
+  refundDate: z.string().nullable().optional(),
   refundMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]).nullable().optional(),
   refundReference: z.string().nullable().optional(),
   refundNotes: z.string().nullable().optional(),
@@ -121,8 +121,8 @@ export const saleSchema = z.object({
     phone: z.string().nullable(),
   }).optional(),
 
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
 });
 
 export type Sale = z.infer<typeof saleSchema>;

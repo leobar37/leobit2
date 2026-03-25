@@ -6,6 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSaleService } from "~/lib/sync/service-provider";
+import { useToastError } from "~/hooks/use-toast-error";
 import type {
   Sale,
   SaleWithItems,
@@ -21,6 +22,8 @@ export interface CancelSaleInput {
   id: string;
   reason: string;
   refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
+  refundAmount?: number;
+  refundReference?: string;
 }
 
 const QUERY_KEYS = {
@@ -33,6 +36,7 @@ const QUERY_KEYS = {
 interface SaleFilters {
   customerId?: string;
   status?: SaleStatus;
+  distribucionId?: string | 'none' | 'all';
 }
 
 /**
@@ -46,7 +50,12 @@ export function useSales(filters?: SaleFilters) {
       ? ["sales-new", "filtered", filters]
       : QUERY_KEYS.sales,
     queryFn: async () => {
-      if (filters?.customerId) {
+      if (filters?.distribucionId && filters.distribucionId !== 'all') {
+        if (filters.distribucionId === 'none') {
+          return saleService.findByDistribucionIdIsNull();
+        }
+        return saleService.findByDistribucionId(filters.distribucionId);
+      } else if (filters?.customerId) {
         return saleService.findByCustomerId(filters.customerId);
       } else if (filters?.status) {
         return saleService.findByStatus(filters.status);
@@ -70,6 +79,25 @@ export function useSale(id: string | null) {
     },
     enabled: !!id,
   });
+}
+
+/**
+ * Hook to check the sync status of a specific sale
+ * Returns sync status information useful for UI decisions
+ */
+export function useSaleSyncStatus(saleId: string | null) {
+  const { data: sale, isLoading, error } = useSale(saleId);
+
+  return {
+    isSynced: sale?.syncStatus === "synced",
+    isPending: sale?.syncStatus === "pending",
+    hasSyncError: sale?.syncStatus === "error",
+    syncAttempts: sale?.syncAttempts ?? 0,
+    syncStatus: sale?.syncStatus ?? "pending",
+    sale,
+    isLoading,
+    error,
+  };
 }
 
 /**
@@ -138,6 +166,7 @@ export function useCreateDraftSale() {
       distribucionId?: string;
       visitaId?: string;
       type?: "instant_sale" | "pre_order";
+      deliveryDate?: string;
     }): Promise<Sale> => {
       console.log("[useCreateDraftSale] Mutation started");
       console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
@@ -157,6 +186,7 @@ export function useCreateDraftSale() {
         customerId: options?.customerId,
         distribucionId: options?.distribucionId,
         visitaId: options?.visitaId,
+        deliveryDate: options?.deliveryDate,
       });
       console.log("[useCreateDraftSale] Sale created with id:", sale.id);
       return sale;
@@ -185,6 +215,8 @@ export function useConfirmSale() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("active") });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
     },
   });
 }
@@ -195,6 +227,7 @@ export function useConfirmSale() {
 export function useConfirmPreOrder() {
   const saleService = useSaleService();
   const queryClient = useQueryClient();
+  const { showError } = useToastError();
 
   return useMutation({
     mutationFn: async ({ id, baseVersion }: { id: string; baseVersion: number }): Promise<void> => {
@@ -207,6 +240,20 @@ export function useConfirmPreOrder() {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.byStatus("confirmed"),
       });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Error al confirmar el pedido";
+      // Check if it's a version conflict error
+      if (message.includes("modificada") || message.includes("modificado")) {
+        showError("Conflicto de versión", {
+          description: "Esta venta fue modificada. Refresca la página e intenta de nuevo.",
+          duration: 6000,
+        });
+      } else {
+        showError("Error al confirmar", error);
+      }
     },
   });
 }
@@ -246,10 +293,7 @@ export function useCancelSale() {
     mutationFn: async ({
       id,
       reason,
-    }: {
-      id: string;
-      reason: string;
-    }): Promise<void> => {
+    }: CancelSaleInput): Promise<void> => {
       return saleService.cancel(id, reason);
     },
     onSuccess: (_, variables) => {

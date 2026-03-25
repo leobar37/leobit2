@@ -24,6 +24,9 @@ export const saleTokens = pgTable(
     // Token status
     isActive: boolean("is_active").notNull().default(true),
 
+    // Expiration (default 7 days from creation)
+    expiresAt: timestamp("expires_at").notNull(),
+
     // Tracking
     createdAt: timestamp("created_at").notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at"),
@@ -32,6 +35,7 @@ export const saleTokens = pgTable(
     index("idx_sale_tokens_token").on(table.token),
     index("idx_sale_tokens_sale_id").on(table.saleId),
     index("idx_sale_tokens_is_active").on(table.isActive),
+    index("idx_sale_tokens_expires_at").on(table.expiresAt),
   ]
 );
 

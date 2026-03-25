@@ -1,24 +1,50 @@
 import { useNavigate } from "react-router";
-import { formatCurrency } from "~/lib/utils";
-import { ShoppingCart, Search, Plus, TrendingUp } from "lucide-react";
-import { useMemo, useEffect } from "react";
+import { ShoppingCart, Search, Plus, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SyncStatus } from "~/components/sync/sync-status";
-import { useCreateDraftSale, useSales } from "~/hooks/use-sales";
-import { useListSearch } from "~/hooks/use-list-search";
-import { useBusiness } from "~/hooks/use-business";
+import { useSales } from "~/hooks/use-sales";
+import { useMiDistribucion } from "~/hooks/use-distribuciones";
+import { useSaleFilters } from "~/hooks/use-sale-filters";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { showError } from "~/lib/errors";
+import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
 
+  const { data: miDistribucion } = useMiDistribucion();
   const { data: allSales, isLoading, error } = useSales();
-  const { data: business, isLoading: businessLoading } = useBusiness();
-  const createDraftSale = useCreateDraftSale();
   const navigate = useNavigate();
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
+
+  // Use centralized filter hook with URL persistence
+  const {
+    sortedSales,
+    tab,
+    setTab,
+    tipo,
+    setTipo,
+    search,
+    setSearch,
+    isFiltering,
+  } = useSaleFilters({
+    sales: allSales,
+    searchFields: [
+      (sale) => sale.id,
+      (sale) => sale.customer?.name ?? undefined,
+      (sale) => sale.saleType,
+    ],
+    miDistribucionId: miDistribucion?.id,
+  });
+
+  // Reset to 'all' if on 'mine' tab but no distribution exists
+  useEffect(() => {
+    if (tab === "mine" && !miDistribucion?.id) {
+      setTab("all");
+    }
+  }, [tab, miDistribucion?.id, setTab]);
 
   // Log any query errors for debugging
   useEffect(() => {
@@ -27,101 +53,9 @@ export default function SalesPage() {
     }
   }, [error]);
 
-  const handleCreateSale = async () => {
-    console.log("[SalesPage] handleCreateSale called");
-    console.log("[SalesPage] createDraftSale.isPending:", createDraftSale.isPending);
-    console.log("[SalesPage] businessLoading:", businessLoading);
-    console.log("[SalesPage] business:", business);
-    console.log("[SalesPage] business?.businessUserId:", business?.businessUserId);
-
-    // Prevent duplicate clicks while mutation is pending
-    if (createDraftSale.isPending) {
-      console.log("[SalesPage] Early return: isPending is true");
-      return;
-    }
-
-    // Wait until business membership finishes loading to avoid a false disabled look
-    if (businessLoading) {
-      console.log("[SalesPage] Early return: businessLoading is true");
-      return;
-    }
-
-    // Prevent if business is not ready
-    if (!business?.businessUserId) {
-      console.log("[SalesPage] Early return: no businessUserId");
-      showError(
-        "Error al crear venta",
-        new Error("Business seller is not available")
-      );
-      return;
-    }
-
-    try {
-      console.log("[SalesPage] Calling createDraftSale.mutateAsync...");
-      const sale = await createDraftSale.mutateAsync();
-      console.log("[SalesPage] Sale created successfully:", sale.id);
-      navigate(`/ventas/${sale.id}/editar`);
-    } catch (err) {
-      console.error("[SalesPage] Failed to create sale:", err);
-      showError("Error al crear venta", err);
-    }
-  };
-
-  // Sort sales by saleDate descending (most recent first)
-  const sortedByDate = useMemo(() => {
-    if (!allSales) return [];
-    return [...allSales].sort((a, b) => {
-      const dateA = new Date(a.saleDate).getTime();
-      const dateB = new Date(b.saleDate).getTime();
-      return dateB - dateA; // Descending order (newest first)
-    });
-  }, [allSales]);
-
-  // Use centralized search hook with customer name support
-  const { filteredItems: sortedSales, search, setSearch } = useListSearch({
-    items: sortedByDate,
-    searchFields: [
-      (sale) => sale.id,
-      (sale) => sale.customer?.name ?? undefined,
-      (sale) => sale.saleType,
-    ],
-  });
-
-  const stats = useMemo(() => {
-    if (!allSales?.length) return null;
-    const total = allSales.reduce((sum, sale) => {
-      return sum + Number(sale.totalAmount || 0);
-    }, 0);
-    return { count: allSales.length, total: formatCurrency(total) };
-  }, [allSales]);
-
   return (
     <>
       <div className="space-y-4">
-        {stats && (
-          <div className="shell-card-flat rounded-[24px] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Total de ventas</p>
-                <p className="mt-1 whitespace-nowrap text-[clamp(1.7rem,6.8vw,2rem)] font-bold tracking-[-0.04em] text-foreground">
-                  S/ {formatCurrency(stats.total)}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Cantidad</p>
-                  <p className="text-xl font-bold leading-none text-foreground">{stats.count}</p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-orange-100 text-orange-600">
-                  <TrendingUp className="h-[18px] w-[18px]" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -130,6 +64,81 @@ export default function SalesPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
           />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="-mx-3 overflow-x-auto px-3 pb-1 hide-scrollbar sm:-mx-4 sm:px-4">
+          <div className="flex min-w-max gap-2">
+            <button
+              onClick={() => {
+                setTab("all");
+                setTipo("");
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tab === "all" && !tipo
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Todas
+            </button>
+            {miDistribucion?.id && (
+              <button
+                onClick={() => setTab("mine")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  tab === "mine"
+                    ? "bg-orange-100 text-orange-700"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Mi Dist.
+              </button>
+            )}
+            <button
+              onClick={() => setTab("free")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tab === "free"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Libres
+            </button>
+            <button
+              onClick={() => setTab("drafts")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tab === "drafts"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Borradores
+            </button>
+
+            <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80" />
+
+            <button
+              onClick={() => setTipo(tipo === "ventas" ? "" : "ventas")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tipo === "ventas"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Ventas
+            </button>
+            <button
+              onClick={() => setTipo(tipo === "pedidos" ? "" : "pedidos")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tipo === "pedidos"
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Pedidos
+            </button>
+          </div>
         </div>
 
         {isLoading && (
@@ -149,7 +158,9 @@ export default function SalesPage() {
           <div className="text-center py-8">
             <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              {search ? "No se encontraron ventas" : "No hay ventas registradas"}
+              {search
+                ? "No se encontraron ventas"
+                : "No hay ventas registradas"}
             </p>
           </div>
         )}
@@ -159,7 +170,18 @@ export default function SalesPage() {
             <SaleCard
               key={sale.id}
               sale={sale as unknown as { id: string; businessId: string; customerId: string | null; sellerId: string; type: "instant_sale" | "pre_order"; saleType: "contado" | "credito"; totalAmount: string; amountPaid: string; balanceDue: string; tara: string | null; netWeight: string | null; saleDate: Date; deliveryDate: Date | null; orderDate: Date | null; status: "draft" | "confirmed" | "active" | "delivered" | "cancelled"; version: number; confirmedSnapshot: Record<string, unknown> | null; deliveredSnapshot: Record<string, unknown> | null; allowCustomerEdit: boolean; syncStatus: "pending" | "synced" | "error"; syncAttempts: number; cancelledAt: Date | null; cancelledBy: string | null; cancelReason: string | null; refundAmount: string | null; refundDate: Date | null; refundMethod: "efectivo" | "yape" | "plin" | "transferencia" | "saldo" | null; refundReference: string | null; refundNotes: string | null; advancePaymentMethod: string | null; advanceReferenceNumber: string | null; advanceProofImageId: string | null; createdAt: Date; updatedAt: Date; }}
-              onClick={() => navigate(`/ventas/${sale.id}`)}
+              onClick={() => {
+                // Draft sales and confirmed pre_orders go to editor
+                // Others go to detail view
+                const isDraft = sale.status === "draft";
+                const isConfirmedPreOrder =
+                  sale.type === "pre_order" && sale.status === "confirmed";
+                if (isDraft || isConfirmedPreOrder) {
+                  navigate(`/ventas/${sale.id}/editar`);
+                } else {
+                  navigate(`/ventas/${sale.id}`);
+                }
+              }}
             />
           ))}
         </div>
@@ -168,15 +190,15 @@ export default function SalesPage() {
       <Button
         size="icon"
         className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-        onClick={handleCreateSale}
-        disabled={createDraftSale.isPending}
+        onClick={() => setCreateSheetOpen(true)}
       >
-        {createDraftSale.isPending ? (
-          <ShoppingCart className="h-6 w-6 animate-spin" />
-        ) : (
-          <Plus className="h-6 w-6" />
-        )}
+        <Plus className="h-6 w-6" />
       </Button>
+
+      <CreateSaleTypeSheet
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+      />
     </>
   );
 }

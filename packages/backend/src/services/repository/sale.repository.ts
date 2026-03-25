@@ -3,6 +3,8 @@ import { db } from "../../lib/db";
 import { logger } from "../../lib/logger";
 import { sales, saleItems, type Sale, type NewSale, type SaleItem, type NewSaleItem } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import { VersionConflictError } from "../../errors";
+import { toDateColumnValue, toTimestampColumnValue } from "../../lib/date-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -123,9 +125,9 @@ export class SaleRepository {
       balanceDue,
       tara: tara ?? null,
       netWeight: netWeight ?? null,
-      saleDate: saleDate ? new Date(saleDate) : new Date(),
-      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-      orderDate: orderDate ? new Date(orderDate) : null,
+      saleDate: toTimestampColumnValue(saleDate),
+      deliveryDate: toDateColumnValue(deliveryDate),
+      orderDate: toDateColumnValue(orderDate),
       businessId: ctx.businessId,
       sellerId: sellerId ?? ctx.businessUserId,
       ...(id ? { id } : {}),
@@ -389,7 +391,7 @@ export class SaleRepository {
     }
 
     if (sale.version !== baseVersion) {
-      throw new Error("Version conflict - sale was modified");
+      throw new VersionConflictError("La venta");
     }
 
     const [updated] = await executor
@@ -414,7 +416,7 @@ export class SaleRepository {
       .returning();
 
     if (!updated) {
-      throw new Error("Failed to confirm - version mismatch");
+      throw new VersionConflictError("La venta");
     }
 
     return updated;
@@ -434,7 +436,7 @@ export class SaleRepository {
     }
 
     if (sale.version !== baseVersion) {
-      throw new Error("Version conflict - sale was modified");
+      throw new VersionConflictError("La venta");
     }
 
     const [updated] = await executor
@@ -459,7 +461,7 @@ export class SaleRepository {
       .returning();
 
     if (!updated) {
-      throw new Error("Failed to deliver - version mismatch");
+      throw new VersionConflictError("La venta");
     }
 
     return updated;
@@ -689,5 +691,47 @@ export class SaleRepository {
           eq(sales.businessId, ctx.businessId)
         )
       );
+  }
+
+  /**
+   * Find stale draft sales for cleanup
+   * @param options.olderThanDays - Delete drafts older than X days
+   * @param options.withNoItems - Only delete drafts with no items
+   */
+  async findDrafts(
+    ctx: RequestContext,
+    options: {
+      olderThanDays: number;
+      withNoItems?: boolean;
+    }
+  ): Promise<Sale[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - options.olderThanDays);
+
+    const conditions = [
+      eq(sales.businessId, ctx.businessId),
+      eq(sales.status, "draft"),
+      lte(sales.createdAt, cutoffDate),
+    ];
+
+    const staleDrafts = await db
+      .select()
+      .from(sales)
+      .where(and(...conditions))
+      .orderBy(desc(sales.createdAt));
+
+    // If withNoItems is true, also filter out drafts that have items
+    if (options.withNoItems) {
+      const draftsWithItems = await db
+        .select({ saleId: saleItems.saleId })
+        .from(saleItems)
+        .groupBy(saleItems.saleId)
+        .having(sql`COUNT(*) >= 1`);
+
+      const draftIds = staleDrafts.map((d) => d.id);
+      return staleDrafts.filter((d) => !draftIds.includes(d.id));
+    }
+
+    return staleDrafts;
   }
 }

@@ -243,8 +243,9 @@ export default function NuevoCobroPage() {
       }
 
       navigate(customerId ? `/clientes/${customerId}` : "/cobros");
-    } catch {
-      setSubmitError("No se pudo registrar el pago. Intenta nuevamente.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo registrar el pago. Intenta nuevamente.";
+      setSubmitError(message);
     }
   };
 
@@ -428,7 +429,7 @@ export default function NuevoCobroPage() {
               paymentMethod === "plin" ||
               paymentMethod === "transferencia") && (
               <div className="space-y-2">
-                <Label htmlFor="reference">Número de operación</Label>
+                <Label htmlFor="reference">Número de operación (opcional)</Label>
                 <Input
                   id="reference"
                   placeholder="Ej: 123456"

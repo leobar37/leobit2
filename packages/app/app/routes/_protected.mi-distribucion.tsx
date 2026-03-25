@@ -6,16 +6,36 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
+import { useSales } from "~/hooks/use-sales";
 import { useCreateSale } from "~/hooks/use-sales";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency, generateId } from "~/lib/utils";
 import { BusinessUserRole } from "@avileo/shared";
+import { useMemo } from "react";
 
 export default function MiDistribucionPage() {
   const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
   const createSale = useCreateSale();
+
+  // Fetch sales for this distribution to calculate collected amount dynamically
+  const { data: distribucionSales } = useSales(
+    distribucion?.id ? { distribucionId: distribucion.id } : undefined
+  );
+
+
+
+  // Calculate monto recaudado dynamically from active/confirmed/delivered sales
+  // Note: "active" status is used for confirmed contado sales, "confirmed" for pre_orders
+  const montoRecaudado = useMemo(() => {
+    if (!distribucionSales || distribucionSales.length === 0) return 0;
+    return distribucionSales
+      .filter((sale) =>
+        sale.status === "active" || sale.status === "confirmed" || sale.status === "delivered"
+      )
+      .reduce((sum, sale) => sum + parseFloat(sale.totalAmount || "0"), 0);
+  }, [distribucionSales]);
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
@@ -25,27 +45,30 @@ export default function MiDistribucionPage() {
       return;
     }
 
+    if (!distribucion?.id) {
+      console.error("No distribucion available");
+      return;
+    }
+
     try {
-      const saleId = await createSale.mutateAsync({
-        businessId: business.id,
-        sellerId: business.businessUserId,
-        customerId: undefined,
-        type: "instant_sale",
-        saleType: "contado",
-        totalAmount: 0,
-        amountPaid: 0,
+      const sale = await createSale.mutateAsync({
+        sale: {
+          sellerId: business.businessUserId,
+          customerId: undefined,
+          distribucionId: distribucion.id,
+          type: "instant_sale",
+          saleType: "contado",
+          totalAmount: 0,
+        },
         items: [],
       });
 
-      if (!saleId) {
+      if (!sale?.id) {
         console.error("Could not get saleId from result!");
         return;
       }
 
-      // Small delay to allow PGlite to persist
-      setTimeout(() => {
-        navigate(getSaleEditorPath(saleId));
-      }, 200);
+      navigate(getSaleEditorPath(sale.id));
     } catch (error) {
       console.error("Failed to create draft sale:", error);
     }
@@ -66,7 +89,7 @@ export default function MiDistribucionPage() {
         </header>
 
         <main className="p-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+          <Card className="border border-gray-100 rounded-xl">
             <CardContent className="p-8 text-center">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-lg font-semibold mb-2">Modo Libre</h2>
@@ -116,7 +139,7 @@ export default function MiDistribucionPage() {
         </header>
 
         <main className="p-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+          <Card className="border border-gray-100 rounded-xl">
             <CardContent className="p-8 text-center">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-lg font-semibold mb-2">Sin Asignación</h2>
@@ -173,7 +196,7 @@ export default function MiDistribucionPage() {
         />
 
         {distribucion.modo === "libre" && (!distribucion.items || distribucion.items.length === 0) && (
-          <Card className="border-0 shadow-md rounded-2xl">
+          <Card className="border border-gray-100 rounded-xl">
             <CardContent className="p-6 text-center">
               <Package className="h-10 w-10 text-orange-500 mx-auto mb-3" />
               <h3 className="font-semibold mb-1">Distribución Libre</h3>
@@ -185,7 +208,7 @@ export default function MiDistribucionPage() {
         )}
 
         {distribucion.items && distribucion.items.length > 0 && (
-          <Card className="border-0 shadow-md rounded-2xl">
+          <Card className="border border-gray-100 rounded-xl">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -230,7 +253,7 @@ export default function MiDistribucionPage() {
           </Card>
         )}
 
-        <Card className="border-0 shadow-md rounded-2xl">
+        <Card className="border border-gray-100 rounded-xl">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -241,7 +264,7 @@ export default function MiDistribucionPage() {
             <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
               <span className="text-sm text-muted-foreground">Monto Recaudado</span>
               <span className="text-xl font-bold text-green-600">
-                S/ {formatCurrency(distribucion.montoRecaudado)}
+                S/ {formatCurrency(montoRecaudado)}
               </span>
             </div>
           </CardContent>

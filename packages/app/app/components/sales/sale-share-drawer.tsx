@@ -11,6 +11,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
+  DrawerDescription,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +24,7 @@ import {
   useToggleSaleToken,
   useShareSale,
 } from "~/hooks/use-sale-token";
+import { useSaleSyncStatus } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useSync } from "~/components/sync/sync-status";
 
@@ -50,10 +52,17 @@ export function SaleShareDrawer({
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
+  const { isSynced } = useSaleSyncStatus(saleId);
 
   const handleGenerate = () => {
     if (!isOnline) {
       toast.error("Se requiere conexión a internet para generar el enlace de compartir");
+      return;
+    }
+    if (!isSynced) {
+      toast.error("Sincroniza la venta antes de compartir", {
+        description: "La venta aún no se ha guardado en el servidor",
+      });
       return;
     }
     generateToken.mutate(saleId);
@@ -107,7 +116,7 @@ export function SaleShareDrawer({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger className="inline-flex cursor-pointer">
+      <DrawerTrigger asChild>
         {triggerElement}
       </DrawerTrigger>
       <DrawerContent className="max-h-[90vh]">
@@ -123,9 +132,9 @@ export function SaleShareDrawer({
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <DrawerDescription>
             Comparte este enlace con tu cliente para que pueda revisar y modificar su pedido.
-          </p>
+          </DrawerDescription>
         </DrawerHeader>
 
         <div className="p-4 overflow-y-auto">

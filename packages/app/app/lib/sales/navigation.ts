@@ -1,9 +1,12 @@
 import type { Sale } from "~/lib/db/schemas/sale";
 
 export function shouldOpenSaleEditor(
-  sale: Pick<Sale, "status">
+  sale: Pick<Sale, "status" | "type">
 ): boolean {
-  return sale.status === "draft";
+  if (sale.status === "draft") return true;
+  // Confirmed pre_orders should open in editor for delivery adjustments
+  if (sale.type === "pre_order" && sale.status === "confirmed") return true;
+  return false;
 }
 
 export function getSaleEditorPath(saleId: string): string {

@@ -7,9 +7,6 @@ import { ReportService } from "../services/business/report.service";
 export const reportRoutes = new Elysia({ prefix: "/reports" })
   .use(contextPlugin)
   .use(servicesPlugin)
-  .decorate(() => ({
-    reportService: new ReportService(),
-  }))
   .get(
     "/accounts-receivable",
     async ({ customerService, ctx, query }) => {
@@ -59,14 +56,16 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
   // Dashboard metrics endpoints
   .get(
     "/sales-today",
-    async ({ reportService, ctx }) => {
+    async ({ ctx }) => {
+      const reportService = new ReportService();
       const stats = await reportService.getSalesTodayStats(ctx as RequestContext);
       return { success: true, data: stats };
     }
   )
   .get(
     "/sales-stats",
-    async ({ reportService, ctx, query }) => {
+    async ({ ctx, query }) => {
+      const reportService = new ReportService();
       const type = (query.type as "day" | "week" | "month" | "range") || "day";
       const startDate = query.startDate ? new Date(query.startDate) : undefined;
       const endDate = query.endDate ? new Date(query.endDate) : undefined;
@@ -93,21 +92,24 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
   )
   .get(
     "/debtors-summary",
-    async ({ reportService, ctx }) => {
+    async ({ ctx }) => {
+      const reportService = new ReportService();
       const summary = await reportService.getDebtorsSummary(ctx as RequestContext);
       return { success: true, data: summary };
     }
   )
   .get(
     "/sales-weekly",
-    async ({ reportService, ctx }) => {
+    async ({ ctx }) => {
+      const reportService = new ReportService();
       const data = await reportService.getWeeklySales(ctx as RequestContext);
       return { success: true, data };
     }
   )
   .get(
     "/sales-chart",
-    async ({ reportService, ctx, query }) => {
+    async ({ ctx, query }) => {
+      const reportService = new ReportService();
       const type = (query.type as "day" | "week" | "month" | "range") || "week";
       const startDate = query.startDate ? new Date(query.startDate) : undefined;
       const endDate = query.endDate ? new Date(query.endDate) : undefined;
@@ -135,11 +137,17 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
   // Sale analysis endpoint
   .get(
     "/sale/:id/analysis",
-    async ({ reportService, ctx, params }) => {
+    async ({ ctx, params }) => {
+      const reportService = new ReportService();
       const analysis = await reportService.getSaleAnalysis(
         ctx as RequestContext,
         params.id
       );
       return { success: true, data: analysis };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
     }
   );

@@ -33,6 +33,21 @@ import {
   CLOSINGS as CLIENT_CLOSINGS,
 } from "./client-data";
 import {
+  CLIENT1_USER,
+  CLIENT1_BUSINESS,
+  PRODUCTS as CLIENT1_PRODUCTS,
+  PRODUCT_VARIANTS as CLIENT1_PRODUCT_VARIANTS,
+  CUSTOMERS as CLIENT1_CUSTOMERS,
+  SALES as CLIENT1_SALES,
+  ABONOS as CLIENT1_ABONOS,
+  DISTRIBUCIONES as CLIENT1_DISTRIBUCIONES,
+  SUPPLIERS as CLIENT1_SUPPLIERS,
+  PURCHASES as CLIENT1_PURCHASES,
+  TAGS as CLIENT1_TAGS,
+  CUSTOMER_TAGS as CLIENT1_CUSTOMER_TAGS,
+  CLOSINGS as CLIENT1_CLOSINGS,
+} from "./client1-data";
+import {
   saleItems as saleItemsSchema,
   sales as salesSchema,
   abonos as abonosSchema,
@@ -48,6 +63,7 @@ import {
 
 const FORCE_MODE = process.argv.includes("--force");
 const CLIENT_MODE = process.argv.includes("--client");
+const CLIENT1_MODE = process.argv.includes("--client1");
 
 interface SeedProduct {
   id: string;
@@ -86,36 +102,78 @@ export async function seedDatabase(): Promise<SeedResult> {
     throw new Error("Seed cannot run in production environment");
   }
 
-  // Detectar si usamos datos reales
+  // Detectar modo
+  const isClient = CLIENT_MODE;
+  const isClient1 = CLIENT1_MODE;
+
+  // Detectar si usamos datos reales (solo para --client con JSON exportado)
   const useRealData = isRealClientData();
-  
+
   if (useRealData) {
     console.log("📦 Modo DATOS REALES: Usando exportación de cliente@avileo.com\n");
+  } else if (isClient1) {
+    console.log("📦 Modo CLIENTE1: Creando cuenta para cliente1@gmail.com\n");
   }
 
   // Select data based on mode
-  const isClient = CLIENT_MODE;
-  const currentUser = isClient ? CLIENT_USER : { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
-  const currentBusiness = isClient ? CLIENT_BUSINESS : TEST_BUSINESS;
-  const currentProducts: any[] = isClient ? CLIENT_PRODUCTS : PRODUCTS;
-  const currentProductVariants: any[][] = isClient ? CLIENT_PRODUCT_VARIANTS : PRODUCT_VARIANTS;
-  const currentCustomers: any[] = isClient ? CLIENT_CUSTOMERS : CUSTOMERS;
-  const currentSales: any[] = isClient ? CLIENT_SALES : SALES;
-  const currentAbonos: any[] = isClient ? CLIENT_ABONOS : ABONOS;
-  const currentDistribuciones: any[] = isClient ? CLIENT_DISTRIBUCIONES : DISTRIBUCIONES;
-  const currentSuppliers: any[] = isClient ? CLIENT_SUPPLIERS : SUPPLIERS;
-  const currentPurchases: any[] = isClient ? CLIENT_PURCHASES : PURCHASES;
-  const currentTags: any[] = isClient ? CLIENT_TAGS : TAGS;
-  const currentCustomerTags: any[] = isClient ? CLIENT_CUSTOMER_TAGS : CUSTOMER_TAGS;
-  const currentClosings: any[] = isClient ? CLIENT_CLOSINGS : CLOSINGS;
+  let currentUser, currentBusiness, currentProducts, currentProductVariants, currentCustomers;
+  let currentSales, currentAbonos, currentDistribuciones, currentSuppliers, currentPurchases;
+  let currentTags, currentCustomerTags, currentClosings;
 
-  if (FORCE_MODE && !isClient) {
+  if (isClient1) {
+    // Modo cliente1@gmail.com
+    currentUser = CLIENT1_USER;
+    currentBusiness = CLIENT1_BUSINESS;
+    currentProducts = CLIENT1_PRODUCTS;
+    currentProductVariants = CLIENT1_PRODUCT_VARIANTS;
+    currentCustomers = CLIENT1_CUSTOMERS;
+    currentSales = CLIENT1_SALES;
+    currentAbonos = CLIENT1_ABONOS;
+    currentDistribuciones = CLIENT1_DISTRIBUCIONES;
+    currentSuppliers = CLIENT1_SUPPLIERS;
+    currentPurchases = CLIENT1_PURCHASES;
+    currentTags = CLIENT1_TAGS;
+    currentCustomerTags = CLIENT1_CUSTOMER_TAGS;
+    currentClosings = CLIENT1_CLOSINGS;
+  } else if (isClient) {
+    // Modo cliente@avileo.com
+    currentUser = CLIENT_USER;
+    currentBusiness = CLIENT_BUSINESS;
+    currentProducts = CLIENT_PRODUCTS;
+    currentProductVariants = CLIENT_PRODUCT_VARIANTS;
+    currentCustomers = CLIENT_CUSTOMERS;
+    currentSales = CLIENT_SALES;
+    currentAbonos = CLIENT_ABONOS;
+    currentDistribuciones = CLIENT_DISTRIBUCIONES;
+    currentSuppliers = CLIENT_SUPPLIERS;
+    currentPurchases = CLIENT_PURCHASES;
+    currentTags = CLIENT_TAGS;
+    currentCustomerTags = CLIENT_CUSTOMER_TAGS;
+    currentClosings = CLIENT_CLOSINGS;
+  } else {
+    // Modo E2E (default)
+    currentUser = { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
+    currentBusiness = TEST_BUSINESS;
+    currentProducts = PRODUCTS;
+    currentProductVariants = PRODUCT_VARIANTS;
+    currentCustomers = CUSTOMERS;
+    currentSales = SALES;
+    currentAbonos = ABONOS;
+    currentDistribuciones = DISTRIBUCIONES;
+    currentSuppliers = SUPPLIERS;
+    currentPurchases = PURCHASES;
+    currentTags = TAGS;
+    currentCustomerTags = CUSTOMER_TAGS;
+    currentClosings = CLOSINGS;
+  }
+
+  if (FORCE_MODE && !isClient && !isClient1) {
     console.log("⚠️ FORCE MODE: Clearing existing seeded data...\n");
     await clearExistingData();
   }
 
-  // Create user (different function for client vs e2e)
-  const user = isClient
+  // Create user (different function for client modes vs e2e)
+  const user = (isClient || isClient1)
     ? await createClientUser(currentUser.email, currentUser.password, currentUser.name)
     : await createTestUser();
   console.log();
@@ -183,7 +241,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     console.log("✅ Seed completed successfully with REAL DATA!\n");
     console.log("Login credentials:");
     console.log(`  Email: ${currentUser.email}`);
-    console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
+    console.log(`  Password: ${isClient ? "Cliente112345" : isClient1 ? "Prueba@123" : "e2e123456"}`);
     console.log();
 
     return {
@@ -242,7 +300,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     console.log("✅ Seed completed successfully!\n");
     console.log("Login credentials:");
     console.log(`  Email: ${currentUser.email}`);
-    console.log(`  Password: ${isClient ? "Cliente112345" : "e2e123456"}`);
+    console.log(`  Password: ${isClient ? "Cliente112345" : isClient1 ? "Prueba@123" : "e2e123456"}`);
     console.log();
 
     return {

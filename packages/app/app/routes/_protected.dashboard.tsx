@@ -11,6 +11,8 @@ import {
   CreditCard,
   WifiOff,
   CloudOff,
+  TrendingUp,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -28,6 +30,7 @@ import {
 import { formatCurrency, formatKilos } from "~/lib/utils";
 import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-selector";
 import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -76,85 +79,14 @@ export default function DashboardPage() {
       {isOnline && hasPending && (
         <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
           <CloudOff className="h-4 w-4" />
-          {syncStatus?.pending} operación{syncStatus.pending !== 1 ? "es" : ""} pendiente{syncStatus.pending !== 1 ? "s" : ""} de sincronizar
+          {syncStatus?.pending} operación{syncStatus?.pending !== 1 ? "es" : ""} pendiente{syncStatus?.pending !== 1 ? "s" : ""} de sincronizar
         </div>
-      )}
-
-      {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
-        <Link to="/mi-distribucion" className="block">
-          <InventoryCard
-            puntoVenta={distribucion.puntoVenta}
-            modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
-            estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
-            cantidadItems={distribucion.items?.length || 0}
-          />
-        </Link>
-      )}
-
-      {/* Alerta - Card blanca con borde lateral ámbar */}
-      {usarDistribucion && !isLoadingDistribucion && !tieneDistribucion && (
-        <Link to="/distribuciones" className="block">
-          <div className="border-l-4 border-amber-400 bg-white py-3 pl-4 pr-3">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-foreground">Sin distribución asignada</p>
-                <p className="text-sm text-muted-foreground">
-                  {isAdmin
-                    ? "Asigna tu distribución para hoy"
-                    : "Contacta a tu administrador"}
-                </p>
-              </div>
-              {isAdmin && <Settings className="h-4 w-4 text-amber-500 ml-auto" />}
-            </div>
-          </div>
-        </Link>
       )}
 
       {/* Selector de Período */}
       <PeriodSelector value={period} onChange={setPeriod} />
 
-      {/* Métricas del Dashboard */}
-      <div className="grid grid-cols-2 gap-3">
-        <MetricCard
-          title={period.type === "day" ? "Ventas Hoy" : period.type === "week" ? "Ventas Semana" : period.type === "month" ? "Ventas Mes" : "Ventas"}
-          value={isLoadingSales ? "S/ -" : `S/ ${formatCurrency(salesStats?.current.amount ?? 0)}`}
-          change={salesStats?.change.amount}
-          icon={DollarSign}
-          iconColor="text-green-600"
-        />
-        <MetricCard
-          title="Kilos Vendidos"
-          value={isLoadingSales ? "-" : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
-          change={salesStats?.change.kilos}
-          icon={Weight}
-          iconColor="text-blue-600"
-        />
-        <MetricCard
-          title="Deudores"
-          value={isLoadingDebtors ? "-" : String(debtorsCount)}
-          subtitle="clientes con deuda"
-          icon={Users}
-          iconColor="text-red-600"
-        />
-        <MetricCard
-          title="Por Cobrar"
-          value={isLoadingDebtors ? "S/ -" : `S/ ${formatCurrency(debtorsSummary?.totalDebt ?? 0)}`}
-          icon={CreditCard}
-          iconColor="text-orange-600"
-        />
-      </div>
-
-      {/* Gráfico de Ventas */}
-      {!isLoadingChart && chartData && (
-        <WeeklySalesChart
-          labels={chartData.labels}
-          data={chartData.data}
-          periodType={period.type}
-        />
-      )}
-
-      {/* Accesos Rápidos - Minimalista */}
+      {/* Accesos Rápidos - Siempre visibles */}
       <div className="grid grid-cols-4 gap-2">
         <Link to="/ventas" className="block">
           <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
@@ -197,6 +129,106 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Tabs para organizar el contenido */}
+      <Tabs defaultValue="resumen" className="w-full border-t pt-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="resumen" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger value="distribucion" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Distribución
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Resumen - Métricas y Gráfico */}
+        <TabsContent value="resumen" className="space-y-6 mt-4">
+          {/* Métricas del Dashboard */}
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard
+              title={period.type === "day" ? "Ventas Hoy" : period.type === "week" ? "Ventas Semana" : period.type === "month" ? "Ventas Mes" : "Ventas"}
+              value={isLoadingSales ? "S/ -" : `S/ ${formatCurrency(salesStats?.current.amount ?? 0)}`}
+              change={salesStats?.change.amount}
+              icon={DollarSign}
+              iconColor="text-green-600"
+            />
+            <MetricCard
+              title="Kilos Vendidos"
+              value={isLoadingSales ? "-" : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
+              change={salesStats?.change.kilos}
+              icon={Weight}
+              iconColor="text-blue-600"
+            />
+            <MetricCard
+              title="Deudores"
+              value={isLoadingDebtors ? "-" : String(debtorsCount)}
+              subtitle="clientes con deuda"
+              icon={Users}
+              iconColor="text-red-600"
+            />
+            <MetricCard
+              title="Por Cobrar"
+              value={isLoadingDebtors ? "S/ -" : `S/ ${formatCurrency(debtorsSummary?.totalDebt ?? 0)}`}
+              icon={CreditCard}
+              iconColor="text-orange-600"
+            />
+          </div>
+
+          {/* Gráfico de Ventas */}
+          {!isLoadingChart && chartData && (
+            <WeeklySalesChart
+              labels={chartData.labels}
+              data={chartData.data}
+              periodType={period.type}
+            />
+          )}
+        </TabsContent>
+
+        {/* Tab: Distribución */}
+        <TabsContent value="distribucion" className="space-y-4 mt-4">
+          {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
+            <Link to="/mi-distribucion" className="block">
+              <InventoryCard
+                puntoVenta={distribucion.puntoVenta}
+                modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
+                estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
+                cantidadItems={distribucion.items?.length || 0}
+              />
+            </Link>
+          )}
+
+          {/* Alerta - Card blanca con borde lateral ámbar */}
+          {usarDistribucion && !isLoadingDistribucion && !tieneDistribucion && (
+            <Link to="/distribuciones" className="block">
+              <div className="border-l-4 border-amber-400 bg-white py-3 pl-4 pr-3">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">Sin distribución asignada</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isAdmin
+                        ? "Asigna tu distribución para hoy"
+                        : "Contacta a tu administrador"}
+                    </p>
+                  </div>
+                  {isAdmin && <Settings className="h-4 w-4 text-amber-500 ml-auto" />}
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {!usarDistribucion && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p>El sistema de distribución está desactivado</p>
+              <p className="text-sm">Contacta al administrador si necesitas activarlo</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
     </div>
   );
 }

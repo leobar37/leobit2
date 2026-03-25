@@ -198,7 +198,7 @@ export abstract class BaseService {
   ): Promise<void> {
     const validatedTableName = validateTableName(tableName);
     const now = this.now();
-    await this.pg.exec(
+    await this.pg.query(
       `UPDATE ${validatedTableName} SET sync_status = $1, updated_at = $2 WHERE id = $3`,
       [status, now, id]
     );
@@ -225,7 +225,7 @@ export abstract class BaseService {
     const newVersion = currentVersion + 1;
 
     const now = this.now();
-    await this.pg.exec(
+    await this.pg.query(
       `UPDATE ${validatedTableName} SET version = $1, sync_status = $2, updated_at = $3 WHERE id = $4`,
       [newVersion, SyncStatus.PENDING, now, id]
     );

@@ -1,7 +1,8 @@
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { sales, customers, abonos, saleItems } from "../../db/schema";
+import { sales, customers, abonos, saleItems, type Sale } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import { NotFoundError } from "../../errors";
 
 export interface SalesTodayStats {
   today: {
@@ -513,23 +514,25 @@ export class ReportService {
     });
 
     if (!sale) {
-      throw new Error("Sale not found");
+      throw new NotFoundError("Venta");
     }
 
+    const typedSale = sale as unknown as Sale;
+
     const [customerHistory, profitAnalysis, paymentStatus] = await Promise.all([
-      sale.customerId ? this.getSaleCustomerHistory(ctx, sale.customerId) : null,
+      typedSale.customerId ? this.getSaleCustomerHistory(ctx, typedSale.customerId) : null,
       this.getSaleProfitAnalysis(ctx, saleId),
-      this.getSalePaymentStatus(ctx, sale),
+      this.getSalePaymentStatus(ctx, typedSale),
     ]);
 
     return {
       sale: {
-        id: sale.id,
-        totalAmount: sale.totalAmount,
-        balanceDue: sale.balanceDue,
-        saleDate: sale.saleDate,
-        status: sale.status,
-        saleType: sale.saleType,
+        id: typedSale.id,
+        totalAmount: typedSale.totalAmount,
+        balanceDue: typedSale.balanceDue,
+        saleDate: typedSale.saleDate,
+        status: typedSale.status,
+        saleType: typedSale.saleType,
       },
       customerHistory,
       profitAnalysis,

@@ -409,6 +409,12 @@ export class SaleService {
       throw new ValidationError("Solo se pueden confirmar ventas en estado borrador");
     }
 
+    // Validate that sale has items before confirming
+    const saleItems = await this.repository.findSaleItems(ctx, id);
+    if (saleItems.length === 0) {
+      throw new ValidationError("No puedes confirmar una venta sin productos");
+    }
+
     // For pre_orders, use versioned confirm
     if (sale.type === "pre_order") {
       if (baseVersion === undefined) {
@@ -533,12 +539,64 @@ export class SaleService {
     return this.repository.getTotalSalesToday(ctx);
   }
 
+  /**
+   * Get items for a sale
+   */
   async getSaleItems(ctx: RequestContext, saleId: string): Promise<SaleItem[]> {
     const sale = await this.repository.findById(ctx, saleId);
     if (!sale) {
       throw new NotFoundError("Sale");
     }
     return this.repository.findSaleItems(ctx, saleId);
+  }
+
+  /**
+   * Cleanup stale draft sales
+   * - Drafts older than X days with no items
+   * - Drafts older than 30 days regardless of items
+   */
+  async cleanupStaleDraftSales(
+    ctx: RequestContext,
+    options: {
+      olderThanDays?: number;
+      withNoItems?: boolean;
+      olderThan30Days?: number;
+    }
+  ): Promise<{ deletedCount: number; deletedIds: string[] }> {
+    const staleDrafts = await this.repository.findDrafts(ctx, {
+      olderThanDays: options.olderThanDays ?? 7,
+      withNoItems: options.withNoItems ?? true,
+    });
+
+    // Also find drafts older than 30 days regardless of items
+    const veryOldDrafts = await this.repository.findDrafts(ctx, {
+      olderThanDays: options.olderThan30Days ?? 30,
+      withNoItems: false,
+    });
+
+    // Combine and deduplicate
+    const allDrafts = [...staleDrafts];
+    for (const draft of veryOldDrafts) {
+      if (!allDrafts.find((d) => d.id === draft.id)) {
+        allDrafts.push(draft);
+      }
+    }
+
+    const deletedIds: string[] = [];
+
+    for (const draft of allDrafts) {
+      try {
+        await this.repository.delete(ctx, draft.id);
+        deletedIds.push(draft.id);
+      } catch (error) {
+        console.error(`Failed to delete stale draft ${draft.id}:`, error);
+      }
+    }
+
+    return {
+      deletedCount: deletedIds.length,
+      deletedIds,
+    };
   }
 
   async addItem(

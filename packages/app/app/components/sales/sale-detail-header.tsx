@@ -28,7 +28,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
   const { open } = useCancelSaleDialog();
 
   const canShare = sale?.status === "draft" || sale?.status === "confirmed";
-  const canReschedule = sale?.type === "pre_order" && sale?.status !== "cancelled" && sale?.status !== "delivered";
+  const canReschedule = sale?.type === "pre_order" && sale?.status === "draft";
 
   return (
     <header className="sticky top-0 z-50 border-b shell-surface">

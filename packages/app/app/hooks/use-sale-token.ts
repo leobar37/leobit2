@@ -16,6 +16,22 @@ interface SaleToken {
   lastUsedAt?: string;
 }
 
+/**
+ * Extract error message from structured API error
+ */
+function extractErrorMessage(errorValue: unknown): string {
+  if (typeof errorValue === "string") {
+    return errorValue;
+  }
+  if (errorValue && typeof errorValue === "object") {
+    if ("message" in errorValue && typeof errorValue.message === "string") {
+      return errorValue.message;
+    }
+    return JSON.stringify(errorValue);
+  }
+  return "Error desconocido";
+}
+
 // Get token for a sale
 export function useSaleToken(saleId: string | null) {
   return useQuery({
@@ -24,7 +40,7 @@ export function useSaleToken(saleId: string | null) {
       if (!saleId) return null;
       const response = await api.sales({ id: saleId }).token.get();
       if (response.error) {
-        throw new Error(String(response.error.value));
+        throw new Error(extractErrorMessage(response.error.value));
       }
       return response.data?.data as SaleToken | null;
     },
@@ -41,7 +57,7 @@ export function useGenerateSaleToken() {
     mutationFn: async (saleId: string) => {
       const response = await api.sales({ id: saleId }).token.post();
       if (response.error) {
-        throw new Error(String(response.error.value));
+        throw new Error(extractErrorMessage(response.error.value));
       }
       return response.data?.data as { token: string };
     },
@@ -68,7 +84,7 @@ export function useRegenerateSaleToken() {
     mutationFn: async (saleId: string) => {
       const response = await api.sales({ id: saleId })["token"].regenerate.post();
       if (response.error) {
-        throw new Error(String(response.error.value));
+        throw new Error(extractErrorMessage(response.error.value));
       }
       return response.data?.data as { token: string };
     },
@@ -95,7 +111,7 @@ export function useToggleSaleToken() {
     mutationFn: async ({ saleId, isActive }: { saleId: string; isActive: boolean }) => {
       const response = await api.sales({ id: saleId })["token"].toggle.post({ isActive });
       if (response.error) {
-        throw new Error(String(response.error.value));
+        throw new Error(extractErrorMessage(response.error.value));
       }
       return response.data?.data as SaleToken;
     },

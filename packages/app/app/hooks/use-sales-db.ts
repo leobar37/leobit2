@@ -91,7 +91,54 @@ export function useCreateSale() {
 }
 
 export function useFinalizeSale() {
-  return useConfirmSale();
+  const saleService = useSaleService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      type,
+      version,
+      isDeliveryMode,
+      deliveryItems,
+      amountPaid,
+      paymentMode,
+    }: {
+      id: string;
+      type: string;
+      version: number;
+      isDeliveryMode?: boolean;
+      deliveryItems?: Array<{
+        itemId: string;
+        deliveredQuantity?: number;
+        unitPriceFinal?: number;
+        subtotal?: number;
+      }>;
+      amountPaid?: number;
+      paymentMode?: string;
+    }) => {
+      // If in delivery mode, use finalizeDelivery instead
+      if (isDeliveryMode) {
+        return saleService.finalizeDelivery(id, {
+          items: deliveryItems || [],
+          amountPaid,
+          paymentMode,
+        });
+      }
+
+      // Otherwise, use the normal confirmation flow
+      if (type === "pre_order") {
+        return saleService.confirmPreOrder(id, version);
+      }
+      return saleService.confirm(id);
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["sales-new", id] });
+      queryClient.invalidateQueries({ queryKey: ["sales-new"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+    },
+  });
 }
 
 export function useAddSaleItem() {

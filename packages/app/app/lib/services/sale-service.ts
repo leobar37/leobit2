@@ -11,7 +11,7 @@ import { SyncService } from "../sync/sync-service";
 import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates, normalizeRow } from "../mappers/entity-mapper";
-import { eq, sql, and, gte, lte, inArray } from "drizzle-orm";
+import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
 
 /**
  * Sale status types
@@ -72,15 +72,15 @@ export interface Sale {
   visitaId: string | null;
   type: SaleType;
   saleType: SalePaymentType;
-  paymentMode: string | null;
+  paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null;
   totalAmount: string;
   amountPaid: string;
   balanceDue: string;
   tara: string | null;
   netWeight: string | null;
-  saleDate: Date;
-  deliveryDate: Date | null;
-  orderDate: Date | null;
+  saleDate: string;
+  deliveryDate: string | null;
+  orderDate: string | null;
   status: SaleStatus;
   version: number;
   confirmedSnapshot: Record<string, unknown> | null;
@@ -88,19 +88,19 @@ export interface Sale {
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  cancelledAt: Date | null;
+  cancelledAt: string | null;
   cancelledBy: string | null;
   cancelReason: string | null;
   refundAmount: string | null;
-  refundDate: Date | null;
+  refundDate: string | null;
   refundMethod: string | null;
   refundReference: string | null;
   refundNotes: string | null;
   advancePaymentMethod: string | null;
   advanceReferenceNumber: string | null;
   advanceProofImageId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -124,7 +124,7 @@ export interface CreateSaleInput {
   netWeight?: number;
   deliveryDate?: string;
   orderDate?: string;
-  paymentMode?: string;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
 }
 
 /**
@@ -148,6 +148,7 @@ export interface CreateSaleItemInput {
 export interface UpdateSaleInput {
   customerId?: string;
   saleType?: SalePaymentType;
+  type?: SaleType;
   totalAmount?: number;
   amountPaid?: number;
   balanceDue?: number;
@@ -155,7 +156,7 @@ export interface UpdateSaleInput {
   netWeight?: number;
   deliveryDate?: string;
   orderDate?: string;
-  paymentMode?: string;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
 }
 
 /**
@@ -320,6 +321,90 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(and(eq(salesTable.status, status), eq(salesTable.businessId, this.businessId)))
+      .orderBy(sql`${salesTable.saleDate} DESC`);
+
+    const sales: SaleWithItems[] = [];
+
+    for (const row of salesResult) {
+      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
+
+      // Fetch customer data if customerId exists
+      let customer: SaleCustomer | null = null;
+      if (sale.customerId) {
+        const customerResult = await this.pg.query<Record<string, unknown>>(
+          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
+          [sale.customerId]
+        );
+        if (customerResult.rows.length > 0) {
+          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
+        }
+      }
+
+      const itemsResult = await this.pg.query<Record<string, unknown>>(
+        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+        [sale.id, this.businessId]
+      );
+
+      sales.push({
+        ...sale,
+        customer,
+        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
+      });
+    }
+
+    return sales;
+  }
+
+  /**
+   * Find sales by distribution ID
+   */
+  async findByDistribucionId(distribucionId: string): Promise<SaleWithItems[]> {
+    const salesResult = await this.db
+      .select()
+      .from(salesTable)
+      .where(and(eq(salesTable.distribucionId, distribucionId), eq(salesTable.businessId, this.businessId)))
+      .orderBy(sql`${salesTable.saleDate} DESC`);
+
+    const sales: SaleWithItems[] = [];
+
+    for (const row of salesResult) {
+      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
+
+      // Fetch customer data if customerId exists
+      let customer: SaleCustomer | null = null;
+      if (sale.customerId) {
+        const customerResult = await this.pg.query<Record<string, unknown>>(
+          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
+          [sale.customerId]
+        );
+        if (customerResult.rows.length > 0) {
+          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
+        }
+      }
+
+      const itemsResult = await this.pg.query<Record<string, unknown>>(
+        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
+        [sale.id, this.businessId]
+      );
+
+      sales.push({
+        ...sale,
+        customer,
+        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
+      });
+    }
+
+    return sales;
+  }
+
+  /**
+   * Find sales with no distribution (libres)
+   */
+  async findByDistribucionIdIsNull(): Promise<SaleWithItems[]> {
+    const salesResult = await this.db
+      .select()
+      .from(salesTable)
+      .where(and(isNull(salesTable.distribucionId), eq(salesTable.businessId, this.businessId)))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
     const sales: SaleWithItems[] = [];
@@ -621,11 +706,46 @@ export class SaleService extends BaseService {
       throw new Error("Only instant_sales can be confirmed directly");
     }
 
+    // Validate that sale has items before confirming
+    if (sale.items.length === 0) {
+      throw new Error("No puedes confirmar una venta sin productos");
+    }
+
     const now = this.now();
 
+    // Recalculate totals from items to ensure consistency
+    const totalAmount = sale.items.reduce(
+      (sum, item) => sum + parseFloat(item.subtotal || "0"), 0
+    );
+    const paymentMode = sale.paymentMode || "pago_total";
+    const amountPaid = paymentMode === "pago_total"
+      ? totalAmount
+      : paymentMode === "debe_todo"
+        ? 0
+        : parseFloat(sale.amountPaid || "0");
+    const balanceDue = Math.max(totalAmount - amountPaid, 0);
+
     await this.pg.query(
-      `UPDATE sales SET status = 'active', updated_at = $1, sync_status = $2 WHERE id = $3`,
-      [now, SyncStatus.PENDING, id]
+      `UPDATE sales SET
+        status = 'active',
+        total_amount = $1,
+        amount_paid = $2,
+        balance_due = $3,
+        payment_mode = $4,
+        sale_type = $5,
+        updated_at = $6,
+        sync_status = $7
+      WHERE id = $8`,
+      [
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        paymentMode,
+        paymentMode === "pago_total" ? "contado" : "credito",
+        now,
+        SyncStatus.PENDING,
+        id,
+      ]
     );
 
     const syncGroupId = await this.getSaleSyncGroupId(id);
@@ -635,7 +755,11 @@ export class SaleService extends BaseService {
       id,
       {
         status: "active",
-        saleType: sale.saleType,
+        saleType: paymentMode === "pago_total" ? "contado" : "credito",
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        paymentMode,
       },
       syncGroupId
     );
@@ -660,15 +784,52 @@ export class SaleService extends BaseService {
       throw new Error("Only pre_orders use confirmPreOrder");
     }
 
+    // Validate that sale has items before confirming
+    if (sale.items.length === 0) {
+      throw new Error("No puedes confirmar un pedido sin productos");
+    }
+
     if (sale.version !== baseVersion) {
       throw new Error("La venta fue modificada por otro usuario. Por favor, intenta de nuevo.");
     }
 
     const now = this.now();
 
+    // Recalculate totals from items to ensure consistency
+    const totalAmount = sale.items.reduce(
+      (sum, item) => sum + parseFloat(item.subtotal || "0"), 0
+    );
+    const paymentMode = sale.paymentMode || "pago_total";
+    const amountPaid = paymentMode === "pago_total"
+      ? totalAmount
+      : paymentMode === "debe_todo"
+        ? 0
+        : parseFloat(sale.amountPaid || "0");
+    const balanceDue = Math.max(totalAmount - amountPaid, 0);
+
     await this.pg.query(
-      `UPDATE sales SET status = 'confirmed', version = version + 1, updated_at = $1, sync_status = $2 WHERE id = $3 AND version = $4`,
-      [now, SyncStatus.PENDING, id, baseVersion]
+      `UPDATE sales SET
+        status = 'confirmed',
+        version = version + 1,
+        total_amount = $1,
+        amount_paid = $2,
+        balance_due = $3,
+        payment_mode = $4,
+        sale_type = $5,
+        updated_at = $6,
+        sync_status = $7
+      WHERE id = $8 AND version = $9`,
+      [
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        paymentMode,
+        paymentMode === "pago_total" ? "contado" : "credito",
+        now,
+        SyncStatus.PENDING,
+        id,
+        baseVersion,
+      ]
     );
 
     const syncGroupId = await this.getSaleSyncGroupId(id);
@@ -678,7 +839,11 @@ export class SaleService extends BaseService {
       id,
       {
         status: "confirmed",
-        saleType: sale.saleType,
+        saleType: paymentMode === "pago_total" ? "contado" : "credito",
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        paymentMode,
       },
       syncGroupId
     );
@@ -720,6 +885,123 @@ export class SaleService extends BaseService {
       },
       syncGroupId
     );
+  }
+
+  /**
+   * Finalize delivery of a pre_order with adjustments
+   * Allows modifying quantities, prices, and payment before marking as delivered
+   */
+  async finalizeDelivery(
+    id: string,
+    options: {
+      items: Array<{
+        itemId: string;
+        deliveredQuantity?: number;
+        unitPriceFinal?: number;
+        subtotal?: number;
+      }>;
+      amountPaid?: number;
+      paymentMode?: string;
+    }
+  ): Promise<void> {
+    const sale = await this.findById(id);
+
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+
+    if (sale.status !== "confirmed") {
+      throw new Error("Only confirmed sales can be finalized for delivery");
+    }
+
+    if (sale.type !== "pre_order") {
+      throw new Error("Only pre_orders can use finalize delivery");
+    }
+
+    const now = this.now();
+    const syncGroupId = await this.getSaleSyncGroupId(id);
+
+    // Start transaction
+    await this.pg.exec("BEGIN");
+
+    try {
+      let totalAmount = 0;
+
+      // Update each item with final delivery details
+      for (const itemUpdate of options.items) {
+        const item = sale.items.find((i) => i.id === itemUpdate.itemId);
+        if (!item) continue;
+
+        const deliveredQty = itemUpdate.deliveredQuantity ?? parseFloat(item.orderedQuantity || "0");
+        const finalPrice = itemUpdate.unitPriceFinal ?? parseFloat(item.unitPriceQuoted || "0");
+        const subtotal = itemUpdate.subtotal ?? deliveredQty * finalPrice;
+
+        totalAmount += subtotal;
+
+        await this.pg.query(
+          `UPDATE sale_items SET
+            delivered_quantity = $1,
+            unit_price_final = $2,
+            subtotal = $3,
+            is_modified = true
+          WHERE id = $4 AND sale_id = $5`,
+          [deliveredQty, finalPrice, subtotal, itemUpdate.itemId, id]
+        );
+
+        // Queue sync for item update
+        await this.queueSync(
+          "update",
+          itemUpdate.itemId,
+          {
+            deliveredQuantity: deliveredQty,
+            unitPriceFinal: finalPrice,
+            subtotal,
+            isModified: true,
+          },
+          syncGroupId,
+          "sale_items"
+        );
+      }
+
+      // Calculate final amounts
+      const amountPaid = options.amountPaid ?? parseFloat(sale.amountPaid);
+      const balanceDue = totalAmount - amountPaid;
+
+      // Update sale with final totals and mark as delivered
+      await this.pg.query(
+        `UPDATE sales SET
+          status = 'delivered',
+          total_amount = $1,
+          amount_paid = $2,
+          balance_due = $3,
+          payment_mode = $4,
+          updated_at = $5,
+          sync_status = $6
+        WHERE id = $7`,
+        [totalAmount, amountPaid, balanceDue, options.paymentMode ?? sale.paymentMode, now, SyncStatus.PENDING, id]
+      );
+
+      // Commit transaction
+      await this.pg.exec("COMMIT");
+
+      // Queue sync for sale update
+      await this.queueSync(
+        "update",
+        id,
+        {
+          status: "delivered",
+          saleType: sale.saleType,
+          totalAmount,
+          amountPaid,
+          balanceDue,
+          paymentMode: options.paymentMode ?? sale.paymentMode,
+        },
+        syncGroupId
+      );
+    } catch (error) {
+      await this.pg.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   /**
@@ -793,6 +1075,12 @@ export class SaleService extends BaseService {
     if (input.saleType !== undefined) {
       updates.push(`sale_type = $${paramIndex}`);
       params.push(input.saleType);
+      paramIndex++;
+    }
+
+    if (input.type !== undefined) {
+      updates.push(`type = $${paramIndex}`);
+      params.push(input.type);
       paramIndex++;
     }
 
@@ -911,8 +1199,9 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found");
     }
 
-    if (sale.status !== "draft") {
-      throw new Error("Only draft sales can have items added");
+    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
+    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+      throw new Error("Only draft or confirmed pre_order sales can have items added");
     }
 
     // Check for existing item with same product + variant
@@ -929,10 +1218,13 @@ export class SaleService extends BaseService {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
 
+    // Get the sale's syncGroupId to ensure items are synced in the correct order
+    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
+
     const itemId = this.generateId();
     const now = this.now();
 
-    // Use Drizzle to insert the item
+    // Use Drizzle to insert the item with the sale's syncGroupId
     await this.db.insert(saleItemsTable).values({
       id: itemId,
       businessId: this.businessId,
@@ -947,6 +1239,7 @@ export class SaleService extends BaseService {
       unitPriceQuoted: item.unitPriceQuoted?.toString() ?? null,
       subtotal: item.subtotal.toString(),
       isModified: false,
+      syncGroupId: saleSyncGroupId,
     });
 
     // Update sale total atomically to prevent race conditions
@@ -961,7 +1254,6 @@ export class SaleService extends BaseService {
     );
 
     // Queue sync for the new item (use same syncGroupId as the sale insert to ensure correct order)
-    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
     console.log("[SaleService] addItem - saleSyncGroupId:", saleSyncGroupId, "saleId:", saleId);
     await this.queueSync(
       "create",
@@ -1009,8 +1301,9 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found");
     }
 
-    if (sale.status !== "draft") {
-      throw new Error("Only draft sales can have items updated");
+    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
+    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+      throw new Error("Only draft or confirmed pre_order sales can have items updated");
     }
 
     // Get existing item to calculate difference
@@ -1086,8 +1379,9 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found");
     }
 
-    if (sale.status !== "draft") {
-      throw new Error("Only draft sales can have items removed");
+    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
+    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+      throw new Error("Only draft or confirmed pre_order sales can have items removed");
     }
 
     // Get item to calculate refund

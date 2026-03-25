@@ -191,30 +191,23 @@ export class PaymentService extends BaseService {
       // Validate payment amount against customer debt (offline validation)
       await this.validatePaymentAmount(input.customerId, input.amount);
 
-      await this.pg.exec(
-        `INSERT INTO abonos (
-          id, business_id, customer_id, seller_id, amount, payment_method,
-          notes, proof_image_id, reference_number, related_sale_id,
-          sync_status, sync_attempts, created_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-        )`,
-        [
-          id,
-          this.businessId,
-          input.customerId,
-          input.sellerId,
-          amount,
-          input.paymentMethod,
-          input.notes ?? null,
-          input.proofImageId ?? null,
-          input.referenceNumber ?? null,
-          input.relatedSaleId ?? null,
-          "pending",
-          0,
-          now,
-        ]
-      );
+      // Insert using Drizzle ORM
+      await this.db.insert(abonos).values({
+        id,
+        customerId: input.customerId,
+        sellerId: input.sellerId,
+        businessId: this.businessId,
+        relatedSaleId: input.relatedSaleId ?? null,
+        amount,
+        paymentMethod: input.paymentMethod,
+        referenceNumber: input.referenceNumber ?? null,
+        proofImageId: input.proofImageId ?? null,
+        notes: input.notes ?? null,
+        syncStatus: "pending",
+        syncAttempts: 0,
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
+      });
 
       // Queue sync operation
       await this.queueSync("create", id, {
@@ -248,45 +241,37 @@ export class PaymentService extends BaseService {
   async update(id: string, input: UpdateAbonoInput): Promise<Abono | null> {
     const now = this.now();
 
-    // Build dynamic update based on provided fields
-    const updates: string[] = [];
-    const params: (string | null)[] = [];
-    let paramIndex = 1;
+    // Build update object with only provided fields
+    const updateData: Record<string, unknown> = {
+      syncStatus: "pending",
+      updatedAt: new Date(now),
+    };
 
     if (input.notes !== undefined) {
-      updates.push(`notes = $${paramIndex++}`);
-      params.push(input.notes ?? null);
+      updateData.notes = input.notes ?? null;
     }
 
     if (input.proofImageId !== undefined) {
-      updates.push(`proof_image_id = $${paramIndex++}`);
-      params.push(input.proofImageId ?? null);
+      updateData.proofImageId = input.proofImageId ?? null;
     }
 
     if (input.referenceNumber !== undefined) {
-      updates.push(`reference_number = $${paramIndex++}`);
-      params.push(input.referenceNumber ?? null);
+      updateData.referenceNumber = input.referenceNumber ?? null;
     }
 
-    if (updates.length === 0) {
-      // Nothing to update
+    // Only update if there are actual field changes
+    const hasChanges = input.notes !== undefined ||
+                       input.proofImageId !== undefined ||
+                       input.referenceNumber !== undefined;
+
+    if (!hasChanges) {
       return this.findById(id);
     }
 
-    // Add sync_status and updated_at
-    updates.push(`sync_status = $${paramIndex++}`);
-    params.push("pending");
-
-    updates.push(`updated_at = $${paramIndex++}`);
-    params.push(now);
-
-    // Add id as last parameter
-    params.push(id);
-
-    await this.pg.exec(
-      `UPDATE abonos SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
-      params
-    );
+    // Update using Drizzle ORM
+    await this.db.update(abonos)
+      .set(updateData)
+      .where(eq(abonos.id, id));
 
     // Queue sync operation
     await this.queueSync("update", id, {
@@ -321,8 +306,10 @@ export class PaymentService extends BaseService {
  */
 export function createPaymentService(
   pg: PGlite,
+  db: ReturnType<typeof drizzle>,
   syncService: SyncService,
-  businessId: string
+  businessId: string,
+  businessUserId: string
 ): PaymentService {
-  return new PaymentService(pg, null, syncService, businessId);
+  return new PaymentService(pg, db, syncService, businessId, businessUserId);
 }

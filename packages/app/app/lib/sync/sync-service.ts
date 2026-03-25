@@ -188,6 +188,62 @@ function parsePayload(payload: unknown): Record<string, unknown> {
   return {};
 }
 
+/**
+ * Date field names that should be normalized to ISO strings
+ */
+const DATE_FIELDS_SYNC = new Set([
+  "saleDate",
+  "deliveryDate",
+  "orderDate",
+  "cancelledAt",
+  "refundDate",
+  "createdAt",
+  "updatedAt",
+  "purchaseDate",
+  "sale_date",
+  "delivery_date",
+  "order_date",
+  "cancelled_at",
+  "refund_date",
+  "created_at",
+  "updated_at",
+  "purchase_date",
+]);
+
+/**
+ * Recursively converts Date objects to ISO strings for safe JSON serialization.
+ * This fixes the bug where Date.toString() produces "Tue Mar 24 2026 19:00:00 GMT-0500"
+ * instead of "2026-03-25T00:00:00.000Z".
+ */
+function normalizeDatesToISO(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => normalizeDatesToISO(item));
+  }
+
+  if (typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      // Check if this is a date field that needs conversion
+      if (DATE_FIELDS_SYNC.has(key) && value instanceof Date) {
+        result[key] = value.toISOString();
+      } else {
+        result[key] = normalizeDatesToISO(value);
+      }
+    }
+    return result;
+  }
+
+  return obj;
+}
+
 function normalizeStatusKey(status: string): keyof SyncStatus | null {
   switch (status) {
     case OPERATION_STATUS.PENDING:
@@ -426,7 +482,7 @@ export class SyncService {
              AND business_id = $6`,
           [
             plan.operation,
-            JSON.stringify(plan.payload),
+            JSON.stringify(normalizeDatesToISO(plan.payload)),
             idempotencyKey,
             OPERATION_STATUS.PENDING,
             existing.id,
@@ -494,7 +550,7 @@ export class SyncService {
         params.entity_type,
         params.operation,
         params.entityId,
-        JSON.stringify(params.data),
+        JSON.stringify(normalizeDatesToISO(params.data)),
         OPERATION_STATUS.PENDING,
         params.idempotencyKey ?? null,
         params.syncGroupId ?? null,
@@ -991,9 +1047,18 @@ export class SyncService {
       const count = parseInt(row.count, 10);
       const key = normalizeStatusKey(row.status);
       if (!key) continue;
+      // Skip dead_letter status from sync_operations - count from sync_dead_letter table instead
+      if (key === "deadLetter") continue;
       status[key] = count;
       status.total += count;
     }
+
+    // Count DLQ from the correct table
+    const dlqResult = await this.pg.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM sync_dead_letter WHERE business_id = $1`,
+      [this.businessId]
+    );
+    status.deadLetter = parseInt(dlqResult.rows[0]?.count || "0", 10);
 
     return status;
   }

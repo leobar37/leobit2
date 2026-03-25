@@ -3,7 +3,7 @@
  * Allows customers to view and edit sales via token
  * Similar to pedido.$token.tsx but for the unified sales system
  */
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useState } from "react";
 import {
   usePublicSale,
@@ -12,12 +12,11 @@ import {
   useDeletePublicSaleItem,
   useCancelPublicSale,
   useConfirmPublicSale,
+  usePublicCatalog,
+  usePublicVariants,
 } from "~/hooks/use-public-sale";
-import { useProducts } from "~/hooks/use-products";
-import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,19 +37,14 @@ import {
 import {
   Package,
   Calendar,
-  CreditCard,
   ClipboardList,
   CheckCircle,
   XCircle,
   Truck,
   Plus,
   Trash2,
-  ChevronRight,
   Minus,
   ShoppingBag,
-  User,
-  Phone,
-  FileText,
   AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/utils";
@@ -92,7 +86,6 @@ const statusConfig = {
 
 export default function PublicSalePage() {
   const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -113,8 +106,8 @@ export default function PublicSalePage() {
   const confirmSale = useConfirmPublicSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const { data: products } = useProducts();
-  const { data: variants } = useVariantsByProduct(selectedProductId || "");
+  const { data: products } = usePublicCatalog(token);
+  const { data: variants } = usePublicVariants(token, selectedProductId);
 
   if (isLoading) {
     return (

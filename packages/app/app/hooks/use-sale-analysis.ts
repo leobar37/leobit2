@@ -67,8 +67,11 @@ export function useSaleAnalysis(saleId: string | null) {
     queryFn: async (): Promise<SaleAnalysis | null> => {
       if (!saleId) return null;
 
-      // Try API first if online
-      if (isOnline) {
+      // Find sale in local data to check sync status
+      const sale = allSales.find((s) => s.id === saleId);
+
+      // Only call API if sale is synced to backend
+      if (isOnline && sale?.syncStatus === "synced") {
         try {
           const { data, error } = await api.reports["sale/:id/analysis"].get({
             params: { id: saleId },
@@ -82,7 +85,6 @@ export function useSaleAnalysis(saleId: string | null) {
       }
 
       // Offline fallback: calculate from local sales data
-      const sale = allSales.find((s) => s.id === saleId);
       if (!sale) return null;
 
       // Calculate customer history (always available offline)

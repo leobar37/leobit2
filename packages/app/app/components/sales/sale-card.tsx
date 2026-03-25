@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ChevronRight,
+  Package,
   ShoppingCart,
   Trash2,
   User,
@@ -8,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatRecentDateTime } from "~/lib/date-utils";
+import { formatDeliveryCountdown, formatRecentDateTime } from "~/lib/date-utils";
 import { cn, formatCurrency } from "~/lib/utils";
 import { useDeleteSale } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
@@ -33,11 +34,17 @@ const saleStatusLabel: Record<Sale["status"], string> = {
   cancelled: "Cancelada",
 };
 
+const saleTypeLabel: Record<Sale["type"], string> = {
+  instant_sale: "Venta",
+  pre_order: "Pedido",
+};
+
 export function SaleCard({ sale, onClick }: SaleCardProps) {
   const customerName = sale.customer?.name || "Cliente general";
   const isCredit = sale.saleType === "credito";
   const isDraft = sale.status === "draft";
   const hasBalanceDue = Number(sale.balanceDue || 0) > 0;
+  const isPreOrder = sale.type === "pre_order";
   const deleteSale = useDeleteSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
@@ -71,8 +78,17 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-50 ring-1 ring-orange-100/80">
-                <ShoppingCart className="h-[18px] w-[18px] text-orange-600" />
+              <div className={cn(
+                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1",
+                isPreOrder
+                  ? "bg-indigo-50 ring-indigo-100/80"
+                  : "bg-orange-50 ring-orange-100/80"
+              )}>
+                {isPreOrder ? (
+                  <Package className="h-[18px] w-[18px] text-indigo-600" />
+                ) : (
+                  <ShoppingCart className="h-[18px] w-[18px] text-orange-600" />
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -82,7 +98,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                       {customerName}
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
-                      Venta #{sale.id.slice(-6)}
+                      {saleTypeLabel[sale.type]} #{sale.id.slice(-6)}
                     </p>
                   </div>
 
@@ -166,7 +182,11 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
                       <CalendarDays className="h-3.5 w-3.5" />
                     </div>
-                    <span className="truncate">{formatRecentDateTime(sale.saleDate)}</span>
+                    <span className="truncate">
+                      {isPreOrder
+                        ? formatDeliveryCountdown(sale.deliveryDate)
+                        : formatRecentDateTime(sale.saleDate)}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -85,6 +85,8 @@ export class SaleItemSyncHandler extends BaseSyncHandler {
       unitPriceQuoted: parsed.unitPriceQuoted,
       subtotal: parsed.subtotal,
     }, tx);
+
+    await this.saleRepo.recalculateTotalsAtomically(ctx, parsed.saleId, tx);
   }
 
   private async handleUpdate(

@@ -1,4 +1,4 @@
-import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, like, sql, inArray, ne } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
@@ -270,7 +270,8 @@ export class CustomerRepository {
       .where(and(
         eq(sales.businessId, ctx.businessId),
         eq(sales.customerId, customerId),
-        eq(sales.status, "active")
+        ne(sales.status, "cancelled"),
+        ne(sales.status, "draft")
       ));
 
     const paymentsResult = await db

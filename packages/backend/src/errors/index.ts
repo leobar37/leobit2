@@ -39,6 +39,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class VersionConflictError extends ConflictError {
+  constructor(resource: string = "recurso") {
+    super(`${resource} fue modificado por otro usuario. Por favor, recarga la página e intenta de nuevo.`);
+  }
+}
+
 export class ServiceUnavailableError extends AppError {
   constructor(message: string = "Servicio no disponible") {
     super(message, "SERVICE_UNAVAILABLE", 503);

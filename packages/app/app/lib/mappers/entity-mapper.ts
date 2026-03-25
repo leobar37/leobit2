@@ -143,13 +143,16 @@ function isISODateString(value: unknown): boolean {
 }
 
 /**
- * Converts snake_case keys to camelCase and automatically converts ISO date strings to Date objects
+ * Converts snake_case keys to camelCase and automatically converts Date objects to ISO strings
  * Works recursively for nested objects
  *
+ * PGlite returns Date objects for TIMESTAMP columns, but our TypeScript interfaces expect strings.
+ * This function ensures dates are always returned as ISO strings.
+ *
  * @example
- * const row = { sale_date: "2024-01-15T10:30:00Z", total_amount: "100.00" };
+ * const row = { sale_date: Date object, total_amount: "100.00" };
  * const result = mapToCamelCaseWithDates(row);
- * // result: { saleDate: Date object, totalAmount: "100.00" }
+ * // result: { saleDate: "2024-01-15T10:30:00.000Z" (string), totalAmount: "100.00" }
  */
 export function mapToCamelCaseWithDates<T>(obj: T): SnakeCaseKeysToCamelCase<T> {
   if (obj === null || obj === undefined) {
@@ -164,17 +167,11 @@ export function mapToCamelCaseWithDates<T>(obj: T): SnakeCaseKeysToCamelCase<T> 
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = toCamelCase(key);
-      // Convert ISO date strings to Date objects for known date fields
-      if (DATE_FIELDS.has(key) || DATE_FIELDS.has(camelKey)) {
-        if (isISODateString(value)) {
-          result[camelKey] = new Date(value as string);
-        } else {
-          result[camelKey] = value;
-        }
-      } else if (typeof value === "object" && value !== null) {
-        result[camelKey] = mapToCamelCaseWithDates(value);
+      // Convert Date objects to ISO strings for date fields
+      if (DATE_FIELDS.has(camelKey) && value instanceof Date) {
+        result[camelKey] = value.toISOString();
       } else {
-        result[camelKey] = value;
+        result[camelKey] = mapToCamelCaseWithDates(value);
       }
     }
     return result;

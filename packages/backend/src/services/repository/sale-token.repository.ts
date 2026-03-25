@@ -15,30 +15,38 @@ export class SaleTokenRepository {
    * Find token by sale ID
    */
   async findBySaleId(ctx: RequestContext, saleId: string): Promise<SaleToken | undefined> {
-    return db.query.saleTokens.findFirst({
-      where: and(
-        eq(saleTokens.saleId, saleId),
-        eq(sales.businessId, ctx.businessId)
-      ),
-      with: {
-        sale: true,
-      },
-    });
+    const result = await db
+      .select({ token: saleTokens })
+      .from(saleTokens)
+      .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+      .where(
+        and(
+          eq(saleTokens.saleId, saleId),
+          eq(sales.businessId, ctx.businessId)
+        )
+      )
+      .limit(1);
+
+    return result[0]?.token;
   }
 
   /**
    * Find token by token string (with context)
    */
   async findByToken(ctx: RequestContext, token: string): Promise<SaleToken | undefined> {
-    return db.query.saleTokens.findFirst({
-      where: and(
-        eq(saleTokens.token, token),
-        eq(sales.businessId, ctx.businessId)
-      ),
-      with: {
-        sale: true,
-      },
-    });
+    const result = await db
+      .select({ token: saleTokens })
+      .from(saleTokens)
+      .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+      .where(
+        and(
+          eq(saleTokens.token, token),
+          eq(sales.businessId, ctx.businessId)
+        )
+      )
+      .limit(1);
+
+    return result[0]?.token;
   }
 
   /**
@@ -103,13 +111,18 @@ export class SaleTokenRepository {
   ): Promise<SaleToken | undefined> {
     const executor = tx ?? db;
 
+    // Use a subquery to check business_id via the related sale
     const [updated] = await executor
       .update(saleTokens)
       .set({ isActive })
       .where(
         and(
           eq(saleTokens.id, tokenId),
-          eq(sales.businessId, ctx.businessId)
+          eq(saleTokens.saleId,
+            db.select({ saleId: sales.id })
+              .from(sales)
+              .where(eq(sales.businessId, ctx.businessId))
+          )
         )
       )
       .returning();
@@ -121,15 +134,27 @@ export class SaleTokenRepository {
    * Mark token as used (update lastUsedAt)
    */
   async markUsed(ctx: RequestContext, tokenId: string): Promise<void> {
-    await db
-      .update(saleTokens)
-      .set({ lastUsedAt: new Date() })
+    // First verify the token belongs to the business via a join query
+    const tokenRecord = await db
+      .select({ tokenId: saleTokens.id })
+      .from(saleTokens)
+      .innerJoin(sales, eq(sales.id, saleTokens.saleId))
       .where(
         and(
           eq(saleTokens.id, tokenId),
           eq(sales.businessId, ctx.businessId)
         )
-      );
+      )
+      .limit(1);
+
+    if (tokenRecord.length === 0) {
+      return;
+    }
+
+    await db
+      .update(saleTokens)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(saleTokens.id, tokenId));
   }
 
   /**
@@ -138,14 +163,25 @@ export class SaleTokenRepository {
   async deleteBySaleId(ctx: RequestContext, saleId: string, tx?: DbTransaction): Promise<void> {
     const executor = tx ?? db;
 
-    await executor
-      .delete(saleTokens)
+    // First verify the sale belongs to the business
+    const saleRecord = await executor
+      .select({ id: sales.id })
+      .from(sales)
       .where(
         and(
-          eq(saleTokens.saleId, saleId),
+          eq(sales.id, saleId),
           eq(sales.businessId, ctx.businessId)
         )
-      );
+      )
+      .limit(1);
+
+    if (saleRecord.length === 0) {
+      return;
+    }
+
+    await executor
+      .delete(saleTokens)
+      .where(eq(saleTokens.saleId, saleId));
   }
 
   /**

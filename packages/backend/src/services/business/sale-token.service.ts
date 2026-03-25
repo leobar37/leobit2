@@ -4,6 +4,7 @@
  */
 import { randomBytes } from "node:crypto";
 import type { SaleTokenRepository } from "../repository/sale-token.repository";
+import type { SaleRepository } from "../repository/sale.repository";
 import type { RequestContext } from "../../context/request-context";
 import type { SaleToken } from "../../db/schema/sale-tokens";
 import { NotFoundError, ValidationError, ConflictError } from "../../errors";
@@ -13,6 +14,7 @@ const ALLOWED_CHARS_REGEX = /^[a-zA-Z0-9_-]+$/;
 const TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 const TOKEN_LENGTH = 12;
 const MAX_TOKEN_ATTEMPTS = 10;
+const DEFAULT_EXPIRATION_DAYS = 7;
 
 /**
  * Generate a secure random token
@@ -34,7 +36,10 @@ export function isValidTokenFormat(token: string): boolean {
 }
 
 export class SaleTokenService {
-  constructor(private repository: SaleTokenRepository) {}
+  constructor(
+    private repository: SaleTokenRepository,
+    private saleRepository: SaleRepository
+  ) {}
 
   /**
    * Generate a new token for a sale
@@ -42,6 +47,12 @@ export class SaleTokenService {
   async generateToken(ctx: RequestContext, saleId: string): Promise<{ token: string }> {
     if (!saleId) {
       throw new ValidationError("El ID de la venta es requerido");
+    }
+
+    // Verify the sale exists
+    const sale = await this.saleRepository.findById(ctx, saleId);
+    if (!sale) {
+      throw new NotFoundError("Venta no encontrada");
     }
 
     // Check if token already exists for this sale
@@ -68,8 +79,11 @@ export class SaleTokenService {
       }
     } while (true);
 
-    // Create the token
-    await this.repository.create(ctx, { saleId, token });
+    // Create the token with expiration
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
+
+    await this.repository.create(ctx, { saleId, token, expiresAt });
 
     return { token };
   }
@@ -89,6 +103,11 @@ export class SaleTokenService {
     }
 
     if (!tokenRecord.isActive) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (tokenRecord.expiresAt && new Date() > tokenRecord.expiresAt) {
       return { valid: false };
     }
 
@@ -118,6 +137,11 @@ export class SaleTokenService {
     }
 
     if (!tokenRecord.isActive) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (tokenRecord.expiresAt && new Date() > tokenRecord.expiresAt) {
       return { valid: false };
     }
 
@@ -182,8 +206,11 @@ export class SaleTokenService {
       }
     } while (true);
 
-    // Create the new token
-    await this.repository.create(ctx, { saleId, token });
+    // Create the new token with expiration
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
+
+    await this.repository.create(ctx, { saleId, token, expiresAt });
 
     return { token };
   }

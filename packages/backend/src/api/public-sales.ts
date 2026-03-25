@@ -8,6 +8,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { sales, saleItems } from "../db/schema/sales";
 import { saleTokens } from "../db/schema/sale-tokens";
+import { syncOperations } from "../db/schema/sync-operations";
 import { productVariants, products, variantInventory } from "../db/schema/inventory";
 import { NotFoundError, ValidationError, ForbiddenError } from "../errors";
 import { normalizeAmount, normalizeQuantity } from "../lib/number-utils";
@@ -68,6 +69,11 @@ export const publicSaleRoutes = new Elysia({
         throw new ValidationError("Token inactivo");
       }
 
+      // Check if token has expired
+      if (tokenData.expiresAt && new Date() > tokenData.expiresAt) {
+        throw new ValidationError("El enlace ha expirado");
+      }
+
       await db
         .update(saleTokens)
         .set({ lastUsedAt: new Date() })
@@ -121,6 +127,124 @@ export const publicSaleRoutes = new Elysia({
       params: t.Object({ token: t.String() }),
     }
   )
+  .get(
+    "/:token/catalogo",
+    async ({ params }) => {
+      const { token } = params;
+
+      if (!isValidTokenFormat(token)) {
+        throw new ValidationError("Token inválido");
+      }
+
+      const [tokenRecord] = await db
+        .select({
+          token: saleTokens,
+          sale: { businessId: sales.businessId },
+        })
+        .from(saleTokens)
+        .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+        .where(and(eq(saleTokens.token, token)));
+
+      if (!tokenRecord) {
+        throw new NotFoundError("Venta no encontrada");
+      }
+
+      const tokenData = tokenRecord.token;
+
+      if (!tokenData.isActive) {
+        throw new ValidationError("Token inactivo");
+      }
+
+      if (tokenData.expiresAt && new Date() > tokenData.expiresAt) {
+        throw new ValidationError("El enlace ha expirado");
+      }
+
+      await db
+        .update(saleTokens)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(saleTokens.id, tokenData.id));
+
+      const catalogRows = await db
+        .select({
+          productId: products.id,
+          productName: products.name,
+          productType: products.type,
+          productUnit: products.unit,
+          variantId: productVariants.id,
+          variantName: productVariants.name,
+          variantPrice: productVariants.price,
+          variantUnitQuantity: productVariants.unitQuantity,
+          variantSortOrder: productVariants.sortOrder,
+          stockQuantity: variantInventory.quantity,
+        })
+        .from(products)
+        .innerJoin(productVariants, eq(productVariants.productId, products.id))
+        .leftJoin(variantInventory, eq(variantInventory.variantId, productVariants.id))
+        .where(
+          and(
+            eq(products.businessId, tokenRecord.sale.businessId),
+            eq(products.isActive, true),
+            eq(productVariants.isActive, true)
+          )
+        );
+
+      const productsMap = new Map<
+        string,
+        {
+          id: string;
+          name: string;
+          type: string;
+          unit: string;
+          variants: Array<{
+            id: string;
+            productId: string;
+            name: string;
+            price: string;
+            unitQuantity: string;
+            stockQuantity: string;
+            sortOrder: number;
+          }>;
+        }
+      >();
+
+      for (const row of catalogRows) {
+        const existingProduct = productsMap.get(row.productId);
+
+        if (!existingProduct) {
+          productsMap.set(row.productId, {
+            id: row.productId,
+            name: row.productName,
+            type: row.productType,
+            unit: row.productUnit,
+            variants: [],
+          });
+        }
+
+        productsMap.get(row.productId)?.variants.push({
+          id: row.variantId,
+          productId: row.productId,
+          name: row.variantName,
+          price: row.variantPrice,
+          unitQuantity: row.variantUnitQuantity,
+          stockQuantity: row.stockQuantity ?? "0",
+          sortOrder: row.variantSortOrder,
+        });
+      }
+
+      const catalog = Array.from(productsMap.values()).map((product) => ({
+        ...product,
+        variants: product.variants.sort((a, b) => a.sortOrder - b.sortOrder),
+      }));
+
+      return {
+        success: true,
+        data: catalog,
+      };
+    },
+    {
+      params: t.Object({ token: t.String() }),
+    }
+  )
   .post(
     "/:token/items",
     async ({ params, body }) => {
@@ -146,6 +270,11 @@ export const publicSaleRoutes = new Elysia({
 
       if (!tokenData.isActive) {
         throw new ForbiddenError("El token no está activo");
+      }
+
+      // Check if token has expired
+      if (tokenData.expiresAt && new Date() > tokenData.expiresAt) {
+        throw new ForbiddenError("El enlace ha expirado");
       }
 
       const [saleData] = await db
@@ -340,6 +469,11 @@ export const publicSaleRoutes = new Elysia({
         throw new ForbiddenError("El token no está activo");
       }
 
+      // Check if token has expired
+      if (tokenRecord.token.expiresAt && new Date() > tokenRecord.token.expiresAt) {
+        throw new ForbiddenError("El enlace ha expirado");
+      }
+
       if (!tokenRecord.sale.allowCustomerEdit) {
         throw new ForbiddenError("La edición por cliente no está permitida");
       }
@@ -431,6 +565,11 @@ export const publicSaleRoutes = new Elysia({
 
       if (!tokenRecord.token.isActive) {
         throw new ForbiddenError("El token no está activo");
+      }
+
+      // Check if token has expired
+      if (tokenRecord.token.expiresAt && new Date() > tokenRecord.token.expiresAt) {
+        throw new ForbiddenError("El enlace ha expirado");
       }
 
       if (!tokenRecord.sale.allowCustomerEdit) {
@@ -574,6 +713,11 @@ export const publicSaleRoutes = new Elysia({
         throw new ForbiddenError("El token no está activo");
       }
 
+      // Check if token has expired
+      if (tokenData.expiresAt && new Date() > tokenData.expiresAt) {
+        throw new ForbiddenError("El enlace ha expirado");
+      }
+
       const [saleData] = await db
         .select()
         .from(sales)
@@ -643,6 +787,11 @@ export const publicSaleRoutes = new Elysia({
         throw new ForbiddenError("El token no está activo");
       }
 
+      // Check if token has expired
+      if (tokenData.expiresAt && new Date() > tokenData.expiresAt) {
+        throw new ForbiddenError("El enlace ha expirado");
+      }
+
       const [saleData] = await db
         .select()
         .from(sales)
@@ -660,6 +809,16 @@ export const publicSaleRoutes = new Elysia({
         throw new ValidationError("Solo se pueden confirmar ventas en borrador");
       }
 
+      // Validate that sale has items before confirming
+      const saleItemsList = await db
+        .select()
+        .from(saleItems)
+        .where(eq(saleItems.saleId, saleData.id));
+
+      if (saleItemsList.length === 0) {
+        throw new ValidationError("No puedes confirmar una venta sin productos");
+      }
+
       // Determine new status based on sale type
       const newStatus = saleData.type === "pre_order" ? "confirmed" : "active";
 
@@ -670,6 +829,23 @@ export const publicSaleRoutes = new Elysia({
           updatedAt: new Date(),
         })
         .where(eq(sales.id, saleData.id));
+
+      // Create sync operation so vendor receives the update via pull sync
+      await db.insert(syncOperations).values({
+        businessId: saleData.businessId,
+        operationId: `server-sale-update-${saleData.id}-${Date.now()}`,
+        entity: "sales",
+        action: "update",
+        entityId: saleData.id,
+        payload: {
+          id: saleData.id,
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        },
+        status: "processed",
+        clientTimestamp: new Date(),
+        processedAt: new Date(),
+      });
 
       // Optionally deactivate token after confirmation
       // await db.update(saleTokens).set({ isActive: false }).where(eq(saleTokens.id, tokenData.id));

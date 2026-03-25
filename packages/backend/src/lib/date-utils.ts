@@ -135,3 +135,24 @@ export function formatShortDate(date: Date | string): string {
   const d = typeof date === 'string' ? parseDateString(date) : date;
   return d.toLocaleDateString('es-PE');
 }
+
+/**
+ * Normalizes a value to a YYYY-MM-DD string for Drizzle `date()` columns.
+ * Drizzle's `date()` type maps to PostgreSQL DATE and expects a string, NOT a Date object.
+ * Returns null if the value is falsy.
+ */
+export function toDateColumnValue(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return toDateString(value);
+  return value;
+}
+
+/**
+ * Normalizes a value to a Date object for Drizzle `timestamp()` columns.
+ * Returns fallback (defaults to now()) if the value is falsy.
+ */
+export function toTimestampColumnValue(value: string | Date | null | undefined, fallback?: Date): Date {
+  if (!value) return fallback ?? now();
+  if (value instanceof Date) return value;
+  return new Date(value);
+}

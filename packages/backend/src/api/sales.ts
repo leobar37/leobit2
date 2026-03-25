@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
+import { ForbiddenError } from "../errors";
 
 export const saleRoutes = new Elysia({ prefix: "/sales" })
   .use(contextPlugin)
@@ -366,6 +367,37 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
       body: t.Object({
         isActive: t.Boolean(),
+      }),
+    }
+  )
+  // Draft cleanup endpoint (admin only)
+  .post(
+    "/cleanup-drafts",
+    async ({ saleService, ctx, body }) => {
+    // Only admins can run cleanup
+    if (!ctx.isAdmin()) {
+      throw new ForbiddenError("Solo los administradores pueden limpiar borradores");
+    }
+
+    const result = await saleService.cleanupStaleDraftSales(ctx as RequestContext, {
+      olderThanDays: body.olderThanDays ?? 7,
+      withNoItems: body.withNoItems ?? false,
+      olderThan30Days: body.olderThan30Days ?? 30,
+    });
+
+    return {
+      success: true,
+      data: {
+        deletedCount: result.deletedCount,
+        deletedIds: result.deletedIds,
+      },
+    };
+    },
+    {
+      body: t.Object({
+        olderThanDays: t.Optional(t.Number({ minimum: 1 })),
+        withNoItems: t.Optional(t.Boolean()),
+        olderThan30Days: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );

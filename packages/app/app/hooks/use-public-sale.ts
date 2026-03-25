@@ -3,7 +3,7 @@
  * Allows customers to view and edit sales via shared token
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
+import { api, extractData } from "~/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
@@ -36,6 +36,24 @@ interface PublicSale {
   items: PublicSaleItem[];
 }
 
+export interface PublicCatalogVariant {
+  id: string;
+  productId: string;
+  name: string;
+  price: string;
+  unitQuantity: string;
+  stockQuantity: string;
+  sortOrder: number;
+}
+
+export interface PublicCatalogProduct {
+  id: string;
+  name: string;
+  type: string;
+  unit: string;
+  variants: PublicCatalogVariant[];
+}
+
 // Get public sale by token
 export function usePublicSale(token: string | undefined) {
   return useQuery({
@@ -46,10 +64,38 @@ export function usePublicSale(token: string | undefined) {
       if (response.error) {
         throw new Error(String(response.error.value));
       }
-      return response.data?.data as PublicSale;
+      return response.data?.data as unknown as PublicSale;
     },
     enabled: !!token,
     refetchInterval: 30000, // Refetch every 30 seconds
+  });
+}
+
+export function usePublicCatalog(token: string | undefined) {
+  return useQuery({
+    queryKey: ["public-sale", token, "catalog"],
+    queryFn: async () => {
+      if (!token) throw new Error("Token requerido");
+      const response = await api["public"].venta({ token }).catalogo.get();
+      return extractData(response, "No se pudo cargar el catálogo") as PublicCatalogProduct[];
+    },
+    enabled: !!token,
+  });
+}
+
+export function usePublicVariants(
+  token: string | undefined,
+  productId: string | null
+) {
+  return useQuery({
+    queryKey: ["public-sale", token, "catalog", productId, "variants"],
+    queryFn: async () => {
+      if (!token || !productId) return [];
+      const response = await api["public"].venta({ token }).catalogo.get();
+      const catalog = extractData(response, "No se pudo cargar las variantes") as PublicCatalogProduct[];
+      return catalog.find((product) => product.id === productId)?.variants ?? [];
+    },
+    enabled: !!token && !!productId,
   });
 }
 
@@ -78,7 +124,7 @@ export function useAddItemToPublicSale() {
       if (response.error) {
         throw new Error(String(response.error.value));
       }
-      return response.data?.data as PublicSale;
+      return response.data?.data as unknown as PublicSale;
     },
     onSuccess: (_, { token }) => {
       queryClient.invalidateQueries({ queryKey: ["public-sale", token] });

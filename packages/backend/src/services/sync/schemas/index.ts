@@ -79,8 +79,11 @@ export const saleItemSchema = z.object({
 export const saleCreateSchema = z.object({
   sellerId: z.string().min(1, "sellerId es requerido"),
   customerId: z.string().optional(),
+  distribucionId: z.string().optional(),
+  visitaId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]),
   saleType: z.enum(["contado", "credito"]),
+  paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).optional(),
   totalAmount: numericStringTransform,
   amountPaid: optionalNumericStringTransform,
   balanceDue: optionalNumericStringTransform,
@@ -122,8 +125,11 @@ export const saleCreateSchema = z.object({
 const saleBaseSchema = z.object({
   sellerId: z.string().optional(),
   customerId: z.string().optional(),
+  distribucionId: z.string().optional(),
+  visitaId: z.string().optional(),
   type: z.enum(["instant_sale", "pre_order"]).optional(),
   saleType: z.enum(["contado", "credito"]).optional(),
+  paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).optional(),
   totalAmount: optionalNumericStringTransform,
   amountPaid: optionalNumericStringTransform,
   balanceDue: optionalNumericStringTransform,

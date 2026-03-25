@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency, formatDateForInput } from "~/lib/utils";
 import {
   ArrowLeft,
   Calculator,
+  Calendar,
   Loader2,
   Plus,
+  Share2,
   ShoppingCart,
+  Truck,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   CartSection,
   CustomerSection,
@@ -20,6 +24,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSale, useSaleItems } from "~/hooks/use-sales-db";
 import { getSaleCalculatorPath } from "~/lib/sales/navigation";
+import { SaleShareDrawer } from "~/components/sales/sale-share-drawer";
+import { RescheduleSaleDialog } from "~/components/sales/reschedule-sale-dialog";
+import { useUpdateSale } from "~/hooks/use-sales";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "~/lib/utils";
 
 function HeaderTotal() {
   const { saleId } = useNewSaleContext();
@@ -47,6 +65,12 @@ export default function SaleEditorPage() {
   const { saleId, returnTo, setLinkedVisitaId } = useNewSaleContext();
 
   const { data: sale, isLoading } = useSale(saleId);
+  const updateSale = useUpdateSale();
+  const [programarOpen, setProgramarOpen] = useState(false);
+  const [programarDate, setProgramarDate] = useState("");
+
+  // Determine if we're in delivery mode (confirmed pre_order)
+  const isDeliveryMode = sale?.type === "pre_order" && sale?.status === "confirmed";
 
   // Set linked visitaId from sale data when available
   useEffect(() => {
@@ -91,9 +115,76 @@ export default function SaleEditorPage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h1 className="text-lg font-bold tracking-tight">Editar Venta</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold tracking-tight">
+                {isDeliveryMode
+                  ? "Entregar Pedido"
+                  : sale?.type === "pre_order"
+                    ? "Editar Pedido"
+                    : "Editar Venta"}
+              </h1>
+              {isDeliveryMode && (
+                <Badge className="bg-indigo-100 text-indigo-700 border-0">
+                  <Truck className="h-3 w-3 mr-1" />
+                  Entrega
+                </Badge>
+              )}
+            </div>
           </div>
-          <HeaderTotal />
+          <div className="flex items-center gap-2">
+            <HeaderTotal />
+            {sale && (
+              <>
+                {sale.type === "instant_sale" && sale.status === "draft" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                    title="Programar pedido"
+                    onClick={() => {
+                      setProgramarDate(formatDateForInput(new Date()));
+                      setProgramarOpen(true);
+                    }}
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                )}
+                {sale.type === "pre_order" && sale.status !== "cancelled" && sale.status !== "delivered" && (
+                  <RescheduleSaleDialog
+                    saleId={sale.id}
+                    currentDeliveryDate={sale.deliveryDate}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                        title="Reprogramar entrega"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                )}
+                {(sale.status === "draft" || sale.status === "confirmed") && (
+                  <SaleShareDrawer
+                    saleId={sale.id}
+                    saleStatus={sale.status}
+                    allowCustomerEdit={sale.allowCustomerEdit}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                        title="Compartir venta"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -140,6 +231,59 @@ export default function SaleEditorPage() {
       </main>
 
       <SaleSubmitBar />
+
+      <Dialog open={programarOpen} onOpenChange={setProgramarOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Programar pedido</DialogTitle>
+            <DialogDescription>
+              Convierte esta venta en un pedido programable con fecha de entrega
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <DatePicker
+              value={programarDate}
+              onChange={setProgramarDate}
+              label="Fecha de entrega"
+              quickActionLabels={["Hoy", "Mañana"]}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setProgramarOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!programarDate) {
+                  toast.error("Selecciona una fecha de entrega");
+                  return;
+                }
+                try {
+                  await updateSale.mutateAsync({
+                    id: saleId,
+                    input: {
+                      type: "pre_order",
+                      deliveryDate: programarDate,
+                    },
+                  });
+                  toast.success("Venta convertida a pedido programado");
+                  setProgramarOpen(false);
+                } catch (err) {
+                  toast.error("Error al programar la venta");
+                  console.error(err);
+                }
+              }}
+              disabled={updateSale.isPending}
+            >
+              {updateSale.isPending ? "Guardando..." : "Programar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

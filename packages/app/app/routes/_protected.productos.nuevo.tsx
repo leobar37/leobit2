@@ -30,7 +30,7 @@ export default function NuevoProductoPage() {
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
-      await createProduct.mutateAsync({
+      const createdProduct = await createProduct.mutateAsync({
         name: data.name,
         type: data.type,
         unit: data.unit,
@@ -38,7 +38,7 @@ export default function NuevoProductoPage() {
         isActive: data.isActive,
         imageId: data.imageId,
       });
-      navigate("/productos");
+      navigate(`/productos/${createdProduct.id}`);
     } catch (error) {
       console.error("Error creating product:", error);
     }

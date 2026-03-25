@@ -165,12 +165,31 @@ export class SaleSyncHandler extends BaseSyncHandler {
       await this.saleRepo.update(ctx, operation.entityId, {
         status: "active",
         version: existing.version + 1,
+        ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
+        ...(parsed.amountPaid !== undefined && { amountPaid: parsed.amountPaid }),
+        ...(parsed.balanceDue !== undefined && { balanceDue: parsed.balanceDue }),
+        ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
+        ...(parsed.paymentMode !== undefined && { paymentMode: parsed.paymentMode }),
       }, tx, existing.version);
       return;
     }
 
     if (parsed.status === "confirmed" && existing.status === "draft" && existing.type === "pre_order") {
-      await this.saleRepo.confirmPreOrder(ctx, operation.entityId, existing.version, tx);
+      const hasMonetaryUpdates = parsed.totalAmount !== undefined || parsed.amountPaid !== undefined;
+      if (hasMonetaryUpdates) {
+        // Update monetary fields together with confirmation to avoid version conflict
+        await this.saleRepo.update(ctx, operation.entityId, {
+          status: "confirmed",
+          version: existing.version + 1,
+          ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
+          ...(parsed.amountPaid !== undefined && { amountPaid: parsed.amountPaid }),
+          ...(parsed.balanceDue !== undefined && { balanceDue: parsed.balanceDue }),
+          ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
+          ...(parsed.paymentMode !== undefined && { paymentMode: parsed.paymentMode }),
+        }, tx, existing.version);
+      } else {
+        await this.saleRepo.confirmPreOrder(ctx, operation.entityId, existing.version, tx);
+      }
       return;
     }
 

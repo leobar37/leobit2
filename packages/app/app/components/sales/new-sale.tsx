@@ -146,6 +146,7 @@ export function PaymentModeSection() {
   );
 
   // Guard clause: ensure we have required data before rendering
+  // Note: Must be after all hook calls to maintain hook order consistency
   if (!saleId || items.length === 0) {
     return null;
   }
@@ -265,7 +266,7 @@ function CartItemRow({ itemId }: { itemId: string }) {
 
   const handleEdit = () => {
     setEditingItemId(item.id);
-    navigate(`/ventas/${saleId}/editar/calculadora`);
+    navigate(`/ventas/${saleId}/editar/calculadora?itemId=${item.id}`);
   };
 
   return (
@@ -415,20 +416,58 @@ export function SaleSubmitBar() {
 
   const calculations = useSaleCalculations(sale, items);
 
+  // Check if we're in delivery mode (confirmed pre_order)
+  const isDeliveryMode = sale?.type === "pre_order" && sale?.status === "confirmed";
+
   const handleSubmit = async () => {
-    if (!calculations.canSubmit || !saleId) return;
+    if (!calculations.canSubmit || !saleId || !sale) return;
 
     try {
-      // Finalize the sale - the backend will automatically update the visita if needed
-      await finalizeSale.mutateAsync(saleId);
+      if (isDeliveryMode) {
+        // In delivery mode, pass the items with their final values
+        const deliveryItems = items.map(item => ({
+          itemId: item.id,
+          deliveredQuantity: parseFloat(item.quantity || item.orderedQuantity || "0"),
+          unitPriceFinal: parseFloat(item.unitPrice || item.unitPriceQuoted || "0"),
+          subtotal: parseFloat(item.subtotal),
+        }));
+
+        await finalizeSale.mutateAsync({
+          id: saleId,
+          type: sale.type,
+          version: sale.version,
+          isDeliveryMode: true,
+          deliveryItems,
+          amountPaid: parseFloat(sale.amountPaid || "0"),
+          paymentMode: sale.paymentMode || undefined,
+        });
+
+        toast.success("Pedido entregado exitosamente");
+      } else {
+        // Normal confirmation flow
+        await finalizeSale.mutateAsync({
+          id: saleId,
+          type: sale.type,
+          version: sale.version,
+        });
+      }
 
       navigate(returnTo);
-    } catch {
-      toast.error("Error al finalizar venta", {
-        description: "No se pudo completar la venta",
+    } catch (error) {
+      console.error("[SaleSubmitBar] Error finalizing sale:", error);
+      const message = error instanceof Error ? error.message : "No se pudo completar la venta";
+      toast.error(isDeliveryMode ? "Error al confirmar entrega" : "Error al finalizar venta", {
+        description: message,
       });
     }
   };
+
+  const buttonText = useMemo(() => {
+    if (finalizeSale.isPending) return "Procesando...";
+    if (isDeliveryMode) return "Confirmar Entrega";
+    if (sale?.type === "pre_order") return "Confirmar Pedido";
+    return "Finalizar Venta";
+  }, [finalizeSale.isPending, sale?.type, isDeliveryMode]);
 
   if (items.length === 0) {
     return null;
@@ -448,13 +487,14 @@ export function SaleSubmitBar() {
         <Button
           onClick={handleSubmit}
           disabled={!calculations.canSubmit || finalizeSale.isPending}
-          className="h-11 px-6 rounded-xl bg-orange-500 text-sm font-semibold shadow-md hover:bg-orange-600 disabled:bg-orange-300 disabled:opacity-100 whitespace-nowrap"
-        >
-          {finalizeSale.isPending ? (
-            "Procesando..."
-          ) : (
-            <>Finalizar Venta</>
+          className={cn(
+            "h-11 px-6 rounded-xl text-sm font-semibold shadow-md whitespace-nowrap disabled:opacity-100",
+            isDeliveryMode
+              ? "bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300"
+              : "bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300"
           )}
+        >
+          {buttonText}
         </Button>
       </div>
     </div>
@@ -475,13 +515,18 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const { data: saleItems = [] } = useSaleItems(saleId);
   
   const editingItem = editingItemId ? saleItems.find((i) => i.id === editingItemId) : null;
+  const isEditMode = !!editingItem;
   
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    editingItem?.productId ?? null
-  );
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    editingItem?.variantId ?? null
-  );
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+
+  // Sync product/variant selection when editing item loads
+  useEffect(() => {
+    if (isEditMode && editingItem) {
+      setSelectedProductId(editingItem.productId);
+      setSelectedVariantId(editingItem.variantId);
+    }
+  }, [isEditMode, editingItem]);
 
   const { toast } = useToast();
   const addItem = useAddSaleItem();
@@ -508,8 +553,6 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
 
-  const isEditMode = !!editingItem;
-
   const editingInitialValues = isEditMode && editingItem ? {
     quantity: String(editingItem.quantity),
     unitPrice: String(editingItem.unitPrice),
@@ -534,19 +577,37 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     initialValues: editingInitialValues,
   });
 
-  // Populate calculator values when editing and product loads
+  // Populate calculator values when editing and product/variant loads
   useEffect(() => {
-    if (!isEditMode || !editingItem || !selectedProduct) return;
+    if (!isEditMode || !editingItem || !selectedProduct || !selectedVariant) return;
 
-    // Check if form already has values to avoid overwriting
-    const currentQuantity = form.getValues("quantity");
-    if (currentQuantity && currentQuantity !== "0") return;
+    // Reset form with editing item values
+    const quantity = String(editingItem.quantity);
+    const unitPrice = String(editingItem.unitPrice);
+    const subtotal = String(editingItem.subtotal);
 
-    // Set the calculator values from editingItem
-    setFieldValue("quantity", String(editingItem.quantity));
-    setFieldValue("unitPrice", String(editingItem.unitPrice));
-    setFieldValue("subtotal", String(editingItem.subtotal));
-  }, [isEditMode, editingItem, selectedProduct, form, setFieldValue]);
+    if (isKgProduct) {
+      form.reset({
+        totalAmount: subtotal,
+        pricePerKg: unitPrice,
+        kilos: quantity,
+        tara: "0",
+        pricePerPack: "",
+        packs: "",
+        units: "",
+      });
+    } else {
+      form.reset({
+        totalAmount: subtotal,
+        pricePerKg: "",
+        kilos: "",
+        tara: "0",
+        pricePerPack: unitPrice,
+        packs: quantity,
+        units: "",
+      });
+    }
+  }, [isEditMode, editingItem, selectedProduct, selectedVariant, isKgProduct, form]);
 
   const handleSave = async () => {
     if (

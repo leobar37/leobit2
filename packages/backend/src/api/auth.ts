@@ -1,19 +1,18 @@
 import { Elysia } from "elysia";
 import { auth } from "../lib/auth";
+import { createLogger } from "../lib/logger";
 
-const isAuthDebugEnabled = process.env.NODE_ENV !== "production";
+const logger = createLogger("auth");
 
 const AUTH_HANDLER_TIMEOUT_MS = 10000; // 10 second timeout
 
 function debugAuthRoute(message: string, payload?: unknown) {
-  if (!isAuthDebugEnabled) return;
-
   if (payload === undefined) {
-    console.log(`[AuthRoute] ${message}`);
+    logger.debug(message);
     return;
   }
 
-  console.log(`[AuthRoute] ${message}`, payload);
+  logger.debug({ payload }, message);
 }
 
 /**
@@ -80,7 +79,7 @@ export const authRoutes = new Elysia()
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       const isTimeout = errorMessage.includes("timed out");
 
-      console.error("[Auth Handler Error]", errorMessage);
+      logger.error({ err: error }, "Auth handler error");
 
       set.status = isTimeout ? 504 : 500;
       set.headers["content-type"] = "application/json";
