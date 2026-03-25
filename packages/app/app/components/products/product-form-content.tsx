@@ -1,6 +1,3 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,18 +5,7 @@ import { Package, DollarSign } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
 import type { Product } from "~/lib/db/schema";
 import type { UseFormReturn } from "react-hook-form";
-
-export const productSchema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  type: z.enum(["pollo", "huevo", "otro"]).optional(),
-  unit: z.enum(["kg", "unidad"]),
-  basePrice: z.string().min(1, "El precio es requerido"),
-  isActive: z.boolean(),
-  imageId: z.string().optional(),
-  syncPriceToVariants: z.boolean().optional(),
-});
-
-export type ProductFormData = z.infer<typeof productSchema>;
+import { type ProductFormData } from "~/lib/schemas/product-schema";
 
 interface ProductFormContentProps {
   form: UseFormReturn<ProductFormData>;
@@ -68,7 +54,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           />
         </div>
 
-        <div className="hidden space-y-2">
+        <div className="space-y-2">
           <Label htmlFor="type" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Tipo

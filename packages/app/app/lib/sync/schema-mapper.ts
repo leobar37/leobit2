@@ -32,7 +32,9 @@ export const VALID_TABLES = new Set([
 // Estas columnas se ignoran silenciosamente para evitar errores SQL
 const INVALID_COLUMNS: Record<string, Set<string>> = {
   // products no tiene sku (solo product_variants lo tiene)
-  products: new Set(["sku"]),
+  // products tampoco tiene price ni product_id (estan en product_variants)
+  products: new Set(["sku", "price", "product_id"]),
+  // product_variants tiene product_id que referencia a products
 };
 
 // Static table map using shared schema

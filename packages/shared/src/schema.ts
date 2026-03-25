@@ -293,6 +293,7 @@ export const products = pgTable(
     type: text("type").notNull().default(ProductType.POLLO),
     unit: text("unit").notNull().default(ProductUnit.KG),
     basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
     isActive: boolean("is_active").notNull().default(true),
     hasVariants: boolean("has_variants").notNull().default(false),
     imageId: uuid("image_id"),

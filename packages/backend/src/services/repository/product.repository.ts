@@ -125,6 +125,7 @@ export class ProductRepository {
         ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.imageId !== undefined && { imageId: data.imageId }),
+        ...(data.hasVariants !== undefined && { hasVariants: data.hasVariants }),
       })
       .where(and(
         eq(products.id, id),

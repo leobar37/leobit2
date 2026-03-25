@@ -8,11 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCreateProduct } from "~/hooks/use-products";
 import { FormPage } from "~/components/layout/form-page";
-import {
-  ProductFormContent,
-  productSchema,
-  type ProductFormData,
-} from "~/components/products/product-form-content";
+import { ProductFormContent } from "~/components/products/product-form-content";
+import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
 export default function NuevoProductoPage() {
   const navigate = useNavigate();

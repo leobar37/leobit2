@@ -64,6 +64,7 @@ export class ProductService {
       costPrice?: number;
       isActive?: boolean;
       imageId?: string;
+      hasVariants?: boolean;
     }
   ): Promise<MutationResult<Product>> {
     if (!ctx.hasPermission("products.manage")) {
@@ -95,16 +96,20 @@ export class ProductService {
         costPrice: data.costPrice?.toString() ?? "0",
         isActive: data.isActive ?? true,
         imageId: data.imageId,
+        hasVariants: data.hasVariants ?? false,
       }, tx);
 
-      await this.variantRepo.create(ctx, {
-        productId: product.id,
-        name: "Estándar",
-        unitQuantity: "1",
-        price: data.basePrice.toString(),
-        costPrice: data.costPrice?.toString() ?? "0",
-        isActive: true,
-      }, tx);
+      // Only create default variant if product does NOT have variants
+      if (data.hasVariants !== true) {
+        await this.variantRepo.create(ctx, {
+          productId: product.id,
+          name: "Estándar",
+          unitQuantity: "1",
+          price: data.basePrice.toString(),
+          costPrice: data.costPrice?.toString() ?? "0",
+          isActive: true,
+        }, tx);
+      }
 
       return {
         data: product,

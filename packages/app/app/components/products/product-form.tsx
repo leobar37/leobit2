@@ -1,26 +1,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Package, DollarSign, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
 import type { Product } from "~/lib/db/schema";
-
-const productSchema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  type: z.enum(["pollo", "huevo", "otro"]),
-  unit: z.enum(["kg", "unidad"]),
-  basePrice: z.string().min(1, "El precio es requerido"),
-  isActive: z.boolean(),
-  imageId: z.string().optional(),
-  syncPriceToVariants: z.boolean().optional(),
-});
-
-type ProductFormData = z.infer<typeof productSchema>;
+import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
 interface ProductFormProps {
   onSubmit: (data: ProductFormData) => void;
@@ -66,29 +54,26 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
   });
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl">
-      <CardHeader>
-        <CardTitle className="text-xl">Información del Producto</CardTitle>
+    <Card className="border border-gray-100 shadow-none rounded-xl">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-base font-semibold">Información del Producto</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Nombre *
-          </Label>
+      <CardContent className="space-y-3 px-4 pb-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="name" className="text-sm">Nombre *</Label>
           <Input
             id="name"
             placeholder="Nombre del producto"
             {...register("name")}
-            className="rounded-xl"
+            className="rounded-lg"
           />
           {errors.name && (
-            <p className="text-sm text-red-500">{errors.name.message}</p>
+            <p className="text-xs text-red-500">{errors.name.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label>Imagen del producto</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm">Imagen del producto</Label>
           <AssetPicker
             value={watch("imageId")}
             onChange={(id) => setValue("imageId", id)}
@@ -96,71 +81,62 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="type" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Tipo *
-          </Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="type" className="text-sm">Tipo *</Label>
           <select
             id="type"
             {...register("type")}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="pollo">Pollo</option>
             <option value="huevo">Huevo</option>
             <option value="otro">Otro</option>
           </select>
           {errors.type && (
-            <p className="text-sm text-red-500">{errors.type.message}</p>
+            <p className="text-xs text-red-500">{errors.type.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="unit" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Unidad *
-          </Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="unit" className="text-sm">Unidad *</Label>
           <select
             id="unit"
             {...register("unit")}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="kg">Kilogramo (kg)</option>
             <option value="unidad">Unidad</option>
           </select>
           {errors.unit && (
-            <p className="text-sm text-red-500">{errors.unit.message}</p>
+            <p className="text-xs text-red-500">{errors.unit.message}</p>
           )}
         </div>
 
         {hasVariants && (
-          <Alert className="bg-orange-50 border-orange-200">
+          <Alert className="bg-orange-50 border-orange-200 rounded-lg">
             <Info className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
+            <AlertDescription className="text-xs text-orange-800">
               Este producto tiene {variantCount} {variantCount === 1 ? "variante" : "variantes"} con precios propios.
               El precio base solo se usa como referencia.
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="basePrice" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Precio base (S/) *
-          </Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="basePrice" className="text-sm">Precio base (S/) *</Label>
           <Input
             id="basePrice"
             placeholder="0.00"
             {...register("basePrice")}
-            className="rounded-xl"
+            className="rounded-lg"
           />
           {errors.basePrice && (
-            <p className="text-sm text-red-500">{errors.basePrice.message}</p>
+            <p className="text-xs text-red-500">{errors.basePrice.message}</p>
           )}
         </div>
 
         {hasVariants && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="syncPriceToVariants" className="flex items-center gap-2 cursor-pointer">
               <input
                 id="syncPriceToVariants"
@@ -169,13 +145,13 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
                 className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
               />
               <span className="text-sm">
-                Sincronizar este precio con todas las variantes activas
+                Sincronizar precio con todas las variantes
               </span>
             </Label>
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">
             <input
               id="isActive"
@@ -183,35 +159,34 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
               {...register("isActive")}
               className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
             />
-            <span>Activo</span>
+            <span className="text-sm">Activo</span>
           </Label>
-          {errors.isActive && (
-            <p className="text-sm text-red-500">{errors.isActive.message}</p>
-          )}
         </div>
 
-        <Button
-          onClick={handleSubmit(onSubmit)}
-          disabled={isLoading || !isValid}
-          className="w-full rounded-xl bg-orange-500 hover:bg-orange-600"
-        >
-          {isLoading
-            ? "Guardando..."
-            : isEditing
-            ? "Guardar cambios"
-            : "Guardar Producto"}
-        </Button>
-
-        {onCancel && (
+        <div className="flex gap-2 pt-2">
           <Button
-            type="button"
-            variant="outline"
-            className="w-full rounded-xl"
-            onClick={onCancel}
+            onClick={handleSubmit(onSubmit)}
+            disabled={isLoading || !isValid}
+            className="flex-1 rounded-lg bg-orange-500 hover:bg-orange-600"
           >
-            Cancelar
+            {isLoading
+              ? "Guardando..."
+              : isEditing
+              ? "Guardar cambios"
+              : "Guardar Producto"}
           </Button>
-        )}
+
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-lg"
+              onClick={onCancel}
+            >
+              Cancelar
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

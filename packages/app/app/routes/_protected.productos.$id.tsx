@@ -1,13 +1,14 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Package, DollarSign, Tag, Calendar } from "lucide-react";
+import { ArrowLeft, Package, Layers } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useUpdateProduct } from "~/hooks/use-products";
 import { useProduct } from "~/hooks/use-products-live";
 import { ProductForm, type ProductFormData } from "~/components/products/product-form";
 import { VariantList } from "~/components/products/variant-list";
-import { VariantForm, type VariantFormData } from "~/components/products/variant-form";
+import { type VariantFormData } from "~/components/products/variant-form";
 import {
   useVariantsByProduct,
   useCreateVariant,
@@ -56,15 +57,33 @@ export default function ProductDetailPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const variantModal = useVariantModal();
 
+  // Determine if product currently has multiple real variants (not just the auto-created one)
+  const hasMultipleVariants = (variants?.length ?? 0) > 1;
+  const isSimpleProduct = !product?.hasVariants && !hasMultipleVariants;
+
+  // Toggle state: initialized from product data
+  const [showVariants, setShowVariants] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      setShowVariants(product.hasVariants === true || hasMultipleVariants);
+    }
+  }, [product, hasMultipleVariants]);
+
   const handleSubmit = async (data: ProductFormData) => {
     if (!id) return;
 
-    await updateProduct.mutateAsync({
-      id,
-      input: data,
-    });
-
-    navigate(`/productos/${id}`);
+    try {
+      await updateProduct.mutateAsync({
+        id,
+        input: data,
+      });
+      toast.success("Producto actualizado");
+      navigate(`/productos/${id}`);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast.error("Error al actualizar el producto");
+    }
   };
 
   const handleVariantSubmit = async (data: VariantFormData) => {
@@ -73,31 +92,38 @@ export default function ProductDetailPage() {
     const isEditing = variantModal.data?.isEditing;
     const editingVariantId = variantModal.data?.variant?.id;
 
-    if (isEditing && editingVariantId) {
-      await updateVariant.mutateAsync({
-        id: editingVariantId,
-        input: {
-          name: data.name,
-          sku: data.sku,
-          unitQuantity: data.unitQuantity,
-          price: data.price,
-          isActive: data.isActive,
-        },
-      });
-    } else {
-      await createVariant.mutateAsync({
-        productId: id,
-        input: {
-          name: data.name,
-          sku: data.sku,
-          unitQuantity: data.unitQuantity,
-          price: data.price,
-          isActive: data.isActive,
-        },
-      });
-    }
+    try {
+      if (isEditing && editingVariantId) {
+        await updateVariant.mutateAsync({
+          id: editingVariantId,
+          input: {
+            name: data.name,
+            sku: data.sku,
+            unitQuantity: data.unitQuantity,
+            price: data.price,
+            isActive: data.isActive,
+          },
+        });
+        toast.success("Variante actualizada");
+      } else {
+        await createVariant.mutateAsync({
+          productId: id,
+          input: {
+            name: data.name,
+            sku: data.sku,
+            unitQuantity: data.unitQuantity,
+            price: data.price,
+            isActive: data.isActive,
+          },
+        });
+        toast.success("Variante creada");
+      }
 
-    refetchVariants();
+      refetchVariants();
+    } catch (error) {
+      console.error("Error saving variant:", error);
+      toast.error(isEditing ? "Error al actualizar la variante" : "Error al crear la variante");
+    }
   };
 
   const handleVariantEdit = (variant: ProductVariant) => {
@@ -126,15 +152,26 @@ export default function ProductDetailPage() {
       variant: "destructive",
     });
     if (confirmed) {
-      await deactivateVariant.mutateAsync(variantId);
-      refetchVariants();
+      try {
+        await deactivateVariant.mutateAsync(variantId);
+        toast.success("Variante desactivada");
+        refetchVariants();
+      } catch (error) {
+        console.error("Error deactivating variant:", error);
+        toast.error("Error al desactivar la variante");
+      }
     }
   };
 
   const handleVariantReorder = async (variantIds: string[]) => {
     if (!id) return;
-    await reorderVariants.mutateAsync({ productId: id, variantIds });
-    refetchVariants();
+    try {
+      await reorderVariants.mutateAsync({ productId: id, variantIds });
+      refetchVariants();
+    } catch (error) {
+      console.error("Error reordering variants:", error);
+      toast.error("Error al reordenar las variantes");
+    }
   };
 
   if (isProductLoading) {
@@ -169,89 +206,79 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
-          <button
-            onClick={() => navigate("/productos")}
-            className="p-2 -ml-2 rounded-xl hover:bg-orange-50 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="font-bold text-lg truncate">Editar Producto</h1>
+      {/* Compact header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div className="flex items-center justify-between h-12 px-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/productos")}
+              className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <h1 className="font-semibold text-base truncate">{product.name}</h1>
+            <Badge className={`text-[10px] px-1.5 py-0 ${typeBadgeClasses[product.type]}`}>
+              {typeLabels[product.type]}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-semibold text-orange-600 text-sm">S/ {product.basePrice}</span>
+            <span className="text-gray-300">|</span>
+            <Badge
+              variant={product.isActive ? "default" : "secondary"}
+              className={`text-[10px] px-1.5 py-0 ${
+                product.isActive
+                  ? "bg-green-100 text-green-700 hover:bg-green-100"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              {product.isActive ? "Activo" : "Inactivo"}
+            </Badge>
+          </div>
         </div>
       </header>
 
-      <main className="px-3 py-4 sm:px-4 pb-8 space-y-4">
-        <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-4">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <Package className="h-7 w-7 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg text-white truncate">
-                  {product.name}
-                </h2>
-                <Badge
-                  className={`mt-2 ${typeBadgeClasses[product.type]}`}
-                >
-                  {typeLabels[product.type]}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          <CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
-                  <span>Precio actual</span>
-                </div>
-                <p className="text-2xl font-bold text-orange-600">
-                  S/ {product.basePrice}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Tag className="h-4 w-4" />
-                  <span>Unidad</span>
-                </div>
-                <p className="text-lg font-medium">{unitLabels[product.unit]}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-sm pt-4 border-t">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Creado el {new Date(product.createdAt).toLocaleDateString("es-PE")}</span>
-              </div>
-              <Badge
-                variant={product.isActive ? "default" : "secondary"}
-                className={
-                  product.isActive
-                    ? "bg-green-100 text-green-700 hover:bg-green-100"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                }
-              >
-                {product.isActive ? "Activo" : "Inactivo"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
+      <main className="px-3 py-3 sm:px-4 pb-8 space-y-3">
         <ProductForm
           product={product}
           onSubmit={handleSubmit}
           onCancel={() => navigate("/productos")}
           isLoading={updateProduct.isPending}
-          hasVariants={product.hasVariants || (variants && variants.length > 0)}
+          hasVariants={showVariants}
           variantCount={variants?.length || 0}
         />
 
-        {/* Only show variants section if product hasVariants flag is true or has multiple variants */}
-        {(product.hasVariants || (variants && variants.length > 1)) && (
+        {/* Variants Toggle */}
+        <div className="rounded-xl border border-gray-100 bg-white p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Layers className="h-4 w-4 text-orange-500" />
+              <div>
+                <Label htmlFor="showVariants" className="text-sm font-medium text-foreground cursor-pointer">
+                  Este producto tiene variantes
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {showVariants
+                    ? "Gestiona las variantes del producto"
+                    : "Activa para agregar presentaciones o tamaños"}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                id="showVariants"
+                type="checkbox"
+                checked={showVariants}
+                onChange={(e) => setShowVariants(e.target.checked)}
+                disabled={hasMultipleVariants}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+            </label>
+          </div>
+        </div>
+
+        {showVariants && (
           <VariantList
             variants={variants || []}
             isLoading={isVariantsLoading}
