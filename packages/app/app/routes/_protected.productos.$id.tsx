@@ -250,14 +250,17 @@ export default function ProductDetailPage() {
           variantCount={variants?.length || 0}
         />
 
-        <VariantList
-          variants={variants || []}
-          isLoading={isVariantsLoading}
-          onAdd={handleVariantAdd}
-          onEdit={handleVariantEdit}
-          onDelete={handleVariantDelete}
-          onReorder={handleVariantReorder}
-        />
+        {/* Only show variants section if product hasVariants flag is true or has multiple variants */}
+        {(product.hasVariants || (variants && variants.length > 1)) && (
+          <VariantList
+            variants={variants || []}
+            isLoading={isVariantsLoading}
+            onAdd={handleVariantAdd}
+            onEdit={handleVariantEdit}
+            onDelete={handleVariantDelete}
+            onReorder={handleVariantReorder}
+          />
+        )}
 
         <VariantModal />
         <ConfirmDialog />

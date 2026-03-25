@@ -1,4 +1,4 @@
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, or } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
 import { db, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
@@ -103,19 +103,32 @@ export class SyncService {
     return this.engine.processBatch(ctx, operations);
   }
 
-  async getChanges(ctx: RequestContext, since?: Date, limit = 100) {
+  async getChanges(ctx: RequestContext, since?: Date, limit = 100, syncGroupId?: string) {
     const effectiveLimit = Math.min(limit, 500);
 
-    const where = since
-      ? and(
-          eq(syncOperations.businessId, ctx.businessId),
-          eq(syncOperations.status, "processed"),
-          gte(syncOperations.processedAt, since)
+    // Build where clause with optional syncGroupId filter
+    const baseConditions = [
+      eq(syncOperations.businessId, ctx.businessId),
+      eq(syncOperations.status, "processed"),
+    ];
+
+    // Add syncGroupId filter if provided
+    // If syncGroupId is specified, only return changes for that group OR changes without a group
+    if (syncGroupId) {
+      baseConditions.push(
+        or(
+          eq(syncOperations.syncGroupId, syncGroupId),
+          isNull(syncOperations.syncGroupId)
         )
-      : and(
-          eq(syncOperations.businessId, ctx.businessId),
-          eq(syncOperations.status, "processed")
-        );
+      );
+    }
+
+    // Add since filter if provided
+    if (since) {
+      baseConditions.push(gte(syncOperations.processedAt, since));
+    }
+
+    const where = and(...baseConditions);
 
     const operations = await db.query.syncOperations.findMany({
       where,

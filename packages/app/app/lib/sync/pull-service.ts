@@ -22,6 +22,7 @@ export class PullService {
   private db: ReturnType<typeof drizzle>;
   private businessId: string;
   private authToken: string;
+  private syncGroupId: string | null = null;
   private pullIntervalId: ReturnType<typeof setInterval> | null = null;
   private lastSince: string | null = null;
   private onChangesApplied: ((entityTypes: string[]) => void) | null = null;
@@ -40,14 +41,16 @@ export class PullService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     businessId: string,
-    authToken: string
+    authToken: string,
+    syncGroupId?: string | null
   ) {
     this.pg = pg;
     this.db = db;
     this.businessId = businessId;
     this.authToken = authToken;
+    this.syncGroupId = syncGroupId ?? null;
     this.cursorStorageKey = getPullCursorStorageKey(getLocalDatabaseNamespace());
-    
+
     // Load persisted cursor from localStorage
     this.loadCursor();
   }
@@ -119,6 +122,20 @@ export class PullService {
   }
 
   /**
+   * Set the sync group ID for filtering changes
+   */
+  setSyncGroupId(syncGroupId: string | null): void {
+    this.syncGroupId = syncGroupId;
+  }
+
+  /**
+   * Get current sync group ID
+   */
+  getSyncGroupId(): string | null {
+    return this.syncGroupId;
+  }
+
+  /**
    * Fetch changes from the server with pagination support
    */
   async pull(): Promise<PullResult> {
@@ -141,6 +158,9 @@ export class PullService {
         url.searchParams.set("since", this.lastSince);
       }
       url.searchParams.set("limit", "100");
+      if (this.syncGroupId) {
+        url.searchParams.set("syncGroupId", this.syncGroupId);
+      }
 
       const response = await fetch(url.toString(), {
         method: "GET",

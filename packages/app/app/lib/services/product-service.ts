@@ -336,6 +336,7 @@ export class ProductService extends BaseService {
   /**
    * Create a new product (admin only)
    * Queues sync operation to server
+   * If hasVariants is false, auto-creates a default variant with the product name
    * @param input - Product creation data
    * @returns Created product
    */
@@ -369,6 +370,18 @@ export class ProductService extends BaseService {
       isActive: input.isActive ?? true,
       imageId: input.imageId,
     });
+
+    // If product has no variants, auto-create a default variant
+    if (input.hasVariants === false) {
+      await this.createVariant({
+        productId: id,
+        name: input.name,
+        unitQuantity: "1",
+        price: input.basePrice,
+        isActive: true,
+        sortOrder: 0,
+      });
+    }
 
     return (await this.findById(id))!;
   }

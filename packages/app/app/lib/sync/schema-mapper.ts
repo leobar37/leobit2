@@ -28,6 +28,13 @@ export const VALID_TABLES = new Set([
   "visitas",
 ]);
 
+// Columnas que NO existen en ciertas tablas (lista negra segura)
+// Estas columnas se ignoran silenciosamente para evitar errores SQL
+const INVALID_COLUMNS: Record<string, Set<string>> = {
+  // products no tiene sku (solo product_variants lo tiene)
+  products: new Set(["sku"]),
+};
+
 // Static table map using shared schema
 const TABLE_MAP: Record<string, PgTable> = {
   customers: schema.customers,
@@ -83,30 +90,36 @@ export function toSnakeCase(obj: Record<string, unknown>): Record<string, unknow
 }
 
 /**
- * Filter payload to only include valid columns for a table.
+ * Filtra columnas inválidas conocidas del payload.
+ * Usa lista negra para no romper campos existentes que no estén listados.
  *
- * IMPORTANT: Drizzle tables from @avileo/shared use camelCase column names
- * (e.g., businessId, syncStatus) but the local PGlite database uses snake_case
- * (e.g., business_id, sync_status). This mismatch means Drizzle column keys
- * do NOT match SQL column names, so we skip column filtering entirely.
- *
- * The database will enforce constraints via SQL errors if invalid columns are
- * passed. This avoids the bug where valid columns were incorrectly removed.
- *
- * @param tableName - Name of the table
- * @param payload - Payload to filter
- * @returns Filtered payload with only valid columns
+ * @param tableName - Nombre de la tabla
+ * @param payload - Payload a filtrar (snake_case keys)
+ * @returns Payload sin columnas inválidas conocidas
  */
 export function filterValidColumns(
   tableName: string,
   payload: Record<string, unknown>
 ): Record<string, unknown> {
-  const table = TABLE_MAP[tableName];
-  if (!table) {
+  const invalidColumns = INVALID_COLUMNS[tableName];
+  if (!invalidColumns || invalidColumns.size === 0) {
     return payload;
   }
 
-  // Skip column filtering due to Drizzle (camelCase) vs local SQL (snake_case) mismatch.
-  // The database will reject invalid columns via SQL constraints.
-  return payload;
+  const filtered: Record<string, unknown> = {};
+  const removed: string[] = [];
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (invalidColumns.has(key)) {
+      removed.push(key);
+    } else {
+      filtered[key] = value;
+    }
+  }
+
+  if (removed.length > 0) {
+    console.warn(`[SchemaMapper] Columnas ignoradas para ${tableName}: ${removed.join(', ')}`);
+  }
+
+  return filtered;
 }

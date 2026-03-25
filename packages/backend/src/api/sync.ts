@@ -194,7 +194,8 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       const result = await syncService.getChanges(
         ctx as RequestContext,
         since,
-        limit
+        limit,
+        query.syncGroupId
       );
 
       return { success: true, data: result };

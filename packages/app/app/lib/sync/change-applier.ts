@@ -7,7 +7,7 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { PullChange, ChangeApplicationResult } from "./types";
-import { isValidTableName, toSnakeCase } from "./schema-mapper";
+import { isValidTableName, toSnakeCase, filterValidColumns } from "./schema-mapper";
 import { isTransientError, sleep } from "./backoff";
 
 const MAX_APPLY_RETRIES = 3;
@@ -78,7 +78,8 @@ async function applyInsert(
   change: PullChange,
   businessId: string
 ): Promise<ChangeApplicationResult> {
-  const data = toSnakeCase(change.payload);
+  const snakeCaseData = toSnakeCase(change.payload);
+  const data = filterValidColumns(tableName, snakeCaseData);
 
   // Inject required fields
   const id = change.entityId;
@@ -138,7 +139,8 @@ async function applyUpdate(
   change: PullChange,
   businessId: string
 ): Promise<ChangeApplicationResult> {
-  const data = toSnakeCase(change.payload);
+  const snakeCaseData = toSnakeCase(change.payload);
+  const data = filterValidColumns(tableName, snakeCaseData);
 
   if (Object.keys(data).length === 0) {
     return { success: false, error: "Empty payload for update operation" };
