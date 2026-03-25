@@ -72,36 +72,42 @@ export class ProductRepository {
         syncStatus: products.syncStatus,
         syncAttempts: products.syncAttempts,
         createdAt: products.createdAt,
-        variantCount: sql<number>`count(${productVariants.id})`,
+        hasVariants: products.hasVariants,
       })
       .from(products)
-      .leftJoin(productVariants, eq(products.id, productVariants.productId))
       .where(and(
         eq(products.id, id),
         eq(products.businessId, ctx.businessId)
       ))
-      .groupBy(products.id)
       .limit(1);
 
     if (!product) return undefined;
 
     return {
       ...product,
-      hasVariants: (product.variantCount ?? 0) > 0,
+      hasVariants: product.hasVariants ?? false,
     };
   }
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewProduct, "id" | "createdAt" | "businessId">,
+    data: Omit<NewProduct, "id" | "createdAt" | "businessId"> & { id?: string },
     tx?: DbTransaction
   ): Promise<Product> {
     const dbOrTx = tx || db;
     const [product] = await dbOrTx
       .insert(products)
       .values({
-        ...data,
+        ...(data.id ? { id: data.id } : {}),
+        name: data.name,
+        type: data.type,
+        unit: data.unit,
+        basePrice: data.basePrice,
+        costPrice: data.costPrice,
+        isActive: data.isActive,
+        imageId: data.imageId,
         businessId: ctx.businessId,
+        hasVariants: data.hasVariants,
       })
       .returning();
 

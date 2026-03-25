@@ -57,6 +57,7 @@ export class SupplierSyncHandler extends BaseSyncHandler {
     const parsed = supplierCreateSchema.parse(operation.payload);
 
     await this.supplierRepo.create(ctx, {
+      id: operation.entityId,
       name: parsed.name,
       type: parsed.type || "regular",
       ruc: parsed.ruc,

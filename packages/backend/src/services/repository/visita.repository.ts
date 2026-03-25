@@ -13,6 +13,7 @@ export interface VisitaWithCustomer extends Visita {
 }
 
 export interface CreateVisitaData {
+  id?: string;
   distribucionId: string;
   customerId: string;
 }
@@ -100,6 +101,7 @@ export class VisitaRepository {
     const [visit] = await db
       .insert(visitas)
       .values({
+        ...(data.id ? { id: data.id } : {}),
         distribucionId: data.distribucionId,
         customerId: data.customerId,
         vendedorId: ctx.businessUserId,

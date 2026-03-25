@@ -5,6 +5,7 @@ import type { RequestContext } from "../../context/request-context";
 import type { DbTransaction } from "../../lib/txid";
 
 export interface CreateVariantInput {
+  id?: string;
   productId: string;
   name: string;
   sku?: string | null;
@@ -77,7 +78,13 @@ export class ProductVariantRepository {
     const [variant] = await dbOrTx
       .insert(productVariants)
       .values({
-        ...data,
+        ...(data.id ? { id: data.id } : {}),
+        productId: data.productId,
+        name: data.name,
+        sku: data.sku,
+        unitQuantity: data.unitQuantity,
+        price: data.price,
+        costPrice: data.costPrice ?? "0",
         businessId: ctx.businessId,
         isActive: data.isActive ?? true,
         sortOrder: data.sortOrder ?? 0,

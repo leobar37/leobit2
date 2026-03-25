@@ -2,14 +2,18 @@ import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
+import type { ProductVariantRepository } from "../../repository/product-variant.repository";
 import type { ProductRepository } from "../../repository/product.repository";
 import { BaseSyncHandler } from "./BaseSyncHandler";
-import { productCreateSchema, productUpdateSchema } from "../schemas";
+import { productVariantCreateSchema, productVariantUpdateSchema } from "../schemas";
 
-export class ProductSyncHandler extends BaseSyncHandler {
-  readonly entityType = "products" as const;
+export class ProductVariantSyncHandler extends BaseSyncHandler {
+  readonly entityType = "product_variants" as const;
 
-  constructor(private productRepo: ProductRepository) {
+  constructor(
+    private variantRepo: ProductVariantRepository,
+    private productRepo: ProductRepository
+  ) {
     super();
   }
 
@@ -19,7 +23,7 @@ export class ProductSyncHandler extends BaseSyncHandler {
     operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    this.validatePayload(payload, productCreateSchema, productUpdateSchema, operation);
+    this.validatePayload(payload, productVariantCreateSchema, productVariantUpdateSchema, operation);
   }
 
   async execute(
@@ -37,7 +41,7 @@ export class ProductSyncHandler extends BaseSyncHandler {
       } else if (operation.operation === "delete") {
         await this.handleDelete(ctx, operation, tx);
       } else {
-        throw new Error(`Acción no soportada: ${operation.operation}`);
+        throw new Error(`Unsupported operation: ${operation.operation}`);
       }
 
       this.logSuccess(ctx, operation);
@@ -54,17 +58,25 @@ export class ProductSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
-    const parsed = productCreateSchema.parse(operation.payload);
+    const parsed = productVariantCreateSchema.parse(operation.payload);
 
-    await this.productRepo.create(ctx, {
+    // Verify parent product exists (or was created in same batch)
+    await this.ensureParentExists(
+      parsed.productId,
+      () => this.productRepo.findById(ctx, parsed.productId),
+      "Producto"
+    );
+
+    await this.variantRepo.create(ctx, {
       id: operation.entityId,
+      productId: parsed.productId,
       name: parsed.name,
-      unit: (parsed.unit ?? "kg") as "kg" | "unidad",
-      basePrice: parsed.basePrice ?? "0",
+      sku: parsed.sku,
+      unitQuantity: parsed.unitQuantity,
+      price: parsed.price,
       costPrice: parsed.costPrice ?? "0",
+      sortOrder: parsed.sortOrder ?? 0,
       isActive: parsed.isActive ?? true,
-      imageId: parsed.imageId,
-      hasVariants: parsed.hasVariants ?? false,
     }, tx);
   }
 
@@ -73,19 +85,21 @@ export class ProductSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
-    const parsed = productUpdateSchema.parse(operation.payload);
-    const updateData: Parameters<typeof this.productRepo.update>[2] = {};
+    const parsed = productVariantUpdateSchema.parse(operation.payload);
+    const updateData: Parameters<typeof this.variantRepo.update>[2] = {};
 
     if (parsed.name !== undefined) updateData.name = parsed.name;
-    if (parsed.unit !== undefined) updateData.unit = parsed.unit as "kg" | "unidad";
-    if (parsed.basePrice !== undefined) updateData.basePrice = parsed.basePrice;
+    if (parsed.sku !== undefined) updateData.sku = parsed.sku;
+    if (parsed.unitQuantity !== undefined) updateData.unitQuantity = parsed.unitQuantity;
+    if (parsed.price !== undefined) updateData.price = parsed.price;
+    if (parsed.costPrice !== undefined) updateData.costPrice = parsed.costPrice;
+    if (parsed.sortOrder !== undefined) updateData.sortOrder = parsed.sortOrder;
     if (parsed.isActive !== undefined) updateData.isActive = parsed.isActive;
-    if (parsed.imageId !== undefined) updateData.imageId = parsed.imageId;
 
-    const updated = await this.productRepo.update(ctx, operation.entityId, updateData, tx);
+    const updated = await this.variantRepo.update(ctx, operation.entityId, updateData, tx);
 
     if (!updated) {
-      throw new Error("Producto no encontrado");
+      throw new Error("Variante no encontrada");
     }
   }
 
@@ -94,11 +108,11 @@ export class ProductSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     _tx?: DbTransaction
   ): Promise<void> {
-    const existing = await this.productRepo.findById(ctx, operation.entityId);
+    const existing = await this.variantRepo.findById(ctx, operation.entityId);
     if (!existing) {
       return;
     }
 
-    await this.productRepo.delete(ctx, operation.entityId);
+    await this.variantRepo.delete(ctx, operation.entityId);
   }
 }

@@ -5,6 +5,7 @@ export type SyncEntity =
   | "abonos"
   | "distribuciones"
   | "products"
+  | "product_variants"
   | "tags"
   | "customer_tags"
   | "purchases"

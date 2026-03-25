@@ -54,7 +54,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="hidden space-y-2">
           <Label htmlFor="type" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Tipo

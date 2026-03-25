@@ -31,9 +31,9 @@ export const VALID_TABLES = new Set([
 // Columnas que NO existen en ciertas tablas (lista negra segura)
 // Estas columnas se ignoran silenciosamente para evitar errores SQL
 const INVALID_COLUMNS: Record<string, Set<string>> = {
-  // products no tiene sku (solo product_variants lo tiene)
-  // products tampoco tiene price ni product_id (estan en product_variants)
-  products: new Set(["sku", "price", "product_id"]),
+  // products no tiene sku, price, sort_order, unit_quantity (solo product_variants los tiene)
+  // products tampoco tiene product_id (esta en product_variants)
+  products: new Set(["sku", "price", "product_id", "sort_order", "unit_quantity"]),
   // product_variants tiene product_id que referencia a products
 };
 

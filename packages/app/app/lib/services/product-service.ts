@@ -159,6 +159,7 @@ export class ProductService extends BaseService {
         isActive: products.isActive,
         imageId: products.imageId,
         createdAt: products.createdAt,
+        hasVariants: products.hasVariants,
       })
       .from(products)
       .where(and(eq(products.id, id), eq(products.businessId, this.businessId)))
@@ -168,13 +169,7 @@ export class ProductService extends BaseService {
       return null;
     }
 
-    const row = result[0];
-    const hasVariants = await this.checkHasVariants(row.id);
-
-    return {
-      ...row,
-      hasVariants,
-    };
+    return result[0];
   }
 
   /**
@@ -193,22 +188,13 @@ export class ProductService extends BaseService {
         isActive: products.isActive,
         imageId: products.imageId,
         createdAt: products.createdAt,
+        hasVariants: products.hasVariants,
       })
       .from(products)
       .where(eq(products.businessId, this.businessId))
       .orderBy(products.name);
 
-    // Check hasVariants for each product
-    const mappedProducts: Product[] = [];
-    for (const row of result) {
-      const hasVariants = await this.checkHasVariants(row.id);
-      mappedProducts.push({
-        ...row,
-        hasVariants,
-      });
-    }
-
-    return mappedProducts;
+    return result;
   }
 
   /**
@@ -228,21 +214,13 @@ export class ProductService extends BaseService {
         isActive: products.isActive,
         imageId: products.imageId,
         createdAt: products.createdAt,
+        hasVariants: products.hasVariants,
       })
       .from(products)
       .where(and(eq(products.businessId, this.businessId), eq(products.type, type)))
       .orderBy(products.name);
 
-    const mappedProducts: Product[] = [];
-    for (const row of result) {
-      const hasVariants = await this.checkHasVariants(row.id);
-      mappedProducts.push({
-        ...row,
-        hasVariants,
-      });
-    }
-
-    return mappedProducts;
+    return result;
   }
 
   /**
@@ -261,21 +239,13 @@ export class ProductService extends BaseService {
         isActive: products.isActive,
         imageId: products.imageId,
         createdAt: products.createdAt,
+        hasVariants: products.hasVariants,
       })
       .from(products)
       .where(and(eq(products.businessId, this.businessId), eq(products.isActive, true)))
       .orderBy(products.name);
 
-    const mappedProducts: Product[] = [];
-    for (const row of result) {
-      const hasVariants = await this.checkHasVariants(row.id);
-      mappedProducts.push({
-        ...row,
-        hasVariants,
-      });
-    }
-
-    return mappedProducts;
+    return result;
   }
 
   /**
@@ -344,6 +314,9 @@ export class ProductService extends BaseService {
     const id = this.generateId();
     const now = new Date(this.now());
 
+    // Shared syncGroupId so product + variant are sent in the same batch
+    const syncGroupId = `prod-${id}`;
+
     // Insert into local PGlite using Drizzle
     await this.db.insert(products).values({
       id,
@@ -364,14 +337,14 @@ export class ProductService extends BaseService {
     // Queue for server sync
     await this.queueSync("create", id, {
       name: input.name,
-      type: input.type,
       unit: input.unit,
       basePrice: input.basePrice,
       isActive: input.isActive ?? true,
       imageId: input.imageId,
-    });
+      hasVariants: input.hasVariants ?? false,
+    }, syncGroupId);
 
-    // If product has no variants, auto-create a default variant
+    // If product does NOT have variants, auto-create a default variant so it can be sold
     if (input.hasVariants === false) {
       await this.createVariant({
         productId: id,
@@ -380,7 +353,7 @@ export class ProductService extends BaseService {
         price: input.basePrice,
         isActive: true,
         sortOrder: 0,
-      });
+      }, syncGroupId);
     }
 
     return (await this.findById(id))!;
@@ -478,13 +451,10 @@ export class ProductService extends BaseService {
     await this.updateSyncStatus("product_variants", variantId, SyncStatus.PENDING);
 
     // Queue for server sync
-    await this.queueSync("update", variantId, {
-      entity: "product_variants",
-      ...input,
-    });
+    await this.queueSync("update", variantId, input, undefined, "product_variants");
   }
 
-  async createVariant(input: CreateVariantInput): Promise<ProductVariant> {
+  async createVariant(input: CreateVariantInput, syncGroupId?: string): Promise<ProductVariant> {
     const id = this.generateId();
     const now = new Date(this.now());
 
@@ -516,7 +486,7 @@ export class ProductService extends BaseService {
       price: input.price,
       sortOrder: input.sortOrder ?? 0,
       isActive: input.isActive ?? true,
-    });
+    }, syncGroupId, "product_variants");
 
     // Return created variant
     const result = await this.findVariantById(id);

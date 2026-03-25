@@ -12,6 +12,22 @@ import { isTransientError, sleep } from "./backoff";
 
 const MAX_APPLY_RETRIES = 3;
 
+// Default values for NOT NULL columns that may be missing from sync payloads.
+// When the backend stores the original client payload in sync_operations,
+// fields with server-side defaults (like basePrice → "0") are not included.
+// This map ensures the change-applier can still INSERT without NOT NULL violations.
+const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> = {
+  products: {
+    base_price: "0",
+    cost_price: "0",
+  },
+  product_variants: {
+    price: "0",
+    cost_price: "0",
+    unit_quantity: "1",
+  },
+};
+
 const RELATION_FIELDS = new Set([
   "items", "customer", "seller", "business", "distribucion", "visita",
   "sale", "product", "variant", "supplier", "purchase",
@@ -80,6 +96,16 @@ async function applyInsert(
 ): Promise<ChangeApplicationResult> {
   const snakeCaseData = toSnakeCase(change.payload);
   const data = filterValidColumns(tableName, snakeCaseData);
+
+  // Apply required column defaults for missing NOT NULL fields
+  const defaults = REQUIRED_COLUMN_DEFAULTS[tableName];
+  if (defaults) {
+    for (const [col, defaultVal] of Object.entries(defaults)) {
+      if (data[col] === undefined || data[col] === null) {
+        data[col] = defaultVal;
+      }
+    }
+  }
 
   // Inject required fields
   const id = change.entityId;

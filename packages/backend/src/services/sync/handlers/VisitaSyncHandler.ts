@@ -53,6 +53,7 @@ export class VisitaSyncHandler extends BaseSyncHandler {
     const parsed = visitaCreateSchema.parse(operation.payload);
 
     await this.visitaRepo.create(ctx, {
+      id: operation.entityId,
       distribucionId: parsed.distribucionId,
       customerId: parsed.customerId,
     });

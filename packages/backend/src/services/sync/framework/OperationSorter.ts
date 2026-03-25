@@ -13,6 +13,8 @@ export class OperationSorter {
     customer_group_members: 4,
     purchases: 1,
     purchase_items: 2,
+    products: 1,
+    product_variants: 2,
     distribucion: 1,
     distribucion_items: 2,
   };

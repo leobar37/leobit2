@@ -59,14 +59,16 @@ export class SupplierRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt">,
+    data: Omit<NewSupplier, "businessId" | "id" | "createdAt" | "updatedAt"> & { id?: string },
     tx?: DbTransaction
   ): Promise<Supplier> {
     const dbOrTx = tx || db;
+    const { id, ...rest } = data;
     const [supplier] = await dbOrTx
       .insert(suppliers)
       .values({
-        ...data,
+        ...(id ? { id } : {}),
+        ...rest,
         businessId: ctx.businessId,
       })
       .returning();

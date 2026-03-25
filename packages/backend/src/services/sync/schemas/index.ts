@@ -221,18 +221,46 @@ export type SaleItemOperationInput = z.infer<typeof saleItemOperationSchema>;
 
 export const productCreateSchema = z.object({
   name: z.string().min(1, "name es requerido"),
-  type: z.enum(["pollo", "huevo", "otro"]).optional(),
   unit: z.string().optional(),
-  basePrice: optionalNumericStringTransform,
-  costPrice: optionalNumericStringTransform,
+  basePrice: z.union([z.string(), z.number()]).optional().default("0").transform((val) => {
+    if (val === undefined) return "0";
+    if (typeof val === "number") {
+      return Number.isFinite(val) ? val.toString() : "0";
+    }
+    return /^\d+(\.\d+)?$/.test(val) ? val : "0";
+  }),
+  costPrice: z.union([z.string(), z.number()]).optional().default("0").transform((val) => {
+    if (val === undefined) return "0";
+    if (typeof val === "number") {
+      return Number.isFinite(val) ? val.toString() : "0";
+    }
+    return /^\d+(\.\d+)?$/.test(val) ? val : "0";
+  }),
   isActive: z.boolean().optional(),
   imageId: z.string().optional(),
+  hasVariants: z.boolean().optional(),
 });
 
 export const productUpdateSchema = productCreateSchema.partial();
 
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
+
+export const productVariantCreateSchema = z.object({
+  productId: z.string().min(1, "productId es requerido"),
+  name: z.string().min(1, "name es requerido"),
+  sku: z.string().optional().nullable(),
+  unitQuantity: numericStringTransform,
+  price: numericStringTransform,
+  costPrice: optionalNumericStringTransform,
+  sortOrder: z.number().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const productVariantUpdateSchema = productVariantCreateSchema.partial();
+
+export type ProductVariantCreateInput = z.infer<typeof productVariantCreateSchema>;
+export type ProductVariantUpdateInput = z.infer<typeof productVariantUpdateSchema>;
 
 export const tagCreateSchema = z.object({
   name: z.string().min(1, "name es requerido"),
@@ -309,7 +337,7 @@ export const purchaseItemUpdateSchema = z.object({
 
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "product_variants", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

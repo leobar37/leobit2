@@ -12,6 +12,7 @@ import { AbonoSyncHandler } from "./handlers/AbonoSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
 import { SaleItemSyncHandler } from "./handlers/SaleItemSyncHandler";
 import { ProductSyncHandler } from "./handlers/ProductSyncHandler";
+import { ProductVariantSyncHandler } from "./handlers/ProductVariantSyncHandler";
 import { TagSyncHandler } from "./handlers/TagSyncHandler";
 import { CustomerTagSyncHandler } from "./handlers/CustomerTagSyncHandler";
 import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
@@ -61,6 +62,10 @@ export class SyncService {
 
     HandlerRegistry.register("products", () => {
       return new ProductSyncHandler(deps.productRepo);
+    });
+
+    HandlerRegistry.register("product_variants", () => {
+      return new ProductVariantSyncHandler(deps.variantRepo, deps.productRepo);
     });
 
     HandlerRegistry.register("tags", () => {

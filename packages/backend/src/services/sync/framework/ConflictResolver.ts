@@ -1,7 +1,7 @@
 import { and, eq, getTableName } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { customers, sales, abonos, products, tags, visitas, purchases, purchaseItems, suppliers, closings, distribuciones, saleItems } from "../../../db/schema";
+import { customers, sales, abonos, products, productVariants, tags, visitas, purchases, purchaseItems, suppliers, closings, distribuciones, saleItems } from "../../../db/schema";
 import { customerGroups } from "../../../db/schema/customer-groups";
 import { customerTags } from "../../../db/schema/customer-tags";
 import { customerGroupMembers } from "../../../db/schema/customer-group-members";
@@ -28,6 +28,14 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
   protected abstract getUpdatedAtField(): string;
   protected abstract getServerDataFields(record: any): Record<string, unknown>;
 
+  /**
+   * Returns the Drizzle query relation name for tx.query[name].
+   * Override when the SQL table name (snake_case) differs from the Drizzle export name (camelCase).
+   */
+  protected getQueryRelationName(): string | null {
+    return null;
+  }
+
   async checkConflict(
     ctx: RequestContext,
     operation: SyncOperationInput,
@@ -42,8 +50,17 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
     const businessIdField = this.getBusinessIdField();
     const updatedAtField = this.getUpdatedAtField();
 
-    const tableName = getTableName(table);
-    const record = await (tx.query as Record<string, any>)[tableName].findFirst({
+    const queryName = this.getQueryRelationName() ?? getTableName(table);
+    const queryApi = (tx.query as Record<string, any>)[queryName];
+    if (!queryApi) {
+      logger.warn({
+        msg: `⚠️ No query relation found for "${queryName}", skipping conflict check`,
+        entityType: this.getEntityName(),
+      });
+      return { hasConflict: false };
+    }
+
+    const record = await queryApi.findFirst({
       where: and(
         eq(table[idField], operation.entityId),
         eq(table[businessIdField], ctx.businessId)
@@ -121,9 +138,29 @@ class ProductConflictResolver extends BaseTimestampConflictResolver {
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
-      type: record.type,
       unit: record.unit,
       basePrice: record.basePrice,
+      isActive: record.isActive,
+      updatedAt: record.updatedAt?.toISOString(),
+    };
+  }
+}
+
+class ProductVariantConflictResolver extends BaseTimestampConflictResolver {
+  protected getEntityName() { return "ProductVariant"; }
+  protected getTable() { return productVariants; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "productVariants"; }
+  protected getServerDataFields(record: any) {
+    return {
+      name: record.name,
+      productId: record.productId,
+      unitQuantity: record.unitQuantity,
+      price: record.price,
+      costPrice: record.costPrice,
+      sortOrder: record.sortOrder,
       isActive: record.isActive,
       updatedAt: record.updatedAt?.toISOString(),
     };
@@ -151,6 +188,7 @@ class CustomerTagConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "customerTags"; }
   protected getServerDataFields(record: any) {
     return {
       customerId: record.customerId,
@@ -166,6 +204,7 @@ class CustomerGroupConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "customerGroups"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
@@ -181,6 +220,7 @@ class CustomerGroupMemberConflictResolver extends BaseTimestampConflictResolver 
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "customerGroupMembers"; }
   protected getServerDataFields(record: any) {
     return {
       groupId: record.groupId,
@@ -245,6 +285,7 @@ class PurchaseItemConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "purchaseItems"; }
   protected getServerDataFields(record: any) {
     return {
       purchaseId: record.purchaseId,
@@ -300,6 +341,7 @@ class PuntoVentaConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "puntosVenta"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
@@ -317,6 +359,7 @@ class ProductUnitConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "productUnits"; }
   protected getServerDataFields(record: any) {
     return {
       variantId: record.variantId,
@@ -334,6 +377,7 @@ class VariantInventoryConflictResolver extends BaseTimestampConflictResolver {
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
   protected getUpdatedAtField() { return "updatedAt"; }
+  protected getQueryRelationName() { return "variantInventory"; }
   protected getServerDataFields(record: any) {
     return {
       variantId: record.variantId,
@@ -483,6 +527,7 @@ const resolvers: Record<string, IConflictResolver> = {
   abonos: new AbonoConflictResolver(),
   distribuciones: new DistribucionConflictResolver(),
   products: new ProductConflictResolver(),
+  product_variants: new ProductVariantConflictResolver(),
   tags: new TagConflictResolver(),
   customer_tags: new CustomerTagConflictResolver(),
   customer_groups: new CustomerGroupConflictResolver(),

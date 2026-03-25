@@ -586,7 +586,7 @@ export class SyncService {
             CASE entity_type
               WHEN 'customers' THEN 1
               WHEN 'products' THEN 1
-              WHEN 'product_variants' THEN 1
+              WHEN 'product_variants' THEN 2
               WHEN 'tags' THEN 1
               WHEN 'customer_groups' THEN 1
               WHEN 'customer_group_members' THEN 2
@@ -673,6 +673,8 @@ export class SyncService {
         'customer_group_members': 4,
         'purchases': 1,
         'purchase_items': 2,
+        'products': 1,
+        'product_variants': 2,
         'distribucion': 1,
         'distribucion_items': 2,
       };

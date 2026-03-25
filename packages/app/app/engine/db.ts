@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS products (
   name VARCHAR(255) NOT NULL,
   type TEXT NOT NULL DEFAULT 'pollo',
   unit TEXT NOT NULL DEFAULT 'kg',
-  base_price DECIMAL(10,2) NOT NULL,
+  base_price DECIMAL(10,2) NOT NULL DEFAULT '0',
   cost_price DECIMAL(10,2) NOT NULL DEFAULT '0',
   is_active BOOLEAN NOT NULL DEFAULT true,
   has_variants BOOLEAN NOT NULL DEFAULT false,
