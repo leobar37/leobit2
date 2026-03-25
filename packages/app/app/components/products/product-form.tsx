@@ -192,4 +192,4 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
   );
 }
 
-export type { ProductFormData };
+export type { ProductFormData } from "~/lib/schemas/product-schema";
