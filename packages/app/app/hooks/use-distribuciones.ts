@@ -379,6 +379,29 @@ export function useDeleteDistribucion() {
       console.log("[Distribuciones] useDeleteDistribucion - deleted successfully");
     },
     offlineMessage: "Se requiere conexión a internet para eliminar la distribución",
+    onMutate: async (id: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [DISTRIBUCIONES_QUERY_KEY] });
+
+      // Snapshot previous value
+      const previousDistribuciones = queryClient.getQueryData([DISTRIBUCIONES_QUERY_KEY]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], (old: any) => {
+        if (!old) return old;
+        return old.filter((d: any) => d.id !== id);
+      });
+
+      // Return context with the snapshotted value
+      return { previousDistribuciones };
+    },
+    onError: (err, id, context: any) => {
+      // Rollback to previous value on error
+      if (context?.previousDistribuciones) {
+        queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], context.previousDistribuciones);
+      }
+      console.error("[Distribuciones] useDeleteDistribucion - error:", err);
+    },
     onSuccess: async () => {
       // Force pull immediately to sync deletion from server to PGlite
       await pullNow();

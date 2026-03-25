@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, CheckCircle, Store, UserRound } from "lucide-react";
+import { Edit, Trash2, CheckCircle, Store, UserRound, Loader2 } from "lucide-react";
 import type { Distribucion } from "~/hooks/use-distribuciones";
 import { cn, formatKilos as formatKilosUtil } from "~/lib/utils";
 
@@ -18,6 +18,7 @@ interface DistribucionTableProps {
   onClose: (distribucion: Distribucion) => void;
   onDelete: (id: string) => void;
   isLoading?: boolean;
+  deletingId?: string | null;
 }
 
 type DistribucionListItem = Distribucion & {
@@ -30,6 +31,7 @@ export function DistribucionTable({
   onClose,
   onDelete,
   isLoading,
+  deletingId,
 }: DistribucionTableProps) {
   const getVendedorLabel = (dist: DistribucionListItem) => dist.vendedorName?.trim() || "Vendedor no disponible";
 
@@ -165,9 +167,14 @@ export function DistribucionTable({
                   size="sm"
                   className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                   onClick={() => onDelete(dist.id)}
+                  disabled={deletingId === dist.id}
                 >
-                  <Trash2 className="mr-1.5 h-4 w-4" />
-                  Eliminar
+                  {deletingId === dist.id ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1.5 h-4 w-4" />
+                  )}
+                  {deletingId === dist.id ? "Eliminando..." : "Eliminar"}
                 </Button>
               </div>
             </div>
@@ -238,8 +245,13 @@ export function DistribucionTable({
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => onDelete(dist.id)}
+                        disabled={deletingId === dist.id}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        {deletingId === dist.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>

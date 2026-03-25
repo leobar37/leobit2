@@ -7,7 +7,6 @@ export const productSchema = z.object({
   basePrice: z.string().min(1, "El precio es requerido"),
   isActive: z.boolean(),
   imageId: z.string().optional(),
-  syncPriceToVariants: z.boolean().optional(),
 });
 
 export type ProductFormData = z.infer<typeof productSchema>;

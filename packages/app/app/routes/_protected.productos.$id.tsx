@@ -70,10 +70,27 @@ export default function ProductDetailPage() {
     }
   }, [product, hasMultipleVariants]);
 
+  // Track if any update mutation is pending
+  const isUpdating = updateProduct.isPending || updateVariant.isPending;
+
   const handleSubmit = async (data: ProductFormData) => {
     if (!id) return;
 
     try {
+      // For simple products (no variants), update the variant price directly
+      // This generates a single sync operation instead of two
+      if (isSimpleProduct && variants && variants.length > 0) {
+        const variantId = variants[0].id;
+        await updateVariant.mutateAsync({
+          id: variantId,
+          input: { price: data.basePrice },
+        });
+        toast.success("Producto actualizado");
+        navigate(`/productos/${id}`);
+        return;
+      }
+
+      // For products with variants, basePrice is just a reference - no need to update
       await updateProduct.mutateAsync({
         id,
         input: data,
@@ -243,7 +260,7 @@ export default function ProductDetailPage() {
           product={product}
           onSubmit={handleSubmit}
           onCancel={() => navigate("/productos")}
-          isLoading={updateProduct.isPending}
+          isLoading={isUpdating}
           hasVariants={showVariants}
           variantCount={variants?.length || 0}
         />

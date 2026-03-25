@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { useAsset } from "~/hooks/use-assets";
 import { AssetGallery } from "./asset-gallery";
 import type { Asset } from "~/hooks/use-assets";
 
@@ -24,6 +25,16 @@ export function AssetPicker({
 }: AssetPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | undefined>();
+  
+  // Cargar asset desde el backend cuando tenemos value pero no selectedAsset
+  const { data: fetchedAsset } = useAsset(value || "");
+  
+  // Actualizar selectedAsset cuando se carga el asset desde el backend
+  useEffect(() => {
+    if (fetchedAsset && !selectedAsset) {
+      setSelectedAsset(fetchedAsset);
+    }
+  }, [fetchedAsset, selectedAsset]);
 
   const handleSelect = (asset: Asset) => {
     setSelectedAsset(asset);
@@ -41,7 +52,7 @@ export function AssetPicker({
       {selectedAsset || value ? (
         <div className="relative inline-block">
           <img
-            src={selectedAsset?.url || ""}
+            src={selectedAsset?.url || undefined}
             alt="Selected"
             className="w-32 h-32 object-cover rounded-xl"
           />

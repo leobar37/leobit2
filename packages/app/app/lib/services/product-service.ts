@@ -86,7 +86,6 @@ export interface UpdateProductInput extends BaseUpdateInput {
   basePrice?: string;
   isActive?: boolean;
   imageId?: string;
-  syncPriceToVariants?: boolean;
 }
 
 /** Input for creating a product variant (admin only) */

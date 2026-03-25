@@ -72,7 +72,6 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         ...body,
         basePrice: body.basePrice ? parseFloat(body.basePrice) : undefined,
         costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
-        syncPriceToVariants: body.syncPriceToVariants,
       });
       return { success: true, data: result.data, txid: result.txid };
     },
@@ -88,7 +87,6 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         costPrice: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
         imageId: t.Optional(t.Union([t.String(), t.Null()])),
-        syncPriceToVariants: t.Optional(t.Boolean()),
       }),
     }
   )

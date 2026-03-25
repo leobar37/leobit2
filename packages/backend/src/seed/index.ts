@@ -980,8 +980,8 @@ async function seedTags(
       name: tagDef.name,
       color: tagDef.color,
     });
-    seededTags.push({ id: created.id, name: created.name });
-    console.log(`   ✓ Tag: ${created.name} (${created.color})`);
+    seededTags.push({ id: created.data.id, name: created.data.name });
+    console.log(`   ✓ Tag: ${created.data.name} (${created.data.color})`);
   }
 
   return seededTags;

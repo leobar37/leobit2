@@ -23,6 +23,7 @@ import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { useSync } from "~/components/sync/sync-status";
 import { useTeam } from "~/hooks/use-team";
+import { useState } from "react";
 
 const distribucionFilterSchema = z.object({
   fecha: z.string(),
@@ -56,6 +57,7 @@ export default function DistribucionesPage() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { isOnline } = useSync();
   const { toast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const distribuciones = (distribucionesData ?? []).map((distribucion) => {
     const vendedor = team.find((member) => member.id === distribucion.vendedorId);
@@ -119,10 +121,19 @@ export default function DistribucionesPage() {
     });
 
     if (confirmed) {
+      setDeletingId(id);
       try {
         await deleteMutation.mutateAsync(id);
+        toast.success("Distribución eliminada", {
+          description: "La distribución se ha eliminado correctamente.",
+        });
       } catch (error) {
         console.error("[Distribuciones] Delete failed:", error);
+        toast.error("Error al eliminar", {
+          description: error instanceof Error ? error.message : "No se pudo eliminar la distribución.",
+        });
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -208,6 +219,7 @@ export default function DistribucionesPage() {
           onClose={handleClose}
           onDelete={handleDelete}
           isLoading={isLoading}
+          deletingId={deletingId}
         />
 
         <ConfirmDialog />

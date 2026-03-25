@@ -41,7 +41,7 @@ import { eq, ne, and } from "drizzle-orm";
 import { auth } from "../src/lib/auth";
 
 const DEMO_EMAIL = "demo@avileo.com";
-const CLIENT_EMAIL = "cliente@avileo.com";
+const CLIENT_EMAIL = "cliente1@gmail.com";
 
 // Demo user data
 const DEMO_USER = {
@@ -58,19 +58,19 @@ const DEMO_BUSINESS = {
   email: "demo@avileo.com",
 };
 
-// Client user data  
+// Client1 user data (Pollería y Bodega)
 const CLIENT_USER = {
-  email: "cliente@avileo.com",
-  password: "Cliente112345",
-  name: "Cliente Demo",
+  email: "cliente1@gmail.com",
+  password: "Prueba@123",
+  name: "Cliente Uno",
 };
 
 const CLIENT_BUSINESS = {
-  name: "Pollos La Granja",
-  ruc: "20456789012",
-  address: "Av. Principal 456, Lima",
-  phone: "999-777-555",
-  email: "contacto@polloslagranja.com",
+  name: "Pollería y Bodega Cliente 1",
+  ruc: "20567890123",
+  address: "Av. Los Pollos 123, Lima",
+  phone: "999-111-222",
+  email: "cliente1@gmail.com",
 };
 
 async function ensureDemoUserExists() {
@@ -322,7 +322,7 @@ async function resetDatabase() {
   console.log(`   • Demo User: ${DEMO_EMAIL} (ID: ${demoUser.id})`);
   console.log(`   • Demo Business: Pollos Demo (ID: ${demoBusinessId})`);
   console.log(`   • Client User: ${CLIENT_EMAIL} (ID: ${clientUser.id})`);
-  console.log(`   • Client Business: Pollos La Granja (ID: ${clientBusinessId})`);
+  console.log(`   • Client Business: Pollería y Bodega Cliente 1 (ID: ${clientBusinessId})`);
   console.log("\n🔐 Login credentials:");
   console.log(`   Demo: ${DEMO_EMAIL} / ${DEMO_USER.password}`);
   console.log(`   Client: ${CLIENT_EMAIL} / ${CLIENT_USER.password}`);

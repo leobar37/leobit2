@@ -39,7 +39,6 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
           basePrice: product.basePrice,
           isActive: product.isActive,
           imageId: product.imageId ?? undefined,
-          syncPriceToVariants: false,
         }
       : undefined,
     defaultValues: {
@@ -49,7 +48,6 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
       basePrice: "",
       isActive: true,
       imageId: undefined,
-      syncPriceToVariants: false,
     },
   });
 
@@ -134,22 +132,6 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             <p className="text-xs text-red-500">{errors.basePrice.message}</p>
           )}
         </div>
-
-        {hasVariants && (
-          <div className="space-y-1.5">
-            <Label htmlFor="syncPriceToVariants" className="flex items-center gap-2 cursor-pointer">
-              <input
-                id="syncPriceToVariants"
-                type="checkbox"
-                {...register("syncPriceToVariants")}
-                className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-sm">
-                Sincronizar precio con todas las variantes
-              </span>
-            </Label>
-          </div>
-        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">
