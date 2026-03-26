@@ -310,7 +310,7 @@ export const purchaseCreateSchema = z.object({
 });
 
 export const purchaseUpdateSchema = purchaseCreateSchema.extend({
-  status: z.enum(["draft", "pending", "received", "cancelled"]),
+  status: z.enum(["draft", "pending", "received", "cancelled"]).optional(),
 });
 
 export type PurchaseCreateInput = z.infer<typeof purchaseCreateSchema>;

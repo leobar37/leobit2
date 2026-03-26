@@ -55,7 +55,6 @@ export const ENTITY_LABELS: Record<string, string> = {
   purchase_items: "Items de compra",
   distribuciones: "Distribuciones",
   distribucion_items: "Items de distribución",
-  closings: "Cierres",
   tags: "Etiquetas",
   customer_tags: "Etiquetas por cliente",
 };
@@ -71,7 +70,6 @@ export const TABLES_WITH_SYNC_STATUS = new Set([
   "purchase_items",
   "distribuciones",
   "distribucion_items",
-  "closings",
   "tags",
   "customer_tags",
 ]);
@@ -90,7 +88,6 @@ export const SYNCED_TABLES = [
   "purchase_items",
   "distribuciones",
   "distribucion_items",
-  "closings",
   "tags",
   "customer_tags",
   "customer_groups",

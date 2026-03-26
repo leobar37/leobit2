@@ -160,7 +160,7 @@ export function EngineProvider({
               'products', 'customers', 'sales', 'abonos',
               'suppliers', 'tags', 'product_variants', 'purchases',
               'sale_items', 'purchase_items', 'distribuciones',
-              'distribucion_items', 'closings', 'variant_inventory', 'customer_tags',
+              'distribucion_items', 'variant_inventory', 'customer_tags',
               'customer_groups', 'customer_group_members', 'visitas', 'sync_operations'
             ];
             for (const table of tables) {
@@ -311,6 +311,7 @@ export function EngineProvider({
     localStorage.removeItem("bearer_token");
     localStorage.removeItem("current_business_id");
     localStorage.removeItem("avileo_pull_cursor");
+    localStorage.removeItem("avileo_schema_hash");
 
     // Redirect to login
     window.location.href = "/login";

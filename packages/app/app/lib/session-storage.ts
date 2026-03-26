@@ -4,6 +4,7 @@ const CURRENT_BUSINESS_ID_KEY = "current_business_id";
 // Sync-related localStorage keys
 const PULL_CURSOR_KEY = "avileo_pull_cursor";
 const SCHEMA_VERSION_KEY = "avileo_schema_version";
+const SCHEMA_HASH_KEY = "avileo_schema_hash";
 const FORCE_RESET_KEY = "AVILEO_FORCE_RESET";
 const CALCULATOR_LAST_KEY = "avileo-calculator-last";
 const LOCAL_DB_NAMESPACE_KEY = "avileo_local_db_namespace";
@@ -87,6 +88,7 @@ export function clearSyncKeys() {
   keysToRemove.forEach(key => localStorage.removeItem(key));
   
   localStorage.removeItem(SCHEMA_VERSION_KEY);
+  localStorage.removeItem(SCHEMA_HASH_KEY);
   localStorage.removeItem(FORCE_RESET_KEY);
   localStorage.removeItem(CALCULATOR_LAST_KEY);
 }

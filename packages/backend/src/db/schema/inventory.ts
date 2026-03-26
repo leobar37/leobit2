@@ -95,6 +95,10 @@ export const distribuciones = pgTable(
 
     modo: varchar("modo", { length: 20 }).notNull().default("estricto"),
 
+    // Cierre tracking (metrics calculated from items, not stored)
+    closedAt: timestamp("closed_at"),
+    closedBy: uuid("closed_by").references(() => businessUsers.id),
+
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
@@ -112,6 +116,7 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_sync_status").on(table.syncStatus),
     index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
     index("idx_distribuciones_vendedor_fecha").on(table.vendedorId, table.fecha),
+    index("idx_distribuciones_closed_at").on(table.closedAt),
   ]
 );
 
@@ -176,6 +181,10 @@ export const productVariants = pgTable(
     // Display & status
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
+
+    // Stock thresholds
+    lowStockThreshold: decimal("low_stock_threshold", { precision: 10, scale: 3 }).notNull().default("10"),
+    criticalStockThreshold: decimal("critical_stock_threshold", { precision: 10, scale: 3 }).notNull().default("5"),
 
     // Sync
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),

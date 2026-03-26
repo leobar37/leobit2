@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alertas de Inventario - PollosPro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .phone-frame {
+      width: 375px;
+      height: 812px;
+      border-radius: 40px;
+      overflow: hidden;
+      position: relative;
+      background: #f8fafc;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .status-bar {
+      height: 44px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-8">
+  <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+    <!-- Mobile Preview -->
+    <div class="phone-frame border-4 border-slate-800">
+      <!-- Status Bar -->
+      <div class="status-bar border-b border-slate-100">
+        <span>9:41</span>
+        <div class="flex items-center gap-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3C7.46 3 3.34 4.78.29 7.67c-.18.18-.29.43-.29.71 0 .28.11.53.29.71l11 11c.18.18.43.29.71.29.28 0 .53-.11.71-.29l11-11c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71C20.66 4.78 16.54 3 12 3z"/></svg>
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="bg-white px-4 py-3 flex items-center gap-3 border-b border-slate-100">
+        <button class="p-2 -ml-2 rounded-full hover:bg-slate-100">
+          <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <h1 class="text-lg font-semibold text-slate-900 flex-1">Alertas de Inventario</h1>
+        <button class="p-2 -mr-2 rounded-full hover:bg-slate-100">
+          <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/></svg>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="overflow-y-auto scrollbar-hide" style="height: calc(100% - 44px - 57px - 80px);">
+
+        <!-- Summary Metrics -->
+        <div class="p-4 space-y-3">
+          <!-- Metric Cards Row -->
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+              <div class="text-2xl font-bold text-red-600">2</div>
+              <div class="text-xs text-red-600 font-medium">Críticos</div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+              <div class="text-2xl font-bold text-amber-600">5</div>
+              <div class="text-xs text-amber-600 font-medium">Bajos</div>
+            </div>
+            <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+              <div class="text-2xl font-bold text-orange-600">62 kg</div>
+              <div class="text-xs text-orange-600 font-medium">Por comprar</div>
+            </div>
+          </div>
+
+          <!-- Critical Section -->
+          <div class="mt-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+              <h2 class="text-sm font-semibold text-red-600">Stock Crítico</h2>
+            </div>
+
+            <!-- Alert Card 1 - Negative Stock -->
+            <div class="bg-white border border-red-200 rounded-xl overflow-hidden shadow-sm">
+              <!-- Header -->
+              <div class="p-4 border-b border-red-100">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 class="font-semibold text-slate-900">Pollo Entero</h3>
+                    <p class="text-sm text-slate-500">Fresco • 1 kg</p>
+                  </div>
+                  <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg">
+                    -5 kg
+                  </span>
+                </div>
+              </div>
+
+              <!-- Metrics -->
+              <div class="px-4 py-3 bg-red-50/50">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-red-600">-5</div>
+                    <div class="text-xs text-slate-500">Stock</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-slate-700">5</div>
+                    <div class="text-xs text-slate-500">Umbral</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-orange-600">60 kg</div>
+                    <div class="text-xs text-slate-500">Sugerido</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action -->
+              <div class="p-4 bg-white">
+                <button class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  Crear Orden de Compra
+                </button>
+              </div>
+            </div>
+
+            <!-- Alert Card 2 -->
+            <div class="bg-white border border-red-200 rounded-xl overflow-hidden shadow-sm mt-2">
+              <div class="p-4 border-b border-red-100">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 class="font-semibold text-slate-900">Pollo Quarter</h3>
+                    <p class="text-sm text-slate-500">Fresco • 500 g</p>
+                  </div>
+                  <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg">
+                    2 kg
+                  </span>
+                </div>
+              </div>
+              <div class="px-4 py-3 bg-red-50/50">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-red-600">2</div>
+                    <div class="text-xs text-slate-500">Stock</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-slate-700">5</div>
+                    <div class="text-xs text-slate-500">Umbral</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-orange-600">18 kg</div>
+                    <div class="text-xs text-slate-500">Sugerido</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 bg-white">
+                <button class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  Crear Orden de Compra
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Low Stock Section -->
+          <div class="mt-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
+              <h2 class="text-sm font-semibold text-amber-600">Stock Bajo</h2>
+            </div>
+
+            <!-- Low Stock Card 1 -->
+            <div class="bg-white border border-amber-200 rounded-xl overflow-hidden shadow-sm">
+              <div class="p-4 border-b border-amber-100">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 class="font-semibold text-slate-900">Alitas de Pollo</h3>
+                    <p class="text-sm text-slate-500">Frozen • 500 g</p>
+                  </div>
+                  <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg">
+                    8 kg
+                  </span>
+                </div>
+              </div>
+              <div class="px-4 py-3 bg-amber-50/50">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-amber-600">8</div>
+                    <div class="text-xs text-slate-500">Stock</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-slate-700">15</div>
+                    <div class="text-xs text-slate-500">Umbral</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-orange-600">12 kg</div>
+                    <div class="text-xs text-slate-500">Sugerido</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 bg-white">
+                <button class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  Crear Orden de Compra
+                </button>
+              </div>
+            </div>
+
+            <!-- Low Stock Card 2 -->
+            <div class="bg-white border border-amber-200 rounded-xl overflow-hidden shadow-sm mt-2">
+              <div class="p-4 border-b border-amber-100">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 class="font-semibold text-slate-900">Milanesa de Pollo</h3>
+                    <p class="text-sm text-slate-500">Fresco • 1 kg</p>
+                  </div>
+                  <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg">
+                    12 kg
+                  </span>
+                </div>
+              </div>
+              <div class="px-4 py-3 bg-amber-50/50">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-amber-600">12</div>
+                    <div class="text-xs text-slate-500">Stock</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-slate-700">20</div>
+                    <div class="text-xs text-slate-500">Umbral</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-orange-600">18 kg</div>
+                    <div class="text-xs text-slate-500">Sugerido</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 bg-white">
+                <button class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  Crear Orden de Compra
+                </button>
+              </div>
+            </div>
+
+            <!-- Low Stock Card 3 -->
+            <div class="bg-white border border-amber-200 rounded-xl overflow-hidden shadow-sm mt-2">
+              <div class="p-4 border-b border-amber-100">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 class="font-semibold text-slate-900">Pechuga de Pollo</h3>
+                    <p class="text-sm text-slate-500">Fresco • 1 kg</p>
+                  </div>
+                  <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg">
+                    10 kg
+                  </span>
+                </div>
+              </div>
+              <div class="px-4 py-3 bg-amber-50/50">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-amber-600">10</div>
+                    <div class="text-xs text-slate-500">Stock</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-slate-700">25</div>
+                    <div class="text-xs text-slate-500">Umbral</div>
+                  </div>
+                  <div class="bg-white rounded-lg p-2">
+                    <div class="text-lg font-bold text-orange-600">25 kg</div>
+                    <div class="text-xs text-slate-500">Sugerido</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 bg-white">
+                <button class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  Crear Orden de Compra
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulk Action -->
+          <div class="mt-6 p-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg">
+            <div class="flex items-center justify-between">
+              <div class="text-white">
+                <div class="font-semibold">Crear compra para todos</div>
+                <div class="text-sm text-orange-100">7 productos • 133 kg total</div>
+              </div>
+              <button class="px-4 py-2 bg-white text-orange-600 font-semibold rounded-lg hover:bg-orange-50 transition-colors">
+                Generar
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom spacing -->
+          <div class="h-6"></div>
+        </div>
+      </div>
+
+      <!-- Bottom Navigation -->
+      <div class="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-slate-200 flex items-center justify-around px-6">
+        <button class="flex flex-col items-center gap-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="text-xs">Inicio</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span class="text-xs">Reportes</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-orange-500">
+          <div class="bg-orange-100 p-2 rounded-full">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          </div>
+          <span class="text-xs font-medium">Alertas</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="text-xs">Config</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Info Panel -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 max-w-md">
+      <h2 class="text-xl font-bold text-slate-900 mb-4">📱 Alertas de Inventario v2</h2>
+
+      <div class="space-y-4">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">Descripción</h3>
+          <p class="text-sm text-slate-600">
+            Pantalla de alertas que notifica al usuario cuando el stock cae por debajo de los umbrales,
+            con <strong>acciones directas para resolver</strong> el problema.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">Acciones por Tarjeta</h3>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li class="flex items-start gap-2">
+              <span class="w-5 h-5 bg-orange-100 text-orange-600 rounded flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+              <span>Muestra <strong>cantidad sugerida</strong> a comprar (umbral - stock actual)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="w-5 h-5 bg-orange-100 text-orange-600 rounded flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+              <span>Botón <strong>"Crear Orden de Compra"</strong> pre-llena el formulario</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="w-5 h-5 bg-orange-100 text-orange-600 rounded flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+              <span>Usuario completa proveedor y confirma</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">Acción Bulk</h3>
+          <p class="text-sm text-slate-600">
+            Al final de la lista, un banner gradient permite <strong>generar una orden de compra
+            con todos los productos</strong> en alerta de un solo clic.
+          </p>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="text-sm text-amber-800">
+              <strong>Cálculo sugerido:</strong><br>
+              Si stock = -5kg y umbral = 5kg<br>
+              <span class="font-mono bg-amber-100 px-1 rounded">Sugerido = 5 - (-5) = 10kg mínimo</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200">
+          <p class="text-xs text-slate-500">
+            <strong>Ruta:</strong> <code class="bg-slate-100 px-1 rounded">/reportes/alertas-stock</code>
+          </p>
+          <p class="text-xs text-slate-500 mt-1">
+            <strong>Backend:</strong> <code class="bg-slate-100 px-1 rounded">GET /reports/stock-alerts</code>
+          </p>
+          <p class="text-xs text-slate-500 mt-1">
+            <strong>Flujo:</strong> Alerta → Compra → Receiving → +Stock
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

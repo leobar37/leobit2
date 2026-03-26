@@ -145,82 +145,7 @@ async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
 }
 ```
 
-## Example 3: Creating Sync Hook
-
-### Flow Summary
-1. Define hook condition
-2. Hook runs before sync enqueue
-3. Can block sync if conditions not met
-
-### Frontend Code
-
-```typescript
-// packages/app/app/lib/sync/hooks/sales.ts
-
-import { createHook, type SyncHookContext } from "../create-sync-hook";
-
-export const saleSyncHook = createHook("sales")
-  .onBeforeSync(async (context: SyncHookContext, options: { pg: PGlite; businessId: string }) => {
-    // Only validate inserts
-    if (context.operation !== "insert") {
-      return { allow: true };
-    }
-
-    // Check if sale has customer OR items
-    const hasCustomer = Boolean(context.data.customerId);
-
-    const pg = options.pg;
-    const businessId = options.businessId;
-
-    const itemsResult = await pg.query<{ count: number }>(
-      `SELECT COUNT(*) as count FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-      [context.entityId, businessId]
-    );
-    const hasItems = (itemsResult.rows[0]?.count ?? 0) > 0;
-
-    if (hasCustomer || hasItems) {
-      return { allow: true };
-    }
-
-    return {
-      allow: false,
-      reason: "Venta vacía: sin cliente ni productos",
-    };
-  })
-  .build();
-```
-
-### Registering Hook
-
-```typescript
-// packages/app/app/lib/sync/registry.ts
-
-import { saleSyncHook } from "./hooks/sales";
-
-const registeredHooks: SyncHook[] = [
-  saleSyncHook,
-  // purchaseSyncHook removed - drafts now sync with items
-];
-
-export async function runSyncHooks(
-  entityType: string,
-  context: SyncHookContext,
-  options: { pg: PGlite; businessId: string }
-): Promise<SyncHookResult> {
-  const hooks = registeredHooks.filter((hook) => hook.entityType === entityType);
-
-  for (const hook of hooks) {
-    const result = await hook.condition(context, options);
-    if (!result.allow) {
-      return result;
-    }
-  }
-
-  return { allow: true };
-}
-```
-
-## Example 4: Queueing Independent Operations
+## Example 3: Queueing Independent Operations
 
 ### When to Use
 - Simple entities without children
@@ -237,7 +162,7 @@ await this.queueSync("insert", customerId, customerData);
 await this.queueSync("insert", customerId, customerData, undefined);
 ```
 
-## Example 5: Backend Conflict Resolution
+## Example 4: Backend Conflict Resolution
 
 ### Flow Summary
 1. Client sends operation with localVersion
@@ -316,7 +241,7 @@ async resolveConflict(
 }
 ```
 
-## Example 6: Manual Sync Trigger
+## Example 5: Manual Sync Trigger
 
 ### Frontend Code
 
@@ -343,7 +268,7 @@ async function manualSync() {
 </Button>
 ```
 
-## Example 7: Checking Sync Status
+## Example 6: Checking Sync Status
 
 ### Frontend Code
 
@@ -369,7 +294,7 @@ async function checkSyncHealth() {
 }
 ```
 
-## Example 8: Backend Batch Processing
+## Example 7: Backend Batch Processing
 
 ### API Endpoint
 

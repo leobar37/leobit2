@@ -53,6 +53,13 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
       }),
     }
   )
+  .get(
+    "/stock-alerts",
+    async ({ productVariantRepo, ctx }) => {
+      const alerts = await productVariantRepo.getStockAlerts(ctx as RequestContext);
+      return { success: true, data: alerts };
+    }
+  )
   // Dashboard metrics endpoints
   .get(
     "/sales-today",

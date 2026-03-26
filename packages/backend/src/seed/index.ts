@@ -15,7 +15,6 @@ import {
   PURCHASES,
   TAGS,
   CUSTOMER_TAGS,
-  CLOSINGS,
 } from "./data";
 import {
   CLIENT_USER,
@@ -30,7 +29,6 @@ import {
   PURCHASES as CLIENT_PURCHASES,
   TAGS as CLIENT_TAGS,
   CUSTOMER_TAGS as CLIENT_CUSTOMER_TAGS,
-  CLOSINGS as CLIENT_CLOSINGS,
 } from "./client-data";
 import {
   CLIENT1_USER,
@@ -45,7 +43,6 @@ import {
   PURCHASES as CLIENT1_PURCHASES,
   TAGS as CLIENT1_TAGS,
   CUSTOMER_TAGS as CLIENT1_CUSTOMER_TAGS,
-  CLOSINGS as CLIENT1_CLOSINGS,
 } from "./client1-data";
 import {
   saleItems as saleItemsSchema,
@@ -87,7 +84,6 @@ interface SeedResult {
   paymentMethodsConfigured: boolean;
   tagsCount: number;
   customerTagsCount: number;
-  closingsCount: number;
 }
 
 // Detectar si los datos del cliente son datos reales del JSON
@@ -118,7 +114,7 @@ export async function seedDatabase(): Promise<SeedResult> {
   // Select data based on mode
   let currentUser, currentBusiness, currentProducts, currentProductVariants, currentCustomers;
   let currentSales, currentAbonos, currentDistribuciones, currentSuppliers, currentPurchases;
-  let currentTags, currentCustomerTags, currentClosings;
+  let currentTags, currentCustomerTags;
 
   if (isClient1) {
     // Modo cliente1@gmail.com
@@ -134,7 +130,6 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = CLIENT1_PURCHASES;
     currentTags = CLIENT1_TAGS;
     currentCustomerTags = CLIENT1_CUSTOMER_TAGS;
-    currentClosings = CLIENT1_CLOSINGS;
   } else if (isClient) {
     // Modo cliente@avileo.com
     currentUser = CLIENT_USER;
@@ -149,7 +144,6 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = CLIENT_PURCHASES;
     currentTags = CLIENT_TAGS;
     currentCustomerTags = CLIENT_CUSTOMER_TAGS;
-    currentClosings = CLIENT_CLOSINGS;
   } else {
     // Modo E2E (default)
     currentUser = { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
@@ -164,7 +158,6 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = PURCHASES;
     currentTags = TAGS;
     currentCustomerTags = CUSTOMER_TAGS;
-    currentClosings = CLOSINGS;
   }
 
   if (FORCE_MODE && !isClient && !isClient1) {
@@ -231,12 +224,11 @@ export async function seedDatabase(): Promise<SeedResult> {
     seededAbonos = await seedRealAbonos(ctx, currentAbonos);
     console.log(`✓ Seeded ${seededAbonos.length} abonos (IDs preservados)\n`);
 
-    // Saltar distribuciones, tags, closings en modo datos reales
+    // Saltar distribuciones, tags en modo datos reales
     const distribuciones: any[] = [];
     const seededTags: any[] = [];
     const customerTagsCount = 0;
-    const closingsCount = 0;
-    console.log(`ℹ Skipping distribuciones, tags, closings in real data mode\n`);
+    console.log(`ℹ Skipping distribuciones, tags in real data mode\n`);
 
     console.log("✅ Seed completed successfully with REAL DATA!\n");
     console.log("Login credentials:");
@@ -260,7 +252,6 @@ export async function seedDatabase(): Promise<SeedResult> {
       paymentMethodsConfigured: !!paymentMethods,
       tagsCount: 0,
       customerTagsCount: 0,
-      closingsCount: 0,
     };
   } else {
     // Modo normal (E2E o Client demo básico)
@@ -294,9 +285,6 @@ export async function seedDatabase(): Promise<SeedResult> {
     const customerTagsCount = await seedCustomerTags(ctx, seededCustomers, seededTags, currentCustomerTags);
     console.log(`✓ Seeded ${customerTagsCount} customer tags\n`);
 
-    const closingsCount = await seedClosings(ctx, businessUserId, currentClosings);
-    console.log(`✓ Seeded ${closingsCount} closings\n`);
-
     console.log("✅ Seed completed successfully!\n");
     console.log("Login credentials:");
     console.log(`  Email: ${currentUser.email}`);
@@ -319,7 +307,6 @@ export async function seedDatabase(): Promise<SeedResult> {
       paymentMethodsConfigured: !!paymentMethods,
       tagsCount: seededTags.length,
       customerTagsCount: customerTagsCount,
-      closingsCount: closingsCount,
     };
   }
 }
@@ -1020,61 +1007,6 @@ async function seedCustomerTags(
     } catch (error) {
       // Tag might already be assigned, ignore
       console.log(`   ℹ Customer-Tag already exists: ${customer.id.slice(-8)} -> ${tag.name}`);
-    }
-  }
-
-  return count;
-}
-
-async function seedClosings(
-  ctx: RequestContext,
-  businessUserId: string,
-  closingsData: Array<{
-    closingDate: string;
-    totalSales: number;
-    totalAmount: number;
-    cashAmount: number;
-    creditAmount: number;
-    totalKilos: number;
-  }>
-): Promise<number> {
-  if (closingsData.length === 0) {
-    console.log(`⚠ No closings to seed (empty array)`);
-    return 0;
-  }
-
-  const existing = await services.closing.getClosings(ctx);
-  if (existing.length > 0) {
-    console.log(`⚠ ${existing.length} closings already exist, skipping`);
-    return existing.length;
-  }
-
-  let count = 0;
-  for (const closingDef of closingsData) {
-    try {
-      const closingDate = new Date(closingDef.closingDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const isBackdated = closingDate < today;
-      
-      await services.closing.createClosing(ctx, {
-        closingDate: closingDef.closingDate,
-        totalSales: closingDef.totalSales,
-        totalAmount: closingDef.totalAmount,
-        cashAmount: closingDef.cashAmount,
-        creditAmount: closingDef.creditAmount,
-        totalKilos: closingDef.totalKilos,
-        ...(isBackdated && { backdateReason: "Seed data initialization" }),
-      });
-      count++;
-      console.log(`   ✓ Closing: ${closingDef.closingDate} - S/ ${closingDef.totalAmount}`);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        console.log(`   ℹ Closing already exists: ${closingDef.closingDate}`);
-        continue;
-      }
-      throw error;
     }
   }
 

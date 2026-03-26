@@ -26,8 +26,8 @@
 │         ┌────────────────────┼─────────────────────┐            │
 │         │                    │                     │            │
 │  ┌──────▼───────┐    ┌──────▼───────┐    ┌──────▼───────┐  │
-│  │ Sync Hooks   │    │ Coalescing   │    │ Auto-Sync    │  │
-│  │ (validation) │    │ (merge ops)  │    │ (30s interval│  │
+│  │ Coalescing   │    │ Dead Letter  │    │ Auto-Sync    │  │
+│  │ (merge ops)  │    │ Queue       │    │ (30s interval│  │
 │  └──────────────┘    └──────────────┘    └──────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -75,8 +75,8 @@
 |-----------|----------|---------|
 | **SyncService** | `packages/app/app/lib/sync/sync-service.ts` | Main client-side queue, groups operations by syncGroupId |
 | **PullService** | `packages/app/app/lib/sync/pull-service.ts` | Fetches server changes via GET /sync/changes |
+| **ChangeApplier** | `packages/app/app/lib/sync/change-applier.ts` | Applies server changes to local PGlite (UPSERT) |
 | **BaseService** | `packages/app/app/lib/services/base-service.ts` | Provides `generateSyncGroup()` and `queueSync()` |
-| **Sync Hooks** | `packages/app/app/lib/sync/hooks/` | Pre-sync validation (saleSyncHook, purchaseSyncHook) |
 | **Config** | `packages/app/app/lib/sync/config.ts` | BATCH_SIZE, MAX_RETRIES, SYNC_INTERVAL_MS, etc. |
 
 ### Backend Components

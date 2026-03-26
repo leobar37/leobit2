@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import {
   Plus,
   Calculator as CalculatorIcon,
@@ -19,18 +19,31 @@ import { useUpdatePurchaseItem, useAddPurchaseItem } from "~/hooks/use-purchases
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
 
+interface PreFilledItem {
+  variantId: string;
+  quantity: string;
+}
+
+interface PreFilledItem {
+  variantId: string;
+  quantity: string;
+}
+
 interface PurchaseCalculatorContentProps {
   onAddedToCart?: () => void;
   returnPath?: string;
+  preFilledItems?: PreFilledItem[];
 }
 
-export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: PurchaseCalculatorContentProps) {
+export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilledItems: externalPreFilledItems }: PurchaseCalculatorContentProps) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { addItem } = usePurchaseForm();
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [preFilledItems, setPreFilledItems] = useState<PreFilledItem[]>([]);
 
   const {
     data: products = [],
@@ -68,7 +81,48 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath }: Purchas
     initialValues: editingInitialValues,
   });
 
+  // Initialize pre-filled items from props or location state
+  useEffect(() => {
+    if (externalPreFilledItems && externalPreFilledItems.length > 0) {
+      setPreFilledItems(externalPreFilledItems);
+    } else {
+      const stateItems = location.state?.items as PreFilledItem[] | undefined;
+      if (stateItems && stateItems.length > 0) {
+        setPreFilledItems(stateItems);
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [externalPreFilledItems, location.state]);
 
+  // Pre-select first variant and pre-fill quantity when products are loaded
+  useEffect(() => {
+    if (preFilledItems.length > 0 && products.length > 0 && !selectedVariantId) {
+      const firstItem = preFilledItems[0];
+      // Find the variant using the variants data from useVariantsByProduct
+      // We need to check each product's variants
+      const foundProduct = products.find(p => p.id === firstItem.variantId.split('-')[0]);
+      
+      // If we can't find the product directly, use the first product and set variant later
+      if (foundProduct) {
+        setSelectedProductId(foundProduct.id);
+      }
+    }
+  }, [preFilledItems, products, selectedVariantId]);
+
+  // Pre-select variant when variants are loaded for the selected product
+  useEffect(() => {
+    if (preFilledItems.length > 0 && selectedProductId && variants.length > 0 && !selectedVariantId) {
+      const firstItem = preFilledItems[0];
+      const variant = variants.find(v => v.id === firstItem.variantId);
+      if (variant) {
+        setSelectedVariantId(variant.id);
+        // Pre-fill quantity after a short delay to ensure calculator is ready
+        setTimeout(() => {
+          setFieldValue("kilos", firstItem.quantity);
+        }, 150);
+      }
+    }
+  }, [preFilledItems, selectedProductId, variants, selectedVariantId, setFieldValue]);
 
   const handleSave = async () => {
     if (!selectedVariant || !calculation.isValid) return;

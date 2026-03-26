@@ -1,7 +1,7 @@
 import { and, eq, getTableName } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import { customers, sales, abonos, products, productVariants, tags, visitas, purchases, purchaseItems, suppliers, closings, distribuciones, saleItems } from "../../../db/schema";
+import { customers, sales, abonos, products, productVariants, tags, visitas, purchases, purchaseItems, suppliers, distribuciones, saleItems } from "../../../db/schema";
 import { customerGroups } from "../../../db/schema/customer-groups";
 import { customerTags } from "../../../db/schema/customer-tags";
 import { customerGroupMembers } from "../../../db/schema/customer-group-members";
@@ -318,23 +318,6 @@ class SupplierConflictResolver extends BaseTimestampConflictResolver {
   }
 }
 
-class ClosingConflictResolver extends BaseTimestampConflictResolver {
-  protected getEntityName() { return "Closing"; }
-  protected getTable() { return closings; }
-  protected getIdField() { return "id"; }
-  protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
-  protected getServerDataFields(record: any) {
-    return {
-      sellerId: record.sellerId,
-      closingDate: record.closingDate,
-      totalSales: record.totalSales,
-      totalCash: record.totalCash,
-      updatedAt: record.updatedAt?.toISOString(),
-    };
-  }
-}
-
 class PuntoVentaConflictResolver extends BaseTimestampConflictResolver {
   protected getEntityName() { return "PuntoVenta"; }
   protected getTable() { return puntosVenta; }
@@ -536,7 +519,6 @@ const resolvers: Record<string, IConflictResolver> = {
   purchases: new PurchaseConflictResolver(),
   purchase_items: new PurchaseItemConflictResolver(),
   suppliers: new SupplierConflictResolver(),
-  closings: new ClosingConflictResolver(),
   puntos_venta: new PuntoVentaConflictResolver(),
   product_units: new ProductUnitConflictResolver(),
   variant_inventory: new VariantInventoryConflictResolver(),

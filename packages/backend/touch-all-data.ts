@@ -12,7 +12,6 @@ const tablesWithUpdatedAt = [
   'inventory',
   'suppliers',
   'purchases',
-  'closings',
   'distribuciones',
   'tags',
   'product_variants',

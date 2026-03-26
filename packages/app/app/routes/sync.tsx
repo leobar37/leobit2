@@ -1,10 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Loader2, CloudDownload, Database, CheckCircle2 } from "lucide-react";
-import { initDatabase } from "~/engine/db";
+import { Loader2, CloudDownload, Database, CheckCircle2, AlertTriangle } from "lucide-react";
+import { initDatabase, resetDatabase, SCHEMA_HASH_KEY } from "~/engine/db";
 import { PullService } from "~/lib/sync/pull-service";
 import { getStoredAuthToken, getStoredBusinessId, getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import { Button } from "@/components/ui/button";
+
+/**
+ * Check if an error is related to database schema issues
+ */
+function isSchemaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+  return (
+    (lowerMessage.includes("column") &&
+      (lowerMessage.includes("does not exist") || lowerMessage.includes("no existe"))) ||
+    (lowerMessage.includes("relation") && lowerMessage.includes("does not exist")) ||
+    lowerMessage.includes("schema") ||
+    lowerMessage.includes("syntax error")
+  );
+}
 
 interface SyncProgress {
   stage: "initializing" | "pulling" | "completed" | "error";
@@ -20,6 +35,8 @@ export default function SyncPage() {
     message: "Preparando sincronización...",
   });
   const [error, setError] = useState<string | null>(null);
+  const [isSchemaErrorState, setIsSchemaErrorState] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const syncAttempted = useRef(false);
 
   const waitForAuth = async (maxRetries = 10, delayMs = 300): Promise<{ token: string; businessId: string } | null> => {
@@ -153,7 +170,9 @@ export default function SyncPage() {
 
       } catch (err) {
         console.error("[SyncPage] Sync failed:", err);
-        setError(err instanceof Error ? err.message : "Error de sincronización");
+        const errorMessage = err instanceof Error ? err.message : "Error de sincronización";
+        setError(errorMessage);
+        setIsSchemaErrorState(isSchemaError(err));
         setSyncProgress({
           stage: "error",
           message: "Error al sincronizar",
@@ -182,6 +201,39 @@ export default function SyncPage() {
 
   const handleGoToLogin = () => {
     navigate("/login", { replace: true });
+  };
+
+  const handleResetAndSync = async () => {
+    setIsResetting(true);
+    setError(null);
+    setSyncProgress({
+      stage: "initializing",
+      message: "Reiniciando base de datos local...",
+    });
+
+    try {
+      // Clear schema hash to force fresh database creation
+      localStorage.removeItem(SCHEMA_HASH_KEY);
+
+      // Clear pull cursor to sync from beginning
+      const namespace = getLocalDatabaseNamespace();
+      const cursorKey = getPullCursorStorageKey(namespace);
+      localStorage.removeItem(cursorKey);
+
+      // Reset the database (closes PGlite and deletes IndexedDB)
+      await resetDatabase();
+
+      // Reload the page to restart sync from scratch
+      window.location.reload();
+    } catch (err) {
+      console.error("[SyncPage] Reset failed:", err);
+      setError("No se pudo reiniciar la sincronización. Intenta nuevamente.");
+      setIsResetting(false);
+      setSyncProgress({
+        stage: "error",
+        message: "Error al reiniciar",
+      });
+    }
   };
 
   return (
@@ -249,17 +301,45 @@ export default function SyncPage() {
         {/* Error state */}
         {error && (
           <div className="space-y-4">
+            {isSchemaErrorState && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium">Problema detectado con la base de datos local</p>
+                    <p className="mt-1">Reiniciar la sincronización descargará los datos nuevamente desde el servidor.</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Button
-                onClick={handleRetry}
-                className="h-12 w-full rounded-2xl bg-orange-500 text-base font-semibold text-white hover:bg-orange-600"
-              >
-                Intentar nuevamente
-              </Button>
+              {isSchemaErrorState ? (
+                <Button
+                  onClick={handleResetAndSync}
+                  disabled={isResetting}
+                  className="h-12 w-full rounded-2xl bg-orange-500 text-base font-semibold text-white hover:bg-orange-600"
+                >
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reiniciando...
+                    </>
+                  ) : (
+                    "Reiniciar sincronización"
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleRetry}
+                  className="h-12 w-full rounded-2xl bg-orange-500 text-base font-semibold text-white hover:bg-orange-600"
+                >
+                  Intentar nuevamente
+                </Button>
+              )}
               <Button
                 onClick={handleSkip}
                 variant="outline"

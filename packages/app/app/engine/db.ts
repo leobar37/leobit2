@@ -7,6 +7,7 @@ let db: ReturnType<typeof drizzle> | null = null;
 let initPromise: Promise<{ pg: import("@electric-sql/pglite").PGlite; db: ReturnType<typeof drizzle> }> | null = null;
 
 const VERSION_KEY = "avileo_schema_hash";
+export const SCHEMA_HASH_KEY = VERSION_KEY;
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS customers (
@@ -268,27 +269,6 @@ CREATE TABLE IF NOT EXISTS distribucion_items (
 );
 CREATE INDEX IF NOT EXISTS idx_distribucion_items_business_id ON distribucion_items(business_id);
 CREATE INDEX IF NOT EXISTS idx_distribucion_items_distribucion_id ON distribucion_items(distribucion_id);
-
-CREATE TABLE IF NOT EXISTS closings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id UUID NOT NULL,
-  seller_id UUID NOT NULL,
-  closing_date DATE NOT NULL,
-  total_sales INTEGER NOT NULL DEFAULT 0,
-  total_amount DECIMAL(12,2) NOT NULL DEFAULT '0',
-  cash_amount DECIMAL(12,2) NOT NULL DEFAULT '0',
-  credit_amount DECIMAL(12,2) NOT NULL DEFAULT '0',
-  total_kilos DECIMAL(10,3),
-  backdate_reason TEXT,
-  sync_status TEXT NOT NULL DEFAULT 'pending',
-  sync_attempts INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_closings_business_id ON closings(business_id);
-CREATE INDEX IF NOT EXISTS idx_closings_seller_id ON closings(seller_id);
-CREATE INDEX IF NOT EXISTS idx_closings_date ON closings(closing_date);
-CREATE INDEX IF NOT EXISTS idx_closings_sync_status ON closings(sync_status);
 
 CREATE TABLE IF NOT EXISTS sync_operations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -595,9 +575,8 @@ export async function initDatabase(): Promise<{
     const databaseName = getLocalDatabaseName();
     const dataDir = `idb://${databaseName}`;
 
-    const [{ PGlite }, { electricSync }] = await Promise.all([
+    const [{ PGlite }] = await Promise.all([
       import("@electric-sql/pglite"),
-      import("@electric-sql/pglite-sync"),
     ]);
 
     // Migration: clean old version key if exists
@@ -642,9 +621,6 @@ export async function initDatabase(): Promise<{
     // Create fresh database instance
     const pgInstance = await PGlite.create({
       dataDir,
-      extensions: {
-        electric: electricSync(),
-      },
       locateFile: (file: string) => {
         if (file === "postgres.data") {
           return "/pglite.data";
@@ -671,9 +647,6 @@ export async function initDatabase(): Promise<{
     pg = pgInstance;
     db = dbInstance;
 
-    // Debug: Check if electric extension is loaded
-    console.log(`[DB] pg.electric exists:`, 'electric' in pgInstance);
-    console.log(`[DB] pg.sync exists:`, 'sync' in pgInstance);
     console.log(`[DB] Database namespace: ${databaseName}`);
     console.log(`[DB] Database initialized with schema hash ${currentHash.substring(0, 8)}...`);
 
@@ -696,14 +669,12 @@ async function exportPendingData(): Promise<PendingData> {
 
   try {
     // Try to open a temporary connection to existing database
-    const [{ PGlite }, { electricSync }] = await Promise.all([
+    const [{ PGlite }] = await Promise.all([
       import("@electric-sql/pglite"),
-      import("@electric-sql/pglite-sync"),
     ]);
 
     const tempPg = await PGlite.create({
       dataDir: `idb://${getLocalDatabaseName()}`,
-      extensions: { electric: electricSync() },
       locateFile: (file: string) => {
         if (file === "postgres.data") {
           return "/pglite.data";

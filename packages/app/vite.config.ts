@@ -82,8 +82,8 @@ export default defineConfig({
       },
       includeAssets: ["favicon.png", "apple-touch-icon.png", "maskable-icon.png"],
       manifest: {
-        name: "PollosPro",
-        short_name: "PollosPro",
+        name: "Avileo",
+        short_name: "Avileo",
         description: "Sistema de ventas de pollo - Offline first",
         theme_color: "#f97316",
         background_color: "#0a0a0f",
@@ -132,7 +132,7 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   optimizeDeps: {
-    exclude: ["@electric-sql/pglite", "@electric-sql/pglite-sync"],
+    exclude: ["@electric-sql/pglite"],
     include: [
       "react-day-picker",
       "date-fns",

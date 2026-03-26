@@ -12,8 +12,6 @@ import { DistribucionItemRepository } from "../services/repository/distribucion-
 import { DistribucionService } from "../services/business/distribucion.service";
 import { SaleRepository } from "../services/repository/sale.repository";
 import { SaleService } from "../services/business/sale.service";
-import { ClosingRepository } from "../services/repository/closing.repository";
-import { ClosingService } from "../services/business/closing.service";
 import { SyncService } from "../services/sync/sync.service";
 import { AssetRepository } from "../services/repository/asset.repository";
 import { AssetService } from "../services/business/asset.service";
@@ -63,7 +61,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const distribucionRepo = new DistribucionRepository();
     const distribucionItemRepo = new DistribucionItemRepository();
     const saleRepo = new SaleRepository();
-    const closingRepo = new ClosingRepository();
     const assetRepo = new AssetRepository();
     const fileRepo = new FileRepository();
     const productVariantRepo = new ProductVariantRepository();
@@ -97,7 +94,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const paymentService = new PaymentService(paymentRepo, customerRepo);
     const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
-    const closingService = new ClosingService(closingRepo);
     const syncService = new SyncService({
       customerRepo,
       saleRepo,
@@ -152,8 +148,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       distribucionService,
       saleRepo,
       saleService,
-      closingRepo,
-      closingService,
       syncService,
       assetRepo,
       assetService,

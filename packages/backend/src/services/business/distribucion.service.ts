@@ -311,7 +311,10 @@ export class DistribucionService {
     return updated;
   }
 
-  async closeDistribucion(ctx: RequestContext, id: string): Promise<Distribucion> {
+  async closeDistribucion(
+    ctx: RequestContext,
+    id: string
+  ): Promise<Distribucion> {
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para cerrar distribuciones");
     }
@@ -331,9 +334,13 @@ export class DistribucionService {
     // Execute state machine transition: activo/en_ruta → cerrado (return inventory)
     await distribucionMachine.executeTransition(ctx, existing, previousState, "cerrado");
 
-    const updated = await this.repository.update(ctx, id, {
+    const updateData: Parameters<DistribucionRepository["update"]>[2] = {
       estado: "cerrado",
-    });
+      closedAt: new Date(),
+      closedBy: ctx.businessUserId,
+    };
+
+    const updated = await this.repository.update(ctx, id, updateData);
 
     if (!updated) {
       throw new NotFoundError("Distribución");
@@ -348,7 +355,8 @@ export class DistribucionService {
       payload: {
         id: updated.id,
         estado: updated.estado,
-        montoRecaudado: updated.montoRecaudado,
+        closedAt: updated.closedAt,
+        closedBy: updated.closedBy,
       },
       status: "processed",
       clientTimestamp: new Date(),

@@ -6,12 +6,12 @@
  */
 
 import { db } from "../src/lib/db";
-import { 
-  customers, 
-  sales, 
-  saleItems, 
-  abonos, 
-  products, 
+import {
+  customers,
+  sales,
+  saleItems,
+  abonos,
+  products,
   productVariants,
   businesses,
   businessUsers,
@@ -25,7 +25,6 @@ import {
   productUnits,
   tags,
   customerTags,
-  closings,
   userProfiles,
   syncOperations,
   staffInvitations,
@@ -69,7 +68,6 @@ const TABLES = [
   'sales',
   'saleItems',
   'abonos',
-  'closings',
   'saleTokens',
   'products',
   'productVariants',
@@ -102,7 +100,6 @@ const tableMap: Record<TableName, unknown> = {
   sales,
   saleItems,
   abonos,
-  closings,
   saleTokens,
   products,
   productVariants,

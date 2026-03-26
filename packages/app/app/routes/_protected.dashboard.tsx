@@ -87,7 +87,7 @@ export default function DashboardPage() {
       <PeriodSelector value={period} onChange={setPeriod} />
 
       {/* Accesos Rápidos - Siempre visibles */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Link to="/ventas" className="block">
           <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
@@ -120,14 +120,7 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <Link to="/cierre" className="block">
-          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-purple-600" />
-            </div>
-            <span className="text-xs font-medium text-gray-700">Cierre</span>
-          </div>
-        </Link>
+
       </div>
 
       {/* Tabs para organizar el contenido */}

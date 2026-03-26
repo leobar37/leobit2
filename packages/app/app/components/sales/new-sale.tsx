@@ -37,6 +37,7 @@ import { formatCurrency, formatKilos, formatNumber, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
+import { ToolbarActions } from "~/components/layout/toolbar-actions";
 import { useNewSaleContext } from "./new-sale-context";
 import { useToast } from "~/hooks/use-toast";
 
@@ -664,7 +665,12 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Product Selection */}
-      <div className="p-4 space-y-4 overflow-y-auto flex-1">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto p-4 space-y-4",
+          selectedVariant && "pb-36",
+        )}
+      >
         {/* Product Selector */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Producto</label>
@@ -951,7 +957,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
 
       {/* Action Buttons */}
       {selectedVariant && (
-        <div className="space-y-2 border-t px-4 py-4 shell-surface shell-divider">
+        <ToolbarActions>
+          <div className="space-y-2">
           <Button
             onClick={handleSave}
             disabled={!isValid || updateItem.isPending || addItem.isPending}
@@ -968,7 +975,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
           >
             Cancelar
           </Button>
-        </div>
+          </div>
+        </ToolbarActions>
       )}
     </div>
   );

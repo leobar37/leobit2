@@ -1,10 +1,18 @@
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { PurchaseCalculatorContent } from "~/components/purchases/calculator";
 
+interface PreFilledItem {
+  variantId: string;
+  quantity: string;
+}
+
 export default function ComprasCalculadoraPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { draftId } = useParams<{ draftId: string }>();
+
+  const preFilledItems = (location.state?.items as PreFilledItem[] | undefined) || [];
 
   const handleBack = () => {
     if (draftId) {
@@ -30,7 +38,10 @@ export default function ComprasCalculadoraPage() {
       </header>
 
       <div className="flex-1 p-4 overflow-y-auto">
-        <PurchaseCalculatorContent onAddedToCart={handleBack} />
+        <PurchaseCalculatorContent 
+          onAddedToCart={handleBack} 
+          preFilledItems={preFilledItems}
+        />
       </div>
     </div>
   );

@@ -288,4 +288,62 @@ export class ProductVariantRepository {
 
     return result;
   }
+
+  async getStockAlerts(ctx: RequestContext): Promise<Array<{
+    variantId: string;
+    productId: string;
+    productName: string;
+    variantName: string;
+    currentStock: string;
+    lowThreshold: string;
+    criticalThreshold: string;
+    alertType: "negative" | "critical" | "low";
+    suggestedQuantity: string;
+  }>> {
+    const result = await db
+      .select({
+        variantId: productVariants.id,
+        productId: products.id,
+        productName: products.name,
+        variantName: productVariants.name,
+        currentStock: sql<string>`coalesce(${variantInventory.quantity}, '0')`,
+        lowThreshold: productVariants.lowStockThreshold,
+        criticalThreshold: productVariants.criticalStockThreshold,
+        alertType: sql<"negative" | "critical" | "low">`
+          CASE
+            WHEN coalesce(${variantInventory.quantity}, '0')::decimal < 0 THEN 'negative'
+            WHEN coalesce(${variantInventory.quantity}, '0')::decimal <= ${productVariants.criticalStockThreshold}::decimal THEN 'critical'
+            WHEN coalesce(${variantInventory.quantity}, '0')::decimal <= ${productVariants.lowStockThreshold}::decimal THEN 'low'
+            ELSE 'low'
+          END
+        `,
+        suggestedQuantity: sql<string>`
+          CASE
+            WHEN coalesce(${variantInventory.quantity}, '0')::decimal < 0 THEN
+              greatest(0, ${productVariants.lowStockThreshold}::decimal - coalesce(${variantInventory.quantity}, '0')::decimal)
+            WHEN coalesce(${variantInventory.quantity}, '0')::decimal <= ${productVariants.lowStockThreshold}::decimal THEN
+              greatest(0, ${productVariants.lowStockThreshold}::decimal - coalesce(${variantInventory.quantity}, '0')::decimal)
+            ELSE '0'
+          END
+        `,
+      })
+      .from(productVariants)
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .leftJoin(variantInventory, eq(variantInventory.variantId, productVariants.id))
+      .where(and(
+        eq(productVariants.businessId, ctx.businessId),
+        eq(productVariants.isActive, true),
+        eq(products.isActive, true),
+        sql`coalesce(${variantInventory.quantity}, '0')::decimal <= ${productVariants.lowStockThreshold}::decimal`
+      ))
+      .orderBy(sql`
+        CASE
+          WHEN coalesce(${variantInventory.quantity}, '0')::decimal < 0 THEN 0
+          WHEN coalesce(${variantInventory.quantity}, '0')::decimal <= ${productVariants.criticalStockThreshold}::decimal THEN 1
+          ELSE 2
+        END
+      `);
+
+    return result;
+  }
 }

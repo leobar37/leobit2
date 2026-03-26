@@ -150,13 +150,7 @@ export {
   type NewAbono,
 } from "./payments";
 
-// Closings (Cierres del día)
-export {
-  closings,
-  closingsRelations,
-  type Closing,
-  type NewClosing,
-} from "./closings";
+
 
 // Inventory (Products, Inventory, Distribuciones, Variants)
 export {

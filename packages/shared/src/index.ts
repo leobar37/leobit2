@@ -25,8 +25,6 @@ export type {
   NewDistribucion,
   DistribucionItem,
   NewDistribucionItem,
-  Closing,
-  NewClosing,
   Tag,
   NewTag,
   CustomerTag,

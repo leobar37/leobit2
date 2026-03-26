@@ -30,18 +30,8 @@ await syncService.getStatus();
 // Returns: { pending: 0, processing: 0, failed: 5, ... }
 ```
 
-#### Cause: Sync hook blocking
-**Location**: `packages/app/app/lib/sync/registry.ts:13-16`
-
-```typescript
-// Current state - hooks may be commented out:
-const registeredHooks: SyncHook[] = [
-  saleSyncHook,
-  // purchaseSyncHook removed - drafts now sync with items
-];
-```
-
-**Fix**: Ensure your entity isn't being blocked by a hook.
+#### Cause: Sync hooks disabled
+**Note**: Sync hooks are disabled. All operations proceed directly to the queue. If operations aren't syncing, check other causes.
 
 ### 2. Operations Not Grouped
 
@@ -108,45 +98,9 @@ console.log(dlqOps.map(op => ({
 - Validation errors (4xx)
 - Handler not implemented for entity type
 
-### 5. Sync Hook Blocking Valid Operations
+### 5. Sync Hooks Are Disabled
 
-**Symptoms**: Sale is valid but won't sync.
-
-**Location**: `packages/app/app/lib/sync/hooks/sales.ts`
-
-**Current Hook Logic**:
-```typescript
-export const saleSyncHook = createHook("sales")
-  .onBeforeSync(async (context, options) => {
-    if (context.operation !== "insert") {
-      return { allow: true };
-    }
-
-    const hasCustomer = Boolean(context.data.customerId);
-    const itemsResult = await pg.query(
-      `SELECT COUNT(*) as count FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-      [context.entityId, businessId]
-    );
-    const hasItems = (itemsResult.rows[0]?.count ?? 0) > 0;
-
-    if (hasCustomer || hasItems) {
-      return { allow: true };
-    }
-
-    return {
-      allow: false,
-      reason: "Venta vacía: sin cliente ni productos",
-    };
-  })
-  .build();
-```
-
-**Issue**: Hook is enabled but may block drafts with specific conditions.
-
-**Fix Options**:
-1. Comment out hook in registry
-2. Modify hook logic to allow drafts
-3. Add flag to bypass hook for specific cases
+**NOTE**: Sync hooks are disabled. All operations proceed directly to the queue without pre-sync validation. If you need to add validation before sync in the future, re-implement using the `createSyncHook()` pattern in `registry.ts`.
 
 ### 6. Pull Sync Not Updating Local Data
 

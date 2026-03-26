@@ -11,7 +11,6 @@
  */
 
 import { PGlite } from "@electric-sql/pglite";
-import { electricSync } from "@electric-sql/pglite-sync";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -525,9 +524,6 @@ async function main() {
   console.log("\nInitializing PGlite database...");
   const pg = await PGlite.create({
     dataDir: "./data/pglite-migration",
-    extensions: {
-      electric: electricSync(),
-    },
   });
 
   // Read TanStack collections

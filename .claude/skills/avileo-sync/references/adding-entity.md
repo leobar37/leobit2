@@ -334,37 +334,7 @@ export type EntityType =
   | "visits";  // Add new entity type
 ```
 
-## Step 4: Add Sync Hook (Optional)
-
-**Location**: `packages/app/app/lib/sync/hooks/visits.ts`
-
-```typescript
-import { createHook, type SyncHookContext } from "../create-sync-hook";
-
-export const visitSyncHook = createHook("visits")
-  .onBeforeSync(async (context: SyncHookContext, options) => {
-    // Validation logic
-    if (context.operation === "insert") {
-      if (!context.data.customerId) {
-        return { allow: false, reason: "Visit requires customer" };
-      }
-    }
-    return { allow: true };
-  })
-  .build();
-```
-
-**Location**: `packages/app/app/lib/sync/registry.ts`
-
-```typescript
-const registeredHooks: SyncHook[] = [
-  saleSyncHook,
-  // purchaseSyncHook,
-  visitSyncHook,  // Add new hook
-];
-```
-
-## Step 5: Update Type Exports
+## Step 4: Update Type Exports
 
 ### 5.1 Backend Types
 
@@ -396,5 +366,4 @@ export type SyncOperation = "insert" | "update" | "delete" | "create";
 - [ ] API entity types updated
 - [ ] Frontend service created extending `BaseService`
 - [ ] Entity type added to `EntityType`
-- [ ] Sync hook created (optional but recommended)
 - [ ] Type exports updated in both backend and frontend

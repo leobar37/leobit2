@@ -17,7 +17,6 @@ import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
 import { publicSaleRoutes } from "./api/public-sales";
 
-import { closingRoutes } from "./api/closings";
 import { reportRoutes } from "./api/reports";
 import { syncRoutes } from "./api/sync";
 import { assetRoutes } from "./api/assets";
@@ -82,7 +81,6 @@ export const app = new Elysia()
   .use(distribucionRoutes)
   .use(saleRoutes)
   .use(publicSaleRoutes)
-  .use(closingRoutes)
   .use(reportRoutes)
   .use(syncRoutes)
   .use(assetRoutes)

@@ -21,7 +21,6 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { PGlite } from "@electric-sql/pglite";
-import { electricSync } from "@electric-sql/pglite-sync";
 
 interface RollbackReport {
   timestamp: string;
@@ -811,9 +810,6 @@ async function main() {
       // Use file-based PGlite for testing
       pg = await PGlite.create({
         dataDir: "./data/pglite-rollback-test",
-        extensions: {
-          electric: electricSync(),
-        },
       });
       console.log("✓ PGlite connected (file-based)");
     } else {
@@ -821,9 +817,6 @@ async function main() {
       try {
         pg = await PGlite.create({
           dataDir: "idb://avileo-pg",
-          extensions: {
-            electric: electricSync(),
-          },
         });
         console.log("✓ PGlite connected (IndexedDB)");
       } catch {
@@ -831,9 +824,6 @@ async function main() {
         console.log("⚠ IndexedDB not available, falling back to file-based storage");
         pg = await PGlite.create({
           dataDir: "./data/pglite-rollback-fallback",
-          extensions: {
-            electric: electricSync(),
-          },
         });
         console.log("✓ PGlite connected (file-based fallback)");
       }

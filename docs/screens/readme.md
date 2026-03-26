@@ -19,6 +19,7 @@ PollosPro es una aplicación **mobile-first** diseñada principalmente para vend
 | [componentes-ui.md](./componentes-ui.md) | Sistema de diseño y componentes reutilizables |
 | [mobile-list-pattern.md](./mobile-list-pattern.md) | Patron para pantallas mobile de listados con buscador y FAB |
 | [flujos-navegacion.md](./flujos-navegacion.md) | Flujos de usuario y navegación entre pantallas |
+| [alertas-stock.html](./alertas-stock.html) | Mockup interactivo: Alertas de Inventario |
 
 ---
 

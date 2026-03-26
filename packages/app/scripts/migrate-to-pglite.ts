@@ -11,7 +11,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { PGlite } from "@electric-sql/pglite";
-import { electricSync } from "@electric-sql/pglite-sync";
 
 // Types
 interface MigrationReport {
@@ -566,9 +565,6 @@ async function main() {
   console.log("\nInitializing PGlite database...");
   const pg = await PGlite.create({
     dataDir: "./data/pglite-migration",
-    extensions: {
-      electric: electricSync(),
-    },
   });
 
   // Create tables

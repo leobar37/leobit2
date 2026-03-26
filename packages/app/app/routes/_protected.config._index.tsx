@@ -164,10 +164,19 @@ const conflictosConfigItem: ConfigItem = {
 const syncConfigItem: ConfigItem = {
   icon: RefreshCw,
   title: "Sync",
-  description: "Administración de operaciones de sincronización",
+  description: "Administración de sincronización",
   href: "/config/sync",
   color: "text-blue-600",
   iconBg: "bg-blue-100",
+};
+
+const stockAlertsConfigItem: ConfigItem = {
+  icon: AlertTriangle,
+  title: "Alertas de Stock",
+  description: "Productos con stock bajo o crítico",
+  href: "/reportes/alertas-stock",
+  color: "text-red-600",
+  iconBg: "bg-red-100",
 };
 
 export default function ConfigIndexPage() {
@@ -183,6 +192,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        stockAlertsConfigItem,
         puntosVentaConfigItem,
         proveedoresConfigItem,
         gruposConfigItem,

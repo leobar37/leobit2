@@ -8,10 +8,10 @@ description: |
   - Debugging "sync pending", "sync failed", or "conflict" issues
   - Understanding how syncGroupId groups operations
   - Adding new sync handlers on backend
-  - Questions about sync hooks, sync status fields, or schema declarations
+  - Questions about sync status fields or schema declarations
 
   Covers: push sync, pull sync, syncGroupId, operation sorting, handlers,
-  conflict resolution, sync hooks, and schema requirements.
+  conflict resolution, and schema requirements. Sync hooks are disabled.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -162,8 +162,7 @@ export class NewEntitySyncHandler extends BaseSyncHandler {
 - Ensure parent entity is created before children
 
 ### 2. Sync hook blocking valid operations
-- Check `packages/app/app/lib/sync/registry.ts:13-16`
-- Hooks can be commented out if blocking drafts
+- **NOTE**: Sync hooks are disabled. The `registry.ts` returns `allow: true` for all operations. If you need hooks in the future, re-implement using `createSyncHook()`.
 
 ### 3. Conflict not resolving
 - Check `packages/backend/src/services/sync/framework/ConflictResolver.ts`

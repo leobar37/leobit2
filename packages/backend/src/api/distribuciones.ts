@@ -181,9 +181,10 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       params: t.Object({
         id: t.String(),
       }),
+      body: t.Optional(t.Object({})),
       detail: {
         summary: "Cerrar distribución",
-        description: "Cierra una distribución (cambia estado a 'cerrado')",
+        description: "Cierra una distribución (cambia estado a 'cerrado'). Las métricas se calculan desde los items.",
         tags: ["Distribuciones"],
       },
     }

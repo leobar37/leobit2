@@ -170,31 +170,4 @@ export const CUSTOMER_TAGS: CustomerTagData[] = [
   { customerIndex: 1, tagIndex: 1 }, // Juan Perez -> Frecuente
 ];
 
-// Cierres del día (closings) para testing
-export interface ClosingData {
-  closingDate: string;
-  totalSales: number;
-  totalAmount: number;
-  cashAmount: number;
-  creditAmount: number;
-  totalKilos: number;
-}
-
-export const CLOSINGS: ClosingData[] = [
-  {
-    closingDate: getLocalDate(-1), // Ayer
-    totalSales: 5,
-    totalAmount: 150.0,
-    cashAmount: 100.0,
-    creditAmount: 50.0,
-    totalKilos: 12.5,
-  },
-  {
-    closingDate: getLocalDate(-2), // Anteayer
-    totalSales: 3,
-    totalAmount: 89.5,
-    cashAmount: 60.0,
-    creditAmount: 29.5,
-    totalKilos: 8.2,
-  },
-];
+// Nota: La tabla closings fue eliminada. Los datos de cierre ahora están en distribuciones.

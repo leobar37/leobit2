@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sync System Audit - Avileo/PollosPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #1a1d27;
+      --bg-tertiary: #252a38;
+      --text-primary: #f0f2f5;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --border-color: #2d3348;
+      --accent-orange: #f97316;
+      --accent-orange-dim: #ea580c;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-yellow: #eab308;
+      --accent-purple: #a855f7;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: var(--accent-orange);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 9999px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+    }
+
+    .date {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Navigation */
+    nav {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      position: sticky;
+      top: 1rem;
+      z-index: 100;
+    }
+
+    nav ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      list-style: none;
+    }
+
+    nav a {
+      display: block;
+      padding: 0.5rem 1rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 3rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h2 .icon {
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text-primary);
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem;
+      color: var(--text-secondary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card.critical {
+      border-color: var(--accent-red);
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(239, 68, 68, 0.05) 100%);
+    }
+
+    .card.warning {
+      border-color: var(--accent-yellow);
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(234, 179, 8, 0.05) 100%);
+    }
+
+    .card.success {
+      border-color: var(--accent-green);
+    }
+
+    .card.info {
+      border-color: var(--accent-blue);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .card.critical .card-title { color: var(--accent-red); }
+    .card.warning .card-title { color: var(--accent-yellow); }
+    .card.success .card-title { color: var(--accent-green); }
+    .card.info .card-title { color: var(--accent-blue); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bg-tertiary);
+    }
+
+    tr:hover td {
+      background: var(--bg-tertiary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--accent-orange);
+    }
+
+    pre {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: var(--text-primary);
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-right: 0.25rem;
+    }
+
+    .tag-critico { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+    .tag-alto { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .tag-medio { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+    .tag-bajo { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+
+    /* Architecture Diagram */
+    .architecture {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .architecture {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-box {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .arch-box h4 {
+      margin: 0 0 0.5rem;
+      color: var(--accent-orange);
+    }
+
+    .arch-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .flow-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .flow-arrow {
+      color: var(--accent-orange);
+    }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+    }
+
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .checklist li:last-child {
+      border-bottom: none;
+    }
+
+    .check-box {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid var(--border-color);
+      border-radius: 0.25rem;
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
+
+    /* Two Column Layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Summary Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .stat {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-orange);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Print */
+    @media print {
+      body { background: white; color: black; }
+      .card { border: 1px solid #ddd; }
+      nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header id="top">
+      <span class="badge">Audit Report</span>
+      <h1>Sync System Deep Feature Audit</h1>
+      <p class="subtitle">Avileo (PollosPro) Offline-First Synchronization Architecture</p>
+      <p class="date">Generated: March 25, 2026</p>
+    </header>
+
+    <nav>
+      <ul>
+        <li><a href="#executive">Executive Summary</a></li>
+        <li><a href="#scope">Feature Scope</a></li>
+        <li><a href="#files">Files & Layers</a></li>
+        <li><a href="#issues">Issues Found</a></li>
+        <li><a href="#root-cause">Root Cause</a></li>
+        <li><a href="#framework">Framework Design</a></li>
+        <li><a href="#solution">Recommended Solution</a></li>
+        <li><a href="#risks">Risks & Validations</a></li>
+      </ul>
+    </nav>
+
+    <!-- Executive Summary -->
+    <section id="executive">
+      <h2><span class="icon">📋</span> Executive Summary</h2>
+
+      <div class="card critical">
+        <div class="card-header">
+          <span class="card-title">⚠️ Important Finding</span>
+          <span class="tag tag-critico">Critical</span>
+        </div>
+        <p>The sync system is a <strong>custom REST-based offline-first synchronization engine</strong>. It is <strong>NOT using ElectricSQL</strong> for sync — only PGlite for local storage. The system handles bidirectional sync between a React frontend (PGlite/IndexedDB) and an ElysiaJS backend (PostgreSQL).</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value">16</div>
+          <div class="stat-label">Entity Handlers</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">~20</div>
+          <div class="stat-label">Files Involved</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">540</div>
+          <div class="stat-label">ConflictResolver Lines</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Duplicate Priority Maps</div>
+        </div>
+      </div>
+
+      <p><strong>Current state:</strong> Functional but fragmented, with documentation that doesn't match implementation, dead hook infrastructure, and significant maintenance burden.</p>
+    </section>
+
+    <!-- Feature Scope -->
+    <section id="scope">
+      <h2><span class="icon">🔍</span> Feature Scope</h2>
+
+      <h3>What Exists</h3>
+
+      <div class="two-col">
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ Push Sync (Client → Server)</span>
+          </div>
+          <p>REST batch API <code>/sync/batch</code> with batching, coalescing, dead letter queue, exponential backoff</p>
+        </div>
+
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ Pull Sync (Server → Client)</span>
+          </div>
+          <p>REST API <code>/sync/changes</code> with cursor tracking, auto-pull every 10s</p>
+        </div>
+
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ Conflict Resolution</span>
+          </div>
+          <p>Version-based (Sales) + Timestamp-based (other entities)</p>
+        </div>
+
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ syncGroupId Grouping</span>
+          </div>
+          <p>Groups related parent-child operations (sale + items + payments)</p>
+        </div>
+
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ Entity Priority Sorting</span>
+          </div>
+          <p>Ensures parents before children (sales=1, sale_items=2, etc.)</p>
+        </div>
+
+        <div class="card success">
+          <div class="card-header">
+            <span class="card-title">✓ Dead Letter Queue</span>
+          </div>
+          <p>Failed operations after MAX_RETRIES (5) go to DLQ</p>
+        </div>
+      </div>
+
+      <h3>Partial or Missing</h3>
+
+      <div class="two-col">
+        <div class="card warning">
+          <div class="card-header">
+            <span class="card-title">⚠ ElectricSQL Integration</span>
+            <span class="tag tag-alto">High</span>
+          </div>
+          <p>Referenced in skills/docs but NOT actually used — the system uses custom REST sync only</p>
+        </div>
+
+        <div class="card warning">
+          <div class="card-header">
+            <span class="card-title">⚠ Sync Hooks</span>
+            <span class="tag tag-alto">High</span>
+          </div>
+          <p>DISABLED — <code>registry.ts</code> returns <code>allow: true</code> for all operations</p>
+        </div>
+
+        <div class="card warning">
+          <div class="card-header">
+            <span class="card-title">⚠ PuntoVenta Handler</span>
+            <span class="tag tag-alto">Medium</span>
+          </div>
+          <p>Has conflict resolver but no handler registered</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Files and Layers -->
+    <section id="files">
+      <h2><span class="icon">📁</span> Files and Layers Involved</h2>
+
+      <h3>Frontend Sync Layer</h3>
+      <pre><code>packages/app/app/lib/sync/
+├── sync-service.ts          # 770+ lines - main client sync engine
+├── pull-service.ts          # server-to-client pull sync
+├── change-applier.ts        # applies server changes to local PGlite
+├── schema-mapper.ts         # validates table names
+├── config.ts                # BATCH_SIZE=50, SYNC_INTERVAL_MS=30000, MAX_RETRIES=5
+├── registry.ts              # HOOKS DISABLED - just returns allow:true
+├── service-provider.tsx     # React context for all 13 services
+├── manual-sync.ts           # manual trigger utilities
+├── backoff.ts               # exponential backoff
+└── types.ts                 # SyncEntity, SyncOperationInput
+
+packages/app/app/lib/services/
+├── base-service.ts          # generateSyncGroup(), queueSync() - ALL services extend
+├── customer-service.ts
+├── sale-service.ts
+├── purchase-service.ts
+└── ... (11 more entity services)</code></pre>
+
+      <h3>Backend Sync Layer</h3>
+      <pre><code>packages/backend/src/services/sync/
+├── sync.service.ts          # Thin orchestrator
+├── framework/
+│   ├── SyncEngine.ts        # Batch processing with SAVEPOINTs
+│   ├── OperationSorter.ts    # Groups + sorts by priority
+│   ├── ConflictResolver.ts  # 540 lines, 16 entity resolvers
+│   ├── HandlerRegistry.ts   # Factory for entity handlers
+│   ├── SyncPipeline.ts      # Validation → business rules → execute
+│   ├── EntityRegistry.ts   # Tracks entities in current batch
+│   └── types.ts
+├── handlers/
+│   ├── BaseSyncHandler.ts   # Abstract base class
+│   ├── CustomerSyncHandler.ts
+│   ├── SaleSyncHandler.ts
+│   └── ... (14 more handlers)
+└── schemas/index.ts         # Zod validation schemas
+
+packages/backend/src/api/
+└── sync.ts                  # POST /sync/batch, GET /sync/changes</code></pre>
+
+      <h3>Entity Handlers (16 total)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Handler</th>
+            <th>Entity</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>CustomerSyncHandler</td><td>customers</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>SaleSyncHandler</td><td>sales</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>SaleItemSyncHandler</td><td>sale_items</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>AbonoSyncHandler</td><td>abonos</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>PurchaseSyncHandler</td><td>purchases</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>PurchaseItemSyncHandler</td><td>purchase_items</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>ProductSyncHandler</td><td>products</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>ProductVariantSyncHandler</td><td>product_variants</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>TagSyncHandler</td><td>tags</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>CustomerTagSyncHandler</td><td>customer_tags</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>CustomerGroupSyncHandler</td><td>customer_groups</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>CustomerGroupMemberSyncHandler</td><td>customer_group_members</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>VisitaSyncHandler</td><td>visitas</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>DistribucionSyncHandler</td><td>distribuciones</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>SupplierSyncHandler</td><td>suppliers</td><td><span class="tag tag-bajo">Active</span></td></tr>
+          <tr><td>PuntoVentaSyncHandler</td><td>puntos_venta</td><td><span class="tag tag-critico">MISSING</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Issues Found -->
+    <section id="issues">
+      <h2><span class="icon">🚨</span> Code Quality Issues Detected</h2>
+
+      <div class="card critical">
+        <div class="card-header">
+          <span class="card-title">1. Documentation vs Implementation Mismatch</span>
+          <span class="tag tag-critico">Critical</span>
+        </div>
+        <p><strong>Location:</strong> <code>.claude/skills/avileo-sync/SKILL.md</code>, <code>references/overview.md</code></p>
+        <p><strong>Issue:</strong> Skills reference ElectricSQL as part of the sync stack, but the actual implementation uses only custom REST-based sync with PGlite</p>
+        <p><strong>Impact:</strong> Developers may expect ElectricSQL sync capabilities that don't exist</p>
+      </div>
+
+      <div class="card critical">
+        <div class="card-header">
+          <span class="card-title">2. Sync Hooks Are Gutted, Not Disabled</span>
+          <span class="tag tag-critico">Critical</span>
+        </div>
+        <p><strong>Location:</strong> <code>packages/app/app/lib/sync/registry.ts</code></p>
+        <p><strong>Issue:</strong> <code>runSyncHooks()</code> always returns <code>{ allow: true }</code> — hooks were removed entirely. Skill docs mention <code>createSyncHook()</code> which doesn't exist</p>
+        <p><strong>Impact:</strong> If hooks needed in future, must be reimplemented from scratch</p>
+      </div>
+
+      <div class="card warning">
+        <div class="card-header">
+          <span class="card-title">3. Duplicate Entity Priority Maps</span>
+          <span class="tag tag-alto">High</span>
+        </div>
+        <p><strong>Locations:</strong></p>
+        <ul>
+          <li><code>packages/backend/src/services/sync/framework/OperationSorter.ts:9-20</code></li>
+          <li><code>packages/app/app/lib/sync/sync-service.ts:681-692</code></li>
+        </ul>
+        <p><strong>Issue:</strong> Two separate entity priority maps MUST be kept in sync manually when adding entities</p>
+        <p><strong>Impact:</strong> Missing an update causes ordering bugs that are hard to debug</p>
+      </div>
+
+      <div class="card warning">
+        <div class="card-header">
+          <span class="card-title">4. 16 Near-Identical Conflict Resolvers</span>
+          <span class="tag tag-alto">High</span>
+        </div>
+        <p><strong>Location:</strong> <code>packages/backend/src/services/sync/framework/ConflictResolver.ts</code> (540 lines)</p>
+        <p><strong>Issue:</strong> Each resolver repeats the same <code>BaseTimestampConflictResolver</code> pattern with minor variations</p>
+        <p><strong>Impact:</strong> ~400 lines of repetitive code, adding new entities = copy-paste existing resolver</p>
+      </div>
+
+      <div class="card warning">
+        <div class="card-header">
+          <span class="card-title">5. PuntoVenta Has ConflictResolver But No Handler</span>
+          <span class="tag tag-alto">Medium</span>
+        </div>
+        <p><strong>Location:</strong> <code>ConflictResolver.ts:321-337</code> (resolver exists)</p>
+        <p><strong>Issue:</strong> <code>PuntoVentaConflictResolver</code> registered but no <code>PuntoVentaSyncHandler</code> in registry</p>
+        <p><strong>Impact:</strong> PuntoVenta entities cannot sync despite having conflict resolution</p>
+      </div>
+
+      <div class="card warning">
+        <div class="card-header">
+          <span class="card-title">6. Hardcoded Required Column Defaults</span>
+          <span class="tag tag-alto">Medium</span>
+        </div>
+        <p><strong>Location:</strong> <code>packages/app/app/lib/sync/change-applier.ts:19-29</code></p>
+        <p><strong>Issue:</strong> <code>REQUIRED_COLUMN_DEFAULTS</code> only covers <code>products</code> and <code>product_variants</code></p>
+        <p><strong>Impact:</strong> Pull sync may fail for entities with NOT NULL columns missing from payload</p>
+      </div>
+
+      <div class="card info">
+        <div class="card-header">
+          <span class="card-title">7. No Shared Config for Sync Constants</span>
+          <span class="tag tag-medio">Medium</span>
+        </div>
+        <p><strong>Location:</strong> Scattered across <code>config.ts</code>, <code>service-provider.tsx</code>, <code>sync-service.ts</code></p>
+        <p><strong>Issue:</strong> BATCH_SIZE, SYNC_INTERVAL_MS, MAX_RETRIES defined in multiple places</p>
+        <p><strong>Impact:</strong> Changing sync params requires multiple file updates</p>
+      </div>
+    </section>
+
+    <!-- Root Cause -->
+    <section id="root-cause">
+      <h2><span class="icon">🔬</span> Root Cause Analysis</h2>
+
+      <h3>Why This System Is Complex to Maintain</h3>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">No Code Generation</span>
+        </div>
+        <p>Adding an entity requires manually editing ~10 files across both packages</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">No Shared Config</span>
+        </div>
+        <p>Entity priorities, sync constants scattered across packages</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">No Template Enforcement</span>
+        </div>
+        <p>Handlers are copy-pasted with slight modifications</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">No Tests</span>
+        </div>
+        <p>No visible integration test coverage for sync operations</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Dead Hook Infrastructure</span>
+        </div>
+        <p>Hook system was removed rather than completed</p>
+      </div>
+
+      <h3>The Fundamental Challenge</h3>
+
+      <p>The system grew organically. Each new entity added:</p>
+      <ul>
+        <li>A handler (120-200 lines)</li>
+        <li>A conflict resolver (40-60 lines)</li>
+        <li>Zod schemas</li>
+        <li>Frontend service</li>
+        <li>Type exports in 3+ places</li>
+        <li>Priority entries in 2 places</li>
+      </ul>
+
+      <p><strong>With 16 entities</strong>, this = ~4,000 lines of entity-specific code that must be manually kept in sync.</p>
+    </section>
+
+    <!-- Framework Design -->
+    <section id="framework">
+      <h2><span class="icon">🏗️</span> Framework Design Proposal</h2>
+
+      <h3>What a Framework Should Solve</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Problem</th>
+            <th>Current State</th>
+            <th>Framework Goal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Boilerplate</td>
+            <td>Copy-paste 16 handlers</td>
+            <td>Code generation from schema</td>
+          </tr>
+          <tr>
+            <td>Duplicate priorities</td>
+            <td>2 manual locations</td>
+            <td>Single source of truth</td>
+          </tr>
+          <tr>
+            <td>Hooks</td>
+            <td>Gutted, no re-implementation</td>
+            <td>Plugin-based hook system</td>
+          </tr>
+          <tr>
+            <td>Entity types</td>
+            <td>Scattered across files</td>
+            <td>Central registry</td>
+          </tr>
+          <tr>
+            <td>Testing</td>
+            <td>None visible</td>
+            <td>Test utilities per handler</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Proposed Architecture</h3>
+
+      <div class="architecture">
+        <div class="arch-box">
+          <h4>Frontend Layer</h4>
+          <div class="arch-flow">
+            <div class="flow-item"><span class="flow-arrow">→</span> React Components</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> TanStack Query</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> SyncService (Push)</div>
+            <div class="flow-item"><span class="flow-arrow">↔</span> REST API</div>
+            <div class="flow-item"><span class="flow-arrow">←</span> PullService (Pull)</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> Local PGlite</div>
+          </div>
+        </div>
+
+        <div class="arch-box">
+          <h4>Backend Layer</h4>
+          <div class="arch-flow">
+            <div class="flow-item"><span class="flow-arrow">←</span> Elysia Routes</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> SyncService (Orchestrator)</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> SyncEngine (Batch)</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> HandlerRegistry</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> OperationSorter</div>
+            <div class="flow-item"><span class="flow-arrow">→</span> ConflictResolver</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Framework Components</h3>
+
+      <pre><code>┌─────────────────────────────────────────────────────────┐
+│                    Sync Framework                       │
+├─────────────────────────────────────────────────────────┤
+│  1. Schema-Driven Code Gen                              │
+│     - Define entity sync config in YAML/JSON            │
+│     - Generate: Handler, Resolver, Zod schemas         │
+│     - Generate: Frontend service, types                │
+│                                                         │
+│  2. Single Priority Config                             │
+│     - One file: entity priorities                       │
+│     - Both frontend + backend import from shared        │
+│                                                         │
+│  3. Composable Hooks                                   │
+│     - BeforeInsert, AfterInsert, BeforeUpdate, etc.    │
+│     - Default no-op implementations                    │
+│     - Easy to override per-entity                      │
+│                                                         │
+│  4. Conflict Resolution Strategy Pattern               │
+│     - TimestampStrategy, VersionStrategy, etc.         │
+│     - Configurable per entity                          │
+│                                                         │
+│  5. Test Harness                                       │
+│     - SyncScenario builder                             │
+│     - Conflict simulation utilities                     │
+└─────────────────────────────────────────────────────────┘</code></pre>
+    </section>
+
+    <!-- Solution -->
+    <section id="solution">
+      <h2><span class="icon">✅</span> Recommended Solution</h2>
+
+      <h3>Phase 1: Fix Current Issues (No Framework)</h3>
+
+      <ul class="checklist">
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Update skill docs</strong> — Remove ElectricSQL references</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Register PuntoVenta handler</strong> or remove resolver</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Extract entity priority to shared package</strong> (<code>@avileo/shared</code>)</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Add missing required column defaults</strong> in <code>change-applier.ts</code></span>
+        </li>
+      </ul>
+
+      <h3>Phase 2: Create Sync Framework (If Worth the Investment)</h3>
+
+      <ol>
+        <li>
+          <strong>Create <code>sync-config.yaml</code></strong> defining all entities, priorities, conflict strategies
+        </li>
+        <li>
+          <strong>Create codegen script</strong> that generates:
+          <ul>
+            <li>Backend handlers from templates</li>
+            <li>Conflict resolvers from strategy</li>
+            <li>Frontend service boilerplate</li>
+            <li>Zod schemas</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Move priorities to shared</strong> package
+        </li>
+        <li>
+          <strong>Re-implement hooks properly</strong> with proper interfaces
+        </li>
+        <li>
+          <strong>Add test utilities</strong>
+        </li>
+      </ol>
+
+      <h3>Implementation Steps</h3>
+
+      <pre><code>1. Create sync-config schema (YAML/JSON)
+   - Define: entity name, priority, conflict strategy, hooks
+
+2. Create codegen templates
+   - handler.ts.ejs
+   - resolver.ts.ejs
+   - service.ts.ejs
+
+3. Extract to @avileo/sync package
+   - Shared priority config
+   - Sync utilities
+   - Hook interfaces
+   - Codegen CLI
+
+4. Migrate existing entities
+   - Run codegen for all 16 entities
+   - Delete duplicate files
+   - Verify behavior unchanged
+
+5. Add test infrastructure
+   - SyncScenario test builder
+   - Mock sync operations
+   - Conflict scenario simulator</code></pre>
+    </section>
+
+    <!-- Risks -->
+    <section id="risks">
+      <h2><span class="icon">⚠️</span> Risks and Validations</h2>
+
+      <h3>Before Any Changes</h3>
+
+      <ul class="checklist">
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Verify PuntoVenta sync status</strong> — is it supposed to sync? If so, add handler</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Check ElectricSQL references</strong> — where else is it mentioned? Update all docs</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Review all 16 handlers</strong> — are any broken or incomplete?</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Audit conflict resolution</strong> — are timestamp-based conflicts working correctly?</span>
+        </li>
+        <li>
+          <span class="check-box"></span>
+          <span><strong>Test offline scenarios</strong> — vendor goes offline for 2 days, comes back</span>
+        </li>
+      </ul>
+
+      <h3>Tests to Run After Changes</h3>
+
+      <pre><code># 1. Full sync cycle test (offline → online → sync)
+# 2. Conflict scenario tests (simultaneous edit)
+# 3. Large batch test (100+ operations)
+# 4. Priority ordering test (parent before child)
+# 5. Dead letter queue test (verify DLQ behavior)</code></pre>
+    </section>
+
+    <!-- Summary -->
+    <section id="summary">
+      <h2><span class="icon">📊</span> Summary</h2>
+
+      <div class="card critical">
+        <div class="card-header">
+          <span class="card-title">The sync system is functional but fragile.</span>
+        </div>
+      </div>
+
+      <h3>Main Challenges</h3>
+
+      <div class="two-col">
+        <div class="card warning">
+          <div class="card-header"><span class="card-title">1. Boilerplate explosion</span></div>
+          <p>16 entities × multiple files = high maintenance burden</p>
+        </div>
+
+        <div class="card warning">
+          <div class="card-header"><span class="card-title">2. Documentation rot</span></div>
+          <p>ElectricSQL mentioned but not used</p>
+        </div>
+
+        <div class="card warning">
+          <div class="card-header"><span class="card-title">3. Dead infrastructure</span></div>
+          <p>Hooks removed rather than fixed</p>
+        </div>
+
+        <div class="card warning">
+          <div class="card-header"><span class="card-title">4. Manual synchronization</span></div>
+          <p>Priorities, types, configs scattered everywhere</p>
+        </div>
+      </div>
+
+      <h3>Framework Value Assessment</h3>
+
+      <p><strong>A framework would help if:</strong></p>
+      <ul>
+        <li>More entities will be added (likely)</li>
+        <li>Multiple developers work on sync code</li>
+        <li>Reliability/regression prevention is valued</li>
+      </ul>
+
+      <p><strong>Otherwise:</strong> fixing the immediate issues (docs, PuntoVenta, priorities extraction) is the safer path.</p>
+    </section>
+
+    <footer>
+      <p>Sync System Audit — Avileo/PollosPro — Generated March 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

@@ -52,7 +52,6 @@ export const SYNCABLE_ENTITIES = [
   "abonos",
   "distribuciones",
   "variant_inventory",
-  "closings",
   "orders",
   "order_items",
   "files",

@@ -196,7 +196,7 @@ Current priorities (lower = processed first):
 |----------|--------|-------------|
 | 1 | `sales` | Parent sale record |
 | 1 | `purchases` | Parent purchase record |
-| 1 | `distribucion` | Parent distribution record |
+| 1 | `distribuciones` | Parent distribution record |
 | 2 | `sale_items` | Sale line items |
 | 2 | `purchase_items` | Purchase line items |
 | 2 | `distribucion_items` | Distribution items |

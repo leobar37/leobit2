@@ -263,8 +263,12 @@ export function useCreateDistribucion() {
   });
 }
 
+export interface CloseDistribucionInput {
+  id: string;
+}
+
 /**
- * Close a distribucion
+ * Close a distribucion with cierre data
  * Requires internet connection
  */
 export function useCloseDistribucion() {
@@ -272,9 +276,9 @@ export function useCloseDistribucion() {
   const { pullNow } = useManualSync();
 
   return useOfflineAwareMutation({
-    mutationFn: async (id: string) => {
-      console.log("[Distribuciones] useCloseDistribucion - calling API for id:", id);
-      const response = await (api.distribuciones({ id }).close as any).patch();
+    mutationFn: async (input: CloseDistribucionInput) => {
+      console.log("[Distribuciones] useCloseDistribucion - calling API for id:", input.id);
+      const response = await (api.distribuciones({ id: input.id }).close as any).patch({});
       console.log("[Distribuciones] useCloseDistribucion - API response:", response);
       if (!response.data?.success || response.error) {
         handleApiError(response);
@@ -282,12 +286,12 @@ export function useCloseDistribucion() {
       return response.data.data;
     },
     offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
-    onSuccess: async (_, id) => {
+    onSuccess: async (_, input) => {
       // Force pull immediately to sync closure from server to PGlite
       await pullNow();
 
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
+        queryKey: [DISTRIBUCIONES_QUERY_KEY, input.id],
       });
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
