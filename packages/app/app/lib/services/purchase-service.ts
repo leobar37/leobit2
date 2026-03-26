@@ -162,6 +162,22 @@ export class PurchaseService extends BaseService {
        ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
       [this.businessId]
     );
+
+    for (const purchase of result.rows) {
+      const itemsResult = await this.pg.query<{ total: string }>(
+        `SELECT COALESCE(SUM(CAST(total_cost AS DECIMAL)), 0) as total
+         FROM purchase_items WHERE purchase_id = $1 AND business_id = $2`,
+        [purchase.id, this.businessId]
+      );
+      const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
+      const storedTotal = parseFloat(purchase.total_amount) || 0;
+
+      if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
+        await this.recalculateTotal(purchase.id);
+        purchase.total_amount = formatCurrency(calculatedTotal);
+      }
+    }
+
     return result.rows;
   }
 
@@ -188,6 +204,22 @@ export class PurchaseService extends BaseService {
        ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
       [supplierId, this.businessId]
     );
+
+    for (const purchase of result.rows) {
+      const itemsResult = await this.pg.query<{ total: string }>(
+        `SELECT COALESCE(SUM(CAST(total_cost AS DECIMAL)), 0) as total
+         FROM purchase_items WHERE purchase_id = $1 AND business_id = $2`,
+        [purchase.id, this.businessId]
+      );
+      const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
+      const storedTotal = parseFloat(purchase.total_amount) || 0;
+
+      if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
+        await this.recalculateTotal(purchase.id);
+        purchase.total_amount = formatCurrency(calculatedTotal);
+      }
+    }
+
     return result.rows;
   }
 
@@ -526,33 +558,38 @@ export class PurchaseService extends BaseService {
     const now = new Date();
     const itemId = this.generateId();
 
-    await this.pg.query(
-      `INSERT INTO purchase_items (
-        id, business_id, purchase_id, product_id, variant_id, unit_id,
-        quantity, unit_cost, total_cost,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [
-        itemId,
-        this.businessId,
-        purchaseId,
-        item.productId,
-        item.variantId ?? null,
-        item.unitId ?? null,
-        String(item.quantity),
-        formatCurrency(item.unitCost),
-        formatCurrency(item.quantity * item.unitCost),
-        "pending",
-        0,
-        now.toISOString(),
-        now.toISOString(),
-      ]
-    );
+    await this.pg.exec("BEGIN");
+    try {
+      await this.pg.query(
+        `INSERT INTO purchase_items (
+          id, business_id, purchase_id, product_id, variant_id, unit_id,
+          quantity, unit_cost, total_cost,
+          sync_status, sync_attempts, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [
+          itemId,
+          this.businessId,
+          purchaseId,
+          item.productId,
+          item.variantId ?? null,
+          item.unitId ?? null,
+          String(item.quantity),
+          formatCurrency(item.unitCost),
+          formatCurrency(item.quantity * item.unitCost),
+          "pending",
+          0,
+          now.toISOString(),
+          now.toISOString(),
+        ]
+      );
 
-    // Recalculate total
-    await this.recalculateTotal(purchaseId);
+      await this.recalculateTotal(purchaseId);
+      await this.pg.exec("COMMIT");
+    } catch (err) {
+      await this.pg.exec("ROLLBACK");
+      throw err;
+    }
 
-    // Sync with parent's syncGroupId
     const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
     await this.queueSync("create", itemId, {
       purchaseId,
@@ -581,29 +618,34 @@ export class PurchaseService extends BaseService {
     const now = new Date();
     const totalCost = data.totalCost ?? (data.quantity && data.unitCost ? data.quantity * data.unitCost : undefined);
 
-    await this.pg.query(
-      `UPDATE purchase_items SET
-        quantity = COALESCE($1, quantity),
-        unit_cost = COALESCE($2, unit_cost),
-        total_cost = COALESCE($3, total_cost),
-        updated_at = $4,
-        sync_status = $5
-      WHERE id = $6 AND purchase_id = $7`,
-      [
-        data.quantity !== undefined ? String(data.quantity) : null,
-        data.unitCost !== undefined ? formatCurrency(data.unitCost) : null,
-        totalCost !== undefined ? formatCurrency(totalCost) : null,
-        now.toISOString(),
-        "pending",
-        itemId,
-        purchaseId,
-      ]
-    );
+    await this.pg.exec("BEGIN");
+    try {
+      await this.pg.query(
+        `UPDATE purchase_items SET
+          quantity = COALESCE($1, quantity),
+          unit_cost = COALESCE($2, unit_cost),
+          total_cost = COALESCE($3, total_cost),
+          updated_at = $4,
+          sync_status = $5
+        WHERE id = $6 AND purchase_id = $7`,
+        [
+          data.quantity !== undefined ? String(data.quantity) : null,
+          data.unitCost !== undefined ? formatCurrency(data.unitCost) : null,
+          totalCost !== undefined ? formatCurrency(totalCost) : null,
+          now.toISOString(),
+          "pending",
+          itemId,
+          purchaseId,
+        ]
+      );
 
-    // Recalculate purchase total
-    await this.recalculateTotal(purchaseId);
+      await this.recalculateTotal(purchaseId);
+      await this.pg.exec("COMMIT");
+    } catch (err) {
+      await this.pg.exec("ROLLBACK");
+      throw err;
+    }
 
-    // Sync with parent's syncGroupId
     const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
     await this.queueSync("update", itemId, {
       purchaseId,
@@ -620,15 +662,20 @@ export class PurchaseService extends BaseService {
   async deleteItemFromPurchase(purchaseId: string, itemId: string): Promise<void> {
     const now = new Date();
 
-    await this.pg.query(
-      `DELETE FROM purchase_items WHERE id = $1 AND purchase_id = $2`,
-      [itemId, purchaseId]
-    );
+    await this.pg.exec("BEGIN");
+    try {
+      await this.pg.query(
+        `DELETE FROM purchase_items WHERE id = $1 AND purchase_id = $2`,
+        [itemId, purchaseId]
+      );
 
-    // Recalculate purchase total
-    await this.recalculateTotal(purchaseId);
+      await this.recalculateTotal(purchaseId);
+      await this.pg.exec("COMMIT");
+    } catch (err) {
+      await this.pg.exec("ROLLBACK");
+      throw err;
+    }
 
-    // Sync with parent's syncGroupId
     const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
     await this.queueSync("delete", itemId, { purchaseId }, purchaseSyncGroupId, "purchase_items");
   }

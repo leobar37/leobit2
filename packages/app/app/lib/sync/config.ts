@@ -10,7 +10,7 @@ export const MAX_RETRIES = 5;
 export const BATCH_SIZE = 50;
 
 /** Interval in milliseconds between sync cycles */
-export const SYNC_INTERVAL_MS = 30000;
+export const SYNC_INTERVAL_MS = 5000;
 
 /** Interval in milliseconds between pull sync cycles (server to client) */
 export const PULL_INTERVAL_MS = 10000;

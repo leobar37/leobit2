@@ -114,8 +114,8 @@ const registeredHooks: SyncHook[] = [
 ```typescript
 // config.ts
 export const SYNC_CONFIG = {
-  // Sync interval (30 seconds)
-  SYNC_INTERVAL_MS: 30000,
+  // Sync interval (5 seconds)
+  SYNC_INTERVAL_MS: 5000,
 
   // Pull interval (10 seconds)
   PULL_INTERVAL_MS: 10000,

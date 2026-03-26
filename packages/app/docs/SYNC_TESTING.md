@@ -226,7 +226,7 @@ location.reload();
 
 ## Notas
 
-- El sync automático corre cada 30 segundos (SYNC_INTERVAL_MS)
+- El sync automático corre cada 5 segundos (SYNC_INTERVAL_MS)
 - Batch size máximo es 50 operaciones (BATCH_SIZE)
 - Máximo reintentos: 5 (MAX_RETRIES)
 - Backoff: 1s, 2s, 4s, 8s, 16s (exponencial)
