@@ -1008,25 +1008,27 @@ async function resetDatabaseInternal(): Promise<void> {
   }
   initPromise = null;
 
-  // Delete IndexedDB database
-  return new Promise((resolve, reject) => {
+  // Delete IndexedDB database and wait for completion
+  await new Promise<void>((resolve) => {
     const request = indexedDB.deleteDatabase(databaseName);
-    request.onsuccess = () => {
-      console.log(`[DB] IndexedDB database deleted successfully: ${databaseName}`);
-      resolve();
+    let resolved = false;
+
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      console.log(`[DB] IndexedDB database deleted: ${databaseName}`);
+      // Give IndexedDB a moment to finalize the deletion before we return
+      setTimeout(resolve, 50);
     };
+
+    request.onsuccess = done;
     request.onerror = () => {
-      console.warn("[DB] Error deleting IndexedDB:", request.error);
-      // Continue anyway - the database might not exist
-      resolve();
+      console.warn("[DB] IndexedDB delete error (may not exist):", request.error);
+      done();
     };
     request.onblocked = () => {
-      console.warn("[DB] IndexedDB delete blocked - retrying...");
-      setTimeout(() => {
-        const retry = indexedDB.deleteDatabase(databaseName);
-        retry.onsuccess = () => resolve();
-        retry.onerror = () => resolve();
-      }, 100);
+      console.warn("[DB] IndexedDB delete blocked - waiting...");
+      setTimeout(done, 200);
     };
   });
 }

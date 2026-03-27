@@ -132,11 +132,18 @@ export function useFinalizeSale() {
       }
       return saleService.confirm(id);
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: async (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["sales-new", id] });
       queryClient.invalidateQueries({ queryKey: ["sales-new"] });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
+
+      // Force immediate refetch of sales list to prevent stale data display
+      // This ensures the total amount appears correctly right after finalizing
+      await queryClient.refetchQueries({
+        queryKey: ["sales-new"],
+        type: 'active',
+      });
     },
   });
 }

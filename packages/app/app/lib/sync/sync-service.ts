@@ -535,12 +535,12 @@ export class SyncService {
          $5,
          $6::jsonb,
          $7,
-         1,
+         $8,
          0,
          NULL,
          NULL,
-         $8,
          $9,
+         $10,
          CURRENT_TIMESTAMP,
          CURRENT_TIMESTAMP
        )`,
@@ -552,6 +552,7 @@ export class SyncService {
         params.entityId,
         JSON.stringify(normalizeDatesToISO(params.data)),
         OPERATION_STATUS.PENDING,
+        (params.data?._localVersion as number) ?? 1,
         params.idempotencyKey ?? null,
         params.syncGroupId ?? null,
       ]

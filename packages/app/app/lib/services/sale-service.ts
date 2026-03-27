@@ -761,7 +761,9 @@ export class SaleService extends BaseService {
         balanceDue,
         paymentMode,
       },
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 
@@ -845,7 +847,9 @@ export class SaleService extends BaseService {
         balanceDue,
         paymentMode,
       },
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 
@@ -883,7 +887,9 @@ export class SaleService extends BaseService {
         status: "delivered",
         saleType: sale.saleType,
       },
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 
@@ -996,7 +1002,9 @@ export class SaleService extends BaseService {
           balanceDue,
           paymentMode: options.paymentMode ?? sale.paymentMode,
         },
-        syncGroupId
+        syncGroupId,
+        undefined,
+        sale.version
       );
     } catch (error) {
       await this.pg.exec("ROLLBACK");
@@ -1043,7 +1051,9 @@ export class SaleService extends BaseService {
         cancelledAt: now,
         cancelledBy: this.businessUserId,
       },
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 
@@ -1157,7 +1167,9 @@ export class SaleService extends BaseService {
       "update",
       id,
       input as Record<string, unknown>,
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 
@@ -1467,7 +1479,9 @@ export class SaleService extends BaseService {
         amountPaid: parseFloat(updatedSale.amountPaid),
         balanceDue: parseFloat(updatedSale.balanceDue),
       },
-      syncGroupId
+      syncGroupId,
+      undefined,
+      sale.version
     );
   }
 

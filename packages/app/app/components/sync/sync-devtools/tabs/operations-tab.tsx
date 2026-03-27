@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Trash2, CheckCircle } from "lucide-react";
+import { Search, Trash2, CheckCircle, Copy } from "lucide-react";
 import { useListSearch } from "~/hooks/use-list-search";
 import type { SyncOperation } from "../types";
 import { OperationRow } from "../components/operation-row";
@@ -27,6 +27,11 @@ export function OperationsTab({ operations, onDeleteOperation, onDeleteAll, canD
     debounceMs: 150,
   });
 
+  const handleCopyJson = () => {
+    const json = JSON.stringify(filteredOperations, null, 2);
+    navigator.clipboard.writeText(json);
+  };
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -37,15 +42,26 @@ export function OperationsTab({ operations, onDeleteOperation, onDeleteAll, canD
           </p>
         </div>
         {operations.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
-            onClick={onDeleteAll}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Eliminar todas
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground h-7 px-2"
+              onClick={handleCopyJson}
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              Copiar JSON
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2"
+              onClick={onDeleteAll}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Eliminar todas
+            </Button>
+          </>
         )}
       </div>
 

@@ -212,13 +212,22 @@ export default function SyncPage() {
     });
 
     try {
-      // Clear schema hash to force fresh database creation
+      // Clear ALL sync-related localStorage to force complete reset
+      // This is critical when switching browsers - the old IndexedDB may have stale schema
       localStorage.removeItem(SCHEMA_HASH_KEY);
 
-      // Clear pull cursor to sync from beginning
-      const namespace = getLocalDatabaseNamespace();
-      const cursorKey = getPullCursorStorageKey(namespace);
-      localStorage.removeItem(cursorKey);
+      // Clear pull cursor keys (all namespaces)
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key === "avileo_pull_cursor" || key.startsWith("avileo_pull_cursor:"))) {
+          localStorage.removeItem(key);
+          i--; // Adjust index after removal
+        }
+      }
+
+      // Clear namespace so a fresh database name is used
+      // This prevents stale IndexedDB from old browser being reused
+      localStorage.removeItem("avileo_local_db_namespace");
 
       // Reset the database (closes PGlite and deletes IndexedDB)
       await resetDatabase();
