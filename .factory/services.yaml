@@ -1,9 +1,23 @@
 commands:
-  install: bun install
-  build: bun run build
-  typecheck: cd packages/app && bun run typecheck
-  test:app: cd packages/app && bun run test --run
-  test:backend: cd packages/backend && bun run test --run
-  lint: echo "No lint command configured"
+  install: cd "/Users/leobar37/code/avileo" && bun install
+  build: cd "/Users/leobar37/code/avileo" && bun run build
+  typecheck: cd "/Users/leobar37/code/avileo/packages/backend" && bun run build && cd "/Users/leobar37/code/avileo/packages/app" && bun run typecheck
+  test: cd "/Users/leobar37/code/avileo/packages/backend" && bun run test:run && cd "/Users/leobar37/code/avileo/packages/app" && bun run test --run
+  test_backend: cd "/Users/leobar37/code/avileo/packages/backend" && bun run test:run
+  test_app: cd "/Users/leobar37/code/avileo/packages/app" && bun run test --run
+  lint: echo "No lint command configured for this repo"
 
-services: {}
+services:
+  backend:
+    start: cd "/Users/leobar37/code/avileo/packages/backend" && PORT=3100 bun run dev
+    stop: lsof -ti :3100 | xargs kill
+    healthcheck: curl -sf http://127.0.0.1:3100/health
+    port: 3100
+    depends_on: []
+
+  frontend:
+    start: cd "/Users/leobar37/code/avileo/packages/app" && PORT=5173 bun run dev -- --port 5173 --host 127.0.0.1
+    stop: lsof -ti :5173 | xargs kill
+    healthcheck: curl -sf http://127.0.0.1:5173
+    port: 5173
+    depends_on: [backend]
