@@ -1,0 +1,94 @@
+{
+  "imageId": "cuaderno-tanchy-41",
+  "imageFile": "Cuaderno Tanchy_41.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date not clearly visible.",
+    "Multiple payment markers including yapeo, NP, P."
+  ],
+  "imageLevelNotes": [
+    "Full page with many entries.",
+    "Multiple circled amounts.",
+    "Various product codes."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": null,
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.3
+      },
+      "blockNotes": ["Date not visible"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "28 Angula P = x12 = 47.7",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "28 Angula P", "normalizedCandidate": "Angula P", "similarTo": [], "confidence": 0.75},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale amount", "customerRef": "Angula P", "amount": 47.7, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.8}],
+          "items": [{"rawText": "x12", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 12.0, "lineAmount": 47.7, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 47.7, "total": 47.7, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["number_prefix"],
+          "notes": [],
+          "confidence": 0.75
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Julian Urbina = 9 pollos = 46.4 + 11.5 = 57.9 yapeo",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Julian Urbina", "normalizedCandidate": "Julian Urbina", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "pollos with yapeo", "customerRef": "Julian Urbina", "amount": 57.9, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.85}],
+          "items": [{"rawText": "9 pollos", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": "9", "unitPrice": null, "lineAmount": 46.4, "confidence": 0.75}],
+          "operations": [{"rawText": "46.4 + 11.5", "operator": "+", "operands": [46.4, 11.5], "result": 57.9, "confidence": 0.9}],
+          "amounts": {"subtotal": 57.9, "total": 57.9, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.84
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Violeta San Isidro = (26)",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Violeta San Isidro", "normalizedCandidate": "Violeta San Isidro", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with circled amount", "customerRef": "Violeta San Isidro", "amount": 26.0, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.8}],
+          "items": [],
+          "operations": [],
+          "amounts": {"subtotal": 26.0, "total": 26.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": 26.0},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": true, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "NP",
+          "lineType": "header_line",
+          "customer": {"rawName": null, "normalizedCandidate": null, "similarTo": [], "confidence": 0.3},
+          "entries": [],
+          "items": [],
+          "operations": [],
+          "amounts": {"subtotal": null, "total": null, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "no_pago", "yapeoConfirmed": false, "pendingYape": false, "noPago": true, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": true, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["isolated_marker"],
+          "notes": [],
+          "confidence": 0.6
+        }
+      ]
+    }
+  ]
+}

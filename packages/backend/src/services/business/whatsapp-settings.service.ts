@@ -74,8 +74,8 @@ export class WhatsAppSettingsService {
   async getStatus(ctx: RequestContext): Promise<WhatsAppConnectionStatus> {
     const settings = await this.repository.getOrCreate(ctx);
 
-    // If connected, just return status
-    if (settings.isConnected && settings.instanceName) {
+    // If we have an instance name, always check the real connection state with Evolution API
+    if (settings.instanceName) {
       try {
         const state = await this.evolutionService.getConnectionState(
           settings.instanceName
@@ -83,51 +83,42 @@ export class WhatsAppSettingsService {
 
         const isActuallyConnected = state === "open";
 
+        // If the actual state differs from our stored state, update the database
         if (isActuallyConnected !== settings.isConnected) {
           await this.repository.updateConnection(ctx, settings.id, {
             isConnected: isActuallyConnected,
-            phoneNumber: settings.phoneNumber,
+            phoneNumber: isActuallyConnected ? settings.phoneNumber : null,
             instanceName: settings.instanceName,
           });
         }
 
-        return {
-          isConnected: isActuallyConnected,
-          state,
-          phoneNumber: settings.phoneNumber,
-          instanceName: settings.instanceName,
-          qrCode: null,
-        };
-      } catch (error) {
-        console.error("Failed to get WhatsApp status:", error);
-        return {
-          isConnected: false,
-          state: "unknown",
-          phoneNumber: settings.phoneNumber,
-          instanceName: settings.instanceName,
-          qrCode: null,
-        };
-      }
-    }
+        // If connected, return immediately
+        if (isActuallyConnected) {
+          return {
+            isConnected: true,
+            state,
+            phoneNumber: settings.phoneNumber,
+            instanceName: settings.instanceName,
+            qrCode: null,
+          };
+        }
 
-    // If we have a valid stored QR, return it
-    if (
-      settings.qrCode &&
-      settings.qrCodeExpiresAt &&
-      settings.qrCodeExpiresAt > new Date()
-    ) {
-      return {
-        isConnected: false,
-        state: "connecting",
-        phoneNumber: settings.phoneNumber,
-        instanceName: settings.instanceName,
-        qrCode: settings.qrCode,
-      };
-    }
+        // Not connected according to Evolution API - check if we have a valid QR
+        if (
+          settings.qrCode &&
+          settings.qrCodeExpiresAt &&
+          settings.qrCodeExpiresAt > new Date()
+        ) {
+          return {
+            isConnected: false,
+            state: "connecting",
+            phoneNumber: settings.phoneNumber,
+            instanceName: settings.instanceName,
+            qrCode: settings.qrCode,
+          };
+        }
 
-    // If we have instance name but no valid QR, try to generate one
-    if (settings.instanceName) {
-      try {
+        // No valid QR, try to generate a new one
         const { qrCode } = await this.evolutionService.connectInstance(
           settings.instanceName
         );
@@ -145,9 +136,24 @@ export class WhatsAppSettingsService {
           qrCode,
         };
       } catch (error) {
-        console.error("Failed to generate QR code:", error);
-        // Continue to return status without QR
+        console.error("Failed to get WhatsApp status:", error);
+        // Fall through to return offline state
       }
+    }
+
+    // If we have a valid stored QR but no instance name, return it
+    if (
+      settings.qrCode &&
+      settings.qrCodeExpiresAt &&
+      settings.qrCodeExpiresAt > new Date()
+    ) {
+      return {
+        isConnected: false,
+        state: "connecting",
+        phoneNumber: settings.phoneNumber,
+        instanceName: settings.instanceName,
+        qrCode: settings.qrCode,
+      };
     }
 
     // Not connected, no instance

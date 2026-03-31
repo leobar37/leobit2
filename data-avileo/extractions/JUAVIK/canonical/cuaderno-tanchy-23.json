@@ -1,0 +1,358 @@
+{
+  "imageId": "cuaderno-tanchy-23",
+  "imageFile": "Cuaderno Tanchy_23.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date: Jueves 1:48g - unclear date format.",
+    "Multiple payment markers including yapeo."
+  ],
+  "imageLevelNotes": [
+    "Date partially illegible.",
+    "Many entries with arrows and circled amounts.",
+    "yapeo marker visible."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [
+    {
+      "rawText": "Jueves 1:48g",
+      "normalizedDate": null,
+      "confidence": 0.4
+    }
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "Jueves 1:48g",
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.4
+      },
+      "blockNotes": ["Date unclear - possibly February 2026"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Francisca x11 = 30?1/9 = x?3 p",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Francisca",
+            "normalizedCandidate": "Francisca",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Francisca",
+              "amount": 30.19,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.65
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 30.19,
+              "confidence": 0.6
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 30.19,
+            "total": 30.19,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": ["amount_calculation_mismatch"],
+          "notes": [],
+          "confidence": 0.62
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Nictalia x11 = (55)",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Nictalia",
+            "normalizedCandidate": "Nictalia",
+            "similarTo": [],
+            "confidence": 0.78
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with circled amount",
+              "customerRef": "Nictalia",
+              "amount": 55.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.8
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 55.0,
+              "confidence": 0.75
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 55.0,
+            "total": 55.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": 55.0
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": true,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Manuela x11.10 = 21.7",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Manuela",
+            "normalizedCandidate": "Manuela",
+            "similarTo": [],
+            "confidence": 0.9
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Manuela",
+              "amount": 21.7,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.82
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11.10",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.1,
+              "lineAmount": 21.7,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 21.7,
+            "total": 21.7,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Bodeni x12 = 29.3p",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Bodeni",
+            "normalizedCandidate": "Bodeni",
+            "similarTo": [],
+            "confidence": 0.75
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Bodeni",
+              "amount": 29.3,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.82
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x12",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 12.0,
+              "lineAmount": 29.3,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 29.3,
+            "total": 29.3,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Alto-s.t x11 = 27.9 + 25.7",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Alto-s.t",
+            "normalizedCandidate": "Alto S.T",
+            "similarTo": [],
+            "confidence": 0.7
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "composite sale",
+              "customerRef": "Alto-s.t",
+              "amount": 53.6,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.75
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 27.9,
+              "confidence": 0.72
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "27.9 + 25.7",
+              "operator": "+",
+              "operands": [27.9, 25.7],
+              "result": 53.6,
+              "confidence": 0.8
+            }
+          ],
+          "amounts": {
+            "subtotal": 27.9,
+            "total": 53.6,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        }
+      ]
+    }
+  ]
+}

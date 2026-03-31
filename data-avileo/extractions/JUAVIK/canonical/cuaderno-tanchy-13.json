@@ -1,0 +1,610 @@
+{
+  "imageId": "cuaderno-tanchy-13",
+  "imageFile": "Cuaderno Tanchy_13.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date found: Jueves 12-2-26.",
+    "All payment markers found: P, NP, XY, yapeo.",
+    "Many customer names partially unclear."
+  ],
+  "imageLevelNotes": [
+    "Page has explicit date at top.",
+    "Dense entries with mixed legibility.",
+    "Multiple payment markers present."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [
+    {
+      "rawText": "Jueves 12-2-26",
+      "normalizedDate": "2026-02-12",
+      "confidence": 0.92
+    }
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "Jueves 12-2-26",
+        "normalizedDate": "2026-02-12",
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.92
+      },
+      "blockNotes": [],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Patricia x10.6 = 71",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Patricia",
+            "normalizedCandidate": "Patricia",
+            "similarTo": [],
+            "confidence": 0.92
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Patricia",
+              "amount": 71.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.85
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.6",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.6,
+              "lineAmount": 71.0,
+              "confidence": 0.82
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 71.0,
+            "total": 71.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.85
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Olga + x10.8 = 52.3 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Olga",
+            "normalizedCandidate": "Olga",
+            "similarTo": [],
+            "confidence": 0.9
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Olga",
+              "amount": 52.3,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.88
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 52.3,
+              "confidence": 0.85
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 52.3,
+            "total": 52.3,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.88
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Carmen + x10.8 = 71.8 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Carmen",
+            "normalizedCandidate": "Carmen",
+            "similarTo": [],
+            "confidence": 0.9
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Carmen",
+              "amount": 71.8,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.88
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 71.8,
+              "confidence": 0.85
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 71.8,
+            "total": 71.8,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.88
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Roxana x10.8 = 23.8 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Roxana",
+            "normalizedCandidate": "Roxana",
+            "similarTo": [],
+            "confidence": 0.9
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Roxana",
+              "amount": 23.8,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.88
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 23.8,
+              "confidence": 0.85
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 23.8,
+            "total": 23.8,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.88
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Sofia x10.8 = 23.7 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Sofia",
+            "normalizedCandidate": "Sofia",
+            "similarTo": [],
+            "confidence": 0.92
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Sofia",
+              "amount": 23.7,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.88
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 23.7,
+              "confidence": 0.85
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 23.7,
+            "total": 23.7,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.88
+        },
+        {
+          "lineIndex": 5,
+          "rawLineText": "Morena x10.8 = 26.4 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Morena",
+            "normalizedCandidate": "Morena",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Morena",
+              "amount": 26.4,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.86
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 26.4,
+              "confidence": 0.82
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 26.4,
+            "total": 26.4,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.86
+        },
+        {
+          "lineIndex": 6,
+          "rawLineText": "Sally x11 = 23.7 +12.5 -36.2 NP",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Sally",
+            "normalizedCandidate": "Sally",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with NP marker",
+              "customerRef": "Sally",
+              "amount": 36.2,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.78
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 23.7,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "23.7 + 12.5 = 36.2",
+              "operator": "+",
+              "operands": [
+                23.7,
+                12.5
+              ],
+              "result": 36.2,
+              "confidence": 0.85
+            }
+          ],
+          "amounts": {
+            "subtotal": 23.7,
+            "total": 36.2,
+            "amountPaid": null,
+            "balanceDue": 36.2,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "no_pago",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": true,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": true,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 7,
+          "rawLineText": "Emy Brenda x10.9 = 26.3 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Emy Brenda",
+            "normalizedCandidate": "Emy Brenda",
+            "similarTo": [],
+            "confidence": 0.85
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Emy Brenda",
+              "amount": 26.3,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.86
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.9",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.9,
+              "lineAmount": 26.3,
+              "confidence": 0.82
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 26.3,
+            "total": 26.3,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.85
+        },
+        {
+          "lineIndex": 8,
+          "rawLineText": "Liz Asencio x11 = 29.2 XY",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Liz Asencio",
+            "normalizedCandidate": "Liz Asencio",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with XY marker",
+              "customerRef": "Liz Asencio",
+              "amount": 29.2,
+              "paymentMethod": null,
+              "paymentStatus": "pending_yape",
+              "confidence": 0.82
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 29.2,
+              "confidence": 0.82
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 29.2,
+            "total": 29.2,
+            "amountPaid": null,
+            "balanceDue": 29.2,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "pending_yape",
+            "yapeoConfirmed": false,
+            "pendingYape": true,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": true
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.84
+        }
+      ]
+    }
+  ]
+}

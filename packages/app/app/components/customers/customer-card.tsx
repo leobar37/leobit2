@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
 import type { Customer } from "~/lib/db/schema";
 
-import { useCustomerGroupsWithDetails } from "~/hooks/use-customer-groups-with-details";
-import { useCustomerTagsWithDetails } from "~/hooks/use-customer-tags-with-details";
+import { useCustomerGroupsWithDetails, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
+import { useCustomerTagsWithDetails, type CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";
 import { TagBadge } from "~/components/tags";
 import {
   MinimalCard,
@@ -21,6 +21,8 @@ interface CustomerCardProps {
   selected?: boolean;
   onSelect?: (selected: boolean) => void;
   onNavigate?: () => void;
+  preloadedTags?: CustomerTagWithDetails[];
+  preloadedGroups?: CustomerGroupBadgeItem[];
 }
 
 export function CustomerCard({
@@ -32,10 +34,18 @@ export function CustomerCard({
   selected = false,
   onSelect,
   onNavigate,
+  preloadedTags,
+  preloadedGroups,
 }: CustomerCardProps) {
   const isPending = customer.syncStatus === "pending";
-  const { data: customerTags } = useCustomerTagsWithDetails(customer.id);
-  const { data: customerGroups } = useCustomerGroupsWithDetails(customer.id);
+  const { data: customerTagsQuery } = useCustomerTagsWithDetails(
+    preloadedTags ? null : customer.id
+  );
+  const { data: customerGroupsQuery } = useCustomerGroupsWithDetails(
+    preloadedGroups ? null : customer.id
+  );
+  const customerTags = preloadedTags ?? customerTagsQuery;
+  const customerGroups = preloadedGroups ?? customerGroupsQuery;
 
   const handleSelectClick = (e: React.MouseEvent) => {
     e.stopPropagation();

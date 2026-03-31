@@ -10,13 +10,21 @@ import type {
   CreateCustomerInput,
   UpdateCustomerInput,
   CustomerSearchFilters,
+  CustomerPageQuery,
 } from "~/lib/services/customer-service";
 
 const QUERY_KEYS = {
   customers: ["customers-new"],
   customer: (id: string) => ["customers-new", id],
   search: (filters: CustomerSearchFilters) => ["customers-new", "search", filters],
+  page: (query: CustomerPageQuery) => ["customers-new", "page", query],
+  tags: (customerIds: string[]) => ["customers-new", "tags", customerIds],
 } as const;
+
+export interface PaginatedCustomersResult {
+  items: Customer[];
+  total: number;
+}
 
 /**
  * Get all customers for the current business
@@ -29,6 +37,27 @@ export function useCustomers(filters?: CustomerSearchFilters) {
     queryFn: async () => {
       return customerService.findByBusiness(filters);
     },
+  });
+}
+
+export function usePaginatedCustomers(query: CustomerPageQuery) {
+  const customerService = useCustomerService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.page(query),
+    queryFn: async (): Promise<PaginatedCustomersResult> => {
+      return customerService.findPageByBusiness(query);
+    },
+  });
+}
+
+export function useCustomerTagsSummary(customerIds: string[]) {
+  const customerService = useCustomerService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.tags(customerIds),
+    queryFn: async () => customerService.getCustomerTagsForCustomers(customerIds),
+    enabled: customerIds.length > 0,
   });
 }
 

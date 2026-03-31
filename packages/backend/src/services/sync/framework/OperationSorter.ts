@@ -1,3 +1,4 @@
+import { ENTITY_PRIORITIES, getEntityPriority, type SyncEntity } from "@avileo/shared";
 import type { SyncOperationInput } from "../types";
 
 export interface SortResult {
@@ -6,19 +7,6 @@ export interface SortResult {
 }
 
 export class OperationSorter {
-  private entityPriority: Record<string, number> = {
-    sales: 1,
-    sale_items: 2,
-    customer_groups: 3,
-    customer_group_members: 4,
-    purchases: 1,
-    purchase_items: 2,
-    products: 1,
-    product_variants: 2,
-    distribucion: 1,
-    distribucion_items: 2,
-  };
-
   sort(operations: SyncOperationInput[]): SortResult {
     const sortedOperations = [...operations].sort((a, b) => {
       const aKey = a.syncGroupId ?? "";
@@ -27,9 +15,9 @@ export class OperationSorter {
         return aKey > bKey ? 1 : -1;
       }
 
-      const pA = this.entityPriority[a.entityType] ?? 99;
-      const pB = this.entityPriority[b.entityType] ?? 99;
-      if (pA !== pB) return pA - pB;
+      const priorityA = getEntityPriority(a.entityType as SyncEntity);
+      const priorityB = getEntityPriority(b.entityType as SyncEntity);
+      if (priorityA !== priorityB) return priorityA - priorityB;
 
       return new Date(a.localTimestamp).getTime() - new Date(b.localTimestamp).getTime();
     });
@@ -42,7 +30,7 @@ export class OperationSorter {
     };
   }
 
-  getPriorityMap(): Record<string, number> {
-    return { ...this.entityPriority };
+  getPriorityMap(): Partial<Record<SyncEntity, number>> {
+    return { ...ENTITY_PRIORITIES };
   }
 }

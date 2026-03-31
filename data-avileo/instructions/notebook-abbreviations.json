@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "1.0.0",
+  "dataset": "JUAVIK",
+  "entries": [
+    {
+      "token": "yapeo",
+      "normalizedMeaning": "payment made by Yape",
+      "status": "confirmed",
+      "paymentMethod": "yape",
+      "paymentStatus": "paid",
+      "confidence": "high"
+    },
+    {
+      "token": "xyapear",
+      "normalizedMeaning": "pending payment by Yape",
+      "status": "confirmed",
+      "paymentMethod": "yape",
+      "paymentStatus": "pending_yape",
+      "confidence": "high"
+    },
+    {
+      "token": "x yapear",
+      "normalizedMeaning": "pending payment by Yape",
+      "status": "confirmed",
+      "paymentMethod": "yape",
+      "paymentStatus": "pending_yape",
+      "confidence": "high"
+    },
+    {
+      "token": "NP",
+      "normalizedMeaning": "no payment",
+      "status": "confirmed",
+      "paymentMethod": null,
+      "paymentStatus": "no_pago",
+      "confidence": "high"
+    },
+    {
+      "token": "pago anterior",
+      "normalizedMeaning": "reference to previous payment",
+      "status": "confirmed",
+      "affects": "payment_reference",
+      "confidence": "high"
+    },
+    {
+      "token": "actual",
+      "normalizedMeaning": "current amount or carried balance",
+      "status": "tentative",
+      "affects": "carry_over_or_balance",
+      "confidence": "medium"
+    },
+    {
+      "token": "+",
+      "normalizedMeaning": "sum or concatenated financial fragments",
+      "status": "tentative",
+      "affects": "arithmetic_or_multi_entry",
+      "confidence": "medium"
+    },
+    {
+      "token": "x",
+      "normalizedMeaning": "context dependent marker",
+      "status": "tentative",
+      "affects": "quantity_or_pending_payment_marker",
+      "confidence": "low"
+    },
+    {
+      "token": "1/2",
+      "normalizedMeaning": "fractional quantity or presentation",
+      "status": "tentative",
+      "affects": "product_quantity",
+      "confidence": "medium"
+    },
+    {
+      "token": "1/4",
+      "normalizedMeaning": "fractional quantity or presentation",
+      "status": "tentative",
+      "affects": "product_quantity",
+      "confidence": "medium"
+    },
+    {
+      "token": "P",
+      "normalizedMeaning": "unknown contextual marker",
+      "status": "unknown",
+      "affects": "requires_review",
+      "confidence": "low"
+    },
+    {
+      "token": "H",
+      "normalizedMeaning": "unknown contextual marker",
+      "status": "unknown",
+      "affects": "requires_review",
+      "confidence": "low"
+    },
+    {
+      "token": "CH",
+      "normalizedMeaning": "unknown contextual marker",
+      "status": "unknown",
+      "affects": "requires_review",
+      "confidence": "low"
+    },
+    {
+      "token": "ND",
+      "normalizedMeaning": "unknown contextual marker",
+      "status": "unknown",
+      "affects": "requires_review",
+      "confidence": "low"
+    },
+    {
+      "token": "circled_amount",
+      "normalizedMeaning": "highlighted amount with unclear business meaning",
+      "status": "tentative",
+      "affects": "balance_or_payment_or_total",
+      "confidence": "low"
+    },
+    {
+      "token": ">",
+      "normalizedMeaning": "directional or carry-over marker",
+      "status": "tentative",
+      "affects": "carry_over_or_attention",
+      "confidence": "low"
+    }
+  ]
+}

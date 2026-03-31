@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Centralización del Sistema Sync - Avileo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --panel: rgba(17, 23, 34, 0.86);
+      --panel-strong: #121927;
+      --panel-soft: #1a2234;
+      --line: rgba(255, 255, 255, 0.1);
+      --line-strong: rgba(249, 115, 22, 0.35);
+      --text: #edf2f7;
+      --muted: #a4b0c2;
+      --muted-soft: #7f8aa0;
+      --orange: #f97316;
+      --orange-soft: rgba(249, 115, 22, 0.14);
+      --blue: #38bdf8;
+      --blue-soft: rgba(56, 189, 248, 0.14);
+      --green: #22c55e;
+      --green-soft: rgba(34, 197, 94, 0.14);
+      --yellow: #facc15;
+      --yellow-soft: rgba(250, 204, 21, 0.14);
+      --red: #f87171;
+      --red-soft: rgba(248, 113, 113, 0.14);
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --max-width: 1240px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(249, 115, 22, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 24%),
+        linear-gradient(180deg, #070a10 0%, #0a0d12 44%, #0d121b 100%);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.8), transparent 92%);
+      opacity: 0.35;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(var(--max-width), calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 32px;
+      background:
+        linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(160deg, rgba(56, 189, 248, 0.08), rgba(255, 255, 255, 0) 60%),
+        rgba(13, 18, 27, 0.88);
+      box-shadow: var(--shadow);
+      padding: 36px;
+      margin-bottom: 24px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -35% auto;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.22), transparent 70%);
+      filter: blur(18px);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.24);
+      color: #ffd4b4;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4.6rem);
+      line-height: 0.95;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      max-width: 10ch;
+      margin-bottom: 18px;
+    }
+
+    .hero p {
+      max-width: 68ch;
+      font-size: 1.08rem;
+      color: var(--muted);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.9fr;
+      gap: 24px;
+      align-items: end;
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .signal {
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 18px 18px 16px;
+      backdrop-filter: blur(12px);
+    }
+
+    .signal-label {
+      color: var(--muted-soft);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 6px;
+    }
+
+    .signal strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+      color: var(--muted-soft);
+      font-size: 0.92rem;
+    }
+
+    .meta span {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .nav {
+      position: sticky;
+      top: 14px;
+      z-index: 20;
+      margin-bottom: 26px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(11, 15, 23, 0.84);
+      backdrop-filter: blur(16px);
+      padding: 12px;
+    }
+
+    .nav ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      text-decoration: none;
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid transparent;
+      transition: 180ms ease;
+      font-size: 0.94rem;
+      font-weight: 600;
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      color: var(--text);
+      border-color: rgba(249, 115, 22, 0.28);
+      background: rgba(249, 115, 22, 0.08);
+      outline: none;
+    }
+
+    section {
+      margin-bottom: 28px;
+    }
+
+    .section-card {
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-kicker {
+      color: var(--orange);
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      max-width: 72ch;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted-soft);
+      font-size: 0.86rem;
+      white-space: nowrap;
+    }
+
+    .stats,
+    .grid-3,
+    .grid-2,
+    .timeline,
+    .decision-grid,
+    .risk-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .timeline { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .decision-grid { grid-template-columns: 1.1fr 0.9fr; }
+    .risk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      padding: 20px;
+    }
+
+    .card h3,
+    .card h4 {
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+    }
+
+    .card strong.number {
+      display: block;
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .accent-orange { border-color: rgba(249, 115, 22, 0.3); background: linear-gradient(180deg, var(--orange-soft), rgba(255,255,255,0.02)); }
+    .accent-blue { border-color: rgba(56, 189, 248, 0.28); background: linear-gradient(180deg, var(--blue-soft), rgba(255,255,255,0.02)); }
+    .accent-green { border-color: rgba(34, 197, 94, 0.28); background: linear-gradient(180deg, var(--green-soft), rgba(255,255,255,0.02)); }
+    .accent-yellow { border-color: rgba(250, 204, 21, 0.28); background: linear-gradient(180deg, var(--yellow-soft), rgba(255,255,255,0.02)); }
+    .accent-red { border-color: rgba(248, 113, 113, 0.28); background: linear-gradient(180deg, var(--red-soft), rgba(255,255,255,0.02)); }
+
+    .flow {
+      display: grid;
+      gap: 16px;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .flow-step,
+    .mini-panel {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      padding: 16px;
+    }
+
+    .flow-step small,
+    .mini-panel small,
+    .path-label {
+      display: block;
+      color: var(--muted-soft);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 8px;
+    }
+
+    .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--orange);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    ul,
+    ol {
+      padding-left: 1.15rem;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code,
+    .path,
+    .label-inline {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.88em;
+    }
+
+    .path {
+      color: #ffd2ad;
+      word-break: break-word;
+    }
+
+    .callout {
+      border-left: 4px solid var(--orange);
+      background: rgba(249, 115, 22, 0.08);
+      border-radius: 0 18px 18px 0;
+      padding: 18px 20px;
+      color: var(--text);
+    }
+
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline .card {
+      position: relative;
+      padding-top: 54px;
+    }
+
+    .phase {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.28);
+      color: #ffd6b3;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .footer-note {
+      color: var(--muted-soft);
+      font-size: 0.92rem;
+      text-align: center;
+      padding: 28px 12px 0;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-grid,
+      .stats,
+      .grid-3,
+      .timeline,
+      .decision-grid,
+      .risk-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .flow-row {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+        min-height: 24px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 20px, var(--max-width));
+        padding-top: 20px;
+      }
+
+      .hero,
+      .section-card {
+        padding: 22px;
+      }
+
+      .hero-grid,
+      .stats,
+      .grid-3,
+      .grid-2,
+      .timeline,
+      .decision-grid,
+      .risk-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-top {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      table,
+      tbody,
+      tr,
+      td,
+      th,
+      thead {
+        display: block;
+        width: 100%;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        border-bottom: 1px solid var(--line);
+      }
+
+      td {
+        padding: 10px 14px;
+        border-bottom: none;
+      }
+
+      td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--muted-soft);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 5px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .nav a { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero" id="inicio">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Avileo · Sync System Review</div>
+          <h1>Centralizar sin reescribir</h1>
+          <p>
+            Este documento resume el diagnóstico del sistema de sync actual, las áreas de mejora detectadas,
+            la propuesta de manejo para que la lógica deje de estar regada y un plan incremental que reduce
+            riesgo, retrabajo y costo de mantenimiento.
+          </p>
+          <div class="meta">
+            <span>Estado actual: funcional, pero subcentralizado</span>
+            <span>Enfoque: bajo churn</span>
+            <span>Objetivo: una sola fuente de verdad</span>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="signal">
+            <div class="signal-label">Veredicto</div>
+            <strong>El problema principal no es la falta de motor, sino la duplicación de políticas y metadata.</strong>
+            <span>El backend ya tiene forma de framework; lo que falta es consolidar definición, coordinación y reglas.</span>
+          </div>
+          <div class="signal">
+            <div class="signal-label">Decisión recomendada</div>
+            <strong>Formalizar el framework existente</strong>
+            <span>No conviene rehacer el sistema. Conviene encapsularlo mejor y compartir definiciones.</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="nav" aria-label="Navegación del reporte">
+      <ul>
+        <li><a href="#resumen">Resumen</a></li>
+        <li><a href="#arquitectura">Arquitectura actual</a></li>
+        <li><a href="#hallazgos">Hallazgos</a></li>
+        <li><a href="#mejoras">Áreas de mejora</a></li>
+        <li><a href="#marco">Cómo lo vamos a manejar</a></li>
+        <li><a href="#plan">Plan propuesto</a></li>
+        <li><a href="#riesgos">Riesgos</a></li>
+        <li><a href="#conclusion">Conclusión</a></li>
+      </ul>
+    </nav>
+
+    <section id="resumen">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Resumen ejecutivo</div>
+            <h2>La arquitectura sirve, pero sus reglas viven en demasiados lugares</h2>
+            <p class="section-desc">
+              El sistema actual sí tiene una base sólida: enqueue en frontend, procesamiento por lotes, handlers en backend,
+              conflictos, reintentos y pull de cambios. El dolor aparece porque los mismos conceptos se repiten en varios archivos,
+              capas y formatos.
+            </p>
+          </div>
+          <div class="pill">Meta: centralización gradual</div>
+        </div>
+
+        <div class="stats">
+          <article class="card accent-green">
+            <strong class="number">1</strong>
+            <h3>Motor backend claro</h3>
+            <p><span class="path">SyncEngine</span>, <span class="path">SyncPipeline</span> y handlers ya forman una buena base.</p>
+          </article>
+          <article class="card accent-orange">
+            <strong class="number">5+</strong>
+            <h3>Puntos duplicados</h3>
+            <p>Entity lists, prioridades, estrategias y estados se repiten entre frontend y backend.</p>
+          </article>
+          <article class="card accent-yellow">
+            <strong class="number">1</strong>
+            <h3>Infraestructura dormida</h3>
+            <p>Existe un sistema de hooks, pero hoy prácticamente no gobierna nada.</p>
+          </article>
+          <article class="card accent-blue">
+            <strong class="number">0</strong>
+            <h3>Rewrites necesarios</h3>
+            <p>La mejor salida no es rehacer. Es consolidar definiciones y coordinación.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top: 20px;">
+          <p><strong>Conclusión rápida:</strong> Avileo no necesita un sync nuevo. Necesita un <em>framework de definición y coordinación</em> que haga explícitas las reglas compartidas y reduzca la dispersión actual.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="arquitectura">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Arquitectura actual</div>
+            <h2>Cómo funciona hoy el sync</h2>
+            <p class="section-desc">
+              El sistema opera en dos direcciones: push de cambios locales al servidor y pull de cambios procesados
+              desde el servidor hacia PGlite. La estructura es entendible y relativamente madura.
+            </p>
+          </div>
+          <div class="pill">Push + Pull + Conflicts</div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-row">
+            <article class="flow-step">
+              <small>Push · frontend</small>
+              <strong>Entity Service</strong>
+              <p>Los servicios de entidad escriben localmente y delegan el enqueue vía <span class="path">BaseService.queueSync()</span>.</p>
+            </article>
+            <div class="arrow">→</div>
+            <article class="flow-step">
+              <small>Push · cola local</small>
+              <strong>SyncService</strong>
+              <p>Encola operaciones, agrupa por <span class="label-inline">syncGroupId</span>, aplica retry, backoff y dead letter.</p>
+            </article>
+            <div class="arrow">→</div>
+            <article class="flow-step">
+              <small>Push · backend</small>
+              <strong>SyncEngine</strong>
+              <p>Ordena operaciones, corre validaciones, resuelve conflictos y ejecuta handlers por entidad.</p>
+            </article>
+          </div>
+
+          <div class="flow-row">
+            <article class="flow-step">
+              <small>Pull · backend</small>
+              <strong>GET /sync/changes</strong>
+              <p>Expone cambios procesados desde <span class="path">packages/backend/src/services/sync/sync.service.ts</span>.</p>
+            </article>
+            <div class="arrow">→</div>
+            <article class="flow-step">
+              <small>Pull · frontend</small>
+              <strong>PullService</strong>
+              <p>Descarga cambios paginados y conserva un cursor de sincronización.</p>
+            </article>
+            <div class="arrow">→</div>
+            <article class="flow-step">
+              <small>Aplicación local</small>
+              <strong>change-applier</strong>
+              <p>Aplica inserts, updates y deletes a PGlite usando SQL directo.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 20px;">
+          <article class="mini-panel">
+            <small>Frontend</small>
+            <strong>Responsables clave</strong>
+            <p><span class="path">app/lib/sync/sync-service.ts</span><br><span class="path">app/lib/sync/pull-service.ts</span><br><span class="path">app/lib/services/base-service.ts</span></p>
+          </article>
+          <article class="mini-panel">
+            <small>Backend</small>
+            <strong>Responsables clave</strong>
+            <p><span class="path">backend/src/api/sync.ts</span><br><span class="path">backend/src/services/sync/sync.service.ts</span><br><span class="path">backend/src/services/sync/framework/*</span></p>
+          </article>
+          <article class="mini-panel">
+            <small>Punto fuerte</small>
+            <strong>Framework parcial ya existente</strong>
+            <p>El backend ya tiene patrón de engine, pipeline, sorter, registry y handlers.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="hallazgos">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Hallazgos principales</div>
+            <h2>Dónde está el verdadero costo de mantenimiento</h2>
+            <p class="section-desc">
+              Los problemas más caros no son de funcionalidad básica. Son de gobernanza del sync: listas duplicadas,
+              prioridades repetidas, estrategias partidas y piezas buenas que hoy no están activadas como framework real.
+            </p>
+          </div>
+          <div class="pill">Problema central: metadata dispersa</div>
+        </div>
+
+        <div class="grid-2">
+          <article class="card accent-red">
+            <h3>1. Metadata duplicada entre capas</h3>
+            <p>Los mismos conceptos viven en varios sitios y con variantes distintas.</p>
+            <ul>
+              <li><span class="path">packages/app/app/lib/sync/config.ts</span></li>
+              <li><span class="path">packages/app/app/lib/sync/sync-service.ts</span></li>
+              <li><span class="path">packages/backend/src/services/sync/framework/OperationSorter.ts</span></li>
+              <li><span class="path">packages/backend/src/api/sync.ts</span></li>
+            </ul>
+          </article>
+
+          <article class="card accent-yellow">
+            <h3>2. Infraestructura de hooks subutilizada</h3>
+            <p>El punto de extensión existe, pero la registry está vacía y no está funcionando como capa oficial de reglas pre-sync.</p>
+            <ul>
+              <li><span class="path">packages/app/app/lib/sync/registry.ts:10</span></li>
+              <li><span class="path">packages/app/app/lib/services/base-service.ts:163</span></li>
+            </ul>
+          </article>
+
+          <article class="card accent-orange">
+            <h3>3. Coordinación push/pull separada</h3>
+            <p><span class="path">SyncService</span> y <span class="path">PullService</span> funcionan bien, pero su manejo de ciclo de vida no está concentrado detrás de una única fachada.</p>
+          </article>
+
+          <article class="card accent-blue">
+            <h3>4. El backend ya es más sólido que el frontend</h3>
+            <p>La parte servidor ya tiene mentalidad de framework. El frontend todavía mezcla coordinación, configuración y política operativa.</p>
+          </article>
+        </div>
+
+        <div style="margin-top: 20px; overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Hallazgo</th>
+                <th>Evidencia</th>
+                <th>Impacto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Hallazgo">Lista de entidades repartida</td>
+                <td data-label="Evidencia"><span class="path">config.ts</span>, <span class="path">api/sync.ts</span>, <span class="path">backend/types.ts</span></td>
+                <td data-label="Impacto">Agregar una entidad implica múltiples ediciones propensas a drift.</td>
+              </tr>
+              <tr>
+                <td data-label="Hallazgo">Mapa de prioridad duplicado</td>
+                <td data-label="Evidencia"><span class="path">sync-service.ts:670</span>, <span class="path">OperationSorter.ts:9</span></td>
+                <td data-label="Impacto">Riesgo de inconsistencias de orden en operaciones agrupadas.</td>
+              </tr>
+              <tr>
+                <td data-label="Hallazgo">Hooks sin gobierno real</td>
+                <td data-label="Evidencia"><span class="path">registry.ts:10</span> vacío</td>
+                <td data-label="Impacto">Las reglas previas al sync no tienen una sede oficial clara.</td>
+              </tr>
+              <tr>
+                <td data-label="Hallazgo">Pull atado al audit log</td>
+                <td data-label="Evidencia"><span class="path">sync.service.ts:111</span></td>
+                <td data-label="Impacto">Mayor acoplamiento entre escritura de auditoría y cambios servidos al cliente.</td>
+              </tr>
+              <tr>
+                <td data-label="Hallazgo">DDL local manual</td>
+                <td data-label="Evidencia"><span class="path">sync-service.ts</span> crea tablas locales por SQL directo</td>
+                <td data-label="Impacto">Más riesgo de drift entre schema compartido y schema local.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="mejoras">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Áreas de mejora</div>
+            <h2>Qué debemos mejorar y por qué</h2>
+            <p class="section-desc">
+              Estas mejoras apuntan a reducir fricción futura: menos archivos que tocar, menos reglas escondidas,
+              menos divergencia entre frontend y backend, y una historia más clara para sumar entidades nuevas.
+            </p>
+          </div>
+          <div class="pill">Priorizar bajo riesgo / alto impacto</div>
+        </div>
+
+        <div class="grid-3">
+          <article class="card accent-orange">
+            <h3>Fuente única de verdad</h3>
+            <p>Consolidar entidades syncables, prioridades, capacidades y estrategias en un módulo compartido.</p>
+          </article>
+          <article class="card accent-green">
+            <h3>Activar la capa de hooks</h3>
+            <p>Usar la registry como punto oficial para reglas de validación previas al enqueue o al envío.</p>
+          </article>
+          <article class="card accent-blue">
+            <h3>Coordinar push y pull</h3>
+            <p>Introducir una fachada liviana para gobernar ciclo de vida, estado y coordinación de ambos servicios.</p>
+          </article>
+          <article class="card accent-yellow">
+            <h3>Reducir drift de esquema</h3>
+            <p>Endurecer el manejo del schema local para no depender de DDL manual dispersa.</p>
+          </article>
+          <article class="card accent-red">
+            <h3>Normalizar políticas</h3>
+            <p>Evitar que estados, conflicto y prioridades sean definidos de forma distinta en cada capa.</p>
+          </article>
+          <article class="card accent-blue">
+            <h3>Subir el nivel de pruebas</h3>
+            <p>Agregar pruebas de grouped operations, idempotencia, conflict flow y ciclo push→pull.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top: 22px;">
+          <p><strong>Principio rector:</strong> cualquier mejora debe bajar la cantidad de lugares donde se define la misma regla, sin desarmar el engine actual.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="marco">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Cómo lo vamos a manejar</div>
+            <h2>Marco propuesto: Sync Definition Framework</h2>
+            <p class="section-desc">
+              En lugar de crear otro motor, proponemos encapsular el existente detrás de un marco de definiciones compartidas,
+              extensiones claras y una coordinación más explícita en frontend.
+            </p>
+          </div>
+          <div class="pill">Formalizar lo que ya funciona</div>
+        </div>
+
+        <div class="decision-grid">
+          <article class="card accent-orange">
+            <h3>Pilar 1 · Shared Sync Manifest</h3>
+            <p>Un módulo compartido que defina por entidad:</p>
+            <ul>
+              <li>nombre canónico</li>
+              <li>prioridad de procesamiento</li>
+              <li>si actualiza <code>sync_status</code></li>
+              <li>si permite self-heal</li>
+              <li>estrategia de conflicto</li>
+              <li>relaciones parent/child cuando aplique</li>
+            </ul>
+          </article>
+
+          <article class="card accent-blue">
+            <h3>Pilar 2 · Sync Coordinator</h3>
+            <p>Una fachada en frontend que coordine:</p>
+            <ul>
+              <li>inicio y parada de auto-push / auto-pull</li>
+              <li>estado unificado visible para UI</li>
+              <li>gating online/offline</li>
+              <li>invalidaciones y side effects</li>
+            </ul>
+          </article>
+
+          <article class="card accent-green">
+            <h3>Pilar 3 · Hook Governance</h3>
+            <p>La registry pasa a ser el lugar oficial para reglas de pre-sync, no solo una utilidad opcional.</p>
+          </article>
+
+          <article class="card accent-yellow">
+            <h3>Pilar 4 · Definition-driven backend</h3>
+            <p>El backend sigue usando handlers y engine, pero consume definiciones compartidas para ordenar, validar y registrar entidades.</p>
+          </article>
+        </div>
+
+        <div class="grid-2" style="margin-top: 20px;">
+          <article class="card accent-red">
+            <h3>Lo que no vamos a hacer</h3>
+            <ul>
+              <li>No vamos a reemplazar el engine del backend.</li>
+              <li>No vamos a mover todo a otra tecnología de sync.</li>
+              <li>No vamos a rehacer todos los handlers.</li>
+              <li>No vamos a abrir una migración gigante de una sola vez.</li>
+            </ul>
+          </article>
+          <article class="card accent-green">
+            <h3>Lo que sí vamos a hacer</h3>
+            <ul>
+              <li>Consolidar definición.</li>
+              <li>Centralizar gobierno de reglas.</li>
+              <li>Reducir duplicación de política.</li>
+              <li>Mejorar extensibilidad con riesgo controlado.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="plan">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Plan propuesto</div>
+            <h2>Plan incremental para ordenar el sync</h2>
+            <p class="section-desc">
+              El plan está pensado para capturar el mayor valor primero. Las primeras fases tienen poco riesgo técnico y
+              alto impacto sobre mantenibilidad y claridad operativa.
+            </p>
+          </div>
+          <div class="pill">Orden recomendado: 1 → 5</div>
+        </div>
+
+        <div class="timeline">
+          <article class="card accent-orange">
+            <span class="phase">F1</span>
+            <h3>Extraer definiciones compartidas</h3>
+            <p>Crear una sola fuente de verdad para entidades, prioridades, capacidades y estrategias base.</p>
+            <ul>
+              <li>Mayor impacto con menor riesgo</li>
+              <li>Reduce drift inmediato</li>
+            </ul>
+          </article>
+          <article class="card accent-green">
+            <span class="phase">F2</span>
+            <h3>Activar hooks</h3>
+            <p>Convertir la registry en capa real de gobierno para reglas previas al sync.</p>
+            <ul>
+              <li>Empezar con 1 o 2 entidades críticas</li>
+              <li>Medir valor antes de expandir</li>
+            </ul>
+          </article>
+          <article class="card accent-blue">
+            <span class="phase">F3</span>
+            <h3>Agregar Sync Coordinator</h3>
+            <p>Unificar el ciclo de vida de push/pull sin tocar la lógica interna de procesamiento.</p>
+          </article>
+          <article class="card accent-yellow">
+            <span class="phase">F4</span>
+            <h3>Endurecer schema y constantes</h3>
+            <p>Reducir SQL manual y centralizar estados / estrategias donde corresponda.</p>
+          </article>
+          <article class="card accent-red">
+            <span class="phase">F5</span>
+            <h3>Revisar fuente del pull</h3>
+            <p>Evaluar si conviene mantener el acoplamiento actual al audit log o desacoplarlo más.</p>
+          </article>
+        </div>
+
+        <div style="margin-top: 20px; overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Fase</th>
+                <th>Objetivo</th>
+                <th>Resultado esperado</th>
+                <th>Riesgo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Fase">F1</td>
+                <td data-label="Objetivo">Eliminar definiciones repetidas</td>
+                <td data-label="Resultado esperado">Agregar o cambiar una entidad será un cambio localizado y predecible</td>
+                <td data-label="Riesgo">Bajo</td>
+              </tr>
+              <tr>
+                <td data-label="Fase">F2</td>
+                <td data-label="Objetivo">Dar sede oficial a reglas pre-sync</td>
+                <td data-label="Resultado esperado">Menos lógica escondida dentro de servicios o handlers</td>
+                <td data-label="Riesgo">Bajo</td>
+              </tr>
+              <tr>
+                <td data-label="Fase">F3</td>
+                <td data-label="Objetivo">Unificar coordinación frontend</td>
+                <td data-label="Resultado esperado">Manejo más claro de auto-sync, pull, estado y efectos colaterales</td>
+                <td data-label="Riesgo">Bajo / Medio</td>
+              </tr>
+              <tr>
+                <td data-label="Fase">F4</td>
+                <td data-label="Objetivo">Reducir drift de schema y estados</td>
+                <td data-label="Resultado esperado">Menor divergencia entre definición compartida y persistencia local</td>
+                <td data-label="Riesgo">Medio</td>
+              </tr>
+              <tr>
+                <td data-label="Fase">F5</td>
+                <td data-label="Objetivo">Revisar coupling del pull</td>
+                <td data-label="Resultado esperado">Mejor claridad del source of truth de cambios servidos al cliente</td>
+                <td data-label="Riesgo">Medio</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="riesgos">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Riesgos</div>
+            <h2>Qué pasa si no ordenamos esto ahora</h2>
+            <p class="section-desc">
+              El sistema puede seguir funcionando, pero cada nueva entidad o cambio de política hará crecer el costo oculto.
+            </p>
+          </div>
+          <div class="pill">Costo diferido = deuda operativa</div>
+        </div>
+
+        <div class="risk-grid">
+          <article class="card accent-red">
+            <h3>Riesgo de drift</h3>
+            <p>Las mismas reglas pueden divergir entre frontend y backend sin que sea obvio en revisión.</p>
+          </article>
+          <article class="card accent-yellow">
+            <h3>Riesgo de onboarding lento</h3>
+            <p>Entender dónde tocar el sync seguirá siendo más caro para cualquiera que entre al módulo.</p>
+          </article>
+          <article class="card accent-orange">
+            <h3>Riesgo de features lentas</h3>
+            <p>Cada entidad nueva implicará revisar múltiples listas, mapas, unions y reglas repetidas.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top: 20px;">
+          <p><strong>Riesgo más importante:</strong> no es una caída inmediata del sistema, sino una pérdida sostenida de velocidad y confianza al extender el sync.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="conclusion">
+      <div class="section-card">
+        <div class="section-top">
+          <div>
+            <div class="section-kicker">Conclusión</div>
+            <h2>El plan correcto es ordenar, no reconstruir</h2>
+            <p class="section-desc">
+              El sistema actual ya contiene piezas valiosas. La oportunidad está en volver explícitas sus definiciones y
+              darles una sede única para que el sync deje de sentirse repartido.
+            </p>
+          </div>
+          <div class="pill">North star: definición compartida</div>
+        </div>
+
+        <div class="grid-2">
+          <article class="card accent-green">
+            <h3>Decisión final recomendada</h3>
+            <p>Construir un <strong>Sync Definition Framework</strong> sobre la arquitectura existente, empezando por shared definitions y hook governance.</p>
+          </article>
+          <article class="card accent-blue">
+            <h3>Mensaje operativo</h3>
+            <p>Primero consolidamos definiciones, luego coordinación, y recién después tocamos temas más sensibles como el source del pull.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top: 20px;">
+          <p><strong>En una frase:</strong> Avileo no necesita otro sistema de sync; necesita que el suyo tenga una columna vertebral compartida y explícita.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">Documento generado para sintetizar el análisis del sistema sync de Avileo y proponer un camino de centralización incremental, explicativo y accionable.</p>
+  </main>
+</body>
+</html>

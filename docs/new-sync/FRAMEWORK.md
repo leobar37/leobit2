@@ -1,21 +1,168 @@
-# Sync Framework Proposal - No Decorators
+# Sync Framework Documentation
 
 > **Date:** March 2026
-> **Status:** Draft for Review
+> **Status:** Active Implementation
 
 ---
 
 ## Overview
 
-This document proposes a code generation framework for Avileo's sync system that generates handlers, types, and hooks from Drizzle schema definitions — **without using TypeScript decorators**.
+This document describes Avileo's sync system architecture. It covers both the **current implementation** (in production use) and a **future generator proposal** that may simplify development.
 
-**Why no decorators?**
-- Decorators require `experimentalDecorators` compiler option
-- Decorator metadata reflection has runtime overhead
-- Configuration is less explicit and harder to debug
-- Alternatives are more portable and easier to test
+**Key principle:** The current system uses explicit, hand-written handlers with shared definitions. The generator proposal remains future work and is not required for current development.
 
-**Alternative approach:** Configuration objects + TypeScript types + generator CLI
+---
+
+## Shared Manifest Architecture
+
+The **Shared Manifest** (`packages/shared/src/sync-manifest.ts`) is the single source of truth for all syncable entities.
+
+### Canonical vs Local-Only Entities
+
+Entities are divided into two categories:
+
+| Type | Sync Direction | Storage | Example |
+|------|---------------|---------|---------|
+| **Canonical** | Bidirectional (client ↔ server) | Both sides | `customers`, `sales`, `abonos` |
+| **Local-Only** | Client-side only | Local only | `sync_operations`, `pending_changes` |
+
+### Manifest Structure
+
+```typescript
+// packages/shared/src/sync-manifest.ts
+
+export interface SyncManifest {
+  // Entities that sync bidirectionally
+  canonicalEntities: CanonicalEntityDef[];
+  
+  // Entities that exist only on client
+  localOnlyEntities: LocalOnlyEntityDef[];
+  
+  // Cross-cutting sync configuration
+  config: {
+    batchSize: number;
+    retryAttempts: number;
+    conflictStrategy: ConflictStrategy;
+  };
+}
+
+export interface CanonicalEntityDef {
+  name: string;                    // Entity type identifier
+  table: string;                   // Database table name
+  primaryKey: string;              // UUID field name
+  syncGroupCapable: boolean;       // Can use sync_group_id
+  conflictStrategy: 'timestamp' | 'version' | 'none';
+  parentEntity?: string;           // For child entities (e.g., sale_items → sales)
+  fields: FieldDef[];
+}
+
+export interface LocalOnlyEntityDef {
+  name: string;
+  table: string;
+  primaryKey: string;
+  fields: FieldDef[];
+}
+```
+
+### Entity Priority for Sync Ordering
+
+Operations are sorted by dependency before sync to ensure parent entities are created before children:
+
+```typescript
+// packages/backend/src/services/sync/framework/OperationSorter.ts
+private entityPriority: Record<string, number> = {
+  sales: 1,
+  sale_items: 2,           // Depends on sales
+  customer_groups: 3,
+  customer_group_members: 4, // Depends on groups
+  purchases: 1,
+  purchase_items: 2,
+  distribucion: 1,
+  distribucion_items: 2,
+};
+```
+
+---
+
+## SyncCoordinator (Client-Side)
+
+The **SyncCoordinator** orchestrates the sync lifecycle on the client side. It sits between the UI components and the underlying sync services.
+
+### Responsibilities
+
+| Concern | Description |
+|---------|-------------|
+| **Queue Management** | Manages the `sync_operations` queue (pending, processing, failed) |
+| **Lifecycle Hooks** | Provides before/after hooks for sync operations (NOT blocking validators) |
+| **Status Tracking** | Tracks sync status for each entity and overall sync health |
+| **Retry Logic** | Handles exponential backoff for failed operations |
+| **Conflict Handling** | Delegates to server-side conflict resolution |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     React Components                        │
+│              (TanStack Query hooks)                         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                  SyncCoordinator                            │
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  Queue      │  │  Lifecycle  │  │   Status    │         │
+│  │  Manager    │  │  Hooks      │  │   Tracker   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                  Sync Service Layer                         │
+│    (SyncService for push, PullService for pull)             │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                     PGLite (Local DB)                       │
+│                 (IndexedDB persistence)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Differences from Old Hook System
+
+**Old approach (deprecated):** `registry.ts` with blocking sync hooks that could prevent operations
+
+**New approach:** SyncCoordinator with lifecycle hooks that observe but don't block
+
+| Aspect | Old (Hooks) | New (Coordinator) |
+|--------|-------------|-------------------|
+| Can block operations | Yes | No |
+| Purpose | Validation | Observation/Logging |
+| Registration | `registry.ts` | Direct coordinator config |
+| Returns | `{ allow: boolean }` | Nothing (void) |
+
+### Lifecycle Hooks
+
+```typescript
+// packages/app/app/lib/sync/coordinator.ts
+
+export interface SyncLifecycleHooks {
+  // Called before enqueueing an operation
+  onBeforeEnqueue?: (operation: SyncOperation) => void;
+  
+  // Called after successful enqueue
+  onAfterEnqueue?: (operation: SyncOperation) => void;
+  
+  // Called before processing a batch
+  onBeforeProcess?: (operations: SyncOperation[]) => void;
+  
+  // Called after batch processing
+  onAfterProcess?: (result: ProcessResult) => void;
+  
+  // Called when an operation fails
+  onOperationFailed?: (operation: SyncOperation, error: Error) => void;
+}
+```
+
+**Important:** Lifecycle hooks are for logging, analytics, and side effects. They **cannot** block or reject operations. Validation happens in server-side handlers.
 
 ---
 
@@ -29,7 +176,11 @@ This document proposes a code generation framework for Avileo's sync system that
 
 ---
 
-## Proposed Architecture
+## Future: Generator Proposal (Not Implemented)
+
+**Status:** This section describes a potential future enhancement. The current implementation uses explicit handlers as documented above.
+
+### Proposed Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

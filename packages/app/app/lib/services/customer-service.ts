@@ -7,9 +7,9 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, customers } from "@avileo/shared";
+import { SyncStatus, customers, customerTags, tags } from "@avileo/shared";
 import type { Customer } from "@avileo/shared";
-import { eq, like, and, or, desc, isNull, isNotNull } from "drizzle-orm";
+import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
 
 /** Input for creating a new customer */
 export interface CreateCustomerInput {
@@ -34,6 +34,24 @@ export interface CustomerSearchFilters {
   search?: string;
   hasDni?: boolean;
   hasPhone?: boolean;
+  tagIds?: string[];
+}
+
+export interface CustomerPageQuery extends CustomerSearchFilters {
+  limit: number;
+  offset: number;
+}
+
+export interface CustomerListPage {
+  items: Customer[];
+  total: number;
+}
+
+export interface CustomerTagSummary {
+  customerId: string;
+  tagId: string;
+  tagName: string;
+  tagColor: string;
 }
 
 /**
@@ -63,6 +81,52 @@ export class CustomerService extends BaseService {
     return CustomerService.ID_PREFIX;
   }
 
+  private buildFilterConditions(filters?: CustomerSearchFilters) {
+    const conditions = [eq(customers.businessId, this.businessId)];
+
+    if (filters?.search) {
+      const searchPattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(customers.name, searchPattern),
+          like(customers.dni, searchPattern),
+          like(customers.phone, searchPattern)
+        ) as never
+      );
+    }
+
+    if (filters?.hasDni === true) {
+      conditions.push(isNotNull(customers.dni) as never);
+    }
+
+    if (filters?.hasPhone === true) {
+      conditions.push(isNotNull(customers.phone) as never);
+    }
+
+    return conditions;
+  }
+
+  private async filterCustomerIdsByTags(tagIds: string[]): Promise<string[] | null> {
+    if (tagIds.length === 0) {
+      return null;
+    }
+
+    const rows = await this.db
+      .select({ customerId: customerTags.customerId })
+      .from(customerTags)
+      .innerJoin(customers, eq(customerTags.customerId, customers.id))
+      .where(
+        and(
+          eq(customers.businessId, this.businessId),
+          inArray(customerTags.tagId, tagIds)
+        )
+      )
+      .groupBy(customerTags.customerId)
+      .having(sql`count(distinct ${customerTags.tagId}) = ${tagIds.length}`);
+
+    return rows.map((row) => row.customerId);
+  }
+
   /**
    * Find a customer by ID
    */
@@ -85,25 +149,15 @@ export class CustomerService extends BaseService {
    * Optionally filtered by search query
    */
   async findByBusiness(filters?: CustomerSearchFilters): Promise<Customer[]> {
-    const conditions = [eq(customers.businessId, this.businessId)];
-
-    if (filters?.search) {
-      const searchPattern = `%${filters.search}%`;
-      conditions.push(
-        or(
-          like(customers.name, searchPattern),
-          like(customers.dni, searchPattern),
-          like(customers.phone, searchPattern)
-        ) as never
-      );
+    const tagFilteredIds = await this.filterCustomerIdsByTags(filters?.tagIds ?? []);
+    if (tagFilteredIds && tagFilteredIds.length === 0) {
+      return [];
     }
 
-    if (filters?.hasDni === true) {
-      conditions.push(isNotNull(customers.dni) as never);
-    }
+    const conditions = this.buildFilterConditions(filters);
 
-    if (filters?.hasPhone === true) {
-      conditions.push(isNotNull(customers.phone) as never);
+    if (tagFilteredIds) {
+      conditions.push(inArray(customers.id, tagFilteredIds) as never);
     }
 
     const result = await this.db
@@ -113,6 +167,77 @@ export class CustomerService extends BaseService {
       .orderBy(desc(customers.createdAt));
 
     return result as Customer[];
+  }
+
+  async countByBusiness(filters?: CustomerSearchFilters): Promise<number> {
+    const tagFilteredIds = await this.filterCustomerIdsByTags(filters?.tagIds ?? []);
+    if (tagFilteredIds && tagFilteredIds.length === 0) {
+      return 0;
+    }
+
+    const conditions = this.buildFilterConditions(filters);
+
+    if (tagFilteredIds) {
+      conditions.push(inArray(customers.id, tagFilteredIds) as never);
+    }
+
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(customers)
+      .where(and(...conditions));
+
+    return result[0]?.count ?? 0;
+  }
+
+  async findPageByBusiness(query: CustomerPageQuery): Promise<CustomerListPage> {
+    const tagFilteredIds = await this.filterCustomerIdsByTags(query.tagIds ?? []);
+    if (tagFilteredIds && tagFilteredIds.length === 0) {
+      return { items: [], total: 0 };
+    }
+
+    const conditions = this.buildFilterConditions(query);
+
+    if (tagFilteredIds) {
+      conditions.push(inArray(customers.id, tagFilteredIds) as never);
+    }
+
+    const [items, totalResult] = await Promise.all([
+      this.db
+        .select()
+        .from(customers)
+        .where(and(...conditions))
+        .orderBy(desc(customers.createdAt))
+        .limit(query.limit)
+        .offset(query.offset),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(customers)
+        .where(and(...conditions)),
+    ]);
+
+    return {
+      items: items as Customer[],
+      total: totalResult[0]?.count ?? 0,
+    };
+  }
+
+  async getCustomerTagsForCustomers(customerIds: string[]): Promise<CustomerTagSummary[]> {
+    if (customerIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.db
+      .select({
+        customerId: customerTags.customerId,
+        tagId: customerTags.tagId,
+        tagName: tags.name,
+        tagColor: tags.color,
+      })
+      .from(customerTags)
+      .innerJoin(tags, eq(customerTags.tagId, tags.id))
+      .where(inArray(customerTags.customerId, customerIds));
+
+    return result;
   }
 
   /**

@@ -1,0 +1,94 @@
+{
+  "imageId": "cuaderno-tanchy-37",
+  "imageFile": "Cuaderno Tanchy_37.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date not clearly visible.",
+    "Multiple payment markers including yapeo, XY, NP."
+  ],
+  "imageLevelNotes": [
+    "Full page with many pollo entries.",
+    "Multiple circled amounts.",
+    "Various customer types."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": null,
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.3
+      },
+      "blockNotes": ["Date not visible"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Hizn c = pollo 23.4 yapeo",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Hizn c", "normalizedCandidate": "Hizn C", "similarTo": [], "confidence": 0.7},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "pollo with yapeo", "customerRef": "Hizn c", "amount": 23.4, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "pollo", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 23.4, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 23.4, "total": 23.4, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Elita Marldon = pollo y H=21 + 45 = 62.5 xy",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Elita Marldon", "normalizedCandidate": "Elita Marldon", "similarTo": [], "confidence": 0.78},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite with XY", "customerRef": "Elita Marldon", "amount": 62.5, "paymentMethod": null, "paymentStatus": "pending_yape", "confidence": 0.75}],
+          "items": [{"rawText": "pollo H", "normalizedProductCandidate": "pollo H", "similarTo": [], "quantityText": null, "unitPrice": 21.0, "lineAmount": 21.0, "confidence": 0.7}],
+          "operations": [{"rawText": "21 + 45", "operator": "+", "operands": [21.0, 45.0], "result": 66.0, "confidence": 0.85}],
+          "amounts": {"subtotal": 66.0, "total": 62.5, "amountPaid": null, "balanceDue": 62.5, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "pending_yape", "yapeoConfirmed": false, "pendingYape": true, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": true},
+          "reviewFlags": ["amount_calculation_mismatch"],
+          "notes": [],
+          "confidence": 0.72
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Alizy ampliacion = md = 25 + 19.8 chancho n.p",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Alizy ampliacion", "normalizedCandidate": "Alizy Ampliacion", "similarTo": [], "confidence": 0.72},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "chancho with NP", "customerRef": "Alizy ampliacion", "amount": 44.8, "paymentMethod": null, "paymentStatus": "no_pago", "confidence": 0.75}],
+          "items": [{"rawText": "chancho", "normalizedProductCandidate": "chancho", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 44.8, "confidence": 0.7}],
+          "operations": [{"rawText": "25 + 19.8", "operator": "+", "operands": [25.0, 19.8], "result": 44.8, "confidence": 0.85}],
+          "amounts": {"subtotal": 44.8, "total": 44.8, "amountPaid": null, "balanceDue": 44.8, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "no_pago", "yapeoConfirmed": false, "pendingYape": false, "noPago": true, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": true, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.74
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Blanca P. x11.5 = 26.8P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Blanca P", "normalizedCandidate": "Blanca P", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Blanca P", "amount": 26.8, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.85}],
+          "items": [{"rawText": "x11.5", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.5, "lineAmount": 26.8, "confidence": 0.78}],
+          "operations": [],
+          "amounts": {"subtotal": 26.8, "total": 26.8, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.83
+        }
+      ]
+    }
+  ]
+}

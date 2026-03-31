@@ -3,41 +3,58 @@ import { ShoppingCart, Search, Plus, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { SyncStatus } from "~/components/sync/sync-status";
-import { useSales } from "~/hooks/use-sales";
+import { usePaginatedSales } from "~/hooks/use-sales";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useSaleFilters } from "~/hooks/use-sale-filters";
 import { SaleCard } from "~/components/sales/sale-card";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
+import type { Sale as SaleCardData } from "~/lib/db/schemas/sale";
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <SyncStatus /> });
 
   const { data: miDistribucion } = useMiDistribucion();
-  const { data: allSales, isLoading, error } = useSales();
   const navigate = useNavigate();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
-  // Use centralized filter hook with URL persistence
   const {
-    sortedSales,
     tab,
     setTab,
     tipo,
     setTipo,
     search,
     setSearch,
+    debouncedSearch,
     isFiltering,
-  } = useSaleFilters({
-    sales: allSales,
-    searchFields: [
-      (sale) => sale.id,
-      (sale) => sale.customer?.name ?? undefined,
-      (sale) => sale.saleType,
-    ],
-    miDistribucionId: miDistribucion?.id,
+  } = useSaleFilters({ miDistribucionId: miDistribucion?.id });
+
+  const pageSize = 100;
+  const offset = (page - 1) * pageSize;
+
+  const distribucionId = tab === "mine"
+    ? miDistribucion?.id
+    : tab === "free"
+      ? "none"
+      : "all";
+
+  const status = tab === "drafts" ? "draft" : undefined;
+  const type = tipo === "ventas" ? "instant_sale" : tipo === "pedidos" ? "pre_order" : undefined;
+
+  const { data: salesPage, isLoading, error } = usePaginatedSales({
+    limit: pageSize,
+    offset,
+    distribucionId,
+    status,
+    type,
+    search: debouncedSearch || undefined,
   });
+
+  const sales = salesPage?.items ?? [];
+  const totalSales = salesPage?.total ?? 0;
 
   // Reset to 'all' if on 'mine' tab but no distribution exists
   useEffect(() => {
@@ -45,6 +62,10 @@ export default function SalesPage() {
       setTab("all");
     }
   }, [tab, miDistribucion?.id, setTab]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, tipo, debouncedSearch]);
 
   // Log any query errors for debugging
   useEffect(() => {
@@ -154,7 +175,7 @@ export default function SalesPage() {
           </div>
         )}
 
-        {sortedSales?.length === 0 && !isLoading && (
+        {sales.length === 0 && !isLoading && (
           <div className="text-center py-8">
             <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
@@ -166,10 +187,10 @@ export default function SalesPage() {
         )}
 
         <div className="space-y-3">
-          {sortedSales?.map((sale) => (
+          {sales.map((sale) => (
             <SaleCard
               key={sale.id}
-              sale={sale as unknown as { id: string; businessId: string; customerId: string | null; sellerId: string; type: "instant_sale" | "pre_order"; saleType: "contado" | "credito"; totalAmount: string; amountPaid: string; balanceDue: string; tara: string | null; netWeight: string | null; saleDate: Date; deliveryDate: Date | null; orderDate: Date | null; status: "draft" | "confirmed" | "active" | "delivered" | "cancelled"; version: number; confirmedSnapshot: Record<string, unknown> | null; deliveredSnapshot: Record<string, unknown> | null; allowCustomerEdit: boolean; syncStatus: "pending" | "synced" | "error"; syncAttempts: number; cancelledAt: Date | null; cancelledBy: string | null; cancelReason: string | null; refundAmount: string | null; refundDate: Date | null; refundMethod: "efectivo" | "yape" | "plin" | "transferencia" | "saldo" | null; refundReference: string | null; refundNotes: string | null; advancePaymentMethod: string | null; advanceReferenceNumber: string | null; advanceProofImageId: string | null; createdAt: Date; updatedAt: Date; }}
+              sale={sale as unknown as SaleCardData}
               onClick={() => {
                 // Draft sales and confirmed pre_orders go to editor
                 // Others go to detail view
@@ -184,6 +205,15 @@ export default function SalesPage() {
               }}
             />
           ))}
+
+          {totalSales > pageSize && (
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalSales}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       </div>
 

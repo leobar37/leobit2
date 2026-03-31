@@ -17,19 +17,32 @@ The `app/lib/sync/` directory contains the sync engine that enables Avileo's off
 ├─────────────────────────────────────────────────────────────┤
 │                  TanStack Query (Cache)                     │
 ├─────────────────────────────────────────────────────────────┤
+│                  SyncCoordinator                            │
+│    (Lifecycle orchestration, queue management, status)      │
+├─────────────────────────────────────────────────────────────┤
 │                  Sync Service Layer                         │
 │    (SyncService for push, PullService for pull)             │
-├─────────────────────────────────────────────────────────────┤
-│                  Registry & Hooks                           │
-│         (pre-sync validations, business rules)              │
 ├─────────────────────────────────────────────────────────────┤
 │                     PGLite (Local DB)                       │
 │                 (IndexedDB persistence)                     │
 ├─────────────────────────────────────────────────────────────┤
 │                     REST API                                │
-│         (/sync/batch for push, /sync/changes for pull)      │
+│         (/sync/batch for push, /sync/changes for pull)     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### SyncCoordinator
+
+The **SyncCoordinator** (located at `packages/app/app/lib/sync/coordinator.ts`) orchestrates the sync lifecycle:
+
+| Responsibility | Description |
+|----------------|-------------|
+| Queue Management | Manages the `sync_operations` queue |
+| Lifecycle Hooks | Provides before/after hooks (observation only, not blocking) |
+| Status Tracking | Tracks sync status per entity and overall health |
+| Retry Logic | Exponential backoff for failed operations |
+
+**Note:** The old blocking sync hook system (in `registry.ts`) has been removed. Hooks are now non-blocking lifecycle observers only.
 
 ## Directory Structure
 
@@ -39,13 +52,11 @@ app/lib/sync/
 ├── sync-service.ts             # Push sync (client → server)
 ├── pull-service.ts             # Pull sync (server → client)
 ├── config.ts                   # Sync configuration & constants
-├── registry.ts                 # Sync hooks registry
-├── create-sync-hook.ts         # Hook builder API
 ├── manual-sync.ts              # Manual sync trigger
 ├── service-provider.tsx        # React context provider
-└── hooks/                      # Entity-specific sync hooks
-    ├── index.ts
-    └── sales.ts
+├── schema-mapper.ts            # Schema mapping utilities
+├── change-applier.ts           # Apply server changes to local DB
+└── backoff.ts                  # Retry backoff strategy
 ```
 
 ## Key Concepts
@@ -85,30 +96,6 @@ export class PullService {
 }
 ```
 
-### Sync Hooks
-
-Validaciones antes de sincronizar:
-
-```typescript
-// hooks/sales.ts
-export const saleSyncHook = createHook('sales')
-  .onBeforeSync(async ({ operation, data }) => {
-    if (operation === 'insert' && !data.customerId) {
-      return { allow: false, reason: 'Venta sin cliente' };
-    }
-    return { allow: true };
-  })
-  .build();
-```
-
-Register in `registry.ts`:
-```typescript
-const registeredHooks: SyncHook[] = [
-  saleSyncHook,
-  // Add more hooks here
-];
-```
-
 ## Sync Configuration
 
 ```typescript
@@ -142,10 +129,13 @@ export const SYNCABLE_ENTITIES = [
 
 ## Adding a New Syncable Entity
 
-1. **Add to `SYNCABLE_ENTITIES`** in `config.ts`
-2. **Add to `VALID_TABLES`** in `pull-service.ts` (for server → client sync)
-3. **Create table** in `engine/db.ts` with `sync_status` and `sync_attempts` columns
-4. **Add sync hook** (optional) in `hooks/` and register in `registry.ts`
+1. **Add to Shared Manifest** in `packages/shared/src/sync-manifest.ts`
+   - Add to `canonicalEntities` for bidirectional sync
+   - Or `localOnlyEntities` for client-only data
+2. **Add to `SYNCABLE_ENTITIES`** in `config.ts`
+3. **Add to `VALID_TABLES`** in `pull-service.ts` (for server → client sync)
+4. **Create table** in `engine/db.ts` with `sync_status` and `sync_attempts` columns
+5. **Create server handler** in `packages/backend/src/services/sync/handlers/`
 
 ## Service Provider
 
@@ -201,9 +191,9 @@ const handleCreateCustomer = async (data: CreateCustomerInput) => {
 ### DO:
 - Always write to local PGlite first
 - Use `sync_status` field to track pending changes
-- Register sync hooks for business validations
 - Handle sync errors gracefully
 - Show sync status in UI
+- Use SyncCoordinator for lifecycle observation
 
 ### DON'T:
 - Don't call API directly without enqueuing

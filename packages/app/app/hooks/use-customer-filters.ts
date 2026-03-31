@@ -10,9 +10,10 @@ interface CustomerWithTagIds extends Customer {
 }
 
 interface UseCustomerFiltersParams {
-  customers: Customer[] | undefined;
-  searchFields: SearchableField<Customer>[];
+  customers?: Customer[] | undefined;
+  searchFields?: SearchableField<Customer>[];
   debounceMs?: number;
+  loadTagRelations?: boolean;
 }
 
 interface UseCustomerFiltersResult {
@@ -29,9 +30,14 @@ const ALL_CUSTOMER_TAGS_KEY = ["all-customer-tags"] as const;
 
 export function useCustomerFilters({
   customers,
-  searchFields,
+  searchFields = [
+    (customer) => customer.name,
+    (customer) => customer.dni ?? undefined,
+    (customer) => customer.phone ?? undefined,
+  ],
   debounceMs = 300,
-}: UseCustomerFiltersParams): UseCustomerFiltersResult {
+  loadTagRelations = true,
+}: UseCustomerFiltersParams = {}): UseCustomerFiltersResult {
   const customerTagService = useCustomerTagService();
 
   const [tagIds, setTagIds] = useQueryState(
@@ -52,6 +58,7 @@ export function useCustomerFilters({
       return customerTagService.getAllCustomerTags();
     },
     staleTime: 1000 * 60,
+    enabled: loadTagRelations,
   });
 
   const customersWithTagIds = useMemo<CustomerWithTagIds[]>(() => {

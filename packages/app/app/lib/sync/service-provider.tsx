@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import { SyncCoordinator } from "./coordinator";
 import { SyncService, type SyncStatus } from "../sync/sync-service";
 import { PullService, type PullStatus } from "../sync/pull-service";
 import { CustomerService } from "../services/customer-service";
@@ -21,6 +22,7 @@ import { registerDebugServices } from "~/lib/debug";
 export interface ServicesContextValue {
   pg: PGlite;
   db: ReturnType<typeof drizzle>;
+  coordinator: SyncCoordinator;
   syncService: SyncService;
   pullService: PullService;
   customerService: CustomerService;
@@ -76,6 +78,7 @@ export function ServicesProvider({
   // Use refs to ensure single instances
   const syncServiceRef = useRef<SyncService | null>(null);
   const pullServiceRef = useRef<PullService | null>(null);
+  const coordinatorRef = useRef<SyncCoordinator | null>(null);
 
   // Create services once per provider lifecycle
   const services = useMemo(() => {
@@ -91,6 +94,12 @@ export function ServicesProvider({
 
     const syncService = syncServiceRef.current;
     const pullService = pullServiceRef.current;
+
+    if (!coordinatorRef.current) {
+      coordinatorRef.current = new SyncCoordinator(syncService, pullService);
+    }
+
+    const coordinator = coordinatorRef.current;
 
     const customerService = new CustomerService(pg, db, syncService, businessId, businessUserId);
     const saleService = new SaleService(pg, db, syncService, businessId, businessUserId);
@@ -108,6 +117,7 @@ export function ServicesProvider({
     return {
       pg,
       db,
+      coordinator,
       syncService,
       pullService,
       customerService,
@@ -132,16 +142,12 @@ export function ServicesProvider({
   useEffect(() => {
     const syncService = syncServiceRef.current;
     const pullService = pullServiceRef.current;
+    const coordinator = coordinatorRef.current;
 
-    if (!syncService || !pullService) return;
+    if (!syncService || !pullService || !coordinator) return;
 
-    // Start auto-sync for outgoing operations (client to server)
-    syncService.startAutoSync();
-    console.log("[ServicesProvider] SyncService auto-sync started");
-
-    // Start auto-pull for incoming changes (server to client)
-    pullService.startAutoPull();
-    console.log("[ServicesProvider] PullService auto-pull started");
+    coordinator.start();
+    console.log("[ServicesProvider] SyncCoordinator started");
 
     // Cleanup old drafts on startup
     const cleanupDrafts = async () => {
@@ -181,11 +187,10 @@ export function ServicesProvider({
     });
 
     return () => {
-      syncService.stopAutoSync();
-      pullService.stopAutoPull();
-      console.log("[ServicesProvider] Sync services stopped");
+      coordinator.stop();
+      console.log("[ServicesProvider] SyncCoordinator stopped");
     };
-  }, [services.purchaseService]);
+  }, [services]);
 
   return (
     <ServicesContext.Provider value={services}>
@@ -304,6 +309,14 @@ export function useSyncService(): SyncService | null {
     return null;
   }
   return context.syncService;
+}
+
+export function useSyncCoordinator(): SyncCoordinator | null {
+  const context = useContext(ServicesContext);
+  if (!context) {
+    return null;
+  }
+  return context.coordinator;
 }
 
 export function usePullService(): PullService | null {

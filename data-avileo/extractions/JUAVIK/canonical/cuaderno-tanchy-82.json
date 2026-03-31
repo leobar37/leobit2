@@ -1,0 +1,252 @@
+{
+  "imageId": "cuaderno-tanchy-82",
+  "imageFile": "Cuaderno Tanchy_82.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date: Viernes 20-3-26 clearly visible.",
+    "Multiple payment markers including P, yapeo."
+  ],
+  "imageLevelNotes": [
+    "Full page of entries.",
+    "Various customer sales entries."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [
+    {
+      "rawText": "Viernes 20-3-26",
+      "normalizedDate": "2026-03-20",
+      "confidence": 0.95
+    }
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "Viernes 20-3-26",
+        "normalizedDate": "2026-03-20",
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.95
+      },
+      "blockNotes": [],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Justo x11.2 = 10.4 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Justo", "normalizedCandidate": "Justo", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Justo", "amount": 10.4, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.2", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.2, "lineAmount": 10.4, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 10.4, "total": 10.4, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Arle x11.3 = 66.6 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Arle", "normalizedCandidate": "Arle", "similarTo": [], "confidence": 0.75},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Arle", "amount": 66.6, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.3", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.3, "lineAmount": 66.6, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 66.6, "total": 66.6, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Chapo x11.4 = 49.4 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Chapo", "normalizedCandidate": "Chapo", "similarTo": [], "confidence": 0.8},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Chapo", "amount": 49.4, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.4", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.4, "lineAmount": 49.4, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 49.4, "total": 49.4, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Nilda x11.6 = 52.7 yapeo",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Nilda", "normalizedCandidate": "Nilda", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with yapeo", "customerRef": "Nilda", "amount": 52.7, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.6", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.6, "lineAmount": 52.7, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 52.7, "total": 52.7, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Carmen x11.4 = 18.2 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Carmen", "normalizedCandidate": "Carmen", "similarTo": [], "confidence": 0.9},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Carmen", "amount": 18.2, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.4", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.4, "lineAmount": 18.2, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 18.2, "total": 18.2, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 5,
+          "rawLineText": "Diana x10.4 = 20.6 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Diana", "normalizedCandidate": "Diana", "similarTo": [], "confidence": 0.9},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Diana", "amount": 20.6, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x10.4", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 10.4, "lineAmount": 20.6, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 20.6, "total": 20.6, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 6,
+          "rawLineText": "Luz Ruiz x11.4 = 24.5 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Luz Ruiz", "normalizedCandidate": "Luz Ruiz", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Luz Ruiz", "amount": 24.5, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.4", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.4, "lineAmount": 24.5, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 24.5, "total": 24.5, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 7,
+          "rawLineText": "Fabiola x11.4 = 27.4 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Fabiola", "normalizedCandidate": "Fabiola", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Fabiola", "amount": 27.4, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.4", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.4, "lineAmount": 27.4, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 27.4, "total": 27.4, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 8,
+          "rawLineText": "Regina x6.8 = 21 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Regina", "normalizedCandidate": "Regina", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Regina", "amount": 21.0, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x6.8", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 6.8, "lineAmount": 21.0, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 21.0, "total": 21.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 9,
+          "rawLineText": "Bodega M x12.2 = 29.3 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Bodega M", "normalizedCandidate": "Bodega M", "similarTo": [], "confidence": 0.82},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Bodega M", "amount": 29.3, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x12.2", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 12.2, "lineAmount": 29.3, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 29.3, "total": 29.3, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 10,
+          "rawLineText": "Alda S.I x11.4 = 25.9",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Alda S.I", "normalizedCandidate": "Alda S.I", "similarTo": [], "confidence": 0.78},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale without payment marker", "customerRef": "Alda S.I", "amount": 25.9, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.75}],
+          "items": [{"rawText": "x11.4 S.I", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.4, "lineAmount": 25.9, "confidence": 0.7}],
+          "operations": [],
+          "amounts": {"subtotal": 25.9, "total": 25.9, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["missing_payment_marker"],
+          "notes": [],
+          "confidence": 0.72
+        },
+        {
+          "lineIndex": 11,
+          "rawLineText": "Emy Parven x11.5 = 25 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Emy Parven", "normalizedCandidate": "Emy Parven", "similarTo": [], "confidence": 0.8},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Emy Parven", "amount": 25.0, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "x11.5", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.5, "lineAmount": 25.0, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 25.0, "total": 25.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 12,
+          "rawLineText": "Lauro x11.8 = 23",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Lauro", "normalizedCandidate": "Lauro", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale without payment marker", "customerRef": "Lauro", "amount": 23.0, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.75}],
+          "items": [{"rawText": "x11.8", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.8, "lineAmount": 23.0, "confidence": 0.75}],
+          "operations": [],
+          "amounts": {"subtotal": 23.0, "total": 23.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["missing_payment_marker"],
+          "notes": [],
+          "confidence": 0.72
+        },
+        {
+          "lineIndex": 13,
+          "rawLineText": "Susana x13 = 40.3 + x11.7 = 30.3 P",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Susana", "normalizedCandidate": "Susana", "similarTo": [], "confidence": 0.9},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite sale with P marker", "customerRef": "Susana", "amount": 70.6, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.78}],
+          "items": [
+            {"rawText": "x13", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 13.0, "lineAmount": 40.3, "confidence": 0.7},
+            {"rawText": "x11.7", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 11.7, "lineAmount": 30.3, "confidence": 0.7}
+          ],
+          "operations": [{"rawText": "40.3 + 30.3", "operator": "+", "operands": [40.3, 30.3], "result": 70.6, "confidence": 0.85}],
+          "amounts": {"subtotal": 70.6, "total": 70.6, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        }
+      ]
+    }
+  ]
+}

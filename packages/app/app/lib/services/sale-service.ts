@@ -107,6 +107,22 @@ export interface Sale {
  * Sale with its items (for queries that include items)
  */
 export type SaleWithItems = Sale & { items: SaleItem[] };
+export type SaleListItem = Sale & { items?: SaleItem[] };
+
+export interface SalePageQuery {
+  limit: number;
+  offset: number;
+  customerId?: string;
+  status?: SaleStatus;
+  distribucionId?: string | "none" | "all";
+  search?: string;
+  type?: SaleType;
+}
+
+export interface SaleListPage {
+  items: SaleListItem[];
+  total: number;
+}
 
 /**
  * Input for creating a sale
@@ -186,6 +202,48 @@ export class SaleService extends BaseService {
    */
   getEntityPrefix(): string {
     return "sale";
+  }
+
+  private buildPagedSalesWhere(query: SalePageQuery) {
+    const conditions = [eq(salesTable.businessId, this.businessId)];
+
+    if (query.distribucionId && query.distribucionId !== "all") {
+      if (query.distribucionId === "none") {
+        conditions.push(isNull(salesTable.distribucionId));
+      } else {
+        conditions.push(eq(salesTable.distribucionId, query.distribucionId));
+      }
+    }
+
+    if (query.customerId) {
+      conditions.push(eq(salesTable.customerId, query.customerId));
+    }
+
+    if (query.status) {
+      conditions.push(eq(salesTable.status, query.status));
+    }
+
+    if (query.type) {
+      conditions.push(eq(salesTable.type, query.type));
+    }
+
+    if (query.search?.trim()) {
+      const searchPattern = `%${query.search.trim()}%`;
+      conditions.push(
+        sql`(
+          ${salesTable.id} LIKE ${searchPattern}
+          OR EXISTS (
+            SELECT 1
+            FROM customers c
+            WHERE c.id = ${salesTable.customerId}
+              AND c.name LIKE ${searchPattern}
+          )
+          OR ${salesTable.saleType} LIKE ${searchPattern}
+        )`
+      );
+    }
+
+    return and(...conditions);
   }
 
   /**
@@ -269,6 +327,64 @@ export class SaleService extends BaseService {
     }
 
     return sales;
+  }
+
+  async countByBusiness(query: Omit<SalePageQuery, "limit" | "offset"> = {}): Promise<number> {
+    const where = this.buildPagedSalesWhere({ limit: 0, offset: 0, ...query });
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(salesTable)
+      .where(where);
+
+    return result[0]?.count ?? 0;
+  }
+
+  async findPageByBusiness(query: SalePageQuery): Promise<SaleListPage> {
+    const where = this.buildPagedSalesWhere(query);
+
+    const [rows, totalResult] = await Promise.all([
+      this.db
+        .select()
+        .from(salesTable)
+        .where(where)
+        .orderBy(sql`${salesTable.saleDate} DESC`)
+        .limit(query.limit)
+        .offset(query.offset),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(salesTable)
+        .where(where),
+    ]);
+
+    const sales = rows.map((row) => mapToCamelCaseWithDates(row) as unknown as SaleListItem);
+    const customerIds = Array.from(
+      new Set(
+        sales
+          .map((sale) => sale.customerId)
+          .filter((customerId): customerId is string => Boolean(customerId))
+      )
+    );
+
+    const customerMap = new Map<string, SaleCustomer>();
+    if (customerIds.length > 0) {
+      const customerResult = await this.pg.query<Record<string, unknown>>(
+        `SELECT id, name, dni, phone FROM customers WHERE id = ANY($1)`,
+        [customerIds]
+      );
+
+      for (const row of customerResult.rows) {
+        const customer = mapToCamelCase(row) as unknown as SaleCustomer;
+        customerMap.set(customer.id, customer);
+      }
+    }
+
+    return {
+      items: sales.map((sale) => ({
+        ...sale,
+        customer: sale.customerId ? customerMap.get(sale.customerId) ?? null : null,
+      })),
+      total: totalResult[0]?.count ?? 0,
+    };
   }
 
   /**

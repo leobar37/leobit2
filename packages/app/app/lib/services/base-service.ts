@@ -6,13 +6,19 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import { isSyncEntity, SyncStatus } from "@avileo/shared";
 import { SyncService, type EnqueueParams } from "../sync/sync-service";
-import { runSyncHooks } from "../sync/registry";
-import { SyncStatus } from "@avileo/shared";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
 
-/** Entity types supported by services */
+/**
+ * Entity types referenced by frontend base services.
+ *
+ * Classification:
+ * - Most entries are canonical and match `@avileo/shared` `SYNC_ENTITIES`.
+ * - `inventory` is LOCAL-ONLY frontend state.
+ * - `variant_inventory` is a LEGACY frontend entity that no longer belongs to the canonical sync API.
+ */
 export type EntityType =
   | "customers"
   | "sales"
@@ -27,32 +33,39 @@ export type EntityType =
   | "distribucion_items"
   | "tags"
   | "customer_tags"
-  | "inventory"
-  | "variant_inventory"
+  | "inventory" // LOCAL-ONLY: frontend service/devtools entity, not in shared SYNC_ENTITIES
+  | "variant_inventory" // LEGACY: deprecated frontend entity, not in shared SYNC_ENTITIES
   | "visitas"
   | "customer_groups"
   | "customer_group_members";
 
-/** Valid table names that can be used in SQL queries */
+/**
+ * SQL table-name safety allowlist for frontend services.
+ *
+ * Classification:
+ * - Canonical entries match `@avileo/shared` `SYNC_ENTITIES`.
+ * - `inventory` is LOCAL-ONLY frontend state.
+ * - `variant_inventory` is LEGACY and retained here for compatibility/safety.
+ */
 const VALID_TABLE_NAMES: readonly string[] = [
-  "customers",
-  "sales",
-  "sale_items",
-  "abonos",
-  "products",
-  "product_variants",
-  "suppliers",
-  "purchases",
-  "purchase_items",
-  "distribuciones",
-  "distribucion_items",
-  "tags",
-  "customer_tags",
-  "inventory",
-  "variant_inventory",
-  "visitas",
-  "customer_groups",
-  "customer_group_members",
+  "customers", // CANONICAL: shared SYNC_ENTITIES
+  "sales", // CANONICAL: shared SYNC_ENTITIES
+  "sale_items", // CANONICAL: shared SYNC_ENTITIES
+  "abonos", // CANONICAL: shared SYNC_ENTITIES
+  "products", // CANONICAL: shared SYNC_ENTITIES
+  "product_variants", // CANONICAL: shared SYNC_ENTITIES
+  "suppliers", // CANONICAL: shared SYNC_ENTITIES
+  "purchases", // CANONICAL: shared SYNC_ENTITIES
+  "purchase_items", // CANONICAL: shared SYNC_ENTITIES
+  "distribuciones", // CANONICAL: shared SYNC_ENTITIES
+  "distribucion_items", // CANONICAL: shared SYNC_ENTITIES
+  "tags", // CANONICAL: shared SYNC_ENTITIES
+  "customer_tags", // CANONICAL: shared SYNC_ENTITIES
+  "inventory", // LOCAL-ONLY: frontend table/service usage, not in shared SYNC_ENTITIES
+  "variant_inventory", // LEGACY: deprecated frontend table kept in validation allowlist
+  "visitas", // CANONICAL: shared SYNC_ENTITIES
+  "customer_groups", // CANONICAL: shared SYNC_ENTITIES
+  "customer_group_members", // CANONICAL: shared SYNC_ENTITIES
 ] as const;
 
 /** Sync action types */
@@ -158,24 +171,9 @@ export abstract class BaseService {
     entityTypeOverride?: EntityType,
     entityVersion?: number
   ): Promise<void> {
-    // Run sync hooks before enqueueing
     const entityType = entityTypeOverride ?? this.getEntityType();
-    const hookResult = await runSyncHooks(
-      entityType,
-      {
-        operation: action,
-        entityId,
-        data: payload,
-      },
-      {
-        pg: this.pg,
-        businessId: this.businessId,
-      }
-    );
-
-    if (!hookResult.allow) {
-      console.log(`[SyncHook] Skipping sync for ${entityType}:${entityId} - ${hookResult.reason}`);
-      return;
+    if (!isSyncEntity(entityType)) {
+      throw new Error(`Invalid sync entity type: ${entityType}`);
     }
 
     const params: EnqueueParams = {

@@ -1,7 +1,4 @@
-/**
- * Sync Configuration
- * Constants and configuration for the sync engine
- */
+import { SYNC_ENTITIES, type SyncEntity } from "@avileo/shared";
 
 /** Maximum number of retry attempts for failed operations */
 export const MAX_RETRIES = 5;
@@ -44,25 +41,7 @@ export const OPERATION_STATUS = {
   DEAD_LETTER: "dead_letter",
 } as const;
 
-/** Entity types that can be synced */
-export const SYNCABLE_ENTITIES = [
-  "customers",
-  "sales",
-  "sale_items",
-  "abonos",
-  "distribuciones",
-  "variant_inventory",
-  "orders",
-  "order_items",
-  "files",
-  "assets",
-  "suppliers",
-  "purchases",
-  "purchase_items",
-  "customer_groups",
-  "customer_group_members",
-  "visitas",
-] as const;
+export const SYNCABLE_ENTITIES = SYNC_ENTITIES;
 
 /** Conflict resolution strategies */
 export const CONFLICT_STRATEGY = {
@@ -73,5 +52,5 @@ export const CONFLICT_STRATEGY = {
 } as const;
 
 export type OperationStatus = (typeof OPERATION_STATUS)[keyof typeof OPERATION_STATUS];
-export type SyncableEntity = (typeof SYNCABLE_ENTITIES)[number];
+export type SyncableEntity = SyncEntity;
 export type ConflictStrategy = (typeof CONFLICT_STRATEGY)[keyof typeof CONFLICT_STRATEGY];

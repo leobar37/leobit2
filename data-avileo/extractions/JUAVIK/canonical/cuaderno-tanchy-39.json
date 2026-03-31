@@ -1,0 +1,85 @@
+{
+  "imageId": "cuaderno-tanchy-39",
+  "imageFile": "Cuaderno Tanchy_39.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Dates: 17/8/25 and +7/8/25 visible - possibly August 2025.",
+    "Multiple payment markers including NP."
+  ],
+  "imageLevelNotes": [
+    "Older dates (2025).",
+    "Multiple RP entries.",
+    "Many circled amounts."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [
+    {
+      "rawText": "17/8/25",
+      "normalizedDate": "2025-08-17",
+      "confidence": 0.7
+    }
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "17/8/25",
+        "normalizedDate": "2025-08-17",
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.7
+      },
+      "blockNotes": ["Older date - August 2025"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Jeronimo oblitas = x6 = 4 64+34 yape?",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Jeronimo oblitas", "normalizedCandidate": "Jeronimo Oblitas", "similarTo": [], "confidence": 0.82},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with yape?", "customerRef": "Jeronimo oblitas", "amount": 98.0, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.75}],
+          "items": [{"rawText": "x6", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 6.0, "lineAmount": 64.0, "confidence": 0.68}],
+          "operations": [{"rawText": "64 + 34", "operator": "+", "operands": [64.0, 34.0], "result": 98.0, "confidence": 0.85}],
+          "amounts": {"subtotal": 98.0, "total": 98.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": ["marker_unclear"],
+          "notes": [],
+          "confidence": 0.74
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Chondu = Paico = 26 NP",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Chondu", "normalizedCandidate": "Chondu", "similarTo": [], "confidence": 0.75},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "paico with NP", "customerRef": "Chondu", "amount": 26.0, "paymentMethod": null, "paymentStatus": "no_pago", "confidence": 0.8}],
+          "items": [{"rawText": "Paico", "normalizedProductCandidate": "paico", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 26.0, "confidence": 0.72}],
+          "operations": [],
+          "amounts": {"subtotal": 26.0, "total": 26.0, "amountPaid": null, "balanceDue": 26.0, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "no_pago", "yapeoConfirmed": false, "pendingYape": false, "noPago": true, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": true, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.77
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Rosex Nerisa = 20/6 = (18) ↓ 24g",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Rosex Nerisa", "normalizedCandidate": "Rosex Nerisa", "similarTo": [], "confidence": 0.75},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with circled amount", "customerRef": "Rosex Nerisa", "amount": 24.0, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.7}],
+          "items": [{"rawText": "20/6", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 24.0, "confidence": 0.6}],
+          "operations": [],
+          "amounts": {"subtotal": 24.0, "total": 24.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": 18.0},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": true, "hasArrow": true, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["multiple_totals_unclear"],
+          "notes": [],
+          "confidence": 0.68
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,442 @@
+{
+  "imageId": "cuaderno-tanchy-4",
+  "imageFile": "Cuaderno Tanchy_4.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "pass-2",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "imageLevelNotes": [
+    "Second reading of continuation page with yapeo, previous-payment, and NP evidence."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": null,
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": true,
+        "confidence": 0.18
+      },
+      "blockNotes": [
+        "Continuation page; no explicit date read."
+      ],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Vidrios x11 = 25.8 + 38 yapeo",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Vidrios",
+            "normalizedCandidate": "Vidrios",
+            "similarTo": [],
+            "confidence": 0.79
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Vidrios",
+              "amount": 25.8,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.72
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "payment_confirmed",
+              "description": "yapeo payment",
+              "customerRef": "Vidrios",
+              "amount": 38.0,
+              "paymentMethod": "yape",
+              "paymentStatus": "paid",
+              "confidence": 0.9
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 25.8,
+              "confidence": 0.67
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "25.8 + 38",
+              "operator": "+",
+              "operands": [
+                25.8,
+                38.0
+              ],
+              "result": null,
+              "confidence": 0.44
+            }
+          ],
+          "amounts": {
+            "subtotal": 25.8,
+            "total": null,
+            "amountPaid": 38.0,
+            "balanceDue": null,
+            "highlightedAmount": 25.8
+          },
+          "payment": {
+            "paymentMethod": "yape",
+            "paymentStatus": "paid",
+            "yapeoConfirmed": true,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": true,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": true,
+            "hasXYapear": false
+          },
+          "reviewFlags": [
+            "block_date_inherited"
+          ],
+          "notes": [],
+          "confidence": 0.75
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Aldo S.I x10.8 = 24 + pago 24 anterior",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Aldo S.I",
+            "normalizedCandidate": "Aldo S.I",
+            "similarTo": [
+              "Aldo"
+            ],
+            "confidence": 0.7
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Aldo S.I",
+              "amount": 24.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.78
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "previous_payment_reference",
+              "description": "previous payment note",
+              "customerRef": "Aldo S.I",
+              "amount": 24.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.87
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.8",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.8,
+              "lineAmount": 24.0,
+              "confidence": 0.7
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 24.0,
+            "total": 24.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": true,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [
+            "pago 24 anterior"
+          ],
+          "confidence": 0.79
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Castita x11 = 46.8 + 12 = 58.8P",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Castita",
+            "normalizedCandidate": "Castita",
+            "similarTo": [
+              "Castilla"
+            ],
+            "confidence": 0.58
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "main sale fragment",
+              "customerRef": "Castita",
+              "amount": 46.8,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.72
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "product_fragment",
+              "description": "secondary amount",
+              "customerRef": "Castita",
+              "amount": 12.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.56
+            },
+            {
+              "entryIndex": 2,
+              "entryType": "balance_reference",
+              "description": "computed total",
+              "customerRef": "Castita",
+              "amount": 58.8,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.83
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 46.8,
+              "confidence": 0.69
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "46.8 + 12 = 58.8",
+              "operator": "+",
+              "operands": [
+                46.8,
+                12.0
+              ],
+              "result": 58.8,
+              "confidence": 0.9
+            }
+          ],
+          "amounts": {
+            "subtotal": 46.8,
+            "total": 58.8,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [
+            "customer_name_unclear",
+            "marker_P_unclear"
+          ],
+          "notes": [],
+          "confidence": 0.75
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Hija Venus H=12 XY",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Hija Venus",
+            "normalizedCandidate": "Hija Venus",
+            "similarTo": [
+              "Venus"
+            ],
+            "confidence": 0.74
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "product_fragment",
+              "description": "H amount",
+              "customerRef": "Hija Venus",
+              "amount": 12.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.6
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "pending_yape_payment",
+              "description": "XY pending marker",
+              "customerRef": "Hija Venus",
+              "amount": null,
+              "paymentMethod": "yape",
+              "paymentStatus": "pending_yape",
+              "confidence": 0.86
+            }
+          ],
+          "items": [
+            {
+              "rawText": "H=12",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 12.0,
+              "lineAmount": 12.0,
+              "confidence": 0.55
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 12.0,
+            "total": 12.0,
+            "amountPaid": null,
+            "balanceDue": 12.0,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": "yape",
+            "paymentStatus": "pending_yape",
+            "yapeoConfirmed": false,
+            "pendingYape": true,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": true
+          },
+          "reviewFlags": [
+            "marker_H_unclear"
+          ],
+          "notes": [],
+          "confidence": 0.71
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Deysi Apl Pol=26.4 NP",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Deysi Apl",
+            "normalizedCandidate": "Deysi Apl",
+            "similarTo": [
+              "Deysi"
+            ],
+            "confidence": 0.62
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "pollo amount",
+              "customerRef": "Deysi Apl",
+              "amount": 26.4,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.73
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "no_payment_marker",
+              "description": "NP",
+              "customerRef": "Deysi Apl",
+              "amount": null,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.93
+            }
+          ],
+          "items": [
+            {
+              "rawText": "Pol=26.4",
+              "normalizedProductCandidate": "pollo",
+              "similarTo": [
+                "pollo"
+              ],
+              "quantityText": null,
+              "unitPrice": null,
+              "lineAmount": 26.4,
+              "confidence": 0.66
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 26.4,
+            "total": 26.4,
+            "amountPaid": null,
+            "balanceDue": 26.4,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "no_pago",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": true,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": true,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [
+            "customer_name_unclear"
+          ],
+          "notes": [],
+          "confidence": 0.72
+        }
+      ]
+    }
+  ]
+}

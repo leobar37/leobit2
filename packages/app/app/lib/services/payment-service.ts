@@ -9,6 +9,7 @@ import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { abonos } from "@avileo/shared";
 import { eq } from "drizzle-orm";
+import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
 import { formatCurrency } from "~/lib/utils";
 
 /** Payment (Abono) entity type */
@@ -47,6 +48,29 @@ export interface UpdateAbonoInput {
   referenceNumber?: string | null;
 }
 
+export interface AccountsReceivableQuery {
+  search?: string;
+  minBalance?: number;
+  limit: number;
+  offset: number;
+  customerId?: string;
+}
+
+export interface AccountsReceivableRow {
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  totalSales: string;
+  totalPayments: string;
+  totalDebt: string;
+  lastSaleDate: string | null;
+}
+
+export interface AccountsReceivablePage {
+  items: AccountsReceivableRow[];
+  total: number;
+}
+
 /**
  * Payment Service for managing debt payments (abonos)
  * Extends BaseService for local-first operations with sync integration
@@ -74,6 +98,168 @@ export class PaymentService extends BaseService {
    */
   getEntityPrefix(): string {
     return "pay";
+  }
+
+  async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
+    const minBalance = query.minBalance ?? 0.01;
+    const params: Array<string | number> = [this.businessId, this.businessId];
+    let paramIndex = params.length;
+
+    let extraFilters = "";
+
+    if (query.customerId) {
+      paramIndex += 1;
+      params.push(query.customerId);
+      extraFilters += ` AND c.id = $${paramIndex}`;
+    }
+
+    if (query.search?.trim()) {
+      const searchPattern = `%${query.search.trim()}%`;
+      paramIndex += 1;
+      params.push(searchPattern);
+      extraFilters += ` AND (c.name LIKE $${paramIndex} OR COALESCE(c.phone, '') LIKE $${paramIndex})`;
+    }
+
+    paramIndex += 1;
+    params.push(minBalance);
+    const minBalanceParam = paramIndex;
+
+    const baseQuery = `
+      WITH sales_by_customer AS (
+        SELECT customer_id,
+               COALESCE(SUM(total_amount), 0) AS total_sales,
+               MAX(sale_date) AS last_sale_date
+        FROM sales
+        WHERE business_id = $1
+          AND sale_type = 'credito'
+          AND status NOT IN ('draft', 'cancelled')
+          AND customer_id IS NOT NULL
+        GROUP BY customer_id
+      ),
+      payments_by_customer AS (
+        SELECT customer_id,
+               COALESCE(SUM(amount), 0) AS total_payments
+        FROM abonos
+        WHERE business_id = $2
+        GROUP BY customer_id
+      ),
+      debtors AS (
+        SELECT
+          c.id AS customer_id,
+          c.name AS customer_name,
+          c.phone AS customer_phone,
+          COALESCE(s.total_sales, 0) AS total_sales,
+          COALESCE(p.total_payments, 0) AS total_payments,
+          GREATEST(COALESCE(s.total_sales, 0) - COALESCE(p.total_payments, 0), 0) AS total_debt,
+          s.last_sale_date
+        FROM customers c
+        LEFT JOIN sales_by_customer s ON s.customer_id = c.id
+        LEFT JOIN payments_by_customer p ON p.customer_id = c.id
+        WHERE c.business_id = $1
+          ${extraFilters}
+      )
+    `;
+
+    const itemsParams = [...params, query.limit, query.offset];
+    const itemsResult = await this.pg.query<AccountsReceivableRow>(
+      `${baseQuery}
+       SELECT
+         customer_id,
+         customer_name,
+         customer_phone,
+         total_sales,
+         total_payments,
+         total_debt,
+         last_sale_date
+       FROM debtors
+       WHERE total_debt >= $${minBalanceParam}
+       ORDER BY total_debt DESC, last_sale_date DESC NULLS LAST, customer_name ASC
+       LIMIT $${minBalanceParam + 1}
+       OFFSET $${minBalanceParam + 2}`,
+      itemsParams
+    );
+
+    const countResult = await this.pg.query<{ count: string }>(
+      `${baseQuery}
+       SELECT COUNT(*) AS count
+       FROM debtors
+       WHERE total_debt >= $${minBalanceParam}`,
+      params
+    );
+
+    return {
+      items: itemsResult.rows.map((row) => mapToCamelCase(row) as unknown as AccountsReceivableRow),
+      total: Number(countResult.rows[0]?.count ?? 0),
+    };
+  }
+
+  async getAccountsReceivableTotal(filters: Pick<AccountsReceivableQuery, "search" | "minBalance" | "customerId">): Promise<number> {
+    const page = await this.findAccountsReceivablePage({
+      ...filters,
+      limit: 1,
+      offset: 0,
+    });
+
+    if (page.items.length === 0) {
+      return 0;
+    }
+
+    const minBalance = filters.minBalance ?? 0.01;
+    const params: Array<string | number> = [this.businessId, this.businessId];
+    let paramIndex = params.length;
+    let extraFilters = "";
+
+    if (filters.customerId) {
+      paramIndex += 1;
+      params.push(filters.customerId);
+      extraFilters += ` AND c.id = $${paramIndex}`;
+    }
+
+    if (filters.search?.trim()) {
+      const searchPattern = `%${filters.search.trim()}%`;
+      paramIndex += 1;
+      params.push(searchPattern);
+      extraFilters += ` AND (c.name LIKE $${paramIndex} OR COALESCE(c.phone, '') LIKE $${paramIndex})`;
+    }
+
+    paramIndex += 1;
+    params.push(minBalance);
+
+    const result = await this.pg.query<{ total: string }>(
+      `
+      WITH sales_by_customer AS (
+        SELECT customer_id,
+               COALESCE(SUM(total_amount), 0) AS total_sales
+        FROM sales
+        WHERE business_id = $1
+          AND sale_type = 'credito'
+          AND status NOT IN ('draft', 'cancelled')
+          AND customer_id IS NOT NULL
+        GROUP BY customer_id
+      ),
+      payments_by_customer AS (
+        SELECT customer_id,
+               COALESCE(SUM(amount), 0) AS total_payments
+        FROM abonos
+        WHERE business_id = $2
+        GROUP BY customer_id
+      ),
+      debtors AS (
+        SELECT GREATEST(COALESCE(s.total_sales, 0) - COALESCE(p.total_payments, 0), 0) AS total_debt
+        FROM customers c
+        LEFT JOIN sales_by_customer s ON s.customer_id = c.id
+        LEFT JOIN payments_by_customer p ON p.customer_id = c.id
+        WHERE c.business_id = $1
+          ${extraFilters}
+      )
+      SELECT COALESCE(SUM(total_debt), 0) AS total
+      FROM debtors
+      WHERE total_debt >= $${paramIndex}
+      `,
+      params
+    );
+
+    return Number(result.rows[0]?.total ?? 0);
   }
 
   /**

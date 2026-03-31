@@ -59,40 +59,56 @@ export const ENTITY_LABELS: Record<string, string> = {
   customer_tags: "Etiquetas por cliente",
 };
 
+/**
+ * Devtools-only UI list for tables that expose a local `sync_status` column in summaries.
+ *
+ * Classification:
+ * - This is a LOCAL-ONLY devtools list, not a canonical backend API contract.
+ * - Entries may reference canonical entities, but the list itself exists only for frontend diagnostics.
+ */
 export const TABLES_WITH_SYNC_STATUS = new Set([
-  "customers",
-  "products",
-  "suppliers",
-  "product_variants",
-  "sales",
-  "purchases",
-  "abonos",
-  "purchase_items",
-  "distribuciones",
-  "distribucion_items",
-  "tags",
-  "customer_tags",
+  "customers", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "products", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "suppliers", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "product_variants", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "sales", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "purchases", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "abonos", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "purchase_items", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "distribuciones", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "distribucion_items", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "tags", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
+  "customer_tags", // CANONICAL entity, used here in a LOCAL-ONLY devtools list
 ]);
 
+/**
+ * Devtools-only entity summary order for sync inspection screens.
+ *
+ * Classification:
+ * - This is a LOCAL-ONLY frontend/devtools list.
+ * - Most entries reference canonical sync entities for display.
+ * - `inventory` is frontend-local UI data.
+ * - `variant_inventory` is a legacy entity still surfaced for diagnostics.
+ */
 export const SYNCED_TABLES = [
-  "customers",
-  "products",
-  "suppliers",
-  "product_variants",
-  "inventory",
-  "variant_inventory",
-  "sales",
-  "purchases",
-  "abonos",
-  "sale_items",
-  "purchase_items",
-  "distribuciones",
-  "distribucion_items",
-  "tags",
-  "customer_tags",
-  "customer_groups",
-  "customer_group_members",
-  "visitas",
+  "customers", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "products", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "suppliers", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "product_variants", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "inventory", // LOCAL-ONLY: frontend inventory view/devtools label, not in shared SYNC_ENTITIES
+  "variant_inventory", // LEGACY: deprecated entity still shown in devtools, not in shared SYNC_ENTITIES
+  "sales", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "purchases", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "abonos", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "sale_items", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "purchase_items", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "distribuciones", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "distribucion_items", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "tags", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "customer_tags", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "customer_groups", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "customer_group_members", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
+  "visitas", // CANONICAL entity, listed here for LOCAL-ONLY devtools summaries
 ] as const;
 
 export const ENTITY_SUMMARY_CONFIG = SYNCED_TABLES.map((table) => ({

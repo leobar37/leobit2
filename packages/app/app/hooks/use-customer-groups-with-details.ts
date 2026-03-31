@@ -31,6 +31,16 @@ export function useCustomerGroupsWithDetails(customerId: string | null) {
   });
 }
 
+export function useCustomerGroupsSummary(customerIds: string[]) {
+  const customerGroupService = useCustomerGroupService();
+
+  return useQuery({
+    queryKey: ["customer-groups-summary", customerIds],
+    queryFn: async () => customerGroupService.getCustomerGroupsForCustomers(customerIds),
+    enabled: customerIds.length > 0,
+  });
+}
+
 /**
  * Invalidate customer groups queries for a specific customer
  * Call this after adding/removing members from groups

@@ -1,0 +1,482 @@
+{
+  "imageId": "cuaderno-tanchy-7",
+  "imageFile": "Cuaderno Tanchy_7.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "No clear date found at top of page.",
+    "Multiple payment markers: P, NP, XY, yapeo.",
+    "Many customer names partially unclear due to handwriting."
+  ],
+  "imageLevelNotes": [
+    "Page contains mixed legibility entries.",
+    "Several lines have side annotations and arrows.",
+    "Bottom section has complex multi-entry lines."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": null,
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.1
+      },
+      "blockNotes": [
+        "No explicit date found on this page."
+      ],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Tia cacho x11 = 348",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Tia cacho",
+            "normalizedCandidate": "Tia Cacho",
+            "similarTo": [],
+            "confidence": 0.75
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Tia cacho",
+              "amount": 34.8,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.72
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 34.8,
+              "confidence": 0.68
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 34.8,
+            "total": 34.8,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [
+            "amount_decimal_ambiguous",
+            "possible_348_vs_34.8"
+          ],
+          "notes": [],
+          "confidence": 0.7
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Elena Tinoco x11 = 29.5 +31.5",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Elena Tinoco",
+            "normalizedCandidate": "Elena Tinoco",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Elena Tinoco",
+              "amount": 29.5,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.82
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "balance_reference",
+              "description": "additional amount",
+              "customerRef": "Elena Tinoco",
+              "amount": 31.5,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.75
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 29.5,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "29.5 + 31.5",
+              "operator": "+",
+              "operands": [
+                29.5,
+                31.5
+              ],
+              "result": 61.0,
+              "confidence": 0.72
+            }
+          ],
+          "amounts": {
+            "subtotal": 29.5,
+            "total": null,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": 31.5
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Flor x10.7 = 21.6 +34.2 > P",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Flor",
+            "normalizedCandidate": "Flor",
+            "similarTo": [],
+            "confidence": 0.92
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Flor",
+              "amount": 21.6,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.82
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "balance_reference",
+              "description": "additional with arrow",
+              "customerRef": "Flor",
+              "amount": 34.2,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.75
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x10.7",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 10.7,
+              "lineAmount": 21.6,
+              "confidence": 0.8
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "21.6 + 34.2",
+              "operator": "+",
+              "operands": [
+                21.6,
+                34.2
+              ],
+              "result": 55.8,
+              "confidence": 0.78
+            }
+          ],
+          "amounts": {
+            "subtotal": 21.6,
+            "total": null,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": 34.2
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": true,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Susana Valerio 1/6 = 33 NP ND",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Susana Valerio",
+            "normalizedCandidate": "Susana Valerio",
+            "similarTo": [],
+            "confidence": 0.85
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with NP marker",
+              "customerRef": "Susana Valerio",
+              "amount": 33.0,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.8
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "no_payment_marker",
+              "description": "NP marker",
+              "customerRef": "Susana Valerio",
+              "amount": null,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.9
+            }
+          ],
+          "items": [
+            {
+              "rawText": "1/6",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": null,
+              "lineAmount": 33.0,
+              "confidence": 0.65
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 33.0,
+            "total": 33.0,
+            "amountPaid": null,
+            "balanceDue": 33.0,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "no_pago",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": true,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": true,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [
+            "ND_marker_unclear"
+          ],
+          "notes": [
+            "ND noted alongside NP"
+          ],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Karina Coisi x12 = 17.9 +12.5 +18 = 48.4 yapeo",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Karina Coisi",
+            "normalizedCandidate": "Karina Coisi",
+            "similarTo": [
+              "Karina Cois"
+            ],
+            "confidence": 0.82
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with yapeo payment",
+              "customerRef": "Karina Coisi",
+              "amount": 48.4,
+              "paymentMethod": "yape",
+              "paymentStatus": "paid",
+              "confidence": 0.85
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x12",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 12.0,
+              "lineAmount": 17.9,
+              "confidence": 0.75
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "17.9 + 12.5 + 18 = 48.4",
+              "operator": "+",
+              "operands": [
+                17.9,
+                12.5,
+                18.0
+              ],
+              "result": 48.4,
+              "confidence": 0.82
+            }
+          ],
+          "amounts": {
+            "subtotal": 17.9,
+            "total": 48.4,
+            "amountPaid": 48.4,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": "yape",
+            "paymentStatus": "paid",
+            "yapeoConfirmed": true,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": true,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.82
+        },
+        {
+          "lineIndex": 5,
+          "rawLineText": "Cochea x11 = 26.6 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Cochea",
+            "normalizedCandidate": "Cochea",
+            "similarTo": [],
+            "confidence": 0.85
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Cochea",
+              "amount": 26.6,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.82
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 26.6,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 26.6,
+            "total": 26.6,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.82
+        }
+      ]
+    }
+  ]
+}

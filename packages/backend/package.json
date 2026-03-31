@@ -19,6 +19,7 @@
     "db:seed": "bun run src/seed/index.ts",
     "db:seed:client": "bun run src/seed/index.ts --client",
     "db:seed:demo": "bun run src/seed/demo-user.ts",
+    "db:seed:client2": "bun src/seed/seed-client2.ts",
     "db:backfill-sync": "bun run src/seed/backfill-sync-operations.ts",
     "db:reset": "bun run scripts/reset-db.ts && bun run src/seed/demo-user.ts",
     "db:apply-migration": "bun run scripts/run-migration.ts",

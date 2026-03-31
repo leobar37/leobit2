@@ -1,0 +1,610 @@
+{
+  "imageId": "cuaderno-tanchy-20",
+  "imageFile": "Cuaderno Tanchy_20.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Page contains two blocks with different dates.",
+    "MART / 17-2-26 block at bottom."
+  ],
+  "imageLevelNotes": [
+    "Two distinct date blocks on this page.",
+    "Multiple arrows and circled amounts visible."
+  ],
+  "ignoredDetachedText": [
+    {
+      "rawText": "NO ESTUVO",
+      "reason": "side-note"
+    }
+  ],
+  "detectedDates": [
+    {
+      "rawText": "MART / 17-2-26",
+      "normalizedDate": "2026-02-17",
+      "confidence": 0.85
+    }
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": null,
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.3
+      },
+      "blockNotes": ["First block - date unclear"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Fela leni = 12.5 + NP",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Fela leni",
+            "normalizedCandidate": "Fela Leni",
+            "similarTo": [],
+            "confidence": 0.65
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with NP marker",
+              "customerRef": "Fela leni",
+              "amount": 12.5,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.7
+            }
+          ],
+          "items": [],
+          "operations": [],
+          "amounts": {
+            "subtotal": 12.5,
+            "total": 12.5,
+            "amountPaid": null,
+            "balanceDue": 12.5,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "no_pago",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": true,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": true,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": ["customer_name_unclear"],
+          "notes": [],
+          "confidence": 0.65
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Flor = 19? P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Flor",
+            "normalizedCandidate": "Flor",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Flor",
+              "amount": 19.0,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.75
+            }
+          ],
+          "items": [],
+          "operations": [],
+          "amounts": {
+            "subtotal": 19.0,
+            "total": 19.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Marilina: x11 = 52.8 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Marilina",
+            "normalizedCandidate": "Marilina",
+            "similarTo": [],
+            "confidence": 0.85
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Marilina",
+              "amount": 52.8,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.85
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 52.8,
+              "confidence": 0.8
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 52.8,
+            "total": 52.8,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.84
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Dana Díaz: x11.5 = 21.5 P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Dana Díaz",
+            "normalizedCandidate": "Dana Diaz",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Dana Díaz",
+              "amount": 21.5,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.85
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11.5",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.5,
+              "lineAmount": 21.5,
+              "confidence": 0.82
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 21.5,
+            "total": 21.5,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.85
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Sr. Athenea: 26.4 NP",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Sr. Athenea",
+            "normalizedCandidate": "Sr. Athenea",
+            "similarTo": [],
+            "confidence": 0.75
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with NP marker",
+              "customerRef": "Sr. Athenea",
+              "amount": 26.4,
+              "paymentMethod": null,
+              "paymentStatus": "no_pago",
+              "confidence": 0.78
+            }
+          ],
+          "items": [],
+          "operations": [],
+          "amounts": {
+            "subtotal": 26.4,
+            "total": 26.4,
+            "amountPaid": null,
+            "balanceDue": 26.4,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "no_pago",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": true,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": true,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "blockIndex": 1,
+      "date": {
+        "rawText": "MART / 17-2-26",
+        "normalizedDate": "2026-02-17",
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.85
+      },
+      "blockNotes": [],
+      "lines": [
+        {
+          "lineIndex": 5,
+          "rawLineText": "Poncho x60 = 90",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Poncho",
+            "normalizedCandidate": "Poncho",
+            "similarTo": [],
+            "confidence": 0.88
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale amount",
+              "customerRef": "Poncho",
+              "amount": 90.0,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.82
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x60",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 6.0,
+              "lineAmount": 90.0,
+              "confidence": 0.75
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 90.0,
+            "total": 90.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 6,
+          "rawLineText": "Melida x11 = 58.2 > 86.2 + 75 > 101.2 P",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Melida",
+            "normalizedCandidate": "Melida",
+            "similarTo": [],
+            "confidence": 0.8
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "initial sale",
+              "customerRef": "Melida",
+              "amount": 58.2,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.75
+            },
+            {
+              "entryIndex": 1,
+              "entryType": "balance_reference",
+              "description": "cumulative with P marker",
+              "customerRef": "Melida",
+              "amount": 101.2,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.72
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 58.2,
+              "confidence": 0.72
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "58.2 + 75",
+              "operator": "+",
+              "operands": [58.2, 75.0],
+              "result": 133.2,
+              "confidence": 0.65
+            }
+          ],
+          "amounts": {
+            "subtotal": 58.2,
+            "total": 101.2,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": true,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": ["multiple_totals_unclear", "amount_calculation_mismatch"],
+          "notes": [],
+          "confidence": 0.68
+        },
+        {
+          "lineIndex": 7,
+          "rawLineText": "Carmen x11 = 27P",
+          "lineType": "single_entry_line",
+          "customer": {
+            "rawName": "Carmen",
+            "normalizedCandidate": "Carmen",
+            "similarTo": [],
+            "confidence": 0.9
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "sale with P marker",
+              "customerRef": "Carmen",
+              "amount": 27.0,
+              "paymentMethod": null,
+              "paymentStatus": "paid",
+              "confidence": 0.88
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 27.0,
+              "confidence": 0.85
+            }
+          ],
+          "operations": [],
+          "amounts": {
+            "subtotal": 27.0,
+            "total": 27.0,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "paid",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": true,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.88
+        },
+        {
+          "lineIndex": 8,
+          "rawLineText": "Violeta R x11 = 50.6 + 12",
+          "lineType": "multi_entry_line",
+          "customer": {
+            "rawName": "Violeta R",
+            "normalizedCandidate": "Violeta R",
+            "similarTo": [],
+            "confidence": 0.85
+          },
+          "entries": [
+            {
+              "entryIndex": 0,
+              "entryType": "sale",
+              "description": "main sale",
+              "customerRef": "Violeta R",
+              "amount": 50.6,
+              "paymentMethod": null,
+              "paymentStatus": "unknown",
+              "confidence": 0.8
+            }
+          ],
+          "items": [
+            {
+              "rawText": "x11",
+              "normalizedProductCandidate": null,
+              "similarTo": [],
+              "quantityText": null,
+              "unitPrice": 11.0,
+              "lineAmount": 50.6,
+              "confidence": 0.78
+            }
+          ],
+          "operations": [
+            {
+              "rawText": "50.6 + 12",
+              "operator": "+",
+              "operands": [50.6, 12.0],
+              "result": 62.6,
+              "confidence": 0.75
+            }
+          ],
+          "amounts": {
+            "subtotal": 50.6,
+            "total": 62.6,
+            "amountPaid": null,
+            "balanceDue": null,
+            "highlightedAmount": null
+          },
+          "payment": {
+            "paymentMethod": null,
+            "paymentStatus": "unknown",
+            "yapeoConfirmed": false,
+            "pendingYape": false,
+            "noPago": false,
+            "referencesPreviousPayment": false,
+            "carryOverFromPrevious": false
+          },
+          "markers": {
+            "hasCircledAmount": false,
+            "hasArrow": false,
+            "hasP": false,
+            "hasNP": false,
+            "hasYapeo": false,
+            "hasXYapear": false
+          },
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        }
+      ]
+    }
+  ]
+}

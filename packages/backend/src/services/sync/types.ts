@@ -1,19 +1,6 @@
-export type SyncEntity =
-  | "customers"
-  | "sales"
-  | "sale_items"
-  | "abonos"
-  | "distribuciones"
-  | "products"
-  | "product_variants"
-  | "tags"
-  | "customer_tags"
-  | "purchases"
-  | "purchase_items"
-  | "customer_groups"
-  | "customer_group_members"
-  | "visitas"
-  | "suppliers";
+import type { SyncEntity } from "@avileo/shared";
+
+export type { SyncEntity } from "@avileo/shared";
 
 export type SyncOperationType = "create" | "update" | "delete";
 

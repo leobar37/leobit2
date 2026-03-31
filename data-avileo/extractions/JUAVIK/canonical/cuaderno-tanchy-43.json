@@ -1,0 +1,94 @@
+{
+  "imageId": "cuaderno-tanchy-43",
+  "imageFile": "Cuaderno Tanchy_43.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Partial date: Lunes visible.",
+    "Multiple payment markers including yapeo, P, NP, XY."
+  ],
+  "imageLevelNotes": [
+    "Full page of pollo entries.",
+    "Many circled amounts.",
+    "Multiple product fractions (1/2, 1/4, 1/5)."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "Lunes",
+        "normalizedDate": null,
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.5
+      },
+      "blockNotes": ["Date partially visible"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Yovana Oblitas x1.5 = 25.2 + 46.9 = 72.1",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Yovana Oblitas", "normalizedCandidate": "Yovana Oblitas", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite sale", "customerRef": "Yovana Oblitas", "amount": 72.1, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.8}],
+          "items": [{"rawText": "x1.5", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 1.5, "lineAmount": 25.2, "confidence": 0.68}],
+          "operations": [{"rawText": "25.2 + 46.9", "operator": "+", "operands": [25.2, 46.9], "result": 72.1, "confidence": 0.9}],
+          "amounts": {"subtotal": 72.1, "total": 72.1, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Nueva Angela R.P = x? = 27.9 (XY)",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Nueva Angela R.P", "normalizedCandidate": "Nueva Angela", "similarTo": [], "confidence": 0.78},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with XY marker", "customerRef": "Nueva Angela", "amount": 27.9, "paymentMethod": null, "paymentStatus": "pending_yape", "confidence": 0.78}],
+          "items": [],
+          "operations": [],
+          "amounts": {"subtotal": 27.9, "total": 27.9, "amountPaid": null, "balanceDue": 27.9, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "pending_yape", "yapeoConfirmed": false, "pendingYape": true, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": true},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Sole = pollo + yapeo : 46p",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Sole", "normalizedCandidate": "Sole", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "pollo with yapeo and P", "customerRef": "Sole", "amount": 46.0, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.82}],
+          "items": [{"rawText": "pollo", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 46.0, "confidence": 0.72}],
+          "operations": [],
+          "amounts": {"subtotal": 46.0, "total": 46.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.8
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Juana = pollo = 24.5 + 23.9 + NP yapeo 60",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Juana", "normalizedCandidate": "Juana", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite with NP and yapeo", "customerRef": "Juana", "amount": 108.4, "paymentMethod": "mixed", "paymentStatus": "partial", "confidence": 0.7}],
+          "items": [{"rawText": "pollo", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 48.4, "confidence": 0.68}],
+          "operations": [{"rawText": "24.5 + 23.9 + 60", "operator": "+", "operands": [24.5, 23.9, 60.0], "result": 108.4, "confidence": 0.85}],
+          "amounts": {"subtotal": 48.4, "total": 108.4, "amountPaid": 60.0, "balanceDue": 48.4, "highlightedAmount": null},
+          "payment": {"paymentMethod": "mixed", "paymentStatus": "partial", "yapeoConfirmed": true, "pendingYape": false, "noPago": true, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": true, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": ["complex_payment"],
+          "notes": [],
+          "confidence": 0.68
+        }
+      ]
+    }
+  ]
+}

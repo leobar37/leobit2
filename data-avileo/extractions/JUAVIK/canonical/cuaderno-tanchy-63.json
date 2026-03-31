@@ -1,0 +1,172 @@
+{
+  "imageId": "cuaderno-tanchy-63",
+  "imageFile": "Cuaderno Tanchy_63.jpg",
+  "sourceDataset": "data-avileo/JUAVIK",
+  "pass": "canonical",
+  "extractedAt": "2026-03-28T00:00:00.000Z",
+  "schemaVersion": "1.0.0",
+  "reconciliationNotes": [
+    "Single-pass extraction from visual inspection.",
+    "Date: 19-3-23 detected (2023-03-19).",
+    "Multiple payment markers: P, yapeo, X, NP.",
+    "Multiple products: pollo, huev (huevos)."
+  ],
+  "imageLevelNotes": [
+    "Full page with pollo and huevos entries.",
+    "Various price points: 4.8, 11.5, 12, 12.5, 15.",
+    "Many entries have partial or illegible text."
+  ],
+  "ignoredDetachedText": [],
+  "detectedDates": [
+    {"rawText": "19-3-23", "normalizedDate": "2023-03-19", "confidence": 0.85}
+  ],
+  "blocks": [
+    {
+      "blockIndex": 0,
+      "date": {
+        "rawText": "19-3-23",
+        "normalizedDate": "2023-03-19",
+        "inheritedFromPreviousBlock": false,
+        "confidence": 0.85
+      },
+      "blockNotes": ["Date at top of page"],
+      "lines": [
+        {
+          "lineIndex": 0,
+          "rawLineText": "Hermano Delia. 24 huev",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Hermano Delia", "normalizedCandidate": "Hermano Delia", "similarTo": [], "confidence": 0.82},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "huevos sale", "customerRef": "Hermano Delia", "amount": null, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.65}],
+          "items": [{"rawText": "24 huev", "normalizedProductCandidate": "huevos", "similarTo": [], "quantityText": "24", "unitPrice": null, "lineAmount": null, "confidence": 0.68}],
+          "operations": [],
+          "amounts": {"subtotal": null, "total": null, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["incomplete_amount"],
+          "notes": [],
+          "confidence": 0.62
+        },
+        {
+          "lineIndex": 1,
+          "rawLineText": "Neto. Roll 21.5",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Neto", "normalizedCandidate": "Neto", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "roll sale", "customerRef": "Neto", "amount": 21.5, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.7}],
+          "items": [{"rawText": "Roll", "normalizedProductCandidate": "roll", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 21.5, "confidence": 0.65}],
+          "operations": [],
+          "amounts": {"subtotal": 21.5, "total": 21.5, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["incomplete_price_format"],
+          "notes": [],
+          "confidence": 0.68
+        },
+        {
+          "lineIndex": 2,
+          "rawLineText": "Panchito x4.8 ... 27 ps + 16 ps",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Panchito", "normalizedCandidate": "Panchito", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite sale", "customerRef": "Panchito", "amount": 43.0, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.68}],
+          "items": [{"rawText": "x4.8", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 4.8, "lineAmount": null, "confidence": 0.62}],
+          "operations": [{"rawText": "27 + 16", "operator": "+", "operands": [27.0, 16.0], "result": 43.0, "confidence": 0.8}],
+          "amounts": {"subtotal": 43.0, "total": 43.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["incomplete_calculation"],
+          "notes": [],
+          "confidence": 0.65
+        },
+        {
+          "lineIndex": 3,
+          "rawLineText": "Omar x12.5 ... +21.10 = yape",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Omar", "normalizedCandidate": "Omar", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with yapeo", "customerRef": "Omar", "amount": null, "paymentMethod": "yape", "paymentStatus": "paid", "confidence": 0.72}],
+          "items": [{"rawText": "x12.5", "normalizedProductCandidate": null, "similarTo": [], "quantityText": null, "unitPrice": 12.5, "lineAmount": null, "confidence": 0.65}],
+          "operations": [],
+          "amounts": {"subtotal": null, "total": null, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": "yape", "paymentStatus": "paid", "yapeoConfirmed": true, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": true, "hasXYapear": false},
+          "reviewFlags": ["incomplete_amount"],
+          "notes": [],
+          "confidence": 0.68
+        },
+        {
+          "lineIndex": 4,
+          "rawLineText": "Sr Julia ... PAGÓ",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Sr Julia", "normalizedCandidate": "Sr. Julia", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with PAGÓ marker", "customerRef": "Sr. Julia", "amount": null, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.72}],
+          "items": [],
+          "operations": [],
+          "amounts": {"subtotal": null, "total": null, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": ["incomplete_amount"],
+          "notes": [],
+          "confidence": 0.65
+        },
+        {
+          "lineIndex": 5,
+          "rawLineText": "Sonia x11.5 = 22 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Sonia", "normalizedCandidate": "Sonia", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "sale with P marker", "customerRef": "Sonia", "amount": 22.0, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.8}],
+          "items": [{"rawText": "x11.5", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": 11.5, "lineAmount": 22.0, "confidence": 0.72}],
+          "operations": [],
+          "amounts": {"subtotal": 22.0, "total": 22.0, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.78
+        },
+        {
+          "lineIndex": 6,
+          "rawLineText": "Deisy ... 21.8 poll 26.9 mercaderia no ps",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Deisy", "normalizedCandidate": "Deisy", "similarTo": [], "confidence": 0.88},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite with NP", "customerRef": "Deisy", "amount": 48.7, "paymentMethod": null, "paymentStatus": "no_payment", "confidence": 0.72}],
+          "items": [{"rawText": "21.8 poll", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 21.8, "confidence": 0.68}, {"rawText": "26.9 mercaderia", "normalizedProductCandidate": "mercaderia", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 26.9, "confidence": 0.68}],
+          "operations": [{"rawText": "21.8 + 26.9", "operator": "+", "operands": [21.8, 26.9], "result": 48.7, "confidence": 0.85}],
+          "amounts": {"subtotal": 48.7, "total": 48.7, "amountPaid": null, "balanceDue": 48.7, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "no_payment", "yapeoConfirmed": false, "pendingYape": false, "noPago": true, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": true, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.72
+        },
+        {
+          "lineIndex": 7,
+          "rawLineText": "Tia silvia 70.10 pollo + 3 caz huev = 106.10 ps",
+          "lineType": "multi_entry_line",
+          "customer": {"rawName": "Tia silvia", "normalizedCandidate": "Tia Silvia", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "composite pollo and huevos", "customerRef": "Tia Silvia", "amount": 106.1, "paymentMethod": null, "paymentStatus": "unknown", "confidence": 0.75}],
+          "items": [{"rawText": "70.10 pollo", "normalizedProductCandidate": "pollo", "similarTo": [], "quantityText": null, "unitPrice": null, "lineAmount": 70.1, "confidence": 0.72}, {"rawText": "3 caz huev", "normalizedProductCandidate": "huevos", "similarTo": [], "quantityText": "3", "unitPrice": null, "lineAmount": 36.0, "confidence": 0.65}],
+          "operations": [],
+          "amounts": {"subtotal": 106.1, "total": 106.1, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "unknown", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": false, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.72
+        },
+        {
+          "lineIndex": 8,
+          "rawLineText": "Red Joan. 3 caz huev 38.50 P",
+          "lineType": "single_entry_line",
+          "customer": {"rawName": "Red Joan", "normalizedCandidate": "Red Joan", "similarTo": [], "confidence": 0.85},
+          "entries": [{"entryIndex": 0, "entryType": "sale", "description": "huevos with P", "customerRef": "Red Joan", "amount": 38.5, "paymentMethod": null, "paymentStatus": "paid", "confidence": 0.78}],
+          "items": [{"rawText": "3 caz huev", "normalizedProductCandidate": "huevos", "similarTo": [], "quantityText": "3", "unitPrice": null, "lineAmount": 38.5, "confidence": 0.7}],
+          "operations": [],
+          "amounts": {"subtotal": 38.5, "total": 38.5, "amountPaid": null, "balanceDue": null, "highlightedAmount": null},
+          "payment": {"paymentMethod": null, "paymentStatus": "paid", "yapeoConfirmed": false, "pendingYape": false, "noPago": false, "referencesPreviousPayment": false, "carryOverFromPrevious": false},
+          "markers": {"hasCircledAmount": false, "hasArrow": false, "hasP": true, "hasNP": false, "hasYapeo": false, "hasXYapear": false},
+          "reviewFlags": [],
+          "notes": [],
+          "confidence": 0.75
+        }
+      ]
+    }
+  ]
+}

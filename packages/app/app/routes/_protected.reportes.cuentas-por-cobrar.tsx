@@ -15,7 +15,7 @@ import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 export default function CuentasPorCobrarPage() {
   const filters = useAtomValue(filtersAtom);
-  const { data: accounts, isLoading } = useAccountsReceivable(filters);
+  const { data: accounts = [], isLoading } = useAccountsReceivable(filters);
   const { data: totalDebt } = useTotalAccountsReceivable();
 
   const [selectedAccount, setSelectedAccount] = useState<AccountsReceivableItem | null>(null);

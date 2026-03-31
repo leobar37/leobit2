@@ -1,9 +1,11 @@
 import { Elysia, t } from "elysia";
+import { SYNC_ENTITIES } from "@avileo/shared";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
 import { createLogger } from "../lib/logger";
 import { SyncConflictRepository } from "../services/sync/framework/SyncConflictRepository";
+import type { SyncOperationInput } from "../services/sync/types";
 
 const logger = createLogger("SyncRoute");
 
@@ -14,28 +16,37 @@ const MAX_BATCH_SIZE = 100;
 const MAX_CHANGES_LIMIT = 500;
 const DEFAULT_CHANGES_LIMIT = 100;
 
+const entityLiterals = SYNC_ENTITIES.map((entity) => t.Literal(entity)) as [
+  ReturnType<typeof t.Literal>,
+  ...ReturnType<typeof t.Literal>[],
+];
+
+const entityTypeSchema = t.Union(entityLiterals);
+
 export const syncRoutes = new Elysia({ prefix: "/sync" })
   .use(contextPlugin)
   .use(servicesPlugin)
   .post(
     "/batch",
     async ({ syncService, ctx, body, set }) => {
+      const operations = body.operations as SyncOperationInput[];
+
       // Enforce batch size limit
-      if (body.operations.length > MAX_BATCH_SIZE) {
+      if (operations.length > MAX_BATCH_SIZE) {
         set.status = 400;
         return {
           success: false,
           error: {
             code: "BATCH_TOO_LARGE",
-            message: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} operations. Received: ${body.operations.length}`,
+            message: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} operations. Received: ${operations.length}`,
             maxBatchSize: MAX_BATCH_SIZE,
           },
         };
       }
 
       // Validate each operation has required fields
-      for (let i = 0; i < body.operations.length; i++) {
-        const op = body.operations[i];
+      for (let i = 0; i < operations.length; i++) {
+        const op = operations[i];
         if (!op.idempotencyKey || typeof op.idempotencyKey !== "string") {
           set.status = 400;
           return {
@@ -76,27 +87,27 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       }
 
       // Log incoming sync batch request
-      const salesOps = body.operations.filter((op: { entityType: string }) => op.entityType === "sales");
-      const updateOps = salesOps.filter((op: { operation: string }) => op.operation === "update");
+      const salesOps = operations.filter((op) => op.entityType === "sales");
+      const updateOps = salesOps.filter((op) => op.operation === "update");
 
       logger.info({
         msg: "📥 SYNC BATCH REQUEST",
         businessId: ctx.businessId,
         userId: ctx.businessUserId,
-        totalOperations: body.operations.length,
-        operationsByEntity: body.operations.reduce((acc: Record<string, number>, op: { entityType: string }) => {
+        totalOperations: operations.length,
+        operationsByEntity: operations.reduce((acc: Record<string, number>, op) => {
           acc[op.entityType] = (acc[op.entityType] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
         salesOperations: salesOps.length,
         saleUpdates: updateOps.length,
-        saleUpdateIds: updateOps.map((op: { entityId: string }) => op.entityId),
+        saleUpdateIds: updateOps.map((op) => op.entityId),
       });
 
       const startTime = Date.now();
       const result = await syncService.processBatch(
         ctx as RequestContext,
-        body.operations
+        operations
       );
       const duration = Date.now() - startTime;
 
@@ -122,23 +133,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         operations: t.Array(
           t.Object({
             idempotencyKey: t.String({ minLength: 1 }),
-            entityType: t.Union([
-              t.Literal("customers"),
-              t.Literal("sales"),
-              t.Literal("sale_items"),
-              t.Literal("abonos"),
-              t.Literal("distribuciones"),
-              t.Literal("products"),
-              t.Literal("product_variants"),
-              t.Literal("tags"),
-              t.Literal("customer_tags"),
-              t.Literal("purchases"),
-              t.Literal("purchase_items"),
-              t.Literal("customer_groups"),
-              t.Literal("customer_group_members"),
-              t.Literal("visitas"),
-              t.Literal("suppliers"),
-            ]),
+            entityType: entityTypeSchema,
             entityId: t.String({ minLength: 1 }),
             operation: t.Union([
               t.Literal("create"),
@@ -205,6 +200,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       query: t.Object({
         since: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        syncGroupId: t.Optional(t.String()),
       }),
     }
   )

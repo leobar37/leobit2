@@ -10,13 +10,15 @@ import { useToastError } from "~/hooks/use-toast-error";
 import type {
   Sale,
   SaleWithItems,
+  SaleListItem,
   SaleStatus,
   CreateSaleInput,
   CreateSaleItemInput,
   UpdateSaleInput,
+  SalePageQuery,
 } from "~/lib/services/sale-service";
 
-export type { Sale, SaleWithItems, SaleStatus, CreateSaleInput, CreateSaleItemInput, UpdateSaleInput };
+export type { Sale, SaleWithItems, SaleListItem, SaleStatus, CreateSaleInput, CreateSaleItemInput, UpdateSaleInput };
 
 export interface CancelSaleInput {
   id: string;
@@ -31,12 +33,18 @@ const QUERY_KEYS = {
   sale: (id: string) => ["sales-new", id],
   byCustomer: (customerId: string) => ["sales-new", "customer", customerId],
   byStatus: (status: SaleStatus) => ["sales-new", "status", status],
+  page: (query: SalePageQuery) => ["sales-new", "page", query],
 } as const;
 
 interface SaleFilters {
   customerId?: string;
   status?: SaleStatus;
   distribucionId?: string | 'none' | 'all';
+}
+
+export interface PaginatedSalesResult {
+  items: SaleListItem[];
+  total: number;
 }
 
 /**
@@ -61,6 +69,17 @@ export function useSales(filters?: SaleFilters) {
         return saleService.findByStatus(filters.status);
       }
       return saleService.findByBusiness();
+    },
+  });
+}
+
+export function usePaginatedSales(query: SalePageQuery) {
+  const saleService = useSaleService();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.page(query),
+    queryFn: async (): Promise<PaginatedSalesResult> => {
+      return saleService.findPageByBusiness(query);
     },
   });
 }

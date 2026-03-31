@@ -8,7 +8,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup, type CustomerGroupMember } from "@avileo/shared";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 export interface CreateCustomerGroupInput {
   name: string;
@@ -28,6 +28,10 @@ export interface CustomerGroupSummary {
   id: string;
   name: string;
   syncStatus: string;
+}
+
+export interface CustomerGroupSummaryWithCustomerId extends CustomerGroupSummary {
+  customerId: string;
 }
 
 export interface CustomerGroupWithMemberCount extends Omit<CustomerGroup, "businessId"> {
@@ -188,6 +192,32 @@ export class CustomerGroupService extends BaseService {
       .where(
         and(
           eq(customerGroupMembers.customerId, customerId),
+          eq(customerGroups.businessId, this.businessId)
+        )
+      )
+      .orderBy(desc(customerGroups.createdAt));
+
+    return results;
+  }
+
+  async getCustomerGroupsForCustomers(customerIds: string[]): Promise<CustomerGroupSummaryWithCustomerId[]> {
+    if (customerIds.length === 0) {
+      return [];
+    }
+
+    const results = await this.db
+      .select({
+        customerId: customerGroupMembers.customerId,
+        id: customerGroups.id,
+        name: customerGroups.name,
+        syncStatus: customerGroups.syncStatus,
+      })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(
+        and(
+          inArray(customerGroupMembers.customerId, customerIds),
+          eq(customerGroupMembers.businessId, this.businessId),
           eq(customerGroups.businessId, this.businessId)
         )
       )

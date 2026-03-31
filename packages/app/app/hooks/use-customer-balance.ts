@@ -8,7 +8,7 @@ export interface CustomerBalance {
 }
 
 export function useCustomerBalance(customerId: string | null) {
-  const { data, isLoading } = useAccountsReceivable(
+  const { data = [], isLoading } = useAccountsReceivable(
     customerId ? { customerId } : {}
   );
 

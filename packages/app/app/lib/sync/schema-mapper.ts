@@ -6,25 +6,32 @@
 import type { PgTable } from "drizzle-orm/pg-core";
 import * as schema from "@avileo/shared";
 
-// Valid table names that can be synced (whitelist for safety)
+/**
+ * Pull/apply safety whitelist for entity-to-table mapping.
+ *
+ * Classification:
+ * - Most entries are canonical and match `@avileo/shared` `SYNC_ENTITIES`.
+ * - `variant_inventory` is intentionally pull-protected: it is still whitelisted here for safety,
+ *   but it is not part of the canonical shared sync API contract.
+ */
 export const VALID_TABLES = new Set([
-  "customers",
-  "products",
-  "product_variants",
-  "sales",
-  "sale_items",
-  "abonos",
-  "purchases",
-  "purchase_items",
-  "suppliers",
-  "variant_inventory",
-  "distribuciones",
-  "distribucion_items",
-  "tags",
-  "customer_tags",
-  "customer_groups",
-  "customer_group_members",
-  "visitas",
+  "customers", // CANONICAL: shared SYNC_ENTITIES
+  "products", // CANONICAL: shared SYNC_ENTITIES
+  "product_variants", // CANONICAL: shared SYNC_ENTITIES
+  "sales", // CANONICAL: shared SYNC_ENTITIES
+  "sale_items", // CANONICAL: shared SYNC_ENTITIES
+  "abonos", // CANONICAL: shared SYNC_ENTITIES
+  "purchases", // CANONICAL: shared SYNC_ENTITIES
+  "purchase_items", // CANONICAL: shared SYNC_ENTITIES
+  "suppliers", // CANONICAL: shared SYNC_ENTITIES
+  "variant_inventory", // PULL-PROTECTED + LEGACY: safety whitelist only, not in shared SYNC_ENTITIES
+  "distribuciones", // CANONICAL: shared SYNC_ENTITIES
+  "distribucion_items", // CANONICAL: shared SYNC_ENTITIES
+  "tags", // CANONICAL: shared SYNC_ENTITIES
+  "customer_tags", // CANONICAL: shared SYNC_ENTITIES
+  "customer_groups", // CANONICAL: shared SYNC_ENTITIES
+  "customer_group_members", // CANONICAL: shared SYNC_ENTITIES
+  "visitas", // CANONICAL: shared SYNC_ENTITIES
 ]);
 
 // Columnas que NO existen en ciertas tablas (lista negra segura)

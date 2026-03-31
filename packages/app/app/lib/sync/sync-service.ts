@@ -1,5 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import {
+  ENTITY_PRIORITIES,
+  SELF_HEAL_INSERTABLE,
+  SYNC_STATUS_TRACKED,
+} from "@avileo/shared";
+import {
   MAX_RETRIES,
   BATCH_SIZE,
   SYNC_INTERVAL_MS,
@@ -152,26 +157,9 @@ type CoalescePlan =
       type: "none";
     };
 
-const SYNC_STATUS_ENTITY_TABLES = new Set([
-  "sales",
-  "customers",
-  "customer_groups",
-  "customer_group_members",
-  "visitas",
-  "abonos",
-  "purchases",
-]);
+const SYNC_STATUS_ENTITY_TABLES: ReadonlySet<string> = new Set(SYNC_STATUS_TRACKED);
 
-const SELF_HEAL_INSERTABLE_ENTITIES = new Set([
-  "sales",
-  "customers",
-  "customer_groups",
-  "customer_group_members",
-  "visitas",
-  "abonos",
-  "purchases",
-  "purchase_items",
-]);
+const SELF_HEAL_INSERTABLE_ENTITIES: ReadonlySet<string> = new Set(SELF_HEAL_INSERTABLE);
 
 function parsePayload(payload: unknown): Record<string, unknown> {
   if (!payload) return {};
@@ -667,23 +655,10 @@ export class SyncService {
 
       // Sort operations within each group to ensure correct dependency order
       // Parent entities must be processed before child entities
-      const entityPriority: Record<string, number> = {
-        'sales': 1,
-        'sale_items': 2,
-        'customer_groups': 3,
-        'customer_group_members': 4,
-        'purchases': 1,
-        'purchase_items': 2,
-        'products': 1,
-        'product_variants': 2,
-        'distribucion': 1,
-        'distribucion_items': 2,
-      };
-      
       for (const [groupId, ops] of grouped) {
         const sortedOps = [...ops].sort((a, b) => {
-          const priorityA = entityPriority[a.entity_type] ?? 99;
-          const priorityB = entityPriority[b.entity_type] ?? 99;
+          const priorityA = ENTITY_PRIORITIES[a.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
+          const priorityB = ENTITY_PRIORITIES[b.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
           if (priorityA !== priorityB) {
             return priorityA - priorityB;
           }

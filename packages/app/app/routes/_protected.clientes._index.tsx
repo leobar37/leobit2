@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search, User, Tags, Check, Users, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useCustomers } from "~/hooks/use-customers";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import type { CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";
+import { usePaginatedCustomers, useCustomerTagsSummary } from "~/hooks/use-customers";
+import { useCustomerGroupsSummary, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerFilters } from "~/hooks/use-customer-filters";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { BulkCustomerTagsModal, useBulkCustomerTagsModal } from "~/components/customers/bulk-tag-assignment-drawer";
@@ -21,29 +24,74 @@ import { CustomerCard } from "~/components/customers/customer-card";
 import { TagFilter, QuickTagModal, useQuickTagModal } from "~/components/tags";
 
 export default function CustomersPage() {
-  const { data: customers, isLoading } = useCustomers();
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const bulkTagsModal = useBulkCustomerTagsModal();
   const bulkGroupsDrawer = useBulkGroupAssignmentDrawer();
   const quickTagModal = useQuickTagModal();
 
   const {
-    filteredCustomers,
     tagIds,
     setTagIds,
     search,
     setSearch,
     isSearching,
     isFiltering,
-  } = useCustomerFilters({
-    customers,
-    searchFields: [
-      (customer) => customer.name,
-      (customer) => customer.dni ?? undefined,
-      (customer) => customer.phone ?? undefined,
-    ],
+  } = useCustomerFilters({ loadTagRelations: false });
+
+  const pageSize = 100;
+  const offset = (page - 1) * pageSize;
+
+  const { data: customersPage, isLoading } = usePaginatedCustomers({
+    search: search || undefined,
+    tagIds,
+    limit: pageSize,
+    offset,
   });
+
+  const customers = customersPage?.items ?? [];
+  const totalCustomers = customersPage?.total ?? 0;
+  const customerIds = useMemo(() => customers.map((customer) => customer.id), [customers]);
+  const { data: customerTags = [] } = useCustomerTagsSummary(customerIds);
+  const { data: customerGroups = [] } = useCustomerGroupsSummary(customerIds);
+
+  const tagsByCustomerId = useMemo(() => {
+    const map = new Map<string, CustomerTagWithDetails[]>();
+    for (const tag of customerTags) {
+      const existing = map.get(tag.customerId) ?? [];
+      existing.push({
+        customerId: tag.customerId,
+        tagId: tag.tagId,
+        tagName: tag.tagName,
+        tagColor: tag.tagColor,
+        assignedAt: new Date(),
+        assignedBy: null,
+        syncStatus: "synced",
+        syncAttempts: 0,
+      });
+      map.set(tag.customerId, existing);
+    }
+    return map;
+  }, [customerTags]);
+
+  const groupsByCustomerId = useMemo(() => {
+    const map = new Map<string, CustomerGroupBadgeItem[]>();
+    for (const group of customerGroups) {
+      const existing = map.get(group.customerId) ?? [];
+      existing.push({
+        id: group.id,
+        name: group.name,
+        syncStatus: group.syncStatus,
+      });
+      map.set(group.customerId, existing);
+    }
+    return map;
+  }, [customerGroups]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, tagIds]);
 
   const toggleCustomerSelection = (customerId: string) => {
     setSelectedCustomerIds((prev) => {
@@ -58,10 +106,10 @@ export default function CustomersPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedCustomerIds.size === filteredCustomers?.length) {
+    if (selectedCustomerIds.size === customers.length) {
       setSelectedCustomerIds(new Set());
     } else {
-      setSelectedCustomerIds(new Set(filteredCustomers?.map((c) => c.id) ?? []));
+      setSelectedCustomerIds(new Set(customers.map((c) => c.id)));
     }
   };
 
@@ -98,7 +146,7 @@ export default function CustomersPage() {
             <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">Cargando clientes...</p>
           </div>
-        ) : filteredCustomers?.length === 0 ? (
+        ) : customers.length === 0 ? (
           <div className="py-8 text-center">
             <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="mb-4 text-muted-foreground">
@@ -110,19 +158,19 @@ export default function CustomersPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredCustomers && filteredCustomers.length > 0 && (
+            {customers.length > 0 && (
               <div className="flex items-center justify-between rounded-xl border border-stone-200/80 bg-white/50 p-3 px-4">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                   <button
                     type="button"
                     onClick={toggleSelectAll}
                     className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                      selectedCustomerIds.size === filteredCustomers.length
+                      selectedCustomerIds.size === customers.length
                         ? "border-orange-500 bg-orange-500"
                         : "border-stone-300 hover:border-orange-400"
                     }`}
                   >
-                    {selectedCustomerIds.size === filteredCustomers.length && (
+                    {selectedCustomerIds.size === customers.length && (
                       <Check className="h-3 w-3 text-white" />
                     )}
                   </button>
@@ -176,7 +224,7 @@ export default function CustomersPage() {
                 )}
               </div>
             )}
-            {filteredCustomers?.map((customer) => (
+            {customers.map((customer) => (
               <CustomerCard
                 key={customer.id}
                 customer={customer as unknown as import("~/lib/db/schema").Customer}
@@ -186,8 +234,19 @@ export default function CustomersPage() {
                 onSelect={() => toggleCustomerSelection(customer.id)}
                 onNavigate={() => navigate(`/clientes/${customer.id}`)}
                 showTags
+                preloadedTags={tagsByCustomerId.get(customer.id) ?? []}
+                preloadedGroups={groupsByCustomerId.get(customer.id) ?? []}
               />
             ))}
+
+            {totalCustomers > pageSize && (
+              <PaginationControls
+                page={page}
+                pageSize={pageSize}
+                totalItems={totalCustomers}
+                onPageChange={setPage}
+              />
+            )}
           </div>
         )}
       </div>
