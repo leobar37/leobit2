@@ -64,6 +64,8 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
     await this.distribucionService.createDistribucion(ctx, {
       vendedorId: parsed.vendedorId,
       puntoVenta: parsed.puntoVenta,
+      puntoVentaId: parsed.puntoVentaId,
+      notaCreacion: parsed.notaCreacion,
       fecha: parsed.fecha ?? getToday(),
       modo: parsed.modo,
       confiarEnVendedor: parsed.confiarEnVendedor,
@@ -85,6 +87,9 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
     const updateData: Parameters<typeof this.distribucionRepo.update>[2] = {};
 
     if (parsed.puntoVenta !== undefined) updateData.puntoVenta = parsed.puntoVenta;
+    if (parsed.puntoVentaId !== undefined) updateData.puntoVentaId = parsed.puntoVentaId;
+    if (parsed.notaCreacion !== undefined) updateData.notaCreacion = parsed.notaCreacion;
+    if (parsed.notaCierre !== undefined) updateData.notaCierre = parsed.notaCierre;
     if (parsed.montoRecaudado !== undefined) updateData.montoRecaudado = parsed.montoRecaudado;
     if (parsed.fecha !== undefined) updateData.fecha = parsed.fecha;
     if (parsed.estado !== undefined) updateData.estado = parsed.estado;

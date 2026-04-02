@@ -24,6 +24,7 @@
     "db:reset": "bun run scripts/reset-db.ts && bun run src/seed/demo-user.ts",
     "db:apply-migration": "bun run scripts/run-migration.ts",
     "db:backup": "bun run scripts/backup-db.ts",
+    "db:check-duplicates": "bun run scripts/check-duplicates.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "vitest run --config=vitest.e2e.config.ts",

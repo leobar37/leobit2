@@ -1,5 +1,6 @@
 const AUTH_TOKEN_KEY = "bearer_token";
 const CURRENT_BUSINESS_ID_KEY = "current_business_id";
+const CURRENT_BUSINESS_USER_ID_KEY = "current_business_user_id";
 
 // Sync-related localStorage keys
 const PULL_CURSOR_KEY = "avileo_pull_cursor";
@@ -36,6 +37,17 @@ export function setStoredBusinessId(businessId: string) {
 export function clearStoredBusinessId() {
   if (!canUseStorage()) return;
   localStorage.removeItem(CURRENT_BUSINESS_ID_KEY);
+  localStorage.removeItem(CURRENT_BUSINESS_USER_ID_KEY);
+}
+
+export function getStoredBusinessUserId(): string | null {
+  if (!canUseStorage()) return null;
+  return localStorage.getItem(CURRENT_BUSINESS_USER_ID_KEY);
+}
+
+export function setStoredBusinessUserId(businessUserId: string) {
+  if (!canUseStorage()) return;
+  localStorage.setItem(CURRENT_BUSINESS_USER_ID_KEY, businessUserId);
 }
 
 export function clearStoredAuthState() {

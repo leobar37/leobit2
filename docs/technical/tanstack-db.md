@@ -1,4 +1,4 @@
-# PollosPro - Implementación Offline con TanStack DB
+# Avileo - Implementación Offline con TanStack DB
 
 > Arquitectura offline-first usando TanStack DB + IndexedDB + Sync personalizado (sin RxDB de pago)
 
@@ -687,7 +687,7 @@ export function useNetworkStatus() {
 ### 2. **Conflict resolution básico**
 - Nuestra implementación: "último que escribe gana"
 - RxDB tiene algoritmos más sofisticados
-- Para PollosPro: el caso de uso es simple (ventas independientes)
+- Para Avileo: el caso de uso es simple (ventas independientes)
 
 ### 3. **Multi-tab sync**
 - Con RxDB: automático

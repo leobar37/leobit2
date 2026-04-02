@@ -1,7 +1,7 @@
 # Plan de Trabajo: Extender Sales para Eliminar Orders
 
 **Documento:** Unificación Ventas-Pedidos en Sales  
-**Proyecto:** Avileo (PollosPro)  
+**Proyecto:** Avileo  
 **Fecha:** 2025-03-10  
 **Duración:** 29 días (6 semanas)  
 **Status:** Listo para Ejecución

@@ -19,7 +19,7 @@ Todas las pantallas desktop comparten el mismo layout base:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Dashboard            🟢 Online  👤Admin │ ← Header
+│ 🟧 Avileo    Dashboard            🟢 Online  👤Admin │ ← Header
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │                                              │
 │ 📍 Dist  │          CONTENIDO PRINCIPAL                 │
@@ -59,7 +59,7 @@ Panel de control principal para administradores. Muestra resumen de ventas, vend
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Dashboard            🟢 Online  👤Admin │
+│ 🟧 Avileo    Dashboard            🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────┬─────────┬─────────┬─────────┐   │
 │ 📍 Dist  │  │ S/4,580 │   89    │ S/2,340 │    5    │   │ ← Stats 4-col
@@ -123,7 +123,7 @@ Gestión de asignación de inventario a vendedores. Solo visible en modo "Invent
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Distribución         🟢 Online  👤Admin │
+│ 🟧 Avileo    Distribución         🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────────────────────────────────────┐ │
 │ 📍 Dist✓ │  │ Inventario Disponible Hoy               │ │ ← Header card
@@ -182,7 +182,7 @@ CRUD de usuarios del sistema. Admin puede crear vendedores y otros admins.
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Usuarios             🟢 Online  👤Admin │
+│ 🟧 Avileo    Usuarios             🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────────────────────────────────────┐ │
 │ 📍 Dist  │  │ [+ Nuevo Usuario]  [🔍 Buscar...]       │ │ ← Acciones
@@ -295,7 +295,7 @@ Visualización de reportes y estadísticas. Funciona con datos ya sincronizados.
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Reportes             🟢 Online  👤Admin │
+│ 🟧 Avileo    Reportes             🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────────────┐ ┌─────────────────┐     │
 │ 📍 Dist  │  │ Desde           │ │ Hasta           │     │ ← Filtros
@@ -357,7 +357,7 @@ Vista global de todos los clientes del sistema. Incluye deudas totales y histori
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Clientes             🟢 Online  👤Admin │
+│ 🟧 Avileo    Clientes             🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────────────────────────────────────┐ │
 │ 📍 Dist  │  │ [🔍 Buscar cliente...] [Filtros ▼]      │ │
@@ -406,7 +406,7 @@ Configuración del sistema: modo de operación, precios, parámetros generales.
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 🟧 PollosPro    Configuración        🟢 Online  👤Admin │
+│ 🟧 Avileo    Configuración        🟢 Online  👤Admin │
 ├──────────┬──────────────────────────────────────────────┤
 │ 🏠 Dash  │  ┌─────────────────────────────────────────┐ │
 │ 📍 Dist  │  │ ⚙️ Configuración General                │ │
@@ -494,4 +494,4 @@ Las pantallas desktop muestran estos estados:
 
 ---
 
-*Documentación de pantallas desktop - PollosPro v1.0*
+*Documentación de pantallas desktop - Avileo v1.0*

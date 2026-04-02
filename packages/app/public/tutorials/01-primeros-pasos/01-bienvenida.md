@@ -1,6 +1,6 @@
 # Bienvenida a Avileo
 
-¡Hola! Bienvenido a **Avileo** (también conocido como PollosPro), el sistema diseñado para ayudarte a gestionar tu negocio de venta de pollos de manera eficiente, ya sea que trabajes desde tu local o recorriendo las calles con tu carrito.
+¡Hola! Bienvenido a **Avileo**, el sistema diseñado para ayudarte a gestionar tu negocio de venta de pollos de manera eficiente, ya sea que trabajes desde tu local o recorriendo las calles con tu carrito.
 
 ## ¿Qué es Avileo?
 

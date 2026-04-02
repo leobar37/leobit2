@@ -246,6 +246,13 @@
       "when": 1773700000000,
       "tag": "0038_add_visita_id_to_sales",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1775320000000,
+      "tag": "0048_add_distribution_notes",
+      "breakpoints": true
     }
   ]
 }

@@ -129,7 +129,7 @@ export const integrationHandlers = [
     return HttpResponse.json({
       data: {
         id: "biz-1",
-        name: "Pollos Pro Demo",
+        name: "Avileo Demo",
         modoOperacion: "libre",
         controlKilos: true,
       },

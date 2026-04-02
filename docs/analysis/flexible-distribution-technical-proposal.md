@@ -2,7 +2,7 @@
 
 ## Resumen Ejecutivo
 
-**Proyecto:** Avileo (PollosPro) - Sistema de gestión de ventas de pollo
+**Proyecto:** Avileo - Sistema de gestión de ventas de pollo
 **Estado actual:** El sistema de distribución es rígido, solo soporta kilos totales sin distinguir productos
 **Problema:** Los negocios reales operan con múltiples productos (pollo, huevos, menudencias) y necesitan flexibilidad en cómo controlan el inventario asignado a vendedores
 **Solución propuesta:** Arquitectura de distribución por variantes con modos de operación flexibles

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This directory contains **6 executable plans** to build Avileo (PollosPro) step by step.
+This directory contains **6 executable plans** to build Avileo step by step.
 
 ### The 6 Plans
 

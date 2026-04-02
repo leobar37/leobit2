@@ -47,7 +47,7 @@ export function Navigation() {
               <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center text-white text-lg font-bold">
                 P
               </div>
-              <span className="font-bold text-gray-800">PollosPro</span>
+              <span className="font-bold text-gray-800">Avileo</span>
             </a>
 
             {/* Desktop nav */}

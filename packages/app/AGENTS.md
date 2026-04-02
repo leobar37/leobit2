@@ -4,7 +4,7 @@
 
 ## Overview
 
-This is the **React Router v7 frontend** for Avileo (PollosPro) - an offline-first chicken sales management system. It provides a mobile-first web application for vendors to manage customers, sales, inventory distribution, and payments with offline capabilities.
+This is the **React Router v7 frontend** for Avileo - an offline-first chicken sales management system. It provides a mobile-first web application for vendors to manage customers, sales, inventory distribution, and payments with offline capabilities.
 
 ## Project Type & Stack
 

@@ -7,21 +7,36 @@ import {
   clearStoredBusinessId,
   clearLocalDatabaseNamespace,
   setStoredBusinessId,
+  setStoredBusinessUserId,
   setLocalDatabaseNamespace,
   clearSyncKeys,
   getStoredAuthToken,
+  getStoredBusinessId,
 } from "../lib/session-storage";
 
 async function hydrateCurrentBusinessId() {
-  const { data, error } = await api.businesses.me.get();
+  try {
+    const { data, error } = await api.businesses.me.get();
 
-  if (error || !data?.success || !data.data?.id) {
-    clearStoredBusinessId();
-    return null;
+    if (error || !data?.success || !data.data?.id) {
+      console.warn("[useAuth] Failed to fetch current business from API, preserving stored ID");
+      const storedId = getStoredBusinessId();
+      if (storedId) {
+        return storedId;
+      }
+      return null;
+    }
+
+    setStoredBusinessId(data.data.id);
+    if (data.data.businessUserId) {
+      setStoredBusinessUserId(data.data.businessUserId);
+    }
+    return data.data.id;
+  } catch (err) {
+    console.warn("[useAuth] Exception fetching business ID, preserving stored ID:", err);
+    const storedId = getStoredBusinessId();
+    return storedId;
   }
-
-  setStoredBusinessId(data.data.id);
-  return data.data.id;
 }
 
 async function ensureSessionReady() {

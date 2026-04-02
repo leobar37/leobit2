@@ -184,6 +184,9 @@ export function ServicesProvider({
       purchaseService: services.purchaseService,
       supplierService: services.supplierService,
       syncService: services.syncService,
+      productService: services.productService,
+      customerService: services.customerService,
+      saleService: services.saleService,
     });
 
     return () => {

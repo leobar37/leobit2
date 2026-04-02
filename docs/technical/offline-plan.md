@@ -1,4 +1,4 @@
-# PollosPro - Plan Técnico (Arquitectura Offline-First)
+# Avileo - Plan Técnico (Arquitectura Offline-First)
 
 > Sistema de gestión para negocios de pollo con soporte offline para vendedores en zonas sin cobertura.
 

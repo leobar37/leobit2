@@ -21,7 +21,7 @@ export function Footer() {
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center text-white text-xl font-bold">
                 P
               </div>
-              <span className="text-xl font-bold text-white">PollosPro</span>
+              <span className="text-xl font-bold text-white">Avileo</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
               Software inteligente para la gestión de pollerías. 
@@ -113,7 +113,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
-            © {currentYear} PollosPro. Todos los derechos reservados.
+            © {currentYear} Avileo. Todos los derechos reservados.
           </p>
           <p className="text-gray-500 text-sm flex items-center gap-1">
             Hecho con <Heart className="w-4 h-4 text-red-500 fill-red-500" /> para los polleros

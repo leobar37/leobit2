@@ -1,4 +1,4 @@
-# PollosPro - Análisis de Funcionalidades Offline
+# Avileo - Análisis de Funcionalidades Offline
 
 > Detalle completo de qué funciona offline, qué no, y por qué.
 

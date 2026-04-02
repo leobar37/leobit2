@@ -2,7 +2,7 @@
 
 ## Context
 
-This conversation was about the Avileo (PollosPro) project - an offline-first chicken sales management system built with React Router v7, PGlite, and ElysiaJS. The task started with analyzing the sales creation flow.
+This conversation was about the Avileo project - an offline-first chicken sales management system built with React Router v7, PGlite, and ElysiaJS. The task started with analyzing the sales creation flow.
 
 ## The Problem / Objective
 

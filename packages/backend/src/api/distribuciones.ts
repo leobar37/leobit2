@@ -106,6 +106,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         vendedorId: body.vendedorId,
         puntoVenta: body.puntoVenta,
         puntoVentaId: body.puntoVentaId,
+        notaCreacion: body.notaCreacion,
         fecha: body.fecha,
         modo: body.modo,
         confiarEnVendedor: body.confiarEnVendedor,
@@ -122,6 +123,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         vendedorId: t.String(),
         puntoVenta: t.String({ minLength: 2 }),
         puntoVentaId: t.Optional(t.String()),
+        notaCreacion: t.Optional(t.String()),
         fecha: t.Optional(t.String()),
         modo: t.Optional(t.Union([t.Literal("estricto"), t.Literal("acumulativo"), t.Literal("libre")])),
         confiarEnVendedor: t.Optional(t.Boolean()),
@@ -170,8 +172,10 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
   )
   .patch(
     "/:id/close",
-    async ({ ctx, params, distribucionService }) => {
-      const distribucion = await distribucionService.closeDistribucion(ctx, params.id);
+    async ({ ctx, params, body, distribucionService }) => {
+      const distribucion = await distribucionService.closeDistribucion(ctx, params.id, {
+        notaCierre: body?.notaCierre,
+      });
       return {
         success: true,
         data: distribucion,
@@ -181,7 +185,9 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       params: t.Object({
         id: t.String(),
       }),
-      body: t.Optional(t.Object({})),
+      body: t.Optional(t.Object({
+        notaCierre: t.Optional(t.String()),
+      })),
       detail: {
         summary: "Cerrar distribución",
         description: "Cierra una distribución (cambia estado a 'cerrado'). Las métricas se calculan desde los items.",

@@ -1,4 +1,4 @@
-# Análisis de Funcionalidades - Avileo (PollosPro)
+# Análisis de Funcionalidades - Avileo
 
 > Documento de análisis del estado actual y planificación de desarrollo modular
 > Fecha: 12 de Febrero, 2026

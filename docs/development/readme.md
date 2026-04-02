@@ -1,4 +1,4 @@
-# PollosPro - Plan de Desarrollo Incremental
+# Avileo - Plan de Desarrollo Incremental
 
 > Guía paso a paso para construir el sistema de gestión de ventas de pollo (offline-first)
 
@@ -20,7 +20,7 @@ Este plan está organizado en **10 fases incrementales**. Cada fase es un módul
 ## 🎯 Estructura del Plan
 
 ```
-PollosPro-Desarrollo/
+Avileo-Desarrollo/
 ├── README.md              <- Estás aquí (guía general)
 ├── tech.md                <- Herramientas y tecnologías
 │

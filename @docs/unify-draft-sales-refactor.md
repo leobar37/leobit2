@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Sistema Avileo (PollosPro) - Offline-first chicken sales management. Actualmente tenemos **dos sistemas paralelos** que resuelven problemas similares:
+Sistema Avileo - Offline-first chicken sales management. Actualmente tenemos **dos sistemas paralelos** que resuelven problemas similares:
 
 - **Ventas (Sales)**: Transacciones instantáneas, cálculo con tara, modos de pago (pago_total/a_cuenta/debe_todo)
 - **Pedidos (Orders)**: Pre-ventas con fecha de entrega, versionado, snapshots, tokens para clientes

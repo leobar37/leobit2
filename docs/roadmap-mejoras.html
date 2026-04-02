@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avileo - Roadmap de Mejoras Estratégicas</title>
+    <style>
+        :root {
+            --orange-50: #fff7ed;
+            --orange-100: #ffedd5;
+            --orange-200: #fed7aa;
+            --orange-300: #fdba74;
+            --orange-400: #fb923c;
+            --orange-500: #f97316;
+            --orange-600: #ea580c;
+            --orange-700: #c2410c;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: var(--gray-50);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--orange-500) 0%, var(--orange-600) 100%);
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            opacity: 0.95;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .header .tagline {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        /* Navigation */
+        .nav {
+            background: white;
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav ul {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            list-style: none;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            color: var(--orange-600);
+            background: var(--orange-50);
+        }
+
+        /* Sections */
+        section {
+            padding: 60px 0;
+        }
+
+        section:nth-child(even) {
+            background: white;
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: var(--gray-800);
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 32px;
+            background: var(--orange-500);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--gray-700);
+            margin: 32px 0 16px;
+        }
+
+        h4 {
+            font-size: 1.125rem;
+            color: var(--gray-700);
+            margin: 24px 0 12px;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--gray-600);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 16px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-100);
+        }
+
+        .card-highlight {
+            border-left: 4px solid var(--orange-500);
+        }
+
+        .card-success {
+            border-left-color: var(--success);
+        }
+
+        .card-warning {
+            border-left-color: var(--warning);
+        }
+
+        .card-danger {
+            border-left-color: var(--danger);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 32px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--orange-500);
+            display: block;
+        }
+
+        .stat-label {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin-top: 4px;
+        }
+
+        /* Roadmap */
+        .roadmap {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .roadmap::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--orange-200);
+        }
+
+        .roadmap-item {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .roadmap-item::before {
+            content: '';
+            position: absolute;
+            left: -33px;
+            top: 4px;
+            width: 16px;
+            height: 16px;
+            background: var(--orange-500);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--orange-200);
+        }
+
+        .roadmap-item.completed::before {
+            background: var(--success);
+            box-shadow: 0 0 0 2px var(--success);
+        }
+
+        .roadmap-quarter {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--orange-600);
+            margin-bottom: 8px;
+        }
+
+        .roadmap-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+
+        .roadmap-features {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        .roadmap-features li {
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            color: var(--gray-600);
+        }
+
+        .roadmap-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        /* Wireframes */
+        .wireframe {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 24px;
+            padding: 20px;
+            margin: 24px 0;
+            max-width: 375px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .wireframe-header {
+            background: linear-gradient(135deg, var(--orange-400) 0%, var(--orange-500) 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .wireframe-header h4 {
+            color: white;
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .wireframe-content {
+            padding: 8px;
+        }
+
+        .wf-card {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .wf-card-title {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .wf-stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+
+        .wf-stat-label {
+            color: var(--gray-500);
+        }
+
+        .wf-stat-value {
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .wf-button {
+            background: var(--orange-500);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        .wf-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .wf-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .wf-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--orange-100);
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wf-avatar svg {
+            width: 20px;
+            height: 20px;
+            color: var(--orange-500);
+        }
+
+        .wf-list-content {
+            flex: 1;
+        }
+
+        .wf-list-title {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .wf-list-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .wf-badge {
+            background: var(--orange-100);
+            color: var(--orange-700);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .wf-badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .wf-badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .wf-fab {
+            width: 56px;
+            height: 56px;
+            background: var(--orange-500);
+            border-radius: 50%;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+        }
+
+        td {
+            color: var(--gray-600);
+        }
+
+        tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--gray-600);
+        }
+
+        /* Feature Tags */
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .feature-tag {
+            background: var(--orange-100);
+            color: var(--orange-700);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Comparison */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .comparison-col {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid var(--gray-200);
+        }
+
+        .comparison-col h4 {
+            margin-top: 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-100);
+        }
+
+        .comparison-col ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .comparison-col li {
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+        }
+
+        .comparison-col li::before {
+            position: absolute;
+            left: 0;
+            font-weight: 700;
+        }
+
+        .comparison-yes li::before {
+            content: '✓';
+            color: var(--success);
+        }
+
+        .comparison-no li::before {
+            content: '✗';
+            color: var(--danger);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--gray-900);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .footer p {
+            color: var(--gray-400);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .nav ul {
+                gap: 16px;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .roadmap {
+                padding-left: 30px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .nav, .wf-fab {
+                display: none;
+            }
+
+            section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>🐔 Avileo - Roadmap Estratégico</h1>
+            <p>Software de bolsillo para vendedores de productos perecederos</p>
+            <span class="tagline">"Simple como un control de ventas en papel, poderoso como un ERP"</span>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <div class="container">
+            <ul>
+                <li><a href="#resumen">Resumen Ejecutivo</a></li>
+                <li><a href="#filosofia">Filosofía</a></li>
+                <li><a href="#roadmap">Roadmap</a></li>
+                <li><a href="#wireframes">Wireframes</a></li>
+                <li><a href="#market">Análisis de Mercado</a></li>
+                <li><a href="#expansion">Expansión</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section id="resumen">
+        <div class="container">
+            <h2>Resumen Ejecutivo</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number">67</span>
+                    <span class="stat-label">Rutas Frontend</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">120+</span>
+                    <span class="stat-label">Endpoints API</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">30</span>
+                    <span class="stat-label">Tablas DB</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">20</span>
+                    <span class="stat-label">Entidades Sync</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">165K</span>
+                    <span class="stat-label">Vendedores Perú</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">3</span>
+                    <span class="stat-label">Taps Máximo</span>
+                </div>
+            </div>
+
+            <div class="card card-highlight">
+                <h3>🎯 Posición Actual</h3>
+                <p>Avileo es un sistema <strong>offline-first</strong> de gestión de ventas diseñado para vendedores de pollo en Perú. Actualmente tiene <strong>+70% de funcionalidades implementadas</strong> con un enfoque en:</p>
+                <ul>
+                    <li><strong>Ventas con fiar:</strong> Gestión de crédito informal sin complicaciones</li>
+                    <li><strong>Distribución diaria:</strong> Asignación de productos a vendedores</li>
+                    <li><strong>Visitas:</strong> Seguimiento de clientes y sus compras</li>
+                    <li><strong>Cobros:</strong> Múltiples métodos de pago con comprobantes</li>
+                    <li><strong>WhatsApp:</strong> Notificaciones automáticas de ventas</li>
+                </ul>
+            </div>
+
+            <div class="card card-success">
+                <h3>✅ Fortalezas Detectadas</h3>
+                <ul>
+                    <li>Arquitectura offline-first sólida con sync en tiempo real</li>
+                    <li>Interfaz mobile-first extremadamente simple</li>
+                    <li>Modelo de negocio claro: vendedores ambulantes con distribución</li>
+                    <li>Integración WhatsApp nativa (el OS del comercio informal)</li>
+                    <li>Sistema de cobros multimodal (efectivo/Yape/Plin/transferencia)</li>
+                </ul>
+            </div>
+
+            <div class="card card-warning">
+                <h3>⚠️ Brechas Identificadas</h3>
+                <ul>
+                    <li><strong>Cierre del Día:</strong> Funcionalidad crítica faltante para control diario</li>
+                    <li><strong>Compras/Proveedores:</strong> Rutas frontend incompletas (30-40%)</li>
+                    <li><strong>Gestión de Deuda:</strong> Sin dashboard de "quién me debe"</li>
+                    <li><strong>Pedidos:</strong> Sin sistema de pedidos anticipados</li>
+                    <li><strong>Rutas de Reparto:</strong> Sin optimización de recorridos</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="filosofia">
+        <div class="container">
+            <h2>Filosofía del Software</h2>
+
+            <div class="card card-highlight">
+                <h3>🎯 Principios No Negociables</h3>
+                <p>Estos principios guían todas las decisiones de producto. <strong>Si una funcionalidad viola alguno de estos principios, no se implementa.</strong></p>
+            </div>
+
+            <h3>1. Software de Bolsillo</h3>
+            <div class="card">
+                <p><strong>Definición:</strong> Accesible únicamente desde celular. No hay versión desktop, no hay versión web compleja. El celular es el centro de operaciones.</p>
+                <p><strong>Sustento:</strong> En el comercio informal peruano, el 98% de los vendedores solo tienen celular. No tienen laptop, no tienen tablet. El celular es su herramienta de trabajo principal.</p>
+                <div class="feature-tags">
+                    <span class="feature-tag">Mobile-only</span>
+                    <span class="feature-tag">Responsive-first</span>
+                    <span class="feature-tag">Touch-optimized</span>
+                </div>
+            </div>
+
+            <h3>2. Regla de los 3 Taps</h3>
+            <div class="card">
+                <p><strong>Definición:</strong> Cualquier acción principal debe completarse en máximo 3 toques/interacciones.</p>
+                <p><strong>Ejemplos:</strong></p>
+                <ul>
+                    <li>Vender → Seleccionar cliente → Agregar producto → Confirmar (3 taps)</li>
+                    <li>Cobrar → Buscar cliente → Registrar pago → Confirmar (3 taps)</li>
+                    <li>Ver deuda → Dashboard → Cliente → Detalle (3 taps)</li>
+                </ul>
+                <p><strong>Sustento:</strong> Los vendedores ambulantes están en constante movimiento. No pueden dedicar 30 segundos a registrar una venta. Si tarda más de 5 segundos, dejan de usar el sistema.</p>
+            </div>
+
+            <h3>3. Cualquiera Puede Usarlo</h3>
+            <div class="card">
+                <p><strong>Definición:</strong> No requiere capacitación formal. Un vendedor debe poder empezar a usarlo sin manual ni tutorial.</p>
+                <p><strong>Implicaciones:</strong></p>
+                <ul>
+                    <li>No usar términos técnicos ("facturación", "conciliación", "depreciación")</li>
+                    <li>Los iconos deben ser universales y obvios</li>
+                    <li>Los flujos deben seguir la lógica natural del negocio</li>
+                    <li>Sin configuraciones complejas iniciales</li>
+                </ul>
+                <p><strong>Sustento:</strong> El rotatividad en vendedores ambulantes es del 40% anual. Si cada nuevo vendedor requiere 2 horas de capacitación, el costo operativo se dispara.</p>
+            </div>
+
+            <h3>4. No Genérico, Nicho Específico</h3>
+            <div class="card">
+                <p><strong>Definición:</strong> No competir con Shopify, Loyverse o Square. Servir un nicho específico mejor que nadie.</p>
+                <p><strong>Nicho Actual:</strong> Vendedores de pollo con distribución diaria y crédito informal</p>
+                <p><strong>Expansión Natural:</strong> Todos los vendedores de productos perecederos que operan con:</p>
+                <ul>
+                    <li>Distribución diaria de productos frescos</li>
+                    <li>Crédito informal ("fiar")</li>
+                    <li>Operación 100% mobile</li>
+                    <li>Clientes recurrentes en rutas fijas</li>
+                </ul>
+                <p><strong>Sustento:</strong> Los software genéricos fallan en las particularidades del nicho (ej: el crédito informal no existe en sistemas formales). Al ser específicos, el valor percibido es 10x mayor.</p>
+            </div>
+
+            <div class="comparison">
+                <div class="comparison-col comparison-no">
+                    <h4>❌ NO Vamos a Hacer</h4>
+                    <ul>
+                        <li>Facturación electrónica (SUNAT)</li>
+                        <li>Contabilidad completa (libros, balances)</li>
+                        <li>Versión multi-idioma</li>
+                        <li>Dashboards con 10+ gráficas</li>
+                        <li>Gestión de empleados compleja</li>
+                        <li>Pasarela de pagos online</li>
+                        <li>Catálogo e-commerce</li>
+                        <li>Sistema de puntos/fidelización</li>
+                        <li>App nativa iOS/Android</li>
+                        <li>Versión desktop</li>
+                    </ul>
+                </div>
+                <div class="comparison-col comparison-yes">
+                    <h4>✅ SÍ Vamos a Hacer</h4>
+                    <ul>
+                        <li>Venta rápida con fiar (crédito informal)</li>
+                        <li>Cobros con múltiples métodos</li>
+                        <li>Distribución diaria de productos</li>
+                        <li>Seguimiento de visitas y clientes</li>
+                        <li>Notificaciones WhatsApp</li>
+                        <li>Cierre del día simple</li>
+                        <li>Control de deudas visuales</li>
+                        <li>Pedidos anticipados</li>
+                        <li>Rutas de reparto optimizadas</li>
+                        <li>Funciona 100% offline</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="roadmap">
+        <div class="container">
+            <h2>Roadmap de Mejoras</h2>
+            
+            <p>Este roadmap está diseñado para maximizar el impacto comercial manteniendo la filosofía de simplicidad. Cada trimestre se enfoca en cerrar brechas críticas mientras se expande el alcance del nicho.</p>
+
+            <div class="roadmap">
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Q1 2025</div>
+                    <div class="roadmap-title">🎯 Completar y Pulir (Alta Prioridad)</div>
+                    <p>Focus: Cerrar funcionalidades faltantes que bloquean la operación diaria y pulir la experiencia móvil.</p>
+                    <ul class="roadmap-features">
+                        <li><strong>Cierre del Día:</strong> Resumen diario de ventas, cobros, inventario remanente y efectivo en caja</li>
+                        <li><strong>Completar Compras:</strong> Rutas de detalle, edición y calculadora de compras</li>
+                        <li><strong>Completar Proveedores:</strong> Rutas de detalle y edición de proveedores</li>
+                        <li><strong>Vista Pública de Venta:</strong> Compartir link de venta para clientes sin login</li>
+                        <li><strong>Calculadora Standalone:</strong> Calculadora de pollo accesible desde menú principal</li>
+                        <li><strong>Dashboard Sin Inventario:</strong> Vista diferenciada para modo gratuito sin gestión de stock</li>
+                    </ul>
+                    <div class="card" style="margin-top: 16px;">
+                        <strong>Impacto Esperado:</strong> Reducir tiempo de cierre diario de 15 min a 2 min. Permitir que vendedores compartan ventas por WhatsApp sin que el cliente necesite cuenta.
+                    </div>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Q2 2025</div>
+                    <div class="roadmap-title">💰 Sistema Inteligente de Deuda</div>
+                    <p>Focus: Convertir el control de deudas en una ventaja competitiva. El "fiar" es el corazón del comercio informal.</p>
+                    <ul class="roadmap-features">
+                        <li><strong>Dashboard "Quién Me Debe":</strong> Lista priorizada de deudores con montos y antigüedad</li>
+                        <li><strong>Límites de Crédito:</strong> Alertas cuando un cliente excede su límite configurado</li>
+                        <li><strong>Visualización de Antigüedad:</strong> Semaforización verde/amarillo/rojo por días de deuda</li>
+                        <li><strong>Recordatorios WhatsApp Automáticos:</strong> Mensajes programados de cobro con links de pago</li>
+                        <li><strong>Línea de Tiempo de Pagos:</strong> Historial visual de deuda vs pagos por cliente</li>
+                        <li><strong>Deuda Promedio por Cliente:</strong> Métricas de comportamiento crediticio</li>
+                    </ul>
+                    <div class="card" style="margin-top: 16px;">
+                        <strong>Impacto Esperado:</strong> Reducir morosidad en 25-30%. Un vendedor que cobra mejor vende más porque puede fiar con confianza.
+                    </div>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Q3 2025</div>
+                    <div class="roadmap-title">📦 Pedidos y Rutas</div>
+                    <p>Focus: Permitir a los clientes hacer pedidos anticipados y optimizar las rutas de reparto.</p>
+                    <ul class="roadmap-features">
+                        <li><strong>Pedidos Recurrentes:</strong> Clientes pueden configurar "todos los lunes X productos"</li>
+                        <li><strong>"Repetir Último Pedido":</strong> Un tap para reordenar lo mismo de la semana pasada</li>
+                        <li><strong>Rutas de Reparto:</strong> Optimización basada en grupos de clientes</li>
+                        <li><strong>Pre-carga de Pedidos en Visitas:</strong> Al visitar un cliente, ver sus pedidos pendientes</li>
+                        <li><strong>Confirmación de Pedidos:</strong> Notificaciones al cliente cuando se confirma su pedido</li>
+                        <li><strong>Ventana de Entrega:</strong> Clientes pueden elegir "mañana" o "tarde"</li>
+                    </ul>
+                    <div class="card" style="margin-top: 16px;">
+                        <strong>Impacto Esperado:</strong> Aumentar ventas en 15-20% mediante pedidos anticipados. Reducir tiempo de ruta en 30% con optimización.
+                    </div>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Q4 2025</div>
+                    <div class="roadmap-title">🚀 Expansión de Nicho</div>
+                    <p>Focus: Extender el alcance a otros productos perecederos manteniendo la especialización.</p>
+                    <ul class="roadmap-features">
+                        <li><strong>Categorías Configurables:</strong> Pollo, carne, pescado, huevos, lácteos, frutas/verduras</li>
+                        <li><strong>Control de Merma:</strong> Registrar productos dañados/desechados</li>
+                        <li><strong>Modo Demo/Onboarding:</strong> Probar el sistema con datos de prueba antes de registrar</li>
+                        <li><strong>Productos Multi-perecederos:</strong> Soporte para vender múltiples categorías</li>
+                        <li><strong>Métricas de Pérdida:</strong> % de merma vs ventas por categoría</li>
+                        <li><strong>Plantillas de WhatsApp por Categoría:</strong> Mensajes específicos: "Su pollo está listo" vs "Sus lácteos están refrigerados"</li>
+                    </ul>
+                    <div class="card" style="margin-top: 16px;">
+                        <strong>Impacto Esperado:</strong> Expandir TAM (Total Addressable Market) de 50K vendedores de pollo a 165K vendedores de perecederos en Perú.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="wireframes">
+        <div class="container">
+            <h2>Wireframes de Funcionalidades Clave</h2>
+
+            <h3>Q1: Cierre del Día</h3>
+            <div class="wireframe">
+                <div class="wireframe-header">
+                    <h4>📊 Cierre del Día - 15 Mar 2025</h4>
+                </div>
+                <div class="wireframe-content">
+                    <div class="wf-card">
+                        <div class="wf-card-title">💰 Ventas del Día</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Total Ventas</span>
+                            <span class="wf-stat-value">S/ 2,450.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Contado</span>
+                            <span class="wf-stat-value">S/ 1,200.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Fiado</span>
+                            <span class="wf-stat-value">S/ 1,250.00</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">💳 Cobros Recibidos</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Total Cobros</span>
+                            <span class="wf-stat-value">S/ 890.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Efectivo</span>
+                            <span class="wf-stat-value">S/ 500.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Yape/Plin</span>
+                            <span class="wf-stat-value">S/ 390.00</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">📦 Inventario Remanente</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Pollo Entero</span>
+                            <span class="wf-stat-value">12.5 kg</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Pechuga</span>
+                            <span class="wf-stat-value">8.3 kg</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card" style="background: var(--orange-50);">
+                        <div class="wf-card-title">💵 Efectivo en Caja</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Calculado</span>
+                            <span class="wf-stat-value">S/ 1,700.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Contado</span>
+                            <span class="wf-stat-value">S/ 1,695.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Diferencia</span>
+                            <span class="wf-stat-value" style="color: var(--success);">-S/ 5.00 ✓</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-button">✓ Confirmar Cierre</div>
+                </div>
+            </div>
+
+            <h3>Q2: Dashboard de Deudas</h3>
+            <div class="wireframe">
+                <div class="wireframe-header">
+                    <h4>💰 Quién Me Debe</h4>
+                </div>
+                <div class="wireframe-content">
+                    <div class="wf-card" style="background: var(--orange-50);">
+                        <div class="wf-card-title">Resumen Total</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Total por Cobrar</span>
+                            <span class="wf-stat-value" style="color: var(--orange-600); font-size: 1.25rem;">S/ 12,450.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Clientes Deudores</span>
+                            <span class="wf-stat-value">34</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin: 16px 0;">
+                        <span class="wf-badge wf-badge-danger">🔴 >30 días: S/ 3,200</span>
+                        <span class="wf-badge wf-badge-warning">🟡 15-30 días: S/ 4,100</span>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">María López - Bodega El Sol</div>
+                            <div class="wf-list-subtitle">Última compra: 5 Mar</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 600; color: var(--danger);">S/ 450.00</div>
+                            <span class="wf-badge wf-badge-danger">45 días</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">Carlos Ruiz -Pollería San Juan</div>
+                            <div class="wf-list-subtitle">Última compra: 10 Mar</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 600; color: var(--warning);">S/ 280.00</div>
+                            <span class="wf-badge wf-badge-warning">18 días</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">Ana García - Restaurante Lima</div>
+                            <div class="wf-list-subtitle">Última compra: 14 Mar</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 600; color: var(--success);">S/ 150.00</div>
+                            <span class="wf-badge">8 días</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-button">📤 Enviar Recordatorios</div>
+                </div>
+            </div>
+
+            <h3>Q3: Pedidos Anticipados</h3>
+            <div class="wireframe">
+                <div class="wireframe-header">
+                    <h4>📦 Pedidos de Hoy - Lunes 17 Mar</h4>
+                </div>
+                <div class="wireframe-content">
+                    <div class="wf-card">
+                        <div class="wf-card-title">Resumen de Pedidos</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Total Pedidos</span>
+                            <span class="wf-stat-value">12</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Valor Estimado</span>
+                            <span class="wf-stat-value">S/ 3,240.00</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <path d="M16 10a4 4 0 0 1-8 0"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">Pollería Los Andes</div>
+                            <div class="wf-list-subtitle">Pollo: 15kg, Pechuga: 5kg</div>
+                        </div>
+                        <span class="wf-badge">🕘 Mañana</span>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <path d="M16 10a4 4 0 0 1-8 0"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">Restaurante Ceviche</div>
+                            <div class="wf-list-subtitle">Entero: 8kg, Alitas: 4kg</div>
+                        </div>
+                        <span class="wf-badge">🕐 Tarde</span>
+                    </div>
+
+                    <div class="wf-list-item">
+                        <div class="wf-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <path d="M16 10a4 4 0 0 1-8 0"/>
+                            </svg>
+                        </div>
+                        <div class="wf-list-content">
+                            <div class="wf-list-title">Bodega El Progreso</div>
+                            <div class="wf-list-subtitle">Pollo: 12kg (Recurrente)</div>
+                        </div>
+                        <span class="wf-badge">🕘 Mañana</span>
+                    </div>
+
+                    <div class="wf-button">🗺️ Ver Ruta Optimizada</div>
+                </div>
+            </div>
+
+            <h3>Q4: Configuración de Categorías</h3>
+            <div class="wireframe">
+                <div class="wireframe-header">
+                    <h4>🏷️ Mis Categorías de Productos</h4>
+                </div>
+                <div class="wireframe-content">
+                    <div class="wf-card" style="background: var(--orange-50);">
+                        <div class="wf-card-title">Categoría Activa</div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                            <span style="font-size: 2rem;">🐔</span>
+                            <div>
+                                <div style="font-weight: 600;">Pollo y Aves</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-500);">Modo: Fresco</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">Otras Categorías Disponibles</div>
+                        
+                        <div class="wf-list-item">
+                            <span style="font-size: 1.5rem;">🥩</span>
+                            <div class="wf-list-content" style="margin-left: 8px;">
+                                <div class="wf-list-title">Carnes Rojas</div>
+                                <div class="wf-list-subtitle">Res, cerdo, cordero</div>
+                            </div>
+                            <span class="wf-badge">Activar</span>
+                        </div>
+
+                        <div class="wf-list-item">
+                            <span style="font-size: 1.5rem;">🐟</span>
+                            <div class="wf-list-content" style="margin-left: 8px;">
+                                <div class="wf-list-title">Pescados y Mariscos</div>
+                                <div class="wf-list-subtitle">Pescado fresco, mariscos</div>
+                            </div>
+                            <span class="wf-badge">Activar</span>
+                        </div>
+
+                        <div class="wf-list-item">
+                            <span style="font-size: 1.5rem;">🥚</span>
+                            <div class="wf-list-content" style="margin-left: 8px;">
+                                <div class="wf-list-title">Huevos y Lácteos</div>
+                                <div class="wf-list-subtitle">Huevos, leche, quesos</div>
+                            </div>
+                            <span class="wf-badge">Activar</span>
+                        </div>
+
+                        <div class="wf-list-item">
+                            <span style="font-size: 1.5rem;">🥬</span>
+                            <div class="wf-list-content" style="margin-left: 8px;">
+                                <div class="wf-list-title">Frutas y Verduras</div>
+                                <div class="wf-list-subtitle">Productos agrícolas frescos</div>
+                            </div>
+                            <span class="wf-badge">Activar</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">🗑️ Control de Merma</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Merma Esta Semana</span>
+                            <span class="wf-stat-value">S/ 145.00 (2.1%)</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Meta de Merma</span>
+                            <span class="wf-stat-value">< 3%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Vista Pública de Venta (Link Compartible)</h3>
+            <div class="wireframe">
+                <div class="wireframe-header">
+                    <h4>🛒 Pedido de Pollo - Pollos El Campeón</h4>
+                </div>
+                <div class="wireframe-content">
+                    <div class="wf-card">
+                        <div class="wf-card-title">Tu Pedido</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Pollo Entero x 3kg</span>
+                            <span class="wf-stat-value">S/ 36.00</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Pechuga x 2kg</span>
+                            <span class="wf-stat-value">S/ 28.00</span>
+                        </div>
+                        <div class="wf-stat-row" style="border-top: 1px solid var(--gray-200); padding-top: 8px; margin-top: 8px;">
+                            <span class="wf-stat-label" style="font-weight: 600;">Total</span>
+                            <span class="wf-stat-value" style="font-weight: 700; color: var(--orange-600);">S/ 64.00</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">📅 Entrega</div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Fecha</span>
+                            <span class="wf-stat-value">Lunes 17 Mar</span>
+                        </div>
+                        <div class="wf-stat-row">
+                            <span class="wf-stat-label">Horario</span>
+                            <span class="wf-stat-value">Mañana (8am-12pm)</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-card">
+                        <div class="wf-card-title">💳 Método de Pago</div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <span class="wf-badge">💵 Efectivo</span>
+                            <span class="wf-badge">📱 Yape</span>
+                            <span class="wf-badge">💳 Plin</span>
+                        </div>
+                    </div>
+
+                    <div class="wf-button" style="background: var(--success);">✓ Confirmar Pedido</div>
+                    <div class="wf-button" style="background: var(--gray-400);">✏️ Modificar</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="market">
+        <div class="container">
+            <h2>Análisis de Mercado</h2>
+
+            <h3>TAM, SAM, SOM - Perú</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Definición</th>
+                        <th>Tamaño</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>TAM</strong></td>
+                        <td>Todos los vendedores de productos perecederos en Perú</td>
+                        <td>~165,000</td>
+                        <td>S/ 330M/año (S/ 20/mes)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SAM</strong></td>
+                        <td>Vendedores con distribución diaria y crédito informal</td>
+                        <td>~82,500 (50%)</td>
+                        <td>S/ 165M/año</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SOM (Año 1)</strong></td>
+                        <td>Vendedores de pollo en Lima metropolitana</td>
+                        <td>~5,000</td>
+                        <td>S/ 1.2M/año</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SOM (Año 3)</strong></td>
+                        <td>Expansión a otros perecederos</td>
+                        <td>~25,000</td>
+                        <td>S/ 6M/año</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Análisis Competitivo</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Competidor</th>
+                        <th>Fortalezas</th>
+                        <th>Debilidades</th>
+                        <th>¿Por qué Avileo gana?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Loyverse</strong><br><small>1M+ usuarios</small></td>
+                        <td>Gratuito, POS completo, internacional</td>
+                        <td>No offline, no fiar, genérico, requiere tablet</td>
+                        <td>Offline-first + fiar + mobile-only</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SellarPro</strong><br><small>Ghana</small></td>
+                        <td>Diseñado para vendedores informales africanos</td>
+                        <td>No en LATAM, sin WhatsApp, sin distribución</td>
+                        <td>WhatsApp + distribución + crédito informal</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Control en Papel</strong><br><small>60% del mercado</small></td>
+                        <td>"Funciona", familiar, no requiere celular</td>
+                        <td>No da deudas, no controla inventario, se pierde</td>
+                        <td>3 taps vs 30 segundos, backup automático</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Excel/WhatsApp</strong><br><small>30% del mercado</small></td>
+                        <td>Flexible, conocido, "gratis"</td>
+                        <td>Desordenado, no automatizado, errores humanos</td>
+                        <td>Automatización + estructura sin rigidez</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="card card-highlight">
+                <h3>📊 Insight Clave del Mercado</h3>
+                <p><strong>El crédito informal ("fiar") es el diferenciador más poderoso.</strong></p>
+                <p>Ningún competidor global tiene una solución elegante para el fiar porque no existe en mercados formales. Es una necesidad exclusiva del comercio informal en LATAM, África y Asia.</p>
+                <p>Avileo puede ser el <strong>"software de fiar"</strong> — la categoría entera. Como WhatsApp es el "mensajero", Avileo puede ser el "control de fiar".</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="expansion">
+        <div class="container">
+            <h2>Estrategia de Expansión de Nicho</h2>
+
+            <h3>Evolución del Nicho: 4 Fases</h3>
+
+            <div class="roadmap">
+                <div class="roadmap-item completed">
+                    <div class="roadmap-quarter">Fase 1: COMPLETADA</div>
+                    <div class="roadmap-title">🐔 Vendedores de Pollo</div>
+                    <p>Estado actual. Producto validado, clientes satisfechos, modelo de negocio probado.</p>
+                    <ul class="roadmap-features">
+                        <li>Control de ventas con fiar</li>
+                        <li>Distribución diaria de productos frescos</li>
+                        <li>Cobros con múltiples métodos</li>
+                        <li>Visitas y seguimiento de clientes</li>
+                    </ul>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Fase 2: Q4 2025</div>
+                    <div class="roadmap-title">🥩🐟 Vendedores de Proteínas (Carne, Pescado)</div>
+                    <p>Mismo patrón de negocio: distribución diaria, crédito informal, clientes recurrentes.</p>
+                    <ul class="roadmap-features">
+                        <li>Mismo flujo de ventas y cobros</li>
+                        <li>Unidades diferentes (kg vs unidades)</li>
+                        <li>Control de merma más crítico</li>
+                        <li>+50K vendedores adicionales en Perú</li>
+                    </ul>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Fase 3: 2026</div>
+                    <div class="roadmap-title">🥚🥛 Vendedores de Huevos y Lácteos</div>
+                    <p>Productos de mayor frecuencia de compra, ciclos de entrega más cortos.</p>
+                    <ul class="roadmap-features">
+                        <li>Pedidos semanales recurrentes automáticos</li>
+                        <li>Alertas de caducidad</li>
+                        <li>Control de refrigeración</li>
+                        <li>+35K vendedores adicionales en Perú</li>
+                    </ul>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-quarter">Fase 4: 2026-2027</div>
+                    <div class="roadmap-title">🥬🍎 Vendedores de Frutas y Verduras (Biohuertos)</div>
+                    <p>Mayor variedad de productos, mayor volatilidad de precios, mayor merma.</p>
+                    <ul class="roadmap-features">
+                        <li>Gestión de temporada/harvest</li>
+                        <li>Precios variables por día</li>
+                        <li>Control de merma avanzado</li>
+                        <li>+80K vendedores adicionales en Perú</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card card-success">
+                <h3>🎯 Fórmula de Expansión</h3>
+                <p>Cada fase mantiene los <strong>3 pilares inmutables</strong>:</p>
+                <ol>
+                    <li><strong>Distribución diaria/semanal:</strong> El vendedor lleva producto a los clientes (no espera a que vengan)</li>
+                    <li><strong>Crédito informal (fiar):</strong> El cliente paga después, en cuotas o semanalmente</li>
+                    <li><strong>Operación 100% mobile:</strong> El vendedor está en movimiento constante</li>
+                </ol>
+                <p><strong>¿Qué cambia entre fases?</strong> Solo las unidades de medida, la frecuencia de reposición y el % aceptable de merma. El software permanece igual.</p>
+            </div>
+
+            <h3>Métricas de Éxito</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Meta Año 1</th>
+                        <th>Meta Año 3</th>
+                        <th>Cómo Medir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Usuarios Activos</td>
+                        <td>1,000</td>
+                        <td>10,000</td>
+                        <td>Ventas registradas en últimos 7 días</td>
+                    </tr>
+                    <tr>
+                        <td>Retención Mensual</td>
+                        <td>60%</td>
+                        <td>75%</td>
+                        <td>% usuarios que registran venta 2 meses seguidos</td>
+                    </tr>
+                    <tr>
+                        <td>Transacciones/Día</td>
+                        <td>15</td>
+                        <td>25</td>
+                        <td>Promedio por usuario activo</td>
+                    </tr>
+                    <tr>
+                        <td>Tiempo por Transacción</td>
+                        <td>< 10 seg</td>
+                        <td>< 5 seg</td>
+                        <td>Desde selección cliente hasta confirmar venta</td>
+                    </tr>
+                    <tr>
+                        <td>NPS</td>
+                        <td>40</td>
+                        <td>50</td>
+                        <td>Encuesta trimestral</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p><strong>Avileo</strong></p>
+            <p>Software de bolsillo para vendedores de productos perecederos</p>
+            <p style="margin-top: 16px; opacity: 0.7;">Documento generado el 31 de Marzo, 2025</p>
+        </div>
+    </footer>
+</body>
+</html>

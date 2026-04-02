@@ -180,6 +180,8 @@ export const distribucionItemSchema = z.object({
 export const distribucionCreateSchema = z.object({
   vendedorId: z.string().min(1, "vendedorId es requerido"),
   puntoVenta: z.string().min(1, "puntoVenta es requerido"),
+  puntoVentaId: z.string().optional(),
+  notaCreacion: z.string().optional(),
   fecha: z.string().optional(),
   modo: z.enum(["estricto", "acumulativo", "libre"]).optional(),
   confiarEnVendedor: z.boolean().optional(),
@@ -190,6 +192,9 @@ export const distribucionCreateSchema = z.object({
 const distribucionBaseSchema = z.object({
   vendedorId: z.string().optional(),
   puntoVenta: z.string().optional(),
+  puntoVentaId: z.string().optional(),
+  notaCreacion: z.string().optional(),
+  notaCierre: z.string().optional(),
   fecha: z.string().optional(),
   modo: z.enum(["estricto", "acumulativo", "libre"]).optional(),
   confiarEnVendedor: z.boolean().optional(),

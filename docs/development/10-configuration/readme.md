@@ -220,7 +220,7 @@ export default function ConfiguracionPage() {
 
 ## 🎉 ¡Proyecto Completo!
 
-Has terminado todas las fases del desarrollo de PollosPro.
+Has terminado todas las fases del desarrollo de Avileo.
 
 ### Resumen:
 - ✅ Fases 1-5: MVP funcional

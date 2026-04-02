@@ -1,6 +1,6 @@
 # Arquitectura Offline-First
 
-> Visión general del stack PGlite + ElectricSQL + Drizzle ORM para Avileo (PollosPro)
+> Visión general del stack PGlite + ElectricSQL + Drizzle ORM para Avileo
 
 ## Stack Tecnológico
 

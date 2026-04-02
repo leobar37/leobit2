@@ -151,7 +151,7 @@ const DesktopSidebar = ({ active }: { active: string }) => (
         <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-bold text-sm">P</span>
         </div>
-        <span className="text-white font-semibold">PollosPro</span>
+        <span className="text-white font-semibold">Avileo</span>
       </div>
     </div>
     <nav className="flex-1 p-2 space-y-1">
@@ -209,7 +209,7 @@ const LoginWireframe = () => (
       <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center mb-6">
         <span className="text-white text-3xl font-bold">P</span>
       </div>
-      <h2 className="text-white text-xl font-bold mb-1">PollosPro</h2>
+      <h2 className="text-white text-xl font-bold mb-1">Avileo</h2>
       <p className="text-gray-500 text-sm mb-8">Sistema de Ventas</p>
       
       <div className="w-full space-y-4">

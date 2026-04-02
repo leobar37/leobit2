@@ -1,6 +1,6 @@
 # ElectricSQL Diagnostic Report
 
-> Analysis of Electric SQL implementation in Avileo (PollosPro)
+> Analysis of Electric SQL implementation in Avileo
 > Generated: March 2026
 
 ---

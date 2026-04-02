@@ -2,7 +2,7 @@
 
 ## Context
 
-Avileo (PollosPro) is an offline-first chicken sales management system built with Bun + ElysiaJS + React Router v7. The current distribution system assigns kilos to vendors daily, but it has rigid limitations that don't match real-world business operations.
+Avileo is an offline-first chicken sales management system built with Bun + ElysiaJS + React Router v7. The current distribution system assigns kilos to vendors daily, but it has rigid limitations that don't match real-world business operations.
 
 ## The Problem / Objective
 

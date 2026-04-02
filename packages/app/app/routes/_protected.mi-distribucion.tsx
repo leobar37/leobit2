@@ -3,6 +3,8 @@ import { Package, TrendingUp, AlertCircle, ShoppingBag, Settings, Lock, CheckCir
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { ToolbarActions } from "~/components/layout/toolbar-actions";
 import { useSetLayout } from "~/components/layout/app-layout";
@@ -13,7 +15,7 @@ import { useCreateSale } from "~/hooks/use-sales";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency } from "~/lib/utils";
 import { BusinessUserRole } from "@avileo/shared";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useSync } from "~/components/sync/sync-status";
 import { createModal } from "~/lib/modal/create-modal";
@@ -49,11 +51,16 @@ function CierreConfirmContent({
 }: { close: () => void } & CierreConfirmData) {
   const { isOnline } = useSync();
   const closeDistribucion = useCloseDistribucion();
+  const [notaCierre, setNotaCierre] = useState("");
 
   const handleClose = async () => {
     try {
-      await closeDistribucion.mutateAsync({ id: distribucionId });
+      await closeDistribucion.mutateAsync({
+        id: distribucionId,
+        notaCierre: notaCierre.trim() || undefined,
+      });
       toast.success("Distribución cerrada exitosamente");
+      setNotaCierre("");
       close();
     } catch (error) {
       console.error("Error closing distribucion:", error);
@@ -76,6 +83,17 @@ function CierreConfirmContent({
             Se requiere conexión a internet para cerrar.
           </p>
         )}
+        <div className="space-y-2">
+          <Label htmlFor="nota-cierre-vendedor">Nota al cerrar</Label>
+          <Textarea
+            id="nota-cierre-vendedor"
+            value={notaCierre}
+            onChange={(event) => setNotaCierre(event.target.value)}
+            placeholder="Observaciones finales de la distribución..."
+            className="min-h-[120px] resize-none rounded-xl"
+            disabled={closeDistribucion.isPending}
+          />
+        </div>
       </div>
       <div className="flex gap-3 p-4 border-t">
         <Button

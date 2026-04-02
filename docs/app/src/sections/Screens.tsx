@@ -217,7 +217,7 @@ export function Screens() {
             <div className="bg-gray-800 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-orange-500 rounded-full" />
-                <span className="text-white text-sm font-medium">PollosPro</span>
+                <span className="text-white text-sm font-medium">Avileo</span>
               </div>
               {currentScreen.device === 'mobile' && (
                 <div className="text-gray-400 text-xs">9:41</div>

@@ -365,7 +365,7 @@ export const handlers = [
       success: true,
       data: {
         id: "biz-1",
-        name: "Pollos Pro Demo",
+        name: "Avileo Demo",
         ruc: "12345678901",
         address: "Av. Principal 123",
         phone: "+51 999 888 777",

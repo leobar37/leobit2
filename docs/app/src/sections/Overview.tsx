@@ -77,7 +77,7 @@ export function Overview() {
           Arquitectura del Sistema
         </h2>
         <p className="text-gray-400 max-w-3xl">
-          Vista general de la arquitectura técnica de PollosPro. El sistema está diseñado 
+          Vista general de la arquitectura técnica de Avileo. El sistema está diseñado 
           como una aplicación web progresiva (PWA) con backend API REST.
         </p>
       </motion.div>

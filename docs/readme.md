@@ -1,4 +1,4 @@
-# PollosPro Documentation
+# Avileo Documentation
 
 > Chicken sales management system - Offline-first architecture
 

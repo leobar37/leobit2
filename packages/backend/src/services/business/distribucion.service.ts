@@ -84,6 +84,7 @@ export class DistribucionService {
       vendedorId: string;
       puntoVenta: string;
       puntoVentaId?: string;
+      notaCreacion?: string;
       fecha?: string;
       modo?: "estricto" | "acumulativo" | "libre";
       confiarEnVendedor?: boolean;
@@ -153,6 +154,7 @@ export class DistribucionService {
       puntoVenta: data.puntoVenta,
       puntoVentaId: data.puntoVentaId,
       montoRecaudado: "0",
+      notaCreacion: data.notaCreacion,
       fecha,
       estado: "activo",
       modo: data.modo || "estricto",
@@ -170,6 +172,7 @@ export class DistribucionService {
         id: distribucion.id,
         vendedorId: distribucion.vendedorId,
         puntoVenta: distribucion.puntoVenta,
+        notaCreacion: distribucion.notaCreacion,
         montoRecaudado: distribucion.montoRecaudado,
         fecha: distribucion.fecha,
         estado: distribucion.estado,
@@ -313,7 +316,10 @@ export class DistribucionService {
 
   async closeDistribucion(
     ctx: RequestContext,
-    id: string
+    id: string,
+    data?: {
+      notaCierre?: string;
+    }
   ): Promise<Distribucion> {
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para cerrar distribuciones");
@@ -336,6 +342,7 @@ export class DistribucionService {
 
     const updateData: Parameters<DistribucionRepository["update"]>[2] = {
       estado: "cerrado",
+      notaCierre: data?.notaCierre,
       closedAt: new Date(),
       closedBy: ctx.businessUserId,
     };
@@ -355,6 +362,7 @@ export class DistribucionService {
       payload: {
         id: updated.id,
         estado: updated.estado,
+        notaCierre: updated.notaCierre,
         closedAt: updated.closedAt,
         closedBy: updated.closedBy,
       },

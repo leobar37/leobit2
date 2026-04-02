@@ -22,7 +22,7 @@
 ## Context
 
 ### Background
-Building Avileo (PollosPro), an offline-first chicken sales management system. This is Phase 0 of 6 phases, establishing the technical foundation.
+Building Avileo, an offline-first chicken sales management system. This is Phase 0 of 6 phases, establishing the technical foundation.
 
 ### Technical Decisions (Confirmed)
 | Decision | Choice | Rationale |
@@ -111,7 +111,7 @@ Establish a solid technical foundation so subsequent phases (1-5) can build feat
 
 ### Must NOT Have (Guardrails)
 - NO business logic (auth, sales, customers, etc.) - that's for phases 1-5
-- NO PollosPro-specific UI - generic setup only
+- NO Avileo-specific UI - generic setup only
 - NO TanStack DB configuration - Phase 2
 - NO Better Auth implementation - Phase 1
 - NO tests in this phase - Phase 5
@@ -666,7 +666,7 @@ Wave 3 (Documentation - After Wave 2):
   **What to do:**
   1. Create `README.md` in project root
   2. Include sections:
-     - **Title and description** - Avileo/PollosPro description
+     - **Title and description** - Avileo description
      - **Requirements** - Bun 1.1.38+, Node 20+ (for some tools)
      - **Quick Start** - Commands to get started:
        ```bash

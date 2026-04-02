@@ -1,6 +1,6 @@
 # AGENTS.md - @avileo/backend
 
-> **ElysiaJS + Drizzle ORM backend for Avileo (PollosPro)**
+> **ElysiaJS + Drizzle ORM backend for Avileo**
 
 ## Overview
 

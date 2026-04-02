@@ -61,7 +61,7 @@ function App() {
             P
           </div>
           <div>
-            <h1 className="text-white font-semibold text-sm">PollosPro</h1>
+            <h1 className="text-white font-semibold text-sm">Avileo</h1>
             <p className="text-xs text-gray-500">Plan Técnico del Sistema</p>
           </div>
         </div>

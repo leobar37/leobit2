@@ -6,7 +6,7 @@
 
 ## 🚀 Quick Summary
 
-**Product Name:** Avileo (PollosPro)
+**Product Name:** Avileo
 **Tagline:** "Vende sin internet - Sistema de gestión offline-first para negocios locales"
 **Primary Value:** 100% offline sales operations with automatic sync
 

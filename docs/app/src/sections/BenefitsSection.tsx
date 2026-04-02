@@ -77,7 +77,7 @@ export function BenefitsSection() {
             Beneficios
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            ¿Por qué usar <span className="text-gradient">PollosPro</span>?
+            ¿Por qué usar <span className="text-gradient">Avileo</span>?
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Diseñado específicamente para el negocio de venta de pollo, 
@@ -124,7 +124,7 @@ export function BenefitsSection() {
                 <tr className="border-b-2 border-gray-200">
                   <th className="py-4 px-6 text-left text-gray-500 font-medium">Proceso</th>
                   <th className="py-4 px-6 text-center text-gray-500 font-medium">Sistema Antiguo</th>
-                  <th className="py-4 px-6 text-center text-orange-600 font-medium">Con PollosPro</th>
+                  <th className="py-4 px-6 text-center text-orange-600 font-medium">Con Avileo</th>
                 </tr>
               </thead>
               <tbody>

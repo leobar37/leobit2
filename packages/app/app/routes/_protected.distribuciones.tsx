@@ -4,6 +4,16 @@ import { Plus, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getToday } from "~/lib/date-utils";
@@ -58,6 +68,8 @@ export default function DistribucionesPage() {
   const { isOnline } = useSync();
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [closingDistribucion, setClosingDistribucion] = useState<Distribucion | null>(null);
+  const [notaCierre, setNotaCierre] = useState("");
 
   const distribuciones = (distribucionesData ?? []).map((distribucion) => {
     const vendedor = team.find((member) => member.id === distribucion.vendedorId);
@@ -87,20 +99,21 @@ export default function DistribucionesPage() {
       return;
     }
 
-    const confirmed = await confirm({
-      title: "Cerrar distribución",
-      description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer.",
-      confirmText: "Cerrar",
-      cancelText: "Cancelar",
-      variant: "destructive",
-    });
+    setClosingDistribucion(distribucion);
+  };
 
-    if (confirmed) {
-      try {
-        await closeMutation.mutateAsync(distribucion.id);
-      } catch (error) {
-        console.error("[Distribuciones] Close failed:", error);
-      }
+  const handleConfirmClose = async () => {
+    if (!closingDistribucion) return;
+
+    try {
+      await closeMutation.mutateAsync({
+        id: closingDistribucion.id,
+        notaCierre: notaCierre.trim() || undefined,
+      });
+      setClosingDistribucion(null);
+      setNotaCierre("");
+    } catch (error) {
+      console.error("[Distribuciones] Close failed:", error);
     }
   };
 
@@ -223,6 +236,59 @@ export default function DistribucionesPage() {
         />
 
         <ConfirmDialog />
+
+        <Drawer
+          open={!!closingDistribucion}
+          onOpenChange={(open) => {
+            if (!open) {
+              setClosingDistribucion(null);
+              setNotaCierre("");
+            }
+          }}
+        >
+          <DrawerContent className="px-4 pb-6 pt-2">
+            <DrawerHeader className="space-y-2 text-left">
+              <DrawerTitle>Cerrar distribución</DrawerTitle>
+              <DrawerDescription>
+                Esta acción no se puede deshacer. El stock sobrante será devuelto al inventario.
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className="space-y-2 px-1 py-2">
+              <Label htmlFor="nota-cierre-listado">Nota al cerrar</Label>
+              <Textarea
+                id="nota-cierre-listado"
+                value={notaCierre}
+                onChange={(event) => setNotaCierre(event.target.value)}
+                placeholder="Observaciones finales de la distribución..."
+                className="min-h-[120px] resize-none rounded-xl"
+                disabled={closeMutation.isPending}
+              />
+            </div>
+
+            <DrawerFooter className="gap-3 sm:flex-col">
+              <Button
+                variant="destructive"
+                onClick={handleConfirmClose}
+                disabled={closeMutation.isPending}
+                className="h-12 rounded-xl"
+              >
+                {closeMutation.isPending ? "Cerrando..." : "Confirmar cierre"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setClosingDistribucion(null);
+                  setNotaCierre("");
+                }}
+                disabled={closeMutation.isPending}
+                className="h-12 rounded-xl"
+              >
+                Cancelar
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
 
       {isAdmin && (

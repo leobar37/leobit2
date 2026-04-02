@@ -210,11 +210,42 @@ function normalizeCustomerName(rawName: string | null | undefined, fileNumber: n
   return titleCase(cleaned);
 }
 
-function resolveProductSeed(item: CanonicalItem | undefined) {
+interface ProductResolution {
+  key: string;
+  name: string;
+  type: ProductType;
+  unit: ProductUnit;
+  fraction?: number; // For chicken fractions: 0.5, 0.33, 0.25, 0.2
+}
+
+function detectFraction(rawText: string | null | undefined): number | null {
+  if (!rawText) return null;
+  
+  const text = rawText.toLowerCase();
+  
+  // Check for explicit fractions
+  if (text.includes("1/2") || text.includes("medio")) return 0.5;
+  if (text.includes("1/3")) return 0.333;
+  if (text.includes("1/4") || text.includes("cuarto")) return 0.25;
+  if (text.includes("1/5")) return 0.2;
+  
+  // Check for patterns like "8 1/2" which means 8.5
+  const mixedMatch = text.match(/(\d+)\s+1\/2/);
+  if (mixedMatch) {
+    return parseInt(mixedMatch[1]) + 0.5;
+  }
+  
+  return null;
+}
+
+function resolveProductSeed(item: CanonicalItem | undefined): ProductResolution {
   const candidate = (item?.normalizedProductCandidate ?? "").toLowerCase();
   const rawText = (item?.rawText ?? "").toLowerCase();
+  
+  // Detect fraction from raw text
+  const fraction = detectFraction(item?.rawText);
 
-  // Fractional pollo variants (1/2, 1/3, 1/4, 1/5) all redirect to plain "Pollo" with kilo
+  // Fractional pollo variants all redirect to plain "Pollo" with kilo
   if (
     candidate.includes("1/2 pollo") ||
     candidate.includes("1/3 pollo") ||
@@ -225,7 +256,13 @@ function resolveProductSeed(item: CanonicalItem | undefined) {
     rawText.includes("1/4") ||
     rawText.includes("1/5")
   ) {
-    return { key: "pollo", name: "Pollo", type: "pollo" as const, unit: "kg" as const };
+    return { 
+      key: "pollo", 
+      name: "Pollo", 
+      type: "pollo" as const, 
+      unit: "kg" as const,
+      fraction: fraction || 0.5 // Default to 0.5 if we can't detect
+    };
   }
 
   if (
@@ -239,9 +276,15 @@ function resolveProductSeed(item: CanonicalItem | undefined) {
     return { key: "huevo", name: "Huevo", type: "huevo" as const, unit: "unidad" as const };
   }
 
-  // Plain pollo (no fraction) - the normal case
+  // Plain pollo (no fraction) - check for fraction in raw text anyway
   if (!candidate || candidate === "pollo" || candidate.startsWith("x")) {
-    return { key: "pollo", name: "Pollo", type: "pollo" as const, unit: "kg" as const };
+    return { 
+      key: "pollo", 
+      name: "Pollo", 
+      type: "pollo" as const, 
+      unit: "kg" as const,
+      fraction: fraction || undefined
+    };
   }
 
   // All other products (Chancho, Arroz, Criolla, etc.) - keep them as-is
@@ -404,13 +447,30 @@ function deriveClient2Data() {
           needsVariableVariant: false,
         };
 
-        // JUAVIK only uses "kilo" variant for all sales
-        const variantKey = "kilo";
-        const unitPrice = typeof primaryItem?.unitPrice === "number" && primaryItem.unitPrice > 0
-          ? round2(primaryItem.unitPrice)
-          : round2(totalAmount);
-        const quantity = round3(totalAmount / unitPrice);
-        accumulator.priceVariants.add(unitPrice);
+        // Pollo uses "kilo" variant; other products use price-based variants
+        let variantKey: string;
+        let unitPrice: number;
+        let quantity: number;
+
+        // Special handling for Pollo: use fraction as kilo quantity if available
+        if (resolvedProduct.key === "pollo" && resolvedProduct.fraction) {
+          // Fraction detected (1/2, 1/3, 1/4, 1/5, or mixed like "8 1/2")
+          quantity = round3(resolvedProduct.fraction);
+          unitPrice = round2(totalAmount / quantity);
+          variantKey = "kilo";
+        } else if (typeof primaryItem?.unitPrice === "number" && primaryItem.unitPrice > 0) {
+          unitPrice = round2(primaryItem.unitPrice);
+          quantity = round3(totalAmount / unitPrice);
+          accumulator.priceVariants.add(unitPrice);
+          
+          // For Pollo, always use "kilo" variant. For others, use price-based key
+          variantKey = resolvedProduct.key === "pollo" ? "kilo" : priceKey(unitPrice);
+        } else {
+          unitPrice = round2(totalAmount);
+          quantity = 1;
+          accumulator.needsVariableVariant = true;
+          variantKey = resolvedProduct.key === "pollo" ? "kilo" : "variable";
+        }
 
         productMap.set(resolvedProduct.key, accumulator);
 

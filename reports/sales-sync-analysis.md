@@ -2,7 +2,7 @@
 
 ## Overview
 
-This report analyzes the sales synchronization flow in the Avileo (PollosPro) offline-first chicken sales management system. The synchronization system enables vendors to work offline while ensuring data consistency when connectivity is restored. This analysis covers the complete flow from frontend (PGlite + ElectricSQL) to backend (PostgreSQL + Drizzle ORM) and identifies potential race conditions, architectural patterns, and improvement opportunities.
+This report analyzes the sales synchronization flow in Avileo - an offline-first chicken sales management system. The synchronization system enables vendors to work offline while ensuring data consistency when connectivity is restored. This analysis covers the complete flow from frontend (PGlite + ElectricSQL) to backend (PostgreSQL + Drizzle ORM) and identifies potential race conditions, architectural patterns, and improvement opportunities.
 
 ## Search Terms Used
 

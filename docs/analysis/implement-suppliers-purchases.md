@@ -2,7 +2,7 @@
 
 ## Context
 
-Analysis of the Avileo (PollosPro) distribution system revealed a fundamental architectural issue: the system has distributions working on inventory, but no purchase/supplier module to feed that inventory. During analysis of the distribution feature, we discovered that:
+Analysis of the Avileo distribution system revealed a fundamental architectural issue: the system has distributions working on inventory, but no purchase/supplier module to feed that inventory. During analysis of the distribution feature, we discovered that:
 
 - Inventory is currently managed via manual adjustments (not purchases)
 - Distributions assign stock to vendors but there's no clear entry point for stock

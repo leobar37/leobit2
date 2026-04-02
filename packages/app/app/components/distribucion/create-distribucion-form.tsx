@@ -1,6 +1,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Users } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { type CreateDistribucionInput } from "~/hooks/use-distribuciones";
 import { type CustomerGroup } from "~/hooks/use-grupos";
 import { VendedorSelect, type VendedorOption } from "./vendedor-select";
@@ -25,6 +26,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
     const [selectedVendedor, setSelectedVendedor] = useState<VendedorOption | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
+    const [notaCreacion, setNotaCreacion] = useState("");
     // Modo is always 'libre' - hiding selector temporarily
     const modo: ModoDistribucion = "libre";
 
@@ -45,6 +47,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVenta: selectedPuntoVenta.name,
         puntoVentaId: selectedPuntoVenta.id,
         groupId: selectedGroup?.id,
+        notaCreacion: notaCreacion.trim() || undefined,
         modo: modo,
         items: [], // Empty items for 'libre' mode - products registered on close
       });
@@ -98,6 +101,18 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
               Se crearán {selectedGroup.memberCount ?? 0} visitas automáticamente
             </p>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="nota-creacion">Nota al crear</Label>
+          <Textarea
+            id="nota-creacion"
+            value={notaCreacion}
+            onChange={(event) => setNotaCreacion(event.target.value)}
+            placeholder="Observaciones iniciales de la distribución..."
+            className="min-h-[96px] resize-none rounded-xl"
+            disabled={isPending}
+          />
         </div>
 
         {/* Modo selector hidden - defaulting to 'libre' mode */}

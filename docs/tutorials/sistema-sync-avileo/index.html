@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{ dark: localStorage.getItem('theme') === 'dark', tab: 'arquitectura', showDetails: false }" 
+      x-bind:class="{ 'dark': dark }" 
+      x-init="$watch('dark', val => localStorage.setItem('theme', val ? 'dark' : 'light'))">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Sincronización Avileo - Tutorial Interactivo</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            orange: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    .dark body { background: #0f172a; color: #e2e8f0; }
+    .mermaid { background: transparent !important; }
+    .dark .mermaid { filter: invert(1) hue-rotate(180deg); }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    .dark ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    
+    /* Code block styles */
+    pre[class*="language-"] { border-radius: 0.75rem; margin: 1rem 0; }
+    
+    /* Smooth transitions */
+    .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
+    
+    /* Card hover effect */
+    .hover-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .hover-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px rgba(249, 115, 22, 0.3); }
+    
+    /* Pulse animation for sync indicator */
+    @keyframes pulse-orange {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse-orange { animation: pulse-orange 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+  
+  <!-- Dark mode toggle -->
+  <button @click="dark = !dark" 
+          class="fixed top-4 right-4 z-50 p-3 rounded-xl bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all">
+    <i data-lucide="sun" x-show="dark" class="w-5 h-5 text-orange-400"></i>
+    <i data-lucide="moon" x-show="!dark" class="w-5 h-5 text-slate-600"></i>
+  </button>
+
+  <!-- Hero Section -->
+  <header class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-purple-500/10 dark:from-orange-500/5 dark:to-purple-500/5"></div>
+    <div class="max-w-6xl mx-auto px-6 py-16 relative">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+          <i data-lucide="refresh-cw" class="w-6 h-6 text-white"></i>
+        </div>
+        <span class="text-sm font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">Arquitectura Avileo</span>
+      </div>
+      <h1 class="text-5xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
+        Sistema de Sincronización
+        <span class="block text-orange-500">Offline-First</span>
+      </h1>
+      <p class="text-xl text-slate-600 dark:text-slate-300 max-w-3xl leading-relaxed">
+        Tutorial completo sobre el sistema de sincronización de Avileo. Aprende cómo funciona la arquitectura 
+        que permite a los vendedores trabajar sin conexión y sincronizar cuando vuelve la señal.
+      </p>
+      
+      <!-- Stats cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="text-3xl font-bold text-orange-500">PGlite</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">PostgreSQL en el navegador</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="text-3xl font-bold text-orange-500">REST API</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Sync batch + pull changes</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="text-3xl font-bold text-orange-500">100%</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Operación offline</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex gap-1 overflow-x-auto py-3">
+        <button @click="tab = 'arquitectura'" 
+                :class="{ 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300': tab === 'arquitectura', 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800': tab !== 'arquitectura' }"
+                class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          Arquitectura
+        </button>
+        <button @click="tab = 'flujo'" 
+                :class="{ 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300': tab === 'flujo', 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800': tab !== 'flujo' }"
+                class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2">
+          <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+          Flujo de Sync
+        </button>
+        <button @click="tab = 'problema'" 
+                :class="{ 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300': tab === 'problema', 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800': tab !== 'problema' }"
+                class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          Problema de Rendimiento
+        </button>
+        <button @click="tab = 'solucion'" 
+                :class="{ 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300': tab === 'solucion', 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800': tab !== 'solucion' }"
+                class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Solución por Etapas
+        </button>
+        <button @click="tab = 'codigo'" 
+                :class="{ 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300': tab === 'codigo', 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800': tab !== 'codigo' }"
+                class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2">
+          <i data-lucide="code" class="w-4 h-4"></i>
+          Implementación
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    
+    <!-- ARQUITECTURA TAB -->
+    <div x-show="tab === 'arquitectura'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+      
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Arquitectura del Sistema</h2>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          Avileo utiliza una arquitectura <strong>híbrida</strong> que combina PostgreSQL local (PGlite), 
+          sincronización REST personalizada y manejo de conflictos server-side. Esta arquitectura permite 
+          a los vendedores trabajar 100% offline mientras mantienen la consistencia de datos.
+        </p>
+      </div>
+
+      <!-- Architecture Diagram -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-10">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="layout" class="w-5 h-5 text-orange-500"></i>
+          Diagrama de Arquitectura
+        </h3>
+        <div class="mermaid">
+flowchart TB
+    subgraph Frontend["FRONTEND (React + PGlite)"]
+        Components["React Components"]
+        TanStack["TanStack Query"]
+        SyncService["SyncService<br/>Push Queue"]
+        PullService["PullService<br/>Fetch Changes"]
+        PGlite["PGlite Database<br/>IndexedDB"]
+        
+        Components --> TanStack
+        TanStack --> SyncService
+        TanStack --> PullService
+        SyncService --> PGlite
+        PullService --> PGlite
+    end
+    
+    subgraph Network["NETWORK LAYER"]
+        Push["POST /sync/batch<br/>Client → Server"]
+        Pull["GET /sync/changes<br/>Server → Client"]
+    end
+    
+    subgraph Backend["BACKEND (ElysiaJS + Drizzle)"]
+        Engine["SyncEngine"]
+        Pipeline["SyncPipeline"]
+        Handlers["Entity Handlers"]
+        Conflict["Conflict Resolver"]
+        
+        Engine --> Pipeline
+        Engine --> Handlers
+        Engine --> Conflict
+    end
+    
+    subgraph DB["PostgreSQL"]
+        Postgres["PostgreSQL<br/>Source of Truth"]
+    end
+    
+    Frontend --> Push
+    Push --> Backend
+    Backend --> Postgres
+    Postgres --> Pull
+    Pull --> Frontend
+        </div>
+      </div>
+
+      <!-- Component Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 hover-card">
+          <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+            <i data-lucide="database" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+          </div>
+          <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">PGlite (PostgreSQL en WASM)</h4>
+          <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            Base de datos PostgreSQL completa que corre en el navegador usando WebAssembly. 
+            Persiste en IndexedDB, permite transacciones SQL completas y mantiene el esquema 
+            idéntico al servidor.
+          </p>
+        </div>
+        
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 hover-card">
+          <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+            <i data-lucide="upload-cloud" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+          </div>
+          <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Push Sync (Client → Server)</h4>
+          <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            Cola de operaciones pendientes que se sincronizan con el servidor en lotes (batches). 
+            Cada operación pasa por validación, detección de conflictos y procesamiento transaccional.
+          </p>
+        </div>
+        
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 hover-card">
+          <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+            <i data-lucide="download-cloud" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+          </div>
+          <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Pull Sync (Server → Client)</h4>
+          <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            Sistema de cursor-based sync que trae solo los cambios desde la última sincronización. 
+            Usa paginación (100 registros por request) para manejar grandes volúmenes de datos.
+          </p>
+        </div>
+        
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700 hover-card">
+          <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+            <i data-lucide="git-merge" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+          </div>
+          <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Conflict Resolution</h4>
+          <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            Sistema de detección de conflictos basado en versiones. Cada entidad tiene un campo 
+            <code>version</code> que incrementa con cada cambio. Si hay discrepancia, se detecta 
+            el conflicto y se puede aplicar estrategia "last-write-wins" o merge manual.
+          </p>
+        </div>
+      </div>
+
+      <!-- Sync Status Values -->
+      <div class="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-2xl p-8 border border-orange-200 dark:border-orange-800">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Estados de Sincronización</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-start gap-3">
+            <div class="w-3 h-3 rounded-full bg-green-500 mt-1.5 animate-pulse"></div>
+            <div>
+              <div class="font-medium text-slate-900 dark:text-white">synced</div>
+              <div class="text-sm text-slate-600 dark:text-slate-400">Datos sincronizados con el servidor</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-3 h-3 rounded-full bg-yellow-500 mt-1.5 animate-pulse-orange"></div>
+            <div>
+              <div class="font-medium text-slate-900 dark:text-white">pending</div>
+              <div class="text-sm text-slate-600 dark:text-slate-400">Cambios locales pendientes de subir</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-3 h-3 rounded-full bg-red-500 mt-1.5"></div>
+            <div>
+              <div class="font-medium text-slate-900 dark:text-white">error</div>
+              <div class="text-sm text-slate-600 dark:text-slate-400">Fallo en sincronización</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLUJO TAB -->
+    <div x-show="tab === 'flujo'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
+      
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Flujo de Sincronización</h2>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          El sistema maneja dos flujos principales: <strong>Push</strong> (subir cambios locales al servidor) 
+          y <strong>Pull</strong> (bajar cambios del servidor al cliente). Ambos funcionan de manera 
+          independiente y automática.
+        </p>
+      </div>
+
+      <!-- Push Flow -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+          <i data-lucide="upload" class="w-5 h-5 text-orange-500"></i>
+          Flujo Push: Cliente → Servidor
+        </h3>
+        <p class="text-slate-600 dark:text-slate-300 mb-6">
+          Cuando un vendedor crea una venta offline, el sistema la encola y la sincroniza cuando hay conexión.
+        </p>
+        
+        <div class="mermaid mb-6">
+sequenceDiagram
+    participant User
+    participant Service
+    participant Queue
+    participant Server
+    participant Engine
+    participant DB
+    
+    User->>Service: Crear venta (offline)
+    Service->>Service: Validar datos
+    Service->>Queue: queueSync()
+    Queue->>Queue: Generar idempotencyKey
+    Queue->>Queue: Guardar en PGlite
+    
+    Note over Queue: Auto-sync cada 30s
+    
+    Queue->>Server: POST /sync/batch
+    Server->>Engine: processBatch()
+    
+    Engine->>DB: BEGIN TRANSACTION
+    
+    loop Cada operacion
+        Engine->>Engine: SAVEPOINT
+        Engine->>Engine: Validar y Ejecutar
+        alt Exito
+            Engine->>DB: RELEASE SAVEPOINT
+        else Fallo
+            Engine->>DB: ROLLBACK TO SAVEPOINT
+        end
+    end
+    
+    Engine->>DB: COMMIT
+    Server-->>Queue: Resultados
+    Queue->>Queue: Actualizar sync_status
+        </div>
+
+        <!-- Sync Group Explanation -->
+        <div class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+          <h4 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+            <i data-lucide="link" class="w-4 h-4 text-orange-500"></i>
+            Sync Group ID: Agrupación Atómica
+          </h4>
+          <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+            Operaciones relacionadas (venta + items + confirmación) se agrupan por <code>sync_group_id</code> 
+            para garantizar que se procesen juntas o no se procesen.
+          </p>
+          <pre class="language-typescript"><code>// Ejemplo: Crear venta con items
+const syncGroupId = crypto.randomUUID();
+
+// 1. Insertar venta (parent)
+await saleService.createDraft({ syncGroupId });
+
+// 2. Agregar items (children)
+await saleService.addItem({ saleId, syncGroupId });
+
+// 3. Confirmar venta (parent update)
+await saleService.confirm({ saleId, syncGroupId });
+
+// Las 3 operaciones viajan juntas en un batch</code></pre>
+        </div>
+      </div>
+
+      <!-- Pull Flow -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+          <i data-lucide="download" class="w-5 h-5 text-orange-500"></i>
+          Flujo Pull: Servidor → Cliente
+        </h3>
+        <p class="text-slate-600 dark:text-slate-300 mb-6">
+          El cliente consulta periódicamente el servidor por cambios usando un cursor (timestamp) 
+          para solo recibir datos nuevos.
+        </p>
+        
+        <div class="mermaid mb-6">
+sequenceDiagram
+    participant Timer
+    participant Pull
+    participant Server
+    participant PG
+    participant PGlite
+    
+    Timer->>Pull: Trigger pull()
+    
+    Pull->>Pull: Cargar cursor de localStorage
+    Pull->>Server: GET /sync/changes?since=cursor
+    
+    Server->>PG: Query cambios desde cursor
+    PG->>Server: Operaciones nuevas
+    
+    Server-->>Pull: Cambios + nuevo cursor
+    
+    loop Por cada cambio
+        Pull->>Pull: Validar tabla whitelist
+        alt Insert o Update
+            Pull->>PGlite: UPSERT
+        else Delete
+            Pull->>PGlite: DELETE
+        end
+    end
+    
+    Pull->>Pull: Guardar nuevo cursor
+    Pull->>Pull: Invalidar queries de TanStack
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Cursor-Based Sync</h4>
+            <p class="text-slate-600 dark:text-slate-300 text-sm">
+              El cursor es un timestamp (<code>processedAt</code>) que indica hasta dónde el cliente 
+              ha sincronizado. Solo se traen registros con <code>processedAt >= cursor</code>.
+            </p>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-3">UPSERT Pattern</h4>
+            <p class="text-slate-600 dark:text-slate-300 text-sm">
+              Usamos <code>INSERT ON CONFLICT DO UPDATE</code> para manejar tanto inserciones 
+              como actualizaciones en una sola operación SQL.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuration Table -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Configuración de Sync</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700">
+                <th class="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Configuración</th>
+                <th class="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Valor</th>
+                <th class="text-left py-3 px-4 font-semibold text-slate-900 dark:text-white">Descripción</th>
+              </tr>
+            </thead>
+            <tbody class="text-slate-600 dark:text-slate-300">
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-3 px-4 font-mono text-xs">SYNC_INTERVAL_MS</td>
+                <td class="py-3 px-4">30,000 (30s)</td>
+                <td class="py-3 px-4">Intervalo de push sync automático</td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-3 px-4 font-mono text-xs">PULL_INTERVAL_MS</td>
+                <td class="py-3 px-4">10,000 (10s)</td>
+                <td class="py-3 px-4">Intervalo de pull sync automático</td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-3 px-4 font-mono text-xs">BATCH_SIZE</td>
+                <td class="py-3 px-4">50</td>
+                <td class="py-3 px-4">Operaciones por batch (push)</td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-3 px-4 font-mono text-xs">MAX_RETRIES</td>
+                <td class="py-3 px-4">5</td>
+                <td class="py-3 px-4">Reintentos antes de dead letter</td>
+              </tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-3 px-4 font-mono text-xs">BACKOFF_BASE_MS</td>
+                <td class="py-3 px-4">1,000 (1s)</td>
+                <td class="py-3 px-4">Delay inicial para reintentos</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono text-xs">BACKOFF_MAX_MS</td>
+                <td class="py-3 px-4">30,000 (30s)</td>
+                <td class="py-3 px-4">Delay máximo entre reintentos</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROBLEMA TAB -->
+    <div x-show="tab === 'problema'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
+      
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Problema de Rendimiento</h2>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          Cuando el sistema sincroniza <strong>500-600 registros</strong>, el proceso se vuelve extremadamente 
+          lento (9-20 segundos). Este análisis identifica las causas raíz del problema.
+        </p>
+      </div>
+
+      <!-- Problem Alert -->
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 mb-8">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-red-100 dark:bg-red-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-red-800 dark:text-red-300 mb-2">Síntoma Principal</h3>
+            <p class="text-red-700 dark:text-red-200 mb-3">
+              <strong>500-600 registros tardan 9-20 segundos en sincronizar</strong>, lo que genera 
+              una mala experiencia de usuario, especialmente en dispositivos móviles con conexión lenta.
+            </p>
+            <div class="flex items-center gap-2 text-sm text-red-600 dark:text-red-300">
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              <span>Tiempo objetivo: &lt; 3 segundos</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Root Causes -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        
+        <!-- Issue 1 -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-red-600 dark:text-red-400 font-bold">1</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white">Batch Size Muy Pequeño</h4>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+            Con <code>BATCH_SIZE = 50</code>, 500 registros requieren <strong>10 requests HTTP separados</strong>. 
+            Cada roundtrip añade 50-200ms de latencia de red.
+          </p>
+          <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+            <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">Cálculo:</div>
+            <div class="text-sm text-slate-700 dark:text-slate-300">
+              500 registros ÷ 50 = <span class="text-red-500 font-semibold">10 HTTP requests</span><br>
+              10 × 150ms (promedio) = <span class="text-red-500 font-semibold">1,500ms solo en red</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Issue 2 -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-red-600 dark:text-red-400 font-bold">2</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white">Procesamiento Secuencial</h4>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+            Los cambios se aplican <strong>uno por uno</strong> en un loop. Cada cambio = 1 query SQL. 
+            500 cambios = 500 queries secuenciales.
+          </p>
+          <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+            <pre class="text-xs text-slate-600 dark:text-slate-400 overflow-x-auto"><code>// Código actual (lento)
+for (const change of changes) {
+  await applyChange(change); // 1 query
+}
+// 500 iteraciones = 500 queries</code></pre>
+          </div>
+        </div>
+
+        <!-- Issue 3 -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-red-600 dark:text-red-400 font-bold">3</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white">N+1 Query Pattern</h4>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+            Cada handler hace <strong>2 queries</strong>: primero verifica si existe (<code>findById</code>), 
+            luego ejecuta (<code>update</code>/<code>delete</code>).
+          </p>
+          <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+            <pre class="text-xs text-slate-600 dark:text-slate-400 overflow-x-auto"><code>// En cada handler
+const existing = await saleRepo.findById(id); // Query 1
+if (!existing) return;
+await saleRepo.update(id, data);               // Query 2
+
+// 500 ops × 2 = 1,000 queries</code></pre>
+          </div>
+        </div>
+
+        <!-- Issue 4 -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-red-600 dark:text-red-400 font-bold">4</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white">Overhead de Savepoints</h4>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+            Cada operación en una transacción crea un <code>SAVEPOINT</code> (2-5ms). 
+            Con 500 operaciones, esto suma <strong>2,500ms adicionales</strong>.
+          </p>
+          <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+            <pre class="text-xs text-slate-600 dark:text-slate-400 overflow-x-auto"><code>// Por cada operación:
+await tx.execute(sql`SAVEPOINT sp_1`);      // ~2ms
+// ... procesar ...
+await tx.execute(sql`RELEASE SAVEPOINT`);  // ~2ms</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time Breakdown -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Desglose de Tiempo (500 registros)</h3>
+        
+        <div class="space-y-4">
+          <!-- HTTP -->
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">HTTP Roundtrips (10 requests)</span>
+              <span class="text-sm text-slate-600 dark:text-slate-400">1.5 - 2.0s</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+              <div class="bg-orange-500 h-2.5 rounded-full" style="width: 25%"></div>
+            </div>
+          </div>
+          
+          <!-- Savepoints -->
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Savepoint Overhead (500 ops)</span>
+              <span class="text-sm text-slate-600 dark:text-slate-400">1.0 - 2.5s</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+              <div class="bg-orange-500 h-2.5 rounded-full" style="width: 20%"></div>
+            </div>
+          </div>
+          
+          <!-- N+1 Queries -->
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">N+1 Queries (1,000 queries)</span>
+              <span class="text-sm text-slate-600 dark:text-slate-400">5.0 - 10.0s</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+              <div class="bg-red-500 h-2.5 rounded-full" style="width: 45%"></div>
+            </div>
+          </div>
+          
+          <!-- Sequential -->
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Procesamiento Secuencial</span>
+              <span class="text-sm text-slate-600 dark:text-slate-400">2.5 - 5.0s</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+              <div class="bg-orange-400 h-2.5 rounded-full" style="width: 25%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <div class="flex justify-between items-center">
+            <span class="text-lg font-bold text-slate-900 dark:text-white">Total Estimado</span>
+            <span class="text-2xl font-bold text-red-600 dark:text-red-400">9 - 20 segundos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Good News -->
+      <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i data-lucide="check-circle" class="w-6 h-6 text-green-600 dark:text-green-400"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-green-800 dark:text-green-300 mb-2">Buena Noticia</h3>
+            <p class="text-green-700 dark:text-green-200">
+              El sistema <strong>ya tiene sincronización incremental</strong> - NO está bajando toda la data 
+              cada vez. El cursor basado en <code>processedAt</code> asegura que solo traemos cambios nuevos. 
+              El problema es <strong>arquitectural</strong> (overhead por operación), no de diseño general.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLUCION TAB -->
+    <div x-show="tab === 'solucion'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
+      
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Solución por Etapas</h2>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          Para resolver el problema de rendimiento con 500-600 registros sin sacrificar la experiencia 
+          offline, implementamos una estrategia de <strong>carga priorizada</strong>: datos críticos primero, 
+          histórico en background.
+        </p>
+      </div>
+
+      <!-- Strategy Overview -->
+      <div class="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-2xl p-8 border border-orange-200 dark:border-orange-800 mb-10">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Estrategia de Carga Priorizada</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Stage 1 -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border-l-4 border-green-500">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-green-600 dark:text-green-400 font-bold">1</span>
+              </div>
+              <span class="text-xs font-semibold text-green-600 dark:text-green-400 uppercase">Crítica</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Datos de Referencia</h4>
+            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              <li>• customers</li>
+              <li>• products</li>
+              <li>• product_variants</li>
+            </ul>
+            <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <span class="text-xs text-slate-500">Lookback: últimos 30 días</span>
+            </div>
+          </div>
+
+          <!-- Stage 2 -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border-l-4 border-orange-500">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-orange-600 dark:text-orange-400 font-bold">2</span>
+              </div>
+              <span class="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase">Esencial</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Ventas Recientes</h4>
+            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              <li>• sales</li>
+              <li>• sale_items</li>
+            </ul>
+            <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <span class="text-xs text-slate-500">Lookback: últimos 7 días</span>
+            </div>
+          </div>
+
+          <!-- Stage 3 -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border-l-4 border-blue-500">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-blue-600 dark:text-blue-400 font-bold">3</span>
+              </div>
+              <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">Background</span>
+            </div>
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Histórico Completo</h4>
+            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              <li>• abonos (todas las deudas)</li>
+              <li>• purchases</li>
+              <li>• distribuciones</li>
+              <li>• visitas, tags</li>
+            </ul>
+            <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <span class="text-xs text-slate-500">Lookback: todo el histórico</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Why This Works -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">¿Por Qué Funciona?</h3>
+        
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="clock" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Tiempo al Primer Uso</h4>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                Los vendedores pueden empezar a trabajar en <strong>&lt; 2 segundos</strong> con los datos 
+                esenciales cargados. Las ventas de hace 7 días son suficientes para operar normalmente.
+              </p>
+            </div>
+          </div>
+          
+          <div class="flex gap-4">
+            <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="search" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Deudas Históricas</h4>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                Los <strong>abonos</strong> (pagos de deudas) se cargan en background porque un cliente 
+                puede tener deudas de hace 6 meses. Cuando el vendedor busca un cliente, el background 
+                ya cargó todo su histórico de deudas.
+              </p>
+            </div>
+          </div>
+          
+          <div class="flex gap-4">
+            <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="battery-charging" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Carga Progresiva</h4>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                En lugar de bloquear 20 segundos al inicio, la app se carga en <strong>3-5 segundos</strong> 
+                y el resto llega silenciosamente mientras el usuario trabaja.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow Diagram -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Flujo de Carga por Etapas</h3>
+        
+        <div class="mermaid">
+sequenceDiagram
+    participant A as App
+    participant C as Critical
+    participant E as Essential
+    participant B as Background
+    participant U as User
+    
+    Note over A: Inicio de App
+    
+    A->>C: 1. Cargar customers, products (30 dias)
+    C-->>A: Datos criticos listos (~1s)
+    
+    A->>E: 2. Cargar ventas recientes (7 dias)
+    E-->>A: Ventas recientes listas (~1s)
+    
+    A->>U: App usable ahora
+    
+    A->>B: 3. Cargar abonos historicos
+    B-->>A: Abonos completos
+    
+    A->>B: 4. Cargar purchases, distribuciones
+    B-->>A: Datos completos
+    
+    Note over U: Usuario trabaja mientras el resto carga en background
+        </div>
+      </div>
+
+      <!-- Configuration -->
+      <div class="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Configuración de Etapas</h3>
+        
+        <pre class="language-typescript"><code>// packages/shared/src/sync-config.ts
+
+export const SYNC_STAGES = {
+  CRITICAL: {
+    entities: ["customers", "products", "product_variants"],
+    lookbackDays: 30,
+    description: "Datos de referencia esenciales",
+    blocking: true,  // La app espera
+  },
+  RECENT_SALES: {
+    entities: ["sales", "sale_items"],
+    lookbackDays: 7,
+    description: "Ventas recientes",
+    blocking: true,  // La app espera
+  },
+  HISTORICAL: {
+    entities: [
+      "abonos",           // Incluye TODO el histórico de deudas
+      "purchases", 
+      "purchase_items",
+      "distribuciones",
+      "visitas",
+      "tags",
+    ],
+    lookbackDays: null,  // Todo el histórico
+    description: "Histórico completo",
+    blocking: false,     // Background, no bloquea
+  },
+} as const;</code></pre>
+      </div>
+    </div>
+
+    <!-- CODIGO TAB -->
+    <div x-show="tab === 'codigo'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
+      
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Implementación</h2>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          Código de referencia para implementar el sistema de sincronización por etapas. 
+          Estos ejemplos muestran los componentes clave del sistema.
+        </p>
+      </div>
+
+      <!-- Pull Service with Staged Loading -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">StagedPullCoordinator</h3>
+        <p class="text-slate-600 dark:text-slate-300 mb-6">
+          Coordinador que gestiona la carga por etapas, permitiendo que la app sea usable 
+          rápidamente mientras carga el histórico en background.
+        </p>
+        
+        <pre class="language-typescript"><code>// packages/app/app/lib/sync/staged-pull-coordinator.ts
+
+import type { PullService, PullResult } from "./pull-service";
+import { SYNC_STAGES } from "@avileo/shared";
+
+interface StagedPullState {
+  stage: string;
+  status: "loading" | "complete" | "error";
+  recordsLoaded: number;
+  error?: string;
+}
+
+export class StagedPullCoordinator {
+  private pullService: PullService;
+  private state: Map&lt;string, StagedPullState&gt; = new Map();
+  
+  constructor(pullService: PullService) {
+    this.pullService = pullService;
+  }
+
+  /**
+   * Carga los datos esenciales (bloqueante)
+   * La app espera a que esto complete antes de ser usable
+   */
+  async loadCriticalData(): Promise&lt;PullResult&gt; {
+    this.updateState("CRITICAL", { status: "loading", recordsLoaded: 0 });
+    
+    const since = this.getDateDaysAgo(SYNC_STAGES.CRITICAL.lookbackDays);
+    const entities = SYNC_STAGES.CRITICAL.entities;
+    
+    try {
+      const result = await this.pullService.pull({
+        entityTypes: entities,
+        since: since.toISOString(),
+        limit: 100,
+      });
+      
+      this.updateState("CRITICAL", {
+        status: "complete",
+        recordsLoaded: result.changesApplied,
+      });
+      
+      return result;
+    } catch (error) {
+      this.updateState("CRITICAL", {
+        status: "error",
+        recordsLoaded: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Carga ventas recientes (bloqueante)
+   * Segunda etapa antes de que la app sea usable
+   */
+  async loadRecentSales(): Promise&lt;PullResult&gt; {
+    this.updateState("RECENT_SALES", { status: "loading", recordsLoaded: 0 });
+    
+    const since = this.getDateDaysAgo(SYNC_STAGES.RECENT_SALES.lookbackDays);
+    const entities = SYNC_STAGES.RECENT_SALES.entities;
+    
+    const result = await this.pullService.pull({
+      entityTypes: entities,
+      since: since.toISOString(),
+      limit: 100,
+    });
+    
+    this.updateState("RECENT_SALES", {
+      status: "complete",
+      recordsLoaded: result.changesApplied,
+    });
+    
+    return result;
+  }
+
+  /**
+   * Carga histórico completo (background)
+   * No bloquea - el usuario puede usar la app mientras carga
+   */
+  async loadHistoricalData(): Promise&lt;void&gt; {
+    this.updateState("HISTORICAL", { status: "loading", recordsLoaded: 0 });
+    
+    const entities = SYNC_STAGES.HISTORICAL.entities;
+    let totalLoaded = 0;
+    let hasMore = true;
+    
+    // Cargar en batches hasta completar
+    while (hasMore) {
+      const result = await this.pullService.pull({
+        entityTypes: entities,
+        limit: 200,  // Batch más grande para background
+      });
+      
+      totalLoaded += result.changesApplied;
+      hasMore = result.hasMore;
+      
+      this.updateState("HISTORICAL", {
+        status: hasMore ? "loading" : "complete",
+        recordsLoaded: totalLoaded,
+      });
+      
+      // Pequeña pausa para no saturar el dispositivo
+      if (hasMore) {
+        await this.sleep(500);
+      }
+    }
+  }
+
+  /**
+   * Orquesta toda la carga
+   * Devuelve control después de las etapas bloqueantes
+   */
+  async executeStagedLoad(): Promise&lt;{
+    critical: StagedPullState;
+    recent: StagedPullState;
+  }&gt; {
+    // Etapa 1: Crítica (bloqueante)
+    await this.loadCriticalData();
+    
+    // Etapa 2: Reciente (bloqueante)
+    await this.loadRecentSales();
+    
+    // App usable ahora - iniciar background
+    this.loadHistoricalData().catch(console.error);
+    
+    return {
+      critical: this.state.get("CRITICAL")!,
+      recent: this.state.get("RECENT_SALES")!,
+    };
+  }
+
+  private getDateDaysAgo(days: number): Date {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date;
+  }
+
+  private updateState(stage: string, state: Partial&lt;StagedPullState&gt;): void {
+    const current = this.state.get(stage) || { stage, status: "loading", recordsLoaded: 0 };
+    this.state.set(stage, { ...current, ...state });
+  }
+
+  private sleep(ms: number): Promise&lt;void&gt; {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}</code></pre>
+      </div>
+
+      <!-- Backend Changes Endpoint -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Backend: GET /sync/changes</h3>
+        <p class="text-slate-600 dark:text-slate-300 mb-6">
+          Endpoint que soporta filtrado por entidad y rango de fechas para la carga por etapas.
+        </p>
+        
+        <pre class="language-typescript"><code>// packages/backend/src/api/sync.ts
+
+.get("/changes", async ({ syncService, ctx, query }) =&gt; {
+  // Parse cursor (timestamp)
+  let since: Date | undefined;
+  if (query.since) {
+    since = new Date(query.since);
+  }
+
+  // Parse entity types filter (e.g., "sales,customers")
+  const entityTypes = query.entityTypes
+    ? query.entityTypes.split(",").filter(isValidEntity)
+    : undefined;
+
+  // Parse limit (capped at 500)
+  const limit = Math.min(
+    parseInt(query.limit || "100", 10),
+    500
+  );
+
+  // Parse priority for ordering
+  const priority = query.priority as "high" | "low" | undefined;
+
+  const result = await syncService.getChanges(ctx, since, limit, {
+    entityTypes,
+    priority,
+  });
+
+  return {
+    changes: result.changes,
+    nextSince: result.nextSince,
+    hasMore: result.hasMore,
+  };
+})</code></pre>
+      </div>
+
+      <!-- Sync Service GetChanges -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">SyncService: Query con Filtros</h3>
+        
+        <pre class="language-typescript"><code>// packages/backend/src/services/sync/sync.service.ts
+
+async getChanges(
+  ctx: RequestContext,
+  since?: Date,
+  limit = 100,
+  options?: {
+    entityTypes?: string[];
+    priority?: "high" | "low";
+  }
+): Promise&lt;SyncChangesResult&gt; {
+  const baseConditions = [
+    eq(syncOperations.businessId, ctx.businessId),
+    eq(syncOperations.status, "processed"),
+  ];
+
+  // Filter by cursor (incremental sync)
+  if (since) {
+    baseConditions.push(gte(syncOperations.processedAt, since));
+  }
+
+  // Filter by entity types (staged loading)
+  if (options?.entityTypes?.length) {
+    baseConditions.push(
+      inArray(syncOperations.entity, options.entityTypes)
+    );
+  }
+
+  // Priority ordering
+  const orderBy = options?.priority === "high"
+    ? [
+        asc(syncOperations.processedAt),
+        // Critical entities first
+        sql`CASE entity 
+          WHEN 'customers' THEN 1 
+          WHEN 'products' THEN 1
+          WHEN 'sales' THEN 2
+          ELSE 99 END`
+      ]
+    : [asc(syncOperations.processedAt)];
+
+  const operations = await db.query.syncOperations.findMany({
+    where: and(...baseConditions),
+    orderBy,
+    limit: limit + 1, // +1 to detect hasMore
+  });
+
+  // Build changes array
+  const changes = operations.slice(0, limit).map(op =&gt; ({
+    entity: op.entity,
+    entityId: op.entityId,
+    operation: op.operation,
+    payload: op.payload,
+    processedAt: op.processedAt,
+  }));
+
+  return {
+    changes,
+    nextSince: operations[operations.length - 1]?.processedAt?.toISOString(),
+    hasMore: operations.length &gt; limit,
+  };
+}</code></pre>
+      </div>
+
+      <!-- UI Component -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">UI: Indicador de Carga por Etapas</h3>
+        
+        <pre class="language-tsx"><code>// packages/app/app/components/sync/staged-sync-indicator.tsx
+
+import { useStagedSync } from "~/hooks/use-staged-sync";
+
+export function StagedSyncIndicator() {
+  const { stages, isComplete } = useStagedSync();
+
+  // Si todo está listo, no mostrar nada
+  if (isComplete) return null;
+
+  return (
+    &lt;div className="fixed bottom-4 right-4 bg-white dark:bg-slate-800 
+                    rounded-xl shadow-lg border border-slate-200 
+                    dark:border-slate-700 p-4 max-w-sm"&gt;
+      &lt;h4 className="font-semibold text-slate-900 dark:text-white mb-3 
+                     flex items-center gap-2"&gt;
+        &lt;RefreshCw className="w-4 h-4 animate-spin" /&gt;
+        Sincronizando...
+      &lt;/h4&gt;
+
+      &lt;div className="space-y-2"&gt;
+        {/* Critical Stage */}
+        &lt;div className="flex items-center gap-2"&gt;
+          {stages.critical === "complete" ? (
+            &lt;CheckCircle className="w-4 h-4 text-green-500" /&gt;
+          ) : stages.critical === "loading" ? (
+            &lt;Loader2 className="w-4 h-4 text-orange-500 animate-spin" /&gt;
+          ) : (
+            &lt;Circle className="w-4 h-4 text-slate-300" /&gt;
+          )}
+          &lt;span className="text-sm text-slate-600 dark:text-slate-300"&gt;
+            Datos esenciales
+          &lt;/span&gt;
+        &lt;/div&gt;
+
+        {/* Recent Sales */}
+        &lt;div className="flex items-center gap-2"&gt;
+          {stages.recent === "complete" ? (
+            &lt;CheckCircle className="w-4 h-4 text-green-500" /&gt;
+          ) : stages.recent === "loading" ? (
+            &lt;Loader2 className="w-4 h-4 text-orange-500 animate-spin" /&gt;
+          ) : (
+            &lt;Circle className="w-4 h-4 text-slate-300" /&gt;
+          )}
+          &lt;span className="text-sm text-slate-600 dark:text-slate-300"&gt;
+            Ventas recientes
+          &lt;/span&gt;
+        &lt;/div&gt;
+
+        {/* Historical */}
+        &lt;div className="flex items-center gap-2"&gt;
+          {stages.historical === "complete" ? (
+            &lt;CheckCircle className="w-4 h-4 text-green-500" /&gt;
+          ) : stages.historical === "loading" ? (
+            &lt;Loader2 className="w-4 h-4 text-blue-500 animate-spin" /&gt;
+          ) : (
+            &lt;Circle className="w-4 h-4 text-slate-300" /&gt;
+          )}
+          &lt;span className="text-sm text-slate-600 dark:text-slate-300"&gt;
+            Histórico (background)
+          &lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-700 py-12">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+            <i data-lucide="refresh-cw" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-slate-900 dark:text-white">Avileo</div>
+            <div class="text-sm text-slate-500">Sistema de sincronización offline-first</div>
+          </div>
+        </div>
+        
+        <div class="flex gap-6 text-sm text-slate-600 dark:text-slate-400">
+          <a href="#" class="hover:text-orange-500 transition-colors">Documentación</a>
+          <a href="#" class="hover:text-orange-500 transition-colors">GitHub</a>
+          <a href="#" class="hover:text-orange-500 transition-colors">Soporte</a>
+        </div>
+      </div>
+      
+      <div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400">
+        Tutorial generado para el equipo de desarrollo de Avileo • 2026
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    mermaid.initialize({ 
+      startOnLoad: true, 
+      theme: 'default',
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+      sequence: { useMaxWidth: true }
+    });
+    
+    lucide.createIcons();
+  </script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
+</body>
+</html>

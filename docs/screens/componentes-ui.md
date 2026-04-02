@@ -1,6 +1,6 @@
 # 🎨 Componentes UI
 
-> Sistema de diseño y componentes reutilizables de PollosPro
+> Sistema de diseño y componentes reutilizables de Avileo
 
 ---
 
@@ -190,7 +190,7 @@ Error message here
 #### Desktop Sidebar
 ```
 ┌────────────────┐
-│ 🟧 PollosPro   │
+│ 🟧 Avileo   │
 ├────────────────┤
 │ 🏠 Dashboard   │  ← Active
 │ 📍 Distribución│
@@ -418,4 +418,4 @@ Error message here
 
 ---
 
-*Sistema de componentes UI - PollosPro v1.0*
+*Sistema de componentes UI - Avileo v1.0*

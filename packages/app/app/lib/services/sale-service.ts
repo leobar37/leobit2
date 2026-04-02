@@ -288,6 +288,51 @@ export class SaleService extends BaseService {
   }
 
   /**
+   * Batch-load customers and sale items for an array of sales.
+   * Replaces N+1 pattern (2 queries per sale) with 2 fixed queries total.
+   */
+  private async enrichSalesBatch(sales: Sale[]): Promise<SaleWithItems[]> {
+    if (sales.length === 0) return [];
+
+    const customerIds = [...new Set(
+      sales.map(s => s.customerId).filter((id): id is string => Boolean(id))
+    )];
+
+    const customerMap = new Map<string, SaleCustomer>();
+    if (customerIds.length > 0) {
+      const customerResult = await this.pg.query<Record<string, unknown>>(
+        `SELECT id, name, dni, phone FROM customers WHERE id = ANY($1)`,
+        [customerIds]
+      );
+      for (const row of customerResult.rows) {
+        const customer = mapToCamelCase(row) as unknown as SaleCustomer;
+        customerMap.set(customer.id, customer);
+      }
+    }
+
+    const saleIds = sales.map(s => s.id);
+    const itemsMap = new Map<string, SaleItem[]>();
+    if (saleIds.length > 0) {
+      const itemsResult = await this.pg.query<Record<string, unknown>>(
+        `SELECT * FROM sale_items WHERE sale_id = ANY($1) AND business_id = $2`,
+        [saleIds, this.businessId]
+      );
+      for (const row of itemsResult.rows) {
+        const item = mapToCamelCase(row) as unknown as SaleItem;
+        const list = itemsMap.get(item.saleId) || [];
+        list.push(item);
+        itemsMap.set(item.saleId, list);
+      }
+    }
+
+    return sales.map(sale => ({
+      ...sale,
+      customer: sale.customerId ? customerMap.get(sale.customerId) ?? null : null,
+      items: itemsMap.get(sale.id) || [],
+    }));
+  }
+
+  /**
    * Find all sales for the business
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
@@ -297,36 +342,9 @@ export class SaleService extends BaseService {
       .where(eq(salesTable.businessId, this.businessId))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
-    const sales: SaleWithItems[] = [];
+    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
 
-    for (const row of salesResult) {
-      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
-
-      // Fetch customer data if customerId exists
-      let customer: SaleCustomer | null = null;
-      if (sale.customerId) {
-        const customerResult = await this.pg.query<Record<string, unknown>>(
-          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-          [sale.customerId]
-        );
-        if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
-        }
-      }
-
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-        [sale.id, this.businessId]
-      );
-
-      sales.push({
-        ...sale,
-        customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
-      });
-    }
-
-    return sales;
+    return this.enrichSalesBatch(sales);
   }
 
   async countByBusiness(query: Omit<SalePageQuery, "limit" | "offset"> = {}): Promise<number> {
@@ -397,36 +415,9 @@ export class SaleService extends BaseService {
       .where(and(eq(salesTable.customerId, customerId), eq(salesTable.businessId, this.businessId)))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
-    const sales: SaleWithItems[] = [];
+    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
 
-    for (const row of salesResult) {
-      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
-
-      // Fetch customer data if customerId exists
-      let customer: SaleCustomer | null = null;
-      if (sale.customerId) {
-        const customerResult = await this.pg.query<Record<string, unknown>>(
-          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-          [sale.customerId]
-        );
-        if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
-        }
-      }
-
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-        [sale.id, this.businessId]
-      );
-
-      sales.push({
-        ...sale,
-        customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
-      });
-    }
-
-    return sales;
+    return this.enrichSalesBatch(sales);
   }
 
   /**
@@ -439,36 +430,9 @@ export class SaleService extends BaseService {
       .where(and(eq(salesTable.status, status), eq(salesTable.businessId, this.businessId)))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
-    const sales: SaleWithItems[] = [];
+    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
 
-    for (const row of salesResult) {
-      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
-
-      // Fetch customer data if customerId exists
-      let customer: SaleCustomer | null = null;
-      if (sale.customerId) {
-        const customerResult = await this.pg.query<Record<string, unknown>>(
-          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-          [sale.customerId]
-        );
-        if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
-        }
-      }
-
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-        [sale.id, this.businessId]
-      );
-
-      sales.push({
-        ...sale,
-        customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
-      });
-    }
-
-    return sales;
+    return this.enrichSalesBatch(sales);
   }
 
   /**
@@ -481,36 +445,9 @@ export class SaleService extends BaseService {
       .where(and(eq(salesTable.distribucionId, distribucionId), eq(salesTable.businessId, this.businessId)))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
-    const sales: SaleWithItems[] = [];
+    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
 
-    for (const row of salesResult) {
-      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
-
-      // Fetch customer data if customerId exists
-      let customer: SaleCustomer | null = null;
-      if (sale.customerId) {
-        const customerResult = await this.pg.query<Record<string, unknown>>(
-          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-          [sale.customerId]
-        );
-        if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
-        }
-      }
-
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-        [sale.id, this.businessId]
-      );
-
-      sales.push({
-        ...sale,
-        customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
-      });
-    }
-
-    return sales;
+    return this.enrichSalesBatch(sales);
   }
 
   /**
@@ -523,36 +460,9 @@ export class SaleService extends BaseService {
       .where(and(isNull(salesTable.distribucionId), eq(salesTable.businessId, this.businessId)))
       .orderBy(sql`${salesTable.saleDate} DESC`);
 
-    const sales: SaleWithItems[] = [];
+    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
 
-    for (const row of salesResult) {
-      const sale = mapToCamelCaseWithDates(row) as unknown as Sale;
-
-      // Fetch customer data if customerId exists
-      let customer: SaleCustomer | null = null;
-      if (sale.customerId) {
-        const customerResult = await this.pg.query<Record<string, unknown>>(
-          `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-          [sale.customerId]
-        );
-        if (customerResult.rows.length > 0) {
-          customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
-        }
-      }
-
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-        [sale.id, this.businessId]
-      );
-
-      sales.push({
-        ...sale,
-        customer,
-        items: itemsResult.rows.map((itemRow) => mapToCamelCase(itemRow) as unknown as SaleItem),
-      });
-    }
-
-    return sales;
+    return this.enrichSalesBatch(sales);
   }
 
   /**

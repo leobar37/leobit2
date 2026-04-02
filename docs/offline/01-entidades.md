@@ -1,6 +1,6 @@
 # Entidades Offline-First
 
-> Documento de referencia para el sistema offline de Avileo (PollosPro)
+> Documento de referencia para el sistema offline de Avileo
 
 ## Overview
 

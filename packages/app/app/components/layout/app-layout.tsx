@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
+import { DebugWidget } from "~/components/debug";
 import {
   Sheet,
   SheetContent,
@@ -226,8 +226,6 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
                         </>
                       )}
                     </Button>
-
-                    <SyncDevToolsDrawer />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -279,6 +277,8 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
             </div>
           </nav>
         )}
+        
+        <DebugWidget />
       </div>
     </LayoutContext.Provider>
   );

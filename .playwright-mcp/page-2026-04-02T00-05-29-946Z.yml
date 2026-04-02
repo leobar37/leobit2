@@ -1,0 +1,135 @@
+- generic [active] [ref=e1]:
+  - button [ref=e2] [cursor=pointer]:
+    - img [ref=e3]
+  - banner [ref=e5]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - img [ref=e10]
+        - generic [ref=e15]: Arquitectura Avileo
+      - heading "Sistema de Sincronización Offline-First" [level=1] [ref=e16]:
+        - text: Sistema de Sincronización
+        - generic [ref=e17]: Offline-First
+      - paragraph [ref=e18]: Tutorial completo sobre el sistema de sincronización de Avileo. Aprende cómo funciona la arquitectura que permite a los vendedores trabajar sin conexión y sincronizar cuando vuelve la señal.
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: PGlite
+          - generic [ref=e22]: PostgreSQL en el navegador
+        - generic [ref=e23]:
+          - generic [ref=e24]: REST API
+          - generic [ref=e25]: Sync batch + pull changes
+        - generic [ref=e26]:
+          - generic [ref=e27]: 100%
+          - generic [ref=e28]: Operación offline
+  - navigation [ref=e29]:
+    - generic [ref=e31]:
+      - button "Arquitectura" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - text: Arquitectura
+      - button "Flujo de Sync" [ref=e37] [cursor=pointer]:
+        - img [ref=e38]
+        - text: Flujo de Sync
+      - button "Problema de Rendimiento" [ref=e41] [cursor=pointer]:
+        - img [ref=e42]
+        - text: Problema de Rendimiento
+      - button "Solución por Etapas" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+        - text: Solución por Etapas
+      - button "Implementación" [ref=e47] [cursor=pointer]:
+        - img [ref=e48]
+        - text: Implementación
+  - main [ref=e51]:
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - heading "Arquitectura del Sistema" [level=2] [ref=e54]
+        - paragraph [ref=e55]:
+          - text: Avileo utiliza una arquitectura
+          - strong [ref=e56]: híbrida
+          - text: que combina PostgreSQL local (PGlite), sincronización REST personalizada y manejo de conflictos server-side. Esta arquitectura permite a los vendedores trabajar 100% offline mientras mantienen la consistencia de datos.
+      - generic [ref=e57]:
+        - heading "Diagrama de Arquitectura" [level=3] [ref=e58]:
+          - img [ref=e59]
+          - text: Diagrama de Arquitectura
+        - document [ref=e62]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - paragraph [ref=e72]: PostgreSQL
+              - paragraph [ref=e79]: NETWORK LAYER
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - paragraph [ref=e94]: BACKEND (ElysiaJS + Drizzle)
+                - generic [ref=e98]:
+                  - paragraph [ref=e105]: SyncEngine
+                  - paragraph [ref=e112]: SyncPipeline
+                  - paragraph [ref=e119]: Entity Handlers
+                  - paragraph [ref=e126]: Conflict Resolver
+              - generic [ref=e127]:
+                - paragraph [ref=e135]: FRONTEND (React + PGlite)
+                - generic [ref=e141]:
+                  - paragraph [ref=e148]: React Components
+                  - paragraph [ref=e155]: TanStack Query
+                  - paragraph [ref=e162]:
+                    - text: SyncService
+                    - text: Push Queue
+                  - paragraph [ref=e169]:
+                    - text: PullService
+                    - text: Fetch Changes
+                  - paragraph [ref=e176]:
+                    - text: PGlite Database
+                    - text: IndexedDB
+              - paragraph [ref=e183]:
+                - text: POST /sync/batch
+                - text: Client → Server
+              - paragraph [ref=e190]:
+                - text: GET /sync/changes
+                - text: Server → Client
+              - paragraph [ref=e197]:
+                - text: PostgreSQL
+                - text: Source of Truth
+      - generic [ref=e198]:
+        - generic [ref=e199]:
+          - img [ref=e201]
+          - heading "PGlite (PostgreSQL en WASM)" [level=4] [ref=e205]
+          - paragraph [ref=e206]: Base de datos PostgreSQL completa que corre en el navegador usando WebAssembly. Persiste en IndexedDB, permite transacciones SQL completas y mantiene el esquema idéntico al servidor.
+        - generic [ref=e207]:
+          - img [ref=e209]
+          - heading "Push Sync (Client → Server)" [level=4] [ref=e212]
+          - paragraph [ref=e213]: Cola de operaciones pendientes que se sincronizan con el servidor en lotes (batches). Cada operación pasa por validación, detección de conflictos y procesamiento transaccional.
+        - generic [ref=e214]:
+          - img [ref=e216]
+          - heading "Pull Sync (Server → Client)" [level=4] [ref=e220]
+          - paragraph [ref=e221]: Sistema de cursor-based sync que trae solo los cambios desde la última sincronización. Usa paginación (100 registros por request) para manejar grandes volúmenes de datos.
+        - generic [ref=e222]:
+          - img [ref=e224]
+          - heading "Conflict Resolution" [level=4] [ref=e228]
+          - paragraph [ref=e229]:
+            - text: Sistema de detección de conflictos basado en versiones. Cada entidad tiene un campo
+            - code [ref=e230]: version
+            - text: que incrementa con cada cambio. Si hay discrepancia, se detecta el conflicto y se puede aplicar estrategia "last-write-wins" o merge manual.
+      - generic [ref=e231]:
+        - heading "Estados de Sincronización" [level=3] [ref=e232]
+        - generic [ref=e233]:
+          - generic [ref=e236]:
+            - generic [ref=e237]: synced
+            - generic [ref=e238]: Datos sincronizados con el servidor
+          - generic [ref=e241]:
+            - generic [ref=e242]: pending
+            - generic [ref=e243]: Cambios locales pendientes de subir
+          - generic [ref=e246]:
+            - generic [ref=e247]: error
+            - generic [ref=e248]: Fallo en sincronización
+  - contentinfo [ref=e249]:
+    - generic [ref=e250]:
+      - generic [ref=e251]:
+        - generic [ref=e252]:
+          - img [ref=e254]
+          - generic [ref=e259]:
+            - generic [ref=e260]: Avileo
+            - generic [ref=e261]: Sistema de sincronización offline-first
+        - generic [ref=e262]:
+          - link "Documentación" [ref=e263] [cursor=pointer]:
+            - /url: "#"
+          - link "GitHub" [ref=e264] [cursor=pointer]:
+            - /url: "#"
+          - link "Soporte" [ref=e265] [cursor=pointer]:
+            - /url: "#"
+      - generic [ref=e266]: Tutorial generado para el equipo de desarrollo de Avileo • 2026

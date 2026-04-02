@@ -1,4 +1,4 @@
-# PollosPro - Stack Tecnológico
+# Avileo - Stack Tecnológico
 
 > Herramientas y tecnologías para el desarrollo del sistema
 
@@ -246,8 +246,8 @@ docker-compose down -v
 
 ```json
 {
-  "name": "PollosPro",
-  "short_name": "PollosPro",
+  "name": "Avileo",
+  "short_name": "Avileo",
   "description": "Sistema de ventas de pollo - Offline first",
   "start_url": "/",
   "display": "standalone",

@@ -215,6 +215,7 @@ export interface CreateDistribucionApiInput {
   vendedorId: string;
   puntoVenta: string;
   puntoVentaId?: string;
+  notaCreacion?: string;
   fecha?: string;
   modo?: "estricto" | "acumulativo" | "libre";
   groupId?: string;
@@ -265,6 +266,7 @@ export function useCreateDistribucion() {
 
 export interface CloseDistribucionInput {
   id: string;
+  notaCierre?: string;
 }
 
 /**
@@ -278,7 +280,9 @@ export function useCloseDistribucion() {
   return useOfflineAwareMutation({
     mutationFn: async (input: CloseDistribucionInput) => {
       console.log("[Distribuciones] useCloseDistribucion - calling API for id:", input.id);
-      const response = await (api.distribuciones({ id: input.id }).close as any).patch({});
+      const response = await (api.distribuciones({ id: input.id }).close as any).patch({
+        notaCierre: input.notaCierre,
+      });
       console.log("[Distribuciones] useCloseDistribucion - API response:", response);
       if (!response.data?.success || response.error) {
         handleApiError(response);

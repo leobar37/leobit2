@@ -30,7 +30,7 @@ Pantalla de autenticación para vendedores. Es la única pantalla que requiere i
 │    │    P    │      │
 │    └─────────┘      │
 │                     │
-│   PollosPro         │  ← Título
+│   Avileo         │  ← Título
 │   Sistema de Ventas │  ← Subtítulo
 │                     │
 │   ┌───────────────┐ │
@@ -675,4 +675,4 @@ Clientes → Seleccionar Cliente → Registrar Abono → Confirmar → Clientes
 
 ---
 
-*Documentación de pantallas mobile - PollosPro v1.0*
+*Documentación de pantallas mobile - Avileo v1.0*

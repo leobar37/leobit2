@@ -65,7 +65,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-orange-700">PollosPro</p>
+              <p className="text-sm font-medium text-orange-700">Avileo</p>
               <CardTitle className="text-[2rem] font-bold tracking-[-0.04em] text-foreground">
                 Bienvenido
               </CardTitle>

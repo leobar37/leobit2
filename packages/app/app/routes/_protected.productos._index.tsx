@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
 import { useListSearch } from "~/hooks/use-list-search";
-import { ProductCard } from "~/components/products/product-card";
+import { ProductCard } from "@/components/products/product-card";
 import { useSetLayout } from "~/components/layout/app-layout";
 
 export default function ProductsPage() {

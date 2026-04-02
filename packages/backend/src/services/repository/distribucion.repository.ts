@@ -159,6 +159,8 @@ export class DistribucionRepository {
         ...(data.puntoVenta !== undefined && {
           puntoVenta: data.puntoVenta,
         }),
+        ...(data.notaCreacion !== undefined && { notaCreacion: data.notaCreacion }),
+        ...(data.notaCierre !== undefined && { notaCierre: data.notaCierre }),
         ...(data.montoRecaudado !== undefined && {
           montoRecaudado: data.montoRecaudado,
         }),
@@ -168,12 +170,6 @@ export class DistribucionRepository {
         ...(data.syncAttempts !== undefined && {
           syncAttempts: data.syncAttempts,
         }),
-        // Cierre data fields
-        ...(data.totalSales !== undefined && { totalSales: data.totalSales }),
-        ...(data.totalAmount !== undefined && { totalAmount: data.totalAmount }),
-        ...(data.cashAmount !== undefined && { cashAmount: data.cashAmount }),
-        ...(data.creditAmount !== undefined && { creditAmount: data.creditAmount }),
-        ...(data.totalKilos !== undefined && { totalKilos: data.totalKilos }),
         ...(data.closedAt !== undefined && { closedAt: data.closedAt }),
         ...(data.closedBy !== undefined && { closedBy: data.closedBy }),
       })

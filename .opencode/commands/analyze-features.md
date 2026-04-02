@@ -2,7 +2,7 @@
 description: Analiza exhaustivamente las features funcionales del proyecto y compara con la documentación
 ---
 
-Realiza un análisis exhaustivo de las features funcionales del proyecto Avileo (PollosPro).
+Realiza un análisis exhaustivo de las features funcionales del proyecto Avileo.
 
 ## Contexto del Proyecto
 

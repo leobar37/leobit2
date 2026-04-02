@@ -261,7 +261,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="w-full max-w-md p-8 bg-gray-800 rounded-xl">
         <h1 className="text-2xl font-bold text-white text-center mb-6">
-          PollosPro
+          Avileo
         </h1>
         
         {error && (

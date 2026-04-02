@@ -1,12 +1,12 @@
-# 📱 UI Screens - PollosPro
+# 📱 UI Screens - Avileo
 
-> Documentación completa de las pantallas de la aplicación PollosPro
+> Documentación completa de las pantallas de la aplicación Avileo
 
 ---
 
 ## 🎯 Resumen
 
-PollosPro es una aplicación **mobile-first** diseñada principalmente para vendedores que trabajan en campo, complementada con un panel de administración desktop. La UI está optimizada para operación offline y sincronización cuando hay conectividad.
+Avileo es una aplicación **mobile-first** diseñada principalmente para vendedores que trabajan en campo, complementada con un panel de administración desktop. La UI está optimizada para operación offline y sincronización cuando hay conectividad.
 
 ---
 
@@ -103,4 +103,4 @@ El sistema soporta 2 modos que afectan la UI:
 
 ---
 
-*Documentación de UI - PollosPro v1.0*
+*Documentación de UI - Avileo v1.0*

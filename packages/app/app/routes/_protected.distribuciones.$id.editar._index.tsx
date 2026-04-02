@@ -1,10 +1,20 @@
 import { useParams } from "react-router";
+import { useState } from "react";
 import { ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { EditDistribucionForm } from "~/components/distribucion";
 import { useDistribucion, useUpdateDistribucion, useUpdateDistribucionItems, useCloseDistribucion, type Distribucion } from "~/hooks/use-distribuciones";
 import { useToastError } from "~/hooks/use-toast-error";
-import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { Loader2 } from "lucide-react";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useBusiness } from "@/hooks/use-business";
@@ -16,9 +26,10 @@ export default function EditarDistribucionPage() {
   const updateMutation = useUpdateDistribucion();
   const updateItemsMutation = useUpdateDistribucionItems();
   const closeMutation = useCloseDistribucion();
-  const { confirm, ConfirmDialog } = useConfirmDialog();
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  const [isCloseDrawerOpen, setIsCloseDrawerOpen] = useState(false);
+  const [notaCierre, setNotaCierre] = useState("");
 
   const { data: distribucion, isLoading } = useDistribucion(id || "");
 
@@ -52,26 +63,21 @@ export default function EditarDistribucionPage() {
 
   const handleClose = async () => {
     if (!id) return;
-    const confirmed = await confirm({
-      title: "Cerrar distribución",
-      description: "¿Estás seguro de cerrar esta distribución? Esta acción no se puede deshacer. El stock sobrante será devuelto al inventario.",
-      confirmText: "Cerrar",
-      cancelText: "Cancelar",
-      variant: "destructive",
-    });
-
-    if (confirmed) {
-      try {
-        await closeMutation.mutateAsync(id);
-        showSuccess("Distribución cerrada", {
-          description: "La distribución se ha cerrado exitosamente.",
-        });
-        goBackRoute();
-      } catch (error) {
-        showError("Error", error, {
-          description: "No se pudo cerrar la distribución",
-        });
-      }
+    try {
+      await closeMutation.mutateAsync({
+        id,
+        notaCierre: notaCierre.trim() || undefined,
+      });
+      showSuccess("Distribución cerrada", {
+        description: "La distribución se ha cerrado exitosamente.",
+      });
+      setIsCloseDrawerOpen(false);
+      setNotaCierre("");
+      goBackRoute();
+    } catch (error) {
+      showError("Error", error, {
+        description: "No se pudo cerrar la distribución",
+      });
     }
   };
 
@@ -127,7 +133,7 @@ export default function EditarDistribucionPage() {
             <Button
               variant="outline"
               className="w-full mt-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-              onClick={handleClose}
+              onClick={() => setIsCloseDrawerOpen(true)}
               disabled={closeMutation.isPending}
             >
               {closeMutation.isPending ? (
@@ -153,8 +159,55 @@ export default function EditarDistribucionPage() {
           </Button>
         </div>
       </div>
-      
-      <ConfirmDialog />
+
+      <Drawer open={isCloseDrawerOpen} onOpenChange={setIsCloseDrawerOpen}>
+        <DrawerContent className="px-4 pb-6 pt-2">
+          <DrawerHeader className="space-y-2 text-left">
+            <DrawerTitle>Cerrar distribución</DrawerTitle>
+            <DrawerDescription>
+              Esta acción no se puede deshacer. El stock sobrante será devuelto al inventario.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="space-y-2 px-1 py-2">
+            <Label htmlFor="nota-cierre-admin">Nota al cerrar</Label>
+            <Textarea
+              id="nota-cierre-admin"
+              value={notaCierre}
+              onChange={(event) => setNotaCierre(event.target.value)}
+              placeholder="Observaciones finales de la distribución..."
+              className="min-h-[120px] resize-none rounded-xl"
+              disabled={closeMutation.isPending}
+            />
+          </div>
+
+          <DrawerFooter className="gap-3 sm:flex-col">
+            <Button
+              variant="destructive"
+              onClick={handleClose}
+              disabled={closeMutation.isPending}
+              className="h-12 rounded-xl"
+            >
+              {closeMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cerrando...
+                </>
+              ) : (
+                "Confirmar cierre"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsCloseDrawerOpen(false)}
+              disabled={closeMutation.isPending}
+              className="h-12 rounded-xl"
+            >
+              Cancelar
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

@@ -4,7 +4,7 @@
 
 ## Overview
 
-This directory contains the React component library for the Avileo (PollosPro) offline-first chicken sales management system. Components are organized by category: reusable UI primitives, form components, and domain-specific business components for customers, products, sales, inventory, and distribution management.
+This directory contains the React component library for Avileo - an offline-first chicken sales management system. Components are organized by category: reusable UI primitives, form components, and domain-specific business components for customers, products, sales, inventory, and distribution management.
 
 ## Project Type & Stack
 

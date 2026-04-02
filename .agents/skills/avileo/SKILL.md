@@ -1,6 +1,6 @@
 ---
 name: avileo
-description: Avileo (PollosPro) - Offline-first chicken sales management system.
+description: Avileo - Offline-first chicken sales management system.
   Use when working on the Avileo project, implementing sales features, offline
   sync, database schema, or any code related to this chicken business management
   app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7
@@ -9,7 +9,7 @@ description: Avileo (PollosPro) - Offline-first chicken sales management system.
 
 # Avileo Project Reference
 
-> **PollosPro** - Offline-first chicken sales management system for businesses selling chicken (live, dressed, cuts) and related products.
+> **Avileo** - Offline-first chicken sales management system for businesses selling chicken (live, dressed, cuts) and related products.
 
 ## Project Overview
 

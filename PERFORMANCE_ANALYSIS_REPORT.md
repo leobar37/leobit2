@@ -2,7 +2,7 @@
 
 ## Overview
 
-This analysis examines the performance and data loading patterns for three critical features in the Avileo (PollosPro) application:
+This analysis examines the performance and data loading patterns for three critical features in the Avileo application:
 - **Ventas (Sales)**: `/ventas` route and related functionality
 - **Clientes (Customers)**: `/clientes` route and customer management
 - **Cobros (Payments/Collections)**: `/cobros` route and accounts receivable

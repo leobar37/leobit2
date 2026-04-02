@@ -1,4 +1,4 @@
-# PollosPro - Esquema de Base de Datos
+# Avileo - Esquema de Base de Datos
 
 > Documentación del modelo de datos PostgreSQL con Drizzle ORM
 

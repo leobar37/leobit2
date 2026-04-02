@@ -472,6 +472,8 @@ export const distribuciones = pgTable(
     puntoVenta: varchar("punto_venta", { length: 100 }).notNull(),
     puntoVentaId: uuid("punto_venta_id"),
     montoRecaudado: decimal("monto_recaudado", { precision: 12, scale: 2 }).notNull().default("0"),
+    notaCreacion: text("nota_creacion"),
+    notaCierre: text("nota_cierre"),
     fecha: date("fecha").notNull(),
     estado: text("estado").notNull().default(DistribucionStatus.ACTIVO),
     modo: text("modo").notNull().default("estricto"),

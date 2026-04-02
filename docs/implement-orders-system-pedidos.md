@@ -12,7 +12,7 @@
 ## 1. Context & Situation Analysis
 
 ### Current State
-- **Project**: Avileo (PollosPro) - Offline-first chicken sales management system
+- **Project**: Avileo - Offline-first chicken sales management system
 - **Stack**: Bun + ElysiaJS + Drizzle ORM + PostgreSQL + React Router v7 + TanStack Query
 - **What was being done**: Comprehensive analysis of existing sales system completed. System has working offline-first sales with full CRUD, sync engine, and inventory management.
 - **Where we are now**: Analysis phase complete. Ready to implement Orders feature that allows customers to place orders one day in advance with modification capabilities.

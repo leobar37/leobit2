@@ -8,7 +8,7 @@ Do not edit directly - edit AGENTS.md instead
 
 ## Project Overview
 
-**Avileo (PollosPro)**: Offline-first chicken sales management system for mobile vendors.
+**Avileo**: Offline-first chicken sales management system for mobile vendors.
 
 | Aspect | Technology |
 |--------|------------|
@@ -183,7 +183,7 @@ Use these skills when delegating tasks:
 
 ## Project Overview
 
-**Avileo (PollosPro)**: Offline-first chicken sales management system.
+**Avileo**: Offline-first chicken sales management system.
 - **Stack**: Bun + ElysiaJS + Drizzle + PostgreSQL + React Router v7 + TanStack
 - **Architecture**: Mobile-first, offline-first with IndexedDB persistence
 - **Multi-tenancy**: Users can belong to multiple businesses

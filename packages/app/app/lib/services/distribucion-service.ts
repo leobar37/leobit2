@@ -15,6 +15,7 @@ export interface CreateDistribucionInput {
   vendedorId: string;
   puntoVenta: string;
   puntoVentaId?: string;
+  notaCreacion?: string;
   fecha?: string;
   modo?: "estricto" | "acumulativo" | "libre";
   groupId?: string;
@@ -115,6 +116,8 @@ export class DistribucionService extends BaseService {
       puntoVenta: input.puntoVenta,
       puntoVentaId: input.puntoVentaId || null,
       montoRecaudado: "0.00",
+      notaCreacion: input.notaCreacion || null,
+      notaCierre: null,
       fecha,
       estado: "activo",
       modo: input.modo || "estricto",
@@ -132,6 +135,7 @@ export class DistribucionService extends BaseService {
       vendedorId: input.vendedorId,
       puntoVenta: input.puntoVenta,
       puntoVentaId: input.puntoVentaId,
+      notaCreacion: input.notaCreacion,
       fecha,
       modo: input.modo || "estricto",
       groupId: input.groupId,

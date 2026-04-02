@@ -8,6 +8,7 @@ import {
   varchar,
   decimal,
   boolean,
+  text,
   timestamp,
   date,
   index,
@@ -88,6 +89,8 @@ export const distribuciones = pgTable(
     puntoVentaId: uuid("punto_venta_id").references(() => puntosVenta.id, { onDelete: "set null" }),
 
     montoRecaudado: decimal("monto_recaudado", { precision: 12, scale: 2 }).notNull().default("0"),
+    notaCreacion: text("nota_creacion"),
+    notaCierre: text("nota_cierre"),
 
     // Dates and status
     fecha: date("fecha").notNull(),

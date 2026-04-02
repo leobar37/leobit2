@@ -1,4 +1,4 @@
-# PollosPro - Plan Técnico del Sistema
+# Avileo - Plan Técnico del Sistema
 
 > Software de gestión para negocios de venta de pollo (vivo, pelado, cortes) y productos relacionados.
 > **Arquitectura: Offline-First con TanStack DB**
@@ -34,7 +34,7 @@ Los negocios de venta de pollo operan de manera artesanal:
 - **Los vendedores trabajan en zonas sin cobertura de internet**
 
 ### Solución
-PollosPro es un sistema **offline-first** que permite:
+Avileo es un sistema **offline-first** que permite:
 - **Vender sin internet** - Los datos se guardan localmente
 - **Sincronizar cuando hay conexión** - Automático y transparente
 - **Calcular precios automáticamente** (con resta de tara)
