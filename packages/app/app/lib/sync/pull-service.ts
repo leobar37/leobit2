@@ -327,6 +327,158 @@ export class PullService {
   }
 
   /**
+   * Pull changes with specific options (for staged loading)
+   * This method allows filtering by entity types and custom cursors
+   * Used by StagedPullCoordinator for loading data in stages
+   */
+  async pullWithOptions(options: {
+    entityTypes?: string[];
+    since?: string;
+    limit?: number;
+    cursorKey?: string; // Key for saving/loading cursor (for per-stage cursors)
+  }): Promise<PullResult & { nextSince: string | null }> {
+    // Prevent concurrent pulls
+    if (this.isPullingFlag) {
+      return { success: false, changesApplied: 0, hasMore: false, error: "Pull already in progress", nextSince: null };
+    }
+
+    this.isPullingFlag = true;
+
+    try {
+      const url = new URL(`${API_URL}/sync/changes`);
+      
+      // Use provided cursor or load from stage-specific storage
+      const cursor = options.since ?? this.loadStageCursor(options.cursorKey);
+      if (cursor) {
+        url.searchParams.set("since", cursor);
+      }
+      
+      url.searchParams.set("limit", String(options.limit ?? 100));
+      
+      // Add entity types filter for staged loading
+      if (options.entityTypes && options.entityTypes.length > 0) {
+        url.searchParams.set("entityTypes", options.entityTypes.join(","));
+      }
+
+      if (this.syncGroupId) {
+        url.searchParams.set("syncGroupId", this.syncGroupId);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.authToken}`,
+          "x-business-id": this.businessId,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          success: false,
+          changesApplied: 0,
+          hasMore: false,
+          error: `Pull failed: ${response.status} ${errorText}`,
+          nextSince: null,
+        };
+      }
+
+      const body = (await response.json()) as { 
+        success: boolean; 
+        data?: PullResponse;
+        error?: { code: string; message: string };
+      };
+
+      if (!body.success || !body.data) {
+        return {
+          success: false,
+          changesApplied: 0,
+          hasMore: false,
+          error: body.error?.message || "Invalid response from server",
+          nextSince: null,
+        };
+      }
+
+      const { changes, nextSince, hasMore } = body.data;
+
+      // Apply each change to local database (sequential, no concurrency)
+      const entityTypes = new Set<string>();
+      let appliedCount = 0;
+      const failedChanges: Array<{ change: PullChange; error: string }> = [];
+
+      for (const change of changes) {
+        const result = await applyChange(this.pg, this.db, change, this.businessId);
+        
+        if (result.success) {
+          entityTypes.add(change.entityType);
+          appliedCount++;
+        } else {
+          console.error(`[Pull] Failed to apply change for ${change.entityType}:${change.entityId}:`, result.error);
+          failedChanges.push({ change, error: result.error || "Unknown error" });
+        }
+      }
+
+      // Persist cursor to localStorage (stage-specific if provided)
+      if (nextSince && appliedCount > 0) {
+        if (options.cursorKey) {
+          this.saveStageCursor(options.cursorKey, nextSince);
+        } else {
+          this.saveCursor(nextSince);
+        }
+      }
+
+      // Notify about changes
+      if (entityTypes.size > 0 && this.onChangesApplied) {
+        this.onChangesApplied(Array.from(entityTypes));
+      }
+
+      return {
+        success: true,
+        changesApplied: appliedCount,
+        hasMore,
+        nextSince,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        changesApplied: 0,
+        hasMore: false,
+        error: error instanceof Error ? error.message : String(error),
+        nextSince: null,
+      };
+    } finally {
+      this.isPullingFlag = false;
+    }
+  }
+
+  /**
+   * Load cursor for a specific stage
+   */
+  private loadStageCursor(stageKey?: string): string | null {
+    if (!stageKey) return this.lastSince;
+    
+    try {
+      const key = `${this.cursorStorageKey}_${stageKey}`;
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn(`[PullService] Failed to load stage cursor:`, e);
+      return null;
+    }
+  }
+
+  /**
+   * Save cursor for a specific stage
+   */
+  private saveStageCursor(stageKey: string, cursor: string): void {
+    try {
+      const key = `${this.cursorStorageKey}_${stageKey}`;
+      localStorage.setItem(key, cursor);
+    } catch (e) {
+      console.warn(`[PullService] Failed to save stage cursor:`, e);
+    }
+  }
+
+  /**
    * Start periodic pull
    */
   startAutoPull(): void {

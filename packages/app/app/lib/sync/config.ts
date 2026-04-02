@@ -4,7 +4,7 @@ import { SYNC_ENTITIES, type SyncEntity } from "@avileo/shared";
 export const MAX_RETRIES = 5;
 
 /** Maximum number of operations to process in a single batch */
-export const BATCH_SIZE = 50;
+export const BATCH_SIZE = 100;
 
 /** Interval in milliseconds between sync cycles */
 export const SYNC_INTERVAL_MS = 5000;

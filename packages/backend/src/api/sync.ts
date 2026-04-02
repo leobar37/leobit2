@@ -187,11 +187,18 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         limit = Math.min(parsedLimit, MAX_CHANGES_LIMIT);
       }
 
+      // Parse entityTypes filter for staged loading (comma-separated list)
+      let entityTypes: string[] | undefined;
+      if (query.entityTypes) {
+        entityTypes = query.entityTypes.split(",").filter(Boolean);
+      }
+
       const result = await syncService.getChanges(
         ctx as RequestContext,
         since,
         limit,
-        query.syncGroupId
+        query.syncGroupId,
+        entityTypes
       );
 
       return { success: true, data: result };
@@ -201,6 +208,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         since: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         syncGroupId: t.Optional(t.String()),
+        entityTypes: t.Optional(t.String()), // Comma-separated entity types
       }),
     }
   )

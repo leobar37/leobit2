@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNull, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
 import { db, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
@@ -108,10 +108,16 @@ export class SyncService {
     return this.engine.processBatch(ctx, operations);
   }
 
-  async getChanges(ctx: RequestContext, since?: Date, limit = 100, syncGroupId?: string) {
+  async getChanges(
+    ctx: RequestContext, 
+    since?: Date, 
+    limit = 100, 
+    syncGroupId?: string,
+    entityTypes?: string[]
+  ) {
     const effectiveLimit = Math.min(limit, 500);
 
-    // Build where clause with optional syncGroupId filter
+    // Build where clause with optional filters
     const baseConditions = [
       eq(syncOperations.businessId, ctx.businessId),
       eq(syncOperations.status, "processed"),
@@ -131,6 +137,11 @@ export class SyncService {
     // Add since filter if provided
     if (since) {
       baseConditions.push(gte(syncOperations.processedAt, since));
+    }
+
+    // Add entityTypes filter if provided (for staged loading)
+    if (entityTypes && entityTypes.length > 0) {
+      baseConditions.push(inArray(syncOperations.entity, entityTypes));
     }
 
     const where = and(...baseConditions);

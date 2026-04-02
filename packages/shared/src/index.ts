@@ -380,3 +380,14 @@ export {
   isSyncEntity,
   getEntityPriority,
 } from "./sync-config";
+
+// Staged sync exports
+export {
+  SYNC_STAGES,
+  type SyncStage,
+  type SyncStageConfig,
+  getEntitiesForStage,
+  getAllStagedEntities,
+  isEntityInStage,
+  getStageForEntity,
+} from "./sync-stages";
