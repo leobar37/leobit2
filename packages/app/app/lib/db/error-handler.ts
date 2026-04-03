@@ -12,7 +12,7 @@ export interface CollectionError {
 }
 
 /**
- * Analyzes an error from TanStack DB/ElectricSQL and returns
+ * Analyzes an error from TanStack DB and returns
  * a structured error object with user-friendly messages
  */
 export function handleCollectionError(error: unknown): CollectionError {

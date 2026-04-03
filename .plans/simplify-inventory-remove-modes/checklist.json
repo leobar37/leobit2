@@ -1,0 +1,135 @@
+{
+  "plan": "simplify-inventory-remove-modes",
+  "version": "1.0",
+  "createdAt": "2026-04-02",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "DB Migration - Remove modo columns",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": [],
+      "blocks": ["T-002", "T-003", "T-007", "T-011"],
+      "estimatedHours": 3,
+      "file": "tasks/T-001-db-migration-remove-modo-columns.md"
+    },
+    {
+      "id": "T-002",
+      "title": "DB Schema - Create cierre items table",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-001"],
+      "blocks": ["T-009"],
+      "estimatedHours": 2,
+      "file": "tasks/T-002-db-schema-create-cierre-items.md"
+    },
+    {
+      "id": "T-003",
+      "title": "Backend - Remove distribucion modo",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-001"],
+      "blocks": ["T-004", "T-005", "T-006", "T-010"],
+      "estimatedHours": 3,
+      "file": "tasks/T-003-backend-remove-distribucion-modo.md"
+    },
+    {
+      "id": "T-004",
+      "title": "Backend - Simplify sale validation",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-003"],
+      "blocks": ["T-010"],
+      "estimatedHours": 2,
+      "file": "tasks/T-004-backend-simplify-sale-validation.md"
+    },
+    {
+      "id": "T-005",
+      "title": "Backend - Remove state machine hooks",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-003"],
+      "blocks": ["T-010"],
+      "estimatedHours": 2,
+      "file": "tasks/T-005-backend-remove-state-machine-hooks.md"
+    },
+    {
+      "id": "T-006",
+      "title": "Backend - Update sync schemas",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-003"],
+      "blocks": ["T-010"],
+      "estimatedHours": 1,
+      "file": "tasks/T-006-backend-update-sync-schemas.md"
+    },
+    {
+      "id": "T-007",
+      "title": "Frontend - Update distribucion types",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-001"],
+      "blocks": ["T-008"],
+      "estimatedHours": 1,
+      "file": "tasks/T-007-frontend-update-distribucion-types.md"
+    },
+    {
+      "id": "T-008",
+      "title": "Frontend - Remove modo from forms",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-007"],
+      "blocks": ["T-009"],
+      "estimatedHours": 2,
+      "file": "tasks/T-008-frontend-remove-modo-from-forms.md"
+    },
+    {
+      "id": "T-009",
+      "title": "Frontend - Create cierre flow",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["T-002", "T-008"],
+      "blocks": ["T-012"],
+      "estimatedHours": 4,
+      "file": "tasks/T-009-frontend-create-cierre-flow.md"
+    },
+    {
+      "id": "T-010",
+      "title": "Tests - Update distribucion tests",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-004", "T-005", "T-006"],
+      "blocks": ["T-012"],
+      "estimatedHours": 3,
+      "file": "tasks/T-010-tests-update-distribucion-tests.md"
+    },
+    {
+      "id": "T-011",
+      "title": "Data Migration - Existing distribuciones",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-001"],
+      "blocks": [],
+      "estimatedHours": 1,
+      "file": "tasks/T-011-data-migration-existing-distribuciones.md"
+    },
+    {
+      "id": "T-012",
+      "title": "Verification - Integration testing",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["T-009", "T-010"],
+      "blocks": [],
+      "estimatedHours": 3,
+      "estimatedHours": 3,
+      "file": "tasks/T-012-verification-integration-testing.md"
+    }
+  ],
+  "stats": {
+    "total": 12,
+    "completed": 10,
+    "inProgress": 0,
+    "pending": 2,
+    "totalEstimatedHours": 24
+  }
+}

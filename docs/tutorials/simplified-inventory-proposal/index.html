@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{ dark: localStorage.getItem('theme') === 'dark', activeTab: 'problem', showCode: false }"
+      x-bind:class="{ 'dark': dark }">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simplificación del Sistema de Inventario - Propuesta</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#f97316',
+            'primary-dark': '#ea580c',
+            secondary: '#64748b',
+            success: '#22c55e',
+            warning: '#eab308',
+            danger: '#ef4444',
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'slide-up': 'slideUp 0.5s ease-out',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+        }
+      }
+    }
+  </script>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    .dark body { background: #0f172a; color: #e2e8f0; }
+    .gradient-text {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px -10px rgba(249, 115, 22, 0.2);
+    }
+    .tab-active {
+      border-bottom: 3px solid #f97316;
+      color: #f97316;
+    }
+    .dark .tab-active {
+      color: #fb923c;
+      border-bottom-color: #fb923c;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+
+  <!-- Dark mode toggle -->
+  <button @click="dark = !dark; localStorage.setItem('theme', dark ? 'dark' : 'light')"
+          class="fixed top-4 right-4 z-50 p-3 rounded-xl bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all">
+    <i data-lucide="sun" x-show="dark" class="w-5 h-5 text-amber-400"></i>
+    <i data-lucide="moon" x-show="!dark" class="w-5 h-5 text-slate-600"></i>
+  </button>
+
+  <!-- Hero Section -->
+  <header class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-blue-500/10 dark:from-orange-500/5 dark:to-blue-500/5"></div>
+    <div class="max-w-6xl mx-auto px-6 py-16 relative">
+      <div class="animate-fade-in">
+        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-sm font-medium mb-6">
+          <i data-lucide="lightbulb" class="w-4 h-4"></i>
+          Propuesta de Arquitectura
+        </span>
+        <h1 class="text-5xl font-bold mb-6">
+          <span class="gradient-text">Simplificación del Inventario</span>
+        </h1>
+        <p class="text-xl text-slate-600 dark:text-slate-300 max-w-3xl leading-relaxed">
+          Una propuesta para eliminar la complejidad del sistema actual de inventario,
+          separando claramente el <strong>stock</strong> de las <strong>distribuciones</strong>
+          y reduciendo los múltiples modos a un solo flujo simple y predecible.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex gap-8 overflow-x-auto">
+        <button @click="activeTab = 'problem'"
+                :class="{ 'tab-active': activeTab === 'problem' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            El Problema
+          </span>
+        </button>
+        <button @click="activeTab = 'proposal'"
+                :class="{ 'tab-active': activeTab === 'proposal' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            La Propuesta
+          </span>
+        </button>
+        <button @click="activeTab = 'comparison'"
+                :class="{ 'tab-active': activeTab === 'comparison' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="git-compare" class="w-4 h-4"></i>
+            Comparación
+          </span>
+        </button>
+        <button @click="activeTab = 'architecture'"
+                :class="{ 'tab-active': activeTab === 'architecture' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            Arquitectura
+          </span>
+        </button>
+        <button @click="activeTab = 'database'"
+                :class="{ 'tab-active': activeTab === 'database' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            Base de Datos
+          </span>
+        </button>
+        <button @click="activeTab = 'flow'"
+                :class="{ 'tab-active': activeTab === 'flow' }"
+                class="py-4 px-2 font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors whitespace-nowrap">
+          <span class="flex items-center gap-2">
+            <i data-lucide="workflow" class="w-4 h-4"></i>
+            Flujo de Trabajo
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+
+    <!-- TAB: El Problema -->
+    <section x-show="activeTab === 'problem'" x-transition:enter="animate-fade-in" class="space-y-8">
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 class="text-2xl font-bold mb-4 flex items-center gap-3 text-slate-900 dark:text-white">
+          <span class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <i data-lucide="x-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+          </span>
+          Sobre-ingeniería Detectada
+        </h2>
+        <p class="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+          El sistema actual tiene <strong>dos sistemas de modos superpuestos</strong> que crean una matriz de combinaciones
+          imposible de razonar y mantener. Esto resulta en código muerto, confusion para los usuarios,
+          y una curva de aprendizaje innecesariamente empinada.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Sistema 1 -->
+          <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 border-l-4 border-blue-500">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              <i data-lucide="building-2" class="w-4 h-4 text-blue-500"></i>
+              Sistema 1: Modo de Operación del Negocio
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Define como el negocio opera globalmente:</p>
+            <ul class="space-y-2 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">inventario_propio</code>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">sin_inventario</code>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">pedidos</code>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">mixto</code>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Sistema 2 -->
+          <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 border-l-4 border-purple-500">
+            <h3 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              <i data-lucide="package" class="w-4 h-4 text-purple-500"></i>
+              Sistema 2: Modo de Distribución
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Define como funciona cada distribución:</p>
+            <ul class="space-y-2 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">estricto</code>
+                <span class="text-xs text-slate-500">- Reserva stock al crear</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">acumulativo</code>
+                <span class="text-xs text-slate-500">- Similar a estricto</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <code class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded">libre</code>
+                <span class="text-xs text-green-600 font-medium">- Unico usado</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Issues Grid -->
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 card-hover">
+          <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+            <i data-lucide="eye-off" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+          </div>
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Selector Oculto</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            El UI está hardcodeado a <code>"libre"</code>. Los otros modos existen en el backend pero
+            los usuarios no pueden accederlos.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 card-hover">
+          <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+            <i data-lucide="code-2" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+          </div>
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Código Muerto</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            ~300-500 líneas de código para reservas de stock, validaciones complejas,
+            y transiciones de estado que nunca se ejecutan.
+          </p>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 card-hover">
+          <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4">
+            <i data-lucide="brain-circuit" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+          </div>
+          <h3 class="font-semibold text-slate-900 dark:text-white mb-2">Complejidad Cognitiva</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            4 modos de negocio × 3 modos de distribución = 12 combinaciones posibles
+            que los desarrolladores deben entender.
+          </p>
+        </div>
+      </div>
+
+      <!-- Code Example -->
+      <div class="bg-slate-900 rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700">
+          <span class="text-sm text-slate-400 flex items-center gap-2">
+            <i data-lucide="file-code" class="w-4 h-4"></i>
+            Código Actual - Hardcodeado
+          </span>
+          <span class="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400">create-distribucion-form.tsx</span>
+        </div>
+        <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">// Modo is always 'libre' - hiding selector temporarily
+const modo: ModoDistribucion = "libre";
+
+// Submit handler - modo is hardcoded
+const handleSubmit = async (data: DistribucionFormData) => {
+  await createDistribucion({
+    ...data,
+    modo: "libre", // Siempre libre, los otros modos no se usan
+  });
+};</code></pre>
+      </div>
+    </section>
+
+    <!-- TAB: La Propuesta -->
+    <section x-show="activeTab === 'proposal'" x-transition:enter="animate-fade-in" class="space-y-8" style="display: none;">
+
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-8 border border-green-200 dark:border-green-800">
+        <h2 class="text-2xl font-bold mb-4 flex items-center gap-3 text-slate-900 dark:text-white">
+          <span class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+          </span>
+          Propuesta: Un Solo Flujo Simple
+        </h2>
+        <p class="text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
+          Eliminar todos los modos y dejar un <strong>único flujo predecible</strong>:
+          <span class="font-semibold text-green-700 dark:text-green-400">"Libre sin reservas"</span>.
+          El stock se maneja independientemente, y los vendedores registran lo que llevaron al cerrar su distribución.
+        </p>
+      </div>
+
+      <!-- Principios -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <i data-lucide="target" class="w-5 h-5 text-primary"></i>
+            Principios Clave
+          </h3>
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-xs font-bold text-primary">1</span>
+              </span>
+              <div>
+                <strong class="text-slate-900 dark:text-white block">Sin modos de distribución</strong>
+                <span class="text-sm text-slate-600 dark:text-slate-400">Un solo comportamiento predecible para todos</span>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-xs font-bold text-primary">2</span>
+              </span>
+              <div>
+                <strong class="text-slate-900 dark:text-white block">Stock separado</strong>
+                <span class="text-sm text-slate-600 dark:text-slate-400">Las distribuciones no manejan inventario</span>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-xs font-bold text-primary">3</span>
+              </span>
+              <div>
+                <strong class="text-slate-900 dark:text-white block">Registro al cerrar</strong>
+                <span class="text-sm text-slate-600 dark:text-slate-400">Vendedores indican lo que llevaron al final</span>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-xs font-bold text-primary">4</span>
+              </span>
+              <div>
+                <strong class="text-slate-900 dark:text-white block">Stock centralizado</strong>
+                <span class="text-sm text-slate-600 dark:text-slate-400">Un solo lugar para ver y ajustar inventario</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+          <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i>
+            Beneficios Esperados
+          </h3>
+          <ul class="space-y-3">
+            <li class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <i data-lucide="trending-down" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+              <span class="text-slate-700 dark:text-slate-300">-60% código de inventario</span>
+            </li>
+            <li class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <i data-lucide="users" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+              <span class="text-slate-700 dark:text-slate-300">Curva de aprendizaje plana</span>
+            </li>
+            <li class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <i data-lucide="bug-off" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+              <span class="text-slate-700 dark:text-slate-300">Menos bugs por edge cases</span>
+            </li>
+            <li class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <i data-lucide="gauge" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+              <span class="text-slate-700 dark:text-slate-300">Testing más simple y rápido</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- New Flow Visualization -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="workflow" class="w-5 h-5 text-primary"></i>
+          Flujo Simplificado
+        </h3>
+
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <!-- Step 1 -->
+          <div class="flex-1 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+              <i data-lucide="play" class="w-8 h-8 text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <h4 class="font-medium text-slate-900 dark:text-white">1. Crear Distribución</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Sin seleccionar productos ni stock</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-6 h-6 text-slate-400 hidden md:block"></i>
+          <i data-lucide="arrow-down" class="w-6 h-6 text-slate-400 md:hidden"></i>
+
+          <!-- Step 2 -->
+          <div class="flex-1 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
+              <i data-lucide="shopping-cart" class="w-8 h-8 text-amber-600 dark:text-amber-400"></i>
+            </div>
+            <h4 class="font-medium text-slate-900 dark:text-white">2. Vender</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">El vendedor vende normalmente</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-6 h-6 text-slate-400 hidden md:block"></i>
+          <i data-lucide="arrow-down" class="w-6 h-6 text-slate-400 md:hidden"></i>
+
+          <!-- Step 3 -->
+          <div class="flex-1 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-3">
+              <i data-lucide="check-square" class="w-8 h-8 text-green-600 dark:text-green-400"></i>
+            </div>
+            <h4 class="font-medium text-slate-900 dark:text-white">3. Cerrar & Registrar</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Indica productos llevados y vendidos</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Comparación -->
+    <section x-show="activeTab === 'comparison'" x-transition:enter="animate-fade-in" class="space-y-8" style="display: none;">
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+            <i data-lucide="git-compare" class="w-6 h-6 text-primary"></i>
+            Comparación: Antes vs Después
+          </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-slate-50 dark:bg-slate-700/50">
+              <tr>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Aspecto</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-red-600 dark:text-red-400">Antes (Complejo)</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-green-600 dark:text-green-400">Después (Simple)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Modos de Distribución</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <span class="inline-flex flex-wrap gap-1">
+                    <code class="bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded text-xs">estricto</code>
+                    <code class="bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded text-xs">acumulativo</code>
+                    <code class="bg-green-200 dark:bg-green-800 px-2 py-1 rounded text-xs text-green-800 dark:text-green-200">libre</code>
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Ninguno (único flujo)
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Reserva de Stock</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                    Al crear distribución (modo estricto)
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    No hay reservas
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Validación en Ventas</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-500"></i>
+                    Depende del modo (complejo)
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Sin validación de stock (simple)
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Cierre de Distribución</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  Devolución de stock no usado
+                </td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Registrar lo llevado y vendido
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+              <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Manejo de Stock</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                    Múltiples lugares (complejo)
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Solo en variant_inventory (simple)
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Tablas de DB</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">products, variants, inventory, distribuciones, items...</td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Solo lo esencial (3-4 tablas)
+                  </span>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">Líneas de Código</td>
+                <td class="px-6 py-4 text-slate-600 dark:text-slate-400">~800-1000 (con modos)</td>
+                <td class="px-6 py-4">
+                  <span class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    ~300-400 (sin modos)
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Visual Comparison -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Before -->
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
+          <h3 class="font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            Antes: Flujo Complejo
+          </h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-slate-400">1.</span>
+              <span class="text-slate-600 dark:text-slate-400">Admin crea distribución</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-slate-400">2.</span>
+              <span class="text-slate-600 dark:text-slate-400">Seleccionar modo (oculto)</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-slate-400">3.</span>
+              <span class="text-slate-600 dark:text-slate-400">Si es estricto: reservar stock</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-slate-400">4.</span>
+              <span class="text-slate-600 dark:text-slate-400">Validar stock en cada venta</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-slate-400">5.</span>
+              <span class="text-slate-600 dark:text-slate-400">Al cerrar: devolver sobrante</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- After -->
+        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+          <h3 class="font-semibold text-green-700 dark:text-green-400 mb-4 flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            Después: Flujo Simple
+          </h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-green-500 font-bold">1.</span>
+              <span class="text-slate-700 dark:text-slate-300 font-medium">Admin crea distribución</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+              <span class="text-green-500 font-bold">2.</span>
+              <span class="text-slate-700 dark:text-slate-300 font-medium">Vendedor vende libremente</span>
+            </div>
+            <div class="flex items-center gap-2 p-2 bg-green-100 dark:bg-green-800/50 rounded border border-green-200 dark:border-green-700">
+              <span class="text-green-600 font-bold">3.</span>
+              <span class="text-green-800 dark:text-green-200 font-medium">Al cerrar: registrar productos llevados</span>
+            </div>
+          </div>
+          <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p class="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <i data-lucide="info" class="w-4 h-4"></i>
+              El stock se ajusta manualmente por el admin en el panel de productos
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Arquitectura -->
+    <section x-show="activeTab === 'architecture'" x-transition:enter="animate-fade-in" class="space-y-8" style="display: none;">
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 class="text-xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-3">
+          <i data-lucide="layout-grid" class="w-6 h-6 text-primary"></i>
+          Arquitectura Simplificada
+        </h2>
+
+        <div class="bg-slate-50 dark:bg-slate-900 rounded-xl p-6">
+          <div class="mermaid">
+graph TB
+    subgraph "Stock Management"
+        VI[variant_inventory]
+        PV[product_variants]
+        P[products]
+    end
+
+    subgraph "Distribuciones"
+        D[distribuciones]
+        DC[distribucion_cierres]
+        DCI[distribucion_cierre_items]
+    end
+
+    subgraph "Ventas"
+        V[ventas]
+        VD[venta_detalles]
+    end
+
+    P --> PV
+    PV --> VI
+    D --> DC
+    DC --> DCI
+    D --> V
+    V --> VD
+    DCI -.->|referencia| PV
+    VD -.->|referencia| PV
+          </div>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-4">
+          <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+              <i data-lucide="package" class="w-4 h-4"></i>
+              Stock
+            </h4>
+            <p class="text-sm text-blue-700 dark:text-blue-400">
+              Unificado en <code>variant_inventory</code>. El admin gestiona cantidades directamente.
+            </p>
+          </div>
+          <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <h4 class="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+              <i data-lucide="truck" class="w-4 h-4"></i>
+              Distribuciones
+            </h4>
+            <p class="text-sm text-amber-700 dark:text-amber-400">
+              Solo tracking de estado y cierre. Sin lógica de stock.
+            </p>
+          </div>
+          <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <h4 class="font-semibold text-green-800 dark:text-green-300 mb-2 flex items-center gap-2">
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              Ventas
+            </h4>
+            <p class="text-sm text-green-700 dark:text-green-400">
+              Independientes, referencian productos directamente.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Component Diagram -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="boxes" class="w-5 h-5 text-primary"></i>
+          Componentes del Sistema
+        </h3>
+
+        <div class="space-y-4">
+          <!-- Component 1 -->
+          <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+            <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="box" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-slate-900 dark:text-white">ProductInventoryService</h4>
+              <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                Gestiona todo el stock en un solo lugar. CRUD de cantidades, alertas de stock bajo,
+                ajustes manuales por el admin.
+              </p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">updateStock()</span>
+                <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">getStockAlerts()</span>
+                <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">adjustInventory()</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Component 2 -->
+          <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+            <div class="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="truck" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-slate-900 dark:text-white">DistribucionService</h4>
+              <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                Maneja el ciclo de vida de distribuciones: creación, asignación a vendedor,
+                cierre con registro de productos. <strong>Sin lógica de stock</strong>.
+              </p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">create()</span>
+                <span class="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">closeWithItems()</span>
+                <span class="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">getActive()</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Component 3 -->
+          <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+            <div class="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="shopping-cart" class="w-6 h-6 text-green-600 dark:text-green-400"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-slate-900 dark:text-white">SaleService</h4>
+              <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                Registra ventas vinculadas a una distribución. Referencia productos directamente,
+                sin validación de stock (el stock es referencial/administrativo).
+              </p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">create()</span>
+                <span class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">getByDistribucion()</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Base de Datos -->
+    <section x-show="activeTab === 'database'" x-transition:enter="animate-fade-in" class="space-y-8" style="display: none;">
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 class="text-xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-3">
+          <i data-lucide="database" class="w-6 h-6 text-primary"></i>
+          Esquema de Base de Datos Simplificado
+        </h2>
+
+        <!-- Products -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <i data-lucide="package" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+            </span>
+            <h3 class="font-semibold text-slate-900 dark:text-white">products</h3>
+            <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">Sin cambios</span>
+          </div>
+          <div class="bg-slate-900 rounded-xl overflow-hidden">
+            <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">export const products = pgTable("products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").references(() => businesses.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});</code></pre>
+          </div>
+        </div>
+
+        <!-- Product Variants -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <i data-lucide="layers" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+            </span>
+            <h3 class="font-semibold text-slate-900 dark:text-white">product_variants</h3>
+            <span class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">Sin cambios</span>
+          </div>
+          <div class="bg-slate-900 rounded-xl overflow-hidden">
+            <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">export const productVariants = pgTable("product_variants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id").references(() => products.id),
+  name: varchar("name", { length: 50 }).notNull(), // ej: "1kg", "Medio"
+  sku: varchar("sku", { length: 50 }),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});</code></pre>
+          </div>
+        </div>
+
+        <!-- Variant Inventory -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <i data-lucide="warehouse" class="w-4 h-4 text-green-600 dark:text-green-400"></i>
+            </span>
+            <h3 class="font-semibold text-slate-900 dark:text-white">variant_inventory</h3>
+            <span class="text-xs px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded">Unico lugar de stock</span>
+          </div>
+          <div class="bg-slate-900 rounded-xl overflow-hidden">
+            <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">export const variantInventory = pgTable("variant_inventory", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").references(() => businesses.id),
+  variantId: uuid("variant_id").references(() => productVariants.id),
+
+  // Stock actual (admin lo gestiona)
+  currentStock: integer("current_stock").default(0),
+
+  // Alertas configurables
+  minStock: integer("min_stock").default(10),
+  criticalStock: integer("critical_stock").default(5),
+
+  updatedAt: timestamp("updated_at").defaultNow(),
+});</code></pre>
+          </div>
+        </div>
+
+        <!-- Distribuciones -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <i data-lucide="truck" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+            </span>
+            <h3 class="font-semibold text-slate-900 dark:text-white">distribuciones</h3>
+            <span class="text-xs px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 rounded">Simplificada - sin modo</span>
+          </div>
+          <div class="bg-slate-900 rounded-xl overflow-hidden">
+            <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">export const distribuciones = pgTable("distribuciones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessId: uuid("business_id").references(() => businesses.id),
+  vendedorId: uuid("vendedor_id").references(() => businessUsers.id),
+
+  // FECHAS - Lo importante
+  fechaAsignacion: date("fecha_asignacion").notNull(),
+  fechaCierre: date("fecha_cierre"), // null = activa
+
+  // Estado simple
+  estado: varchar("estado", { length: 20 })
+    .$type<"activa" | "cerrada" | "cancelada">()
+    .default("activa"),
+
+  // Notas opcionales
+  notasApertura: text("notas_apertura"),
+  notasCierre: text("notas_cierre"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+
+  // ELIMINADO: modo (estricto/acumulativo/libre)
+  // ELIMINADO: stock reservation logic
+});</code></pre>
+          </div>
+        </div>
+
+        <!-- Distribucion Cierre Items -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <i data-lucide="clipboard-list" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+            </span>
+            <h3 class="font-semibold text-slate-900 dark:text-white">distribucion_cierre_items</h3>
+            <span class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded">Nueva tabla</span>
+          </div>
+          <div class="bg-slate-900 rounded-xl overflow-hidden">
+            <pre class="p-4 text-sm overflow-x-auto"><code class="language-typescript">export const distribucionCierreItems = pgTable("distribucion_cierre_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  distribucionId: uuid("distribucion_id").references(() => distribuciones.id),
+  variantId: uuid("variant_id").references(() => productVariants.id),
+
+  // Lo que el vendedor REGISTRA al cerrar
+  cantidadLlevada: integer("cantidad_llevada").notNull(), // Cuanto llevo
+  cantidadVendida: integer("cantidad_vendida").notNull(), // Cuanto vendio
+  cantidadDevuelta: integer("cantidad_devuelta"), // Cuanto sobro
+
+  // Calculado automaticamente
+  montoVentas: decimal("monto_ventas", { precision: 10, scale: 2 }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});</code></pre>
+          </div>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-3">
+            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+            Esta tabla reemplaza el concepto de "items" de distribución. El vendedor la llena
+            <strong>solo al cerrar</strong>, indicando qué llevó y qué vendió.
+          </p>
+        </div>
+
+        <!-- What to Remove -->
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
+          <h3 class="font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+            Tablas/Campos a Eliminar
+          </h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="font-medium text-slate-900 dark:text-white mb-2">Campos a eliminar:</h4>
+              <ul class="space-y-2 text-sm">
+                <li class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                  <code>distribuciones.modo</code>
+                </li>
+                <li class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                  <code>businesses.modoOperacion</code>
+                </li>
+                <li class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                  <code>businesses.modoDistribucion</code>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-medium text-slate-900 dark:text-white mb-2">Tablas a simplificar:</h4>
+              <ul class="space-y-2 text-sm">
+                <li class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="minus" class="w-4 h-4 text-amber-500"></i>
+                  <code>distribucion_items</code> → cierre_items
+                </li>
+                <li class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="minus" class="w-4 h-4 text-amber-500"></i>
+                  <code>variant_inventory</code> → simplificar
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Flujo de Trabajo -->
+    <section x-show="activeTab === 'flow'" x-transition:enter="animate-fade-in" class="space-y-8" style="display: none;">
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h2 class="text-xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-3">
+          <i data-lucide="workflow" class="w-6 h-6 text-primary"></i>
+          Flujo de Trabajo Completo
+        </h2>
+
+        <!-- Stepper -->
+        <div class="space-y-8">
+          <!-- Step 1 -->
+          <div class="relative">
+            <div class="flex gap-6">
+              <div class="flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/30">
+                  1
+                </div>
+                <div class="w-0.5 h-full bg-slate-200 dark:bg-slate-700 mt-4"></div>
+              </div>
+              <div class="flex-1 pb-8">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                  <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                    Admin: Crear Distribución
+                  </h3>
+                  <p class="text-slate-600 dark:text-slate-400 mb-4">
+                    El administrador crea una nueva distribución asignándola a un vendedor.
+                    <strong>No se seleccionan productos ni se reserva stock.</strong>
+                  </p>
+                  <div class="bg-white dark:bg-slate-800 rounded-lg p-4">
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Datos requeridos:</p>
+                    <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                      <li>• Vendedor asignado</li>
+                      <li>• Fecha de asignación</li>
+                      <li>• Notas de apertura (opcional)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="relative">
+            <div class="flex gap-6">
+              <div class="flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-amber-500/30">
+                  2
+                </div>
+                <div class="w-0.5 h-full bg-slate-200 dark:bg-slate-700 mt-4"></div>
+              </div>
+              <div class="flex-1 pb-8">
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
+                  <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+                    Vendedor: Recibir y Vender
+                  </h3>
+                  <p class="text-slate-600 dark:text-slate-400 mb-4">
+                    El vendedor recibe productos físicamente del admin (fuera del sistema)
+                    y comienza a vender. Las ventas se registran normalmente.
+                  </p>
+                  <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4">
+                      <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                        <i data-lucide="package-check" class="w-4 h-4 text-green-500"></i>
+                        Recepción física
+                      </p>
+                      <p class="text-xs text-slate-500">El vendedor recibe pollos/productos del almacén/admin</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4">
+                      <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-4 h-4 text-blue-500"></i>
+                        Ventas
+                      </p>
+                      <p class="text-xs text-slate-500">Registra cada venta en la app móvil</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="relative">
+            <div class="flex gap-6">
+              <div class="flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-green-500/30">
+                  3
+                </div>
+                <div class="w-0.5 h-full bg-slate-200 dark:bg-slate-700 mt-4"></div>
+              </div>
+              <div class="flex-1 pb-8">
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                  <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <i data-lucide="check-square" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+                    Vendedor: Cerrar Distribución
+                  </h3>
+                  <p class="text-slate-600 dark:text-slate-400 mb-4">
+                    Al final del día (o cuando termina), el vendedor cierra la distribución
+                    indicando exactamente qué productos llevó y cuánto vendió de cada uno.
+                  </p>
+                  <div class="bg-white dark:bg-slate-800 rounded-lg p-4">
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Formulario de cierre:</p>
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded">
+                        <span class="text-sm text-slate-600 dark:text-slate-400">Pollo Entero 1kg</span>
+                        <div class="flex gap-2 text-xs">
+                          <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Llevó: 10</span>
+                          <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Vendió: 8</span>
+                          <span class="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">Sobró: 2</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded">
+                        <span class="text-sm text-slate-600 dark:text-slate-400">Medio Pollo</span>
+                        <div class="flex gap-2 text-xs">
+                          <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Llevó: 5</span>
+                          <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Vendió: 5</span>
+                          <span class="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">Sobró: 0</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="relative">
+            <div class="flex gap-6">
+              <div class="flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-purple-500/30">
+                  4
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                  <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+                    Admin: Revisión y Ajustes
+                  </h3>
+                  <p class="text-slate-600 dark:text-slate-400 mb-4">
+                    El admin revisa el cierre, compara con las ventas registradas, y ajusta
+                    el stock general según sea necesario.
+                  </p>
+                  <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center">
+                      <i data-lucide="receipt" class="w-6 h-6 text-purple-500 mx-auto mb-2"></i>
+                      <p class="text-xs text-slate-600 dark:text-slate-400">Revisar cierre del vendedor</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center">
+                      <i data-lucide="file-text" class="w-6 h-6 text-purple-500 mx-auto mb-2"></i>
+                      <p class="text-xs text-slate-600 dark:text-slate-400">Comparar con ventas registradas</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center">
+                      <i data-lucide="settings-2" class="w-6 h-6 text-purple-500 mx-auto mb-2"></i>
+                      <p class="text-xs text-slate-600 dark:text-slate-400">Ajustar stock si es necesario</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sequence Diagram -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="git-commit" class="w-5 h-5 text-primary"></i>
+          Diagrama de Secuencia
+        </h3>
+        <div class="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 overflow-x-auto">
+          <div class="mermaid">
+sequenceDiagram
+    actor A as Admin
+    actor V as Vendedor
+    participant D as DistribucionService
+    participant S as SaleService
+    participant I as InventoryService
+    participant DB as Database
+
+    Note over A,DB: PASO 1: Crear Distribucion
+    A->>D: create(vendedorId, fecha)
+    D->>DB: INSERT distribuciones
+    DB-->>D: distribucion creada
+    D-->>A: Distribucion activa
+
+    Note over V,DB: PASO 2: Vender (durante el dia)
+    loop Por cada venta
+        V->>S: create(cliente, items[])
+        S->>DB: INSERT ventas, venta_detalles
+        DB-->>S: venta creada
+        S-->>V: Confirmacion
+    end
+
+    Note over V,DB: PASO 3: Cerrar Distribucion
+    V->>D: close(distribucionId, items[])
+    D->>DB: INSERT distribucion_cierre_items
+    D->>DB: UPDATE distribuciones SET estado='cerrada'
+    DB-->>D: cierre completado
+    D-->>V: Confirmacion
+
+    Note over A,DB: PASO 4: Admin revisa
+    A->>D: getCierreItems(distribucionId)
+    D->>DB: SELECT cierre items
+    DB-->>D: items registrados
+    D-->>A: Reporte de cierre
+
+    opt Si necesita ajustar stock
+        A->>I: adjustStock(variantId, cantidad)
+        I->>DB: UPDATE variant_inventory
+        DB-->>I: stock actualizado
+        I-->>A: Confirmacion
+    end
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-700 mt-12">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <i data-lucide="lightbulb" class="w-5 h-5 text-primary"></i>
+          </div>
+          <div>
+            <p class="font-medium text-slate-900 dark:text-white">Propuesta de Simplificación</p>
+            <p class="text-sm text-slate-500">Sistema de Inventario Avileo</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-sm text-slate-500">
+          <span class="flex items-center gap-1">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            Abril 2026
+          </span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="git-branch" class="w-4 h-4"></i>
+            v1.0 Propuesta
+          </span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#f97316',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#ea580c',
+        lineColor: '#64748b',
+        secondaryColor: '#e2e8f0',
+        tertiaryColor: '#f1f5f9'
+      }
+    });
+    lucide.createIcons();
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>

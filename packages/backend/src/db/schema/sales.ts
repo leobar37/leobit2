@@ -126,7 +126,7 @@ export const saleItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
-    // Multi-tenancy - required for Electric sync filtering
+    // Multi-tenancy - required for data isolation
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id),

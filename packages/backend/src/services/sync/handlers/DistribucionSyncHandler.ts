@@ -67,10 +67,9 @@ export class DistribucionSyncHandler extends BaseSyncHandler {
       puntoVentaId: parsed.puntoVentaId,
       notaCreacion: parsed.notaCreacion,
       fecha: parsed.fecha ?? getToday(),
-      modo: parsed.modo,
-      confiarEnVendedor: parsed.confiarEnVendedor,
       groupId: parsed.groupId,
-      items: parsed.items.map(item => ({
+      // Items are optional at creation - products registered at close time
+      items: parsed.items?.map(item => ({
         variantId: item.variantId,
         cantidadAsignada: Number(item.cantidadAsignada),
         unidad: item.unidad,

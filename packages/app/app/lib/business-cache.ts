@@ -155,7 +155,7 @@ export function getCacheAge(cachedAt: number): { hours: number; minutes: number;
  */
 export function useCachedBusiness(pg: PGlite | null) {
   return useQuery({
-    queryKey: ["cached-business", pg],
+    queryKey: ["cached-business"],
     queryFn: () => getCachedBusiness(pg),
     staleTime: Infinity,
     enabled: !!pg,

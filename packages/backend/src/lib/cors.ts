@@ -30,11 +30,6 @@ function getAllowedOrigins(): string[] {
 }
 
 const defaultExposeHeaders = [
-  "electric-offset",
-  "electric-handle",
-  "electric-schema",
-  "electric-cursor",
-  "electric-up-to-date",
   "set-auth-token",
 ];
 

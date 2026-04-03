@@ -253,6 +253,20 @@
       "when": 1775320000000,
       "tag": "0048_add_distribution_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1743638400000,
+      "tag": "0049_remove_modo_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1743638500000,
+      "tag": "0050_create_cierre_items_table",
+      "breakpoints": true
     }
   ]
 }

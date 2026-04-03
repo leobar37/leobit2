@@ -1,0 +1,63 @@
+{
+  "plan": {
+    "name": "sync-system-testing-foundation",
+    "created": "2026-04-02",
+    "description": "Create solid, testable foundation for sync system with unit and integration tests"
+  },
+  "tasks": {
+    "T-001": {
+      "title": "Extract interfaces for DI",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high"
+    },
+    "T-002": {
+      "title": "Create PGlite test doubles",
+      "status": "pending",
+      "dependencies": ["T-001"],
+      "priority": "high"
+    },
+    "T-003": {
+      "title": "Unit tests for StagedPullCoordinator",
+      "status": "pending",
+      "dependencies": ["T-001", "T-002"],
+      "priority": "high"
+    },
+    "T-004": {
+      "title": "Unit tests for PullService edge cases",
+      "status": "pending",
+      "dependencies": ["T-001", "T-002"],
+      "priority": "high"
+    },
+    "T-005": {
+      "title": "Integration tests for sync flow",
+      "status": "pending",
+      "dependencies": ["T-003", "T-004"],
+      "priority": "medium"
+    },
+    "T-006": {
+      "title": "Backend sync handlers tests",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "medium"
+    },
+    "T-007": {
+      "title": "Add loop protection",
+      "status": "pending",
+      "dependencies": ["T-003"],
+      "priority": "high"
+    },
+    "T-008": {
+      "title": "Add empty sync_operations handling",
+      "status": "pending",
+      "dependencies": ["T-007"],
+      "priority": "high"
+    }
+  },
+  "metrics": {
+    "totalTasks": 8,
+    "completed": 0,
+    "inProgress": 0,
+    "pending": 8
+  }
+}

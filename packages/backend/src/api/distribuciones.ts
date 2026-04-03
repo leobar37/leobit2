@@ -108,8 +108,6 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         puntoVentaId: body.puntoVentaId,
         notaCreacion: body.notaCreacion,
         fecha: body.fecha,
-        modo: body.modo,
-        confiarEnVendedor: body.confiarEnVendedor,
         groupId: body.groupId,
         items: body.items,
       });
@@ -125,20 +123,18 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         puntoVentaId: t.Optional(t.String()),
         notaCreacion: t.Optional(t.String()),
         fecha: t.Optional(t.String()),
-        modo: t.Optional(t.Union([t.Literal("estricto"), t.Literal("acumulativo"), t.Literal("libre")])),
-        confiarEnVendedor: t.Optional(t.Boolean()),
         groupId: t.Optional(t.String()),
-        items: t.Array(
+        items: t.Optional(t.Array(
           t.Object({
             variantId: t.String(),
             cantidadAsignada: t.Number({ minimum: 0.001 }),
             unidad: t.String(),
           })
-        ),
+        )),
       }),
       detail: {
         summary: "Crear distribución",
-        description: "Crea una nueva asignación con items a un vendedor. Si se proporciona groupId, se crean visitas automáticamente para todos los clientes del grupo.",
+        description: "Crea una nueva asignación a un vendedor. Si se proporciona groupId, se crean visitas automáticamente para todos los clientes del grupo.",
         tags: ["Distribuciones"],
       },
     }

@@ -9,8 +9,6 @@ import { GroupSelect } from "./group-select";
 import { PuntoVentaSelect } from "./punto-venta-select";
 import { type PuntoVenta } from "~/hooks/use-puntos-venta";
 
-type ModoDistribucion = "estricto" | "acumulativo" | "libre";
-
 interface CreateDistribucionFormProps {
   onSubmit: (data: CreateDistribucionInput) => void;
   isPending?: boolean;
@@ -27,8 +25,6 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
     const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
     const [notaCreacion, setNotaCreacion] = useState("");
-    // Modo is always 'libre' - hiding selector temporarily
-    const modo: ModoDistribucion = "libre";
 
     const isValid = !!selectedVendedor && !!selectedPuntoVenta;
 
@@ -48,8 +44,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVentaId: selectedPuntoVenta.id,
         groupId: selectedGroup?.id,
         notaCreacion: notaCreacion.trim() || undefined,
-        modo: modo,
-        items: [], // Empty items for 'libre' mode - products registered on close
+        // No items - products registered on close
       });
     };
 
@@ -114,9 +109,6 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
             disabled={isPending}
           />
         </div>
-
-        {/* Modo selector hidden - defaulting to 'libre' mode */}
-        {/* Product selector hidden for 'libre' mode - products registered on close */}
 
         <button type="submit" disabled className="hidden" />
       </form>

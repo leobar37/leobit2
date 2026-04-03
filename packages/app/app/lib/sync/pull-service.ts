@@ -219,12 +219,12 @@ export class PullService {
 
       console.log(`[PULL] 📥 Received changes:`, {
         count: changes.length,
-        cursor: this.lastSince,
-        nextSince,
+        cursor: this.lastSince?.slice(0, 20),
+        nextSince: nextSince?.slice(0, 20),
         hasMore,
         serverTimestamp,
         entityTypes: entityCounts,
-        ALL_CHANGES: changes.map(c => ({ entityType: c.entityType, operation: c.operation, entityId: c.entityId, name: c.payload?.name })),
+        // ALL_CHANGES removed - potential circular reference issues
       });
 
       if (changes.length === 0) {

@@ -46,10 +46,8 @@ export const businesses = pgTable(
     logoUrl: varchar("logo_url", { length: 255 }),
 
     // Feature flags específicos del negocio (override de system_config)
-    modoOperacion: varchar("modo_operacion", { length: 50 }).default("inventario_propio"),
     controlKilos: boolean("control_kilos").default(true),
     usarDistribucion: boolean("usar_distribucion").default(true),
-    modoDistribucion: varchar("modo_distribucion", { length: 20 }).default("estricto"),
     permitirVentaSinStock: boolean("permitir_venta_sin_stock").default(false),
 
     // Calculator settings (JSONB for flexibility)

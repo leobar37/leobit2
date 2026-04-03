@@ -10,18 +10,11 @@ import {
   check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { modoOperacionEnum } from "./enums";
-
 // Table definition - solo permite 1 registro via constraint
 export const systemConfig = pgTable(
   "system_config",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-
-    // Operation mode
-    modoOperacion: modoOperacionEnum("modo_operacion")
-      .notNull()
-      .default("inventario_propio"),
 
     // Feature flags
     controlKilos: boolean("control_kilos").notNull().default(true),

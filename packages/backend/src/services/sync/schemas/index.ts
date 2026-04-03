@@ -153,6 +153,7 @@ export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
 
 export const abonoCreateSchema = z.object({
   customerId: z.string().min(1, "customerId es requerido"),
+  sellerId: z.string().min(1, "sellerId es requerido"),
   amount: numericStringTransform.refine(
     (val) => Number(val) > 0,
     { message: "amount es requerido y debe ser mayor a 0" }
@@ -183,10 +184,9 @@ export const distribucionCreateSchema = z.object({
   puntoVentaId: z.string().optional(),
   notaCreacion: z.string().optional(),
   fecha: z.string().optional(),
-  modo: z.enum(["estricto", "acumulativo", "libre"]).optional(),
-  confiarEnVendedor: z.boolean().optional(),
   groupId: z.string().optional(),
-  items: z.array(distribucionItemSchema).min(1, "La distribución requiere items"),
+  // Items are now optional at creation - products registered at close time
+  items: z.array(distribucionItemSchema).optional(),
 });
 
 const distribucionBaseSchema = z.object({
@@ -196,8 +196,7 @@ const distribucionBaseSchema = z.object({
   notaCreacion: z.string().optional(),
   notaCierre: z.string().optional(),
   fecha: z.string().optional(),
-  modo: z.enum(["estricto", "acumulativo", "libre"]).optional(),
-  confiarEnVendedor: z.boolean().optional(),
+  // Items are now optional - products registered at close time
   items: z.array(distribucionItemSchema).optional(),
 });
 

@@ -134,16 +134,45 @@ export const distribucionSchema = z.object({
   businessId: z.string(),
   vendedorId: z.string(),
   puntoVenta: z.string(),
+  puntoVentaId: z.string().optional(),
   montoRecaudado: z.string().default("0"),
+  notaCreacion: z.string().nullable().optional(),
+  notaCierre: z.string().nullable().optional(),
   fecha: z.string(),
   estado: z.enum(["activo", "cerrado", "en_ruta"]).default("activo"),
-  modo: z.string().default("estricto"),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
   createdAt: z.coerce.date(),
   items: z.array(distribucionItemSchema).optional(),
 });
 
 export type Distribucion = z.infer<typeof distribucionSchema>;
+
+export const distribucionCierreItemSchema = z.object({
+  id: z.string(),
+  distribucionId: z.string(),
+  variantId: z.string(),
+  cantidadLlevada: z.string(),
+  cantidadVendida: z.string(),
+  cantidadDevuelta: z.string().default("0"),
+  montoVentas: z.string().optional(),
+  syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
+  createdAt: z.coerce.date(),
+});
+
+export type DistribucionCierreItem = z.infer<typeof distribucionCierreItemSchema>;
+
+export interface CreateCierreItemInput {
+  variantId: string;
+  cantidadLlevada: number;
+  cantidadVendida: number;
+  cantidadDevuelta?: number;
+}
+
+export interface CloseDistribucionInput {
+  distribucionId: string;
+  notaCierre?: string;
+  items: CreateCierreItemInput[];
+}
 
 export const fileSchema = z.object({
   id: z.string(),

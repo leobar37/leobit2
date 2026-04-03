@@ -289,6 +289,7 @@ async function backfillAbonos(businessId?: string): Promise<BackfillResult> {
   for (const abono of allAbonos) {
     const payload = {
       customerId: abono.customerId,
+      sellerId: abono.sellerId,
       amount: abono.amount,
       paymentMethod: abono.paymentMethod,
       notes: abono.notes,

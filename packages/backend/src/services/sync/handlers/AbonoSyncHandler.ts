@@ -58,7 +58,15 @@ export class AbonoSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
-    const parsed = abonoCreateSchema.parse(operation.payload);
+    // Auto-inyectar sellerId desde contexto si no está presente en payload
+    // Esto asegura que siempre tengamos un sellerId válido
+    const rawPayload = operation.payload;
+    const payloadWithSeller = {
+      ...rawPayload,
+      sellerId: rawPayload.sellerId || ctx.businessUserId,
+    };
+
+    const parsed = abonoCreateSchema.parse(payloadWithSeller);
 
     // Use registry-aware parent check to avoid DB query when customer was created in same batch
     await this.ensureParentExists(
@@ -74,6 +82,7 @@ export class AbonoSyncHandler extends BaseSyncHandler {
       paymentMethod: parsed.paymentMethod,
       notes: parsed.notes,
     }, tx);
+    // Note: sellerId is automatically injected by paymentRepo from ctx.businessUserId
   }
 
   private async handleDelete(

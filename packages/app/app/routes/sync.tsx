@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { Loader2, CloudDownload, Database, CheckCircle2, AlertTriangle } from "lucide-react";
 import { initDatabase, resetDatabase, SCHEMA_HASH_KEY } from "~/engine/db";
 import { PullService } from "~/lib/sync/pull-service";
+import { StagedPullCoordinator, type StagedPullState } from "~/lib/sync/staged-pull-coordinator";
+import { SYNC_STAGES } from "@avileo/shared";
 import { getStoredAuthToken, getStoredBusinessId, getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +28,7 @@ interface SyncProgress {
   message: string;
   progress?: number;
   changesApplied?: number;
+  currentStage?: string;
 }
 
 export default function SyncPage() {
@@ -87,6 +90,8 @@ export default function SyncPage() {
         const cursorKey = getPullCursorStorageKey(namespace);
         const hasCursor = !!localStorage.getItem(cursorKey);
 
+        const pullService = new PullService(pg, db, businessId, token);
+
         if (hasCursor) {
           // We have synced before, just do a quick pull and go
           setSyncProgress({
@@ -95,7 +100,6 @@ export default function SyncPage() {
             progress: 50,
           });
 
-          const pullService = new PullService(pg, db, businessId, token);
           const result = await pullService.pull();
 
           if (result.success) {
@@ -115,55 +119,80 @@ export default function SyncPage() {
             });
           }
         } else {
-          // First time sync - pull all data
+          // First time sync - use staged loading for better UX
           setSyncProgress({
             stage: "pulling",
-            message: "Descargando datos del servidor...",
-            progress: 30,
+            message: "Preparando descarga de datos...",
+            progress: 15,
           });
 
-          const pullService = new PullService(pg, db, businessId, token);
-
-          // Do multiple pulls until we get all data
-          let totalApplied = 0;
-          let attempts = 0;
-          const maxAttempts = 50; // Safety limit
-
-          while (attempts < maxAttempts) {
-            const result = await pullService.pull();
-
-            if (!result.success) {
-              throw new Error(result.error || "Error al sincronizar");
+          const coordinator = new StagedPullCoordinator(pullService);
+          
+          // Track total changes for progress calculation
+          let totalChanges = 0;
+          
+          coordinator.setOnProgress((state: StagedPullState) => {
+            totalChanges += state.changesApplied;
+            
+            // Calculate progress based on stage
+            const stageProgress = {
+              CRITICAL: { min: 15, max: 50, label: SYNC_STAGES.CRITICAL.description },
+              RECENT_SALES: { min: 50, max: 75, label: SYNC_STAGES.RECENT_SALES.description },
+              HISTORICAL: { min: 75, max: 95, label: SYNC_STAGES.HISTORICAL.description },
+            };
+            
+            const range = stageProgress[state.stage];
+            let progress: number;
+            
+            if (state.status === "complete") {
+              progress = range.max;
+            } else if (state.status === "loading") {
+              // Estimate progress within stage (assume max 1000 changes per stage)
+              const estimatedProgress = Math.min(state.changesApplied / 1000, 0.9);
+              progress = range.min + (estimatedProgress * (range.max - range.min));
+            } else {
+              progress = range.min;
             }
-
-            totalApplied += result.changesApplied;
-
-            // Update progress
-            const progress = Math.min(30 + (attempts * 2), 90);
+            
             setSyncProgress({
-              stage: "pulling",
-              message: `Descargando datos... (${totalApplied} registros)`,
-              progress,
-              changesApplied: totalApplied,
+              stage: state.status === "error" ? "error" : "pulling",
+              message: `${range.label}: ${state.changesApplied} registros`,
+              progress: Math.floor(progress),
+              changesApplied: totalChanges,
+              currentStage: state.stage,
             });
+          });
 
-            if (!result.hasMore) {
-              break;
-            }
-
-            attempts++;
+          // Execute staged load
+          const { critical, recent, historical } = await coordinator.executeStagedLoad();
+          
+          // Check if critical stages completed successfully
+          if (critical.status === "error") {
+            throw new Error(critical.error || "Error al cargar datos críticos");
+          }
+          
+          if (recent.status === "error") {
+            throw new Error(recent.error || "Error al cargar ventas recientes");
           }
 
+          // App is usable now! Show completion
           setSyncProgress({
             stage: "completed",
-            message: `Sincronización completada (${totalApplied} registros)`,
+            message: `Datos listos (${totalChanges} registros)`,
             progress: 100,
-            changesApplied: totalApplied,
+            changesApplied: totalChanges,
+          });
+          
+          // Historical data continues loading in background
+          // We don't await it - app is usable immediately
+          historical.then((histState) => {
+            if (histState.status === "complete") {
+              console.log(`[SyncPage] Historical data loaded: ${histState.changesApplied} changes`);
+            }
           });
         }
 
-        // Wait a moment to show completion before navigating
-        // Note: We don't close pg here because EngineProvider will reuse it
+        // Navigate to dashboard
         setTimeout(() => {
           navigate("/dashboard", { replace: true });
         }, 800);
@@ -271,7 +300,9 @@ export default function SyncPage() {
               ? "Tus datos están actualizados"
               : syncProgress.stage === "error"
               ? "No se pudieron sincronizar los datos"
-              : "Estamos descargando tu información del servidor"}
+              : syncProgress.currentStage 
+                ? "Descargando información..."
+                : "Estamos descargando tu información del servidor"}
           </p>
         </div>
 

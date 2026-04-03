@@ -96,8 +96,6 @@ export const distribuciones = pgTable(
     fecha: date("fecha").notNull(),
     estado: distribucionStatusEnum("estado").notNull().default("activo"),
 
-    modo: varchar("modo", { length: 20 }).notNull().default("estricto"),
-
     // Cierre tracking (metrics calculated from items, not stored)
     closedAt: timestamp("closed_at"),
     closedBy: uuid("closed_by").references(() => businessUsers.id),
@@ -115,7 +113,6 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_vendedor_id").on(table.vendedorId),
     index("idx_distribuciones_fecha").on(table.fecha),
     index("idx_distribuciones_estado").on(table.estado),
-    index("idx_distribuciones_modo").on(table.modo),
     index("idx_distribuciones_sync_status").on(table.syncStatus),
     index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
     index("idx_distribuciones_vendedor_fecha").on(table.vendedorId, table.fecha),
@@ -128,7 +125,7 @@ export const distribucionItems = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
 
-    // Multi-tenancy - required for Electric sync filtering
+    // Multi-tenancy - required for data isolation
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id),
@@ -169,7 +166,7 @@ export const productVariants = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
 
-    // Multi-tenancy - required for Electric sync filtering
+    // Multi-tenancy - required for data isolation
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id),
@@ -211,7 +208,7 @@ export const variantInventory = pgTable(
   "variant_inventory",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // Multi-tenancy - required for Electric sync filtering
+    // Multi-tenancy - required for data isolation
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id),
@@ -235,6 +232,8 @@ export type Distribucion = typeof distribuciones.$inferSelect;
 export type NewDistribucion = typeof distribuciones.$inferInsert;
 export type DistribucionItem = typeof distribucionItems.$inferSelect;
 export type NewDistribucionItem = typeof distribucionItems.$inferInsert;
+export type DistribucionCierreItem = typeof distribucionCierreItems.$inferSelect;
+export type NewDistribucionCierreItem = typeof distribucionCierreItems.$inferInsert;
 export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
 export type VariantInventory = typeof variantInventory.$inferSelect;
@@ -263,6 +262,7 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
     references: [puntosVenta.id],
   }),
   items: many(distribucionItems),
+  cierreItems: many(distribucionCierreItems),
   sales: many(sales),
 }));
 
@@ -280,6 +280,48 @@ export const distribucionItemsRelations = relations(distribucionItems, ({ one })
     references: [productVariants.id],
   }),
 }));
+
+// Distribution close items - registered by vendor when closing
+export const distribucionCierreItems = pgTable(
+  "distribucion_cierre_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    // Multi-tenancy
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id),
+
+    // Relations
+    distribucionId: uuid("distribucion_id")
+      .notNull()
+      .references(() => distribuciones.id, { onDelete: "cascade" }),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id),
+
+    // Vendor-reported quantities at close time
+    cantidadLlevada: decimal("cantidad_llevada", { precision: 10, scale: 3 }).notNull(),
+    cantidadVendida: decimal("cantidad_vendida", { precision: 10, scale: 3 }).notNull(),
+    cantidadDevuelta: decimal("cantidad_devuelta", { precision: 10, scale: 3 }).notNull().default("0"),
+
+    // Calculated field
+    montoVentas: decimal("monto_ventas", { precision: 12, scale: 2 }),
+
+    // Sync status for offline-first
+    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_cierre_items_business_id").on(table.businessId),
+    index("idx_cierre_items_distribucion_id").on(table.distribucionId),
+    index("idx_cierre_items_variant_id").on(table.variantId),
+    index("idx_cierre_items_sync_status").on(table.syncStatus),
+    uniqueIndex("idx_cierre_items_unique").on(table.distribucionId, table.variantId),
+  ]
+);
 
 export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
   business: one(businesses, {
@@ -304,6 +346,21 @@ export const variantInventoryRelations = relations(variantInventory, ({ one }) =
   }),
   variant: one(productVariants, {
     fields: [variantInventory.variantId],
+    references: [productVariants.id],
+  }),
+}));
+
+export const distribucionCierreItemsRelations = relations(distribucionCierreItems, ({ one }) => ({
+  business: one(businesses, {
+    fields: [distribucionCierreItems.businessId],
+    references: [businesses.id],
+  }),
+  distribucion: one(distribuciones, {
+    fields: [distribucionCierreItems.distribucionId],
+    references: [distribuciones.id],
+  }),
+  variant: one(productVariants, {
+    fields: [distribucionCierreItems.variantId],
     references: [productVariants.id],
   }),
 }));

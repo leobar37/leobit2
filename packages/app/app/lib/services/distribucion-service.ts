@@ -17,9 +17,8 @@ export interface CreateDistribucionInput {
   puntoVentaId?: string;
   notaCreacion?: string;
   fecha?: string;
-  modo?: "estricto" | "acumulativo" | "libre";
   groupId?: string;
-  items: Array<{
+  items?: Array<{
     variantId: string;
     cantidadAsignada: number;
     unidad: string;
@@ -120,7 +119,6 @@ export class DistribucionService extends BaseService {
       notaCierre: null,
       fecha,
       estado: "activo",
-      modo: input.modo || "estricto",
       syncStatus: "pending",
       syncAttempts: 0,
       createdAt: new Date(),
@@ -137,7 +135,6 @@ export class DistribucionService extends BaseService {
       puntoVentaId: input.puntoVentaId,
       notaCreacion: input.notaCreacion,
       fecha,
-      modo: input.modo || "estricto",
       groupId: input.groupId,
       items: input.items || [],
     });

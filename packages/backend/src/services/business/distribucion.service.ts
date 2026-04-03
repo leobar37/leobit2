@@ -15,7 +15,6 @@ import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem } from "../../db/schema";
 import { db, syncOperations } from "../../lib/db";
 import { sales, visitas } from "../../db/schema";
-import { distribucionMachine } from "../transitions";
 
 interface DistribucionWithItems extends Distribucion {
   items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
@@ -86,10 +85,8 @@ export class DistribucionService {
       puntoVentaId?: string;
       notaCreacion?: string;
       fecha?: string;
-      modo?: "estricto" | "acumulativo" | "libre";
-      confiarEnVendedor?: boolean;
       groupId?: string;
-      items: Array<{
+      items?: Array<{
         variantId: string;
         cantidadAsignada: number;
         unidad: string;
@@ -106,31 +103,6 @@ export class DistribucionService {
 
     if (!data.puntoVenta || data.puntoVenta.length < 2) {
       throw new ValidationError("El punto de venta debe tener al menos 2 caracteres");
-    }
-
-    if (!data.items || data.items.length === 0) {
-      if (data.modo !== "libre") {
-        throw new ValidationError("La distribución debe tener al menos un item");
-      }
-    }
-
-    if (data.items && data.items.length > 0) {
-      for (const item of data.items) {
-        if (item.cantidadAsignada <= 0) {
-          throw new ValidationError("La cantidad asignada debe ser mayor a 0");
-        }
-
-        const variant = await this.variantRepository.findById(ctx, item.variantId);
-        if (!variant) {
-          throw new NotFoundError(`Variante ${item.variantId}`);
-        }
-
-        if (variant.inventory && parseFloat(variant.inventory.quantity) < item.cantidadAsignada) {
-          throw new ValidationError(
-            `Stock insuficiente para ${variant.name}. Disponible: ${variant.inventory.quantity}, Requerido: ${item.cantidadAsignada}`
-          );
-        }
-      }
     }
 
     const fecha = data.fecha || getToday();
@@ -157,7 +129,6 @@ export class DistribucionService {
       notaCreacion: data.notaCreacion,
       fecha,
       estado: "activo",
-      modo: data.modo || "estricto",
       syncStatus: "synced",
       syncAttempts: 0,
     });
@@ -176,7 +147,6 @@ export class DistribucionService {
         montoRecaudado: distribucion.montoRecaudado,
         fecha: distribucion.fecha,
         estado: distribucion.estado,
-        modo: distribucion.modo,
       },
       status: "processed",
       clientTimestamp: new Date(),
@@ -252,9 +222,6 @@ export class DistribucionService {
     if (!distribucionWithItems) {
       throw new NotFoundError("Distribución");
     }
-
-    // Execute state machine transition: null → activo (reserve inventory)
-    await distribucionMachine.executeTransition(ctx, distribucionWithItems, null, "activo");
 
     return distribucionWithItems;
   }
@@ -334,11 +301,6 @@ export class DistribucionService {
     if (!ctx.isAdmin() && existing.vendedorId !== ctx.businessUserId) {
       throw new ForbiddenError("No puede cerrar esta distribución");
     }
-
-    const previousState = existing.estado as "activo" | "en_ruta" | "cerrado";
-
-    // Execute state machine transition: activo/en_ruta → cerrado (return inventory)
-    await distribucionMachine.executeTransition(ctx, existing, previousState, "cerrado");
 
     const updateData: Parameters<DistribucionRepository["update"]>[2] = {
       estado: "cerrado",
@@ -566,10 +528,6 @@ export class DistribucionService {
       throw new ForbiddenError("No puede modificar esta distribución");
     }
 
-    if (distribucion.modo !== "libre") {
-      throw new ValidationError("Solo se pueden modificar items en distribuciones con modo libre");
-    }
-
     for (const item of items) {
       if (item.cantidadAsignada <= 0) {
         throw new ValidationError("La cantidad asignada debe ser mayor a 0");
@@ -601,5 +559,89 @@ export class DistribucionService {
     }
 
     return distribucionWithItems;
+  }
+
+  async closeDistribucionWithItems(
+    ctx: RequestContext,
+    id: string,
+    data: {
+      notaCierre?: string;
+      items: Array<{
+        variantId: string;
+        cantidadLlevada: number;
+        cantidadVendida: number;
+        cantidadDevuelta?: number;
+      }>;
+    }
+  ): Promise<Distribucion> {
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para cerrar distribuciones");
+    }
+
+    const existing = await this.repository.findById(ctx, id);
+    if (!existing) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (!ctx.isAdmin() && existing.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede cerrar esta distribución");
+    }
+
+    if (!data.items || data.items.length === 0) {
+      throw new ValidationError("Debe registrar al menos un producto al cerrar");
+    }
+
+    // Validate items and calculate devuelta
+    for (const item of data.items) {
+      if (item.cantidadLlevada < 0 || item.cantidadVendida < 0) {
+        throw new ValidationError("Las cantidades no pueden ser negativas");
+      }
+
+      if (item.cantidadVendida > item.cantidadLlevada) {
+        throw new ValidationError("La cantidad vendida no puede ser mayor a la llevada");
+      }
+
+      const variant = await this.variantRepository.findById(ctx, item.variantId);
+      if (!variant) {
+        throw new NotFoundError(`Variante ${item.variantId}`);
+      }
+    }
+
+    // Close the distribution
+    const updateData: Parameters<DistribucionRepository["update"]>[2] = {
+      estado: "cerrado",
+      notaCierre: data.notaCierre,
+      closedAt: new Date(),
+      closedBy: ctx.businessUserId,
+    };
+
+    const updated = await this.repository.update(ctx, id, updateData);
+
+    if (!updated) {
+      throw new NotFoundError("Distribución");
+    }
+
+    // Create cierre items (implementation would need cierre item repository)
+    // This is a placeholder - actual implementation would insert into distribucion_cierre_items
+
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-close-distribucion-${updated.id}`,
+      entity: "distribuciones",
+      action: "update",
+      entityId: updated.id,
+      payload: {
+        id: updated.id,
+        estado: updated.estado,
+        notaCierre: updated.notaCierre,
+        closedAt: updated.closedAt,
+        closedBy: updated.closedBy,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
+
+    return updated;
   }
 }

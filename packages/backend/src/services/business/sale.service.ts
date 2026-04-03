@@ -139,17 +139,6 @@ export class SaleService {
 
     if (!isEmptyDraft && distribucion) {
       // NOTE: Pre-orders skip stock validation at confirmation time because:
-      // 1. Pre-orders are typically confirmed before inventory is allocated to the route
-      // 2. Stock is validated at delivery time (confirmed → delivered transition)
-      // 3. Business logic allows reserving stock without immediate inventory deduction
-      if (!isPreOrder) {
-        await this.validarStockEstricto(ctx, distribucion.id, items);
-      }
-    } else if (!isEmptyDraft) {
-      const business = await this.businessRepository.findById(ctx, ctx.businessId);
-      if (!ctx.isAdmin() && business?.modoDistribucion !== "libre") {
-        throw new ValidationError("No tiene distribución asignada para hoy");
-      }
     }
 
     const salePayload: CreateSaleInput = {
@@ -191,30 +180,6 @@ export class SaleService {
           { status: "compro", saleId: sale.id },
           tx
         );
-      }
-
-      if (!isEmptyDraft && distribucion && distribucion.modo !== "libre" && !isPreOrder) {
-        const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
-          ctx,
-          distribucion.id
-        );
-
-        for (const saleItem of items) {
-          const distItem = distribucionItems.find(
-            (di) => di.variantId === saleItem.variantId
-          );
-
-          if (distItem) {
-            const currentVendida = parseFloat(distItem.cantidadVendida);
-            const newVendida = currentVendida + saleItem.quantity;
-            await this.distribucionItemRepository.updateVendido(
-              ctx,
-              distItem.id,
-              newVendida.toString(),
-              tx
-            );
-          }
-        }
       }
 
       if (data.saleType === "credito" && data.customerId && amountPaid > 0) {
@@ -840,40 +805,4 @@ export class SaleService {
     });
   }
 
-  private async validarStockEstricto(
-    ctx: RequestContext,
-    distribucionId: string,
-    items: Array<{
-      variantId: string;
-      variantName: string;
-      quantity: number;
-    }>
-  ): Promise<void> {
-    const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
-      ctx,
-      distribucionId
-    );
-
-    for (const saleItem of items) {
-      const distItem = distribucionItems.find(
-        (di) => di.variantId === saleItem.variantId
-      );
-
-      if (!distItem) {
-        throw new ValidationError(
-          `${saleItem.variantName} no está en su distribución`
-        );
-      }
-
-      const asignada = parseFloat(distItem.cantidadAsignada);
-      const vendida = parseFloat(distItem.cantidadVendida);
-      const disponible = asignada - vendida;
-
-      if (saleItem.quantity > disponible) {
-        throw new ValidationError(
-          `Stock insuficiente para ${saleItem.variantName}. Disponible: ${disponible}, Venta: ${saleItem.quantity}`
-        );
-      }
-    }
-  }
 }

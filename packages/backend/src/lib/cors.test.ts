@@ -7,20 +7,18 @@ describe("mergeExposeHeaders", () => {
     expect(
       mergeExposeHeaders(
         "set-auth-token",
-        "electric-offset, electric-handle, electric-schema, electric-cursor, electric-up-to-date"
+        "set-auth-token"
       )
-    ).toBe(
-      "set-auth-token, electric-offset, electric-handle, electric-schema, electric-cursor, electric-up-to-date"
-    );
+    ).toBe("set-auth-token");
   });
 
   it("deduplicates header names regardless of casing", () => {
     expect(
       mergeExposeHeaders(
-        "Set-Auth-Token, electric-offset",
-        "set-auth-token, Electric-Offset, electric-handle"
+        "Set-Auth-Token, x-custom-header",
+        "set-auth-token, X-Custom-Header"
       )
-    ).toBe("Set-Auth-Token, electric-offset, electric-handle");
+    ).toBe("Set-Auth-Token, x-custom-header");
   });
 });
 
@@ -54,7 +52,7 @@ describe("app CORS behavior", () => {
 
     expect(response.headers.get("set-auth-token")).toBe("signed-token");
     expect(response.headers.get("access-control-expose-headers")).toBe(
-      "set-auth-token, electric-offset, electric-handle, electric-schema, electric-cursor, electric-up-to-date"
+      "set-auth-token"
     );
   });
 });
