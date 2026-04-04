@@ -12,9 +12,21 @@ import {
 } from "../../errors";
 import { and, eq } from "drizzle-orm";
 import { getToday } from "../../lib/date-utils";
-import type { Distribucion, DistribucionItem } from "../../db/schema";
+import type { Distribucion, DistribucionItem, NewDistribucionItem } from "../../db/schema";
 import { db, syncOperations } from "../../lib/db";
-import { sales, visitas } from "../../db/schema";
+import { sales, visitas, distribucionItems } from "../../db/schema";
+
+// Types for item management
+export interface DistribucionItemEnriched extends DistribucionItem {
+  variantName?: string;
+  productName?: string;
+}
+
+export interface CreateDistribucionItemInput {
+  variantId: string;
+  cantidadAsignada: number;
+  unidad: string;
+}
 
 interface DistribucionWithItems extends Distribucion {
   items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
@@ -643,5 +655,230 @@ export class DistribucionService {
     });
 
     return updated;
+  }
+
+  // ==========================================
+  // Item Management Methods (T-002)
+  // Following PurchaseService pattern
+  // ==========================================
+
+  /**
+   * Add a single item to an existing distribucion
+   */
+  async addItem(
+    ctx: RequestContext,
+    distribucionId: string,
+    item: CreateDistribucionItemInput
+  ): Promise<DistribucionItem> {
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para modificar distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    // Only allow modifications to active or en_ruta distribuciones
+    if (distribucion.estado === "cerrado") {
+      throw new ValidationError("No se pueden modificar items de una distribución cerrada");
+    }
+
+    // Validate variant exists
+    const variant = await this.variantRepository.findById(ctx, item.variantId);
+    if (!variant) {
+      throw new NotFoundError("Variante de producto");
+    }
+
+    const createdItem = await this.itemRepository.create(ctx, {
+      distribucionId,
+      variantId: item.variantId,
+      cantidadAsignada: item.cantidadAsignada.toString(),
+      cantidadVendida: "0",
+      unidad: item.unidad,
+      syncStatus: "synced",
+      syncAttempts: 0,
+    });
+
+    // Register sync operation
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-add-distribucion-item-${createdItem.id}`,
+      entity: "distribucion_items",
+      action: "create",
+      entityId: createdItem.id,
+      payload: {
+        id: createdItem.id,
+        distribucionId: createdItem.distribucionId,
+        variantId: createdItem.variantId,
+        cantidadAsignada: createdItem.cantidadAsignada,
+        cantidadVendida: createdItem.cantidadVendida,
+        unidad: createdItem.unidad,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
+
+    return createdItem;
+  }
+
+  /**
+   * Update item quantities
+   */
+  async updateItem(
+    ctx: RequestContext,
+    distribucionId: string,
+    itemId: string,
+    data: {
+      cantidadAsignada?: number;
+      cantidadVendida?: number;
+    }
+  ): Promise<DistribucionItem> {
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para modificar distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (distribucion.estado === "cerrado") {
+      throw new ValidationError("No se pueden modificar items de una distribución cerrada");
+    }
+
+    const existingItem = await this.itemRepository.findById(ctx, itemId);
+    if (!existingItem || existingItem.distribucionId !== distribucionId) {
+      throw new NotFoundError("Item de distribución");
+    }
+
+    // Build update data
+    const updateData: Partial<NewDistribucionItem> = {};
+    if (data.cantidadAsignada !== undefined) {
+      updateData.cantidadAsignada = data.cantidadAsignada.toString();
+    }
+    if (data.cantidadVendida !== undefined) {
+      updateData.cantidadVendida = data.cantidadVendida.toString();
+    }
+
+    // Use repository's general update via db directly
+    const [updatedItem] = await db
+      .update(db._.schema?.distribucionItems || db._.fullSchema.distribucionItems)
+      .set(updateData)
+      .where(and(
+        eq(distribucionItems.id, itemId),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ))
+      .returning();
+
+    if (!updatedItem) {
+      throw new NotFoundError("Item de distribución");
+    }
+
+    // Register sync operation
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-update-distribucion-item-${itemId}`,
+      entity: "distribucion_items",
+      action: "update",
+      entityId: itemId,
+      payload: {
+        id: itemId,
+        ...updateData,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
+
+    return updatedItem;
+  }
+
+  /**
+   * Remove an item from distribucion
+   */
+  async removeItem(
+    ctx: RequestContext,
+    distribucionId: string,
+    itemId: string
+  ): Promise<void> {
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para modificar distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (distribucion.estado === "cerrado") {
+      throw new ValidationError("No se pueden eliminar items de una distribución cerrada");
+    }
+
+    const existingItem = await this.itemRepository.findById(ctx, itemId);
+    if (!existingItem || existingItem.distribucionId !== distribucionId) {
+      throw new NotFoundError("Item de distribución");
+    }
+
+    await this.itemRepository.delete(ctx, itemId);
+
+    // Register sync operation
+    await db.insert(syncOperations).values({
+      businessId: ctx.businessId,
+      operationId: `api-delete-distribucion-item-${itemId}`,
+      entity: "distribucion_items",
+      action: "delete",
+      entityId: itemId,
+      payload: {
+        id: itemId,
+        distribucionId,
+      },
+      status: "processed",
+      clientTimestamp: new Date(),
+      processedAt: new Date(),
+    });
+  }
+
+  /**
+   * Get items with enriched product/variant names
+   */
+  async getItemsWithNames(
+    ctx: RequestContext,
+    distribucionId: string
+  ): Promise<DistribucionItemEnriched[]> {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    // Check permissions - admin can see all, vendedor only their own
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede ver los items de esta distribución");
+    }
+
+    const items = await db.query.distribucionItems.findMany({
+      where: and(
+        eq(distribucionItems.distribucionId, distribucionId),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ),
+      with: {
+        variant: {
+          with: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    return items.map((item: DistribucionItem & { variant?: { name?: string; product?: { name?: string } } }) => ({
+      ...item,
+      variantName: item.variant?.name ?? "",
+      productName: item.variant?.product?.name ?? "",
+    }));
   }
 }

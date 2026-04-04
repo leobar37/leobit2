@@ -17,7 +17,7 @@ import {
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
 import { useDistribucionService } from "~/lib/sync/service-provider";
-import type { CreateDistribucionInput } from "~/lib/services/distribucion-service";
+import type { CreateDistribucionInput, CreateDistribucionItemInput } from "~/lib/services/distribucion-service";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 import { useManualSync } from "./use-manual-sync";
 import { api, extractData } from "~/lib/api-client";
@@ -427,5 +427,94 @@ export function useDeleteDistribucion() {
   });
 }
 
+/**
+ * Add an item to a distribucion
+ */
+export function useAddDistribucionItem() {
+  const distribucionService = useDistribucionService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      distribucionId,
+      item,
+    }: {
+      distribucionId: string;
+      item: CreateDistribucionItemInput;
+    }) => {
+      return distribucionService.addItem(distribucionId, item);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+      });
+    },
+  });
+}
+
+/**
+ * Update a distribucion item
+ */
+export function useUpdateDistribucionItem() {
+  const distribucionService = useDistribucionService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      distribucionId,
+      itemId,
+      data,
+    }: {
+      distribucionId: string;
+      itemId: string;
+      data: {
+        cantidadAsignada?: number;
+        cantidadVendida?: number;
+      };
+    }) => {
+      return distribucionService.updateItem(distribucionId, itemId, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+      });
+    },
+  });
+}
+
+/**
+ * Remove an item from a distribucion
+ */
+export function useRemoveDistribucionItem() {
+  const distribucionService = useDistribucionService();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      distribucionId,
+      itemId,
+    }: {
+      distribucionId: string;
+      itemId: string;
+    }) => {
+      return distribucionService.removeItem(distribucionId, itemId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+      });
+    },
+  });
+}
+
 export type { Distribucion, DistribucionItem };
-export type { CreateDistribucionInput };
+export type { CreateDistribucionInput, CreateDistribucionItemInput };

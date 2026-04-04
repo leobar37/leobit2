@@ -1,13 +1,15 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { Users } from "lucide-react";
+import { Users, Package } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { type CreateDistribucionInput } from "~/hooks/use-distribuciones";
+import { Switch } from "@/components/ui/switch";
+import { type CreateDistribucionInput, type CreateDistribucionItemInput } from "~/hooks/use-distribuciones";
 import { type CustomerGroup } from "~/hooks/use-grupos";
 import { VendedorSelect, type VendedorOption } from "./vendedor-select";
 import { GroupSelect } from "./group-select";
 import { PuntoVentaSelect } from "./punto-venta-select";
 import { type PuntoVenta } from "~/hooks/use-puntos-venta";
+import { DistribucionItemEditor } from "./distribucion-item-editor";
 
 interface CreateDistribucionFormProps {
   onSubmit: (data: CreateDistribucionInput) => void;
@@ -25,14 +27,14 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
     const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
     const [notaCreacion, setNotaCreacion] = useState("");
+    const [assignItems, setAssignItems] = useState(false);
+    const [items, setItems] = useState<CreateDistribucionItemInput[]>([]);
 
-    const isValid = !!selectedVendedor && !!selectedPuntoVenta;
+    const isValid = !!selectedVendedor && !!selectedPuntoVenta && (!assignItems || items.length > 0);
 
     useEffect(() => {
       onValidityChange?.(isValid);
     }, [isValid, onValidityChange]);
-
-
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -44,7 +46,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVentaId: selectedPuntoVenta.id,
         groupId: selectedGroup?.id,
         notaCreacion: notaCreacion.trim() || undefined,
-        // No items - products registered on close
+        items: assignItems ? items : undefined,
       });
     };
 
@@ -109,6 +111,23 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
             disabled={isPending}
           />
         </div>
+
+        <div className="border rounded-xl p-4 bg-card">
+          <Switch
+            checked={assignItems}
+            onCheckedChange={setAssignItems}
+            label="Asignar productos (opcional)"
+            description="Controlar qué productos lleva el vendedor"
+          />
+        </div>
+
+        {assignItems && (
+          <DistribucionItemEditor
+            items={items}
+            onItemsChange={setItems}
+            readOnly={false}
+          />
+        )}
 
         <button type="submit" disabled className="hidden" />
       </form>

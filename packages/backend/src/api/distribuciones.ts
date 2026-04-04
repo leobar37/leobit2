@@ -244,6 +244,81 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       },
     }
   )
+  .post(
+    "/:id/items",
+    async ({ ctx, params, body, distribucionService }) => {
+      const item = await distribucionService.addItem(ctx, params.id, {
+        variantId: body.variantId,
+        cantidadAsignada: body.cantidadAsignada,
+        unidad: body.unidad,
+      });
+      return {
+        success: true,
+        data: item,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        variantId: t.String(),
+        cantidadAsignada: t.Number({ minimum: 0.001 }),
+        unidad: t.String(),
+      }),
+      detail: {
+        summary: "Agregar item a distribución",
+        description: "Agrega un nuevo item a una distribución existente",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
+  .patch(
+    "/:id/items/:itemId",
+    async ({ ctx, params, body, distribucionService }) => {
+      const item = await distribucionService.updateItem(ctx, params.id, params.itemId, {
+        cantidadAsignada: body.cantidadAsignada,
+        cantidadVendida: body.cantidadVendida,
+      });
+      return {
+        success: true,
+        data: item,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+        itemId: t.String(),
+      }),
+      body: t.Object({
+        cantidadAsignada: t.Optional(t.Number({ minimum: 0 })),
+        cantidadVendida: t.Optional(t.Number({ minimum: 0 })),
+      }),
+      detail: {
+        summary: "Actualizar item de distribución",
+        description: "Actualiza cantidad asignada o vendida de un item",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
+  .delete(
+    "/:id/items/:itemId",
+    async ({ ctx, params, distribucionService, set }) => {
+      await distribucionService.removeItem(ctx, params.id, params.itemId);
+      set.status = 204;
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+        itemId: t.String(),
+      }),
+      detail: {
+        summary: "Eliminar item de distribución",
+        description: "Elimina un item de una distribución",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
   .delete(
     "/:id",
     async ({ ctx, params, distribucionService, set }) => {
