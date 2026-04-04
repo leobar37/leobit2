@@ -158,6 +158,7 @@ async function applyInsert(
 
 /**
  * Apply an update operation using raw SQL
+ * If the record doesn't exist, it will be created (upsert behavior)
  */
 async function applyUpdate(
   pg: PGlite,
@@ -176,9 +177,11 @@ async function applyUpdate(
 
   // Check if record exists
   const existingResult = await pg.query(`SELECT id FROM "${tableName}" WHERE id = $1`, [id]);
+  
   if (existingResult.rows.length === 0) {
-    console.warn(`[ChangeApplier] Update for non-existent record skipped: ${tableName}:${id}`);
-    return { success: true };
+    // Record doesn't exist - convert to insert (upsert behavior)
+    console.warn(`[ChangeApplier] Record ${tableName}:${id} not found for update, converting to insert`);
+    return applyInsert(pg, tableName, change, businessId);
   }
 
   // Build SET clause

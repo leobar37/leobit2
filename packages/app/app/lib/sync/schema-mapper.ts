@@ -13,6 +13,9 @@ import * as schema from "@avileo/shared";
  * - Most entries are canonical and match `@avileo/shared` `SYNC_ENTITIES`.
  * - `variant_inventory` is intentionally pull-protected: it is still whitelisted here for safety,
  *   but it is not part of the canonical shared sync API contract.
+ * 
+ * NOTE: This is the single source of truth for table validation. 
+ * Import this from other modules instead of defining your own whitelist.
  */
 export const VALID_TABLES = new Set([
   "customers", // CANONICAL: shared SYNC_ENTITIES
@@ -34,13 +37,91 @@ export const VALID_TABLES = new Set([
   "visitas", // CANONICAL: shared SYNC_ENTITIES
 ]);
 
-// Columnas que NO existen en ciertas tablas (lista negra segura)
-// Estas columnas se ignoran silenciosamente para evitar errores SQL
+// Column whitelist for each table - only these columns can be inserted/updated
+// This prevents SQL injection via column names from payload
+const TABLE_COLUMNS: Record<string, Set<string>> = {
+  customers: new Set([
+    "id", "business_id", "name", "dni", "phone", "address", "notes",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  products: new Set([
+    "id", "business_id", "name", "unit", "base_price", "cost_price", "is_active",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  product_variants: new Set([
+    "id", "business_id", "product_id", "name", "unit_quantity", "price", "cost_price",
+    "sort_order", "is_active", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  sales: new Set([
+    "id", "business_id", "customer_id", "seller_id", "distribucion_id", "visita_id",
+    "type", "sale_type", "payment_mode", "total_amount", "amount_paid", "balance_due",
+    "tara", "net_weight", "sale_date", "delivery_date", "order_date", "status",
+    "version", "confirmed_snapshot", "delivered_snapshot", "allow_customer_edit",
+    "sync_status", "sync_attempts", "cancelled_at", "cancelled_by", "cancel_reason",
+    "refund_amount", "refund_date", "refund_method", "refund_reference", "refund_notes",
+    "advance_payment_method", "advance_reference_number", "advance_proof_image_id",
+    "created_at", "updated_at"
+  ]),
+  sale_items: new Set([
+    "id", "business_id", "sale_id", "product_id", "variant_id", "product_name",
+    "variant_name", "quantity", "ordered_quantity", "delivered_quantity", "unit_price",
+    "unit_price_quoted", "unit_price_final", "subtotal", "is_modified", "original_quantity",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  abonos: new Set([
+    "id", "business_id", "customer_id", "sale_id", "amount", "payment_method",
+    "reference_number", "notes", "proof_image_id", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  purchases: new Set([
+    "id", "business_id", "supplier_id", "purchase_date", "status", "total_amount",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  purchase_items: new Set([
+    "id", "business_id", "purchase_id", "product_id", "variant_id", "quantity",
+    "unit_cost", "total_cost", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  suppliers: new Set([
+    "id", "business_id", "name", "type", "ruc", "phone", "email", "address",
+    "is_active", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  distribuciones: new Set([
+    "id", "business_id", "vendedor_id", "punto_venta_id", "fecha", "estado",
+    "monto_recaudado", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  distribucion_items: new Set([
+    "id", "business_id", "distribucion_id", "product_id", "variant_id", "cantidad",
+    "precio_unitario", "subtotal", "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  tags: new Set([
+    "id", "business_id", "name", "color", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_tags: new Set([
+    "id", "business_id", "customer_id", "tag_id", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_groups: new Set([
+    "id", "business_id", "name", "color", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  customer_group_members: new Set([
+    "id", "business_id", "group_id", "customer_id", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+  visitas: new Set([
+    "id", "business_id", "distribucion_id", "customer_id", "status", "order_in_route",
+    "sync_status", "sync_attempts", "created_at", "updated_at"
+  ]),
+  variant_inventory: new Set([
+    "id", "business_id", "variant_id", "quantity", "sync_status", "sync_attempts",
+    "created_at", "updated_at"
+  ]),
+};
+
+// Columnas que NO existen en ciertas tablas (lista negra adicional)
 const INVALID_COLUMNS: Record<string, Set<string>> = {
-  // products no tiene sku, price, sort_order, unit_quantity (solo product_variants los tiene)
-  // products tampoco tiene product_id (esta en product_variants)
   products: new Set(["sku", "price", "product_id", "sort_order", "unit_quantity"]),
-  // product_variants tiene product_id que referencia a products
 };
 
 // Static table map using shared schema
@@ -74,6 +155,26 @@ export function isValidTableName(tableName: string): boolean {
 }
 
 /**
+ * Get valid columns for a table (whitelist approach)
+ * @param tableName - Name of the table
+ * @returns Set of valid column names or null if table not found
+ */
+export function getTableColumns(tableName: string): Set<string> | null {
+  return TABLE_COLUMNS[tableName] ?? null;
+}
+
+/**
+ * Check if a column is valid for a given table
+ * @param tableName - Name of the table
+ * @param column - Column name to check
+ * @returns True if the column is valid for the table
+ */
+export function isValidColumn(tableName: string, column: string): boolean {
+  const columns = TABLE_COLUMNS[tableName];
+  return columns ? columns.has(column) : false;
+}
+
+/**
  * Get the Drizzle table for a given entity type
  * @param entityType - Entity type from the sync API
  * @returns Drizzle table or null if not found
@@ -97,19 +198,20 @@ export function toSnakeCase(obj: Record<string, unknown>): Record<string, unknow
 }
 
 /**
- * Filtra columnas inválidas conocidas del payload.
- * Usa lista negra para no romper campos existentes que no estén listados.
+ * Filter payload to only include valid columns for the table (whitelist approach)
+ * Unknown columns are logged and removed to prevent SQL errors
  *
- * @param tableName - Nombre de la tabla
- * @param payload - Payload a filtrar (snake_case keys)
- * @returns Payload sin columnas inválidas conocidas
+ * @param tableName - Name of the table
+ * @param payload - Payload to filter (snake_case keys)
+ * @returns Filtered payload with only valid columns
  */
 export function filterValidColumns(
   tableName: string,
   payload: Record<string, unknown>
 ): Record<string, unknown> {
-  const invalidColumns = INVALID_COLUMNS[tableName];
-  if (!invalidColumns || invalidColumns.size === 0) {
+  const validColumns = TABLE_COLUMNS[tableName];
+  if (!validColumns) {
+    console.warn(`[SchemaMapper] Unknown table: ${tableName}, allowing all columns`);
     return payload;
   }
 
@@ -117,10 +219,15 @@ export function filterValidColumns(
   const removed: string[] = [];
 
   for (const [key, value] of Object.entries(payload)) {
-    if (invalidColumns.has(key)) {
-      removed.push(key);
-    } else {
+    // Skip relation fields
+    if (key.startsWith('_') || ['items', 'customer', 'seller', 'business'].includes(key)) {
+      continue;
+    }
+    
+    if (validColumns.has(key)) {
       filtered[key] = value;
+    } else {
+      removed.push(key);
     }
   }
 

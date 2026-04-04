@@ -8,6 +8,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity, SyncStatus } from "@avileo/shared";
 import { SyncService, type EnqueueParams } from "../sync/sync-service";
+import { VALID_TABLES } from "../sync/schema-mapper";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
 
@@ -41,31 +42,13 @@ export type EntityType =
 
 /**
  * SQL table-name safety allowlist for frontend services.
- *
- * Classification:
- * - Canonical entries match `@avileo/shared` `SYNC_ENTITIES`.
- * - `inventory` is LOCAL-ONLY frontend state.
- * - `variant_inventory` is LEGACY and retained here for compatibility/safety.
+ * 
+ * Uses VALID_TABLES from schema-mapper as the single source of truth,
+ * plus local-only tables that don't sync.
  */
 const VALID_TABLE_NAMES: readonly string[] = [
-  "customers", // CANONICAL: shared SYNC_ENTITIES
-  "sales", // CANONICAL: shared SYNC_ENTITIES
-  "sale_items", // CANONICAL: shared SYNC_ENTITIES
-  "abonos", // CANONICAL: shared SYNC_ENTITIES
-  "products", // CANONICAL: shared SYNC_ENTITIES
-  "product_variants", // CANONICAL: shared SYNC_ENTITIES
-  "suppliers", // CANONICAL: shared SYNC_ENTITIES
-  "purchases", // CANONICAL: shared SYNC_ENTITIES
-  "purchase_items", // CANONICAL: shared SYNC_ENTITIES
-  "distribuciones", // CANONICAL: shared SYNC_ENTITIES
-  "distribucion_items", // CANONICAL: shared SYNC_ENTITIES
-  "tags", // CANONICAL: shared SYNC_ENTITIES
-  "customer_tags", // CANONICAL: shared SYNC_ENTITIES
+  ...Array.from(VALID_TABLES),
   "inventory", // LOCAL-ONLY: frontend table/service usage, not in shared SYNC_ENTITIES
-  "variant_inventory", // LEGACY: deprecated frontend table kept in validation allowlist
-  "visitas", // CANONICAL: shared SYNC_ENTITIES
-  "customer_groups", // CANONICAL: shared SYNC_ENTITIES
-  "customer_group_members", // CANONICAL: shared SYNC_ENTITIES
 ] as const;
 
 /** Sync action types */

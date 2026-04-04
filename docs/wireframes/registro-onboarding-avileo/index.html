@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avileo - Registro y Onboarding (Wireframe)</title>
+  <title>Avileo - Registro y Onboarding Simplificado (Wireframe)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -17,18 +17,18 @@
 <body class="bg-gray-50 text-gray-900">
   <div x-data="{ screen: 'landing' }" class="min-h-screen">
     <nav class="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg p-3 shadow-md z-50 max-w-sm">
-      <div class="text-xs font-medium text-gray-700 mb-2">📱 Flujo registro + onboarding</div>
+      <div class="text-xs font-medium text-gray-700 mb-2">📱 Flujo simplificado (3 pasos)</div>
       <div class="flex flex-wrap gap-2">
-        <template x-for="s in ['landing','register','business','mode','sample','sync','dashboard']" :key="s">
+        <template x-for="s in ['landing','register','business','sample','sync','dashboard']" :key="s">
           <button
             @click="screen = s"
             class="px-3 py-1 text-xs rounded transition-colors"
             :class="screen === s ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-            x-text="({landing:'Landing',register:'Registro',business:'Negocio',mode:'Modo',sample:'Datos',sync:'Sync',dashboard:'Dashboard'})[s]">
+            x-text="({landing:'Landing',register:'Registro',business:'Negocio',sample:'Datos',sync:'Sync',dashboard:'Dashboard'})[s]">
           </button>
         </template>
       </div>
-      <div class="text-xs text-gray-400 mt-2">Wireframe mid-fidelity clickable</div>
+      <div class="text-xs text-gray-400 mt-2">Wireframe actualizado - sin selección de modo</div>
     </nav>
 
     <div x-show="screen === 'landing'" class="min-h-screen">
@@ -47,201 +47,144 @@
               <span>[Cloud + Offline]</span>
             </div>
             <h1 class="text-4xl font-semibold mb-4">Registro simple para dueños de negocio</h1>
-            <p class="text-gray-600 text-lg mb-8">La propuesta resuelve el hueco actual: CTA pública → registro → creación de negocio → configuración inicial → primera venta.</p>
+            <p class="text-gray-600 text-lg mb-8">Solo 3 pasos: crea tu cuenta, nombra tu negocio y empieza a vender. Sin configuración compleja.</p>
             <div class="flex gap-3">
               <button @click="screen='register'" class="bg-gray-800 text-white px-5 py-3 rounded">Comenzar prueba gratis</button>
               <button class="border border-gray-300 bg-white px-5 py-3 rounded text-gray-700">Ver demo</button>
             </div>
-            <p class="annotation mt-4">💡 Esta pantalla reemplaza el CTA roto actual que apunta a /register sin página existente.</p>
+            <p class="annotation mt-4">💡 Actualizado: eliminado el paso de selección de modo. El sistema ahora usa modo libre por defecto.</p>
           </div>
           <div class="border border-gray-300 rounded-2xl bg-white p-6">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-4 placeholder-box"></div>
             <div class="space-y-3">
-              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500">[Paso 1: Crear cuenta]</div>
-              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500">[Paso 2: Crear negocio]</div>
-              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500">[Paso 3: Elegir modo]</div>
-              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500">[Paso 4: Cargar datos iniciales]</div>
-              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500">[Paso 5: Entrar al dashboard]</div>
+              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500 bg-orange-50 border-orange-200">
+                <span class="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm mr-3">1</span>
+                Crear cuenta
+              </div>
+              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500 bg-orange-50 border-orange-200">
+                <span class="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm mr-3">2</span>
+                Nombre del negocio
+              </div>
+              <div class="h-14 border border-gray-300 rounded-lg flex items-center px-4 text-gray-500 bg-orange-50 border-orange-200">
+                <span class="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm mr-3">3</span>
+                Empezar a vender
+              </div>
             </div>
+            <p class="annotation mt-4 text-orange-600">Simplificado: De 5 pasos a 3 pasos esenciales</p>
           </div>
         </div>
       </main>
     </div>
 
     <div x-show="screen === 'register'" class="min-h-screen flex items-center justify-center px-4 py-10">
-      <div class="w-full max-w-5xl grid lg:grid-cols-2 gap-8 items-start">
+      <div class="w-full max-w-md">
         <div class="border border-gray-300 rounded-2xl bg-white p-8">
-          <div class="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <h2 class="text-2xl font-semibold mb-2">Crear cuenta</h2>
-          <p class="text-gray-600 mb-6">Versión propuesta para dueño/administrador. Soporta parámetro de invitación.</p>
+          <div class="text-center mb-6">
+            <div class="h-5 bg-gray-200 rounded w-1/3 mb-2 mx-auto"></div>
+            <h2 class="text-2xl font-semibold mb-2">Crear cuenta</h2>
+            <p class="text-gray-600">Paso 1 de 3</p>
+          </div>
           <div class="space-y-4">
             <div>
               <label class="text-sm text-gray-600">Nombre completo</label>
               <input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Ej: Juan Pérez">
             </div>
             <div>
-              <label class="text-sm text-gray-600">Correo o teléfono</label>
+              <label class="text-sm text-gray-600">Correo electrónico</label>
               <input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="correo@ejemplo.com">
             </div>
             <div>
               <label class="text-sm text-gray-600">Contraseña</label>
               <input type="password" class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Mínimo 8 caracteres">
             </div>
-            <div>
-              <label class="text-sm text-gray-600">Confirmar contraseña</label>
-              <input type="password" class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Repite la contraseña">
-            </div>
-            <div class="border border-dashed border-gray-300 rounded-lg p-3 text-sm text-gray-500 bg-gray-50">
-              [Estado opcional] Si llega desde invitación: token detectado y mensaje “Te unirás al negocio al finalizar”.
-            </div>
-            <div class="flex gap-3 pt-2">
-              <button @click="screen='business'" class="bg-gray-800 text-white px-4 py-2 rounded">Continuar</button>
-              <button @click="screen='landing'" class="border border-gray-300 bg-white px-4 py-2 rounded text-gray-700">Volver</button>
+            <div class="flex gap-3 pt-4">
+              <button @click="screen='business'" class="flex-1 bg-gray-800 text-white px-4 py-3 rounded">Continuar</button>
             </div>
           </div>
-          <p class="annotation mt-4">💡 Aquí debe vivir el route missing actual: register.tsx.</p>
-        </div>
-        <div class="space-y-4">
-          <div class="border border-gray-300 rounded-2xl bg-white p-6">
-            <div class="font-medium text-gray-800 mb-3">Estados clave</div>
-            <div class="space-y-2 text-sm text-gray-600">
-              <div class="border border-gray-300 rounded p-3">[Normal] Nuevo dueño crea cuenta</div>
-              <div class="border border-gray-300 rounded p-3">[Con invitación] Vendedor crea cuenta y luego acepta invitación</div>
-              <div class="border border-gray-300 rounded p-3">[Error] Email ya registrado / contraseña inválida</div>
-            </div>
-          </div>
-          <div class="border border-gray-300 rounded-2xl bg-white p-6">
-            <div class="font-medium text-gray-800 mb-3">Notas UX</div>
-            <p class="annotation">En Avileo el login requiere internet inicialmente, pero luego el trabajo diario puede continuar con respaldo offline.</p>
-          </div>
+          <p class="annotation mt-4">💡 Redirige automáticamente a crear negocio si no tiene uno.</p>
         </div>
       </div>
     </div>
 
     <div x-show="screen === 'business'" class="min-h-screen flex items-center justify-center px-4 py-10">
-      <div class="w-full max-w-4xl border border-gray-300 rounded-2xl bg-white p-8">
-        <div class="flex items-start justify-between gap-6 mb-6">
+      <div class="w-full max-w-md border border-gray-300 rounded-2xl bg-white p-8">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-semibold">¿Cómo se llama tu negocio?</h2>
+          <p class="text-gray-600 mt-2">Paso 2 de 3</p>
+        </div>
+        <div class="space-y-4">
           <div>
-            <h2 class="text-2xl font-semibold">Crear tu negocio</h2>
-            <p class="text-gray-600">Reutiliza la pantalla existente `_protected.business.create.tsx` dentro del onboarding.</p>
+            <label class="text-sm text-gray-600">Nombre del negocio *</label>
+            <input class="border border-gray-300 rounded px-3 py-3 w-full text-lg" placeholder="Ej: Pollería El Sabor">
           </div>
-          <div class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50">Paso 2 de 5</div>
-        </div>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div><label class="text-sm text-gray-600">Nombre del negocio</label><input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Pollería El Sabor"></div>
-          <div><label class="text-sm text-gray-600">RUC (opcional)</label><input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="20123456789"></div>
-          <div><label class="text-sm text-gray-600">Dirección</label><input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Av. Principal 123"></div>
-          <div><label class="text-sm text-gray-600">Teléfono</label><input class="border border-gray-300 rounded px-3 py-2 w-full" placeholder="987654321"></div>
-        </div>
-        <div class="mt-6 flex items-center justify-between">
-          <p class="annotation">💡 Después de este paso el usuario por fin obtiene membresía válida y deja de romper `hydrateCurrentBusinessId()`.</p>
-          <div class="flex gap-3">
-            <button @click="screen='register'" class="border border-gray-300 bg-white px-4 py-2 rounded text-gray-700">Atrás</button>
-            <button @click="screen='mode'" class="bg-gray-800 text-white px-4 py-2 rounded">Continuar</button>
+          <div class="border-t border-gray-200 pt-4">
+            <p class="text-sm text-gray-500 mb-2">Opcional (puedes agregar después):</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-500">RUC</label>
+                <input class="border border-gray-300 rounded px-3 py-2 w-full text-sm" placeholder="20123456789">
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">Teléfono</label>
+                <input class="border border-gray-300 rounded px-3 py-2 w-full text-sm" placeholder="987654321">
+              </div>
+            </div>
           </div>
         </div>
+        <div class="mt-6 flex gap-3">
+          <button @click="screen='register'" class="border border-gray-300 bg-white px-4 py-3 rounded text-gray-700">Atrás</button>
+          <button @click="screen='sample'" class="flex-1 bg-gray-800 text-white px-4 py-3 rounded">Crear y continuar</button>
+        </div>
+        <p class="annotation mt-4">💡 Solo el nombre es obligatorio. El sistema usa modo libre por defecto (sin configuración de inventario compleja).</p>
       </div>
     </div>
 
-    <div x-show="screen === 'mode'" class="min-h-screen px-4 py-10">
-      <main class="max-w-6xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="text-2xl font-semibold">¿Cómo opera tu negocio?</h2>
-            <p class="text-gray-600">Paso nuevo propuesto, alineado con los modos ya documentados en Avileo.</p>
-          </div>
-          <div class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white">Paso 3 de 5</div>
+    <div x-show="screen === 'sample'" class="min-h-screen flex items-center justify-center px-4 py-10">
+      <div class="w-full max-w-2xl">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-semibold">¿Quieres empezar con datos de ejemplo?</h2>
+          <p class="text-gray-600 mt-2">Paso 3 de 3</p>
         </div>
-        <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div class="border border-gray-300 rounded-xl bg-white p-5">
-            <div class="h-10 w-10 bg-gray-100 border border-gray-300 rounded-lg mb-4"></div>
-            <div class="font-medium mb-2">Inventario propio</div>
-            <p class="text-sm text-gray-600">Control de stock, distribución y asignación por vendedor.</p>
-          </div>
-          <div class="border border-gray-300 rounded-xl bg-white p-5">
-            <div class="h-10 w-10 bg-gray-100 border border-gray-300 rounded-lg mb-4"></div>
-            <div class="font-medium mb-2">Sin inventario</div>
-            <p class="text-sm text-gray-600">Solo registra ventas y clientes.</p>
-          </div>
-          <div class="border border-gray-300 rounded-xl bg-white p-5">
-            <div class="h-10 w-10 bg-gray-100 border border-gray-300 rounded-lg mb-4"></div>
-            <div class="font-medium mb-2">Pedidos primero</div>
-            <p class="text-sm text-gray-600">Trabaja por encargo o pre-venta.</p>
-          </div>
-          <div class="border border-gray-300 rounded-xl bg-white p-5">
-            <div class="h-10 w-10 bg-gray-100 border border-gray-300 rounded-lg mb-4"></div>
-            <div class="font-medium mb-2">Mixto</div>
-            <p class="text-sm text-gray-600">Combina modos según el día o campaña.</p>
-          </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <button @click="screen='sync'" class="border-2 border-orange-500 bg-orange-50 rounded-2xl p-6 text-left hover:shadow-lg transition-shadow">
+            <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+              <span class="text-white text-2xl">✨</span>
+            </div>
+            <h3 class="font-semibold text-lg mb-2">Cargar datos de ejemplo</h3>
+            <p class="text-sm text-gray-600 mb-3">Productos típicos de pollería, clientes de ejemplo y configuración básica lista para usar.</p>
+            <span class="text-xs text-orange-600 font-medium">Ideal para aprender</span>
+          </button>
+          <button @click="screen='sync'" class="border-2 border-gray-300 bg-white rounded-2xl p-6 text-left hover:border-gray-400 transition-colors">
+            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+              <span class="text-gray-600 text-2xl">📦</span>
+            </div>
+            <h3 class="font-semibold text-lg mb-2">Empezar vacío</h3>
+            <p class="text-sm text-gray-600 mb-3">Sin productos ni clientes. Configurarás todo desde cero según tus necesidades.</p>
+            <span class="text-xs text-gray-500 font-medium">Para negocios establecidos</span>
+          </button>
         </div>
-        <div class="mt-6 border border-dashed border-gray-300 rounded-xl bg-white p-4 text-sm text-gray-600">
-          [Configuración rápida derivada] usarDistribucion / permitirVentaSinStock / modoOperacion.
-        </div>
-        <div class="mt-6 flex justify-between">
+        <div class="mt-6 flex justify-center">
           <button @click="screen='business'" class="border border-gray-300 bg-white px-4 py-2 rounded text-gray-700">Atrás</button>
-          <button @click="screen='sample'" class="bg-gray-800 text-white px-4 py-2 rounded">Continuar</button>
         </div>
-      </main>
-    </div>
-
-    <div x-show="screen === 'sample'" class="min-h-screen px-4 py-10">
-      <main class="max-w-5xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="text-2xl font-semibold">¿Quieres empezar con datos de ejemplo?</h2>
-            <p class="text-gray-600">Basado en el seed demo ya existente del proyecto.</p>
-          </div>
-          <div class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-white">Paso 4 de 5</div>
-        </div>
-        <div class="grid lg:grid-cols-2 gap-6">
-          <div class="border border-gray-300 rounded-2xl bg-white p-6">
-            <div class="font-medium mb-3">Opción A: Empezar vacío</div>
-            <div class="space-y-3 text-sm text-gray-600">
-              <div class="border border-gray-300 rounded p-3">[ ] Crear productos manualmente</div>
-              <div class="border border-gray-300 rounded p-3">[ ] Invitar equipo después</div>
-              <div class="border border-gray-300 rounded p-3">[ ] Configurar pagos más tarde</div>
-            </div>
-            <button class="mt-5 border border-gray-300 bg-white px-4 py-2 rounded text-gray-700 w-full">Elegir esta opción</button>
-          </div>
-          <div class="border border-gray-300 rounded-2xl bg-white p-6">
-            <div class="font-medium mb-3">Opción B: Cargar negocio de ejemplo</div>
-            <div class="space-y-3 text-sm text-gray-600">
-              <div class="border border-gray-300 rounded p-3">[Productos base de pollo]</div>
-              <div class="border border-gray-300 rounded p-3">[Clientes de ejemplo]</div>
-              <div class="border border-gray-300 rounded p-3">[Proveedor varios]</div>
-            </div>
-            <button class="mt-5 bg-gray-800 text-white px-4 py-2 rounded w-full">Cargar datos de ejemplo</button>
-          </div>
-        </div>
-        <p class="annotation mt-4">💡 Esto reduce el “dashboard vacío” y acelera el time-to-first-sale.</p>
-        <div class="mt-6 flex justify-between">
-          <button @click="screen='mode'" class="border border-gray-300 bg-white px-4 py-2 rounded text-gray-700">Atrás</button>
-          <button @click="screen='sync'" class="bg-gray-800 text-white px-4 py-2 rounded">Continuar</button>
-        </div>
-      </main>
+        <p class="annotation mt-6 text-center">💡 Elimina el "dashboard vacío" y reduce el tiempo para la primera venta.</p>
+      </div>
     </div>
 
     <div x-show="screen === 'sync'" class="min-h-screen flex items-center justify-center px-4 py-10">
-      <div class="w-full max-w-3xl border border-gray-300 rounded-2xl bg-white p-8 text-center">
-        <div class="mx-auto h-14 w-14 border border-gray-300 rounded-full bg-gray-100 mb-4 flex items-center justify-center">
-          <i data-lucide="refresh-cw" class="w-6 h-6 text-gray-600"></i>
+      <div class="w-full max-w-md border border-gray-300 rounded-2xl bg-white p-8 text-center">
+        <div class="mx-auto h-16 w-16 bg-orange-100 rounded-full mb-4 flex items-center justify-center">
+          <span class="text-3xl">⚡</span>
         </div>
-        <h2 class="text-2xl font-semibold mb-2">Preparando tu espacio</h2>
-        <p class="text-gray-600 mb-6">Pantalla inspirada en el `sync.tsx` actual: inicializa DB local, descarga datos base y deja la app lista para trabajar.</p>
-        <div class="border border-gray-300 rounded-xl p-4 bg-gray-50 text-left">
-          <div class="flex justify-between text-sm text-gray-600 mb-2"><span>Progreso inicial</span><span>65%</span></div>
-          <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-4"><div class="h-full bg-gray-700 w-2/3"></div></div>
+        <h2 class="text-2xl font-semibold mb-2">¡Todo listo!</h2>
+        <p class="text-gray-600 mb-6">Tu negocio está configurado y listo para usar.</p>
+        <div class="bg-gray-50 rounded-xl p-4 mb-6">
           <div class="space-y-2 text-sm text-gray-600">
-            <div>✓ Cuenta creada</div>
-            <div>✓ Negocio configurado</div>
-            <div>✓ Preferencias guardadas</div>
-            <div>… Descargando datos iniciales</div>
+            <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Cuenta creada</div>
+            <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Negocio configurado</div>
+            <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Datos listos</div>
           </div>
         </div>
-        <div class="mt-6 flex justify-center gap-3">
-          <button @click="screen='sample'" class="border border-gray-300 bg-white px-4 py-2 rounded text-gray-700">Atrás</button>
-          <button @click="screen='dashboard'" class="bg-gray-800 text-white px-4 py-2 rounded">Ir al dashboard</button>
-        </div>
+        <button @click="screen='dashboard'" class="w-full bg-gray-800 text-white px-4 py-3 rounded">Ir al dashboard</button>
       </div>
     </div>
 
@@ -249,19 +192,18 @@
       <header class="h-16 border-b border-gray-300 bg-white flex items-center px-6">
         <div class="font-semibold text-gray-800">Avileo</div>
         <div class="ml-auto flex items-center gap-3 text-sm text-gray-600">
-          <div class="border border-gray-300 rounded px-3 py-1 bg-gray-50">[Negocio actual]</div>
-          <div class="border border-gray-300 rounded px-3 py-1 bg-gray-50">[Usuario admin]</div>
+          <div class="border border-gray-300 rounded px-3 py-1 bg-gray-50">Pollería El Sabor</div>
+          <div class="border border-gray-300 rounded px-3 py-1 bg-gray-50">Admin</div>
         </div>
       </header>
       <div class="flex min-h-[calc(100vh-4rem)]">
         <aside class="w-72 border-r border-gray-300 bg-white p-4">
           <div class="space-y-2">
-            <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
+            <div class="h-10 bg-orange-100 border border-orange-200 rounded flex items-center px-3 text-sm font-medium text-orange-800">Dashboard</div>
             <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
             <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
             <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
           </div>
-          <p class="annotation mt-4">Sidebar del sistema ya activado.</p>
         </aside>
         <main class="flex-1 p-6 bg-gray-50">
           <div class="grid xl:grid-cols-[2fr_1fr] gap-6">
@@ -269,41 +211,75 @@
               <div class="border border-gray-300 rounded-2xl bg-white p-6">
                 <div class="flex items-center justify-between mb-4">
                   <div>
-                    <h2 class="text-2xl font-semibold">Bienvenido, Juan</h2>
-                    <p class="text-gray-600">Checklist inicial para activar la cuenta.</p>
+                    <h2 class="text-2xl font-semibold">¡Bienvenido, Juan!</h2>
+                    <p class="text-gray-600">Completa estos pasos para activar tu negocio</p>
                   </div>
-                  <div class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50">3/5 completado</div>
+                  <div class="border border-orange-300 rounded-lg px-3 py-2 text-sm text-orange-700 bg-orange-50 font-medium">1/3 completado</div>
                 </div>
                 <div class="space-y-3">
-                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between"><span>✓ Negocio creado</span><button class="text-sm text-gray-500">Ver</button></div>
-                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between"><span>✓ Modo operativo configurado</span><button class="text-sm text-gray-500">Editar</button></div>
-                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between"><span>○ Agregar primer producto</span><button class="bg-gray-800 text-white px-3 py-1 rounded text-sm">Hacer ahora</button></div>
-                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between"><span>○ Registrar primera venta</span><button class="bg-gray-800 text-white px-3 py-1 rounded text-sm">Empezar</button></div>
-                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between"><span>○ Invitar primer vendedor</span><button class="border border-gray-300 bg-white px-3 py-1 rounded text-sm">Invitar</button></div>
+                  <div class="border border-green-300 bg-green-50 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm">✓</span>
+                      <span class="font-medium text-green-800">Negocio creado</span>
+                    </div>
+                    <span class="text-sm text-green-600">Listo</span>
+                  </div>
+                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between hover:border-orange-300 cursor-pointer transition-colors">
+                    <div class="flex items-center gap-3">
+                      <span class="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                      <div>
+                        <span class="font-medium">Agregar tu primer producto</span>
+                        <p class="text-sm text-gray-500">Ej: Pollo entero, medio pollo, etc.</p>
+                      </div>
+                    </div>
+                    <button class="bg-orange-500 text-white px-4 py-2 rounded text-sm hover:bg-orange-600">Hacer ahora</button>
+                  </div>
+                  <div class="border border-gray-300 rounded-lg p-4 flex items-center justify-between hover:border-orange-300 cursor-pointer transition-colors">
+                    <div class="flex items-center gap-3">
+                      <span class="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                      <div>
+                        <span class="font-medium">Registrar tu primera venta</span>
+                        <p class="text-sm text-gray-500">Empieza a registrar tus ventas diarias</p>
+                      </div>
+                    </div>
+                    <button class="bg-orange-500 text-white px-4 py-2 rounded text-sm hover:bg-orange-600">Empezar</button>
+                  </div>
                 </div>
               </div>
               <div class="grid md:grid-cols-3 gap-4">
-                <div class="border border-gray-300 rounded-xl bg-white p-5"><div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div><div class="h-12 bg-gray-100 rounded"></div></div>
-                <div class="border border-gray-300 rounded-xl bg-white p-5"><div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div><div class="h-12 bg-gray-100 rounded"></div></div>
-                <div class="border border-gray-300 rounded-xl bg-white p-5"><div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div><div class="h-12 bg-gray-100 rounded"></div></div>
+                <div class="border border-gray-300 rounded-xl bg-white p-5">
+                  <div class="text-sm text-gray-500 mb-1">Ventas hoy</div>
+                  <div class="text-2xl font-bold">S/ 0.00</div>
+                </div>
+                <div class="border border-gray-300 rounded-xl bg-white p-5">
+                  <div class="text-sm text-gray-500 mb-1">Productos</div>
+                  <div class="text-2xl font-bold">0</div>
+                </div>
+                <div class="border border-gray-300 rounded-xl bg-white p-5">
+                  <div class="text-sm text-gray-500 mb-1">Clientes</div>
+                  <div class="text-2xl font-bold">0</div>
+                </div>
               </div>
             </section>
             <aside class="space-y-4">
               <div class="border border-gray-300 rounded-2xl bg-white p-5">
-                <div class="font-medium mb-3">Estado de sync</div>
-                <div class="border border-gray-300 rounded p-3 bg-gray-50 text-sm text-gray-600">🟢 Todo sincronizado</div>
+                <div class="font-medium mb-3">Modo de operación</div>
+                <div class="border border-orange-200 rounded p-3 bg-orange-50 text-sm text-orange-800">
+                  <span class="font-medium">Modo Libre</span>
+                  <p class="text-xs mt-1 text-orange-600">Vende sin restricciones de inventario. Ideal para empezar rápido.</p>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Puedes cambiar esto en Configuración cuando lo necesites.</p>
               </div>
               <div class="border border-gray-300 rounded-2xl bg-white p-5">
-                <div class="font-medium mb-3">Atajos sugeridos</div>
-                <div class="space-y-2">
-                  <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
-                  <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
-                  <div class="h-10 bg-gray-100 border border-gray-300 rounded"></div>
+                <div class="font-medium mb-3">Próximos pasos sugeridos</div>
+                <div class="space-y-2 text-sm">
+                  <div class="p-2 hover:bg-gray-50 rounded cursor-pointer">📚 Ver tutorial de primeros pasos</div>
+                  <div class="p-2 hover:bg-gray-50 rounded cursor-pointer">👥 Invitar a tu equipo</div>
+                  <div class="p-2 hover:bg-gray-50 rounded cursor-pointer">⚙️ Configurar pagos</div>
                 </div>
               </div>
             </aside>
           </div>
-          <p class="annotation mt-6">💡 El dashboard no debe quedar vacío: llega con checklist persistente y CTA claros a primera acción.</p>
         </main>
       </div>
     </div>

@@ -1,0 +1,94 @@
+{
+  "plan": "distribucion-items-reuse-pattern",
+  "version": "1.0",
+  "createdAt": "2026-04-03",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "DB Schema - Create distribucion_items table",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": [],
+      "blocks": ["T-002", "T-004"],
+      "estimatedHours": 1,
+      "file": "tasks/T-001-db-schema-distribucion-items.md"
+    },
+    {
+      "id": "T-002",
+      "title": "Backend - DistribucionItemService",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-001"],
+      "blocks": ["T-003"],
+      "estimatedHours": 3,
+      "file": "tasks/T-002-backend-distribucion-item-service.md"
+    },
+    {
+      "id": "T-003",
+      "title": "Backend - API endpoints for items",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-002"],
+      "blocks": ["T-004"],
+      "estimatedHours": 2,
+      "file": "tasks/T-003-backend-api-endpoints.md"
+    },
+    {
+      "id": "T-004",
+      "title": "Frontend - DistribucionService with items",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-001"],
+      "blocks": ["T-005"],
+      "estimatedHours": 3,
+      "file": "tasks/T-004-frontend-distribucion-service.md"
+    },
+    {
+      "id": "T-005",
+      "title": "Frontend - Hooks for distribucion items",
+      "status": "completed",
+      "priority": "P0",
+      "dependsOn": ["T-004"],
+      "blocks": ["T-006"],
+      "estimatedHours": 2,
+      "file": "tasks/T-005-frontend-hooks.md"
+    },
+    {
+      "id": "T-006",
+      "title": "Frontend - Item editor component",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-005"],
+      "blocks": ["T-007"],
+      "estimatedHours": 3,
+      "file": "tasks/T-006-frontend-item-editor-component.md"
+    },
+    {
+      "id": "T-007",
+      "title": "Integration - Create form with items",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-006"],
+      "blocks": ["T-008"],
+      "estimatedHours": 2,
+      "file": "tasks/T-007-integration-create-form.md"
+    },
+    {
+      "id": "T-008",
+      "title": "Verification - Test coverage",
+      "status": "completed",
+      "priority": "P1",
+      "dependsOn": ["T-007"],
+      "blocks": [],
+      "estimatedHours": 2,
+      "file": "tasks/T-008-verification-testing.md"
+    }
+  ],
+  "stats": {
+    "total": 8,
+    "completed": 8,
+    "inProgress": 0,
+    "pending": 0,
+    "totalEstimatedHours": 18
+  }
+}

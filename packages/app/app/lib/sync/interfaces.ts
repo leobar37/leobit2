@@ -25,6 +25,108 @@ import type {
   ChangeApplicationResult,
 } from "./types";
 
+// Import types from sync-service for interface definition
+import type { EnqueueParams, SyncOperationRecord, SyncStatus, DeadLetterOperationRecord, BatchSyncResponse } from "./sync-service";
+import type { ConflictStrategy } from "./config";
+
+/**
+ * ISyncService interface
+ * 
+ * Defines the contract for the sync service that manages
+ * the sync queue and pushes operations to the backend.
+ */
+export interface ISyncService {
+  /**
+   * Initialize the sync service (creates tables, runs migrations)
+   */
+  initialize(): Promise<void>;
+
+  /**
+   * Enqueue an operation for sync
+   */
+  enqueue(params: EnqueueParams): Promise<string>;
+
+  /**
+   * Process all pending operations
+   */
+  processPending(): Promise<{ processed: number; failed: number; conflicts: number }>;
+
+  /**
+   * Get current sync status
+   */
+  getStatus(): Promise<SyncStatus>;
+
+  /**
+   * Get failed operations
+   */
+  getFailedOperations(): Promise<SyncOperationRecord[]>;
+
+  /**
+   * Get operations with problems (pending, failed, conflict)
+   */
+  getProblemOperations(): Promise<SyncOperationRecord[]>;
+
+  /**
+   * Get dead letter operations
+   */
+  getDeadLetterOperations(): Promise<DeadLetterOperationRecord[]>;
+
+  /**
+   * Retry a failed operation
+   */
+  retryOperation(operationId: string): Promise<boolean>;
+
+  /**
+   * Retry a dead letter operation
+   */
+  retryDeadLetterOperation(deadLetterId: string): Promise<boolean>;
+
+  /**
+   * Delete a dead letter operation
+   */
+  deleteDeadLetterOperation(deadLetterId: string): Promise<boolean>;
+
+  /**
+   * Clear all dead letter operations
+   */
+  clearDeadLetterOperations(): Promise<number>;
+
+  /**
+   * Delete an operation
+   */
+  deleteOperation(operationId: string): Promise<boolean>;
+
+  /**
+   * Resolve a conflict
+   */
+  resolveConflict(operationId: string, resolution: ConflictStrategy, mergedData?: Record<string, unknown>): Promise<boolean>;
+
+  /**
+   * Get backend conflicts
+   */
+  getBackendConflicts(options?: { status?: string; entityType?: string; limit?: number; offset?: number }): Promise<{ success: boolean; data: { conflicts: unknown[]; pendingCount: number; pagination: { limit: number; offset: number; hasMore: boolean } } }>;
+
+  /**
+   * Start automatic sync
+   */
+  startAutoSync(): void;
+
+  /**
+   * Stop automatic sync
+   */
+  stopAutoSync(): void;
+
+  /**
+   * Log detailed status
+   */
+  logDetailedStatus(): Promise<void>;
+
+  /**
+   * Clean up sync data (for logout/business switch)
+   */
+  cleanup(): Promise<void>;
+}
+
 /**
  * Options for pullWithOptions
  */
@@ -42,6 +144,11 @@ export interface PullWithOptionsParams {
  * from the backend sync API.
  */
 export interface IPullService {
+  /**
+   * Initialize the pull service
+   */
+  initialize(): Promise<void>;
+
   /**
    * Perform a basic pull operation
    */
@@ -101,6 +208,11 @@ export interface IPullService {
    * Stop periodic pull
    */
   stopAutoPull(): void;
+
+  /**
+   * Clean up pull data (for logout/business switch)
+   */
+  cleanup(): Promise<void>;
 }
 
 /**

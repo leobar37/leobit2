@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wireframe - Cierre de Distribución (Opcional)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .wireframe-box {
+      border: 2px dashed #94a3b8;
+      background: #f8fafc;
+    }
+    .wireframe-screen {
+      border: 3px solid #334155;
+      background: white;
+    }
+    .annotation {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+    }
+    .flow-arrow {
+      position: relative;
+    }
+    .flow-arrow::after {
+      content: '→';
+      position: absolute;
+      right: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 24px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold text-slate-800">Wireframe: Flujo de Cierre Opcional</h1>
+      <p class="text-slate-600 mt-2">Asignación de productos al crear es opcional - el cierre se adapta automáticamente</p>
+    </header>
+
+    <!-- Decision Tree -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">🍴 Diagrama de Decisión</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Flujo:</strong> Al crear la distribución, el admin elige si asigna productos o no.
+        El cierre se adapta automáticamente según esa decisión.
+      </div>
+
+      <div class="bg-white rounded-xl p-6 shadow-lg">
+        <div class="flex flex-col items-center">
+          <!-- Start -->
+          <div class="bg-slate-800 text-white rounded-xl p-4 text-center mb-4 w-64">
+            <p class="font-medium">Crear Distribución</p>
+            <p class="text-xs text-slate-400 mt-1">Admin elige opcionalmente</p>
+          </div>
+
+          <div class="text-2xl text-slate-400 mb-4">↓</div>
+
+          <!-- Decision -->
+          <div class="bg-yellow-100 border-2 border-yellow-400 rounded-full p-4 text-center mb-4 w-64">
+            <p class="font-medium text-sm">¿Asignar productos?</p>
+          </div>
+
+          <div class="text-2xl text-slate-400 mb-4">↓</div>
+
+          <!-- Two Paths -->
+          <div class="flex gap-8 w-full justify-center">
+            <!-- Path A: Sin productos -->
+            <div class="flex flex-col items-center">
+              <div class="bg-red-100 border-2 border-red-300 rounded-lg p-3 text-center mb-2 w-48">
+                <p class="font-medium text-sm">NO</p>
+                <p class="text-xs text-slate-600">Solo punto de venta</p>
+              </div>
+              <div class="text-xl text-slate-400 mb-2">↓</div>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center w-48">
+                <p class="font-medium text-sm text-blue-700">Cierre Simple</p>
+                <p class="text-xs text-slate-500">Solo nota</p>
+              </div>
+            </div>
+
+            <!-- Path B: Con productos -->
+            <div class="flex flex-col items-center">
+              <div class="bg-green-100 border-2 border-green-300 rounded-lg p-3 text-center mb-2 w-48">
+                <p class="font-medium text-sm">SÍ</p>
+                <p class="text-xs text-slate-600">Asigna X productos</p>
+              </div>
+              <div class="text-xl text-slate-400 mb-2">↓</div>
+              <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center w-48">
+                <p class="font-medium text-sm text-orange-700">Cierre con Control</p>
+                <p class="text-xs text-slate-500">Valida vendido/devuelto</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 1A: Crear Distribución - Sin Productos -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">1A. Crear Distribución (Sin Productos - Libre)</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Opción A:</strong> Admin solo asigna vendedor y punto de venta. El vendedor es libre de llevar lo que tenga físicamente.
+      </div>
+
+      <div class="wireframe-screen rounded-xl p-4 max-w-sm mx-auto shadow-lg">
+        <div class="bg-orange-500 text-white p-4 rounded-t-lg -m-4 mb-4">
+          <h3 class="font-semibold text-center">Nueva Distribución</h3>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Vendedor -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Vendedor *</label>
+            <div class="border rounded-lg p-3 bg-white flex justify-between">
+              <span class="text-slate-600">Juan Pérez</span>
+              <span class="text-orange-500">▼</span>
+            </div>
+          </div>
+
+          <!-- Punto de Venta -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Punto de Venta *</label>
+            <div class="border rounded-lg p-3 bg-white flex justify-between">
+              <span class="text-slate-600">Mercado San Juan</span>
+              <span class="text-orange-500">▼</span>
+            </div>
+          </div>
+
+          <!-- Nota -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p class="text-sm text-blue-700">
+              ℹ️ Modo libre: El vendedor registra productos al cerrar, o simplemente cierra con nota.
+            </p>
+          </div>
+
+          <!-- Toggle opcional (oculto por defecto) -->
+          <div class="border-2 border-dashed border-slate-300 rounded-lg p-3 bg-slate-50">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-slate-700">Asignar productos (opcional)</span>
+              <div class="w-12 h-6 bg-slate-300 rounded-full relative">
+                <div class="w-5 h-5 bg-white rounded-full absolute left-0.5 top-0.5 shadow"></div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Activa para controlar qué lleva el vendedor</p>
+          </div>
+
+          <!-- Nota creación -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Nota al crear</label>
+            <textarea class="w-full border rounded-lg p-3 text-sm" rows="3" placeholder="Observaciones..."></textarea>
+          </div>
+
+          <button class="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold">
+            Crear Distribución
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 1B: Crear Distribución - Con Productos -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">1B. Crear Distribución (Con Productos - Control)</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Opción B:</strong> Admin activa "Asignar productos" y define qué lleva el vendedor. El cierre validará contra esto.
+      </div>
+
+      <div class="wireframe-screen rounded-xl p-4 max-w-sm mx-auto shadow-lg">
+        <div class="bg-orange-500 text-white p-4 rounded-t-lg -m-4 mb-4">
+          <h3 class="font-semibold text-center">Nueva Distribución</h3>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Vendedor -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Vendedor *</label>
+            <div class="border rounded-lg p-3 bg-white flex justify-between">
+              <span class="text-slate-600">Juan Pérez</span>
+              <span class="text-orange-500">▼</span>
+            </div>
+          </div>
+
+          <!-- Punto de Venta -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Punto de Venta *</label>
+            <div class="border rounded-lg p-3 bg-white flex justify-between">
+              <span class="text-slate-600">Mercado San Juan</span>
+              <span class="text-orange-500">▼</span>
+            </div>
+          </div>
+
+          <!-- Toggle activado -->
+          <div class="border-2 border-green-400 rounded-lg p-3 bg-green-50">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-slate-700">Asignar productos (opcional)</span>
+              <div class="w-12 h-6 bg-green-500 rounded-full relative">
+                <div class="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+              </div>
+            </div>
+            <p class="text-xs text-green-600 mt-1">✓ Control activado - Se validará al cerrar</p>
+          </div>
+
+          <!-- Productos asignados -->
+          <div class="bg-white border rounded-lg p-3">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm font-medium text-slate-700">Productos Asignados</span>
+              <button class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">+ Agregar</button>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <div>
+                  <p class="text-sm font-medium">Pollo Entero</p>
+                  <p class="text-xs text-slate-500">2.5 kg aprox.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="number" value="20" class="w-16 text-center border rounded py-1 text-sm">
+                  <span class="text-xs text-slate-400">und</span>
+                  <button class="text-red-400">✕</button>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <div>
+                  <p class="text-sm font-medium">Pollo Entero</p>
+                  <p class="text-xs text-slate-500">3.0 kg aprox.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="number" value="15" class="w-16 text-center border rounded py-1 text-sm">
+                  <span class="text-xs text-slate-400">und</span>
+                  <button class="text-red-400">✕</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t">
+              <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Total asignado:</span>
+                <span class="font-semibold">35 unidades</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold">
+            Crear Distribución
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 2A: Cierre Simple (Sin productos asignados) -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">2A. Cierre Simple (Distribución sin productos)</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Cuando no hay productos asignados:</strong> Cierre mínimo - solo nota. El vendedor puede declarar opcionalmente qué tuvo.
+      </div>
+
+      <div class="wireframe-screen rounded-xl p-4 max-w-sm mx-auto shadow-lg">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b">
+          <div class="flex items-center gap-2">
+            <span class="text-red-500">🔒</span>
+            <h3 class="font-semibold">Cerrar Distribución</h3>
+          </div>
+          <button class="text-slate-400">✕</button>
+        </div>
+
+        <!-- Info banner -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p class="text-sm text-blue-700">
+            ℹ️ Esta distribución fue creada sin productos asignados. El cierre es libre.
+          </p>
+        </div>
+
+        <p class="text-sm text-slate-600 mb-4">
+          ¿Estás seguro de que deseas cerrar esta distribución?
+        </p>
+
+        <!-- Optional declaration -->
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4">
+          <p class="text-sm font-medium text-slate-700 mb-2">Declaración opcional (sin validación)</p>
+          <textarea class="w-full border rounded-lg p-3 text-sm" rows="3" placeholder="Ej: Llevé 20 pollos, vendí 18, devolví 2..."></textarea>
+        </div>
+
+        <!-- Nota -->
+        <div class="mb-4">
+          <label class="text-sm font-medium text-slate-700 block mb-2">Nota al cerrar</label>
+          <textarea class="w-full border rounded-lg p-3 text-sm" rows="3" placeholder="Observaciones finales..."></textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <button class="flex-1 py-3 border rounded-xl text-slate-600 font-medium">
+            Cancelar
+          </button>
+          <button class="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium">
+            Confirmar Cierre
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 2B: Cierre con Control (Con productos asignados) -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">2B. Cierre con Control (Distribución con productos)</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Cuando SÍ hay productos asignados:</strong> El vendedor debe reportar qué vendió y devolvió de lo asignado.
+      </div>
+
+      <div class="wireframe-screen rounded-xl p-4 max-w-sm mx-auto shadow-lg">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b">
+          <div class="flex items-center gap-2">
+            <span class="text-red-500">🔒</span>
+            <h3 class="font-semibold">Cerrar Distribución</h3>
+          </div>
+          <button class="text-slate-400">✕</button>
+        </div>
+
+        <p class="text-sm text-slate-600 mb-4">
+          Reporta lo vendido y devuelto de los productos asignados.
+        </p>
+
+        <!-- Products Table -->
+        <div class="bg-white border rounded-lg mb-4 overflow-hidden">
+          <div class="bg-slate-50 p-3 border-b text-xs font-medium text-slate-600 grid grid-cols-12 gap-1">
+            <span class="col-span-4">Producto</span>
+            <span class="col-span-2 text-center">Asig.</span>
+            <span class="col-span-2 text-center">Vend.</span>
+            <span class="col-span-2 text-center">Dev.</span>
+            <span class="col-span-2 text-center">Estado</span>
+          </div>
+
+          <!-- Row 1: OK -->
+          <div class="p-3 border-b grid grid-cols-12 gap-1 items-center">
+            <div class="col-span-4">
+              <p class="text-sm font-medium">Pollo 2.5kg</p>
+            </div>
+            <span class="col-span-2 text-center text-sm text-slate-600">20</span>
+            <input type="number" value="18" class="col-span-2 text-center border rounded py-1 text-sm">
+            <input type="number" value="2" class="col-span-2 text-center border rounded py-1 text-sm bg-slate-50" readonly>
+            <span class="col-span-2 text-center text-green-600 text-lg">✓</span>
+          </div>
+
+          <!-- Row 2: Warning (vendió más?) -->
+          <div class="p-3 border-b grid grid-cols-12 gap-1 items-center bg-yellow-50">
+            <div class="col-span-4">
+              <p class="text-sm font-medium">Pollo 3.0kg</p>
+            </div>
+            <span class="col-span-2 text-center text-sm text-slate-600">15</span>
+            <input type="number" value="16" class="col-span-2 text-center border rounded py-1 text-sm border-yellow-400 bg-yellow-100">
+            <input type="number" value="0" class="col-span-2 text-center border rounded py-1 text-sm bg-slate-50" readonly>
+            <span class="col-span-2 text-center text-yellow-600 text-lg">⚠️</span>
+          </div>
+
+          <!-- Row 3: OK -->
+          <div class="p-3 grid grid-cols-12 gap-1 items-center">
+            <div class="col-span-4">
+              <p class="text-sm font-medium">Filete</p>
+            </div>
+            <span class="col-span-2 text-center text-sm text-slate-600">10</span>
+            <input type="number" value="8" class="col-span-2 text-center border rounded py-1 text-sm">
+            <input type="number" value="2" class="col-span-2 text-center border rounded py-1 text-sm bg-slate-50" readonly>
+            <span class="col-span-2 text-center text-green-600 text-lg">✓</span>
+          </div>
+        </div>
+
+        <!-- Validation Summary -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div class="flex items-start gap-2">
+            <span class="text-yellow-600">⚠️</span>
+            <div>
+              <p class="text-sm font-medium text-yellow-800">Diferencia detectada</p>
+              <p class="text-xs text-yellow-700">Reportaste 16 pollos 3.0kg vendidos pero solo se asignaron 15. Verifica o agrega nota.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="bg-slate-50 rounded-lg p-3 mb-4 text-sm">
+          <div class="flex justify-between mb-1">
+            <span class="text-slate-600">Total asignado:</span>
+            <span class="font-semibold">45 unidades</span>
+          </div>
+          <div class="flex justify-between mb-1">
+            <span class="text-slate-600">Total reportado vendido:</span>
+            <span class="font-semibold text-green-600">42 unidades</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Total reportado devuelto:</span>
+            <span class="font-semibold text-orange-600">4 unidades</span>
+          </div>
+        </div>
+
+        <!-- Nota -->
+        <div class="mb-4">
+          <label class="text-sm font-medium text-slate-700 block mb-2">Nota explicativa (requerida si hay diferencias)</label>
+          <textarea class="w-full border rounded-lg p-3 text-sm" rows="3" placeholder="Explicar diferencias si las hay..."></textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <button class="flex-1 py-3 border rounded-xl text-slate-600 font-medium">
+            Cancelar
+          </button>
+          <button class="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium">
+            Confirmar Cierre
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 3: Mi Distribución Cerrada (Vista resumen) -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">3. Distribución Cerrada - Vista de Resumen</h2>
+      <div class="annotation p-4 rounded-lg mb-4 text-sm">
+        <strong>Vista final:</strong> Muestra diferente información según si tenía productos asignados o no.
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Sin productos -->
+        <div>
+          <p class="text-sm font-medium text-slate-600 mb-2">A) Cerrada sin productos asignados</p>
+          <div class="wireframe-screen rounded-xl p-4 shadow-lg">
+            <div class="bg-green-500 text-white p-3 rounded-t-lg -m-4 mb-4 text-center">
+              <span class="text-sm">✓ Distribución Cerrada</span>
+            </div>
+
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+              <p class="text-sm font-medium text-green-800">Mercado San Juan</p>
+              <p class="text-xs text-green-600">Cerrado el 4 Abr 2026, 18:30</p>
+            </div>
+
+            <div class="bg-white border rounded-lg p-3 mb-3">
+              <h4 class="text-sm font-medium mb-2">Resumen</h4>
+              <div class="space-y-1 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-slate-600">Ventas:</span>
+                  <span class="font-medium">12</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-600">Recaudado:</span>
+                  <span class="font-medium text-green-600">S/ 850.00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p class="text-xs text-yellow-800 font-medium mb-1">Declaración del vendedor:</p>
+              <p class="text-sm text-slate-700">Llevé unos 20 pollos, vendí casi todo. Buen día.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Con productos -->
+        <div>
+          <p class="text-sm font-medium text-slate-600 mb-2">B) Cerrada con productos asignados</p>
+          <div class="wireframe-screen rounded-xl p-4 shadow-lg">
+            <div class="bg-green-500 text-white p-3 rounded-t-lg -m-4 mb-4 text-center">
+              <span class="text-sm">✓ Distribución Cerrada</span>
+            </div>
+
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+              <p class="text-sm font-medium text-green-800">Mercado San Juan</p>
+              <p class="text-xs text-green-600">Cerrado el 4 Abr 2026, 18:30</p>
+            </div>
+
+            <div class="bg-white border rounded-lg p-3 mb-3">
+              <h4 class="text-sm font-medium mb-2">Productos - Control</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between p-2 bg-slate-50 rounded">
+                  <span>Pollo 2.5kg</span>
+                  <span class="text-slate-600">20 → 18 → 2 ✓</span>
+                </div>
+                <div class="flex justify-between p-2 bg-slate-50 rounded">
+                  <span>Pollo 3.0kg</span>
+                  <span class="text-slate-600">15 → 16 → 0 ⚠️</span>
+                </div>
+                <div class="flex justify-between p-2 bg-slate-50 rounded">
+                  <span>Filete</span>
+                  <span class="text-slate-600">10 → 8 → 2 ✓</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white border rounded-lg p-3 mb-3">
+              <h4 class="text-sm font-medium mb-2">Resumen Ventas</h4>
+              <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Total ventas:</span>
+                <span class="font-medium text-green-600">S/ 850.00</span>
+              </div>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p class="text-xs text-yellow-800 font-medium mb-1">Nota:</p>
+              <p class="text-sm text-slate-700">Me equivoqué en el conteo, vendí 16 del grande no 15.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Table -->
+    <section class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-700 mb-4">Resumen de Comportamiento</h2>
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="p-4 text-left font-semibold">Aspecto</th>
+              <th class="p-4 text-left font-semibold">Sin productos (Libre)</th>
+              <th class="p-4 text-left font-semibold">Con productos (Control)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-t">
+              <td class="p-4 font-medium">Al crear</td>
+              <td class="p-4 text-slate-600">Solo vendedor + punto de venta</td>
+              <td class="p-4 text-slate-600">+ Asignación de X productos</td>
+            </tr>
+            <tr class="border-t bg-slate-50">
+              <td class="p-4 font-medium">Durante ventas</td>
+              <td class="p-4 text-slate-600">Sin validación de stock</td>
+              <td class="p-4 text-slate-600">Sin validación (sólo referencia)</td>
+            </tr>
+            <tr class="border-t">
+              <td class="p-4 font-medium">Al cerrar</td>
+              <td class="p-4 text-slate-600">Solo nota opcional</td>
+              <td class="p-4 text-slate-600">Reportar vendido/devuelto de lo asignado</td>
+            </tr>
+            <tr class="border-t bg-slate-50">
+              <td class="p-4 font-medium">Validaciones</td>
+              <td class="p-4 text-slate-600">Ninguna</td>
+              <td class="p-4 text-slate-600">Alerta si vendido > asignado</td>
+            </tr>
+            <tr class="border-t">
+              <td class="p-4 font-medium">Datos guardados</td>
+              <td class="p-4 text-slate-600">Nota de cierre (texto libre)</td>
+              <td class="p-4 text-slate-600">Cierre items (variantId, cantidades)</td>
+            </tr>
+            <tr class="border-t bg-slate-50">
+              <td class="p-4 font-medium">Impacto stock</td>
+              <td class="p-4 text-red-600 font-medium">NINGUNO</td>
+              <td class="p-4 text-red-600 font-medium">NINGUNO</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Key Point -->
+    <section class="mb-12">
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-xl">
+        <h3 class="font-semibold text-blue-800 mb-2">💡 Punto Clave</h3>
+        <p class="text-blue-700">
+          El toggle "Asignar productos" al crear la distribución determina TODO el flujo posterior.
+          Es <strong>puramente opcional</strong> y sirve solo para darle al admin la opción de llevar control
+          de lo que entrega al vendedor vs lo que reporta al cerrar. <strong>No afecta el inventario del sistema en ningún caso.</strong>
+        </p>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

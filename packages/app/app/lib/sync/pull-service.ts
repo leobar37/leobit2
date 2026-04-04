@@ -9,6 +9,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { PULL_INTERVAL_MS } from "./config";
 import { getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import type { PullChange, PullResponse, PullResult, PullStatus } from "./types";
+import { syncEvents } from "./sync-events";
 
 // Re-export types for backward compatibility
 export type { PullStatus, PullResult, PullChange, PullResponse } from "./types";
@@ -16,6 +17,18 @@ import { applyChange } from "./change-applier";
 import { calculateBackoffDelay } from "./backoff";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
+
+/**
+ * Configuration for pull execution
+ */
+interface PullExecutionConfig {
+  entityTypes?: string[];
+  since?: string;
+  limit?: number;
+  cursorKey?: string;
+  useDefaultCursor: boolean;
+  applyBackoff: boolean;
+}
 
 export class PullService {
   private pg: PGlite;
@@ -50,9 +63,15 @@ export class PullService {
     this.authToken = authToken;
     this.syncGroupId = syncGroupId ?? null;
     this.cursorStorageKey = getPullCursorStorageKey(getLocalDatabaseNamespace());
+  }
 
-    // Load persisted cursor from localStorage
+  /**
+   * Initialize the pull service
+   * Loads cursor from storage and prepares for operation
+   */
+  async initialize(): Promise<void> {
     this.loadCursor();
+    console.log("[PullService] Initialized");
   }
 
   /**
@@ -137,27 +156,85 @@ export class PullService {
 
   /**
    * Fetch changes from the server with pagination support
+   * Delegates to executePull with default options
    */
   async pull(): Promise<PullResult> {
+    const result = await this.executePull({
+      useDefaultCursor: true,
+      applyBackoff: true,
+    });
+    
+    return {
+      success: result.success,
+      changesApplied: result.changesApplied,
+      hasMore: result.hasMore,
+      error: result.error,
+    };
+  }
+
+  /**
+   * Pull changes with specific options (for staged loading)
+   * This method allows filtering by entity types and custom cursors
+   * Used by StagedPullCoordinator for loading data in stages
+   */
+  async pullWithOptions(options: {
+    entityTypes?: string[];
+    since?: string;
+    limit?: number;
+    cursorKey?: string;
+  }): Promise<PullResult & { nextSince: string | null }> {
+    return this.executePull({
+      entityTypes: options.entityTypes,
+      since: options.since,
+      limit: options.limit,
+      cursorKey: options.cursorKey,
+      useDefaultCursor: false,
+      applyBackoff: false,
+    });
+  }
+
+  /**
+   * Core pull execution logic shared by pull() and pullWithOptions()
+   */
+  private async executePull(config: PullExecutionConfig): Promise<PullResult & { nextSince: string | null }> {
     // Prevent concurrent pulls
     if (this.isPullingFlag) {
-      return { success: false, changesApplied: 0, hasMore: false, error: "Pull already in progress" };
+      return { 
+        success: false, 
+        changesApplied: 0, 
+        hasMore: false, 
+        error: "Pull already in progress", 
+        nextSince: null 
+      };
     }
 
     this.isPullingFlag = true;
 
     try {
-      // Apply backoff if we have consecutive failures
-      if (this.currentBackoff > 0) {
+      // Apply backoff only for regular pull (not staged loading)
+      if (config.applyBackoff && this.currentBackoff > 0) {
         console.log(`[PullService] Waiting ${this.currentBackoff}ms due to previous failures`);
         await new Promise((resolve) => setTimeout(resolve, this.currentBackoff));
       }
 
       const url = new URL(`${API_URL}/sync/changes`);
-      if (this.lastSince) {
-        url.searchParams.set("since", this.lastSince);
+      
+      // Determine which cursor to use
+      const cursor = config.useDefaultCursor 
+        ? this.lastSince 
+        : (config.since ?? this.loadStageCursor(config.cursorKey));
+        
+      if (cursor) {
+        url.searchParams.set("since", cursor);
       }
-      url.searchParams.set("limit", "100");
+      
+      url.searchParams.set("limit", String(config.limit ?? 100));
+      
+      // Add entity types filter for staged loading
+      if (config.entityTypes && config.entityTypes.length > 0) {
+        url.searchParams.set("entityTypes", config.entityTypes.join(","));
+      }
+
       if (this.syncGroupId) {
         url.searchParams.set("syncGroupId", this.syncGroupId);
       }
@@ -173,45 +250,56 @@ export class PullService {
       if (!response.ok) {
         const errorText = await response.text();
         
-        // Increment failure count for backoff
-        this.consecutiveFailures++;
-        this.currentBackoff = this.getBackoffDelay();
-        this.lastError = `Pull failed: ${response.status} ${errorText}`;
+        // Track failures only for regular pull with backoff
+        if (config.applyBackoff) {
+          this.consecutiveFailures++;
+          this.currentBackoff = this.getBackoffDelay();
+          this.lastError = `Pull failed: ${response.status} ${errorText}`;
+        }
         
         return {
           success: false,
           changesApplied: 0,
           hasMore: false,
-          error: this.lastError,
+          error: config.applyBackoff ? (this.lastError ?? undefined) : `Pull failed: ${response.status} ${errorText}`,
+          nextSince: null,
         };
       }
 
       const body = (await response.json()) as { 
         success: boolean; 
-        data: PullResponse;
-        hasMore?: boolean;
+        data?: PullResponse;
+        error?: { code: string; message: string };
       };
 
       if (!body.success || !body.data?.changes) {
-        this.consecutiveFailures++;
-        this.currentBackoff = this.getBackoffDelay();
-        this.lastError = "Invalid response format";
+        const errorMsg = body.error?.message || "Invalid response from server";
+        
+        if (config.applyBackoff) {
+          this.consecutiveFailures++;
+          this.currentBackoff = this.getBackoffDelay();
+          this.lastError = errorMsg;
+        }
         
         return {
           success: false,
           changesApplied: 0,
           hasMore: false,
-          error: this.lastError,
+          error: errorMsg,
+          nextSince: null,
         };
       }
 
-      // Reset failure count on success
-      this.consecutiveFailures = 0;
-      this.currentBackoff = 0;
-      this.lastError = null;
+      // Reset failure count on success (only for regular pull)
+      if (config.applyBackoff) {
+        this.consecutiveFailures = 0;
+        this.currentBackoff = 0;
+        this.lastError = null;
+      }
 
       const { changes, nextSince, hasMore = false, serverTimestamp } = body.data;
 
+      // Log received changes
       const entityCounts = changes.reduce((acc, c) => {
         acc[c.entityType] = (acc[c.entityType] || 0) + 1;
         return acc;
@@ -219,12 +307,11 @@ export class PullService {
 
       console.log(`[PULL] 📥 Received changes:`, {
         count: changes.length,
-        cursor: this.lastSince?.slice(0, 20),
+        cursor: cursor?.slice(0, 20),
         nextSince: nextSince?.slice(0, 20),
         hasMore,
         serverTimestamp,
         entityTypes: entityCounts,
-        // ALL_CHANGES removed - potential circular reference issues
       });
 
       if (changes.length === 0) {
@@ -233,14 +320,13 @@ export class PullService {
           success: true,
           changesApplied: 0,
           hasMore,
+          nextSince,
         };
       }
 
-      // Update last pull time
-      this.lastPullTime = serverTimestamp ? new Date(serverTimestamp) : new Date();
-
-      if (changes.length === 0) {
-        return { success: true, changesApplied: 0, hasMore: false };
+      // Update last pull time (only for regular pull)
+      if (config.applyBackoff) {
+        this.lastPullTime = serverTimestamp ? new Date(serverTimestamp) : new Date();
       }
 
       // Apply each change to local database
@@ -260,17 +346,27 @@ export class PullService {
         }
       }
 
-      // Persist cursor to localStorage only if we applied at least one change
+      // Persist cursor
       if (nextSince && appliedCount > 0) {
-        this.saveCursor(nextSince);
+        if (config.cursorKey) {
+          this.saveStageCursor(config.cursorKey, nextSince);
+        } else if (config.useDefaultCursor) {
+          this.saveCursor(nextSince);
+        }
       }
 
-      // Notify about changes
-      if (entityTypes.size > 0 && this.onChangesApplied) {
-        this.onChangesApplied(Array.from(entityTypes));
+      // Notify about changes via callback and events
+      if (entityTypes.size > 0) {
+        if (this.onChangesApplied) {
+          this.onChangesApplied(Array.from(entityTypes));
+        }
+        syncEvents.emit("pull:completed", { 
+          changesApplied: appliedCount, 
+          entityTypes: Array.from(entityTypes) 
+        });
       }
 
-      // Log summary if there were failures
+      // Log summary
       if (failedChanges.length > 0) {
         console.warn(`[Pull] Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
       } else {
@@ -281,18 +377,25 @@ export class PullService {
         success: true,
         changesApplied: appliedCount,
         hasMore,
+        nextSince,
       };
     } catch (error) {
-      // Increment failure count for backoff
-      this.consecutiveFailures++;
-      this.currentBackoff = this.getBackoffDelay();
-      this.lastError = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (config.applyBackoff) {
+        this.consecutiveFailures++;
+        this.currentBackoff = this.getBackoffDelay();
+        this.lastError = errorMessage;
+      }
+      
+      syncEvents.emit("pull:error", { error: errorMessage });
       
       return {
         success: false,
         changesApplied: 0,
         hasMore: false,
-        error: this.lastError,
+        error: errorMessage,
+        nextSince: null,
       };
     } finally {
       this.isPullingFlag = false;
@@ -324,131 +427,6 @@ export class PullService {
     }
 
     return { totalApplied, errors };
-  }
-
-  /**
-   * Pull changes with specific options (for staged loading)
-   * This method allows filtering by entity types and custom cursors
-   * Used by StagedPullCoordinator for loading data in stages
-   */
-  async pullWithOptions(options: {
-    entityTypes?: string[];
-    since?: string;
-    limit?: number;
-    cursorKey?: string; // Key for saving/loading cursor (for per-stage cursors)
-  }): Promise<PullResult & { nextSince: string | null }> {
-    // Prevent concurrent pulls
-    if (this.isPullingFlag) {
-      return { success: false, changesApplied: 0, hasMore: false, error: "Pull already in progress", nextSince: null };
-    }
-
-    this.isPullingFlag = true;
-
-    try {
-      const url = new URL(`${API_URL}/sync/changes`);
-      
-      // Use provided cursor or load from stage-specific storage
-      const cursor = options.since ?? this.loadStageCursor(options.cursorKey);
-      if (cursor) {
-        url.searchParams.set("since", cursor);
-      }
-      
-      url.searchParams.set("limit", String(options.limit ?? 100));
-      
-      // Add entity types filter for staged loading
-      if (options.entityTypes && options.entityTypes.length > 0) {
-        url.searchParams.set("entityTypes", options.entityTypes.join(","));
-      }
-
-      if (this.syncGroupId) {
-        url.searchParams.set("syncGroupId", this.syncGroupId);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.authToken}`,
-          "x-business-id": this.businessId,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return {
-          success: false,
-          changesApplied: 0,
-          hasMore: false,
-          error: `Pull failed: ${response.status} ${errorText}`,
-          nextSince: null,
-        };
-      }
-
-      const body = (await response.json()) as { 
-        success: boolean; 
-        data?: PullResponse;
-        error?: { code: string; message: string };
-      };
-
-      if (!body.success || !body.data) {
-        return {
-          success: false,
-          changesApplied: 0,
-          hasMore: false,
-          error: body.error?.message || "Invalid response from server",
-          nextSince: null,
-        };
-      }
-
-      const { changes, nextSince, hasMore } = body.data;
-
-      // Apply each change to local database (sequential, no concurrency)
-      const entityTypes = new Set<string>();
-      let appliedCount = 0;
-      const failedChanges: Array<{ change: PullChange; error: string }> = [];
-
-      for (const change of changes) {
-        const result = await applyChange(this.pg, this.db, change, this.businessId);
-        
-        if (result.success) {
-          entityTypes.add(change.entityType);
-          appliedCount++;
-        } else {
-          console.error(`[Pull] Failed to apply change for ${change.entityType}:${change.entityId}:`, result.error);
-          failedChanges.push({ change, error: result.error || "Unknown error" });
-        }
-      }
-
-      // Persist cursor to localStorage (stage-specific if provided)
-      if (nextSince && appliedCount > 0) {
-        if (options.cursorKey) {
-          this.saveStageCursor(options.cursorKey, nextSince);
-        } else {
-          this.saveCursor(nextSince);
-        }
-      }
-
-      // Notify about changes
-      if (entityTypes.size > 0 && this.onChangesApplied) {
-        this.onChangesApplied(Array.from(entityTypes));
-      }
-
-      return {
-        success: true,
-        changesApplied: appliedCount,
-        hasMore,
-        nextSince,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        changesApplied: 0,
-        hasMore: false,
-        error: error instanceof Error ? error.message : String(error),
-        nextSince: null,
-      };
-    } finally {
-      this.isPullingFlag = false;
-    }
   }
 
   /**

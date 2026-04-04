@@ -15,6 +15,11 @@ import {
   type OperationStatus,
   type ConflictStrategy,
 } from "./config";
+import type { ISyncQueue } from "./queue/sync-queue";
+import type { ISyncHttpClient } from "./http/sync-http-client";
+import { PgSyncQueue } from "./queue/pg-sync-queue";
+import { FetchSyncHttpClient } from "./http/fetch-sync-http-client";
+import { checkAndMigrateSchema } from "./schema-version";
 
 /**
  * Generate a correlation ID for tracking an operation across the stack
@@ -202,6 +207,8 @@ const DATE_FIELDS_SYNC = new Set([
  * Recursively converts Date objects to ISO strings for safe JSON serialization.
  * This fixes the bug where Date.toString() produces "Tue Mar 24 2026 19:00:00 GMT-0500"
  * instead of "2026-03-25T00:00:00.000Z".
+ * 
+ * Simplified: Now converts ALL Date instances, not just whitelisted fields.
  */
 function normalizeDatesToISO(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
@@ -219,12 +226,8 @@ function normalizeDatesToISO(obj: unknown): unknown {
   if (typeof obj === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      // Check if this is a date field that needs conversion
-      if (DATE_FIELDS_SYNC.has(key) && value instanceof Date) {
-        result[key] = value.toISOString();
-      } else {
-        result[key] = normalizeDatesToISO(value);
-      }
+      // Convert any Date instance to ISO string
+      result[key] = normalizeDatesToISO(value);
     }
     return result;
   }
@@ -257,12 +260,126 @@ function buildPlaceholders(count: number, offset: number = 1): string {
   return Array.from({ length: count }, (_, index) => `$${index + offset}`).join(", ");
 }
 
+/**
+ * Error classification system for structured error handling
+ */
+export enum SyncErrorCode {
+  RECORD_NOT_FOUND = 'RECORD_NOT_FOUND',
+  VERSION_CONFLICT = 'VERSION_CONFLICT',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  RATE_LIMITED = 'RATE_LIMITED',
+  UNKNOWN = 'UNKNOWN'
+}
+
+export interface ClassifiedError {
+  code: SyncErrorCode;
+  isRetryable: boolean;
+  isSelfHealable: boolean;
+  originalError: string;
+}
+
+/**
+ * Classify an error using regex patterns instead of brittle string matching
+ */
+export function classifyError(error: string): ClassifiedError {
+  const lower = error.toLowerCase();
+  
+  const patterns: Array<{
+    code: SyncErrorCode;
+    patterns: RegExp[];
+    isRetryable: boolean;
+    isSelfHealable: boolean;
+  }> = [
+    {
+      code: SyncErrorCode.RECORD_NOT_FOUND,
+      patterns: [
+        /record.*not found/i,
+        /no encontrad[oa]/i,
+        /does not exist/i,
+        /no existe/i,
+        /404/i,
+        /not found/i
+      ],
+      isRetryable: false,
+      isSelfHealable: true
+    },
+    {
+      code: SyncErrorCode.VERSION_CONFLICT,
+      patterns: [
+        /version.*conflict/i,
+        /optimistic.*lock/i,
+        /concurrent.*modification/i,
+        /409/i
+      ],
+      isRetryable: false,
+      isSelfHealable: false
+    },
+    {
+      code: SyncErrorCode.NETWORK_ERROR,
+      patterns: [
+        /network.*error/i,
+        /timeout/i,
+        /connection.*refused/i,
+        /fetch.*failed/i,
+        /abort/i,
+        /offline/i
+      ],
+      isRetryable: true,
+      isSelfHealable: false
+    },
+    {
+      code: SyncErrorCode.PERMISSION_DENIED,
+      patterns: [
+        /permission.*denied/i,
+        /unauthorized/i,
+        /forbidden/i,
+        /403/i,
+        /401/i
+      ],
+      isRetryable: false,
+      isSelfHealable: false
+    },
+    {
+      code: SyncErrorCode.VALIDATION_ERROR,
+      patterns: [
+        /validation.*failed/i,
+        /invalid.*input/i,
+        /required.*field/i,
+        /constraint.*violated/i,
+        /400/i
+      ],
+      isRetryable: false,
+      isSelfHealable: false
+    }
+  ];
+  
+  for (const p of patterns) {
+    if (p.patterns.some(regex => regex.test(lower))) {
+      return {
+        code: p.code,
+        isRetryable: p.isRetryable,
+        isSelfHealable: p.isSelfHealable,
+        originalError: error
+      };
+    }
+  }
+  
+  return {
+    code: SyncErrorCode.UNKNOWN,
+    isRetryable: true,
+    isSelfHealable: false,
+    originalError: error
+  };
+}
+
+/**
+ * @deprecated Use classifyError() instead for structured error handling
+ */
 function isNotFoundError(error: string): boolean {
-  return (
-    error.includes("no encontrada") ||
-    error.includes("not found") ||
-    error.includes("does not exist")
-  );
+  const classified = classifyError(error);
+  return classified.code === SyncErrorCode.RECORD_NOT_FOUND;
 }
 
 function getCoalescePlan(
@@ -314,16 +431,60 @@ export class SyncService {
   private pg: PGlite;
   private businessId: string;
   private authToken: string;
+  private queue: ISyncQueue;
+  private httpClient: ISyncHttpClient;
   private syncIntervalId: ReturnType<typeof setInterval> | null = null;
   private isProcessing = false;
   private consecutiveFailures = 0;
   private currentBackoff = 0;
+  private initializationPromise: Promise<void> | null = null;
+  private isInitialized = false;
 
-  constructor(pg: PGlite, businessId: string, authToken: string) {
+  constructor(
+    pg: PGlite,
+    businessId: string,
+    authToken: string,
+    options?: {
+      queue?: ISyncQueue;
+      httpClient?: ISyncHttpClient;
+    }
+  ) {
     this.pg = pg;
     this.businessId = businessId;
     this.authToken = authToken;
-    void this.initTables();
+    // Use injected dependencies or create default implementations
+    this.queue = options?.queue ?? new PgSyncQueue(pg, businessId);
+    this.httpClient = options?.httpClient ?? new FetchSyncHttpClient(authToken, businessId);
+  }
+
+  /**
+   * Initialize the sync service (creates tables, runs migrations)
+   * Must be called before using other methods
+   */
+  async initialize(): Promise<void> {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.doInitialize();
+    return this.initializationPromise;
+  }
+
+  private async doInitialize(): Promise<void> {
+    // Run schema migrations first
+    await checkAndMigrateSchema(this.pg);
+    
+    // Initialize tables
+    await this.initTables();
+    
+    this.isInitialized = true;
+    console.log("[SyncService] Initialized successfully");
+  }
+
+  private ensureInitialized(): void {
+    if (!this.isInitialized) {
+      throw new Error("SyncService not initialized. Call initialize() first.");
+    }
   }
 
   private getBackoffDelay(): number {
@@ -412,141 +573,8 @@ export class SyncService {
   }
 
   async enqueue(params: EnqueueParams): Promise<string> {
-    const id = crypto.randomUUID();
-    const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
-
-    console.log(`[SYNC] Enqueuing operation:`, {
-      entityType: params.entity_type,
-      operation: params.operation,
-      entityId: params.entityId,
-      idempotencyKey,
-      syncGroupId: params.syncGroupId,
-      businessId: this.businessId,
-    });
-
-    const existingOp = await this.pg.query<SyncOperationRecord>(
-      `SELECT *
-       FROM sync_operations
-       WHERE business_id = $1
-         AND entity_type = $2
-         AND entity_id = $3
-         AND status IN ($4, $5)
-       ORDER BY created_at ASC
-       LIMIT 1`,
-      [
-        this.businessId,
-        params.entity_type,
-        params.entityId,
-        OPERATION_STATUS.PENDING,
-        OPERATION_STATUS.FAILED,
-      ]
-    );
-
-    if (existingOp.rows.length > 0) {
-      const existing = existingOp.rows[0];
-      const plan = getCoalescePlan(existing, params);
-
-      if (plan.type === "cancel") {
-        await this.pg.query(
-          `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
-          [existing.id, this.businessId]
-        );
-        console.log(
-          `[SYNC] Cancelled coalesced operations for ${params.entity_type}:${params.entityId}`
-        );
-        return existing.id;
-      }
-
-      if (plan.type === "merge" || plan.type === "replace") {
-        await this.pg.query(
-          `UPDATE sync_operations
-           SET operation = $1,
-               payload = $2::jsonb,
-               idempotency_key = $3,
-               status = $4,
-               last_error = NULL,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $5
-             AND business_id = $6`,
-          [
-            plan.operation,
-            JSON.stringify(normalizeDatesToISO(plan.payload)),
-            idempotencyKey,
-            OPERATION_STATUS.PENDING,
-            existing.id,
-            this.businessId,
-          ]
-        );
-        console.log(
-          `[SYNC] Coalesced ${existing.operation}+${params.operation} for ${params.entity_type}:${params.entityId}`
-        );
-        return existing.id;
-      }
-    }
-
-    const existingIdempotent = await this.pg.query<{ id: string }>(
-      `SELECT id
-       FROM sync_operations
-       WHERE business_id = $1
-         AND idempotency_key = $2
-         AND status != $3
-       LIMIT 1`,
-      [this.businessId, idempotencyKey, OPERATION_STATUS.COMPLETED]
-    );
-
-    if (existingIdempotent.rows.length > 0) {
-      return existingIdempotent.rows[0].id;
-    }
-
-    await this.pg.query(
-      `INSERT INTO sync_operations (
-         id,
-         business_id,
-         entity_type,
-         operation,
-         entity_id,
-         payload,
-         status,
-         version,
-         sync_attempts,
-         last_error,
-         last_attempt_at,
-         idempotency_key,
-         sync_group_id,
-         created_at,
-         updated_at
-       ) VALUES (
-         $1,
-         $2,
-         $3,
-         $4,
-         $5,
-         $6::jsonb,
-         $7,
-         $8,
-         0,
-         NULL,
-         NULL,
-         $9,
-         $10,
-         CURRENT_TIMESTAMP,
-         CURRENT_TIMESTAMP
-       )`,
-      [
-        id,
-        this.businessId,
-        params.entity_type,
-        params.operation,
-        params.entityId,
-        JSON.stringify(normalizeDatesToISO(params.data)),
-        OPERATION_STATUS.PENDING,
-        (params.data?._localVersion as number) ?? 1,
-        params.idempotencyKey ?? null,
-        params.syncGroupId ?? null,
-      ]
-    );
-
-    return id;
+    this.ensureInitialized();
+    return this.queue.enqueue(params);
   }
 
   async processPending(): Promise<{ processed: number; failed: number; conflicts: number }> {
@@ -886,74 +914,42 @@ export class SyncService {
   }
 
   async getFailedOperations(): Promise<SyncOperationRecord[]> {
-    const result = await this.pg.query<SyncOperationRecord>(
-      `SELECT *
-       FROM sync_operations
-       WHERE business_id = $1
-         AND status = $2
-       ORDER BY sync_attempts DESC, updated_at DESC
-       LIMIT 100`,
-      [this.businessId, OPERATION_STATUS.FAILED]
-    );
-    return result.rows;
+    this.ensureInitialized();
+    return this.queue.getFailedOperations(100);
   }
 
   async getProblemOperations(): Promise<SyncOperationRecord[]> {
-    const result = await this.pg.query<SyncOperationRecord>(
-      `SELECT *
-       FROM sync_operations
-       WHERE business_id = $1
-         AND status IN ($2, $3, $4)
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [
-        this.businessId,
-        OPERATION_STATUS.PENDING,
-        OPERATION_STATUS.FAILED,
-        OPERATION_STATUS.CONFLICT,
-      ]
-    );
-
-    return result.rows;
+    this.ensureInitialized();
+    // Get pending, failed, and conflict operations
+    const pending = await this.queue.getPending(50);
+    const failed = await this.queue.getFailedOperations(50);
+    // Combine and deduplicate
+    const seen = new Set<string>();
+    const result: SyncOperationRecord[] = [];
+    for (const op of [...pending, ...failed]) {
+      if (!seen.has(op.id)) {
+        seen.add(op.id);
+        result.push(op);
+      }
+    }
+    return result.slice(0, 50);
   }
 
   async getDeadLetterOperations(): Promise<DeadLetterOperationRecord[]> {
-    const result = await this.pg.query<DeadLetterOperationRecord>(
-      `SELECT *
-       FROM sync_dead_letter
-       WHERE business_id = $1
-       ORDER BY created_at DESC
-       LIMIT 100`,
-      [this.businessId]
-    );
-
-    return result.rows;
+    this.ensureInitialized();
+    return this.queue.getDeadLetterOperations(100);
   }
 
   async retryOperation(operationId: string): Promise<boolean> {
-    const op = await this.getOperation(operationId);
-    if (!op || op.status !== OPERATION_STATUS.FAILED) {
-      return false;
-    }
-
-    await this.markProcessing(operationId);
-
-    try {
-      const result = await this.syncOperation(op);
-      if (result.success) {
-        await this.markCompleted(operationId);
-        return true;
-      }
-      await this.markFailed(operationId, result.error || "Retry failed");
-      return false;
-    } catch (error) {
-      await this.markFailed(operationId, error instanceof Error ? error.message : String(error));
-      return false;
-    }
+    this.ensureInitialized();
+    return this.queue.retryOperation(operationId);
   }
 
   async retryDeadLetterOperation(deadLetterId: string): Promise<boolean> {
-    const record = await this.getDeadLetterOperation(deadLetterId);
+    this.ensureInitialized();
+    const record = await this.queue.getDeadLetterOperations(100).then(ops => 
+      ops.find(op => op.id === deadLetterId)
+    );
     if (!record) {
       return false;
     }
@@ -978,7 +974,10 @@ export class SyncService {
   }
 
   async deleteDeadLetterOperation(deadLetterId: string): Promise<boolean> {
-    const record = await this.getDeadLetterOperation(deadLetterId);
+    this.ensureInitialized();
+    const record = await this.queue.getDeadLetterOperations(100).then(ops => 
+      ops.find(op => op.id === deadLetterId)
+    );
     if (!record) {
       return false;
     }
@@ -992,7 +991,8 @@ export class SyncService {
   }
 
   async clearDeadLetterOperations(): Promise<number> {
-    const records = await this.getDeadLetterOperations();
+    this.ensureInitialized();
+    const records = await this.queue.getDeadLetterOperations(1000);
     if (records.length === 0) {
       return 0;
     }
@@ -1002,43 +1002,8 @@ export class SyncService {
   }
 
   async getStatus(): Promise<SyncStatus> {
-    const result = await this.pg.query<{ status: string; count: string }>(
-      `SELECT status, COUNT(*) as count
-       FROM sync_operations
-       WHERE business_id = $1
-       GROUP BY status`,
-      [this.businessId]
-    );
-
-    const status: SyncStatus = {
-      pending: 0,
-      processing: 0,
-      syncing: 0,
-      completed: 0,
-      failed: 0,
-      conflict: 0,
-      deadLetter: 0,
-      total: 0,
-    };
-
-    for (const row of result.rows) {
-      const count = parseInt(row.count, 10);
-      const key = normalizeStatusKey(row.status);
-      if (!key) continue;
-      // Skip dead_letter status from sync_operations - count from sync_dead_letter table instead
-      if (key === "deadLetter") continue;
-      status[key] = count;
-      status.total += count;
-    }
-
-    // Count DLQ from the correct table
-    const dlqResult = await this.pg.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM sync_dead_letter WHERE business_id = $1`,
-      [this.businessId]
-    );
-    status.deadLetter = parseInt(dlqResult.rows[0]?.count || "0", 10);
-
-    return status;
+    this.ensureInitialized();
+    return this.queue.getStatus();
   }
 
   async logDetailedStatus(): Promise<void> {
@@ -1197,7 +1162,7 @@ export class SyncService {
     if (op && tableName) {
       try {
         await this.pg.query(
-          `UPDATE ${tableName}
+          `UPDATE "${tableName}"
            SET sync_status = $1,
                sync_attempts = 0,
                updated_at = CURRENT_TIMESTAMP
@@ -1261,16 +1226,18 @@ export class SyncService {
     op: SyncOperationRecord,
     error: string
   ): Promise<boolean> {
+    const classifiedError = classifyError(error);
+    
     if (
       op.operation !== "update" ||
       !SELF_HEAL_INSERTABLE_ENTITIES.has(op.entity_type) ||
-      !isNotFoundError(error)
+      !classifiedError.isSelfHealable
     ) {
       return false;
     }
 
     console.log(
-      `[SYNC] Self-healing: Converting ${op.entity_type} update to create for ${op.entity_id}`
+      `[SYNC] Self-healing: Converting ${op.entity_type} update to create for ${op.entity_id} (error: ${classifiedError.code})`
     );
 
     await this.pg.query(
@@ -1406,88 +1373,7 @@ export class SyncService {
   private async sendBatchToServer(
     operations: SyncOperationRecord[]
   ): Promise<BatchSyncResponse> {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-    const batchCorrelationId = generateCorrelationId();
-
-    console.log(`[SYNC] Sending batch to server:`, {
-      correlationId: batchCorrelationId,
-      url: `${apiUrl}/sync/batch`,
-      operationsCount: operations.length,
-      operations: operations.map((op) => ({
-        idempotencyKey: op.idempotency_key,
-        entityType: op.entity_type,
-        operation: op.operation,
-        entityId: op.entity_id,
-      })),
-    });
-
-    const response = await fetch(`${apiUrl}/sync/batch`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-        "x-correlation-id": batchCorrelationId,
-      },
-      body: JSON.stringify({
-        operations: operations.map((op) => ({
-          idempotencyKey: op.idempotency_key ?? op.id,
-          entityType: op.entity_type,
-          entityId: op.entity_id,
-          operation: op.operation,
-          payload: parsePayload(op.payload),
-          localVersion: op.version,
-          localTimestamp: new Date(op.updated_at).toISOString(),
-          correlationId: generateCorrelationId(),
-          ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
-        })),
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`[SYNC] Batch request failed:`, {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      throw new Error(`Sync batch failed: ${response.status} ${response.statusText}`);
-    }
-
-    const body = (await response.json()) as {
-      success?: boolean;
-      data?: {
-        results?: SyncApiResult[];
-      };
-    };
-
-    if (!body.success || !body.data?.results) {
-      throw new Error("Sync batch returned an invalid response");
-    }
-
-    console.log(`[SYNC] Batch response received:`, {
-      success: body.success,
-      resultsCount: body.data?.results?.length,
-      results: body.data?.results?.map((result: SyncApiResult) => ({
-        idempotencyKey: result.idempotencyKey,
-        success: result.success,
-        error: result.error,
-        hasConflict: !!result.conflict,
-      })),
-    });
-
-    return {
-      results: body.data.results.map((result) => ({
-        idempotencyKey: result.idempotencyKey,
-        success: result.success,
-        error: result.error,
-        conflict: result.conflict
-          ? {
-              serverData: result.conflict.serverData,
-              suggestedMerge: result.conflict.serverData,
-            }
-          : undefined,
-      })),
-    };
+    return this.httpClient.sendBatch(operations);
   }
 
   /**
@@ -1499,52 +1385,18 @@ export class SyncService {
     limit?: number;
     offset?: number;
   }): Promise<BackendConflictListResponse> {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-    const params = new URLSearchParams();
-
-    if (options?.status) params.set("status", options.status);
-    if (options?.entityType) params.set("entityType", options.entityType);
-    if (options?.limit) params.set("limit", String(options.limit));
-    if (options?.offset) params.set("offset", String(options.offset));
-
-    const url = `${apiUrl}/sync/conflicts${params.toString() ? `?${params}` : ""}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conflicts: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json() as Promise<BackendConflictListResponse>;
+    this.ensureInitialized();
+    const result = await this.httpClient.getConflicts(options);
+    return result as BackendConflictListResponse;
   }
 
   /**
    * Fetch a single conflict from the backend API
    */
   async getBackendConflict(conflictId: string): Promise<BackendConflictResponse> {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-    const response = await fetch(`${apiUrl}/sync/conflicts/${conflictId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conflict: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json() as Promise<BackendConflictResponse>;
+    this.ensureInitialized();
+    const result = await this.httpClient.getConflict(conflictId);
+    return result as BackendConflictResponse;
   }
 
   /**
@@ -1555,25 +1407,8 @@ export class SyncService {
     resolution: "server" | "local" | "merge",
     mergedData?: Record<string, unknown>
   ): Promise<BackendConflictResponse> {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
-
-    const response = await fetch(`${apiUrl}/sync/conflicts/${conflictId}/resolve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-      body: JSON.stringify({
-        resolution,
-        ...(mergedData ? { mergedData } : {}),
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to resolve conflict: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json() as Promise<BackendConflictResponse>;
+    this.ensureInitialized();
+    const result = await this.httpClient.resolveConflict(conflictId, resolution, mergedData);
+    return result as BackendConflictResponse;
   }
 }

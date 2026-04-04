@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{dark:localStorage.getItem('theme')==='dark',tab:'overview'}" x-bind:class="{'dark':dark}">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sync Audit - Avileo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{primary:'#f97316'}}}}</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+[x-cloak]{display:none!important}
+.dark body{background:#0f172a;color:#e2e8f0}
+pre{border-radius:.75rem;margin:1rem 0}
+.tab-btn{padding:.5rem 1rem;font-size:.85rem;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;transition:all .2s}
+.tab-btn.active{border-bottom-color:#f97316;color:#f97316;font-weight:600}
+details summary{cursor:pointer}
+details summary:hover{opacity:.8}
+</style>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors">
+
+<button @click="dark=!dark;localStorage.setItem('theme',dark?'dark':'light')" class="fixed top-4 right-4 z-50 p-2 rounded-lg bg-white dark:bg-slate-800 shadow border border-slate-200 dark:border-slate-700">
+<span x-show="dark">&#9728;&#65039;</span><span x-show="!dark">&#127769;</span>
+</button>
+
+<div class="max-w-4xl mx-auto px-4 py-8">
+<header class="mb-10 pt-8">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg">S</div>
+<div><h1 class="text-3xl font-bold">Audit del Sistema de Sync</h1><p class="text-slate-500 dark:text-slate-400 text-sm">Avileo &mdash; Tutorial Interactivo</p></div>
+</div>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl">Revision profunda del flujo de sincronizacion bidireccional. Errores criticos detectados, oportunidades de abstraccion para testabilidad, y plan de accion para mejorar la robustez en produccion.</p>
+<div class="flex flex-wrap gap-2 mt-4">
+<span class="px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-semibold">5 Criticos</span>
+<span class="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold">6 Alta Prioridad</span>
+<span class="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold">6 Medium</span>
+</div>
+</header>
+
+<nav class="flex gap-1 mb-8 border-b border-slate-200 dark:border-slate-700 overflow-x-auto pb-0">
+<button @click="tab='overview'" :class="tab==='overview'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Vista General</button>
+<button @click="tab='arch'" :class="tab==='arch'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Arquitectura</button>
+<button @click="tab='critical'" :class="tab==='critical'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Bugs Criticos</button>
+<button @click="tab='high'" :class="tab==='high'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Alta Prioridad</button>
+<button @click="tab='abstract'" :class="tab==='abstract'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Abstracciones</button>
+<button @click="tab='tests'" :class="tab==='tests'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Tests</button>
+<button @click="tab='plan'" :class="tab==='plan'?'active':''" class="tab-btn text-slate-600 dark:text-slate-400">Plan de Accion</button>
+</nav>
+
+<!-- ========== OVERVIEW ========== -->
+<div x-show="tab==='overview'" x-transition>
+<h2 class="text-2xl font-bold mb-4">Vista General del Audit</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Se analizaron 38+ archivos entre frontend, backend y shared. El sistema de sync es un motor bidireccional REST custom-built sobre PGlite (WASM) + PostgreSQL.</p>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center"><div class="text-2xl font-bold text-orange-600">15</div><div class="text-xs text-slate-500 mt-1">Entidades Sync</div></div>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center"><div class="text-2xl font-bold text-blue-600">3</div><div class="text-xs text-slate-500 mt-1">Etapas de Carga</div></div>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center"><div class="text-2xl font-bold text-green-600">5s</div><div class="text-xs text-slate-500 mt-1">Intervalo Push</div></div>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center"><div class="text-2xl font-bold text-purple-600">10s</div><div class="text-xs text-slate-500 mt-1">Intervalo Pull</div></div>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 mb-6">
+<h3 class="font-semibold mb-4">Distribucion de Severidad</h3>
+<div class="space-y-3">
+<div><div class="flex justify-between text-sm mb-1"><span class="text-red-600 font-medium">Critico</span><span>5</span></div><div class="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-red-500 rounded-full" style="width:33%"></div></div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="text-amber-600 font-medium">Alta Prioridad</span><span>6</span></div><div class="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-amber-500 rounded-full" style="width:40%"></div></div></div>
+<div><div class="flex justify-between text-sm mb-1"><span class="text-blue-600 font-medium">Medium</span><span>6</span></div><div class="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500 rounded-full" style="width:40%"></div></div></div>
+</div>
+</div>
+
+<div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 p-5">
+<h3 class="font-semibold text-orange-800 dark:text-orange-300 mb-3">Hallazgo Principal</h3>
+<p class="text-sm text-slate-700 dark:text-slate-300">El archivo <code class="bg-orange-100 dark:bg-orange-800 px-1 rounded text-xs">sync-service.ts</code> es un monolito de 44KB y 1120+ lineas que combina 6 responsabilidades distintas. Tiene <strong>cero tests unitarios</strong>. Este es el riesgo mas critico: el componente mas grande y complejo del sistema de sync no se puede testear.</p>
+</div>
+</div>
+
+<!-- ========== ARCHITECTURE ========== -->
+<div x-show="tab==='arch'" x-transition>
+<h2 class="text-2xl font-bold mb-4">Arquitectura del Sistema de Sync</h2>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 mb-6 overflow-x-auto">
+<div class="mermaid">
+graph TB
+    subgraph Frontend
+        UI["React Components"]
+        SS["SyncService Push"]
+        PS["PullService Pull"]
+        SC["SyncCoordinator"]
+        PG["PGlite WASM + IndexedDB"]
+        SPC["StagedPullCoordinator"]
+    end
+    subgraph Backend
+        API["/sync/batch /sync/changes"]
+        SE["SyncEngine"]
+        PL["SyncPipeline"]
+        CR["ConflictResolver"]
+        H["15 Entity Handlers"]
+    end
+    subgraph Shared
+        ENT["SYNC_ENTITIES"]
+        STG["SYNC_STAGES"]
+        PRI["ENTITY_PRIORITIES"]
+    end
+    UI --> SS
+    UI --> PS
+    SC --> SS
+    SC --> PS
+    SPC --> PS
+    SS <--> PG
+    PS <--> PG
+    SS -->|POST /sync/batch| API
+    PS -->|GET /sync/changes| API
+    API --> SE
+    SE --> PL
+    SE --> CR
+    PL --> H
+    Shared -.-> SS
+    Shared -.-> SE
+</div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-5 border border-orange-200 dark:border-orange-800">
+<h4 class="font-semibold text-orange-800 dark:text-orange-300 mb-3">Push: Client &rarr; Server</h4>
+<ol class="text-sm space-y-1.5 text-slate-700 dark:text-slate-300 list-decimal list-inside">
+<li>Componente escribe en PGlite local</li>
+<li>BaseService.queueSync() encola operacion</li>
+<li>SyncService.enqueue() aplica coalescing</li>
+<li>Auto-sync cada 5s procesa pendientes</li>
+<li>POST /sync/batch al backend</li>
+<li>Backend: validate &rarr; conflict check &rarr; execute</li>
+</ol>
+</div>
+<div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-800">
+<h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-3">Pull: Server &rarr; Client</h4>
+<ol class="text-sm space-y-1.5 text-slate-700 dark:text-slate-300 list-decimal list-inside">
+<li>Auto-pull cada 10s consulta cambios</li>
+<li>GET /sync/changes?since=cursor</li>
+<li>Backend filtra por businessId + timestamp</li>
+<li>change-applier.ts aplica a PGlite</li>
+<li>Cursor persiste en localStorage</li>
+<li>TanStack Query invalida cache para refrescar UI</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- ========== CRITICAL BUGS ========== -->
+<div x-show="tab==='critical'" x-transition>
+<h2 class="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Bugs Criticos</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Riesgo inmediato de errores en produccion. Cada uno incluye evidencia, impacto y sustento.</p>
+
+<div class="space-y-4">
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-red-500 p-5 shadow-sm">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold">C1</span><h3 class="font-bold">SyncService es un monolito de 44KB (1120+ lineas)</h3></div>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-3"><strong>Archivo:</strong> <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">packages/app/app/lib/sync/sync-service.ts</code></p>
+<p class="text-sm mb-2"><strong>Por que es peligroso:</strong> Combina 6 responsabilidades: gestion de cola, procesamiento, HTTP client, dead letter queue, resolucion de conflictos, e inicializacion SQL schema. Cualquier cambio tiene riesgo de regresion en funcionalidad no relacionada.</p>
+<p class="text-sm mb-2"><strong>Produccion:</strong> Un bug en dead letter puede afectar el enqueue. Un error en initTables puede impedir toda la sincronizacion. No hay forma de testear estas responsabilidades de forma aislada.</p>
+<p class="text-sm"><strong>Evidencia:</strong> 0 archivos de test para el modulo mas grande del sistema de sync.</p>
+<details class="mt-3"><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver codigo problematico</summary>
+<pre class="mt-2"><code class="language-typescript">// Constructor con init async fire-and-forget
+constructor(pg: PGlite, businessId: string, authToken: string) {
+  this.pg = pg;
+  this.businessId = businessId;
+  this.authToken = authToken;
+  void this.initTables(); // PROBLEMA: no se espera
+}
+
+// HTTP directo sin abstraccion
+private async sendBatchToServer(operations) {
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5201";
+  const response = await fetch(`${apiUrl}/sync/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${this.authToken}`,
+      "x-business-id": this.businessId,
+    },
+    body: JSON.stringify({ operations: ... }),
+  });
+  // parseo manual de respuesta...
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-red-500 p-5 shadow-sm">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold">C2</span><h3 class="font-bold">PullService: codigo duplicado divergente</h3></div>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-3"><strong>Archivo:</strong> <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">packages/app/app/lib/sync/pull-service.ts</code></p>
+<p class="text-sm mb-2"><strong>Por que es peligroso:</strong> <code>pull()</code> y <code>pullWithOptions()</code> comparten ~80% de logica pero estan implementados como metodos separados. Ya divergieron: pullWithOptions() NO incrementa <code>consecutiveFailures</code> ni actualiza backoff en errores HTTP.</p>
+<p class="text-sm"><strong>Produccion:</strong> Bugs corregidos en pull() no se aplican automaticamente en pullWithOptions(). El staged loading (que usa pullWithOptions) tiene manejo de errores debilitado.</p>
+<details class="mt-3"><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver divergencia</summary>
+<pre class="mt-2"><code class="language-typescript">// pull() - SI incrementa failures
+if (!response.ok) {
+  this.consecutiveFailures++;      // OK
+  this.currentBackoff = this.getBackoffDelay();
+  this.lastError = `Pull failed: ${response.status}`;
+}
+
+// pullWithOptions() - NO incrementa failures
+if (!response.ok) {
+  const errorText = await response.text();
+  return {
+    success: false,
+    // consecutiveFailures NO se incrementa
+    // backoff NO se actualiza
+    error: `Pull failed: ${response.status} ${errorText}`,
+  };
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-red-500 p-5 shadow-sm">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold">C3</span><h3 class="font-bold">Superficie de SQL injection en change-applier.ts</h3></div>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-3"><strong>Archivo:</strong> <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">packages/app/app/lib/sync/change-applier.ts</code></p>
+<p class="text-sm mb-2"><strong>Por que es peligroso:</strong> Los nombres de columna vienen del payload del servidor via <code>toSnakeCase(change.payload)</code>. filterValidColumns usa <em>lista negra</em> (elimina columnas malas conocidas), no <em>lista blanca</em> (solo permite columnas validas). Si el backend envia campos inesperados, se intentan insertar como columnas.</p>
+<p class="text-sm"><strong>Produccion:</strong> Errores SQL silenciosos al insertar columnas que no existen, o peor, escribir en columnas que no deberian modificarse.</p>
+<details class="mt-3"><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver codigo vulnerable</summary>
+<pre class="mt-2"><code class="language-typescript">// Columnas del payload van directo al SQL
+const snakeCaseData = toSnakeCase(change.payload); // sin whitelist
+const data = filterValidColumns(tableName, snakeCaseData); // solo blacklist
+
+const insertSql = `
+  INSERT INTO "${tableName}" (${columns.map(c => `"${c}"`).join(", ")})
+  VALUES (${columns.map((_, i) => `$${i + 1}`).join(", ")})
+`;
+// columns viene de Object.keys(data) -> derivado del payload</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-red-500 p-5 shadow-sm">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold">C4</span><h3 class="font-bold">initTables() fire-and-forget en constructor</h3></div>
+<p class="text-sm mb-2"><strong>Por que es peligroso:</strong> El constructor llama <code>void this.initTables()</code> sin esperar. Cualquier llamada a enqueue() o processPending() ANTES de que las tablas existan falla con error SQL.</p>
+<p class="text-sm"><strong>Produccion:</strong> En dispositivos lentos con PGlite en cold start, la primera operacion de sync falla. El usuario ve "error de sincronizacion" sin explicacion clara.</p>
+<details class="mt-3"><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver solucion propuesta</summary>
+<pre class="mt-2"><code class="language-typescript">// SOLUCION: Lifecycle guard con Promise
+private ready: Promise&lt;void&gt;;
+
+constructor(pg: PGlite, businessId: string, authToken: string) {
+  this.pg = pg;
+  this.businessId = businessId;
+  this.authToken = authToken;
+  this.ready = this.initTables(); // guardar Promise
+}
+
+async enqueue(params: EnqueueParams): Promise&lt;string&gt; {
+  await this.ready; // esperar inicializacion
+  // ... resto del codigo
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-red-500 p-5 shadow-sm">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold">C5</span><h3 class="font-bold">No hay cleanup al cerrar sesion o cambiar negocio</h3></div>
+<p class="text-sm mb-2"><strong>Por que es peligroso:</strong> ServicesProvider solo llama coordinator.stop(). La cola sync_operations, dead letter, cursor en localStorage, y cache TanStack Query NO se limpian. Si el usuario pertenece a multiples negocios, los datos del negocio anterior persisten.</p>
+<p class="text-sm"><strong>Produccion:</strong> Operaciones del negocio A pueden enviarse con token del negocio B. Violacion de multi-tenancy. Datos de clientes/ventas cruzados entre negocios hasta que pull los sobrescribe.</p>
+</div>
+</div>
+</div>
+
+<!-- ========== HIGH PRIORITY ========== -->
+<div x-show="tab==='high'" x-transition>
+<h2 class="text-2xl font-bold text-amber-600 dark:text-amber-400 mb-2">Problemas de Alta Prioridad</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">No causan fallas inmediatas pero degradan robustez y rendimiento.</p>
+
+<div class="space-y-4">
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H1</span><h3 class="font-bold">Polling cada 5s para estado de sync</h3></div>
+<p class="text-sm">SyncStateProvider ejecuta syncService.getStatus() cada 5 segundos, consultando PGlite. Incluso cuando el sistema esta idle. Multiplicado por los intervalos de push (5s) y pull (10s), son ~3 consultas cada 10s sin actividad. Un enfoque event-driven eliminaria esta carga innecesaria en dispositivos moviles.</p>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H2</span><h3 class="font-bold">Backoff duplicado entre SyncService y PullService</h3></div>
+<p class="text-sm">Ambos mantienen su propio consecutiveFailures y currentBackoff. backoff.ts provee calculateBackoffDelay() pero SyncService reimplementa la formula inline. Son identicas hoy, pero la duplicacion garantiza que divergeran.</p>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H3</span><h3 class="font-bold">SyncCoordinator vacio (23 lineas)</h3></div>
+<p class="text-sm">Solo tiene start(), stop(), getCombinedStatus(), forceSync(). No coordina: no previene pull durante push, no reacciona a eventos de red, no gestiona el ciclo de vida conjunto. Deberia ser el orquestador central pero es un passthrough.</p>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H4</span><h3 class="font-bold">applyUpdate salta registros no-existentes sin error</h3></div>
+<p class="text-sm">Cuando un update llega para un registro que no existe localmente, retorna {success: true} sin hacer nada. El servidor cree que el cambio fue aplicado, pero el cliente nunca lo reflejo. Inconsistencia de datos invisible.</p>
+<details class="mt-2"><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver codigo</summary>
+<pre class="mt-2"><code class="language-typescript">if (existingResult.rows.length === 0) {
+  console.warn("Update for non-existent record skipped");
+  return { success: true }; // Retorna exito sin hacer nada!
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H5</span><h3 class="font-bold">Codigo muerto en PullService.pull()</h3></div>
+<p class="text-sm">El bloque <code>if (changes.length === 0) return { success: true, changesApplied: 0, hasMore: false }</code> aparece dos veces en el mismo metodo (lineas ~145 y ~170). El segundo es inalcanzable porque el primero ya retorna.</p>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-amber-500 p-5">
+<div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">H6</span><h3 class="font-bold">Zero tests para SyncService (push)</h3></div>
+<p class="text-sm">El modulo mas grande y complejo (44KB, enqueue, coalescing, dead letter, self-heal, conflicts) no tiene tests unitarios. Los tests existentes cubren pull-service, change-applier, staged-pull-coordinator, backoff y schema-mapper, pero NO el push.</p>
+</div>
+</div>
+</div>
+
+<!-- ========== ABSTRACTIONS ========== -->
+<div x-show="tab==='abstract'" x-transition>
+<h2 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">Oportunidades de Abstraccion</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Cada extraccion resuelve un problema especifico de testabilidad o mantenibilidad.</p>
+
+<div class="space-y-6">
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-green-500 p-5">
+<h3 class="font-bold text-green-700 dark:text-green-400 mb-2">1. Extraer ISyncQueue</h3>
+<p class="text-sm mb-3"><strong>Por que:</strong> La gestion de la cola (enqueue, coalescing, mark status) es cohesiva y testeable independientemente del HTTP client. <strong>Habilita:</strong> Tests unitarios del coalescing (create+update=merge, create+delete=cancel), dead letter flow, y self-heal sin mockear fetch.</p>
+<details><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver interfaz propuesta</summary>
+<pre class="mt-2"><code class="language-typescript">export interface ISyncQueue {
+  enqueue(params: EnqueueParams): Promise&lt;string&gt;;
+  getPending(limit: number): Promise&lt;SyncOperationRecord[]&gt;;
+  markProcessing(id: string): Promise&lt;void&gt;;
+  markCompleted(id: string): Promise&lt;void&gt;;
+  markFailed(id: string, error: string): Promise&lt;void&gt;;
+  moveToDeadLetter(id: string, error: string): Promise&lt;void&gt;;
+  getStatus(): Promise&lt;SyncStatus&gt;;
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-green-500 p-5">
+<h3 class="font-bold text-green-700 dark:text-green-400 mb-2">2. Extraer ISyncHttpClient</h3>
+<p class="text-sm mb-3"><strong>Por que:</strong> SyncService y PullService usan fetch() directamente con headers manuales. Una capa comun elimina duplicacion y permite mockear la red. <strong>Habilita:</strong> Tests de procesamiento sin network, retry centralizado, consistencia en auth headers.</p>
+<details><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver interfaz propuesta</summary>
+<pre class="mt-2"><code class="language-typescript">export interface ISyncHttpClient {
+  sendBatch(ops: SyncOperationRecord[]): Promise&lt;BatchSyncResponse&gt;;
+  fetchChanges(opts: {
+    since?: string;
+    limit?: number;
+    entityTypes?: string[];
+  }): Promise&lt;PullResponse&gt;;
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-green-500 p-5">
+<h3 class="font-bold text-green-700 dark:text-green-400 mb-2">3. Unificar pull() + pullWithOptions()</h3>
+<p class="text-sm mb-3"><strong>Por que:</strong> ~80% de logica duplicada. La divergencia actual ya causo un bug (backoff no se aplica en pullWithOptions). <strong>Habilita:</strong> Un solo path de codigo que mantener, fixes aplican a ambos flujos.</p>
+<details><summary class="text-sm font-medium text-blue-600 dark:text-blue-400">Ver refactor</summary>
+<pre class="mt-2"><code class="language-typescript">// ANTES: dos metodos separados
+async pull(): Promise&lt;PullResult&gt; { /* 80 lineas */ }
+async pullWithOptions(opts): Promise&lt;PullResult&gt; { /* 90 lineas */ }
+
+// DESPUES: un metodo unificado
+async pull(options: PullOptions = {}): Promise&lt;PullResult&gt; {
+  const cursor = options.since ?? this.loadCursor(options.cursorKey);
+  const entityTypes = options.entityTypes;
+  // ... logica comun
+}</code></pre>
+</details>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-green-500 p-5">
+<h3 class="font-bold text-green-700 dark:text-green-400 mb-2">4. Event-driven status updates</h3>
+<p class="text-sm"><strong>Por que:</strong> Reemplazar polling de 5s con EventTarget. SyncService emite evento al cambiar estado. SyncStateProvider escucha eventos en vez de consultar BD. <strong>Habilita:</strong> Actualizaciones instantaneas de UI, menos carga en IndexedDB, base para notificaciones.</p>
+</div>
+</div>
+</div>
+
+<!-- ========== TESTS ========== -->
+<div x-show="tab==='tests'" x-transition>
+<h2 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">Cobertura de Tests</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Analisis de que esta testeado, que falta, y por que los gaps son riesgosos.</p>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div class="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 p-5">
+<h4 class="font-semibold text-green-700 dark:text-green-300 mb-3">Con Tests</h4>
+<ul class="text-sm space-y-2">
+<li class="flex gap-2"><span class="text-green-500">&#10003;</span><div><strong>pull-service.test.ts</strong><br/><span class="text-xs text-slate-500">Constructor, status, backoff, cursor</span></div></li>
+<li class="flex gap-2"><span class="text-green-500">&#10003;</span><div><strong>pull-service.edge-cases.test.ts</strong><br/><span class="text-xs text-slate-500">Error handling, concurrent pulls</span></div></li>
+<li class="flex gap-2"><span class="text-green-500">&#10003;</span><div><strong>change-applier.test.ts</strong><br/><span class="text-xs text-slate-500">Insert, update, delete, upsert</span></div></li>
+<li class="flex gap-2"><span class="text-green-500">&#10003;</span><div><strong>staged-pull-coordinator.test.ts</strong><br/><span class="text-xs text-slate-500">Stage loading, progress</span></div></li>
+<li class="flex gap-2"><span class="text-green-500">&#10003;</span><div><strong>backoff + schema-mapper + ordering</strong><br/><span class="text-xs text-slate-500">Utility functions</span></div></li>
+</ul>
+</div>
+<div class="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-5">
+<h4 class="font-semibold text-red-700 dark:text-red-300 mb-3">Sin Tests</h4>
+<ul class="text-sm space-y-2">
+<li class="flex gap-2"><span class="text-red-500">&#10007;</span><div><strong>sync-service.ts (44KB, 1120 lineas)</strong><br/><span class="text-xs text-slate-500">Enqueue, coalescing, dead letter, conflicts</span></div></li>
+<li class="flex gap-2"><span class="text-red-500">&#10007;</span><div><strong>coordinator.ts</strong><br/><span class="text-xs text-slate-500">Orquestacion push/pull</span></div></li>
+<li class="flex gap-2"><span class="text-red-500">&#10007;</span><div><strong>service-provider.tsx</strong><br/><span class="text-xs text-slate-500">Lifecycle, cleanup, polling</span></div></li>
+<li class="flex gap-2"><span class="text-red-500">&#10007;</span><div><strong>base-service.ts</strong><br/><span class="text-xs text-slate-500">queueSync, sync status updates</span></div></li>
+</ul>
+</div>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+<h4 class="font-semibold mb-3">Estrategia de Testing Recomendada</h4>
+<div class="space-y-3 text-sm">
+<div class="flex gap-3"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 text-xs font-bold shrink-0">1</span><div><strong>Unitarios de ISyncQueue:</strong> Coalescing logic, dead letter threshold, self-heal conversion. Logica pura con PGlite in-memory.</div></div>
+<div class="flex gap-3"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 text-xs font-bold shrink-0">2</span><div><strong>Integracion de processPending:</strong> Con mock ISyncHttpClient, verificar orden de prioridad, grouped operations, y reset de backoff.</div></div>
+<div class="flex gap-3"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 text-xs font-bold shrink-0">3</span><div><strong>Change-applier con datos reales:</strong> Usar PGlite in-memory para verificar SQL INSERT/UPDATE/DELETE contra schema local.</div></div>
+</div>
+</div>
+</div>
+
+<!-- ========== PLAN ========== -->
+<div x-show="tab==='plan'" x-transition>
+<h2 class="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">Plan de Accion</h2>
+<p class="text-slate-600 dark:text-slate-400 mb-6">Plan por fases incremental. Cada fase es segura y no rompe funcionalidad existente.</p>
+
+<div class="space-y-4">
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-orange-500 p-5">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-bold flex items-center gap-2"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold">1</span>Fase 1: Extraer Abstracciones Testeables</h3>
+<span class="text-xs text-orange-600">Semana 1</span>
+</div>
+<ul class="text-sm space-y-1.5 list-disc list-inside text-slate-600 dark:text-slate-400">
+<li>Crear <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">sync/queue.ts</code> con PgSyncQueue</li>
+<li>Crear <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">sync/http-client.ts</code> con SyncHttpClient</li>
+<li>Unificar pull() + pullWithOptions() en un solo metodo</li>
+<li>SyncService queda como facade que delega a las abstracciones</li>
+</ul>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-blue-500 p-5">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-bold flex items-center gap-2"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold">2</span>Fase 2: Corregir Bugs Criticos</h3>
+<span class="text-xs text-blue-600">Semana 1-2</span>
+</div>
+<ul class="text-sm space-y-1.5 list-disc list-inside text-slate-600 dark:text-slate-400">
+<li>Agregar lifecycle guard (ready: Promise) en SyncService</li>
+<li>Whitelist de columnas en change-applier (generar desde shared schema)</li>
+<li>Crear sync/cleanup.ts para logout/business-switch</li>
+<li>applyUpdate: convertir skip silencioso en upsert</li>
+</ul>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border-l-4 border-purple-500 p-5">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-bold flex items-center gap-2"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-bold">3</span>Fase 3: Mejorar Robustez</h3>
+<span class="text-xs text-purple-600">Semana 2-3</span>
+</div>
+<ul class="text-sm space-y-1.5 list-disc list-inside text-slate-600 dark:text-slate-400">
+<li>Wire SyncCoordinator a network events (online/offline)</li>
+<li>Reemplazar polling con event-driven status</li>
+<li>Escribir tests unitarios para SyncService via abstracciones</li>
+<li>Escribir tests de integracion para change-applier con PGlite real</li>
+</ul>
+</div>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mt-6">
+<h4 class="font-semibold mb-3">Riesgos y Mitigaciones</h4>
+<div class="overflow-x-auto">
+<table class="text-sm w-full">
+<thead><tr class="border-b border-slate-200 dark:border-slate-700"><th class="text-left py-2 pr-4">Riesgo</th><th class="text-left py-2">Mitigacion</th></tr></thead>
+<tbody class="text-slate-600 dark:text-slate-400">
+<tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pr-4">Refactoring SyncService</td><td class="py-2">Extraer interfaces primero, mantener facade, migrar incrementalmente</td></tr>
+<tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pr-4">Cambios en schema PGlite</td><td class="py-2">Mantener initTables() intacto, solo mover logica circundante</td></tr>
+<tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pr-4">Unificacion de pull</td><td class="py-2">Tests existentes cubren cursor; agregar regression tests</td></tr>
+<tr><td class="py-2 pr-4">Whitelist de columnas</td><td class="py-2">Generar desde shared schema, no hardcodear</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<footer class="border-t border-slate-200 dark:border-slate-700 mt-12 pt-6 pb-8">
+<p class="text-sm text-slate-500 dark:text-slate-400">Generado desde audit del sistema de sync de Avileo &mdash; Abril 2026</p>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Archivos clave: <code>sync-service.ts</code>, <code>pull-service.ts</code>, <code>change-applier.ts</code>, <code>coordinator.ts</code>, <code>service-provider.tsx</code></p>
+</footer>
+
+</div>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'default'});
+if(typeof Prism!=='undefined')Prism.highlightAll();
+</script>
+</body>
+</html>

@@ -122,8 +122,8 @@ export default function CustomersPage() {
   return (
     <>
       <div className="space-y-4">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-2">
+          <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar cliente..."
@@ -132,7 +132,7 @@ export default function CustomersPage() {
               className="h-12 rounded-xl border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
             />
           </div>
-          <div className="min-w-[132px] max-w-[160px]">
+          <div className="w-full">
             <TagFilter
               selectedTagIds={tagIds}
               onChange={setTagIds}

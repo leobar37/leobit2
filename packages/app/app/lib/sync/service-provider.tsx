@@ -18,6 +18,7 @@ import { DistribucionService } from "../services/distribucion-service";
 import { SupplierService } from "../services/supplier-service";
 import type { ConflictStrategy } from "../sync/config";
 import { registerDebugServices } from "~/lib/debug";
+import { syncEvents } from "./sync-events";
 
 export interface ServicesContextValue {
   pg: PGlite;
@@ -146,8 +147,19 @@ export function ServicesProvider({
 
     if (!syncService || !pullService || !coordinator) return;
 
-    coordinator.start();
-    console.log("[ServicesProvider] SyncCoordinator started");
+    // Initialize services before starting
+    const initAndStart = async () => {
+      try {
+        await syncService.initialize();
+        await pullService.initialize();
+        coordinator.start();
+        console.log("[ServicesProvider] SyncCoordinator started");
+      } catch (error) {
+        console.error("[ServicesProvider] Failed to initialize sync services:", error);
+      }
+    };
+    
+    initAndStart();
 
     // Cleanup old drafts on startup
     const cleanupDrafts = async () => {
@@ -234,29 +246,68 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
   // Get services from context
   const services = useContext(ServicesContext);
 
-  // Update sync status periodically
+  // Update sync status using events (replacing 5s polling)
   useEffect(() => {
     if (!services) return;
 
-    const updateStatus = async () => {
+    // Initial status load
+    const loadInitialStatus = async () => {
       try {
         const pull = services.pullService.getStatus();
         setPullStatus(pull);
-
         const push = await services.syncService.getStatus();
         setPushStatus(push);
       } catch (error) {
-        console.error("[SyncStateProvider] Failed to get sync status:", error);
+        console.error("[SyncStateProvider] Failed to get initial sync status:", error);
       }
     };
+    loadInitialStatus();
 
-    // Update immediately
-    updateStatus();
+    // Subscribe to sync events
+    const unsubStatus = syncEvents.on("status:changed", (status) => {
+      setPushStatus((prev) => ({ ...prev, ...status }));
+    });
 
-    // Then update every 5 seconds
-    const interval = setInterval(updateStatus, 5000);
+    const unsubPullCompleted = syncEvents.on("pull:completed", ({ changesApplied }) => {
+      setPullStatus((prev) => ({
+        ...prev,
+        lastPullTime: new Date(),
+      }));
+    });
 
-    return () => clearInterval(interval);
+    const unsubPullError = syncEvents.on("pull:error", ({ error }) => {
+      setPullStatus((prev) => ({
+        ...prev,
+        lastError: error,
+      }));
+    });
+
+    const unsubOnline = syncEvents.on("sync:online", () => {
+      setIsOnline(true);
+    });
+
+    const unsubOffline = syncEvents.on("sync:offline", () => {
+      setIsOnline(false);
+    });
+
+    // Fallback: periodic refresh every 30s (not 5s) for resilience
+    const fallbackInterval = setInterval(async () => {
+      try {
+        const push = await services.syncService.getStatus();
+        setPushStatus(push);
+      } catch (error) {
+        console.error("[SyncStateProvider] Fallback status refresh failed:", error);
+      }
+    }, 30000);
+
+    return () => {
+      unsubStatus();
+      unsubPullCompleted();
+      unsubPullError();
+      unsubOnline();
+      unsubOffline();
+      clearInterval(fallbackInterval);
+    };
   }, [services]);
 
   // Track online status

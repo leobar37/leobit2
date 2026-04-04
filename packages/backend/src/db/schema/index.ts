@@ -39,7 +39,6 @@ export {
   productTypeEnum,
   productUnitEnum,
   distribucionStatusEnum,
-  modoOperacionEnum,
   supplierTypeEnum,
   purchaseStatusEnum,
   orderPaymentStatusEnum,
