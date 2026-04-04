@@ -1,6 +1,6 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, Navigate } from "react-router";
+import { useNavigate, Navigate, Link } from "react-router";
 import { Store, Loader2 } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,8 +44,12 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginInput) => {
     try {
-      await login(data.email, data.password);
-      navigate("/sync");
+      const result = await login(data.email, data.password);
+      if (result.needsRedirect) {
+        navigate(result.redirectTo);
+      } else {
+        navigate("/sync");
+      }
     } catch (error) {
       form.setError("root", {
         message: error instanceof Error ? error.message : "Error al iniciar sesión",
@@ -122,6 +126,16 @@ export default function LoginPage() {
                     "Iniciar sesión"
                   )}
                 </Button>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  ¿No tienes cuenta?{" "}
+                  <Link
+                    to="/register"
+                    className="text-orange-600 hover:text-orange-700 font-medium"
+                  >
+                    Regístrate
+                  </Link>
+                </p>
               </CardFooter>
             </form>
           </FormProvider>

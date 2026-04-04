@@ -89,6 +89,19 @@ export class ProductRepository {
     };
   }
 
+  async findByName(ctx: RequestContext, name: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(and(
+        eq(products.name, name),
+        eq(products.businessId, ctx.businessId)
+      ))
+      .limit(1);
+
+    return product;
+  }
+
   async create(
     ctx: RequestContext,
     data: Omit<NewProduct, "id" | "createdAt" | "businessId"> & { id?: string },

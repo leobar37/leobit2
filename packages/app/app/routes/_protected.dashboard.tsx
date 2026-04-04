@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useSyncStatus } from "~/hooks/use-sync-status";
+import { useProducts } from "~/hooks/use-products";
+import { useSales } from "~/hooks/use-sales";
 import { BusinessUserRole } from "@avileo/shared";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { MetricCard } from "~/components/dashboard/metric-card";
@@ -29,6 +31,7 @@ import {
 } from "~/hooks/use-dashboard";
 import { formatCurrency, formatKilos } from "~/lib/utils";
 import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-selector";
+import { OnboardingChecklist } from "~/components/dashboard/onboarding-checklist";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -48,8 +51,13 @@ export default function DashboardPage() {
   const { data: debtorsSummary, isLoading: isLoadingDebtors } = useDebtorsSummary();
   const { data: chartData, isLoading: isLoadingChart } = useSalesChart(period);
 
+  const { data: products = [] } = useProducts();
+  const { data: sales = [] } = useSales();
+
   const isOnline = navigator.onLine;
   const hasPending = syncStatus?.pending ? syncStatus.pending > 0 : false;
+  const hasProducts = products.length > 0;
+  const hasSales = sales.length > 0;
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.estado === "activo";
@@ -68,6 +76,12 @@ export default function DashboardPage() {
           Bienvenido de vuelta a tu sistema de ventas
         </p>
       </div>
+
+      <OnboardingChecklist
+        hasProducts={hasProducts}
+        hasSales={hasSales}
+        userName={user?.name?.split(" ")[0]}
+      />
 
       {/* Offline Status Indicators */}
       {!isOnline && (
@@ -187,7 +201,7 @@ export default function DashboardPage() {
                 puntoVenta={distribucion.puntoVenta}
                 modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
                 estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
-                cantidadItems={distribucion.items?.length || 0}
+                cantidadItems={0}
               />
             </Link>
           )}

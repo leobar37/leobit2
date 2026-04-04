@@ -6,7 +6,7 @@
     {
       "id": "T-001",
       "title": "Crear ruta /register con formulario",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
@@ -20,7 +20,7 @@
     {
       "id": "T-002",
       "title": "Simplificar formulario /business/create",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
@@ -32,11 +32,13 @@
     {
       "id": "T-003",
       "title": "Crear página /onboarding/data",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
-      "dependencies": ["T-002"],
+      "dependencies": [
+        "T-002"
+      ],
       "files": [
         "packages/app/app/routes/_protected.onboarding.data.tsx",
         "packages/app/app/routes.ts"
@@ -45,11 +47,13 @@
     {
       "id": "T-004",
       "title": "Auto-redirect post-login si no tiene business",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
-      "dependencies": ["T-001"],
+      "dependencies": [
+        "T-001"
+      ],
       "files": [
         "packages/app/app/hooks/use-auth.ts"
       ]
@@ -57,11 +61,13 @@
     {
       "id": "T-005",
       "title": "Crear checklist component en dashboard",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
-      "dependencies": ["T-003"],
+      "dependencies": [
+        "T-003"
+      ],
       "files": [
         "packages/app/app/components/dashboard/onboarding-checklist.tsx",
         "packages/app/app/routes/_protected.dashboard.tsx"
@@ -70,7 +76,7 @@
     {
       "id": "T-006",
       "title": "Backend - Endpoint de seed demo",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
@@ -83,11 +89,13 @@
     {
       "id": "T-007",
       "title": "Flow invitación con token en registro",
-      "status": "pending",
+      "status": "completed",
       "owner": null,
       "startedAt": null,
       "completedAt": null,
-      "dependencies": ["T-001"],
+      "dependencies": [
+        "T-001"
+      ],
       "files": [
         "packages/app/app/routes/register.tsx"
       ]
@@ -99,11 +107,23 @@
       "owner": null,
       "startedAt": null,
       "completedAt": null,
-      "dependencies": ["T-001", "T-002", "T-003", "T-004", "T-005", "T-006", "T-007"],
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007"
+      ],
       "files": [
         "packages/app/e2e/onboarding.spec.ts"
       ]
     }
   ],
-  "nextExecutable": ["T-001", "T-002", "T-006"]
+  "nextExecutable": [
+    "T-001",
+    "T-002",
+    "T-006"
+  ]
 }

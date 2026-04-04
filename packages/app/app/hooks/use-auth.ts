@@ -64,12 +64,15 @@ async function waitForToken(maxRetries = 10, delayMs = 200): Promise<string | nu
   return null;
 }
 
+export type LoginResult = { needsRedirect: false } | { needsRedirect: true; redirectTo: "/business/create" };
+export type RegisterResult = { needsRedirect: false } | { needsRedirect: true; redirectTo: "/business/create" };
+
 export function useAuth() {
   const navigate = useNavigate();
   const { data: session, isPending } = useSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     clearStoredAuthState();
 
     const result = await authClient.signIn.email({
@@ -93,8 +96,7 @@ export function useAuth() {
     const businessId = await hydrateCurrentBusinessId();
 
     if (!businessId) {
-      console.error("[useAuth] Business ID not found after login");
-      throw new Error("No se encontró el negocio asociado a tu cuenta.");
+      return { needsRedirect: true, redirectTo: "/business/create" };
     }
 
     if (sessionState.user?.id) {
@@ -107,14 +109,14 @@ export function useAuth() {
       );
     }
 
-    return result.data;
+    return { needsRedirect: false };
   };
 
   const register = async (data: {
     email: string;
     password: string;
     name: string;
-  }) => {
+  }): Promise<RegisterResult> => {
     clearStoredAuthState();
 
     const result = await authClient.signUp.email({
@@ -127,7 +129,6 @@ export function useAuth() {
       throw new Error(result.error.message);
     }
 
-    // Wait for the token to be stored by the onSuccess callback in auth-client.ts
     const token = await waitForToken();
     if (!token) {
       console.error("[useAuth] Token not stored after sign-up");
@@ -138,8 +139,7 @@ export function useAuth() {
     const businessId = await hydrateCurrentBusinessId();
 
     if (!businessId) {
-      console.error("[useAuth] Business ID not found after registration");
-      throw new Error("No se encontró el negocio asociado a tu cuenta.");
+      return { needsRedirect: true, redirectTo: "/business/create" };
     }
 
     if (sessionState.user?.id) {
@@ -152,7 +152,7 @@ export function useAuth() {
       );
     }
 
-    return result.data;
+    return { needsRedirect: false };
   };
 
   const logout = async () => {

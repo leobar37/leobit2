@@ -1,6 +1,7 @@
 import { BusinessRepository } from "../repository/business.repository";
 import { SupplierRepository } from "../repository/supplier.repository";
 import { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";
+import { ProductRepository } from "../repository/product.repository";
 import type { RequestContext } from "../../context/request-context";
 import { RequestContext as RequestContextClass } from "../../context/request-context";
 import {
@@ -19,7 +20,8 @@ export class BusinessService {
   constructor(
     private repository: BusinessRepository,
     private supplierRepo: SupplierRepository,
-    private whatsAppTemplateRepo: WhatsAppTemplateRepository
+    private whatsAppTemplateRepo: WhatsAppTemplateRepository,
+    private productRepo: ProductRepository
   ) {}
 
   async getBusiness(ctx: RequestContext) {
@@ -211,5 +213,39 @@ export class BusinessService {
         isDefault: template.isDefault,
       });
     }
+  }
+
+  async seedDemoData(ctx: RequestContext) {
+    const demoProducts = [
+      { name: "Pollo Entero", type: "pollo" as const, unit: "kg" as const, basePrice: "12.50" },
+      { name: "1/2 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "6.50" },
+      { name: "1/4 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "3.50" },
+      { name: "Pierna", type: "pollo" as const, unit: "unidad" as const, basePrice: "8.00" },
+      { name: "Pecho", type: "pollo" as const, unit: "unidad" as const, basePrice: "7.50" },
+    ];
+
+    const createdProducts = [];
+
+    for (const productData of demoProducts) {
+      const existing = await this.productRepo.findByName(ctx, productData.name);
+      
+      if (!existing) {
+        const product = await this.productRepo.create(ctx, {
+          name: productData.name,
+          type: productData.type,
+          unit: productData.unit,
+          basePrice: productData.basePrice,
+          costPrice: "0",
+          isActive: true,
+          hasVariants: false,
+        });
+        createdProducts.push(product);
+      }
+    }
+
+    return {
+      productsCreated: createdProducts.length,
+      products: createdProducts,
+    };
   }
 }

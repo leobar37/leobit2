@@ -8,6 +8,7 @@ import { db } from "../lib/db";
 import { businessUsers, businesses } from "../db/schema/businesses";
 import { user } from "../db/schema/auth";
 import type { BusinessCalculatorSettings } from "../db/schema/businesses";
+import { ForbiddenError } from "../../errors";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
   .use(servicesPlugin)
@@ -362,5 +363,24 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
           }),
         }),
       }),
+    }
+  )
+  .post(
+    "/seed-demo",
+    async ({ businessService, ctx }) => {
+      if (!ctx.isAdmin()) {
+        throw new ForbiddenError("No tienes permiso para sembrar datos de ejemplo");
+      }
+      const result = await businessService.seedDemoData(ctx as RequestContext);
+      return {
+        success: true,
+        data: result,
+      };
+    },
+    {
+      detail: {
+        summary: "Seed demo data",
+        description: "Creates sample products for new businesses",
+      },
     }
   );

@@ -1,14 +1,14 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
-import { Store, Loader2 } from "lucide-react";
+import { Store, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,6 +28,7 @@ type CreateBusinessFormData = z.infer<typeof createBusinessSchema>;
 export default function CreateBusinessPage() {
   const navigate = useNavigate();
   const createBusiness = useCreateBusiness();
+  const [showOptional, setShowOptional] = useState(false);
 
   const form = useForm<CreateBusinessFormData>({
     resolver: zodResolver(createBusinessSchema),
@@ -52,7 +53,7 @@ export default function CreateBusinessPage() {
       };
 
       await createBusiness.mutateAsync(input);
-      navigate("/dashboard");
+      navigate("/onboarding/data");
     } catch (error) {
       form.setError("root", {
         message: error instanceof Error ? error.message : "Error al crear negocio",
@@ -62,7 +63,7 @@ export default function CreateBusinessPage() {
 
   return (
     <FormPage
-      title="Crear tu negocio"
+      title=""
       backHref="/"
       maxWidth="sm"
       toolbar={
@@ -77,63 +78,85 @@ export default function CreateBusinessPage() {
               Creando negocio...
             </>
           ) : (
-            "Crear negocio"
+            "Crear y continuar"
           )}
         </Button>
       }
     >
       <Card className="border-0 shadow-lg rounded-3xl">
-        <CardHeader className="space-y-4 text-center pb-8">
+        <CardHeader className="space-y-2 text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Store className="w-8 h-8 text-white" />
           </div>
           <div>
+            <p className="text-sm text-orange-600 font-medium mb-1">Paso 2 de 3</p>
             <CardTitle className="text-2xl font-bold text-foreground">
-              Crear tu negocio
+              ¿Cómo se llama tu negocio?
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Configura tu negocio para comenzar a vender
-            </CardDescription>
           </div>
         </CardHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <FormInput
-              label="Nombre del negocio"
+              label="Nombre del negocio *"
               placeholder="Ej: Pollería El Sabor"
               error={form.formState.errors.name?.message}
+              className="text-lg"
               {...form.register("name")}
             />
 
-            <FormInput
-              label="RUC (opcional)"
-              placeholder="20123456789"
-              error={form.formState.errors.ruc?.message}
-              {...form.register("ruc")}
-            />
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowOptional(!showOptional)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                {showOptional ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Ocultar opcionales
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Agregar RUC, teléfono (opcional)
+                  </>
+                )}
+              </button>
 
-            <FormInput
-              label="Dirección (opcional)"
-              placeholder="Av. Principal 123"
-              error={form.formState.errors.address?.message}
-              {...form.register("address")}
-            />
-
-            <FormInput
-              label="Teléfono (opcional)"
-              placeholder="987654321"
-              error={form.formState.errors.phone?.message}
-              {...form.register("phone")}
-            />
-
-            <FormInput
-              label="Email del negocio (opcional)"
-              type="email"
-              placeholder="contacto@tunegocio.com"
-              error={form.formState.errors.email?.message}
-              {...form.register("email")}
-            />
+              {showOptional && (
+                <div className="mt-4 space-y-4 pt-4 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormInput
+                      label="RUC"
+                      placeholder="20123456789"
+                      error={form.formState.errors.ruc?.message}
+                      {...form.register("ruc")}
+                    />
+                    <FormInput
+                      label="Teléfono"
+                      placeholder="987654321"
+                      error={form.formState.errors.phone?.message}
+                      {...form.register("phone")}
+                    />
+                  </div>
+                  <FormInput
+                    label="Dirección"
+                    placeholder="Av. Principal 123"
+                    error={form.formState.errors.address?.message}
+                    {...form.register("address")}
+                  />
+                  <FormInput
+                    label="Email del negocio"
+                    type="email"
+                    placeholder="contacto@tunegocio.com"
+                    error={form.formState.errors.email?.message}
+                    {...form.register("email")}
+                  />
+                </div>
+              )}
+            </div>
 
             {form.formState.errors.root && (
               <p className="text-sm text-destructive text-center">

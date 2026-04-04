@@ -88,7 +88,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       }
     });
 
-    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo);
+    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
     const customerService = new CustomerService(customerRepo);
     const productService = new ProductService(productRepo, productVariantRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo);
