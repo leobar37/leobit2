@@ -137,6 +137,18 @@ export class SaleService {
 
     const isPreOrder = data.type === "pre_order";
 
+    if (isPreOrder) {
+      if (!data.deliveryDate) {
+        throw new ValidationError("La fecha de entrega es requerida para pedidos programados");
+      }
+      const deliveryDateObj = new Date(data.deliveryDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (deliveryDateObj < today) {
+        throw new ValidationError("La fecha de entrega debe ser hoy o una fecha futura");
+      }
+    }
+
     if (!isEmptyDraft && distribucion) {
       // NOTE: Pre-orders skip stock validation at confirmation time because:
     }
@@ -219,8 +231,23 @@ export class SaleService {
       throw new NotFoundError("Sale");
     }
 
-    if (sale.status !== "draft") {
+    const isDeliveryDateOnlyUpdate =
+      sale.type === "pre_order" &&
+      sale.status === "confirmed" &&
+      Object.keys(data).length === 1 &&
+      "deliveryDate" in data;
+
+    if (sale.status !== "draft" && !isDeliveryDateOnlyUpdate) {
       throw new ValidationError("Solo se pueden editar ventas en borrador");
+    }
+
+    if (isDeliveryDateOnlyUpdate && data.deliveryDate) {
+      const deliveryDateObj = new Date(data.deliveryDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (deliveryDateObj < today) {
+        throw new ValidationError("La fecha de entrega debe ser hoy o una fecha futura");
+      }
     }
 
     const totalAmount = parseFloat(

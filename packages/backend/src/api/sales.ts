@@ -101,6 +101,19 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
     }
   )
+  .guard(async ({ body, error }) => {
+    if (body.type === "pre_order" && !body.deliveryDate) {
+      return error(400, { message: "La fecha de entrega es requerida para pedidos programados" });
+    }
+    if (body.deliveryDate && isNaN(Date.parse(body.deliveryDate))) {
+      return error(400, { message: "La fecha de entrega no es una fecha válida" });
+    }
+  }, {
+    body: t.Object({
+      type: t.Optional(t.Union([t.Literal("instant_sale"), t.Literal("pre_order")])),
+      deliveryDate: t.Optional(t.String()),
+    }),
+  })
   .patch(
     "/:id",
     async ({ saleService, ctx, params, body }) => {

@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "plan": "fix-preorder-feature",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Fix local sale schema for pre_order fields",
+      "file": "tasks/T-001-fix-local-sale-schema.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Add deliveryDate validation for pre_order creation",
+      "file": "tasks/T-002-add-deliverydate-validation.md",
+      "status": "completed",
+      "phase": "backend",
+      "dependencies": [],
+      "requirements": [
+        "FR-002"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Add sale_items to SYNC_STATUS_TRACKED",
+      "file": "tasks/T-003-fix-sync-config-sale-items.md",
+      "status": "completed",
+      "phase": "shared",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Add status guard to RescheduleSaleDialog",
+      "file": "tasks/T-004-add-status-guard-reschedule.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Add deliveryDate display to SaleDetailInfoCard",
+      "file": "tasks/T-005-fix-sale-detail-info-card.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-005"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Add pre_order type badge to SaleDetailSummaryCard",
+      "file": "tasks/T-006-fix-sale-detail-summary-card.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-006"
+      ]
+    }
+  ]
+}

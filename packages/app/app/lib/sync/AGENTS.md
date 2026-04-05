@@ -38,11 +38,9 @@ The **SyncCoordinator** (located at `packages/app/app/lib/sync/coordinator.ts`) 
 | Responsibility | Description |
 |----------------|-------------|
 | Queue Management | Manages the `sync_operations` queue |
-| Lifecycle Hooks | Provides before/after hooks (observation only, not blocking) |
+| Event System | Provides event-driven updates for sync status |
 | Status Tracking | Tracks sync status per entity and overall health |
 | Retry Logic | Exponential backoff for failed operations |
-
-**Note:** The old blocking sync hook system (in `registry.ts`) has been removed. Hooks are now non-blocking lifecycle observers only.
 
 ## Directory Structure
 
@@ -193,7 +191,7 @@ const handleCreateCustomer = async (data: CreateCustomerInput) => {
 - Use `sync_status` field to track pending changes
 - Handle sync errors gracefully
 - Show sync status in UI
-- Use SyncCoordinator for lifecycle observation
+- Use SyncCoordinator for status tracking
 
 ### DON'T:
 - Don't call API directly without enqueuing

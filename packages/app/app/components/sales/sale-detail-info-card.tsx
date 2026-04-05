@@ -1,4 +1,5 @@
 import { Calendar, Scale, User } from "lucide-react";
+import { formatDeliveryCountdown } from "~/lib/date-utils";
 import type { Sale } from "~/lib/services/sale-service";
 import { cn, formatCurrency } from "~/lib/utils";
 import { SaleDetailSection } from "./sale-detail-section";
@@ -24,6 +25,16 @@ export function SaleDetailInfoCard({ hideTara, sale }: SaleDetailInfoCardProps) 
       value: formattedDate,
       accent: "text-muted-foreground",
     },
+    ...(sale.type === "pre_order" && sale.deliveryDate
+      ? [
+          {
+            icon: Calendar,
+            label: "Fecha de entrega",
+            value: formatDeliveryCountdown(sale.deliveryDate),
+            accent: "text-indigo-600",
+          },
+        ]
+      : []),
     {
       icon: User,
       label: "Cliente",

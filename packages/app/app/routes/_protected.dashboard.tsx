@@ -34,6 +34,7 @@ import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-
 import { OnboardingChecklist } from "~/components/dashboard/onboarding-checklist";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -46,6 +47,8 @@ export default function DashboardPage() {
     startDate: undefined,
     endDate: undefined,
   });
+
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
   const { data: salesStats, isLoading: isLoadingSales } = useSalesStats(period);
   const { data: debtorsSummary, isLoading: isLoadingDebtors } = useDebtorsSummary();
@@ -81,6 +84,7 @@ export default function DashboardPage() {
         hasProducts={hasProducts}
         hasSales={hasSales}
         userName={user?.name?.split(" ")[0]}
+        onCreateSale={() => setCreateSheetOpen(true)}
       />
 
       {/* Offline Status Indicators */}
@@ -236,6 +240,10 @@ export default function DashboardPage() {
         </TabsContent>
       </Tabs>
 
+      <CreateSaleTypeSheet
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+      />
     </div>
   );
 }

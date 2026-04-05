@@ -54,6 +54,7 @@ export const ENTITY_PRIORITIES: Partial<Record<SyncEntity, number>> = {
 /** Entities that track sync_status column */
 export const SYNC_STATUS_TRACKED = [
   "sales",
+  "sale_items",
   "customers",
   "customer_groups",
   "customer_group_members",

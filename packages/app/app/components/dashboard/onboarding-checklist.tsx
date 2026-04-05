@@ -8,12 +8,13 @@ interface OnboardingChecklistProps {
   hasProducts: boolean;
   hasSales: boolean;
   userName?: string;
+  onCreateSale?: () => void;
 }
 
 const CHECKLIST_DISMISSED_KEY = "avileo:onboarding-checklist-dismissed";
 const CHECKLIST_COMPLETED_KEY = "avileo:onboarding-checklist-completed";
 
-export function OnboardingChecklist({ hasProducts, hasSales, userName }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateSale }: OnboardingChecklistProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -147,14 +148,22 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName }: Onboard
                   </p>
                 </div>
                 {!item.completed && (
-                  <Link to={item.actionHref}>
-                    <Button
-                      size="sm"
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                    >
-                      {item.actionLabel}
-                    </Button>
-                  </Link>
+                  <Button
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    onClick={() => {
+                      if (item.id === "first_sale" && onCreateSale) {
+                        onCreateSale();
+                      }
+                    }}
+                    asChild={item.id !== "first_sale"}
+                  >
+                    {item.id === "first_sale" ? (
+                      item.actionLabel
+                    ) : (
+                      <Link to={item.actionHref}>{item.actionLabel}</Link>
+                    )}
+                  </Button>
                 )}
                 {item.completed && (
                   <span className="text-sm text-green-600 font-medium">

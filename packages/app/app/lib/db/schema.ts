@@ -66,6 +66,7 @@ export type SaleItem = z.infer<typeof saleItemSchema>;
 
 export const saleSchema = z.object({
   id: z.string(),
+  type: z.enum(["instant_sale", "pre_order"]).default("instant_sale"),
   clientId: z.string().nullable(),
   sellerId: z.string(),
   businessId: z.string(),
@@ -75,8 +76,10 @@ export const saleSchema = z.object({
   balanceDue: z.string().default("0"),
   tara: z.string().nullable(),
   netWeight: z.string().nullable(),
+  deliveryDate: z.string().nullable().optional(),
+  orderDate: z.string().nullable().optional(),
   syncStatus: z.enum(["pending", "synced", "error"]).default("pending"),
-  status: z.enum(["draft", "active", "cancelled"]).default("draft"),
+  status: z.enum(["draft", "active", "confirmed", "delivered", "cancelled"]).default("draft"),
   cancelledAt: z.coerce.date().nullable(),
   cancelledBy: z.string().nullable(),
   cancelReason: z.string().nullable(),

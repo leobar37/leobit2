@@ -77,7 +77,12 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
             <div className="mt-1 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-lg font-bold tracking-tight text-foreground">
-                  Venta #{sale.id.slice(-6)}
+                  {sale.type === "pre_order" ? "Pedido" : "Venta"} #{sale.id.slice(-6)}
+                  {sale.type === "pre_order" && (
+                    <span className="ml-2 inline-flex items-center rounded bg-indigo-100 px-1.5 py-0.5 text-xs font-semibold text-indigo-700">
+                      Pedido
+                    </span>
+                  )}
                 </p>
                 <p className="mt-1 truncate text-sm text-muted-foreground">
                   {sale.customer?.name || "Cliente general"}

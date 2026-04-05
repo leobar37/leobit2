@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Business, CreateBusinessInput, UpdateBusinessInput } from "@avileo/shared";
+import type { PGlite } from "@electric-sql/pglite";
 import { api } from "~/lib/api-client";
 import { setStoredBusinessId, setStoredBusinessUserId } from "~/lib/session-storage";
+import { offlineCache } from "~/lib/cache";
 import { useEngine } from "~/engine";
-import { cacheBusiness, getCachedBusiness } from "~/lib/business-cache";
-import type { PGlite } from "@electric-sql/pglite";
 
 async function createBusiness(input: CreateBusinessInput): Promise<Business> {
   const { data, error } = await api.businesses.post(input);
@@ -68,12 +68,10 @@ async function getBusinessWithFallback(
   }
 
   if (error || !data?.success || !data.data) {
-    if (pg) {
-      const cached = await getCachedBusiness(pg);
-      if (cached) {
-        console.log("[useBusiness] API failed, using cached business data");
-        return { business: cached as unknown as Business, fromCache: true, error: null };
-      }
+    const cached = await offlineCache.get<Business>("business");
+    if (cached) {
+      console.log("[useBusiness] API failed, using cached business data");
+      return { business: cached, fromCache: true, error: null };
     }
     return {
       business: null,
@@ -91,9 +89,7 @@ async function getBusinessWithFallback(
     setStoredBusinessUserId(business.businessUserId);
   }
 
-  if (pg) {
-    await cacheBusiness(pg, business as unknown as Parameters<typeof cacheBusiness>[1]);
-  }
+  await offlineCache.set("business", business, 24 * 60 * 60 * 1000);
 
   return { business, fromCache: false, error: null };
 }

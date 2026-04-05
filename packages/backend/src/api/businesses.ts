@@ -8,7 +8,7 @@ import { db } from "../lib/db";
 import { businessUsers, businesses } from "../db/schema/businesses";
 import { user } from "../db/schema/auth";
 import type { BusinessCalculatorSettings } from "../db/schema/businesses";
-import { ForbiddenError } from "../../errors";
+import { ForbiddenError } from "../errors";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
   .use(servicesPlugin)
