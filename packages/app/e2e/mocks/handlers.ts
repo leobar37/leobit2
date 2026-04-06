@@ -319,30 +319,48 @@ export const handlers = [
   // ==========================================================================
   http.post("/api/auth/sign-in/email", async () => {
     return HttpResponse.json({
-      success: true,
-      data: {
-        user: TEST_USER,
-        session: {
-          id: "session-1",
-          userId: TEST_USER.id,
-          token: "mock-jwt-token",
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        },
+      user: TEST_USER,
+      session: {
+        id: "session-1",
+        userId: TEST_USER.id,
+        token: "mock-jwt-token",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
+    });
+  }),
+
+  http.post("/api/auth/sign-up/email", async ({ request }) => {
+    const body = (await request.json()) as { email?: string; name?: string; password?: string };
+    const newUser = {
+      id: "user-new",
+      email: body.email ?? "new@avileo.com",
+      name: body.name ?? "New User",
+      emailVerified: false,
+      image: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return new HttpResponse(JSON.stringify({
+      user: newUser,
+      session: {
+        id: "session-new",
+        userId: newUser.id,
+        token: "mock-jwt-token-signup",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+    }), {
+      headers: { "set-auth-token": "mock-jwt-token-signup" },
     });
   }),
 
   http.get("/api/auth/session", () => {
     return HttpResponse.json({
-      success: true,
-      data: {
-        user: TEST_USER,
-        session: {
-          id: "session-1",
-          userId: TEST_USER.id,
-          token: "mock-jwt-token",
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        },
+      user: TEST_USER,
+      session: {
+        id: "session-1",
+        userId: TEST_USER.id,
+        token: "mock-jwt-token",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
     });
   }),
@@ -581,6 +599,40 @@ export const handlers = [
     return HttpResponse.json({
       success: true,
       data: { status: "ok", timestamp: new Date().toISOString() },
+    });
+  }),
+
+  // ==========================================================================
+  // Public Invitations API (for register flow)
+  // ==========================================================================
+  http.get("/api/public/invitations/:token", ({ params }) => {
+    if (params.token === "invalid-token" || params.token === "expired-token") {
+      return HttpResponse.json(
+        { success: false, error: "Token inválido o expirado" },
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json({
+      success: true,
+      data: {
+        name: "Negocio Mock",
+        email: "admin@mock.com",
+        salesPoint: "Punto 1",
+      },
+    });
+  }),
+
+  http.post("/api/public/invitations/accept", async () => {
+    return HttpResponse.json({ success: true });
+  }),
+
+  // ==========================================================================
+  // Businesses Me API (for register flow - no business for new users)
+  // ==========================================================================
+  http.get("/api/businesses/me", () => {
+    return HttpResponse.json({
+      success: true,
+      data: null,
     });
   }),
 ];

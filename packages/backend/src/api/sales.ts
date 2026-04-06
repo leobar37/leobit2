@@ -50,8 +50,17 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
   )
   .post(
     "/",
-    async ({ saleService, ctx, body, set }) => {
+    async ({ saleService, ctx, body, set, error }) => {
       set.status = 201;
+
+      // Validation for pre-orders: deliveryDate is required
+      if (body.type === "pre_order" && !body.deliveryDate) {
+        return error(400, { message: "La fecha de entrega es requerida para pedidos programados" });
+      }
+      if (body.deliveryDate && isNaN(Date.parse(body.deliveryDate))) {
+        return error(400, { message: "La fecha de entrega no es una fecha válida" });
+      }
+
       const result = await saleService.createSale(ctx as RequestContext, {
         id: body.id,
         customerId: body.customerId,
@@ -101,19 +110,6 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
     }
   )
-  .guard(async ({ body, error }) => {
-    if (body.type === "pre_order" && !body.deliveryDate) {
-      return error(400, { message: "La fecha de entrega es requerida para pedidos programados" });
-    }
-    if (body.deliveryDate && isNaN(Date.parse(body.deliveryDate))) {
-      return error(400, { message: "La fecha de entrega no es una fecha válida" });
-    }
-  }, {
-    body: t.Object({
-      type: t.Optional(t.Union([t.Literal("instant_sale"), t.Literal("pre_order")])),
-      deliveryDate: t.Optional(t.String()),
-    }),
-  })
   .patch(
     "/:id",
     async ({ saleService, ctx, params, body }) => {

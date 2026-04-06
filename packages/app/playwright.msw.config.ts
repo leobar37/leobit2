@@ -69,6 +69,14 @@ export default defineConfig({
       },
       dependencies: ["setup"],
     },
+    // Register tests - no auth state (unauthenticated user)
+    {
+      name: "register",
+      testMatch: /register\.spec\.ts/,
+      use: {
+        ...devices["Pixel 5"],
+      },
+    },
   ],
 
   /* Build and serve the app with MSW */

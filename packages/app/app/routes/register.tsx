@@ -185,7 +185,7 @@ export default function RegisterPage() {
                 />
 
                 {form.formState.errors.root && (
-                  <p className="text-center text-sm text-destructive">
+                  <p data-testid="register-error" className="text-center text-sm text-destructive">
                     {form.formState.errors.root.message}
                   </p>
                 )}
@@ -194,6 +194,7 @@ export default function RegisterPage() {
               <CardFooter className="flex flex-col gap-3 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
                 <Button
                   type="submit"
+                  data-testid="register-submit"
                   className="h-12 w-full rounded-[18px] bg-orange-500 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600"
                   disabled={form.formState.isSubmitting || !form.formState.isValid}
                 >
