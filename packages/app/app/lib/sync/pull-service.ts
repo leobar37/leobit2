@@ -50,6 +50,9 @@ export class PullService {
   private lastError: string | null = null;
   private cursorStorageKey: string;
 
+  // Cursor persistence failure tracking
+  private failedStorageAttempts: number = 0;
+
   // Abort controller for cancelling in-flight requests
   private abortController: AbortController | null = null;
 
@@ -96,11 +99,20 @@ export class PullService {
    * Save cursor to localStorage
    */
   private saveCursor(cursor: string): void {
+    this.lastSince = cursor;
     try {
       localStorage.setItem(this.cursorStorageKey, cursor);
-      this.lastSince = cursor;
+      this.failedStorageAttempts = 0;
     } catch (e) {
-      console.warn(`[PullService] Failed to save cursor to localStorage:`, e);
+      this.failedStorageAttempts++;
+      console.warn(`[PullService] Failed to persist cursor to localStorage (attempt ${this.failedStorageAttempts}):`, e);
+
+      if (this.failedStorageAttempts >= 3) {
+        console.warn(`[PullService] Clearing cursor to prevent stale sync state after ${this.failedStorageAttempts} failures`);
+        this.lastSince = null;
+        localStorage.removeItem(this.cursorStorageKey);
+        this.failedStorageAttempts = 0;
+      }
     }
   }
 
@@ -108,9 +120,10 @@ export class PullService {
    * Clear cursor from localStorage
    */
   clearCursor(): void {
+    this.lastSince = null;
+    this.failedStorageAttempts = 0;
     try {
       localStorage.removeItem(this.cursorStorageKey);
-      this.lastSince = null;
     } catch (e) {
       console.warn(`[PullService] Failed to clear cursor:`, e);
     }
@@ -363,6 +376,11 @@ export class PullService {
           this.saveStageCursor(config.cursorKey, nextSince);
         } else if (config.useDefaultCursor) {
           this.saveCursor(nextSince);
+          console.log(`[PULL] 💾 Cursor saved:`, {
+            cursor: nextSince.slice(0, 20),
+            memoryCursor: this.lastSince?.slice(0, 20),
+            storageOk: this.failedStorageAttempts === 0,
+          });
         }
       }
 
