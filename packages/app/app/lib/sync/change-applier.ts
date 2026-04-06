@@ -60,13 +60,14 @@ export async function applyChange(
   try {
     switch (change.operation) {
       case "create":
+      case "insert": // backward compatibility with old server responses
         return await applyInsert(pg, tableName, change, businessId);
 
       case "update":
         return await applyUpdate(pg, tableName, change, businessId);
 
       case "delete":
-        return await applyDelete(pg, tableName, change);
+        return await applyDelete(pg, tableName, change, businessId);
 
       default:
         return { success: false, error: `Unknown operation: ${change.operation}` };
@@ -209,9 +210,13 @@ async function applyUpdate(
 async function applyDelete(
   pg: PGlite,
   tableName: string,
-  change: PullChange
+  change: PullChange,
+  businessId: string
 ): Promise<ChangeApplicationResult> {
   const id = change.entityId;
-  await pg.query(`DELETE FROM "${tableName}" WHERE id = $1`, [id]);
+  await pg.query(
+    `DELETE FROM "${tableName}" WHERE id = $1 AND business_id = $2`,
+    [id, businessId]
+  );
   return { success: true };
 }

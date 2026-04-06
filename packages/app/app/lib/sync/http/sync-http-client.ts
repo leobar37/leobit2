@@ -25,7 +25,7 @@ export interface ISyncHttpClient {
   /**
    * Send a batch of operations to the server
    */
-  sendBatch(operations: SyncOperationRecord[]): Promise<BatchSyncResponse>;
+  sendBatch(operations: SyncOperationRecord[], signal?: AbortSignal): Promise<BatchSyncResponse>;
 
   /**
    * Get conflicts from the server
@@ -62,4 +62,9 @@ export interface ISyncHttpClient {
     success: boolean;
     data: unknown;
   }>;
+
+  /**
+   * Abort any in-flight request
+   */
+  abort(): void;
 }

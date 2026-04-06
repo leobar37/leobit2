@@ -50,6 +50,9 @@ export class PullService {
   private lastError: string | null = null;
   private cursorStorageKey: string;
 
+  // Abort controller for cancelling in-flight requests
+  private abortController: AbortController | null = null;
+
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -199,14 +202,20 @@ export class PullService {
   private async executePull(config: PullExecutionConfig): Promise<PullResult & { nextSince: string | null }> {
     // Prevent concurrent pulls
     if (this.isPullingFlag) {
-      return { 
-        success: false, 
-        changesApplied: 0, 
-        hasMore: false, 
-        error: "Pull already in progress", 
-        nextSince: null 
+      return {
+        success: false,
+        changesApplied: 0,
+        hasMore: false,
+        error: "Pull already in progress",
+        nextSince: null
       };
     }
+
+    // Cancel any in-flight request
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
 
     this.isPullingFlag = true;
 
@@ -245,6 +254,7 @@ export class PullService {
           Authorization: `Bearer ${this.authToken}`,
           "x-business-id": this.businessId,
         },
+        signal: this.abortController.signal,
       });
 
       if (!response.ok) {
@@ -346,8 +356,9 @@ export class PullService {
         }
       }
 
-      // Persist cursor
-      if (nextSince && appliedCount > 0) {
+      // Persist cursor — always advance when server provides a new cursor
+      // even if changes failed to apply (prevents infinite retry loops)
+      if (nextSince) {
         if (config.cursorKey) {
           this.saveStageCursor(config.cursorKey, nextSince);
         } else if (config.useDefaultCursor) {
@@ -380,8 +391,21 @@ export class PullService {
         nextSince,
       };
     } catch (error) {
+      // Handle abort gracefully
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("[PullService] Pull was aborted");
+        this.isPullingFlag = false;
+        return {
+          success: false,
+          changesApplied: 0,
+          hasMore: false,
+          error: "Aborted",
+          nextSince: null,
+        };
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       if (config.applyBackoff) {
         this.consecutiveFailures++;
         this.currentBackoff = this.getBackoffDelay();
@@ -481,6 +505,21 @@ export class PullService {
     if (this.pullIntervalId) {
       clearInterval(this.pullIntervalId);
       this.pullIntervalId = null;
+    }
+    // Cancel any in-flight request
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  /**
+   * Abort any in-flight pull request
+   */
+  abort(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
     }
   }
 

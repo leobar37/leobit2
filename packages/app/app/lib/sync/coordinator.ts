@@ -20,6 +20,8 @@ export class SyncCoordinator {
   private pushBackoff: ExponentialBackoff;
   private pullBackoff: ExponentialBackoff;
   private isRunning = false;
+  private forceSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly FORCE_SYNC_DEBOUNCE_MS = 1000;
 
   constructor(
     private syncService: SyncService,
@@ -52,6 +54,10 @@ export class SyncCoordinator {
   }
 
   stop(): void {
+    if (this.forceSyncTimer) {
+      clearTimeout(this.forceSyncTimer);
+      this.forceSyncTimer = null;
+    }
     this.syncService.stopAutoSync();
     this.pullService.stopAutoPull();
 
@@ -64,11 +70,19 @@ export class SyncCoordinator {
   private handleOnline = (): void => {
     console.log("[SyncCoordinator] Online - resuming sync");
     syncEvents.emit("sync:online", undefined);
+
+    // Reset backoffs IMMEDIATELY (not debounced)
     this.pushBackoff.reset();
     this.pullBackoff.reset();
-    
-    // Trigger immediate sync
-    this.forceSync();
+
+    // Debounce forceSync to handle rapid online/offline events
+    if (this.forceSyncTimer) {
+      clearTimeout(this.forceSyncTimer);
+    }
+    this.forceSyncTimer = setTimeout(() => {
+      this.forceSyncTimer = null;
+      this.forceSync();
+    }, this.FORCE_SYNC_DEBOUNCE_MS);
   };
 
   private handleOffline = (): void => {

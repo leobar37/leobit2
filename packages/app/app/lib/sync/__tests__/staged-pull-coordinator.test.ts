@@ -64,6 +64,13 @@ describe("StagedPullCoordinator", () => {
   let coordinator: StagedPullCoordinator;
 
   beforeEach(() => {
+    // Mock navigator.onLine for tests
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { onLine: true },
+      writable: true,
+      configurable: true,
+    });
+
     // Create mock pull service
     mockPullService = {
       pullWithOptions: vi.fn(),

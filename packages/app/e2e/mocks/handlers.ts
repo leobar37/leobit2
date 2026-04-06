@@ -635,6 +635,67 @@ export const handlers = [
       data: null,
     });
   }),
+
+  // ==========================================================================
+  // Sync API — POST /sync/batch
+  // ==========================================================================
+  http.post("/api/sync/batch", async ({ request }) => {
+    const body = await request.json() as {
+      operations: Array<{
+        idempotencyKey: string;
+        entityType: string;
+        entityId: string;
+        operation: "create" | "update" | "delete";
+        payload: Record<string, unknown>;
+        localVersion: number;
+        localTimestamp: string;
+        syncGroupId?: string;
+      }>;
+    };
+
+    const results = body.operations.map((op) => ({
+      idempotencyKey: op.idempotencyKey,
+      success: true,
+    }));
+
+    return HttpResponse.json({
+      success: true,
+      data: { results },
+    });
+  }),
+
+  // ==========================================================================
+  // Sync API — GET /sync/changes
+  // ==========================================================================
+  http.get("/api/sync/changes", ({ request }) => {
+    const url = new URL(request.url);
+    const since = url.searchParams.get("since");
+    const entityTypes = url.searchParams.get("entityTypes")?.split(",").filter(Boolean) || [];
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        changes: [],
+        nextSince: since || new Date().toISOString(),
+        hasMore: false,
+        serverTimestamp: new Date().toISOString(),
+      },
+    });
+  }),
+
+  // ==========================================================================
+  // Sync API — GET /sync/conflicts
+  // ==========================================================================
+  http.get("/api/sync/conflicts", () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        conflicts: [],
+        pendingCount: 0,
+        pagination: { limit: 50, offset: 0, hasMore: false },
+      },
+    });
+  }),
 ];
 
 // ============================================================================

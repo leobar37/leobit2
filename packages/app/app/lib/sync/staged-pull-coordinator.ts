@@ -35,6 +35,7 @@ export class StagedPullCoordinator {
   private pullService: PullService;
   private state: Map<SyncStage, StagedPullState> = new Map();
   private onProgress: StagedPullProgressCallback | null = null;
+  private aborted = false;
 
   constructor(pullService: PullService) {
     this.pullService = pullService;
@@ -76,7 +77,15 @@ export class StagedPullCoordinator {
       let lastCursor: string | null = null;
 
       // Load all data for this stage (paginated)
-      while (hasMore) {
+      let iterations = 0;
+      const MAX_ITERATIONS = 1000; // Safety limit to prevent infinite loops
+
+      while (hasMore && !this.aborted && navigator.onLine) {
+        iterations++;
+        if (iterations > MAX_ITERATIONS) {
+          throw new Error(`Loop protection: exceeded ${MAX_ITERATIONS} iterations in critical stage`);
+        }
+
         const result = await this.pullService.pullWithOptions({
           entityTypes,
           since,
@@ -88,6 +97,13 @@ export class StagedPullCoordinator {
         }
 
         totalApplied += result.changesApplied;
+
+        // Detect stuck cursor (cursor not advancing but server says there's more)
+        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
+          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in critical stage, breaking loop`);
+          break;
+        }
+
         hasMore = result.hasMore;
         lastCursor = result.nextSince;
       }
@@ -124,8 +140,18 @@ export class StagedPullCoordinator {
       
       let totalApplied = 0;
       let hasMore = true;
+      let lastCursor: string | null = null;
 
-      while (hasMore) {
+      // Load all data for this stage (paginated)
+      let iterations = 0;
+      const MAX_ITERATIONS = 1000;
+
+      while (hasMore && !this.aborted && navigator.onLine) {
+        iterations++;
+        if (iterations > MAX_ITERATIONS) {
+          throw new Error(`Loop protection: exceeded ${MAX_ITERATIONS} iterations in recent sales stage`);
+        }
+
         const result = await this.pullService.pullWithOptions({
           entityTypes,
           since,
@@ -137,7 +163,15 @@ export class StagedPullCoordinator {
         }
 
         totalApplied += result.changesApplied;
+
+        // Detect stuck cursor
+        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
+          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in recent stage, breaking loop`);
+          break;
+        }
+
         hasMore = result.hasMore;
+        lastCursor = result.nextSince;
       }
 
       state.status = "complete";
@@ -167,12 +201,21 @@ export class StagedPullCoordinator {
 
     try {
       const entityTypes = getEntitiesForStage(stage);
-      
+
       let totalApplied = 0;
       let hasMore = true;
       let batches = 0;
+      let lastCursor: string | null = null;
+      let iterations = 0;
+      const MAX_ITERATIONS = 1000;
 
-      while (hasMore) {
+      while (hasMore && !this.aborted && navigator.onLine) {
+        iterations++;
+        if (iterations > MAX_ITERATIONS) {
+          console.warn(`[StagedPullCoordinator] Loop protection: exceeded ${MAX_ITERATIONS} iterations in historical stage`);
+          break;
+        }
+
         const result = await this.pullService.pullWithOptions({
           entityTypes,
           cursorKey: stage.toLowerCase(),
@@ -190,7 +233,15 @@ export class StagedPullCoordinator {
         }
 
         totalApplied += result.changesApplied;
+
+        // Detect stuck cursor
+        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
+          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in historical stage, breaking loop`);
+          break;
+        }
+
         hasMore = result.hasMore;
+        lastCursor = result.nextSince;
         batches++;
 
         // Small delay between batches to avoid overwhelming the device
@@ -222,6 +273,8 @@ export class StagedPullCoordinator {
     recent: StagedPullState;
     historical: Promise<StagedPullState>;
   }> {
+    this.aborted = false;
+
     // Stage 1: Critical (blocking)
     const critical = await this.loadCriticalData();
     
@@ -285,6 +338,14 @@ export class StagedPullCoordinator {
         changesApplied: 0,
       });
     }
+  }
+
+  /**
+   * Abort all in-flight pull operations
+   */
+  abort(): void {
+    this.aborted = true;
+    this.pullService.abort();
   }
 
   private getState(stage: SyncStage): StagedPullState {

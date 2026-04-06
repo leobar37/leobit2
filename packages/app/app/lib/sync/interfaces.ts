@@ -210,6 +210,11 @@ export interface IPullService {
   stopAutoPull(): void;
 
   /**
+   * Abort any in-flight pull request
+   */
+  abort(): void;
+
+  /**
    * Clean up pull data (for logout/business switch)
    */
   cleanup(): Promise<void>;

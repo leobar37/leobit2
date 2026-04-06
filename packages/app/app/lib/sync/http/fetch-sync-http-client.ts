@@ -36,6 +36,7 @@ function parsePayload(payload: unknown): Record<string, unknown> {
  */
 export class FetchSyncHttpClient implements ISyncHttpClient {
   private baseUrl: string;
+  private abortController: AbortController | null = null;
 
   constructor(
     private authToken: string,
@@ -45,7 +46,18 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
     this.baseUrl = baseUrl || import.meta.env.VITE_API_URL || "http://localhost:5201";
   }
 
-  async sendBatch(operations: SyncOperationRecord[]): Promise<BatchSyncResponse> {
+  async sendBatch(operations: SyncOperationRecord[], signal?: AbortSignal): Promise<BatchSyncResponse> {
+    // Cancel any in-flight request
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
+    // If an external signal is provided, relay abort to it
+    if (signal) {
+      signal.addEventListener("abort", () => this.abortController?.abort());
+    }
+
     const batchCorrelationId = generateCorrelationId();
 
     console.log(`[FetchSyncHttpClient] Sending batch:`, {
@@ -53,73 +65,94 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
       operationsCount: operations.length,
     });
 
-    const response = await fetch(`${this.baseUrl}/sync/batch`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-        "x-correlation-id": batchCorrelationId,
-      },
-      body: JSON.stringify({
-        operations: operations.map((op) => ({
-          idempotencyKey: op.idempotency_key ?? op.id,
-          entityType: op.entity_type,
-          entityId: op.entity_id,
-          operation: op.operation,
-          payload: parsePayload(op.payload),
-          localVersion: op.version,
-          localTimestamp: new Date(op.updated_at).toISOString(),
-          correlationId: generateCorrelationId(),
-          ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
-        })),
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`[FetchSyncHttpClient] Batch request failed:`, {
-        status: response.status,
-        statusText: response.statusText,
+    try {
+      const response = await fetch(`${this.baseUrl}/sync/batch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.authToken}`,
+          "x-business-id": this.businessId,
+          "x-correlation-id": batchCorrelationId,
+        },
+        body: JSON.stringify({
+          operations: operations.map((op) => ({
+            idempotencyKey: op.idempotency_key ?? op.id,
+            entityType: op.entity_type,
+            entityId: op.entity_id,
+            operation: op.operation,
+            payload: parsePayload(op.payload),
+            localVersion: op.version,
+            localTimestamp: new Date(op.updated_at).toISOString(),
+            correlationId: generateCorrelationId(),
+            ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
+          })),
+        }),
+        signal: this.abortController.signal,
       });
-      throw new Error(`Sync batch failed: ${response.status} ${response.statusText}`);
-    }
 
-    const body = await response.json() as {
-      success?: boolean;
-      data?: {
-        results?: Array<{
-          idempotencyKey: string;
-          success: boolean;
-          error?: string;
-          conflict?: {
-            serverVersion: number;
-            serverData: Record<string, unknown>;
-          };
-        }>;
+      if (!response.ok) {
+        console.error(`[FetchSyncHttpClient] Batch request failed:`, {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error(`Sync batch failed: ${response.status} ${response.statusText}`);
+      }
+
+      const body = await response.json() as {
+        success?: boolean;
+        data?: {
+          results?: Array<{
+            idempotencyKey: string;
+            success: boolean;
+            error?: string;
+            conflict?: {
+              serverVersion: number;
+              serverData: Record<string, unknown>;
+            };
+          }>;
+        };
       };
-    };
 
-    if (!body.success || !body.data?.results) {
-      throw new Error("Sync batch returned an invalid response");
+      if (!body.success || !body.data?.results) {
+        throw new Error("Sync batch returned an invalid response");
+      }
+
+      console.log(`[FetchSyncHttpClient] Batch response:`, {
+        resultsCount: body.data.results.length,
+      });
+
+      return {
+        results: body.data.results.map((result) => ({
+          idempotencyKey: result.idempotencyKey,
+          success: result.success,
+          error: result.error,
+          conflict: result.conflict
+            ? {
+                serverData: result.conflict.serverData,
+                suggestedMerge: result.conflict.serverData,
+              }
+            : undefined,
+        })),
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("[FetchSyncHttpClient] Batch send was aborted");
+        throw error;
+      }
+      throw error;
+    } finally {
+      this.abortController = null;
     }
+  }
 
-    console.log(`[FetchSyncHttpClient] Batch response:`, {
-      resultsCount: body.data.results.length,
-    });
-
-    return {
-      results: body.data.results.map((result) => ({
-        idempotencyKey: result.idempotencyKey,
-        success: result.success,
-        error: result.error,
-        conflict: result.conflict
-          ? {
-              serverData: result.conflict.serverData,
-              suggestedMerge: result.conflict.serverData,
-            }
-          : undefined,
-      })),
-    };
+  /**
+   * Abort any in-flight batch request
+   */
+  abort(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
   }
 
   async getConflicts(options?: ConflictQueryOptions): Promise<{

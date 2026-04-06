@@ -437,6 +437,7 @@ export class SyncService {
   private isProcessing = false;
   private consecutiveFailures = 0;
   private currentBackoff = 0;
+  private backoffTimer: ReturnType<typeof setTimeout> | null = null;
   private initializationPromise: Promise<void> | null = null;
   private isInitialized = false;
 
@@ -501,7 +502,12 @@ export class SyncService {
       console.log(
         `[SyncService] Waiting ${this.currentBackoff}ms due to previous failures`
       );
-      await new Promise((resolve) => setTimeout(resolve, this.currentBackoff));
+      return new Promise<void>((resolve) => {
+        this.backoffTimer = setTimeout(() => {
+          this.backoffTimer = null;
+          resolve();
+        }, this.currentBackoff);
+      });
     }
   }
 
@@ -1102,6 +1108,11 @@ export class SyncService {
       clearInterval(this.syncIntervalId);
       this.syncIntervalId = null;
     }
+    if (this.backoffTimer) {
+      clearTimeout(this.backoffTimer);
+      this.backoffTimer = null;
+    }
+    this.httpClient.abort();
   }
 
   private async getOperation(id: string): Promise<SyncOperationRecord | null> {

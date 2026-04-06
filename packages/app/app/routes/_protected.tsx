@@ -5,7 +5,6 @@ import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
 import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
-import { PullSyncWrapper } from "~/components/sync/pull-sync-wrapper";
 import {
   ConflictResolver,
   type ConflictData,
@@ -18,7 +17,7 @@ import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 import { useBusinessWithCacheStatus } from "~/hooks/use-business";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
-import { useCachedBusiness } from "~/lib/business-cache";
+import { useCachedBusiness } from "~/hooks/use-cached-business";
 
 function OutletWithLog() {
   useAutoFileUploadProcessor();
@@ -151,13 +150,11 @@ function ServicesProviderWrapper({
     const businessUserId = cachedBusinessData.businessUserId || getStoredBusinessUserId() || "";
     return (
       <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
-        <PullSyncWrapper>
-          <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
-            <WifiOff className="h-3 w-3" />
-            Modo offline - datos del negocio en cache
-          </div>
-          {children}
-        </PullSyncWrapper>
+        <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
+          <WifiOff className="h-3 w-3" />
+          Modo offline - datos del negocio en cache
+        </div>
+        {children}
       </ServicesProvider>
     );
   }
@@ -168,13 +165,11 @@ function ServicesProviderWrapper({
       const businessUserId = cachedBusinessData.businessUserId || getStoredBusinessUserId() || "";
       return (
         <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
-          <PullSyncWrapper>
-            <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
-              <WifiOff className="h-3 w-3" />
-              Modo offline - datos del negocio en cache
-            </div>
-            {children}
-          </PullSyncWrapper>
+          <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
+            <WifiOff className="h-3 w-3" />
+            Modo offline - datos del negocio en cache
+          </div>
+          {children}
         </ServicesProvider>
       );
     }
@@ -273,9 +268,7 @@ function ServicesProviderWrapper({
 
   return (
     <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
-      <PullSyncWrapper>
-        {children}
-      </PullSyncWrapper>
+      {children}
     </ServicesProvider>
   );
 }
