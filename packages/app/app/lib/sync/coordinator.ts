@@ -22,6 +22,7 @@ export class SyncCoordinator {
   private isRunning = false;
   private forceSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly FORCE_SYNC_DEBOUNCE_MS = 1000;
+  private handlePullStaleSubscription: (() => void) | null = null;
 
   constructor(
     private syncService: SyncService,
@@ -49,6 +50,9 @@ export class SyncCoordinator {
     window.addEventListener("online", this.handleOnline);
     window.addEventListener("offline", this.handleOffline);
 
+    // Listen for stale pull events
+    this.handlePullStaleSubscription = syncEvents.on("pull:stale", this.handlePullStale);
+
     this.isRunning = true;
     syncEvents.emit("coordinator:started", undefined);
   }
@@ -63,6 +67,12 @@ export class SyncCoordinator {
 
     window.removeEventListener("online", this.handleOnline);
     window.removeEventListener("offline", this.handleOffline);
+
+    // Unsubscribe from pull:stale events
+    if (this.handlePullStaleSubscription) {
+      this.handlePullStaleSubscription();
+      this.handlePullStaleSubscription = null;
+    }
 
     this.isRunning = false;
   }
@@ -90,9 +100,26 @@ export class SyncCoordinator {
     syncEvents.emit("sync:offline", undefined);
   };
 
+  private handlePullStale = ({ consecutiveStalePulls, reason }: { consecutiveStalePulls: number; reason: 'cursor-stuck' | 'empty-pulls' }): void => {
+    console.error(`[SyncCoordinator] 🚨 Pull sync is stuck: ${reason} after ${consecutiveStalePulls} pulls`);
+    // Stop auto-pull - it will be restarted when user manually resets
+    this.pullService.stopAutoPull();
+    this.syncService.stopAutoSync();
+  };
+
   async forceSync(): Promise<void> {
     await this.syncService.processPending();
     await this.pullService.pull();
+  }
+
+  /**
+   * Force reset sync when stuck
+   * Clears cursor and restarts auto-sync
+   */
+  async forceResetSync(): Promise<void> {
+    console.log("[SyncCoordinator] Force reset sync");
+    this.pullService.forceReset();
+    this.syncService.startAutoSync();
   }
 
   async getCombinedStatus(): Promise<{

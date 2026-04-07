@@ -74,6 +74,7 @@ describe("StagedPullCoordinator", () => {
     // Create mock pull service
     mockPullService = {
       pullWithOptions: vi.fn(),
+      getStageCursor: vi.fn().mockReturnValue(null), // Default: no saved cursor
     };
 
     // Create progress callback

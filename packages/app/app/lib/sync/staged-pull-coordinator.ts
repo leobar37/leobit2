@@ -55,23 +55,37 @@ export class StagedPullCoordinator {
   }
 
   /**
+   * Check if a stage can be resumed from a saved cursor
+   */
+  canResumeStage(stage: SyncStage): boolean {
+    const cursor = this.pullService.getStageCursor(stage.toLowerCase());
+    return cursor !== null && cursor !== undefined;
+  }
+
+  /**
    * Stage 1: Load critical reference data (blocking)
    * - customers, products, product_variants
    * - Last 30 days
    * - App waits for this to complete
+   * - Can resume from previous partial sync
    */
   async loadCriticalData(): Promise<StagedPullState> {
     const stage: SyncStage = "CRITICAL";
     const config = SYNC_STAGES[stage];
     const state = this.getState(stage);
-    
+
+    // Check if we can resume from a previous partial sync
+    const canResume = this.canResumeStage(stage);
+    const initialSince = this.getSinceDate(config.lookbackDays);
+
     state.status = "loading";
     this.notifyProgress(state);
 
+    console.log(`[StagedPullCoordinator] Critical stage starting${canResume ? ' (resuming from saved cursor)' : ''}`);
+
     try {
-      const since = this.getSinceDate(config.lookbackDays);
       const entityTypes = getEntitiesForStage(stage);
-      
+
       let totalApplied = 0;
       let hasMore = true;
       let lastCursor: string | null = null;
@@ -88,7 +102,8 @@ export class StagedPullCoordinator {
 
         const result = await this.pullService.pullWithOptions({
           entityTypes,
-          since,
+          // Only pass since on first load; if resuming, cursor takes precedence
+          since: canResume ? undefined : initialSince,
           cursorKey: stage.toLowerCase(),
         });
 
@@ -110,6 +125,7 @@ export class StagedPullCoordinator {
 
       state.status = "complete";
       state.changesApplied = totalApplied;
+      console.log(`[StagedPullCoordinator] Critical stage complete: ${totalApplied} changes`);
     } catch (error) {
       state.status = "error";
       state.error = error instanceof Error ? error.message : String(error);
@@ -125,19 +141,25 @@ export class StagedPullCoordinator {
    * - sales, sale_items
    * - Last 7 days
    * - App waits for this to complete
+   * - Can resume from previous partial sync
    */
   async loadRecentSales(): Promise<StagedPullState> {
     const stage: SyncStage = "RECENT_SALES";
     const config = SYNC_STAGES[stage];
     const state = this.getState(stage);
-    
+
+    // Check if we can resume from a previous partial sync
+    const canResume = this.canResumeStage(stage);
+    const initialSince = this.getSinceDate(config.lookbackDays);
+
     state.status = "loading";
     this.notifyProgress(state);
 
+    console.log(`[StagedPullCoordinator] Recent sales stage starting${canResume ? ' (resuming from saved cursor)' : ''}`);
+
     try {
-      const since = this.getSinceDate(config.lookbackDays);
       const entityTypes = getEntitiesForStage(stage);
-      
+
       let totalApplied = 0;
       let hasMore = true;
       let lastCursor: string | null = null;
@@ -154,7 +176,8 @@ export class StagedPullCoordinator {
 
         const result = await this.pullService.pullWithOptions({
           entityTypes,
-          since,
+          // Only pass since on first load; if resuming, cursor takes precedence
+          since: canResume ? undefined : initialSince,
           cursorKey: stage.toLowerCase(),
         });
 
@@ -176,6 +199,7 @@ export class StagedPullCoordinator {
 
       state.status = "complete";
       state.changesApplied = totalApplied;
+      console.log(`[StagedPullCoordinator] Recent sales stage complete: ${totalApplied} changes`);
     } catch (error) {
       state.status = "error";
       state.error = error instanceof Error ? error.message : String(error);

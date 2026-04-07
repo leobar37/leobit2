@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, or } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
 import { db, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
@@ -135,8 +135,12 @@ export class SyncService {
     }
 
     // Add since filter if provided
+    // Use strict greater-than to avoid returning the same record in next page
     if (since) {
-      baseConditions.push(gte(syncOperations.processedAt, since));
+      const sinceCondition = gt(syncOperations.processedAt, since);
+      if (sinceCondition) {
+        baseConditions.push(sinceCondition);
+      }
     }
 
     // Add entityTypes filter if provided (for staged loading)

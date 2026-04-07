@@ -123,67 +123,84 @@ const KNOWN_DB_NAMES = [
  * Attempt to close any open connections to a database before deleting
  */
 async function closeDatabaseConnections(dbName: string): Promise<void> {
+  console.log(`[ClearSync] Closing connections for ${dbName}...`);
+  
   return new Promise((resolve) => {
     const request = window.indexedDB.open(dbName);
+    
     const timeout = setTimeout(() => {
+      console.warn(`[ClearSync] Timeout closing connections for ${dbName}`);
       resolve();
     }, 1000);
 
     request.onsuccess = (event) => {
       clearTimeout(timeout);
       const db = (event.target as IDBOpenDBRequest).result;
+      console.log(`[ClearSync] Opened ${dbName}, closing connection...`);
       try {
         db.close();
-      } catch {
-        // Ignore close errors
+        console.log(`[ClearSync] Connection closed for ${dbName}`);
+      } catch (err) {
+        console.warn(`[ClearSync] Error closing ${dbName}:`, err);
       }
       resolve();
     };
 
     request.onerror = () => {
       clearTimeout(timeout);
-      resolve(); // Continue even if we can't close
+      console.warn(`[ClearSync] Could not open ${dbName} to close connections`);
+      resolve();
     };
 
     request.onblocked = () => {
       clearTimeout(timeout);
-      resolve(); // Continue even if blocked
+      console.warn(`[ClearSync] Blocked opening ${dbName}`);
+      resolve();
     };
   });
 }
 
 /**
- * Delete a database with timeout
+ * Delete a database with timeout and detailed logging
  */
 async function deleteDatabaseWithTimeout(dbName: string): Promise<boolean> {
+  console.log(`[ClearSync] Step 1: Closing connections for ${dbName}...`);
+  
   // First try to close any open connections
   await closeDatabaseConnections(dbName);
+  console.log(`[ClearSync] Step 2: Connections closed for ${dbName}`);
 
   return new Promise((resolve) => {
+    console.log(`[ClearSync] Step 3: Starting delete request for ${dbName}...`);
+    
     const timeout = setTimeout(() => {
+      console.warn(`[ClearSync] Step 4: TIMEOUT deleting ${dbName}`);
       resolve(false);
-    }, 2000);
+    }, 5000); // Increased timeout
 
     try {
       const request = window.indexedDB.deleteDatabase(dbName);
 
       request.onsuccess = () => {
         clearTimeout(timeout);
+        console.log(`[ClearSync] Step 5: SUCCESS deleting ${dbName}`);
         resolve(true);
       };
 
-      request.onerror = () => {
+      request.onerror = (event) => {
         clearTimeout(timeout);
+        console.error(`[ClearSync] Step 5: ERROR deleting ${dbName}:`, (event.target as IDBOpenDBRequest).error);
         resolve(false);
       };
 
       request.onblocked = () => {
         clearTimeout(timeout);
-        // If blocked, we can't do much - resolve anyway
+        console.warn(`[ClearSync] Step 5: BLOCKED deleting ${dbName}`);
         resolve(false);
       };
-    } catch {
+    } catch (error) {
       clearTimeout(timeout);
+      console.error(`[ClearSync] Step 3: EXCEPTION trying to delete ${dbName}:`, error);
       resolve(false);
     }
   });
@@ -221,15 +238,27 @@ export async function clearSyncStorage(
   // Clear IndexedDB databases
   const results: Array<{ name: string; success: boolean }> = [];
 
+  // Get all databases to clean including the actual PGlite database
+  const dbName = getLocalDatabaseName();
+  const allDbNames = [...KNOWN_DB_NAMES];
+  
+  // Add the actual database name if not already in the list
+  if (dbName && !allDbNames.includes(dbName)) {
+    allDbNames.push(dbName);
+  }
+  
+  console.log(`[ClearSync] Will delete ${allDbNames.length} databases:`, allDbNames);
+  console.log(`[ClearSync] Local DB name resolved to: ${dbName}`);
+
   // Delete sequentially to avoid race conditions
-  for (const dbName of KNOWN_DB_NAMES) {
+  for (const dbName of allDbNames) {
     console.log(`[ClearSync] Deleting database: ${dbName}...`);
     const success = await deleteDatabaseWithTimeout(dbName);
     results.push({ name: dbName, success });
     console.log(`[ClearSync] Database ${dbName}: ${success ? "deleted" : "failed/skip"}`);
     
     // Small delay between deletions to ensure cleanup
-    if (KNOWN_DB_NAMES.indexOf(dbName) < KNOWN_DB_NAMES.length - 1) {
+    if (allDbNames.indexOf(dbName) < allDbNames.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }

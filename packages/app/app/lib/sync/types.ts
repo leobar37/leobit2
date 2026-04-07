@@ -33,6 +33,8 @@ export interface PullStatus {
   lastError: string | null;
   consecutiveFailures: number;
   cursor: string | null;
+  isStuck: boolean;
+  consecutiveStalePulls: number;
 }
 
 export interface ChangeApplicationResult {

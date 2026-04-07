@@ -9,6 +9,50 @@ import type { SyncOperationInput } from "../services/sync/types";
 
 const logger = createLogger("SyncRoute");
 
+/**
+ * Parse cursor from client
+ * Supports two formats:
+ * 1. Legacy: ISO 8601 timestamp (e.g., "2026-03-07T18:07:41.784Z")
+ * 2. New: timestamp_operationId (e.g., "2026-03-07T18:07:41.784Z_op-123")
+ */
+interface ParseCursorResult {
+  valid: boolean;
+  date?: Date;
+  operationId?: string;
+  error?: string;
+}
+
+function parseCursor(cursor: string): ParseCursorResult {
+  if (!cursor || typeof cursor !== "string") {
+    return { valid: false, error: "Cursor is required" };
+  }
+
+  // Check for new format: timestamp_operationId
+  const underscoreIndex = cursor.lastIndexOf("_");
+  if (underscoreIndex > 0) {
+    const timestampPart = cursor.slice(0, underscoreIndex);
+    const operationId = cursor.slice(underscoreIndex + 1);
+
+    const date = new Date(timestampPart);
+    if (isNaN(date.getTime())) {
+      return { valid: false, error: "Invalid timestamp in cursor" };
+    }
+
+    return { valid: true, date, operationId };
+  }
+
+  // Legacy format: just timestamp
+  const date = new Date(cursor);
+  if (isNaN(date.getTime())) {
+    return { valid: false, error: "Invalid cursor format. Expected ISO 8601 timestamp." };
+  }
+
+  // Log legacy format detection for monitoring
+  logger.debug({ msg: "Legacy cursor format detected", cursor: cursor.slice(0, 30) });
+
+  return { valid: true, date };
+}
+
 // Maximum operations per batch request
 const MAX_BATCH_SIZE = 100;
 
@@ -153,17 +197,35 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   .get(
     "/changes",
     async ({ syncService, ctx, query, set }) => {
-      // Parse and validate since timestamp
+      // Parse and validate cursor (since parameter)
+      // Supports two formats:
+      // 1. Legacy: ISO 8601 timestamp (e.g., "2026-03-07T18:07:41.784Z")
+      // 2. New: timestamp_operationId (e.g., "2026-03-07T18:07:41.784Z_op-123")
       let since: Date | undefined;
       if (query.since) {
-        since = new Date(query.since);
-        if (isNaN(since.getTime())) {
+        const cursorResult = parseCursor(query.since);
+
+        if (!cursorResult.valid) {
           set.status = 400;
           return {
             success: false,
             error: {
-              code: "INVALID_SINCE",
-              message: "Invalid 'since' timestamp. Must be a valid ISO 8601 date string.",
+              code: "INVALID_CURSOR",
+              message: cursorResult.error || "Invalid cursor format.",
+            },
+          };
+        }
+
+        since = cursorResult.date;
+
+        // Validate cursor is not in the future
+        if (since && since > new Date()) {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "FUTURE_CURSOR",
+              message: "Cursor timestamp is in the future. Please reset your sync.",
             },
           };
         }

@@ -4,7 +4,7 @@ import { Loader2, CloudDownload, Database, CheckCircle2, AlertTriangle } from "l
 import { initDatabase, resetDatabase, SCHEMA_HASH_KEY } from "~/engine/db";
 import { PullService } from "~/lib/sync/pull-service";
 import { StagedPullCoordinator, type StagedPullState } from "~/lib/sync/staged-pull-coordinator";
-import { SYNC_STAGES } from "@avileo/shared";
+import { SYNC_STAGES, type SyncStage } from "@avileo/shared";
 import { getStoredAuthToken, getStoredBusinessId, getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import { Button } from "@/components/ui/button";
 
@@ -42,12 +42,16 @@ export default function SyncPage() {
   const [isResetting, setIsResetting] = useState(false);
   const syncAttempted = useRef(false);
 
-  const waitForAuth = async (maxRetries = 10, delayMs = 300): Promise<{ token: string; businessId: string } | null> => {
+  const waitForAuth = async (maxRetries = 30, delayMs = 300): Promise<{ token: string; businessId: string } | null> => {
     for (let i = 0; i < maxRetries; i++) {
       const token = getStoredAuthToken();
       const businessId = getStoredBusinessId();
       if (token && businessId) {
         return { token, businessId };
+      }
+      // Log progress every 10 retries to help debugging
+      if (i > 0 && i % 10 === 0) {
+        console.log(`[SyncPage] Waiting for auth... attempt ${i}/${maxRetries} (token: ${token ? 'yes' : 'no'}, businessId: ${businessId ? 'yes' : 'no'})`);
       }
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
@@ -128,11 +132,23 @@ export default function SyncPage() {
 
           const coordinator = new StagedPullCoordinator(pullService);
           
-          // Track total changes for progress calculation
+          // Track total changes across all stages for accurate reporting
           let totalChanges = 0;
+          const stageTotals = new Map<SyncStage, number>();
           
           coordinator.setOnProgress((state: StagedPullState) => {
-            totalChanges += state.changesApplied;
+            // Accumulate total changes across all stages
+            if (state.status === "loading" || state.status === "complete") {
+              // Only add changes when we receive new data (not on status change to complete)
+              // This prevents double-counting when stage completes
+              const currentTotal = totalChanges;
+              const newChanges = state.changesApplied - (stageTotals.get(state.stage) || 0);
+              if (newChanges > 0) {
+                totalChanges += newChanges;
+              }
+              // Update stage tracking
+              stageTotals.set(state.stage, state.changesApplied);
+            }
             
             // Calculate progress based on stage
             const stageProgress = {
@@ -154,9 +170,15 @@ export default function SyncPage() {
               progress = range.min;
             }
             
+            // Show descriptive message with current total
+            const stageName = range.label;
+            const progressText = state.status === "complete" 
+              ? `${stageName} completado` 
+              : `${stageName}: ${totalChanges} registros cargados`;
+            
             setSyncProgress({
               stage: state.status === "error" ? "error" : "pulling",
-              message: `${range.label}: ${state.changesApplied} registros`,
+              message: progressText,
               progress: Math.floor(progress),
               changesApplied: totalChanges,
               currentStage: state.stage,

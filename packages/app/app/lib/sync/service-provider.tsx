@@ -54,6 +54,8 @@ export interface SyncState {
   isOnline: boolean;
   /** Last successful sync time */
   lastSyncTime: Date | null;
+  /** Whether sync is stuck and needs manual intervention */
+  isStuck: boolean;
 }
 
 const ServicesContext = createContext<ServicesContextValue | null>(null);
@@ -226,6 +228,8 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
     lastError: null,
     consecutiveFailures: 0,
     cursor: null,
+    isStuck: false,
+    consecutiveStalePulls: 0,
   });
   
   const [pushStatus, setPushStatus] = useState<SyncStatus>({
@@ -258,6 +262,11 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
         const push = await services.syncService.getStatus();
         setPushStatus(push);
       } catch (error) {
+        // Silently ignore "not initialized" errors during startup - this is normal
+        if (error instanceof Error && error.message.includes("not initialized")) {
+          // Service will initialize shortly, status will update via events or fallback
+          return;
+        }
         console.error("[SyncStateProvider] Failed to get initial sync status:", error);
       }
     };
@@ -290,12 +299,26 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
       setIsOnline(false);
     });
 
+    const unsubPullStale = syncEvents.on("pull:stale", ({ consecutiveStalePulls, reason }) => {
+      console.error(`[SyncStateProvider] Sync stuck: ${reason} after ${consecutiveStalePulls} pulls`);
+      setPullStatus((prev) => ({
+        ...prev,
+        isStuck: true,
+        consecutiveStalePulls,
+        lastError: `Sync stuck: ${reason}. Please refresh page.`,
+      }));
+    });
+
     // Fallback: periodic refresh every 30s (not 5s) for resilience
     const fallbackInterval = setInterval(async () => {
       try {
         const push = await services.syncService.getStatus();
         setPushStatus(push);
       } catch (error) {
+        // Silently ignore "not initialized" errors - service may still be starting
+        if (error instanceof Error && error.message.includes("not initialized")) {
+          return;
+        }
         console.error("[SyncStateProvider] Fallback status refresh failed:", error);
       }
     }, 30000);
@@ -306,6 +329,7 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
       unsubPullError();
       unsubOnline();
       unsubOffline();
+      unsubPullStale();
       clearInterval(fallbackInterval);
     };
   }, [services]);
@@ -337,6 +361,7 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
       isSyncing,
       isOnline,
       lastSyncTime,
+      isStuck: pullStatus.isStuck,
     };
   }, [pullStatus, pushStatus, isOnline]);
 
@@ -395,6 +420,8 @@ export function useSyncState(): SyncState {
         lastError: null,
         consecutiveFailures: 0,
         cursor: null,
+        isStuck: false,
+        consecutiveStalePulls: 0,
       },
       push: {
         pending: 0,
@@ -409,6 +436,7 @@ export function useSyncState(): SyncState {
       isSyncing: false,
       isOnline: true,
       lastSyncTime: null,
+      isStuck: false,
     };
   }
   return context;
@@ -428,6 +456,24 @@ export function useHasPendingSync(): boolean {
 export function useHasFailedSync(): boolean {
   const { push } = useSyncState();
   return push.failed > 0 || push.deadLetter > 0;
+}
+
+/**
+ * Hook to check if sync is stuck
+ */
+export function useIsSyncStuck(): boolean {
+  const { isStuck } = useSyncState();
+  return isStuck;
+}
+
+/**
+ * Hook to force reset sync when stuck
+ */
+export function useForceResetSync(): () => Promise<void> {
+  const services = useServices();
+  return async () => {
+    await services.coordinator.forceResetSync();
+  };
 }
 
 export function useCustomerService(): CustomerService {

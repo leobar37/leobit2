@@ -6,7 +6,7 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { PULL_INTERVAL_MS } from "./config";
+import { PULL_INTERVAL_MS, MAX_STALE_PULLS, MAX_EMPTY_PULLS } from "./config";
 import { getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import type { PullChange, PullResponse, PullResult, PullStatus } from "./types";
 import { syncEvents } from "./sync-events";
@@ -52,6 +52,12 @@ export class PullService {
 
   // Cursor persistence failure tracking
   private failedStorageAttempts: number = 0;
+
+  // Stale pull detection - cursor not advancing
+  private consecutiveStalePulls: number = 0;
+  private lastNextSince: string | null = null;
+  private consecutiveEmptyPulls: number = 0;
+  private isStuck: boolean = false;
 
   // Abort controller for cancelling in-flight requests
   private abortController: AbortController | null = null;
@@ -130,6 +136,31 @@ export class PullService {
   }
 
   /**
+   * Force reset when sync is stuck
+   * Clears all stale state and restarts auto-pull
+   */
+  forceReset(): void {
+    console.log(`[PullService] Force reset triggered`);
+    this.isStuck = false;
+    this.consecutiveStalePulls = 0;
+    this.consecutiveEmptyPulls = 0;
+    this.lastNextSince = null;
+    this.consecutiveFailures = 0;
+    this.currentBackoff = 0;
+    this.lastError = null;
+    this.clearCursor();
+    // Restart auto-pull
+    this.startAutoPull();
+  }
+
+  /**
+   * Check if sync is currently stuck
+   */
+  getIsStuck(): boolean {
+    return this.isStuck;
+  }
+
+  /**
    * Set callback for when changes are applied
    */
   setOnChangesApplied(callback: (entityTypes: string[]) => void): void {
@@ -146,6 +177,8 @@ export class PullService {
       lastError: this.lastError,
       consecutiveFailures: this.consecutiveFailures,
       cursor: this.lastSince,
+      isStuck: this.isStuck,
+      consecutiveStalePulls: this.consecutiveStalePulls,
     };
   }
 
@@ -242,9 +275,10 @@ export class PullService {
       const url = new URL(`${API_URL}/sync/changes`);
       
       // Determine which cursor to use
-      const cursor = config.useDefaultCursor 
-        ? this.lastSince 
-        : (config.since ?? this.loadStageCursor(config.cursorKey));
+      // Priority: 1) saved stage cursor, 2) since parameter, 3) default cursor
+      const cursor = config.useDefaultCursor
+        ? this.lastSince
+        : (this.loadStageCursor(config.cursorKey) ?? config.since);
         
       if (cursor) {
         url.searchParams.set("since", cursor);
@@ -337,6 +371,67 @@ export class PullService {
         entityTypes: entityCounts,
       });
 
+      // STALE PULL DETECTION - only for regular pulls with auto-pull
+      if (config.applyBackoff) {
+        const cursorAdvanced = nextSince && nextSince !== this.lastNextSince;
+        
+        if (cursorAdvanced) {
+          // Cursor advanced - reset stale counters
+          this.consecutiveStalePulls = 0;
+          this.consecutiveEmptyPulls = 0;
+          console.log(`[PULL] ✅ Cursor advanced, stale counters reset`);
+        } else if (hasMore) {
+          // Cursor didn't advance but server says there's more - potential infinite loop
+          if (changes.length === 0) {
+            this.consecutiveEmptyPulls++;
+            console.warn(`[PULL] ⚠️ Empty pull #${this.consecutiveEmptyPulls} with hasMore=true`);
+            
+            if (this.consecutiveEmptyPulls >= MAX_EMPTY_PULLS) {
+              this.isStuck = true;
+              console.error(`[PULL] 🚨 STUCK: ${MAX_EMPTY_PULLS} consecutive empty pulls with hasMore=true`);
+              syncEvents.emit("pull:stale", { 
+                consecutiveStalePulls: this.consecutiveEmptyPulls, 
+                reason: 'empty-pulls' 
+              });
+              // Force stop auto-pull
+              this.stopAutoPull();
+              return {
+                success: false,
+                changesApplied: 0,
+                hasMore: false,
+                error: `Sync stuck: ${MAX_EMPTY_PULLS} empty pulls. Please refresh or re-login.`,
+                nextSince: null,
+              };
+            }
+          } else {
+            // Cursor didn't advance but we got changes - still counts as stale
+            this.consecutiveStalePulls++;
+            console.warn(`[PULL] ⚠️ Cursor stuck #${this.consecutiveStalePulls} (got ${changes.length} changes but cursor same)`);
+            
+            if (this.consecutiveStalePulls >= MAX_STALE_PULLS) {
+              this.isStuck = true;
+              console.error(`[PULL] 🚨 STUCK: Cursor stuck after ${MAX_STALE_PULLS} pulls`);
+              syncEvents.emit("pull:stale", { 
+                consecutiveStalePulls: this.consecutiveStalePulls, 
+                reason: 'cursor-stuck' 
+              });
+              // Force stop auto-pull
+              this.stopAutoPull();
+              return {
+                success: false,
+                changesApplied: 0,
+                hasMore: false,
+                error: `Sync stuck: cursor not advancing after ${MAX_STALE_PULLS} pulls. Please refresh or re-login.`,
+                nextSince: null,
+              };
+            }
+          }
+        }
+        
+        // Update last cursor for next comparison
+        this.lastNextSince = nextSince;
+      }
+
       if (changes.length === 0) {
         console.log(`[PULL] ✅ No new changes`);
         return {
@@ -352,25 +447,8 @@ export class PullService {
         this.lastPullTime = serverTimestamp ? new Date(serverTimestamp) : new Date();
       }
 
-      // Apply each change to local database
-      const entityTypes = new Set<string>();
-      let appliedCount = 0;
-      const failedChanges: Array<{ change: PullChange; error: string }> = [];
-
-      for (const change of changes) {
-        const result = await applyChange(this.pg, this.db, change, this.businessId);
-        
-        if (result.success) {
-          entityTypes.add(change.entityType);
-          appliedCount++;
-        } else {
-          console.error(`[Pull] Failed to apply change for ${change.entityType}:${change.entityId}:`, result.error);
-          failedChanges.push({ change, error: result.error || "Unknown error" });
-        }
-      }
-
-      // Persist cursor — always advance when server provides a new cursor
-      // even if changes failed to apply (prevents infinite retry loops)
+      // Persist cursor FIRST — before applying changes
+      // This ensures progress is saved even if the app crashes during change application
       if (nextSince) {
         if (config.cursorKey) {
           this.saveStageCursor(config.cursorKey, nextSince);
@@ -381,6 +459,23 @@ export class PullService {
             memoryCursor: this.lastSince?.slice(0, 20),
             storageOk: this.failedStorageAttempts === 0,
           });
+        }
+      }
+
+      // Apply each change to local database
+      const entityTypes = new Set<string>();
+      let appliedCount = 0;
+      const failedChanges: Array<{ change: PullChange; error: string }> = [];
+
+      for (const change of changes) {
+        const result = await applyChange(this.pg, this.db, change, this.businessId);
+
+        if (result.success) {
+          entityTypes.add(change.entityType);
+          appliedCount++;
+        } else {
+          console.error(`[Pull] Failed to apply change for ${change.entityType}:${change.entityId}:`, result.error);
+          failedChanges.push({ change, error: result.error || "Unknown error" });
         }
       }
 
@@ -472,11 +567,18 @@ export class PullService {
   }
 
   /**
+   * Get stage cursor (public accessor for StagedPullCoordinator)
+   */
+  getStageCursor(stageKey: string): string | null {
+    return this.loadStageCursor(stageKey);
+  }
+
+  /**
    * Load cursor for a specific stage
    */
   private loadStageCursor(stageKey?: string): string | null {
     if (!stageKey) return this.lastSince;
-    
+
     try {
       const key = `${this.cursorStorageKey}_${stageKey}`;
       return localStorage.getItem(key);

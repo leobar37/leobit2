@@ -79,7 +79,6 @@ export class ReportService {
       .where(
         and(
           eq(sales.businessId, ctx.businessId),
-          eq(sales.sellerId, ctx.businessUserId),
           gte(sales.saleDate, today),
           lte(sales.saleDate, tomorrow)
         )
@@ -96,7 +95,6 @@ export class ReportService {
       .where(
         and(
           eq(sales.businessId, ctx.businessId),
-          eq(sales.sellerId, ctx.businessUserId),
           gte(sales.saleDate, yesterday),
           lte(sales.saleDate, today)
         )
@@ -213,7 +211,6 @@ export class ReportService {
         .where(
           and(
             eq(sales.businessId, ctx.businessId),
-            eq(sales.sellerId, ctx.businessUserId),
             gte(sales.saleDate, day),
             lte(sales.saleDate, nextDay)
           )
@@ -309,7 +306,6 @@ export class ReportService {
           .where(
             and(
               eq(sales.businessId, ctx.businessId),
-              eq(sales.sellerId, ctx.businessUserId),
               gte(sales.saleDate, hour),
               lte(sales.saleDate, nextHour)
             )
@@ -336,7 +332,6 @@ export class ReportService {
           .where(
             and(
               eq(sales.businessId, ctx.businessId),
-              eq(sales.sellerId, ctx.businessUserId),
               gte(sales.saleDate, date),
               lte(sales.saleDate, nextDate)
             )
@@ -364,7 +359,6 @@ export class ReportService {
           .where(
             and(
               eq(sales.businessId, ctx.businessId),
-              eq(sales.sellerId, ctx.businessUserId),
               gte(sales.saleDate, start),
               lte(sales.saleDate, end)
             )
@@ -391,7 +385,6 @@ export class ReportService {
           .where(
             and(
               eq(sales.businessId, ctx.businessId),
-              eq(sales.sellerId, ctx.businessUserId),
               gte(sales.saleDate, start),
               lte(sales.saleDate, end)
             )
@@ -420,7 +413,6 @@ export class ReportService {
       .where(
         and(
           eq(sales.businessId, ctx.businessId),
-          eq(sales.sellerId, ctx.businessUserId),
           gte(sales.saleDate, start),
           lte(sales.saleDate, end)
         )

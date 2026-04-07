@@ -23,16 +23,19 @@ async function ensureTable(pg: PGlite): Promise<void> {
   }
 }
 
-function getPg(): PGlite | null {
-  // Lazy import to avoid circular dependencies
-  const { getDatabase } = require("~/engine") as typeof import("~/engine");
-  const result = getDatabase();
-  return result?.pg ?? null;
+async function getPgAsync(): Promise<PGlite | null> {
+  try {
+    const { getDatabase } = await import("~/engine");
+    const result = getDatabase();
+    return result?.pg ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const offlineCache = {
   async get<T>(key: string): Promise<T | null> {
-    const pg = getPg();
+    const pg = await getPgAsync();
     if (!pg) return null;
 
     try {
@@ -61,7 +64,7 @@ export const offlineCache = {
   },
 
   async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
-    const pg = getPg();
+    const pg = await getPgAsync();
     if (!pg) {
       console.warn("[Cache] PGlite not available, skipping cache");
       return;
@@ -89,7 +92,7 @@ export const offlineCache = {
   },
 
   async remove(key: string): Promise<void> {
-    const pg = getPg();
+    const pg = await getPgAsync();
     if (!pg) return;
 
     try {
@@ -100,7 +103,7 @@ export const offlineCache = {
   },
 
   async clear(): Promise<void> {
-    const pg = getPg();
+    const pg = await getPgAsync();
     if (!pg) return;
 
     try {

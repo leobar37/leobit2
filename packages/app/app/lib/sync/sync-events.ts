@@ -11,6 +11,7 @@ export type SyncEventMap = {
   'operation:conflict': { id: string; entityType: string };
   'pull:completed': { changesApplied: number; entityTypes: string[] };
   'pull:error': { error: string };
+  'pull:stale': { consecutiveStalePulls: number; reason: 'cursor-stuck' | 'empty-pulls' };
   'sync:online': void;
   'sync:offline': void;
   'coordinator:started': void;

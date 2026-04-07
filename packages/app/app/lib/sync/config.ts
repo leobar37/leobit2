@@ -30,6 +30,12 @@ export const BATCH_TIMEOUT_MS = 60000;
 /** Dead letter queue maximum size */
 export const DLQ_MAX_SIZE = 1000;
 
+/** Maximum consecutive pulls where cursor doesn't advance before forcing reset */
+export const MAX_STALE_PULLS = 3;
+
+/** Maximum consecutive pulls with no changes before forcing reset */
+export const MAX_EMPTY_PULLS = 5;
+
 /** Operation status values */
 export const OPERATION_STATUS = {
   PENDING: "pending",

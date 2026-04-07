@@ -1,0 +1,125 @@
+{
+  "plan": "sync-bugfix",
+  "description": "Fix critical and moderate sync system bugs with tests",
+  "created": "2026-04-05",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Run baseline tests",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-all"
+    },
+    {
+      "id": "T-002",
+      "title": "Remove PullSyncWrapper from _protected.tsx",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-001"
+    },
+    {
+      "id": "T-003",
+      "title": "Delete use-pull-sync.ts and pull-sync-wrapper.tsx",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-001",
+      "blockedBy": ["T-002"]
+    },
+    {
+      "id": "T-004",
+      "title": "Fix cursor advancement bug in pull-service.ts",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-002",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-005",
+      "title": "Fix DELETE missing businessId in change-applier.ts",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-003",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-006",
+      "title": "Add AbortController to PullService",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-004",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-007",
+      "title": "Add AbortController to SyncService sendBatch",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-004",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-008",
+      "title": "Make backoff cancellable in sync-service.ts",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-005",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-009",
+      "title": "Debounce forceSync on reconnect in coordinator.ts",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-006",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-010",
+      "title": "Add abort flag to staged pull loop",
+      "status": "pending",
+      "priority": "P2",
+      "requirement": "FR-007",
+      "blockedBy": ["T-001", "T-006"]
+    },
+    {
+      "id": "T-011",
+      "title": "Add MSW sync handlers to e2e mocks",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-009",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-012",
+      "title": "Test CustomerSyncHandler",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-008",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-013",
+      "title": "Test ProductSyncHandler",
+      "status": "pending",
+      "priority": "P2",
+      "requirement": "FR-008",
+      "blockedBy": ["T-001"]
+    },
+    {
+      "id": "T-014",
+      "title": "Test ChangeApplier DELETE with businessId",
+      "status": "pending",
+      "priority": "P1",
+      "requirement": "FR-010",
+      "blockedBy": ["T-001", "T-005"]
+    },
+    {
+      "id": "T-015",
+      "title": "Verify all tests pass",
+      "status": "pending",
+      "priority": "P0",
+      "requirement": "FR-all",
+      "blockedBy": ["T-002", "T-003", "T-004", "T-005", "T-006", "T-007", "T-008", "T-009", "T-010", "T-011", "T-012", "T-013", "T-014"]
+    }
+  ]
+}

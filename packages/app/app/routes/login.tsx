@@ -1,9 +1,10 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link } from "react-router";
-import { Store, Loader2 } from "lucide-react";
+import { Store, Loader2, AlertTriangle, ShieldAlert, RotateCcw } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
+import { useLoginHealth } from "@/hooks/use-login-health";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
 import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
@@ -20,6 +29,7 @@ import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 export default function LoginPage() {
   const navigate = useNavigate();
   const { user, isLoading, login } = useAuth();
+  const health = useLoginHealth();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -114,18 +124,30 @@ export default function LoginPage() {
               <CardFooter className="flex flex-col gap-3 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
                 <Button
                   type="submit"
-                  className="h-12 w-full rounded-[18px] bg-orange-500 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600"
-                  disabled={form.formState.isSubmitting || !form.formState.isValid}
+                  className="h-12 w-full rounded-[18px] bg-orange-500 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={form.formState.isSubmitting || !form.formState.isValid || !health.canLogin}
                 >
                   {form.formState.isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Iniciando sesión...
                     </>
+                  ) : !health.canLogin ? (
+                    <>
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      Requiere reparación
+                    </>
                   ) : (
                     "Iniciar sesión"
                   )}
                 </Button>
+
+                {health.status === "warning" && health.warningMessage && (
+                  <div className="flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{health.warningMessage}</span>
+                  </div>
+                )}
 
                 <p className="text-center text-sm text-muted-foreground">
                   ¿No tienes cuenta?{" "}
@@ -141,6 +163,67 @@ export default function LoginPage() {
           </FormProvider>
         </Card>
       </div>
+
+      {/* Health Check Drawer */}
+      <Drawer open={health.status === "critical"}>
+        <DrawerContent className="px-6 pb-8 pt-4">
+          <DrawerHeader className="text-left">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <ShieldAlert className="h-5 w-5 text-red-600" />
+              </div>
+              <DrawerTitle>Problema detectado</DrawerTitle>
+            </div>
+            <DrawerDescription className="pt-2">
+              Se detectaron problemas con los datos locales que podrían afectar el funcionamiento de la aplicación.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="space-y-3 py-4">
+            {health.result?.issues.map((issue, index) => (
+              <div
+                key={index}
+                className={`rounded-lg border p-3 ${
+                  issue.severity === "critical"
+                    ? "border-red-200 bg-red-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle
+                    className={`mt-0.5 h-4 w-4 ${
+                      issue.severity === "critical" ? "text-red-600" : "text-amber-600"
+                    }`}
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{issue.message}</p>
+                    {issue.details && (
+                      <p className="mt-1 text-xs text-gray-600">{issue.details}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DrawerFooter className="flex-col gap-2 px-0">
+            <Button
+              onClick={health.repair}
+              className="w-full bg-red-600 hover:bg-red-700"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reparar y continuar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={health.ignore}
+              className="w-full"
+            >
+              Ignorar y continuar (riesgo)
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
