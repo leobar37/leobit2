@@ -6,7 +6,8 @@
  * and enables easier testing.
  */
 
-import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams } from "../sync-service";
+import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams } from "../types";
+import type { QueueOptions } from "../types";
 
 /**
  * Interface for sync queue operations
@@ -20,7 +21,7 @@ export interface ISyncQueue {
   /**
    * Get pending operations (status = pending or failed)
    */
-  getPending(limit: number): Promise<SyncOperationRecord[]>;
+  getPending(limit: number, options?: QueueOptions): Promise<SyncOperationRecord[]>;
 
   /**
    * Get a single operation by ID
@@ -66,6 +67,11 @@ export interface ISyncQueue {
    * Delete an operation from the queue
    */
   deleteOperation(id: string): Promise<boolean>;
+
+  /**
+   * Cleanup completed operations older than specified days
+   */
+  cleanupCompleted(olderThanDays: number): Promise<number>;
 
   /**
    * Retry a failed operation

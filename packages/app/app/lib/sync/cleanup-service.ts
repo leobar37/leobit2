@@ -6,7 +6,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { ISyncQueue } from "./queue/sync-queue";
+import type { ISyncQueue } from "./types";
 
 export type CleanupScope = "logout" | "business_switch" | "token_expiry";
 
@@ -46,11 +46,14 @@ export class SyncCleanupService {
       case "logout":
         result.operationsDeleted = await this.clearOperations();
         result.deadLetterDeleted = await this.clearDeadLetter();
+        await this.queue?.cleanupCompleted(7);
         result.cursorsCleared = await this.clearCursors();
         break;
 
       case "business_switch":
         // Only clear cursors - pending operations will sync to new business
+        // Also cleanup old completed operations
+        await this.queue?.cleanupCompleted(7);
         result.cursorsCleared = await this.clearCursors();
         break;
 

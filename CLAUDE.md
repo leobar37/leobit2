@@ -1,31 +1,40 @@
 <!--
 This file is auto-generated from AGENTS.md
 Do not edit directly - edit AGENTS.md instead
- -->
+  -->
 # AGENTS.md - Avileo Project Knowledge Base
 
 > **Hierarchical knowledge base for AI agents. For detailed package docs, see package-level AGENTS.md files.**
 
+**Generated:** 2026-04-08
+**Commit:** 8c917d6
+**Branch:** main
+**Mode:** Update
+
 ## Project Overview
 
 **Avileo**: Offline-first chicken sales management system for mobile vendors.
+- **Stack**: Bun + ElysiaJS + Drizzle + PostgreSQL + React Router v7 + TanStack
+- **Architecture**: Mobile-first, offline-first with PGlite (PostgreSQL in WASM) + custom REST sync
+- **Multi-tenancy**: Users can belong to multiple businesses
 
 | Aspect | Technology |
 |--------|------------|
 | **Runtime** | Bun 1.1.38+ |
-| **Backend** | ElysiaJS + Drizzle ORM + PostgreSQL |
+| **Backend** | ElysiaJS + Drizzle ORM + PostgreSQL (Neon) |
 | **Frontend** | React Router v7 + React 19 + Vite |
 | **Auth** | Better Auth (JWT) |
-| **Offline** | IndexedDB + Electric SQL sync |
+| **Offline** | PGlite + custom REST sync (push/pull) |
 | **Monorepo** | Bun workspaces + Turbo |
+| **Deployment** | Docker + Dokploy (self-hosted PaaS) |
 
 ## Monorepo Structure
 
 ```
 packages/
-├── app/              # React Router v7 frontend
+├── app/              # React Router v7 frontend (SPA)
 ├── backend/          # ElysiaJS API server
-└── shared/           # Shared types (tsup build)
+└── shared/           # Shared types, enums, sync config (tsup build)
 ```
 
 ## Package Documentation Map
@@ -35,13 +44,18 @@ packages/
 | Root | This file | Project-wide conventions |
 | `@avileo/backend` | `packages/backend/AGENTS.md` | ElysiaJS, Drizzle, RequestContext |
 | `@avileo/app` | `packages/app/AGENTS.md` | React Router v7, TanStack, offline-first |
+| `@avileo/shared` | `packages/shared/src/AGENTS.md` | Shared schema, enums, sync config |
 | `app/components` | `packages/app/app/components/AGENTS.md` | UI primitives, forms, shadcn/ui |
 | `app/routes` | `packages/app/app/routes/AGENTS.md` | File-based routing conventions |
 | `app/hooks` | `packages/app/app/hooks/AGENTS.md` | Custom React hooks patterns |
-| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Offline data layer |
-| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | ElectricSQL sync engine |
+| `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Zod entity schemas |
+| `app/lib/services` | `packages/app/app/lib/services/AGENTS.md` | BaseService + PGlite local-first services |
+| `app/lib/sales` | `packages/app/app/lib/sales/AGENTS.md` | POS business logic |
+| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | PGlite sync engine |
 | `app/e2e` | `packages/app/e2e/AGENTS.md` | E2E testing patterns |
 | `backend/services` | `packages/backend/src/services/AGENTS.md` | Repository/service layer |
+| `backend/services/sync` | `packages/backend/src/services/sync/AGENTS.md` | Sync handlers + framework |
+| `backend/services/transitions` | `packages/backend/src/services/transitions/AGENTS.md` | State machine transitions |
 | `backend/api` | `packages/backend/src/api/AGENTS.md` | Elysia route modules |
 | `backend/db/schema` | `packages/backend/src/db/schema/AGENTS.md` | Drizzle table definitions |
 
@@ -58,10 +72,15 @@ bun run build                  # Build all packages
 bun run db:generate            # Generate migrations
 bun run db:migrate             # Run migrations
 bun run db:push                # Push schema changes (dev)
+bun run db:reset               # Reset database (keeps demo user)
+bun run db:seed:demo           # Seed demo account data
+bun run db:backfill-sync       # Backfill sync operations from local data
 
 # Testing
 cd packages/app && bun test    # Run Vitest tests
 cd packages/app && bun run test:e2e  # Run Playwright E2E tests
+cd packages/backend && bun test    # Backend unit tests
+cd packages/backend && bun run test:e2e  # Backend E2E tests
 ```
 
 ## Import Patterns
@@ -71,7 +90,7 @@ cd packages/app && bun run test:e2e  # Run Playwright E2E tests
 import { db } from "./lib/db";
 import { CustomerRepository } from "./services/repository/customer.repository";
 
-// Frontend: path aliases
+// Frontend: path aliases (~ for lib/hooks, @ for components)
 import { Button } from "@/components/ui/button";
 import { useCustomers } from "~/hooks/use-customers";
 import { cn } from "~/lib/utils";
@@ -123,27 +142,39 @@ async findById(id: string, ctx: RequestContext)
 
 | Pattern | Rule | Violation Impact |
 |---------|------|------------------|
-| **File-based Routing** | Routes auto-generated from filenames | 404 errors |
+| **File-based Routing** | Routes auto-generated from filenames via `flatRoutes()` | 404 errors |
 | **Protected Routes** | `_protected.*` prefix for auth pages | Missing auth guard |
-| **Index Convention** | Use `._index.tsx` suffix for parent routes | Nested route conflicts |
-| **Offline-first** | ALL writes check `isOnline()` before API call | Crashes when offline |
+| **Index Convention** | Use `._index.tsx` suffix for parent routes with children | Nested route conflicts |
+| **Offline-first** | ALL writes go through local PGlite + sync queue | Data loss |
 
 ### Database (Drizzle)
 
 1. **Better Auth Tables**: `user`, `session` managed by Better Auth - don't modify directly
 2. **FK Pattern**: Operational FKs point to `business_users.id` (not `users.id`)
 3. **Sync Status**: Offline-capable tables MUST have `sync_status` + `sync_attempts`
+4. **Primary Keys**: CUID2 via `@paralleldrive/cuid2`
+
+### Sync Architecture
+
+- **Local DB**: PGlite (PostgreSQL in WASM) on device
+- **Push**: Client enqueues operations → batch POST to `/sync/batch`
+- **Pull**: 3-stage strategy (CRITICAL → RECENT_SALES → HISTORICAL)
+- **Handlers**: 14 entity handlers on backend extend `BaseSyncHandler`
+- **Conflict Resolution**: Server-side `ConflictResolver` + client `ConflictResolver` UI
 
 ## Key Entry Points
 
 | Purpose | Path |
 |---------|------|
 | Backend server | `packages/backend/src/index.ts` |
+| Backend app config | `packages/backend/src/app.ts` |
 | Frontend routes | `packages/app/app/routes.ts` |
 | Root layout | `packages/app/app/root.tsx` |
 | Protected layout | `packages/app/app/routes/_protected.tsx` |
 | DB schema index | `packages/backend/src/db/schema/index.ts` |
 | API client | `packages/app/app/lib/api-client.ts` |
+| Shared schema | `packages/shared/src/schema.ts` |
+| Sync config | `packages/shared/src/sync-config.ts` |
 
 ## Documentation Map
 
@@ -151,135 +182,25 @@ async findById(id: string, ctx: RequestContext)
 |-------|----------|
 | Architecture overview | `docs/ARCHITECTURE.md` |
 | Database schema | `docs/technical/database.md` |
-| Offline sync plan | `docs/technical/offline-plan.md` |
-| Electric/sales sync lessons | `docs/technical/electric-sales-sync-considerations.md` |
+| Custom sync plan | `docs/technical/custom-sync-plan.md` |
 | Development phases | `docs/development/readme.md` |
 | UI mockups | `docs/screens/readme.md` |
+| Code conventions | `docs/CONVENTIONS.md` |
+| Mobile list pattern | `docs/screens/mobile-list-pattern.md` |
 
 ## Skills for AI Agents
 
-Use these skills when delegating tasks:
-
 | Skill | Use For |
 |-------|---------|
+| `avileo` | Project-specific context |
+| `avileo-sync` | Sync engine, conflict resolution |
 | `fullstack-backend` | Database, Drizzle, repositories |
 | `fullstack-auth-better` | Authentication, JWT, RBAC |
 | `fullstack-infrastructure` | Monorepo, Turbo, setup |
 | `frontend` | React components, forms, UI |
 | `bun-elysia` | ElysiaJS backend patterns |
-| `avileo` | Project-specific context |
-| `tanstack-db` | TanStack DB + ElectricSQL, live queries, mutations |
-
-## Language Rules
-
-- **All code comments must be in English only** — Never add comments in Spanish or other languages
-- User-facing text: Spanish (Peru locale: "es-PE")
-
----
-
-*For package-specific patterns, see the AGENTS.md in each package directory.*
-
-> **Concise project reference for AI agents. For detailed docs, see `/docs/`.**
-
-## Project Overview
-
-**Avileo**: Offline-first chicken sales management system.
-- **Stack**: Bun + ElysiaJS + Drizzle + PostgreSQL + React Router v7 + TanStack
-- **Architecture**: Mobile-first, offline-first with IndexedDB persistence
-- **Multi-tenancy**: Users can belong to multiple businesses
-
-## Package Structure
-
-| Package | Path | Purpose |
-|---------|------|---------|
-| `@avileo/app` | `packages/app/` | React Router v7 frontend |
-| `@avileo/backend` | `packages/backend/` | ElysiaJS + Drizzle backend |
-| `@avileo/shared` | `packages/shared/` | Shared types & utilities |
-
-## Quick Commands
-
-```bash
-# Development
-bun run dev          # Start all dev servers
-bun run build        # Build all packages
-
-# Database
-cd packages/backend
-bun run db:generate  # Generate migrations
-bun run db:migrate   # Run migrations
-bun run db:push      # Push schema changes (dev)
-```
-
-## Key Conventions
-
-### Imports
-```typescript
-// Backend: relative imports only
-import { db } from "./lib/db";
-
-// Frontend: path aliases
-import { Button } from "@/components/ui/button";
-import { Component } from "~/components/Component";
-
-// Cross-package: workspace protocol
-import type { ApiResponse } from "@avileo/shared";
-```
-
-### Naming
-- Files: `kebab-case.ts`, components: `PascalCase.tsx`
-- Components: PascalCase, functions: camelCase
-- Database tables: snake_case
-
-### Critical Patterns
-- **Offline-first**: All vendor screens work 100% offline
-- **Better Auth**: Tables `user`, `session` managed by Better Auth
-- **FK Pattern**: Operational FKs point to `business_users.id`
-- **Sync Status**: Tables `customers`, `sales`, `abonos` have `sync_status` + `sync_attempts`
-
-## React Router v7 Routing
-
-File-based routing in `packages/app/app/routes/` using flatRoutes convention:
-
-| Filename Pattern | URL Path | Layout |
-|------------------|----------|--------|
-| `_index.tsx` | `/` | root |
-| `login.tsx` | `/login` | root |
-| `_protected.tsx` | (layout) | - |
-| `_protected.dashboard.tsx` | `/dashboard` | protected |
-| `_protected.clientes._index.tsx` | `/clientes` | protected |
-| `_protected.clientes.$id._index.tsx` | `/clientes/:id` | protected |
-
-**Critical Rules:**
-- Use `._index.tsx` suffix for routes with children (e.g., `clientes._index.tsx` when you have `clientes.$id.tsx`)
-- `_protected.*` routes are wrapped with auth guard + AppLayout
-- Public routes have no underscore prefix (login, register)
-
-## Documentation Map
-
-| Topic | Location |
-|-------|----------|
-| **Architecture** | `docs/ARCHITECTURE.md` |
-| **Technical Plan** | `docs/technical/readme.md` |
-| **Database Schema** | `docs/technical/database.md` |
-| **Electric/Sales Sync Lessons** | `docs/technical/electric-sales-sync-considerations.md` |
-| **Development Phases** | `docs/development/readme.md` |
-| **UI Mockups** | `docs/screens/readme.md` |
-| **UI Components** | `docs/screens/componentes-ui.md` |
-| **Code Conventions** | `docs/CONVENTIONS.md` |
-
-## Skills Reference
-
-Use these skills when delegating:
-
-| Skill | Use For |
-|-------|---------|
-| `fullstack-backend` | Database, Drizzle, repositories |
-| `fullstack-auth-better` | Authentication, JWT, RBAC |
-| `fullstack-infrastructure` | Monorepo, routing, setup |
-| `frontend` | React components, forms, UI |
-| `bun-elysia` | ElysiaJS backend patterns |
-| `avileo` | Project-specific context |
-| `tanstack-db` | TanStack DB + ElectricSQL, live queries, atomic mutations |
+| `e2e-testing` | Playwright E2E tests |
+| `pglite-electric-hybrid` | PGlite + ElectricSQL hybrid sync |
 
 ## Decision Matrix
 
@@ -289,28 +210,23 @@ Use these skills when delegating:
 | Authentication | fullstack-auth-better | - |
 | React components | frontend | - |
 | API + DB | fullstack-backend | fullstack-auth-better |
+| Sync issues | avileo-sync | fullstack-backend |
 | Full feature | All 4 skills | - |
 
 ## UI Development Rules
 
 1. **Mobile-first**: Design for 320px-428px viewport
-2. **Offline-first**: All vendor screens must work offline
-3. **Use mockups**: Reference `docs/screens/` and `docs/app/src/` prototypes
-4. **Orange primary**: `#f97316` for buttons, accents
+2. **Offline-first**: All vendor screens work 100% offline via PGlite
+3. **Orange primary**: `#f97316` for buttons, accents
+4. **Shell tokens**: `app-shell`, `shell-surface`, `shell-card-flat`, `shell-card-soft`, `shell-block-muted`, `shell-field`
 5. **Bottom nav**: Mobile uses 4-item bottom navigation
-
-## Important Notes
-
-- Login requires internet (first time), JWT cached 24-48h
-- IndexedDB capacity: ~50-100 MB per origin
-- Sync every 30s when online, or manual
-- Admin sees synced data only (with pending indicator)
-- All skills assume Bun runtime
+6. **Mobile list pattern**: Summary → Search → List → FAB
 
 ## Language Rules
 
-- **All code comments must be in English only** — Never add comments in Spanish or any other language
+- **All code comments must be in English only** — Never add comments in Spanish or other languages
+- User-facing text: Spanish (Peru locale: "es-PE")
 
 ---
 
-*For detailed information, see linked documentation files.*
+*For package-specific patterns, see the AGENTS.md in each package directory.*

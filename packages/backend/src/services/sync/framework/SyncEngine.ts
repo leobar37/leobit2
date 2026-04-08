@@ -249,6 +249,8 @@ export class SyncEngine {
           serverData: conflict.serverData!,
           localVersion: operation.localVersion,
           serverVersion: conflict.serverVersion!,
+          sourceDeviceId: operation.deviceId,
+          sourceFingerprint: operation.sourceFingerprint,
         }, tx);
       } catch (persistError) {
         logger.error({

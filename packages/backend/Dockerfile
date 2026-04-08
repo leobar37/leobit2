@@ -2,21 +2,28 @@
 # Multi-stage build for production optimization
 
 # Stage 1: Dependencies
-FROM oven/bun:1.3.6-slim AS deps
+FROM oven/bun:1.2.10-slim AS deps
 WORKDIR /app
 
-# Copy all files (respecting .dockerignore)
-COPY . .
+# Copiar SOLO los archivos necesarios para instalar dependencias (mejor layer caching)
+COPY package.json bun.lock ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/backend/package.json ./packages/backend/
 
-# Install dependencies
-RUN bun install
+# Instalar dependencias (esta layer se cachea si los lockfiles no cambian)
+RUN bun install --frozen-lockfile
 
 # Stage 2: Builder
-FROM oven/bun:1.3.6-slim AS builder
+FROM oven/bun:1.2.10-slim AS builder
 WORKDIR /app
 
-# Copy everything from deps (includes installed node_modules with correct symlinks)
-COPY --from=deps /app ./
+# Copiar dependencias instaladas
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+
+# Copiar el código fuente
+COPY . .
 
 # Build shared package first (required by backend)
 RUN cd packages/shared && bun run build
@@ -28,7 +35,7 @@ RUN cd packages/backend && bun run build
 RUN cd packages/backend && bunx drizzle-kit generate
 
 # Stage 3: Production
-FROM oven/bun:1.3.6-slim AS runner
+FROM oven/bun:1.2.10-slim AS runner
 WORKDIR /app
 
 # Copy package files for workspace resolution

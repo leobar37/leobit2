@@ -123,6 +123,10 @@ export class SaleSyncHandler extends BaseSyncHandler {
     tx?: DbTransaction
   ): Promise<void> {
     const parsed = saleUpdateSchema.parse(operation.payload);
+
+    // Get the client's expected version from the operation
+    const clientExpectedVersion = operation.localVersion ?? parsed.version ?? 1;
+
     const existing = await this.saleRepo.findById(ctx, operation.entityId, tx);
 
     if (!existing) {
@@ -159,6 +163,15 @@ export class SaleSyncHandler extends BaseSyncHandler {
         });
       }
       return;
+    }
+
+    // Check for version conflict before applying update
+    // This prevents race conditions when same sale is edited from multiple devices
+    if (existing.version > clientExpectedVersion) {
+      throw new Error(
+        `Version conflict: expected version ${clientExpectedVersion} but server has version ${existing.version}. ` +
+        `The sale was modified by another device. Please refresh and try again.`
+      );
     }
 
     if (parsed.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {

@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router";
-import { Store, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Route, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   useValidateInvitation,
   useAcceptInvitation,
@@ -68,7 +68,7 @@ export default function AcceptInvitationPage() {
       <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
-            <Store className="w-8 h-8 text-white" />
+            <Route className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl">¡Te han invitado!</CardTitle>
           <CardDescription>

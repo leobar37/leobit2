@@ -23,6 +23,7 @@ interface EngineContextValue {
   db: ReturnType<typeof drizzle> | null;
   error: Error | null;
   schemaError: Error | null;
+  hasInitTimeout: boolean;
   resetAndLogout: () => Promise<void>;
 }
 
@@ -46,6 +47,7 @@ export function EngineProvider({
   );
   const [error, setError] = useState<Error | null>(null);
   const [schemaError, setSchemaError] = useState<Error | null>(null);
+  const [hasInitTimeout, setHasInitTimeout] = useState(false);
 
   const pgRef = useRef<PGlite | null>(null);
   const dbRef = useRef<ReturnType<typeof drizzle> | null>(null);
@@ -122,6 +124,7 @@ export function EngineProvider({
         if (isMounted && !isInitialized) {
           setError(new Error("Initialization timeout. Please check your connection and reload."));
           setIsSyncing(false);
+          setHasInitTimeout(true);
           isInitializingRef.current = false;
           // Allow app to load even on timeout
           setIsInitialized(true);
@@ -197,6 +200,7 @@ export function EngineProvider({
     db: dbRef.current,
     error,
     schemaError,
+    hasInitTimeout,
     resetAndLogout,
   };
 
@@ -213,6 +217,7 @@ const defaultEngineContext: EngineContextValue = {
   db: null,
   error: null,
   schemaError: null,
+  hasInitTimeout: false,
   resetAndLogout: async () => {
     console.warn("[useEngine] resetAndLogout called before engine was initialized");
   },

@@ -1,0 +1,38 @@
+{
+  "plan": "fix-offline-sync-perf",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Wire TanStack Query Invalidation on Pull",
+      "status": "completed",
+      "requirements": ["FR-002"]
+    },
+    {
+      "id": "T-002",
+      "title": "Add Offline Guard to processPending",
+      "status": "completed",
+      "requirements": ["FR-001", "FR-005"]
+    },
+    {
+      "id": "T-003",
+      "title": "Add Pagination to Sales List",
+      "status": "completed",
+      "requirements": ["FR-003"]
+    },
+    {
+      "id": "T-004",
+      "title": "Add DLQ Recovery UI to Sync Debug Panel",
+      "status": "completed",
+      "requirements": ["FR-004"],
+      "dependsOn": ["T-001"],
+      "notes": "Already fully implemented - DLQ tab existed with Retry/Delete/Clear All buttons, search, and empty state"
+    },
+    {
+      "id": "T-005",
+      "title": "Add Stale Pull Auto-Recovery on Online Event",
+      "status": "completed",
+      "requirements": ["FR-005"],
+      "dependsOn": ["T-002"]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Store } from "lucide-react";
+import { Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navigation() {
@@ -9,7 +9,7 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
-              <Store className="w-6 h-6 text-white" />
+              <Route className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white">Avileo</span>
           </div>

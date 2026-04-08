@@ -1,18 +1,28 @@
 /**
  * Fetch-based Sync HTTP Client Implementation
- * 
- * Implements ISyncHttpClient using the native fetch API.
- * Extracted from SyncService to enable testing and separation of concerns.
+ *
+ * Refactored to use BaseHttpClient for scalability while maintaining
+ * the same ISyncHttpClient interface for backward compatibility.
+ *
+ * Features:
+ * - Automatic retry with exponential backoff
+ * - Request/response interceptors
+ * - Proper error handling with typed errors
+ *
+ * Note: Token refresh is handled automatically by Better Auth.
  */
 
 import type { ISyncHttpClient, ConflictQueryOptions } from "./sync-http-client";
 import type { SyncOperationRecord, BatchSyncResponse } from "../sync-service";
+import { getDeviceId, getDeviceFingerprint } from "../device-fingerprint";
+import { BaseHttpClient, createHeaderInterceptor, createLoggingInterceptor } from "../../http/base-http-client";
+import { getStoredAuthToken } from "../../session-storage";
 
 /**
  * Generate a correlation ID for tracking
  */
 function generateCorrelationId(): string {
-  return `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `sync-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**
@@ -33,31 +43,88 @@ function parsePayload(payload: unknown): Record<string, unknown> {
 
 /**
  * Fetch-based implementation of ISyncHttpClient
+ * Built on top of BaseHttpClient for scalability
  */
 export class FetchSyncHttpClient implements ISyncHttpClient {
-  private baseUrl: string;
-  private abortController: AbortController | null = null;
+  private client: BaseHttpClient;
 
   constructor(
     private authToken: string,
     private businessId: string,
     baseUrl?: string
   ) {
-    this.baseUrl = baseUrl || import.meta.env.VITE_API_URL || "http://localhost:5201";
+    const url = baseUrl || import.meta.env.VITE_API_URL || "http://localhost:5201";
+
+    // Create base client with sync-specific configuration
+    this.client = new BaseHttpClient({
+      baseUrl: url,
+      defaultTimeout: 30000,
+      maxRetries: 3,
+      retryBaseDelay: 1000,
+      retryMaxDelay: 30000,
+      defaultHeaders: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Add sync-specific interceptors
+    this.setupInterceptors();
+  }
+
+  /**
+   * Configure interceptors for sync operations
+   */
+  private setupInterceptors(): void {
+    // Auth and business headers interceptor
+    this.client.addInterceptor({
+      id: "sync-auth",
+      onRequest: (context) => {
+        // Always get fresh token from storage (Better Auth handles refresh)
+        const currentToken = getStoredAuthToken() || this.authToken;
+
+        context.headers["Authorization"] = `Bearer ${currentToken}`;
+        context.headers["x-business-id"] = this.businessId;
+
+        // Add correlation ID if not present
+        if (!context.headers["x-correlation-id"]) {
+          context.headers["x-correlation-id"] = generateCorrelationId();
+        }
+
+        return context;
+      },
+    });
+
+    // Device fingerprint interceptor - adds device metadata to sync requests
+    this.client.addInterceptor({
+      id: "sync-device",
+      onRequest: (context) => {
+        // Only add device info to POST /sync/batch requests
+        if (context.method === "POST" && context.url.includes("/sync/batch")) {
+          const body = context.body as { operations?: unknown[]; deviceId?: string } | undefined;
+          if (body?.operations) {
+            context.body = {
+              ...body,
+              deviceId: getDeviceId(),
+              sourceFingerprint: getDeviceFingerprint(),
+            };
+          }
+        }
+        return context;
+      },
+    });
+
+    // Logging interceptor (only in development)
+    if (import.meta.env.DEV) {
+      this.client.addInterceptor(createLoggingInterceptor({
+        logRequests: true,
+        logResponses: true,
+        logErrors: true,
+        filter: (url) => url.includes("/sync/"),
+      }));
+    }
   }
 
   async sendBatch(operations: SyncOperationRecord[], signal?: AbortSignal): Promise<BatchSyncResponse> {
-    // Cancel any in-flight request
-    if (this.abortController) {
-      this.abortController.abort();
-    }
-    this.abortController = new AbortController();
-
-    // If an external signal is provided, relay abort to it
-    if (signal) {
-      signal.addEventListener("abort", () => this.abortController?.abort());
-    }
-
     const batchCorrelationId = generateCorrelationId();
 
     console.log(`[FetchSyncHttpClient] Sending batch:`, {
@@ -66,40 +133,24 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
     });
 
     try {
-      const response = await fetch(`${this.baseUrl}/sync/batch`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.authToken}`,
-          "x-business-id": this.businessId,
-          "x-correlation-id": batchCorrelationId,
-        },
-        body: JSON.stringify({
-          operations: operations.map((op) => ({
-            idempotencyKey: op.idempotency_key ?? op.id,
-            entityType: op.entity_type,
-            entityId: op.entity_id,
-            operation: op.operation,
-            payload: parsePayload(op.payload),
-            localVersion: op.version,
-            localTimestamp: new Date(op.updated_at).toISOString(),
-            correlationId: generateCorrelationId(),
-            ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
-          })),
-        }),
-        signal: this.abortController.signal,
-      });
+      // Transform operations for the API
+      const transformedOperations = operations.map((op) => ({
+        idempotencyKey: op.idempotency_key ?? op.id,
+        entityType: op.entity_type,
+        entityId: op.entity_id,
+        operation: op.operation,
+        payload: parsePayload(op.payload),
+        localVersion: op.version,
+        localTimestamp: new Date(op.updated_at).toISOString(),
+        correlationId: generateCorrelationId(),
+        deviceId: getDeviceId(),
+        sourceFingerprint: getDeviceFingerprint(),
+        ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
+      }));
 
-      if (!response.ok) {
-        console.error(`[FetchSyncHttpClient] Batch request failed:`, {
-          status: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error(`Sync batch failed: ${response.status} ${response.statusText}`);
-      }
-
-      const body = await response.json() as {
-        success?: boolean;
+      // Use base client with retry and timeout handling
+      const response = await this.client.post<{
+        success: boolean;
         data?: {
           results?: Array<{
             idempotencyKey: string;
@@ -111,7 +162,11 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
             };
           }>;
         };
-      };
+      }>("/sync/batch", {
+        operations: transformedOperations,
+      }, { signal });
+
+      const body = response.data;
 
       if (!body.success || !body.data?.results) {
         throw new Error("Sync batch returned an invalid response");
@@ -135,13 +190,8 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
         })),
       };
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        console.log("[FetchSyncHttpClient] Batch send was aborted");
-        throw error;
-      }
+      console.error(`[FetchSyncHttpClient] Batch request failed:`, error);
       throw error;
-    } finally {
-      this.abortController = null;
     }
   }
 
@@ -149,10 +199,7 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
    * Abort any in-flight batch request
    */
   abort(): void {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    this.client.abortAll();
   }
 
   async getConflicts(options?: ConflictQueryOptions): Promise<{
@@ -163,48 +210,40 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
       pagination: { limit: number; offset: number; hasMore: boolean };
     };
   }> {
-    const params = new URLSearchParams();
-    if (options?.status) params.set("status", options.status);
-    if (options?.entityType) params.set("entityType", options.entityType);
-    if (options?.limit) params.set("limit", String(options.limit));
-    if (options?.offset) params.set("offset", String(options.offset));
+    const params: Record<string, string> = {};
+    if (options?.status) params.status = options.status;
+    if (options?.entityType) params.entityType = options.entityType;
+    if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
 
-    const url = `${this.baseUrl}/sync/conflicts${params.toString() ? `?${params}` : ""}`;
+    const queryString = Object.entries(params)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join("&");
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-    });
+    const path = `/sync/conflicts${queryString ? `?${queryString}` : ""}`;
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conflicts: ${response.status} ${response.statusText}`);
-    }
+    const response = await this.client.get<{
+      success: boolean;
+      data: {
+        conflicts: unknown[];
+        pendingCount: number;
+        pagination: { limit: number; offset: number; hasMore: boolean };
+      };
+    }>(path);
 
-    return response.json();
+    return response.data;
   }
 
   async getConflict(conflictId: string): Promise<{
     success: boolean;
     data: unknown;
   }> {
-    const response = await fetch(`${this.baseUrl}/sync/conflicts/${conflictId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-    });
+    const response = await this.client.get<{
+      success: boolean;
+      data: unknown;
+    }>(`/sync/conflicts/${conflictId}`);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conflict: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json();
+    return response.data;
   }
 
   async resolveConflict(
@@ -215,23 +254,14 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
     success: boolean;
     data: unknown;
   }> {
-    const response = await fetch(`${this.baseUrl}/sync/conflicts/${conflictId}/resolve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.authToken}`,
-        "x-business-id": this.businessId,
-      },
-      body: JSON.stringify({
-        resolution,
-        ...(mergedData ? { mergedData } : {}),
-      }),
+    const response = await this.client.post<{
+      success: boolean;
+      data: unknown;
+    }>(`/sync/conflicts/${conflictId}/resolve`, {
+      resolution,
+      ...(mergedData ? { mergedData } : {}),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to resolve conflict: ${response.status} ${response.statusText}`);
-    }
-
-    return response.json();
+    return response.data;
   }
 }

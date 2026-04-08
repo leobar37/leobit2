@@ -59,6 +59,9 @@ export const products = pgTable(
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
   },
   (table) => [
     index("idx_products_business_id").on(table.businessId),
@@ -104,6 +107,9 @@ export const distribuciones = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
+
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -144,6 +150,9 @@ export const distribucionItems = pgTable(
 
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -190,6 +199,9 @@ export const productVariants = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
+
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -216,6 +228,10 @@ export const variantInventory = pgTable(
       .notNull()
       .references(() => productVariants.id, { onDelete: "cascade" }),
     quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
+
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
+
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
@@ -311,6 +327,9 @@ export const distribucionCierreItems = pgTable(
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

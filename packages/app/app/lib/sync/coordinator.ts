@@ -78,13 +78,37 @@ export class SyncCoordinator {
     this.isRunning = false;
   }
 
-  private handleOnline = (): void => {
+  private handleOnline = async (): Promise<void> => {
     console.log("[SyncCoordinator] Online - resuming sync");
     syncEvents.emit("sync:online", undefined);
 
     // Reset backoffs IMMEDIATELY (not debounced)
     this.pushBackoff.reset();
     this.pullBackoff.reset();
+    this.syncService.resetBackoff();
+
+    // If pull service is stuck (stale pull detected previously), force reset
+    if (this.pullService.getIsStuck()) {
+      console.log("[SyncCoordinator] Sync was stuck - forcing reset");
+      await this.forceResetSync();
+      return;
+    }
+
+    // Restart services if they were stopped (e.g., due to stale pulls)
+    if (!this.syncService.isRunning()) {
+      console.log("[SyncCoordinator] Restarting sync service");
+      this.syncService.startAutoSync();
+    }
+    if (!this.pullService.isRunning()) {
+      console.log("[SyncCoordinator] Restarting pull service");
+      this.pullService.startAutoPull();
+    }
+
+    // Retry any DLQ operations that were queued during offline period
+    const retried = await this.syncService.retryAllDeadLetterOperations();
+    if (retried > 0) {
+      console.log(`[SyncCoordinator] Re-enqueued ${retried} DLQ operations`);
+    }
 
     // Debounce forceSync to handle rapid online/offline events
     if (this.forceSyncTimer) {
@@ -109,7 +133,7 @@ export class SyncCoordinator {
   };
 
   async forceSync(): Promise<void> {
-    await this.syncService.processPending();
+    await this.syncService.processPending(true); // ignoreOnlineCheck: true for force sync
     await this.pullService.pull();
   }
 

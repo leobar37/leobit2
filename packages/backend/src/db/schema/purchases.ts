@@ -46,6 +46,9 @@ export const purchases = pgTable(
     syncAttempts: integer("sync_attempts").notNull().default(0),
     syncGroupId: varchar("sync_group_id", { length: 100 }),
 
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -91,6 +94,9 @@ export const purchaseItems = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
     syncGroupId: varchar("sync_group_id", { length: 100 }),
+
+    // Version for optimistic locking (multi-device conflict detection)
+    version: integer("version").notNull().default(1),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

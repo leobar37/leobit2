@@ -4,10 +4,11 @@
  * Provides mock implementations of sync interfaces for testing.
  */
 
-import type { ISyncQueue } from "../queue/sync-queue";
+import type { ISyncQueue } from "../types";
 import type { ISyncHttpClient } from "../http/sync-http-client";
-import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams, BatchSyncResponse } from "../sync-service";
+import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams, BatchSyncResponse } from "../types";
 import type { ConflictStrategy } from "../config";
+import type { QueueOptions } from "../types";
 
 export class MockSyncQueue implements ISyncQueue {
   private operations: Map<string, SyncOperationRecord> = new Map();
@@ -36,7 +37,7 @@ export class MockSyncQueue implements ISyncQueue {
     return id;
   }
 
-  async getPending(limit: number): Promise<SyncOperationRecord[]> {
+  async getPending(limit: number, _options?: QueueOptions): Promise<SyncOperationRecord[]> {
     return Array.from(this.operations.values())
       .filter((op) => op.status === "pending" || op.status === "failed")
       .slice(0, limit);
@@ -136,6 +137,25 @@ export class MockSyncQueue implements ISyncQueue {
 
   async getDeadLetterOperations(limit: number): Promise<DeadLetterOperationRecord[]> {
     return Array.from(this.deadLetter.values()).slice(0, limit);
+  }
+
+  async cleanupCompleted(olderThanDays: number): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - olderThanDays);
+    const cutoffISO = cutoff.toISOString();
+
+    const toDelete: string[] = [];
+    for (const op of this.operations.values()) {
+      if (op.status === "completed" && op.updated_at < cutoffISO) {
+        toDelete.push(op.id);
+      }
+    }
+
+    for (const id of toDelete) {
+      this.operations.delete(id);
+    }
+
+    return toDelete.length;
   }
 
   clear(): void {

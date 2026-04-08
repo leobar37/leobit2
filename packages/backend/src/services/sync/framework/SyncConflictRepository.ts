@@ -22,6 +22,8 @@ export class SyncConflictRepository {
       serverData: Record<string, unknown>;
       localVersion: number;
       serverVersion: number;
+      sourceDeviceId?: string;
+      sourceFingerprint?: string;
     },
     tx?: DbTransaction
   ): Promise<SyncConflict> {
@@ -39,6 +41,8 @@ export class SyncConflictRepository {
         localVersion: data.localVersion,
         serverVersion: data.serverVersion,
         status: "pending",
+        sourceDeviceId: data.sourceDeviceId,
+        sourceFingerprint: data.sourceFingerprint,
       })
       .returning();
 

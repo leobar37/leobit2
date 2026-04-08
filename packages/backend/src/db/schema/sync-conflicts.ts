@@ -21,6 +21,11 @@ export const syncConflicts = pgTable(
     resolution: varchar("resolution", { length: 32 }),
     resolvedBy: uuid("resolved_by").references(() => businessUsers.id),
     resolvedAt: timestamp("resolved_at"),
+
+    // Device tracking for debugging multi-device conflicts
+    sourceDeviceId: varchar("source_device_id", { length: 128 }),
+    sourceFingerprint: varchar("source_fingerprint", { length: 256 }),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

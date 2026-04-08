@@ -609,6 +609,11 @@ export class PullService {
       return;
     }
 
+    // Reset stale pull detection state for clean restart
+    this.isStuck = false;
+    this.consecutiveStalePulls = 0;
+    this.consecutiveEmptyPulls = 0;
+
     this.pullIntervalId = setInterval(async () => {
       if (navigator.onLine && !this.isPullingFlag) {
         await this.pull();
@@ -632,6 +637,13 @@ export class PullService {
       this.abortController.abort();
       this.abortController = null;
     }
+  }
+
+  /**
+   * Check if auto pull is currently running
+   */
+  isRunning(): boolean {
+    return !!this.pullIntervalId;
   }
 
   /**

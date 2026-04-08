@@ -7,8 +7,71 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { ISyncQueue } from "./sync-queue";
-import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams } from "../sync-service";
+import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams } from "../types";
+import type { QueueOptions } from "../types";
+import { normalizeDatesToISO, parsePayload } from "../types";
 import { OPERATION_STATUS } from "../config";
+import { ENTITY_PRIORITIES } from "@avileo/shared";
+import { syncLogger } from "../sync-logger";
+
+/**
+ * Merge two arrays of objects by their `id` field.
+ * Items in `b` that already exist in `a` (by id) are replaced;
+ * items in `b` that don't exist in `a` are appended.
+ * Maintains original order from `a` plus new items from `b`.
+ */
+function mergeArrayById<T extends { id: string }>(a: T[], b: T[]): T[] {
+  const result = [...a];
+  const existingIds = new Set(a.map((item) => item.id));
+
+  for (const item of b) {
+    const idx = result.findIndex((r) => r.id === item.id);
+    if (idx >= 0) {
+      result[idx] = item;
+    } else {
+      result.push(item);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Recursively deep-merges `b` into `a`.
+ * Arrays are merged by `id` field using `mergeArrayById`.
+ * Primitives and other values in `b` overwrite `a`.
+ */
+function deepMerge(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...a };
+
+  for (const key of Object.keys(b)) {
+    const aVal = a[key];
+    const bVal = b[key];
+
+    if (
+      Array.isArray(aVal) &&
+      Array.isArray(bVal) &&
+      aVal.length > 0 &&
+      bVal.length > 0 &&
+      typeof aVal[0] === "object" &&
+      typeof bVal[0] === "object" &&
+      "id" in (aVal[0] as Record<string, unknown>) &&
+      "id" in (bVal[0] as Record<string, unknown>)
+    ) {
+      result[key] = mergeArrayById(
+        aVal as { id: string }[],
+        bVal as { id: string }[]
+      );
+    } else {
+      result[key] = bVal;
+    }
+  }
+
+  return result;
+}
 
 /**
  * Coalescing plan for merging operations
@@ -18,39 +81,6 @@ type CoalescePlan =
   | { type: "replace"; operation: "create" | "update" | "delete"; payload: Record<string, unknown> }
   | { type: "cancel" }
   | { type: "none" };
-
-/**
- * Normalize dates in payload to ISO strings
- */
-function normalizeDatesToISO(obj: unknown): unknown {
-  if (obj === null || obj === undefined) return obj;
-  if (obj instanceof Date) return obj.toISOString();
-  if (Array.isArray(obj)) return obj.map(normalizeDatesToISO);
-  if (typeof obj === "object") {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      result[key] = normalizeDatesToISO(value);
-    }
-    return result;
-  }
-  return obj;
-}
-
-/**
- * Parse payload from string or object
- */
-function parsePayload(payload: unknown): Record<string, unknown> {
-  if (!payload) return {};
-  if (typeof payload === "string") {
-    try {
-      return JSON.parse(payload) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
-  }
-  if (typeof payload === "object") return payload as Record<string, unknown>;
-  return {};
-}
 
 /**
  * Get coalescing plan for merging operations
@@ -66,7 +96,7 @@ function getCoalescePlan(
       return {
         type: "merge",
         operation: "create",
-        payload: { ...existingPayload, ...incoming.data },
+        payload: deepMerge(existingPayload, incoming.data),
       };
     }
     if (incoming.operation === "delete") {
@@ -79,7 +109,7 @@ function getCoalescePlan(
       return {
         type: "merge",
         operation: "update",
-        payload: { ...existingPayload, ...incoming.data },
+        payload: deepMerge(existingPayload, incoming.data),
       };
     }
     if (incoming.operation === "delete") {
@@ -123,7 +153,7 @@ export class PgSyncQueue implements ISyncQueue {
     const id = crypto.randomUUID();
     const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
 
-    console.log(`[PgSyncQueue] Enqueuing operation:`, {
+    syncLogger.warn(`[PgSyncQueue]`, `Enqueuing operation`, {
       entityType: params.entity_type,
       operation: params.operation,
       entityId: params.entityId,
@@ -158,7 +188,7 @@ export class PgSyncQueue implements ISyncQueue {
           `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
           [existing.id, this.businessId]
         );
-        console.log(`[PgSyncQueue] Cancelled coalesced operations for ${params.entity_type}:${params.entityId}`);
+        syncLogger.warn(`[PgSyncQueue]`, `Cancelled coalesced operations for ${params.entity_type}:${params.entityId}`);
         return existing.id;
       }
 
@@ -181,7 +211,7 @@ export class PgSyncQueue implements ISyncQueue {
             this.businessId,
           ]
         );
-        console.log(`[PgSyncQueue] Coalesced ${existing.operation}+${params.operation} for ${params.entity_type}:${params.entityId}`);
+        syncLogger.warn(`[PgSyncQueue]`, `Coalesced ${existing.operation}+${params.operation} for ${params.entity_type}:${params.entityId}`);
         return existing.id;
       }
     }
@@ -227,12 +257,31 @@ export class PgSyncQueue implements ISyncQueue {
     return id;
   }
 
-  async getPending(limit: number): Promise<SyncOperationRecord[]> {
+  async getPending(limit: number, options?: QueueOptions): Promise<SyncOperationRecord[]> {
+    const orderByClause = options?.includePriority
+      ? `ORDER BY
+           CASE entity_type
+             WHEN 'customers' THEN 1
+             WHEN 'products' THEN 1
+             WHEN 'tags' THEN 1
+             WHEN 'customer_groups' THEN 1
+             WHEN 'suppliers' THEN 1
+             WHEN 'product_variants' THEN 2
+             WHEN 'customer_group_members' THEN 2
+             WHEN 'sales' THEN 3
+             WHEN 'abonos' THEN 3
+             WHEN 'purchases' THEN 3
+             WHEN 'distribuciones' THEN 3
+             ELSE 4
+           END,
+           created_at ASC`
+      : `ORDER BY created_at ASC`;
+
     const result = await this.pg.query<SyncOperationRecord>(
       `SELECT * FROM sync_operations
        WHERE business_id = $1
          AND status IN ($2, $3)
-       ORDER BY created_at ASC
+       ${orderByClause}
        LIMIT $4`,
       [this.businessId, OPERATION_STATUS.PENDING, OPERATION_STATUS.FAILED, limit]
     );
@@ -412,5 +461,20 @@ export class PgSyncQueue implements ISyncQueue {
       [this.businessId, limit]
     );
     return result.rows;
+  }
+
+  async cleanupCompleted(olderThanDays: number): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - olderThanDays);
+
+    const result = await this.pg.query(
+      `DELETE FROM sync_operations
+       WHERE business_id = $1
+         AND status = $2
+         AND updated_at < $3`,
+      [this.businessId, OPERATION_STATUS.COMPLETED, cutoff.toISOString()]
+    );
+
+    return result.affectedRows ?? 0;
   }
 }

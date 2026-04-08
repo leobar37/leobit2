@@ -1,7 +1,7 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link } from "react-router";
-import { Store, Loader2, AlertTriangle, ShieldAlert, RotateCcw } from "lucide-react";
+import { Route, Loader2, AlertTriangle, ShieldAlert, RotateCcw } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
 import { useLoginHealth } from "@/hooks/use-login-health";
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
           <CardHeader className="space-y-4 px-5 pb-2 pt-5 sm:px-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
-              <Store className="h-7 w-7 text-white" />
+              <Route className="h-7 w-7 text-white" />
             </div>
 
             <div className="space-y-2">

@@ -1,24 +1,24 @@
 # Dockerfile for Avileo App (React Router v7)
 # Multi-stage build: Bun for deps, Node.js for build, Bun for runtime
 
-# Stage 1: Dependencies
+# Stage 1: Dependencies (Bun - mas rapido para instalar)
 FROM oven/bun:1.2.10-slim AS deps
 WORKDIR /app
 
-# Copy all files (respecting .dockerignore)
-COPY . .
+# Copiar SOLO los archivos necesarios para instalar dependencias (mejor layer caching)
+COPY package.json bun.lock ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/app/package.json ./packages/app/
+COPY packages/backend/package.json ./packages/backend/
 
-# Install dependencies (creates proper workspace symlinks)
+# Instalar dependencias (esta layer se cachea si los lockfiles no cambian)
 RUN bun install --frozen-lockfile
 
-# Stage 2: Builder (Node.js for React Router compatibility)
+# Stage 2: Builder (Node.js para compatibilidad con React Router)
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Copy all files including installed node_modules
-COPY --from=deps /app ./
-
-# Build arguments for environment variables
+# Build arguments para environment variables
 ARG VITE_API_URL
 ARG VITE_BUILD_ID
 
@@ -27,13 +27,22 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 ENV NODE_ENV=production
 
-# Build shared package first (tsup works with Node.js)
+# Copiar node_modules desde deps (ya tiene todo instalado)
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/app/node_modules ./packages/app/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+
+# Copiar el codigo fuente
+COPY . .
+
+# Build shared package first (tsup works con Node.js)
 RUN cd packages/shared && npm run build
 
-# Build the application with Node.js (avoids Bun's renderToPipeableStream issue)
+# Build the application con Node.js (evita el issue de Bun's renderToPipeableStream)
 RUN cd packages/app && npm run build
 
-# Stage 3: Production (Bun for runtime)
+# Stage 3: Production (Bun para runtime)
 FROM oven/bun:1.2.10-slim AS runner
 WORKDIR /app
 
@@ -66,5 +75,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --spider -q http://localhost:3000/health || exit 1
 
-# Start the application with Doppler secret injection
+# Start the application con Doppler secret injection
 CMD ["doppler", "run", "--", "bun", "run", "--cwd", "packages/app", "start"]

@@ -12,174 +12,36 @@ import {
   CONFLICT_STRATEGY,
   BACKOFF_BASE_MS,
   BACKOFF_MAX_MS,
-  type OperationStatus,
   type ConflictStrategy,
 } from "./config";
-import type { ISyncQueue } from "./queue/sync-queue";
+import type { ISyncQueue } from "./types";
 import type { ISyncHttpClient } from "./http/sync-http-client";
 import { PgSyncQueue } from "./queue/pg-sync-queue";
 import { FetchSyncHttpClient } from "./http/fetch-sync-http-client";
 import { checkAndMigrateSchema } from "./schema-version";
 import { syncLogger } from "./sync-logger";
+import { normalizeDatesToISO, buildPlaceholders, parsePayload, validateEntityTableName } from "./types";
+import type {
+  EnqueueParams,
+  SyncOperationRecord,
+  SyncStatus,
+  BatchSyncResponse,
+  DeadLetterOperationRecord,
+  BackendConflict,
+  BackendConflictListResponse,
+  BackendConflictResponse,
+  ConflictResolution,
+  SyncApiResult,
+  ClassifiedError,
+} from "./types";
+import { SyncErrorCode, classifyError } from "./types";
+import { SYNC_STATUS_ENTITY_TABLES, SELF_HEAL_INSERTABLE_ENTITIES } from "./types";
 
 /**
  * Generate a correlation ID for tracking an operation across the stack
  */
 function generateCorrelationId(): string {
   return `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-export interface EnqueueParams {
-  entity_type: string;
-  operation: "create" | "update" | "delete";
-  entityId: string;
-  data: Record<string, unknown>;
-  idempotencyKey?: string;
-  syncGroupId?: string;
-}
-
-export interface SyncOperationRecord {
-  id: string;
-  business_id: string;
-  entity_type: string;
-  operation: "create" | "update" | "delete";
-  entity_id: string;
-  payload: unknown;
-  status: OperationStatus;
-  version: number;
-  sync_attempts: number;
-  last_error: string | null;
-  last_attempt_at: string | null;
-  idempotency_key: string | null;
-  sync_group_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DeadLetterOperationRecord {
-  id: string;
-  business_id: string;
-  operation_id: string;
-  entity_type: string;
-  operation: "create" | "update" | "delete";
-  entity_id: string;
-  data: string;
-  error: string;
-  sync_attempts: number;
-  original_error: string | null;
-  created_at: string;
-}
-
-export interface SyncStatus {
-  pending: number;
-  processing: number;
-  syncing: number;
-  completed: number;
-  failed: number;
-  conflict: number;
-  deadLetter: number;
-  total: number;
-}
-
-export interface BatchSyncResponse {
-  results: Array<{
-    idempotencyKey: string;
-    success: boolean;
-    error?: string;
-    conflict?: {
-      serverData: Record<string, unknown>;
-      suggestedMerge: Record<string, unknown>;
-    };
-  }>;
-}
-
-export interface ConflictResolution {
-  resolution: ConflictStrategy;
-  mergedData?: Record<string, unknown>;
-}
-
-export interface BackendConflict {
-  id: string;
-  businessId: string;
-  operationId: string;
-  entityType: string;
-  entityId: string;
-  localData: Record<string, unknown>;
-  serverData: Record<string, unknown>;
-  localVersion: number;
-  serverVersion: number;
-  status: "pending" | "resolved";
-  resolution: "server" | "local" | "merge" | null;
-  resolvedBy: string | null;
-  resolvedAt: string | null;
-  createdAt: string;
-}
-
-export interface BackendConflictListResponse {
-  success: boolean;
-  data: {
-    conflicts: BackendConflict[];
-    pendingCount: number;
-    pagination: {
-      limit: number;
-      offset: number;
-      hasMore: boolean;
-    };
-  };
-}
-
-export interface BackendConflictResponse {
-  success: boolean;
-  data: BackendConflict;
-}
-
-type SyncApiResult = {
-  idempotencyKey: string;
-  success: boolean;
-  error?: string;
-  conflict?: {
-    serverVersion: number;
-    serverData: Record<string, unknown>;
-  };
-};
-
-type SyncOperationType = EnqueueParams["operation"];
-
-type CoalescePlan =
-  | {
-      type: "merge";
-      operation: SyncOperationType;
-      payload: Record<string, unknown>;
-    }
-  | {
-      type: "replace";
-      operation: SyncOperationType;
-      payload: Record<string, unknown>;
-    }
-  | {
-      type: "cancel";
-    }
-  | {
-      type: "none";
-    };
-
-const SYNC_STATUS_ENTITY_TABLES: ReadonlySet<string> = new Set(SYNC_STATUS_TRACKED);
-
-const SELF_HEAL_INSERTABLE_ENTITIES: ReadonlySet<string> = new Set(SELF_HEAL_INSERTABLE);
-
-function parsePayload(payload: unknown): Record<string, unknown> {
-  if (!payload) return {};
-  if (typeof payload === "string") {
-    try {
-      return JSON.parse(payload) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
-  }
-  if (typeof payload === "object") {
-    return payload as Record<string, unknown>;
-  }
-  return {};
 }
 
 /**
@@ -204,37 +66,25 @@ const DATE_FIELDS_SYNC = new Set([
   "purchase_date",
 ]);
 
-/**
- * Recursively converts Date objects to ISO strings for safe JSON serialization.
- * This fixes the bug where Date.toString() produces "Tue Mar 24 2026 19:00:00 GMT-0500"
- * instead of "2026-03-25T00:00:00.000Z".
- * 
- * Simplified: Now converts ALL Date instances, not just whitelisted fields.
- */
-function normalizeDatesToISO(obj: unknown): unknown {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
+type SyncOperationType = EnqueueParams["operation"];
 
-  if (obj instanceof Date) {
-    return obj.toISOString();
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map((item) => normalizeDatesToISO(item));
-  }
-
-  if (typeof obj === "object") {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      // Convert any Date instance to ISO string
-      result[key] = normalizeDatesToISO(value);
+type CoalescePlan =
+  | {
+      type: "merge";
+      operation: SyncOperationType;
+      payload: Record<string, unknown>;
     }
-    return result;
-  }
-
-  return obj;
-}
+  | {
+      type: "replace";
+      operation: SyncOperationType;
+      payload: Record<string, unknown>;
+    }
+  | {
+      type: "cancel";
+    }
+  | {
+      type: "none";
+    };
 
 function normalizeStatusKey(status: string): keyof SyncStatus | null {
   switch (status) {
@@ -255,124 +105,6 @@ function normalizeStatusKey(status: string): keyof SyncStatus | null {
     default:
       return null;
   }
-}
-
-function buildPlaceholders(count: number, offset: number = 1): string {
-  return Array.from({ length: count }, (_, index) => `$${index + offset}`).join(", ");
-}
-
-/**
- * Error classification system for structured error handling
- */
-export enum SyncErrorCode {
-  RECORD_NOT_FOUND = 'RECORD_NOT_FOUND',
-  VERSION_CONFLICT = 'VERSION_CONFLICT',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  PERMISSION_DENIED = 'PERMISSION_DENIED',
-  RATE_LIMITED = 'RATE_LIMITED',
-  UNKNOWN = 'UNKNOWN'
-}
-
-export interface ClassifiedError {
-  code: SyncErrorCode;
-  isRetryable: boolean;
-  isSelfHealable: boolean;
-  originalError: string;
-}
-
-/**
- * Classify an error using regex patterns instead of brittle string matching
- */
-export function classifyError(error: string): ClassifiedError {
-  const lower = error.toLowerCase();
-  
-  const patterns: Array<{
-    code: SyncErrorCode;
-    patterns: RegExp[];
-    isRetryable: boolean;
-    isSelfHealable: boolean;
-  }> = [
-    {
-      code: SyncErrorCode.RECORD_NOT_FOUND,
-      patterns: [
-        /record.*not found/i,
-        /no encontrad[oa]/i,
-        /does not exist/i,
-        /no existe/i,
-        /404/i,
-        /not found/i
-      ],
-      isRetryable: false,
-      isSelfHealable: true
-    },
-    {
-      code: SyncErrorCode.VERSION_CONFLICT,
-      patterns: [
-        /version.*conflict/i,
-        /optimistic.*lock/i,
-        /concurrent.*modification/i,
-        /409/i
-      ],
-      isRetryable: false,
-      isSelfHealable: false
-    },
-    {
-      code: SyncErrorCode.NETWORK_ERROR,
-      patterns: [
-        /network.*error/i,
-        /timeout/i,
-        /connection.*refused/i,
-        /fetch.*failed/i,
-        /abort/i,
-        /offline/i
-      ],
-      isRetryable: true,
-      isSelfHealable: false
-    },
-    {
-      code: SyncErrorCode.PERMISSION_DENIED,
-      patterns: [
-        /permission.*denied/i,
-        /unauthorized/i,
-        /forbidden/i,
-        /403/i,
-        /401/i
-      ],
-      isRetryable: false,
-      isSelfHealable: false
-    },
-    {
-      code: SyncErrorCode.VALIDATION_ERROR,
-      patterns: [
-        /validation.*failed/i,
-        /invalid.*input/i,
-        /required.*field/i,
-        /constraint.*violated/i,
-        /400/i
-      ],
-      isRetryable: false,
-      isSelfHealable: false
-    }
-  ];
-  
-  for (const p of patterns) {
-    if (p.patterns.some(regex => regex.test(lower))) {
-      return {
-        code: p.code,
-        isRetryable: p.isRetryable,
-        isSelfHealable: p.isSelfHealable,
-        originalError: error
-      };
-    }
-  }
-  
-  return {
-    code: SyncErrorCode.UNKNOWN,
-    isRetryable: true,
-    isSelfHealable: false,
-    originalError: error
-  };
 }
 
 /**
@@ -424,10 +156,6 @@ function getCoalescePlan(
   return { type: "none" };
 }
 
-function validateEntityTableName(entityType: string): string | null {
-  return SYNC_STATUS_ENTITY_TABLES.has(entityType) ? entityType : null;
-}
-
 export class SyncService {
   private pg: PGlite;
   private businessId: string;
@@ -454,14 +182,12 @@ export class SyncService {
     this.pg = pg;
     this.businessId = businessId;
     this.authToken = authToken;
-    // Use injected dependencies or create default implementations
     this.queue = options?.queue ?? new PgSyncQueue(pg, businessId);
     this.httpClient = options?.httpClient ?? new FetchSyncHttpClient(authToken, businessId);
   }
 
   /**
    * Initialize the sync service (creates tables, runs migrations)
-   * Must be called before using other methods
    */
   async initialize(): Promise<void> {
     if (this.initializationPromise) {
@@ -473,12 +199,8 @@ export class SyncService {
   }
 
   private async doInitialize(): Promise<void> {
-    // Run schema migrations first
     await checkAndMigrateSchema(this.pg);
-    
-    // Initialize tables
     await this.initTables();
-    
     this.isInitialized = true;
     console.log("[SyncService] Initialized successfully");
   }
@@ -496,6 +218,26 @@ export class SyncService {
       BACKOFF_BASE_MS * Math.pow(2, this.consecutiveFailures - 1),
       BACKOFF_MAX_MS
     );
+  }
+
+  resetBackoff(): void {
+    this.consecutiveFailures = 0;
+    this.currentBackoff = 0;
+  }
+
+  getBackoffAtMax(): boolean {
+    return this.currentBackoff >= BACKOFF_MAX_MS;
+  }
+
+  async retryAllDeadLetterOperations(): Promise<number> {
+    this.ensureInitialized();
+    const dlq = await this.queue.getDeadLetterOperations(100);
+    let retried = 0;
+    for (const op of dlq) {
+      const ok = await this.retryDeadLetterOperation(op.id);
+      if (ok) retried++;
+    }
+    return retried;
   }
 
   private async applyBackoff(): Promise<void> {
@@ -584,9 +326,14 @@ export class SyncService {
     return this.queue.enqueue(params);
   }
 
-  async processPending(): Promise<{ processed: number; failed: number; conflicts: number }> {
+  async processPending(ignoreOnlineCheck = false): Promise<{ processed: number; failed: number; conflicts: number }> {
     if (this.isProcessing) {
       console.log(`[SYNC] ⏳ Already processing, skipping`);
+      return { processed: 0, failed: 0, conflicts: 0 };
+    }
+
+    if (!ignoreOnlineCheck && !navigator.onLine) {
+      console.log(`[SYNC] Offline - skipping push sync`);
       return { processed: 0, failed: 0, conflicts: 0 };
     }
 
@@ -628,10 +375,9 @@ export class SyncService {
           OPERATION_STATUS.PENDING,
           OPERATION_STATUS.FAILED,
           MAX_RETRIES,
-         ]
+        ]
       );
 
-      // Log queue status
       const entityCounts = pendingOps.rows.reduce((acc, op) => {
         acc[op.entity_type] = (acc[op.entity_type] || 0) + 1;
         return acc;
@@ -648,7 +394,6 @@ export class SyncService {
         return { processed: 0, failed: 0, conflicts: 0 };
       }
 
-      // Group operations by sync_group_id so related ops are sent together
       const grouped = new Map<string, SyncOperationRecord[]>();
       const ungrouped: SyncOperationRecord[] = [];
 
@@ -665,8 +410,6 @@ export class SyncService {
         }
       }
 
-      // For grouped operations, also pull in any siblings not yet in the query
-      // (e.g. if BATCH_SIZE cut off part of a group)
       for (const [groupId, ops] of grouped) {
         const allGroupOps = await this.pg.query<SyncOperationRecord>(
           `SELECT *
@@ -684,12 +427,9 @@ export class SyncService {
             MAX_RETRIES,
           ]
         );
-        // Replace with the complete set (deduplicated)
         grouped.set(groupId, allGroupOps.rows);
       }
 
-      // Sort operations within each group to ensure correct dependency order
-      // Parent entities must be processed before child entities
       for (const [groupId, ops] of grouped) {
         const sortedOps = [...ops].sort((a, b) => {
           const priorityA = ENTITY_PRIORITIES[a.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
@@ -697,13 +437,11 @@ export class SyncService {
           if (priorityA !== priorityB) {
             return priorityA - priorityB;
           }
-          // If same priority, maintain creation order
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
         grouped.set(groupId, sortedOps);
       }
 
-      // Process each group as a single batch
       for (const [groupId, ops] of grouped) {
         try {
           for (const op of ops) {
@@ -736,7 +474,6 @@ export class SyncService {
             }
           }
 
-          // Reset backoff on any group success
           if (ops.length > 0) {
             this.consecutiveFailures = 0;
             this.currentBackoff = 0;
@@ -750,7 +487,6 @@ export class SyncService {
         }
       }
 
-      // Process ungrouped operations individually (original behavior)
       for (const op of ungrouped) {
         try {
           await this.markProcessing(op.id);
@@ -927,10 +663,8 @@ export class SyncService {
 
   async getProblemOperations(): Promise<SyncOperationRecord[]> {
     this.ensureInitialized();
-    // Get pending, failed, and conflict operations
     const pending = await this.queue.getPending(50);
     const failed = await this.queue.getFailedOperations(50);
-    // Combine and deduplicate
     const seen = new Set<string>();
     const result: SyncOperationRecord[] = [];
     for (const op of [...pending, ...failed]) {
@@ -954,7 +688,7 @@ export class SyncService {
 
   async retryDeadLetterOperation(deadLetterId: string): Promise<boolean> {
     this.ensureInitialized();
-    const record = await this.queue.getDeadLetterOperations(100).then(ops => 
+    const record = await this.queue.getDeadLetterOperations(100).then(ops =>
       ops.find(op => op.id === deadLetterId)
     );
     if (!record) {
@@ -982,7 +716,7 @@ export class SyncService {
 
   async deleteDeadLetterOperation(deadLetterId: string): Promise<boolean> {
     this.ensureInitialized();
-    const record = await this.queue.getDeadLetterOperations(100).then(ops => 
+    const record = await this.queue.getDeadLetterOperations(100).then(ops =>
       ops.find(op => op.id === deadLetterId)
     );
     if (!record) {
@@ -1116,6 +850,13 @@ export class SyncService {
     this.httpClient.abort();
   }
 
+  /**
+   * Check if auto sync is currently running
+   */
+  isRunning(): boolean {
+    return !!this.syncIntervalId;
+  }
+
   private async getOperation(id: string): Promise<SyncOperationRecord | null> {
     const result = await this.pg.query<SyncOperationRecord>(
       `SELECT *
@@ -1124,20 +865,6 @@ export class SyncService {
          AND business_id = $2`,
       [id, this.businessId]
     );
-    return result.rows[0] || null;
-  }
-
-  private async getDeadLetterOperation(
-    id: string
-  ): Promise<DeadLetterOperationRecord | null> {
-    const result = await this.pg.query<DeadLetterOperationRecord>(
-      `SELECT *
-       FROM sync_dead_letter
-       WHERE id = $1
-         AND business_id = $2`,
-      [id, this.businessId]
-    );
-
     return result.rows[0] || null;
   }
 
@@ -1238,7 +965,7 @@ export class SyncService {
     error: string
   ): Promise<boolean> {
     const classifiedError = classifyError(error);
-    
+
     if (
       op.operation !== "update" ||
       !SELF_HEAL_INSERTABLE_ENTITIES.has(op.entity_type) ||
@@ -1423,3 +1150,19 @@ export class SyncService {
     return result as BackendConflictResponse;
   }
 }
+
+// Re-export types for external use
+export type {
+  EnqueueParams,
+  SyncOperationRecord,
+  SyncStatus,
+  BatchSyncResponse,
+  DeadLetterOperationRecord,
+  BackendConflict,
+  BackendConflictListResponse,
+  BackendConflictResponse,
+  ConflictResolution,
+  SyncApiResult,
+  ClassifiedError,
+};
+export { SyncErrorCode, classifyError };

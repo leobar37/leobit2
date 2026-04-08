@@ -3,7 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
-import { Store, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Route, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,7 +86,7 @@ export default function CreateBusinessPage() {
       <Card className="border-0 shadow-lg rounded-3xl">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
-            <Store className="w-8 h-8 text-white" />
+            <Route className="w-8 h-8 text-white" />
           </div>
           <div>
             <p className="text-sm text-orange-600 font-medium mb-1">Paso 2 de 3</p>

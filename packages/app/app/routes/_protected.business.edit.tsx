@@ -1,7 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Store, Camera, Loader2, Settings } from "lucide-react";
+import { Route, Camera, Loader2, Settings } from "lucide-react";
 import {
   useBusiness,
   useUpdateBusiness,
@@ -169,7 +169,7 @@ export default function EditBusinessPage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Store className="h-10 w-10 text-white" />
+                  <Route className="h-10 w-10 text-white" />
                 )}
               </div>
               <button

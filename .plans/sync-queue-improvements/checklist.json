@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "plan": "sync-queue-improvements",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Deduplicate dead-letter logic",
+      "file": "tasks/T-001-deduplicate-dead-letter.md",
+      "status": "pending",
+      "phase": "infrastructure",
+      "dependencies": [],
+      "requirements": ["FR-001"]
+    },
+    {
+      "id": "T-002",
+      "title": "Implement deep merge for coalescing",
+      "file": "tasks/T-002-deep-merge-coalescing.md",
+      "status": "pending",
+      "phase": "functional",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-002"]
+    },
+    {
+      "id": "T-003",
+      "title": "Move priority ordering into queue",
+      "file": "tasks/T-003-queue-getpending-priorities.md",
+      "status": "pending",
+      "phase": "functional",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-003"]
+    },
+    {
+      "id": "T-004",
+      "title": "Add cleanupCompleted method",
+      "file": "tasks/T-004-cleanup-completed.md",
+      "status": "pending",
+      "phase": "functional",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-004"]
+    },
+    {
+      "id": "T-005",
+      "title": "Replace console.log with syncLogger",
+      "file": "tasks/T-005-replace-consolelog.md",
+      "status": "pending",
+      "phase": "hygiene",
+      "dependencies": ["T-001"],
+      "requirements": ["NFR-001"]
+    },
+    {
+      "id": "T-006",
+      "title": "Centralize ISyncQueue exports",
+      "file": "tasks/T-006-centralize-exports.md",
+      "status": "pending",
+      "phase": "hygiene",
+      "dependencies": ["T-001"],
+      "requirements": ["NFR-002"]
+    }
+  ]
+}

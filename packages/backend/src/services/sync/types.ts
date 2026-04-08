@@ -14,6 +14,8 @@ export interface SyncOperationInput {
   localTimestamp: string;
   syncGroupId?: string;
   correlationId?: string;
+  deviceId?: string;
+  sourceFingerprint?: string;
 }
 
 export interface SyncOperationResult {

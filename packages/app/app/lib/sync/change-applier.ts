@@ -36,6 +36,33 @@ const RELATION_FIELDS = new Set([
 ]);
 
 /**
+ * Check if a local record has unsynced changes that could be overwritten
+ * @param pg - PGlite instance
+ * @param tableName - Table name
+ * @param entityId - Entity ID
+ * @returns True if record has pending local changes
+ */
+async function hasUnsyncedLocalChanges(
+  pg: PGlite,
+  tableName: string,
+  entityId: string
+): Promise<boolean> {
+  try {
+    const result = await pg.query(
+      `SELECT sync_status FROM "${tableName}" WHERE id = $1`,
+      [entityId]
+    );
+    if (result.rows.length === 0) {
+      return false;
+    }
+    const syncStatus = result.rows[0].sync_status;
+    return syncStatus === 'pending' || syncStatus === 'syncing' || syncStatus === 'failed';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Apply a single change to the local database with retry logic
  * @param pg - PGlite instance for raw queries
  * @param _db - Unused (kept for API compatibility)
@@ -49,7 +76,8 @@ export async function applyChange(
   _db: unknown,
   change: PullChange,
   businessId: string,
-  retriesLeft: number = MAX_APPLY_RETRIES
+  retriesLeft: number = MAX_APPLY_RETRIES,
+  checkConflicts: boolean = true
 ): Promise<ChangeApplicationResult> {
   const tableName = change.entityType;
 
@@ -59,6 +87,15 @@ export async function applyChange(
   }
 
   try {
+    // Check for potential conflict with local unsynced changes
+    if (checkConflicts && change.operation === 'update') {
+      const hasLocalChanges = await hasUnsyncedLocalChanges(pg, tableName, change.entityId);
+      if (hasLocalChanges) {
+        syncLogger.warn('[ChangeApplier]', `Potential conflict: ${tableName}:${change.entityId} has unsynced local changes`);
+        // Still apply but log the conflict - server wins in this case
+      }
+    }
+
     switch (change.operation) {
       case "create":
       case "insert": // backward compatibility with old server responses
@@ -80,7 +117,7 @@ export async function applyChange(
     if (retriesLeft > 0 && isTransientError(errorMessage)) {
       syncLogger.warn('[ChangeApplier]', `Retrying change for ${tableName}:${change.entityId} (${retriesLeft} retries left)`);
       await sleep(100);
-      return applyChange(pg, _db, change, businessId, retriesLeft - 1);
+      return applyChange(pg, _db, change, businessId, retriesLeft - 1, checkConflicts);
     }
 
     return { success: false, error: errorMessage };

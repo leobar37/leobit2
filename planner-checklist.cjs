@@ -16,12 +16,13 @@ function usage() {
 
 Usage:
   node ./planner-checklist.js list [plan-slug-or-path]
-  node ./planner-checklist.js pending [plan-slug-or-path]
+  node ./planner-checklist.js remaining [plan-slug-or-path]
   node ./planner-checklist.js next [plan-slug-or-path]
   node ./planner-checklist.js status [plan-slug-or-path] <TASK_ID>
   node ./planner-checklist.js start [plan-slug-or-path] <TASK_ID>
   node ./planner-checklist.js complete [plan-slug-or-path] <TASK_ID>
   node ./planner-checklist.js block [plan-slug-or-path] <TASK_ID>
+  node ./planner-checklist.js reset [plan-slug-or-path] <TASK_ID>
 
 Resolution:
   - The command should be run from the project root
@@ -132,9 +133,9 @@ function listTasks(data) {
   data.tasks.forEach((task) => console.log(formatTask(task)))
 }
 
-function pendingTasks(data) {
+function remainingTasks(data) {
   data.tasks
-    .filter((task) => task.status === 'pending' || task.status === 'blocked' || task.status === 'in_progress')
+    .filter((task) => task.status !== 'completed')
     .forEach((task) => console.log(formatTask(task)))
 }
 
@@ -175,7 +176,7 @@ function main() {
     process.exit(0)
   }
 
-  const commandsWithTaskId = new Set(['status', 'start', 'complete', 'block'])
+  const commandsWithTaskId = new Set(['status', 'start', 'complete', 'block', 'reset'])
   const taskId = commandsWithTaskId.has(command) ? maybeTaskId : undefined
 
   if (commandsWithTaskId.has(command) && !taskId) {
@@ -188,8 +189,8 @@ function main() {
     case 'list':
       listTasks(data)
       return
-    case 'pending':
-      pendingTasks(data)
+    case 'remaining':
+      remainingTasks(data)
       return
     case 'next':
       nextTasks(data)
@@ -211,6 +212,11 @@ function main() {
       updateStatus(data, taskId, 'blocked')
       writeChecklist(resolved, data)
       console.log(`Blocked ${taskId}`)
+      return
+    case 'reset':
+      updateStatus(data, taskId, 'pending')
+      writeChecklist(resolved, data)
+      console.log(`Reset ${taskId} to pending`)
       return
     default:
       usage()

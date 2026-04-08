@@ -188,6 +188,9 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
             localVersion: t.Number({ minimum: 0 }),
             localTimestamp: t.String(),
             syncGroupId: t.Optional(t.String()),
+            correlationId: t.Optional(t.String()),
+            deviceId: t.Optional(t.String()),
+            sourceFingerprint: t.Optional(t.String()),
           }),
           { minItems: 1, maxItems: MAX_BATCH_SIZE }
         ),

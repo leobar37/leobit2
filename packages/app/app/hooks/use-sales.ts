@@ -48,27 +48,28 @@ export interface PaginatedSalesResult {
 }
 
 /**
- * Get all sales with optional filters
+ * Get all sales with optional filters (paginated - max 50 per page)
  */
 export function useSales(filters?: SaleFilters) {
   const saleService = useSaleService();
+  const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
     queryKey: filters
       ? ["sales-new", "filtered", filters]
       : QUERY_KEYS.sales,
     queryFn: async () => {
-      if (filters?.distribucionId && filters.distribucionId !== 'all') {
-        if (filters.distribucionId === 'none') {
-          return saleService.findByDistribucionIdIsNull();
-        }
-        return saleService.findByDistribucionId(filters.distribucionId);
-      } else if (filters?.customerId) {
-        return saleService.findByCustomerId(filters.customerId);
-      } else if (filters?.status) {
-        return saleService.findByStatus(filters.status);
-      }
-      return saleService.findByBusiness();
+      const query: SalePageQuery = {
+        limit: DEFAULT_PAGE_SIZE,
+        offset: 0,
+        ...(filters?.customerId && { customerId: filters.customerId }),
+        ...(filters?.status && { status: filters.status }),
+        ...(filters?.distribucionId && filters.distribucionId !== 'all' && {
+          distribucionId: filters.distribucionId === 'none' ? 'none' : filters.distribucionId,
+        }),
+      };
+      const result = await saleService.findPageByBusiness(query);
+      return result.items;
     },
   });
 }
@@ -120,30 +121,42 @@ export function useSaleSyncStatus(saleId: string | null) {
 }
 
 /**
- * Get sales by customer ID
+ * Get sales by customer ID (paginated)
  */
 export function useSalesByCustomer(customerId: string) {
   const saleService = useSaleService();
+  const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
     queryKey: QUERY_KEYS.byCustomer(customerId),
     queryFn: async () => {
-      return saleService.findByCustomerId(customerId);
+      const result = await saleService.findPageByBusiness({
+        limit: DEFAULT_PAGE_SIZE,
+        offset: 0,
+        customerId,
+      });
+      return result.items;
     },
     enabled: !!customerId,
   });
 }
 
 /**
- * Get sales by status
+ * Get sales by status (paginated)
  */
 export function useSalesByStatus(status: SaleStatus) {
   const saleService = useSaleService();
+  const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
     queryKey: QUERY_KEYS.byStatus(status),
     queryFn: async () => {
-      return saleService.findByStatus(status);
+      const result = await saleService.findPageByBusiness({
+        limit: DEFAULT_PAGE_SIZE,
+        offset: 0,
+        status,
+      });
+      return result.items;
     },
   });
 }

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avileo - Brand Guidelines</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-brand { background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%); }
+    .gradient-text { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .app-shell {
+      background:
+        radial-gradient(circle at top left, rgba(249, 115, 22, 0.08), transparent 16rem),
+        linear-gradient(180deg, #fbf8f2 0%, #f6f1e8 52%, #f3ede2 100%);
+    }
+    .shell-card {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    }
+    .color-swatch { transition: transform 0.2s, box-shadow 0.2s; }
+    .color-swatch:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+    .logo-container { filter: drop-shadow(0 10px 30px rgba(249, 115, 22, 0.3)); }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-slate-950 text-white py-12">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="w-16 h-16 gradient-brand rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+          <i data-lucide="route" class="w-8 h-8 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-4xl font-bold">Avileo</h1>
+          <p class="text-sm text-orange-400 mt-1">v2.0 - Ruta Dinámica</p>
+        </div>
+      </div>
+      <p class="text-xl text-slate-400 max-w-2xl">Sistema de ventas para negocios de recorrido</p>
+      <p class="text-slate-500 mt-2">Brand Guidelines & Design System</p>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- Logo Section -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Logo</h2>
+      <p class="text-gray-600 mb-8">Ruta dinámica - Conexión entre puntos de venta y clientes</p>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- Logo Principal -->
+        <div class="shell-card rounded-3xl p-12 flex flex-col items-center justify-center app-shell">
+          <div class="logo-container">
+            <svg width="200" height="200" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#f97316"/>
+                  <stop offset="100%" style="stop-color:#fbbf24"/>
+                </linearGradient>
+              </defs>
+              <circle cx="256" cy="256" r="240" fill="url(#routeGradient)"/>
+              <path d="M120 300 Q 180 150, 256 200 T 392 280" stroke="white" stroke-width="24" fill="none" stroke-linecap="round"/>
+              <circle cx="120" cy="300" r="20" fill="white"/>
+              <circle cx="256" cy="200" r="16" fill="white"/>
+              <circle cx="392" cy="280" r="20" fill="white"/>
+              <circle cx="392" cy="280" r="8" fill="#f97316"/>
+            </svg>
+          </div>
+          <div class="mt-8 text-center">
+            <p class="text-lg font-semibold text-gray-900">Logo Principal</p>
+            <p class="text-sm text-gray-500 mt-1">Concepto: recorrido y conexión</p>
+          </div>
+        </div>
+
+        <!-- Variaciones -->
+        <div class="space-y-4">
+          <!-- Logo en fondo oscuro -->
+          <div class="bg-slate-900 rounded-2xl p-8 flex items-center gap-6">
+            <svg width="64" height="64" viewBox="0 0 512 512">
+              <circle cx="256" cy="256" r="240" fill="url(#routeGradient)"/>
+              <path d="M120 300 Q 180 150, 256 200 T 392 280" stroke="white" stroke-width="24" fill="none" stroke-linecap="round"/>
+              <circle cx="120" cy="300" r="20" fill="white"/>
+              <circle cx="256" cy="200" r="16" fill="white"/>
+              <circle cx="392" cy="280" r="20" fill="white"/>
+            </svg>
+            <div>
+              <p class="text-white font-medium">Fondo Oscuro</p>
+              <p class="text-slate-400 text-sm">Para landing page</p>
+            </div>
+          </div>
+
+          <!-- Logo simplificado -->
+          <div class="shell-card rounded-2xl p-8 flex items-center gap-6">
+            <div class="w-16 h-16 gradient-brand rounded-xl flex items-center justify-center">
+              <i data-lucide="route" class="w-8 h-8 text-white"></i>
+            </div>
+            <div>
+              <p class="text-gray-900 font-medium">Versión Icono</p>
+              <p class="text-gray-500 text-sm">Para navegación y UI</p>
+            </div>
+          </div>
+
+          <!-- Specs técnicas -->
+          <div class="bg-gray-100 rounded-2xl p-6">
+            <h4 class="font-semibold text-gray-900 mb-4">Especificaciones</h4>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i> Formato: SVG vectorial</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i> ViewBox: 512×512px</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i> Generación automática de PNGs</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-green-500"></i> Tamaños: 32px, 180px, 192px, 512px</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paleta de Colores -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Paleta de Colores</h2>
+      <p class="text-gray-600 mb-8">Sistema cromático cálido y energético</p>
+
+      <!-- Colores Primarios -->
+      <div class="mb-10">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Colores Primarios</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-[#f97316]"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Orange 500</p>
+              <p class="text-sm text-gray-500">#f97316</p>
+              <p class="text-xs text-gray-400 mt-1">Primario, botones</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-[#ea580c]"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Orange 600</p>
+              <p class="text-sm text-gray-500">#ea580c</p>
+              <p class="text-xs text-gray-400 mt-1">Degradados, hover</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-[#fbbf24]"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Amber 400</p>
+              <p class="text-sm text-gray-500">#fbbf24</p>
+              <p class="text-xs text-gray-400 mt-1">Degradado logo</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-[#fed7aa]"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Orange 200</p>
+              <p class="text-sm text-gray-500">#fed7aa</p>
+              <p class="text-xs text-gray-400 mt-1">Acentos suaves</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fondos -->
+      <div class="mb-10">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Fondos</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 app-shell border"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">App Shell</p>
+              <p class="text-sm text-gray-500">#fbf8f2 → #f3ede2</p>
+              <p class="text-xs text-gray-400 mt-1">Fondo de la aplicación</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-[#0a0a0f] border"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Landing Dark</p>
+              <p class="text-sm text-gray-500">#0a0a0f</p>
+              <p class="text-xs text-gray-400 mt-1">Landing page</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-24 bg-white border"></div>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900">Surface</p>
+              <p class="text-sm text-gray-500">#ffffff (78-90% op)</p>
+              <p class="text-xs text-gray-400 mt-1">Tarjetas con glassmorphism</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colores Semánticos -->
+      <div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Colores Semánticos</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-16 bg-green-500"></div>
+            <div class="p-3">
+              <p class="font-medium text-gray-900 text-sm">Éxito</p>
+              <p class="text-xs text-gray-500">green-500</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-16 bg-red-500"></div>
+            <div class="p-3">
+              <p class="font-medium text-gray-900 text-sm">Error</p>
+              <p class="text-xs text-gray-500">red-500</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-16 bg-amber-500"></div>
+            <div class="p-3">
+              <p class="font-medium text-gray-900 text-sm">Advertencia</p>
+              <p class="text-xs text-gray-500">amber-500</p>
+            </div>
+          </div>
+          <div class="color-swatch rounded-2xl overflow-hidden bg-white shadow-md">
+            <div class="h-16 bg-blue-500"></div>
+            <div class="p-3">
+              <p class="font-medium text-gray-900 text-sm">Info</p>
+              <p class="text-xs text-gray-500">blue-500</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Degradados -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Degradados</h2>
+      <p class="text-gray-600 mb-8">Gradientes característicos de la marca</p>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="rounded-2xl overflow-hidden shadow-lg">
+          <div class="h-32 gradient-brand"></div>
+          <div class="p-4 bg-white">
+            <p class="font-semibold text-gray-900">Logo Gradient</p>
+            <p class="text-sm text-gray-500">#f97316 → #fbbf24</p>
+            <p class="text-xs text-gray-400 mt-1">Fondo del logo principal</p>
+          </div>
+        </div>
+        <div class="rounded-2xl overflow-hidden shadow-lg">
+          <div class="h-32 bg-gradient-to-r from-orange-400 via-orange-500 to-blue-400"></div>
+          <div class="p-4 bg-white">
+            <p class="font-semibold text-gray-900">Hero Gradient</p>
+            <p class="text-sm text-gray-500">orange-400 → orange-500 → blue-400</p>
+            <p class="text-xs text-gray-400 mt-1">Texto de la landing page</p>
+          </div>
+        </div>
+        <div class="rounded-2xl overflow-hidden shadow-lg">
+          <div class="h-32 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+          <div class="p-4 bg-white">
+            <p class="font-semibold text-gray-900">CTA Gradient</p>
+            <p class="text-sm text-gray-500">orange-500 → orange-600</p>
+            <p class="text-xs text-gray-400 mt-1">Botones de acción</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tipografía -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Tipografía</h2>
+      <p class="text-gray-600 mb-8">Inter - Sistema sans-serif moderno</p>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <div class="shell-card rounded-2xl p-8 app-shell">
+          <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6">Jerarquía</h4>
+          <div class="space-y-6">
+            <div>
+              <p class="text-4xl font-bold text-gray-900">Título H1</p>
+              <p class="text-sm text-gray-500 mt-1">text-4xl font-bold tracking-tight</p>
+            </div>
+            <div>
+              <p class="text-2xl font-semibold text-gray-900">Título H2</p>
+              <p class="text-sm text-gray-500 mt-1">text-2xl font-semibold</p>
+            </div>
+            <div>
+              <p class="text-xl font-medium text-gray-900">Subtítulo</p>
+              <p class="text-sm text-gray-500 mt-1">text-xl font-medium</p>
+            </div>
+            <div>
+              <p class="text-base text-gray-700">Texto de párrafo regular para contenido extenso y lectura continua.</p>
+              <p class="text-sm text-gray-500 mt-1">text-base</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600">Texto secundario para etiquetas, captions y metadata.</p>
+              <p class="text-sm text-gray-500 mt-1">text-sm</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-white rounded-2xl p-6 shadow-md">
+            <h4 class="font-semibold text-gray-900 mb-4">Especificaciones</h4>
+            <ul class="space-y-3 text-sm text-gray-600">
+              <li class="flex justify-between">
+                <span>Familia</span>
+                <span class="font-medium text-gray-900">Inter, system-ui, sans-serif</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Títulos</span>
+                <span class="font-medium text-gray-900">font-bold, tracking-tight</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Botones</span>
+                <span class="font-medium text-gray-900">font-semibold</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Etiquetas</span>
+                <span class="font-medium text-gray-900">text-sm font-medium</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-6">
+            <h4 class="font-semibold text-white mb-4">En Fondo Oscuro</h4>
+            <div class="space-y-3">
+              <p class="text-2xl font-bold text-white">Título Blanco</p>
+              <p class="text-base text-slate-300">Texto gris claro para mejor lectura sobre fondos oscuros</p>
+              <p class="text-sm gradient-text font-semibold">Texto con gradiente de marca</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Componentes UI -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Componentes UI</h2>
+      <p class="text-gray-600 mb-8">Elementos de interfaz con estilo Avileo</p>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- Botones -->
+        <div class="shell-card rounded-2xl p-6 app-shell">
+          <h4 class="font-semibold text-gray-900 mb-4">Botones</h4>
+          <div class="space-y-4">
+            <button class="w-full py-3 px-6 bg-[#f97316] hover:bg-[#ea580c] text-white font-semibold rounded-xl transition-colors shadow-lg shadow-orange-500/25">
+              Botón Primario
+            </button>
+            <button class="w-full py-3 px-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl transition-all hover:shadow-orange-500/40 shadow-lg">
+              Con Degradado
+            </button>
+            <button class="w-full py-3 px-6 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
+              Botón Secundario
+            </button>
+            <button class="w-full py-3 px-6 text-orange-600 font-medium rounded-xl hover:bg-orange-50 transition-colors">
+              Botón Terciario
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjetas -->
+        <div class="space-y-4">
+          <div class="shell-card rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                <i data-lucide="route" class="w-5 h-5 text-orange-600"></i>
+              </div>
+              <h4 class="font-semibold text-gray-900">Tarjeta de Ejemplo</h4>
+            </div>
+            <p class="text-sm text-gray-600">Las tarjetas utilizan fondos translúcidos con bordes suaves y sombras sutiles.</p>
+          </div>
+
+          <div class="rounded-2xl p-6 bg-slate-900">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center">
+                <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+              </div>
+              <h4 class="font-semibold text-white">Versión Oscura</h4>
+            </div>
+            <p class="text-sm text-slate-400">Tarjeta con fondo oscuro para la landing page.</p>
+          </div>
+
+          <div class="rounded-2xl p-4 bg-amber-50 border border-amber-200">
+            <div class="flex items-center gap-2 text-amber-800">
+              <i data-lucide="alert-circle" class="w-5 h-5"></i>
+              <span class="font-medium text-sm">Alerta de ejemplo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Iconografía -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Iconografía</h2>
+      <p class="text-gray-600 mb-8">Lucide React - Iconos outline consistentes</p>
+
+      <div class="shell-card rounded-2xl p-8 app-shell">
+        <div class="grid grid-cols-6 md:grid-cols-12 gap-6">
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="route" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Route</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="map-pin" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Location</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="truck" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Truck</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="users" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Users</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="shopping-cart" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Cart</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="package" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Package</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="trending-up" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Trend</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="settings" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Settings</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="cloud" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Cloud</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="wifi-off" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Offline</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="check-circle" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Check</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="arrow-right" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <span class="text-xs text-gray-500">Arrow</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Aplicaciones -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Aplicaciones</h2>
+      <p class="text-gray-600 mb-8">El branding en contexto</p>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- App Login -->
+        <div class="rounded-3xl overflow-hidden shadow-2xl">
+          <div class="app-shell p-6">
+            <div class="max-w-xs mx-auto">
+              <div class="shell-card rounded-[28px] overflow-hidden">
+                <div class="h-1.5 w-full bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300"></div>
+                <div class="p-6">
+                  <div class="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-500 shadow-lg mb-4">
+                    <i data-lucide="route" class="w-7 h-7 text-white"></i>
+                  </div>
+                  <p class="text-sm font-medium text-orange-700 mb-1">Avileo</p>
+                  <h3 class="text-2xl font-bold text-gray-900 mb-2">Bienvenido</h3>
+                  <p class="text-sm text-gray-500">Ingresa tus credenciales</p>
+
+                  <div class="mt-6 space-y-3">
+                    <div class="h-12 rounded-[18px] bg-white border border-stone-200 flex items-center px-4">
+                      <span class="text-gray-400 text-sm">tu@email.com</span>
+                    </div>
+                    <div class="h-12 rounded-[18px] bg-white border border-stone-200 flex items-center px-4">
+                      <span class="text-gray-400 text-sm">••••••••</span>
+                    </div>
+                    <button class="h-12 w-full rounded-[18px] bg-orange-500 text-white font-semibold shadow-sm">
+                      Iniciar sesión
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white p-4 border-t">
+            <p class="font-medium text-gray-900">Pantalla de Login</p>
+            <p class="text-sm text-gray-500">Fondo crema + acentos naranja</p>
+          </div>
+        </div>
+
+        <!-- Landing Hero -->
+        <div class="rounded-3xl overflow-hidden shadow-2xl">
+          <div class="bg-slate-950 p-8">
+            <div class="max-w-sm mx-auto text-center">
+              <div class="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-blue-500/20 border border-orange-500/30 rounded-full px-4 py-2 mb-6">
+                <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
+                <span class="text-slate-300 text-sm">Online +</span>
+                <i data-lucide="wifi-off" class="w-4 h-4 text-orange-400"></i>
+                <span class="text-orange-400 text-sm">Offline</span>
+              </div>
+
+              <h2 class="text-3xl font-bold text-white mb-3 leading-tight">
+                Tu negocio<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-blue-400">
+                  en movimiento.
+                </span>
+              </h2>
+
+              <p class="text-slate-400 mb-6 text-sm">Sistema de ventas con respaldo offline.</p>
+
+              <button class="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-orange-500/25">
+                Comenzar prueba
+              </button>
+            </div>
+          </div>
+          <div class="bg-white p-4 border-t">
+            <p class="font-medium text-gray-900">Landing Page Hero</p>
+            <p class="text-sm text-gray-500">Fondo oscuro + degradados vibrantes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Especificaciones Técnicas -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Especificaciones Técnicas</h2>
+      <p class="text-gray-600 mb-8">Implementación del branding</p>
+
+      <div class="shell-card rounded-2xl p-6 app-shell">
+        <div class="grid md:grid-cols-2 gap-8">
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-4">PWA Config</h4>
+            <table class="w-full text-sm">
+              <tbody class="divide-y">
+                <tr>
+                  <td class="py-2 text-gray-600">Theme Color</td>
+                  <td class="py-2 font-mono text-orange-600">#f97316</td>
+                </tr>
+                <tr>
+                  <td class="py-2 text-gray-600">Background Color</td>
+                  <td class="py-2 font-mono text-gray-900">#0a0a0f</td>
+                </tr>
+                <tr>
+                  <td class="py-2 text-gray-600">Display</td>
+                  <td class="py-2 text-gray-900">standalone</td>
+                </tr>
+                <tr>
+                  <td class="py-2 text-gray-600">Orientation</td>
+                  <td class="py-2 text-gray-900">portrait</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-4">CSS Variables</h4>
+            <pre class="bg-slate-900 text-slate-300 p-4 rounded-xl text-xs overflow-x-auto"><code>:root {
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --destructive: 0 84.2% 60.2%;
+  --radius: 0.5rem;
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-400 py-8 mt-16">
+    <div class="max-w-6xl mx-auto px-6 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 gradient-brand rounded-lg flex items-center justify-center">
+          <i data-lucide="route" class="w-4 h-4 text-white"></i>
+        </div>
+        <span class="font-semibold text-white">Avileo</span>
+      </div>
+      <p class="text-sm">Brand Guidelines v2.0 © 2025</p>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

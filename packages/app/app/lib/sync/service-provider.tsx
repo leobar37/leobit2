@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { SyncCoordinator } from "./coordinator";
@@ -19,6 +20,7 @@ import { SupplierService } from "../services/supplier-service";
 import type { ConflictStrategy } from "../sync/config";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { syncEvents } from "./sync-events";
+import { getQueryKeysForEntity } from "./query-keys";
 
 export interface ServicesContextValue {
   pg: PGlite;
@@ -231,7 +233,9 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
     isStuck: false,
     consecutiveStalePulls: 0,
   });
-  
+
+  const queryClient = useQueryClient();
+
   const [pushStatus, setPushStatus] = useState<SyncStatus>({
     pending: 0,
     processing: 0,
@@ -277,11 +281,20 @@ function SyncStateProvider({ children }: { children: ReactNode }) {
       setPushStatus((prev) => ({ ...prev, ...status }));
     });
 
-    const unsubPullCompleted = syncEvents.on("pull:completed", ({ changesApplied }) => {
+    const unsubPullCompleted = syncEvents.on("pull:completed", ({ changesApplied, entityTypes }) => {
       setPullStatus((prev) => ({
         ...prev,
         lastPullTime: new Date(),
       }));
+      // Invalidate TanStack Query caches for affected entity types (FR-002)
+      if (entityTypes && entityTypes.length > 0) {
+        for (const entityType of entityTypes) {
+          const keys = getQueryKeysForEntity(entityType);
+          for (const key of keys) {
+            queryClient.invalidateQueries({ queryKey: key });
+          }
+        }
+      }
     });
 
     const unsubPullError = syncEvents.on("pull:error", ({ error }) => {

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FetchSyncHttpClient - Sincronización Avileo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .diagram-box { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1)); transition: all 0.3s ease; }
+    .diagram-box:hover { filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.15)); transform: translateY(-2px); }
+    .flow-line { stroke-dasharray: 8; animation: dash 20s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -100; } }
+    .method-card { transition: all 0.2s ease; }
+    .method-card:hover { transform: translateX(4px); }
+    .pulse-dot { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+  <!-- Hero -->
+  <header class="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+    <div class="max-w-6xl mx-auto px-6 py-12 md:py-16">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="bg-white/20 p-2 rounded-lg">
+          <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+        </div>
+        <span class="text-orange-100 font-medium">Avileo Sync Engine</span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-bold mb-4">FetchSyncHttpClient</h1>
+      <p class="text-lg text-orange-100 max-w-2xl">
+        Cliente HTTP que conecta la base local (PGlite) con el servidor backend. 
+        Gestiona el envío de operaciones, conflictos y sincronización offline-first.
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8 md:py-12 space-y-12">
+
+    <!-- Arquitectura Visual -->
+    <section x-data="{ activeTab: 'push' }">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-orange-100 p-2 rounded-lg">
+          <i data-lucide="layers" class="w-5 h-5 text-orange-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Arquitectura del Sync</h2>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+        <svg viewBox="0 0 900 320" class="h-auto min-w-[700px] w-full" role="img" aria-labelledby="arch-title">
+          <title id="arch-title">Arquitectura de sincronización Avileo</title>
+          
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"></polygon>
+            </marker>
+            <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"></polygon>
+            </marker>
+          </defs>
+
+          <!-- Backend (Servidor) -->
+          <g class="diagram-box">
+            <rect x="40" y="40" width="200" height="110" rx="12" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"></rect>
+            <text x="140" y="75" text-anchor="middle" fill="#312e81" font-size="16" font-weight="600">Backend ElysiaJS</text>
+            <text x="140" y="95" text-anchor="middle" fill="#4338ca" font-size="12">POST /sync/batch</text>
+            <text x="140" y="112" text-anchor="middle" fill="#4338ca" font-size="12">GET /sync/conflicts</text>
+            <text x="140" y="129" text-anchor="middle" fill="#4338ca" font-size="12">POST /sync/conflicts/resolve</text>
+          </g>
+
+          <!-- Línea Backend → HTTP Client -->
+          <line x1="240" y1="95" x2="330" y2="95" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+          <!-- HTTP Client (Este archivo) -->
+          <g class="diagram-box" style="filter: drop-shadow(0 6px 16px rgba(249, 115, 22, 0.25));">
+            <rect x="350" y="40" width="200" height="110" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="3"></rect>
+            <text x="450" y="70" text-anchor="middle" fill="#c2410c" font-size="12" font-weight="500">📁 fetch-sync-http-client.ts</text>
+            <text x="450" y="95" text-anchor="middle" fill="#9a3412" font-size="16" font-weight="700">FetchSyncHttpClient</text>
+            <text x="450" y="115" text-anchor="middle" fill="#c2410c" font-size="11">implements ISyncHttpClient</text>
+          </g>
+
+          <!-- Línea HTTP Client → Sync Service -->
+          <line x1="550" y1="95" x2="640" y2="95" stroke="#f97316" stroke-width="2" marker-end="url(#arrowhead-orange)"></line>
+
+          <!-- Sync Service -->
+          <g class="diagram-box">
+            <rect x="660" y="40" width="200" height="110" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"></rect>
+            <text x="760" y="75" text-anchor="middle" fill="#14532d" font-size="16" font-weight="600">SyncService</text>
+            <text x="760" y="95" text-anchor="middle" fill="#166534" font-size="12">processPending()</text>
+            <text x="760" y="112" text-anchor="middle" fill="#166534" font-size="12">enqueue()</text>
+            <text x="760" y="129" text-anchor="middle" fill="#166534" font-size="12">startAutoSync()</text>
+          </g>
+
+          <!-- Línea Sync Service → Local DB -->
+          <path d="M 760 150 L 760 180 L 450 180 L 450 210" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrowhead-orange)"></path>
+
+          <!-- Local DB (PGlite) -->
+          <g class="diagram-box">
+            <rect x="350" y="210" width="200" height="90" rx="12" fill="#f8fafc" stroke="#64748b" stroke-width="2"></rect>
+            <text x="450" y="245" text-anchor="middle" fill="#334155" font-size="16" font-weight="600">PGlite (Local DB)</text>
+            <text x="450" y="265" text-anchor="middle" fill="#475569" font-size="12">Tabla: sync_operations</text>
+            <text x="450" y="282" text-anchor="middle" fill="#475569" font-size="12">Status: pending → synced</text>
+          </g>
+
+          <!-- Flow labels -->
+          <text x="285" y="85" text-anchor="middle" fill="#64748b" font-size="10">HTTPS + JSON</text>
+          <text x="595" y="85" text-anchor="middle" fill="#f97316" font-size="10">fetch()</text>
+          <text x="600" y="195" text-anchor="middle" fill="#22c55e" font-size="10">Lee/Escribe</text>
+        </svg>
+      </div>
+
+      <div class="mt-4 flex gap-4 text-sm text-slate-600">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-orange-500 pulse-dot"></div>
+          <span>Este componente está resaltado</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Métodos Principales -->
+    <section>
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-blue-100 p-2 rounded-lg">
+          <i data-lucide="code-2" class="w-5 h-5 text-blue-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Métodos Principales</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <!-- sendBatch -->
+        <div class="method-card bg-white rounded-xl p-5 border-l-4 border-orange-500 shadow-sm">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <code class="text-sm font-semibold text-orange-700 bg-orange-50 px-2 py-1 rounded">sendBatch()</code>
+              <span class="ml-2 text-xs text-slate-500">async</span>
+            </div>
+            <i data-lucide="arrow-up-circle" class="w-5 h-5 text-orange-500"></i>
+          </div>
+          <p class="text-slate-600 text-sm mb-3">
+            Envía operaciones pendientes al servidor en batch. Cancela peticiones previas automáticamente.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">POST /sync/batch</span>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">AbortController</span>
+          </div>
+        </div>
+
+        <!-- getConflicts -->
+        <div class="method-card bg-white rounded-xl p-5 border-l-4 border-red-500 shadow-sm">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <code class="text-sm font-semibold text-red-700 bg-red-50 px-2 py-1 rounded">getConflicts()</code>
+              <span class="ml-2 text-xs text-slate-500">async</span>
+            </div>
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
+          </div>
+          <p class="text-slate-600 text-sm mb-3">
+            Obtiene lista de conflictos de sincronización con filtros opcionales (status, entityType).
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">GET /sync/conflicts</span>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Query params</span>
+          </div>
+        </div>
+
+        <!-- getConflict -->
+        <div class="method-card bg-white rounded-xl p-5 border-l-4 border-amber-500 shadow-sm">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <code class="text-sm font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded">getConflict(id)</code>
+              <span class="ml-2 text-xs text-slate-500">async</span>
+            </div>
+            <i data-lucide="file-search" class="w-5 h-5 text-amber-500"></i>
+          </div>
+          <p class="text-slate-600 text-sm mb-3">
+            Obtiene detalle de un conflicto específico por su ID.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">GET /sync/conflicts/:id</span>
+          </div>
+        </div>
+
+        <!-- resolveConflict -->
+        <div class="method-card bg-white rounded-xl p-5 border-l-4 border-green-500 shadow-sm">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <code class="text-sm font-semibold text-green-700 bg-green-50 px-2 py-1 rounded">resolveConflict()</code>
+              <span class="ml-2 text-xs text-slate-500">async</span>
+            </div>
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500"></i>
+          </div>
+          <p class="text-slate-600 text-sm mb-3">
+            Resuelve un conflicto: aceptar local, aceptar servidor, o merge con datos combinados.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">POST /sync/conflicts/:id/resolve</span>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">resolution + mergedData</span>
+          </div>
+        </div>
+
+        <!-- abort -->
+        <div class="method-card bg-white rounded-xl p-5 border-l-4 border-slate-400 shadow-sm md:col-span-2">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <code class="text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">abort()</code>
+            </div>
+            <i data-lucide="x-circle" class="w-5 h-5 text-slate-500"></i>
+          </div>
+          <p class="text-slate-600 text-sm">
+            Cancela cualquier petición HTTP en vuelo usando AbortController. Útil para cambios de pantalla o navegación.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Flujo de una Operación -->
+    <section x-data="{ step: 1 }">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-purple-100 p-2 rounded-lg">
+          <i data-lucide="git-branch" class="w-5 h-5 text-purple-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Flujo de Sincronización</h2>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- Timeline -->
+        <div class="p-6 border-b border-slate-100">
+          <div class="flex items-center justify-between mb-6">
+            <button @click="step = step > 1 ? step - 1 : 1" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <div class="flex gap-2">
+              <template x-for="i in 5" :key="i">
+                <button @click="step = i" 
+                  :class="step === i ? 'bg-orange-500 w-8' : 'bg-slate-200 w-2'"
+                  class="h-2 rounded-full transition-all duration-300"></button>
+              </template>
+            </div>
+            <button @click="step = step < 5 ? step + 1 : 5" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Step content -->
+          <div class="min-h-[200px]">
+            <!-- Step 1 -->
+            <div x-show="step === 1" x-transition class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <i data-lucide="database" class="w-6 h-6 text-green-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg">1. Usuario crea registro local</h3>
+                  <p class="text-slate-600">Vendedor crea un cliente o venta en la app (modo offline).</p>
+                </div>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-4 font-mono text-sm text-slate-700">
+                INSERT INTO customers (id, name, sync_status) <br>
+                VALUES ('cuid_123', 'Juan Pérez', <span class="text-orange-600 font-semibold">'pending'</span>)
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div x-show="step === 2" x-transition class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <i data-lucide="list-plus" class="w-6 h-6 text-blue-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg">2. SyncService encola operación</h3>
+                  <p class="text-slate-600">Se agrega a la tabla sync_operations con metadata completa.</p>
+                </div>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-4 font-mono text-sm text-slate-700">
+                INSERT INTO sync_operations <br>
+                (entity_type, entity_id, operation, payload, status) <br>
+                VALUES ('customers', 'cuid_123', 'insert', '{...}', 'pending')
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div x-show="step === 3" x-transition class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <i data-lucide="send" class="w-6 h-6 text-orange-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg">3. FetchSyncHttpClient envía batch</h3>
+                  <p class="text-slate-600">POST /sync/batch con todas las operaciones pendientes.</p>
+                </div>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-4 space-y-2">
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-slate-500">Headers:</span>
+                  <span class="font-mono text-xs bg-slate-200 px-2 py-1 rounded">Authorization: Bearer {token}</span>
+                  <span class="font-mono text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">x-business-id: biz_123</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-slate-500">Body:</span>
+                  <span class="font-mono text-xs">{ operations: [...], deviceId, sourceFingerprint }</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div x-show="step === 4" x-transition class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <i data-lucide="server" class="w-6 h-6 text-indigo-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg">4. Backend procesa y responde</h3>
+                  <p class="text-slate-600">Servidor valida, aplica cambios y retorna resultados por operación.</p>
+                </div>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-4 font-mono text-sm text-slate-700">
+                { <br>
+                &nbsp;&nbsp;success: true, <br>
+                &nbsp;&nbsp;data: { <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;results: [ <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ idempotencyKey: '...', success: true }, <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ idempotencyKey: '...', success: false, conflict: {...} } <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;] <br>
+                &nbsp;&nbsp;} <br>
+                }
+              </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div x-show="step === 5" x-transition class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg">5. Actualización local</h3>
+                  <p class="text-slate-600">SyncService marca operaciones como synced o detecta conflictos.</p>
+                </div>
+              </div>
+              <div class="flex gap-4">
+                <div class="flex-1 bg-green-50 rounded-lg p-3 border border-green-200">
+                  <div class="text-xs text-green-700 font-semibold mb-1">ÉXITO</div>
+                  <div class="font-mono text-xs text-slate-700">sync_status = 'synced'</div>
+                </div>
+                <div class="flex-1 bg-red-50 rounded-lg p-3 border border-red-200">
+                  <div class="text-xs text-red-700 font-semibold mb-1">CONFLICTO</div>
+                  <div class="font-mono text-xs text-slate-700">sync_status = 'conflict'</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress labels -->
+        <div class="bg-slate-50 px-6 py-4 grid grid-cols-5 gap-2 text-center text-xs">
+          <div :class="step >= 1 ? 'text-orange-600 font-semibold' : 'text-slate-400'">Crear Local</div>
+          <div :class="step >= 2 ? 'text-orange-600 font-semibold' : 'text-slate-400'">Encolar</div>
+          <div :class="step >= 3 ? 'text-orange-600 font-semibold' : 'text-slate-400'">Enviar</div>
+          <div :class="step >= 4 ? 'text-orange-600 font-semibold' : 'text-slate-400'">Procesar</div>
+          <div :class="step >= 5 ? 'text-orange-600 font-semibold' : 'text-slate-400'">Actualizar</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gestión de Conflictos -->
+    <section>
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-red-100 p-2 rounded-lg">
+          <i data-lucide="git-merge" class="w-5 h-5 text-red-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Gestión de Conflictos</h2>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+            <i data-lucide="laptop" class="w-5 h-5 text-blue-600"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Versión Local</h3>
+          <p class="text-sm text-slate-600">Datos creados/editados en el dispositivo del vendedor.</p>
+          <div class="mt-3 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded">
+            LocalVersion: 5
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+          <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+            <i data-lucide="zap" class="w-5 h-5 text-purple-600"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Conflicto Detectado</h3>
+          <p class="text-sm text-slate-600">Ambas versiones modificaron el mismo registro simultáneamente.</p>
+          <div class="mt-3 text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded">
+            ServerVersion: 7 > LocalVersion: 5
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+            <i data-lucide="cloud" class="w-5 h-5 text-green-600"></i>
+          </div>
+          <h3 class="font-semibold mb-2">Versión Servidor</h3>
+          <p class="text-sm text-slate-600">Datos oficiales en PostgreSQL (fuente de verdad).</p>
+          <div class="mt-3 text-xs bg-green-50 text-green-700 px-3 py-2 rounded">
+            ServerVersion: 7
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 bg-slate-50 rounded-xl p-6">
+        <h4 class="font-semibold mb-4 flex items-center gap-2">
+          <i data-lucide="scale" class="w-5 h-5 text-slate-600"></i>
+          Opciones de Resolución
+        </h4>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+            <div class="font-medium text-blue-700 mb-1">Aceptar Local</div>
+            <p class="text-sm text-slate-600">Mantener cambios del vendedor, sobrescribir servidor.</p>
+          </div>
+          <div class="bg-white rounded-lg p-4 border-l-4 border-green-500">
+            <div class="font-medium text-green-700 mb-1">Aceptar Servidor</div>
+            <p class="text-sm text-slate-600">Descartar cambios locales, usar versión oficial.</p>
+          </div>
+          <div class="bg-white rounded-lg p-4 border-l-4 border-purple-500">
+            <div class="font-medium text-purple-700 mb-1">Merge Manual</div>
+            <p class="text-sm text-slate-600">Combinar ambas versiones mediante UI de resolución.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Headers y Autenticación -->
+    <section>
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-slate-100 p-2 rounded-lg">
+          <i data-lucide="shield" class="w-5 h-5 text-slate-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Headers de Seguridad</h2>
+      </div>
+
+      <div class="bg-slate-900 rounded-xl p-6 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left py-3 text-slate-400 font-medium">Header</th>
+              <th class="text-left py-3 text-slate-400 font-medium">Valor</th>
+              <th class="text-left py-3 text-slate-400 font-medium">Propósito</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-300">
+            <tr class="border-b border-slate-800">
+              <td class="py-3 font-mono text-orange-400">Authorization</td>
+              <td class="py-3 font-mono text-xs">Bearer {jwt_token}</td>
+              <td class="py-3">Autenticación del usuario</td>
+            </tr>
+            <tr class="border-b border-slate-800">
+              <td class="py-3 font-mono text-orange-400">x-business-id</td>
+              <td class="py-3 font-mono text-xs">biz_xxx</td>
+              <td class="py-3">Multi-tenancy (tenant isolation)</td>
+            </tr>
+            <tr class="border-b border-slate-800">
+              <td class="py-3 font-mono text-orange-400">x-correlation-id</td>
+              <td class="py-3 font-mono text-xs">sync-{timestamp}-{random}</td>
+              <td class="py-3">Trazabilidad de operaciones</td>
+            </tr>
+            <tr>
+              <td class="py-3 font-mono text-orange-400">Content-Type</td>
+              <td class="py-3 font-mono text-xs">application/json</td>
+              <td class="py-3">Formato de payload</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Resumen Técnico -->
+    <section>
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-slate-100 p-2 rounded-lg">
+          <i data-lucide="info" class="w-5 h-5 text-slate-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Resumen Técnico</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+            <h4 class="font-semibold mb-3 flex items-center gap-2">
+              <i data-lucide="file-code" class="w-4 h-4 text-slate-500"></i>
+              Ubicación
+            </h4>
+            <code class="text-sm bg-slate-50 px-3 py-2 rounded block font-mono text-slate-700">
+              packages/app/app/lib/sync/http/<br>
+              fetch-sync-http-client.ts
+            </code>
+          </div>
+
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+            <h4 class="font-semibold mb-3 flex items-center gap-2">
+              <i data-lucide="link" class="w-4 h-4 text-slate-500"></i>
+              Interfaz Implementada
+            </h4>
+            <code class="text-sm bg-slate-50 px-3 py-2 rounded block font-mono text-slate-700">
+              ISyncHttpClient
+            </code>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+          <h4 class="font-semibold mb-4 flex items-center gap-2">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+            Características Clave
+          </h4>
+          <ul class="space-y-3 text-orange-100">
+            <li class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>Cancelación automática de requests previos (AbortController)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>Device fingerprint para trazabilidad</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>Correlation IDs para debugging</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>Manejo de conflictos integrado</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>100% offline-first: local primero, sync después</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-100 border-t border-slate-200 mt-12">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-slate-500">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        <span class="text-sm">Avileo Sync Engine</span>
+      </div>
+      <div class="text-sm text-slate-400">
+        Offline-first architecture
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

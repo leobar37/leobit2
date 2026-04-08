@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Users, Pencil, UserX, Loader2, Store } from "lucide-react";
+import { ArrowLeft, Users, Pencil, UserX, Loader2, Route } from "lucide-react";
 import { useTeam, useUpdateTeamMember, useDeactivateTeamMember } from "@/hooks/use-team";
 import { useBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
@@ -207,7 +207,7 @@ export default function TeamPage() {
           </span>
           <Link to="/invitations">
             <Button size="sm" className="rounded-xl">
-              <Store className="h-4 w-4 mr-1" />
+              <Route className="h-4 w-4 mr-1" />
               Invitar
             </Button>
           </Link>

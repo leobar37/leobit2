@@ -1,7 +1,7 @@
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link, useSearchParams } from "react-router";
-import { Store, Loader2, AlertCircle } from "lucide-react";
+import { Route, Loader2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { registerSchema, type RegisterInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
@@ -120,7 +120,7 @@ export default function RegisterPage() {
 
           <CardHeader className="space-y-4 px-5 pb-2 pt-5 sm:px-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
-              <Store className="h-7 w-7 text-white" />
+              <Route className="h-7 w-7 text-white" />
             </div>
 
             <div className="space-y-2">

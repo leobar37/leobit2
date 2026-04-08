@@ -27,6 +27,9 @@ logs
 # Testing
 coverage
 .nyc_output
+test-results
+playwright-report
+playwright/.cache
 
 # Environment files
 .env
@@ -43,3 +46,38 @@ docs
 .parcel-cache
 .eslintcache
 .stylelintcache
+
+# Turbo cache (se regenera en build)
+.turbo
+
+# Project directories que no se necesitan en produccion
+.factory
+.plans
+.playwright-mcp
+.sisyphus
+@docs
+backups
+data-avileo
+reports
+scripts
+tmp
+.claude
+.opencode
+.superset
+
+# Backup files
+*.sql
+data-avileo/
+backups/
+
+# E2E tests no necesarios en runtime
+e2e/
+packages/app/e2e/
+
+# Archivos de desarrollo
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+vitest.config.*
+playwright.config.*

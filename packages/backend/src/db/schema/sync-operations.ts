@@ -28,6 +28,11 @@ export const syncOperations = pgTable(
     error: text("error"),
     clientTimestamp: timestamp("client_timestamp").notNull(),
     processedAt: timestamp("processed_at"),
+
+    // Device tracking for multi-device conflict detection
+    deviceId: varchar("device_id", { length: 128 }),
+    sourceFingerprint: varchar("source_fingerprint", { length: 256 }),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

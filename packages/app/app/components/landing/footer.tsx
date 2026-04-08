@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { Route } from "lucide-react";
 
 export function Footer() {
   return (
@@ -7,7 +7,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center">
-              <Store className="w-5 h-5 text-white" />
+              <Route className="w-5 h-5 text-white" />
             </div>
             <span className="text-lg font-bold text-white">Avileo</span>
           </div>

@@ -19,13 +19,13 @@ export interface ConflictCheckResult {
   serverData?: Record<string, unknown>;
 }
 
-// Base class for timestamp-based conflict detection
-abstract class BaseTimestampConflictResolver implements IConflictResolver {
+// Base class for version-based conflict detection (replaces timestamp-based)
+abstract class BaseVersionConflictResolver implements IConflictResolver {
   protected abstract getEntityName(): string;
   protected abstract getTable(): any;
   protected abstract getIdField(): string;
   protected abstract getBusinessIdField(): string;
-  protected abstract getUpdatedAtField(): string;
+  protected abstract getVersionField(): string;
   protected abstract getServerDataFields(record: any): Record<string, unknown>;
 
   /**
@@ -48,7 +48,7 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
     const table = this.getTable();
     const idField = this.getIdField();
     const businessIdField = this.getBusinessIdField();
-    const updatedAtField = this.getUpdatedAtField();
+    const versionField = this.getVersionField();
 
     const queryName = this.getQueryRelationName() ?? getTableName(table);
     const queryApi = (tx.query as Record<string, any>)[queryName];
@@ -71,20 +71,21 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
       return { hasConflict: false };
     }
 
-    const serverTimestamp = new Date(record[updatedAtField]).getTime();
-    const localTimestamp = new Date(operation.localTimestamp).getTime();
+    const serverVersion = record[versionField] as number;
+    const localVersion = operation.localVersion ?? 1;
 
-    if (serverTimestamp > localTimestamp) {
+    // Conflict detected: server has a newer version than what the client had when it made the change
+    if (serverVersion > localVersion) {
       logger.warn({
         msg: `⚠️ ${this.getEntityName()} conflict detected`,
         entityId: operation.entityId,
-        serverTimestamp: new Date(serverTimestamp).toISOString(),
-        clientTimestamp: operation.localTimestamp,
+        serverVersion,
+        clientVersion: localVersion,
       });
 
       return {
         hasConflict: true,
-        serverVersion: Math.floor(serverTimestamp / 1000),
+        serverVersion,
         serverData: this.getServerDataFields(record),
       };
     }
@@ -93,13 +94,21 @@ abstract class BaseTimestampConflictResolver implements IConflictResolver {
   }
 }
 
-// Entity-specific resolvers
-class CustomerConflictResolver extends BaseTimestampConflictResolver {
+// @deprecated Use BaseVersionConflictResolver instead
+// Kept for backward compatibility during transition
+abstract class BaseTimestampConflictResolver extends BaseVersionConflictResolver {
+  protected getVersionField(): string {
+    return "version";
+  }
+}
+
+// Entity-specific resolvers (now using version-based conflict detection)
+class CustomerConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Customer"; }
   protected getTable() { return customers; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
@@ -107,51 +116,54 @@ class CustomerConflictResolver extends BaseTimestampConflictResolver {
       phone: record.phone,
       address: record.address,
       notes: record.notes,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class AbonoConflictResolver extends BaseTimestampConflictResolver {
+class AbonoConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Abono"; }
   protected getTable() { return abonos; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       customerId: record.customerId,
       amount: record.amount,
       paymentMethod: record.paymentMethod,
       notes: record.notes,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class ProductConflictResolver extends BaseTimestampConflictResolver {
+class ProductConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Product"; }
   protected getTable() { return products; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
       unit: record.unit,
       basePrice: record.basePrice,
       isActive: record.isActive,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class ProductVariantConflictResolver extends BaseTimestampConflictResolver {
+class ProductVariantConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "ProductVariant"; }
   protected getTable() { return productVariants; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "productVariants"; }
   protected getServerDataFields(record: any) {
     return {
@@ -162,129 +174,137 @@ class ProductVariantConflictResolver extends BaseTimestampConflictResolver {
       costPrice: record.costPrice,
       sortOrder: record.sortOrder,
       isActive: record.isActive,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class TagConflictResolver extends BaseTimestampConflictResolver {
+class TagConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Tag"; }
   protected getTable() { return tags; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
       color: record.color,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class CustomerTagConflictResolver extends BaseTimestampConflictResolver {
+class CustomerTagConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "CustomerTag"; }
   protected getTable() { return customerTags; }
-  protected getIdField() { return "id"; }
+  protected getIdField() { return "customerId"; } // Composite key - uses customerId + tagId
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "customerTags"; }
   protected getServerDataFields(record: any) {
     return {
       customerId: record.customerId,
       tagId: record.tagId,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class CustomerGroupConflictResolver extends BaseTimestampConflictResolver {
+class CustomerGroupConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "CustomerGroup"; }
   protected getTable() { return customerGroups; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "customerGroups"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
       color: record.color,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class CustomerGroupMemberConflictResolver extends BaseTimestampConflictResolver {
+class CustomerGroupMemberConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "CustomerGroupMember"; }
   protected getTable() { return customerGroupMembers; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "customerGroupMembers"; }
   protected getServerDataFields(record: any) {
     return {
       groupId: record.groupId,
       customerId: record.customerId,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class DistribucionConflictResolver extends BaseTimestampConflictResolver {
+class DistribucionConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Distribucion"; }
   protected getTable() { return distribuciones; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       estado: record.estado,
       montoRecaudado: record.montoRecaudado,
       fecha: record.fecha,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class VisitaConflictResolver extends BaseTimestampConflictResolver {
+class VisitaConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Visita"; }
   protected getTable() { return visitas; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       distribucionId: record.distribucionId,
       customerId: record.customerId,
       status: record.status,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class PurchaseConflictResolver extends BaseTimestampConflictResolver {
+class PurchaseConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Purchase"; }
   protected getTable() { return purchases; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       supplierId: record.supplierId,
       purchaseDate: record.purchaseDate,
       status: record.status,
       totalAmount: record.totalAmount,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class PurchaseItemConflictResolver extends BaseTimestampConflictResolver {
+class PurchaseItemConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "PurchaseItem"; }
   protected getTable() { return purchaseItems; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "purchaseItems"; }
   protected getServerDataFields(record: any) {
     return {
@@ -294,17 +314,18 @@ class PurchaseItemConflictResolver extends BaseTimestampConflictResolver {
       quantity: record.quantity,
       unitCost: record.unitCost,
       totalCost: record.totalCost,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class SupplierConflictResolver extends BaseTimestampConflictResolver {
+class SupplierConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Supplier"; }
   protected getTable() { return suppliers; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
@@ -313,17 +334,18 @@ class SupplierConflictResolver extends BaseTimestampConflictResolver {
       phone: record.phone,
       email: record.email,
       isActive: record.isActive,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class PuntoVentaConflictResolver extends BaseTimestampConflictResolver {
+class PuntoVentaConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "PuntoVenta"; }
   protected getTable() { return puntosVenta; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "puntosVenta"; }
   protected getServerDataFields(record: any) {
     return {
@@ -331,17 +353,18 @@ class PuntoVentaConflictResolver extends BaseTimestampConflictResolver {
       type: record.type,
       address: record.address,
       isActive: record.isActive,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class ProductUnitConflictResolver extends BaseTimestampConflictResolver {
+class ProductUnitConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "ProductUnit"; }
   protected getTable() { return productUnits; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "productUnits"; }
   protected getServerDataFields(record: any) {
     return {
@@ -349,39 +372,42 @@ class ProductUnitConflictResolver extends BaseTimestampConflictResolver {
       name: record.name,
       quantity: record.quantity,
       unidad: record.unidad,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class VariantInventoryConflictResolver extends BaseTimestampConflictResolver {
+class VariantInventoryConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "VariantInventory"; }
   protected getTable() { return variantInventory; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getQueryRelationName() { return "variantInventory"; }
   protected getServerDataFields(record: any) {
     return {
       variantId: record.variantId,
       quantity: record.quantity,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
 }
 
-class FileConflictResolver extends BaseTimestampConflictResolver {
+class FileConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "File"; }
   protected getTable() { return files; }
   protected getIdField() { return "id"; }
   protected getBusinessIdField() { return "businessId"; }
-  protected getUpdatedAtField() { return "updatedAt"; }
+  protected getVersionField() { return "version"; }
   protected getServerDataFields(record: any) {
     return {
       name: record.name,
       mimeType: record.mimeType,
       size: record.size,
       url: record.url,
+      version: record.version,
       updatedAt: record.updatedAt?.toISOString(),
     };
   }
