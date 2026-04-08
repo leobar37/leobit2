@@ -1,6 +1,7 @@
 import { type PullStatus, PullService } from "./pull-service";
 import { type SyncStatus, SyncService } from "./sync-service";
 import { syncEvents } from "./sync-events";
+import { syncLogger } from "./sync-logger";
 import { ExponentialBackoff } from "./backoff";
 
 export interface SyncCoordinatorConfig {
@@ -101,7 +102,7 @@ export class SyncCoordinator {
   };
 
   private handlePullStale = ({ consecutiveStalePulls, reason }: { consecutiveStalePulls: number; reason: 'cursor-stuck' | 'empty-pulls' }): void => {
-    console.error(`[SyncCoordinator] 🚨 Pull sync is stuck: ${reason} after ${consecutiveStalePulls} pulls`);
+    syncLogger.error('[SyncCoordinator]', `Pull sync is stuck: ${reason} after ${consecutiveStalePulls} pulls`);
     // Stop auto-pull - it will be restarted when user manually resets
     this.pullService.stopAutoPull();
     this.syncService.stopAutoSync();

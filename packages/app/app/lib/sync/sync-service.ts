@@ -20,6 +20,7 @@ import type { ISyncHttpClient } from "./http/sync-http-client";
 import { PgSyncQueue } from "./queue/pg-sync-queue";
 import { FetchSyncHttpClient } from "./http/fetch-sync-http-client";
 import { checkAndMigrateSchema } from "./schema-version";
+import { syncLogger } from "./sync-logger";
 
 /**
  * Generate a correlation ID for tracking an operation across the stack
@@ -1065,7 +1066,7 @@ export class SyncService {
       );
       return true;
     } catch (error) {
-      console.error("Failed to delete operation:", error);
+      syncLogger.error('[SYNC]', 'Failed to delete operation', { operationId });
       return false;
     }
   }
@@ -1086,7 +1087,7 @@ export class SyncService {
 
       return operationIds.length;
     } catch (error) {
-      console.error("Failed to delete operations:", error);
+      syncLogger.error('[SYNC]', 'Failed to delete operations', { count: operationIds.length });
       return 0;
     }
   }
@@ -1195,7 +1196,7 @@ export class SyncService {
 
     const payloadStr = typeof op?.payload === 'string' ? op.payload : JSON.stringify(op?.payload);
 
-    console.error(`[SYNC] Operation marked as FAILED:`, {
+    syncLogger.error('[SYNC]', 'Operation marked as FAILED', {
       operationId: id,
       entityType: op?.entity_type,
       operation: op?.operation,
@@ -1203,7 +1204,6 @@ export class SyncService {
       error,
       attempts: op?.sync_attempts,
       payload: payloadStr ? payloadStr.substring(0, 1000) : undefined,
-      timestamp: new Date().toISOString(),
     });
 
     if (!op) return;

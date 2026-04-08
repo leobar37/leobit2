@@ -10,6 +10,7 @@ import { PULL_INTERVAL_MS, MAX_STALE_PULLS, MAX_EMPTY_PULLS } from "./config";
 import { getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import type { PullChange, PullResponse, PullResult, PullStatus } from "./types";
 import { syncEvents } from "./sync-events";
+import { syncLogger } from "./sync-logger";
 
 // Re-export types for backward compatibility
 export type { PullStatus, PullResult, PullChange, PullResponse } from "./types";
@@ -384,11 +385,11 @@ export class PullService {
           // Cursor didn't advance but server says there's more - potential infinite loop
           if (changes.length === 0) {
             this.consecutiveEmptyPulls++;
-            console.warn(`[PULL] ⚠️ Empty pull #${this.consecutiveEmptyPulls} with hasMore=true`);
+            syncLogger.warn('[PULL]', `Empty pull #${this.consecutiveEmptyPulls} with hasMore=true`);
             
             if (this.consecutiveEmptyPulls >= MAX_EMPTY_PULLS) {
               this.isStuck = true;
-              console.error(`[PULL] 🚨 STUCK: ${MAX_EMPTY_PULLS} consecutive empty pulls with hasMore=true`);
+              syncLogger.error('[PULL]', `STUCK: ${MAX_EMPTY_PULLS} consecutive empty pulls`);
               syncEvents.emit("pull:stale", { 
                 consecutiveStalePulls: this.consecutiveEmptyPulls, 
                 reason: 'empty-pulls' 
@@ -406,11 +407,11 @@ export class PullService {
           } else {
             // Cursor didn't advance but we got changes - still counts as stale
             this.consecutiveStalePulls++;
-            console.warn(`[PULL] ⚠️ Cursor stuck #${this.consecutiveStalePulls} (got ${changes.length} changes but cursor same)`);
+            syncLogger.warn('[PULL]', `Cursor stuck #${this.consecutiveStalePulls} (got ${changes.length} changes but cursor same)`);
             
             if (this.consecutiveStalePulls >= MAX_STALE_PULLS) {
               this.isStuck = true;
-              console.error(`[PULL] 🚨 STUCK: Cursor stuck after ${MAX_STALE_PULLS} pulls`);
+              syncLogger.error('[PULL]', `STUCK: Cursor stuck after ${MAX_STALE_PULLS} pulls`);
               syncEvents.emit("pull:stale", { 
                 consecutiveStalePulls: this.consecutiveStalePulls, 
                 reason: 'cursor-stuck' 
@@ -474,7 +475,7 @@ export class PullService {
           entityTypes.add(change.entityType);
           appliedCount++;
         } else {
-          console.error(`[Pull] Failed to apply change for ${change.entityType}:${change.entityId}:`, result.error);
+          syncLogger.error('[Pull]', `Failed to apply change for ${change.entityType}:${change.entityId}`, result.error);
           failedChanges.push({ change, error: result.error || "Unknown error" });
         }
       }
@@ -492,7 +493,7 @@ export class PullService {
 
       // Log summary
       if (failedChanges.length > 0) {
-        console.warn(`[Pull] Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
+        syncLogger.warn('[Pull]', `Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
       } else {
         console.log(`[Pull] ✅ Applied all ${appliedCount} changes successfully`);
       }

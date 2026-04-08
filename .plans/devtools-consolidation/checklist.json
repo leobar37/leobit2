@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "plan": "devtools-consolidation",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create devtools folder structure and move UI components",
+      "file": "tasks/01-create-devtools-folder.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": ["FR-002", "FR-006"]
+    },
+    {
+      "id": "T-002",
+      "title": "Extract engine-level helpers from provider.tsx",
+      "file": "tasks/02-extract-engine-helpers.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-001", "FR-002", "FR-003", "FR-004"]
+    },
+    {
+      "id": "T-003",
+      "title": "Create merged initDevTools() in app/devtools/console/index.ts",
+      "file": "tasks/03-create-merged-init.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-002"],
+      "requirements": ["FR-001", "FR-003", "FR-004", "FR-005", "NFR-001"]
+    },
+    {
+      "id": "T-004",
+      "title": "Update provider.tsx to remove debug code and call initDevTools",
+      "file": "tasks/04-update-provider.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-003"],
+      "requirements": ["FR-001", "FR-002", "FR-003", "NFR-002"]
+    },
+    {
+      "id": "T-005",
+      "title": "Remove registerDebugServices from service-provider.tsx",
+      "file": "tasks/05-update-service-provider.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-003"],
+      "requirements": ["FR-001", "FR-003"]
+    },
+    {
+      "id": "T-006",
+      "title": "Update all import paths for moved devtools components",
+      "file": "tasks/06-update-imports.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-001", "T-003", "T-005"],
+      "requirements": ["FR-007"]
+    },
+    {
+      "id": "T-007",
+      "title": "Delete old devtools folders and run final verification",
+      "file": "tasks/07-cleanup-old-files.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-006"],
+      "requirements": ["FR-002", "FR-007"]
+    }
+  ]
+}

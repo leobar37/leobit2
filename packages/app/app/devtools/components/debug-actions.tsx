@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Trash2,
   Copy,
   Database,
@@ -18,6 +19,7 @@ import { cn } from "~/lib/utils";
 import { useSyncService, useSyncState } from "~/lib/sync/service-provider";
 import { useSync } from "~/components/sync/sync-status";
 import { runManualSync } from "~/lib/sync/manual-sync";
+import { syncLogger } from "~/lib/sync/sync-logger";
 import { useToast } from "~/hooks/use-toast";
 
 interface DebugActionsProps {
@@ -309,6 +311,45 @@ ${formatDuplicateSection(salesDupes)}
       };
     });
 
+  const copySyncErrors = async () => {
+    setLoading("copySyncErrors");
+    setResult(null);
+    try {
+      const entries = syncLogger.getEntries();
+      if (entries.length === 0) {
+        await navigator.clipboard.writeText("No sync errors or warnings recorded.");
+        setResult({
+          success: true,
+          message: "✅ Sin errores registrados",
+          details: "No hay entradas de error o warning en el buffer",
+        });
+      } else {
+        const lines = entries.map((entry) => {
+          const ts = entry.timestamp.toISOString();
+          const dataStr = entry.data
+            ? ` ${JSON.stringify(entry.data).substring(0, 500)}`
+            : "";
+          return `[${entry.level.toUpperCase()}] [${ts}] [${entry.prefix}] ${entry.message}${dataStr}`;
+        });
+        const report = `=== AVILEO SYNC ERRORS ===\n${new Date().toISOString()}\n\n${lines.join("\n\n")}`;
+        await navigator.clipboard.writeText(report);
+        setResult({
+          success: true,
+          message: `✅ Copiados ${entries.length} errores/warnings`,
+          details: `${entries.filter((e) => e.level === "error").length} errores, ${entries.filter((e) => e.level === "warn").length} warnings`,
+        });
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        message: "Error copiando errores",
+        details: String(error),
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const actions = [
     {
       icon: Database,
@@ -344,6 +385,13 @@ ${formatDuplicateSection(salesDupes)}
       description: "Sincroniza cambios pendientes",
       action: forceSync,
       color: "text-green-600",
+    },
+    {
+      icon: AlertTriangle,
+      label: "Copiar Errores",
+      description: "Copia últimos errores y warnings de sync",
+      action: copySyncErrors,
+      color: "text-yellow-600",
     },
   ];
 

@@ -9,6 +9,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { PullChange, ChangeApplicationResult } from "./types";
 import { isValidTableName, toSnakeCase, filterValidColumns } from "./schema-mapper";
 import { isTransientError, sleep } from "./backoff";
+import { syncLogger } from "./sync-logger";
 
 const MAX_APPLY_RETRIES = 3;
 
@@ -77,7 +78,7 @@ export async function applyChange(
 
     // Retry on transient errors
     if (retriesLeft > 0 && isTransientError(errorMessage)) {
-      console.warn(`[ChangeApplier] Retrying change for ${tableName}:${change.entityId} (${retriesLeft} retries left)`);
+      syncLogger.warn('[ChangeApplier]', `Retrying change for ${tableName}:${change.entityId} (${retriesLeft} retries left)`);
       await sleep(100);
       return applyChange(pg, _db, change, businessId, retriesLeft - 1);
     }
@@ -181,7 +182,7 @@ async function applyUpdate(
   
   if (existingResult.rows.length === 0) {
     // Record doesn't exist - convert to insert (upsert behavior)
-    console.warn(`[ChangeApplier] Record ${tableName}:${id} not found for update, converting to insert`);
+    syncLogger.warn('[ChangeApplier]', `Record ${tableName}:${id} not found for update, converting to insert`);
     return applyInsert(pg, tableName, change, businessId);
   }
 
