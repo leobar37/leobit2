@@ -60,7 +60,7 @@ export function DebugWidget() {
                 </button>
               </div>
             </div>
-            
+
             <div className="max-h-[60vh] overflow-y-auto">
               {!isInitialized ? (
                 <div className="flex items-center justify-center py-8">

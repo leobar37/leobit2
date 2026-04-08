@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
-import { SyncDevToolsDrawer } from "~/components/sync/sync-devtools-drawer";
+import { SyncDevToolsDrawer } from "~/devtools";
 import {
   ConflictResolver,
   type ConflictData,
@@ -36,6 +36,12 @@ function ServicesProviderWrapper({
   children: React.ReactNode;
 }) {
   const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
+
+  // Allow rendering without engine when businessId is not yet set (new user onboarding)
+  if (!pg) {
+    return <>{children}</>;
+  }
+
   const { data: businessData, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness } = useBusinessWithCacheStatus();
 
   const business = businessData && !businessData.fromCache ? businessData : undefined;
@@ -347,6 +353,11 @@ export default function ProtectedLayout() {
 
   const businessId = getStoredBusinessId() || "";
   const token = getStoredAuthToken() || "";
+
+  // Redirect to /business/create if no businessId (new user onboarding)
+  if (!businessId && location.pathname !== "/business/create") {
+    return <Navigate to="/business/create" replace />;
+  }
 
   return (
     <EngineProvider businessId={businessId} token={token}>

@@ -58,140 +58,6 @@ export function EngineProvider({
   useEffect(() => {
     console.log(`[ENGINE-PROVIDER] useEffect triggered`);
 
-    // Add window-level debug helper
-    if (typeof window !== "undefined") {
-      (window as unknown as Record<string, unknown>).avileoDebug = {
-        getProducts: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const result = await pg.query(`SELECT * FROM products`);
-          console.log("Products in local DB:", result.rows);
-          return result.rows;
-        },
-        getProductCount: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const result = await pg.query(`SELECT COUNT(*) as count FROM products`);
-          const row = result.rows[0] as { count: string | number } | undefined;
-          console.log("Product count:", row?.count);
-          return row?.count;
-        },
-        // Check all synced tables
-        checkAllTables: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const tables = ['products', 'customers', 'sales', 'abonos', 'suppliers', 'tags', 'product_variants', 'purchases'];
-          for (const table of tables) {
-            try {
-              const result = await pg.query(`SELECT COUNT(*) as count FROM "${table}"`);
-              const row = result.rows[0] as { count: string | number } | undefined;
-              console.log(`${table}: ${row?.count} rows`);
-            } catch (e) {
-              console.log(`${table}: ERROR - ${e}`);
-            }
-          }
-        },
-        // Query products with business_id filter (like the app does)
-        getProductsForBusiness: async () => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const businessId = localStorage.getItem("current_business_id");
-          console.log("Querying for businessId:", businessId);
-          const result = await pg.query(`SELECT * FROM products WHERE business_id = $1`, [businessId]);
-          console.log("Products for business:", result.rows);
-          return result.rows;
-        },
-        // Raw query
-        query: async (sql: string, params?: unknown[]) => {
-          const pg = pgRef.current;
-          if (!pg) return console.error("PG not initialized");
-          const result = await pg.query(sql, params);
-          console.log("Query result:", result.rows);
-          return result.rows;
-        },
-        forceResync: () => {
-          localStorage.removeItem("avileo_schema_version");
-          localStorage.removeItem("avileo_pull_cursor");
-          indexedDB.deleteDatabase("avileo-pg");
-          location.reload();
-        },
-        checkLocalStorage: () => {
-          console.log("bearer_token:", localStorage.getItem("bearer_token") ? "present" : "missing");
-          console.log("current_business_id:", localStorage.getItem("current_business_id"));
-          console.log("avileo_schema_version:", localStorage.getItem("avileo_schema_version"));
-          console.log("avileo_pull_cursor:", localStorage.getItem("avileo_pull_cursor"));
-        },
-        // Generate and copy diagnostic report to clipboard
-        copyDiagnosticReport: async () => {
-          const pg = pgRef.current;
-          
-          interface DiagnosticReport {
-            timestamp: string;
-            localStorage: {
-              bearer_token: string;
-              current_business_id: string | null;
-              avileo_schema_version: string | null;
-              avileo_pull_cursor: string | null;
-            };
-            pgInitialized: boolean;
-            tables: Record<string, number>;
-            pullCursor: string | null;
-            errors: string[];
-          }
-          const report: DiagnosticReport = {
-            timestamp: new Date().toISOString(),
-            localStorage: {
-              bearer_token: localStorage.getItem("bearer_token") ? "present" : "missing",
-              current_business_id: localStorage.getItem("current_business_id"),
-              avileo_schema_version: localStorage.getItem("avileo_schema_version"),
-              avileo_pull_cursor: localStorage.getItem("avileo_pull_cursor"),
-            },
-            pgInitialized: !!pg,
-            tables: {},
-            pullCursor: localStorage.getItem("avileo_pull_cursor"),
-            errors: [],
-          };
-
-          if (!pg) {
-            report.errors.push("PGlite not initialized");
-          } else {
-            // Check all main tables
-            const tables = [
-              'products', 'customers', 'sales', 'abonos',
-              'suppliers', 'tags', 'product_variants', 'purchases',
-              'sale_items', 'purchase_items', 'distribuciones',
-              'distribucion_items', 'variant_inventory', 'customer_tags',
-              'customer_groups', 'customer_group_members', 'visitas', 'sync_operations'
-            ];
-            for (const table of tables) {
-              try {
-                const result = await pg.query(`SELECT COUNT(*) as count FROM "${table}"`);
-                const count = result.rows[0] as { count: string | number } | undefined;
-                report.tables[table] = Number(count?.count || 0);
-              } catch (e) {
-                report.tables[table] = -1;
-                report.errors.push(`${table}: ${e instanceof Error ? e.message : String(e)}`);
-              }
-            }
-          }
-
-          const jsonReport = JSON.stringify(report, null, 2);
-          
-          try {
-            await navigator.clipboard.writeText(jsonReport);
-            console.log("✅ Diagnostic report copied to clipboard!");
-            console.log("Report preview:", report);
-            return report;
-          } catch (e) {
-            console.error("Failed to copy to clipboard:", e);
-            console.log("Report (copy manually):", jsonReport);
-            return report;
-          }
-        },
-      };
-      console.log("[ENGINE-PROVIDER] Debug helper available at window.avileoDebug");
-    }
-
     let isMounted = true;
 
     async function initialize() {
@@ -213,6 +79,12 @@ export function EngineProvider({
 
         // Note: PullService and SyncService are managed by ServicesProvider
         // They will be initialized when ServicesProvider mounts with pg/db
+
+        // Initialize devtools (engine-level helpers only, in dev mode)
+        if (import.meta.env.DEV) {
+          const { initDevTools } = await import("~/devtools/console");
+          initDevTools({ pg, services: null });
+        }
 
         console.log(`[ENGINE-PROVIDER] Setting isInitialized = true`);
         setIsInitialized(true);
@@ -333,15 +205,24 @@ export function EngineProvider({
   );
 }
 
+const defaultEngineContext: EngineContextValue = {
+  isInitialized: false,
+  isSyncing: false,
+  isOnline: true,
+  pg: null,
+  db: null,
+  error: null,
+  schemaError: null,
+  resetAndLogout: async () => {
+    console.warn("[useEngine] resetAndLogout called before engine was initialized");
+  },
+};
+
 export function useEngine() {
   const context = useContext(EngineContext);
-  if (!context) {
-    throw new Error(
-      "useEngine must be used within an EngineProvider. " +
-      "Make sure ProtectedLayout is rendering EngineProvider correctly."
-    );
-  }
-  return context;
+  // Return safe defaults instead of throwing when context is null
+  // This allows ServicesProviderWrapper to handle null pg gracefully during onboarding
+  return context ?? defaultEngineContext;
 }
 
 /**

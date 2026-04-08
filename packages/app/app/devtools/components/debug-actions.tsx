@@ -217,14 +217,14 @@ export function DebugActions({ onClose }: DebugActionsProps) {
     setLoading("copyReport");
     try {
       const avileoDebug = (window as any).avileoDebug;
-      
+
       const products = await avileoDebug?.productService?.findByBusiness() || [];
       const customers = await avileoDebug?.customerService?.findByBusiness({}) || [];
       const sales = await avileoDebug?.saleService?.findByBusiness() || [];
-      
+
       const businessId = avileoDebug?.productService?.businessId || "N/A";
       const businessUserId = avileoDebug?.productService?.businessUserId || "N/A";
-      
+
       const syncStatus = syncService
         ? await syncService.getStatus()
         : null;

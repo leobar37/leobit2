@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { DebugWidget } from "~/components/debug";
+import { DebugWidget } from "~/devtools/components";
 import {
   Sheet,
   SheetContent,

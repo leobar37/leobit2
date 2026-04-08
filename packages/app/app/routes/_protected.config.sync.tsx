@@ -20,11 +20,11 @@ import { useSync } from "~/components/sync/sync-status";
 import { useSyncService } from "~/lib/sync/service-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useToast } from "~/hooks/use-toast";
-import { useDevToolsData } from "~/components/sync/sync-devtools/hooks/use-devtools-data";
+import { useDevToolsData } from "~/devtools/sync/hooks/use-devtools-data";
 import { runManualSync } from "~/lib/sync/manual-sync";
-import { TablesTab } from "~/components/sync/sync-devtools/tabs/tables-tab";
-import { OperationsTab } from "~/components/sync/sync-devtools/tabs/operations-tab";
-import { DLQTab } from "~/components/sync/sync-devtools/tabs/dlq-tab";
+import { TablesTab } from "~/devtools/sync/tabs/tables-tab";
+import { OperationsTab } from "~/devtools/sync/tabs/operations-tab";
+import { DLQTab } from "~/devtools/sync/tabs/dlq-tab";
 
 export default function SyncAdminPage() {
   const { isOnline: engineOnline, isSyncing, isInitialized } = useEngine();
