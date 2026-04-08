@@ -110,10 +110,17 @@ export function useBusiness() {
       if (!r.business) throw new Error("No business data available");
       return r.business;
     }),
-    retry: 1,
+    retry: (failureCount) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        return false;
+      }
+      return failureCount < 1;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 }
 
@@ -128,10 +135,17 @@ export function useBusinessWithCacheStatus() {
       if (!result.business) throw new Error("No business data available");
       return { ...result.business, fromCache: result.fromCache };
     },
-    retry: 1,
+    retry: (failureCount) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        return false;
+      }
+      return failureCount < 1;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 }
 

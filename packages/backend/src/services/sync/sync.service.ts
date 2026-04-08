@@ -113,7 +113,8 @@ export class SyncService {
     since?: Date, 
     limit = 100, 
     syncGroupId?: string,
-    entityTypes?: string[]
+    entityTypes?: string[],
+    cursorOperationId?: string
   ) {
     const effectiveLimit = Math.min(limit, 500);
 
@@ -130,16 +131,25 @@ export class SyncService {
         or(
           eq(syncOperations.syncGroupId, syncGroupId),
           isNull(syncOperations.syncGroupId)
-        )
+        )!
       );
     }
 
     // Add since filter if provided
     // Use strict greater-than to avoid returning the same record in next page
     if (since) {
-      const sinceCondition = gt(syncOperations.processedAt, since);
-      if (sinceCondition) {
-        baseConditions.push(sinceCondition);
+      if (cursorOperationId) {
+        baseConditions.push(
+          or(
+            gt(syncOperations.processedAt, since),
+            and(
+              eq(syncOperations.processedAt, since),
+              gt(syncOperations.operationId, cursorOperationId)
+            )
+          )!
+        );
+      } else {
+        baseConditions.push(gt(syncOperations.processedAt, since));
       }
     }
 
@@ -152,7 +162,7 @@ export class SyncService {
 
     const operations = await db.query.syncOperations.findMany({
       where,
-      orderBy: asc(syncOperations.processedAt),
+      orderBy: [asc(syncOperations.processedAt), asc(syncOperations.operationId)],
       limit: effectiveLimit + 1,
     });
 
@@ -161,7 +171,9 @@ export class SyncService {
     const last = results[results.length - 1];
     const serverTimestamp = toISODate(now());
 
-    const nextSince = last?.processedAt?.toISOString() ?? serverTimestamp;
+    const nextSince = last?.processedAt && last.operationId
+      ? `${last.processedAt.toISOString()}_${last.operationId}`
+      : serverTimestamp;
 
     return {
       changes: results.map((item) => ({

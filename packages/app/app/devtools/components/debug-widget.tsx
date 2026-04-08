@@ -10,10 +10,6 @@ export function DebugWidget() {
   const { isOnline } = useSync();
   const { isInitialized, isSyncing } = useEngine();
 
-  if (!import.meta.env.DEV) {
-    return null;
-  }
-
   return (
     <>
       {isOpen && (

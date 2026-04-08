@@ -202,6 +202,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       // 1. Legacy: ISO 8601 timestamp (e.g., "2026-03-07T18:07:41.784Z")
       // 2. New: timestamp_operationId (e.g., "2026-03-07T18:07:41.784Z_op-123")
       let since: Date | undefined;
+      let cursorOperationId: string | undefined;
       if (query.since) {
         const cursorResult = parseCursor(query.since);
 
@@ -217,6 +218,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         }
 
         since = cursorResult.date;
+        cursorOperationId = cursorResult.operationId;
 
         // Validate cursor is not in the future
         if (since && since > new Date()) {
@@ -260,7 +262,8 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         since,
         limit,
         query.syncGroupId,
-        entityTypes
+        entityTypes,
+        cursorOperationId
       );
 
       return { success: true, data: result };

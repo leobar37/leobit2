@@ -7,6 +7,7 @@ import { StagedPullCoordinator, type StagedPullState } from "~/lib/sync/staged-p
 import { SYNC_STAGES, type SyncStage } from "@avileo/shared";
 import { getStoredAuthToken, getStoredBusinessId, getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import { Button } from "@/components/ui/button";
+import { DebugWidget } from "~/devtools";
 
 /**
  * Check if an error is related to database schema issues
@@ -430,6 +431,7 @@ export default function SyncPage() {
           </div>
         )}
       </div>
+      <DebugWidget />
     </div>
   );
 }

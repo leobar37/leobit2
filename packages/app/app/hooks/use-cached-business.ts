@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PGlite } from "@electric-sql/pglite";
+import type { Business } from "@avileo/shared";
 import { offlineCache } from "~/lib/cache";
 
-const CACHE_KEY = "business:current";
+const CACHE_KEY = "business";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedBusinessData {
@@ -16,8 +17,20 @@ export function useCachedBusiness(pg: PGlite | null) {
     queryFn: async () => {
       if (!pg) return undefined;
 
-      const cached = await offlineCache.get<CachedBusinessData>(CACHE_KEY);
-      return cached ?? undefined;
+      const cached = await offlineCache.get<Business | CachedBusinessData>(CACHE_KEY);
+      if (!cached) return undefined;
+
+      const businessUserId =
+        typeof (cached as { businessUserId?: unknown }).businessUserId === "string"
+          ? (cached as { businessUserId: string }).businessUserId
+          : undefined;
+
+      if (!businessUserId) return undefined;
+
+      return {
+        businessUserId,
+        fromCache: true,
+      } satisfies CachedBusinessData;
     },
     enabled: !!pg,
     staleTime: Infinity,
