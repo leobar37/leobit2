@@ -8,10 +8,45 @@ import { db } from "../lib/db";
 import { businessUsers, businesses } from "../db/schema/businesses";
 import { user } from "../db/schema/auth";
 import type { BusinessCalculatorSettings } from "../db/schema/businesses";
-import { ForbiddenError } from "../errors";
+import { ForbiddenError, UnauthorizedError } from "../errors";
+import { auth } from "../lib/auth";
 
 export const businessRoutes = new Elysia({ prefix: "/businesses" })
   .use(servicesPlugin)
+  // POST / must come BEFORE contextPlugin — it is for creating the user's FIRST business,
+  // when they have no membership yet. All other routes require contextPlugin.
+  .post(
+    "/",
+    async ({ businessService, request, body }) => {
+      const session = await auth.api.getSession({ headers: request.headers });
+      if (!session) {
+        throw new UnauthorizedError("No autorizado");
+      }
+      const business = await businessService.createBusiness(
+        { userId: session.user.id } as RequestContext,
+        {
+          name: body.name,
+          ruc: body.ruc,
+          address: body.address,
+          phone: body.phone,
+          email: body.email,
+        }
+      );
+      return {
+        success: true,
+        data: business,
+      };
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 2, maxLength: 100 }),
+        ruc: t.Optional(t.String({ maxLength: 20 })),
+        address: t.Optional(t.String()),
+        phone: t.Optional(t.String({ maxLength: 20 })),
+        email: t.Optional(t.String({ format: "email" })),
+      }),
+    }
+  )
   .use(contextPlugin)
   .get("/me", async ({ businessService, ctx }) => {
     const business = await businessService.getBusiness(ctx as RequestContext);
@@ -82,32 +117,6 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
             qrImageUrl: t.Optional(t.String()),
           }),
         }),
-      }),
-    }
-  )
-  .post(
-    "/",
-    async ({ businessService, ctx, body }) => {
-      const business = await businessService.createBusiness(ctx as RequestContext, {
-        name: body.name,
-        ruc: body.ruc,
-        address: body.address,
-        phone: body.phone,
-        email: body.email,
-      });
-
-      return {
-        success: true,
-        data: business,
-      };
-    },
-    {
-      body: t.Object({
-        name: t.String({ minLength: 2, maxLength: 100 }),
-        ruc: t.Optional(t.String({ maxLength: 20 })),
-        address: t.Optional(t.String()),
-        phone: t.Optional(t.String({ maxLength: 20 })),
-        email: t.Optional(t.String({ format: "email" })),
       }),
     }
   )

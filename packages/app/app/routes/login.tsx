@@ -103,7 +103,8 @@ export default function LoginPage() {
                   placeholder="tu@email.com"
                   error={form.formState.errors.email?.message}
                   className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 shadow-none focus-visible:ring-orange-200"
-                  {...form.register("email")}
+                  name="email"
+                  autoComplete="email"
                 />
 
                 <FormPassword

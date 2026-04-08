@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
@@ -96,6 +96,7 @@ export default function CreateBusinessPage() {
           </div>
         </CardHeader>
 
+        <FormProvider {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <FormInput
@@ -103,7 +104,7 @@ export default function CreateBusinessPage() {
               placeholder="Ej: Pollería El Sabor"
               error={form.formState.errors.name?.message}
               className="text-lg"
-              {...form.register("name")}
+              name="name"
             />
 
             <div className="pt-2">
@@ -132,27 +133,27 @@ export default function CreateBusinessPage() {
                       label="RUC"
                       placeholder="20123456789"
                       error={form.formState.errors.ruc?.message}
-                      {...form.register("ruc")}
+                      name="ruc"
                     />
                     <FormInput
                       label="Teléfono"
                       placeholder="987654321"
                       error={form.formState.errors.phone?.message}
-                      {...form.register("phone")}
+                      name="phone"
                     />
                   </div>
                   <FormInput
                     label="Dirección"
                     placeholder="Av. Principal 123"
                     error={form.formState.errors.address?.message}
-                    {...form.register("address")}
+                    name="address"
                   />
                   <FormInput
                     label="Email del negocio"
                     type="email"
                     placeholder="contacto@tunegocio.com"
                     error={form.formState.errors.email?.message}
-                    {...form.register("email")}
+                    name="email"
                   />
                 </div>
               )}
@@ -165,6 +166,7 @@ export default function CreateBusinessPage() {
             )}
           </CardContent>
         </form>
+      </FormProvider>
       </Card>
     </FormPage>
   );

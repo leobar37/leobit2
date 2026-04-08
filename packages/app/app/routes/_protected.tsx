@@ -37,11 +37,7 @@ function ServicesProviderWrapper({
 }) {
   const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
 
-  // Allow rendering without engine when businessId is not yet set (new user onboarding)
-  if (!pg) {
-    return <>{children}</>;
-  }
-
+  // ALL hooks must be called before any conditional returns (Rules of Hooks)
   const { data: businessData, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness } = useBusinessWithCacheStatus();
 
   const business = businessData && !businessData.fromCache ? businessData : undefined;
@@ -53,7 +49,7 @@ function ServicesProviderWrapper({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use synchronous cache check via useQuery with staleTime: Infinity
-  const { data: cachedBusinessData } = useCachedBusiness(pg);
+  const { data: cachedBusinessData } = useCachedBusiness(pg || undefined);
 
   // Clear cache when business loads successfully from API
   useEffect(() => {
@@ -106,6 +102,19 @@ function ServicesProviderWrapper({
     };
   }, [isBusinessLoading, business]);
 
+  // ============= ALL HOOKS ABOVE THIS LINE =============
+  // NO hooks can be called after this point - only conditional returns
+
+  // If no pg/db, show loading - cannot render children without ServicesProvider
+  if (!pg || !db) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Inicializando base de datos local...</p>
+      </div>
+    );
+  }
+
   const handleRetry = async () => {
     setHasTimedOut(false);
     setElapsedTime(0);
@@ -118,7 +127,7 @@ function ServicesProviderWrapper({
     window.location.href = "/login";
   };
 
-  if (!isInitialized || !pg || !db) {
+  if (!isInitialized) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />

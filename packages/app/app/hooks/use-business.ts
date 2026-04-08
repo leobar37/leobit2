@@ -10,7 +10,9 @@ async function createBusiness(input: CreateBusinessInput): Promise<Business> {
   const { data, error } = await api.businesses.post(input);
 
   if (error) {
-    throw new Error(String(error.value));
+    // Eden Treaty returns errors with value being an object { code, message }
+    const errorValue = error.value as { code?: string; message?: string } | undefined;
+    throw new Error(errorValue?.message || "Error al crear negocio");
   }
   if (!data?.success || !data.data) {
     throw new Error("Failed to create business");
@@ -26,7 +28,9 @@ async function updateBusiness(
   const { data, error } = await api.businesses({ id }).put(input);
 
   if (error) {
-    throw new Error(String(error.value));
+    // Eden Treaty returns errors with value being an object { code, message }
+    const errorValue = error.value as { code?: string; message?: string } | undefined;
+    throw new Error(errorValue?.message || "Error al actualizar negocio");
   }
   if (!data?.success || !data.data) {
     throw new Error("Failed to update business");
@@ -42,7 +46,9 @@ async function uploadBusinessLogo(
   const { data, error } = await api.businesses({ id }).logo.post({ file });
 
   if (error) {
-    throw new Error(String(error.value));
+    // Eden Treaty returns errors with value being an object { code, message }
+    const errorValue = error.value as { code?: string; message?: string } | undefined;
+    throw new Error(errorValue?.message || "Error al subir logo");
   }
   if (!data?.success || !data.data) {
     throw new Error("Failed to upload logo");
@@ -134,7 +140,14 @@ export function useCreateBusiness() {
 
   return useMutation({
     mutationFn: createBusiness,
-    onSuccess: () => {
+    onSuccess: (business) => {
+      // Store business IDs in session storage for ServicesProvider initialization
+      if (business.id) {
+        setStoredBusinessId(business.id);
+      }
+      if (business.businessUserId) {
+        setStoredBusinessUserId(business.businessUserId);
+      }
       queryClient.invalidateQueries({ queryKey: ["business"] });
     },
   });

@@ -172,7 +172,7 @@ export class RequestContext {
       });
 
       if (!membership) {
-        throw new Error("Usuario no pertenece a ningún negocio");
+        throw new ForbiddenError("Usuario no pertenece a ningún negocio");
       }
     }
 

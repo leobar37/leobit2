@@ -156,7 +156,7 @@ export default function RegisterPage() {
                   placeholder="Ej: Juan Pérez"
                   error={form.formState.errors.name?.message}
                   className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 shadow-none focus-visible:ring-orange-200"
-                  {...form.register("name")}
+                  name="name"
                 />
 
                 <FormInput
@@ -165,7 +165,8 @@ export default function RegisterPage() {
                   placeholder="tu@email.com"
                   error={form.formState.errors.email?.message}
                   className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 shadow-none focus-visible:ring-orange-200"
-                  {...form.register("email")}
+                  autoComplete="email"
+                  name="email"
                 />
 
                 <FormPassword
