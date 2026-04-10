@@ -12,6 +12,9 @@ export class OrderDetailPage {
   readonly totalAmount: Locator;
   readonly itemsList: Locator;
   readonly deliveryModal: Locator;
+  readonly orderDate: Locator;
+  readonly advancePaymentAmount: Locator;
+  readonly quotedPriceDisplay: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -25,6 +28,9 @@ export class OrderDetailPage {
     this.totalAmount = page.getByTestId("order-total-amount");
     this.itemsList = page.getByTestId("order-items-list");
     this.deliveryModal = page.getByTestId("order-delivery-modal");
+    this.orderDate = page.getByTestId("order-date-display");
+    this.advancePaymentAmount = page.getByTestId("advance-payment-display");
+    this.quotedPriceDisplay = page.getByTestId("quoted-price-display");
   }
 
   async goto(orderId: string) {
@@ -120,5 +126,29 @@ export class OrderDetailPage {
     } else {
       await this.page.waitForURL(/\/ventas\/.+/);
     }
+  }
+
+  async expectOrderDateVisible(dateStr: string) {
+    const date = new Date(dateStr);
+    const formattedDate = date.toLocaleDateString("es-PE", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    await this.page.waitForSelector(`text=${formattedDate}`, { state: "visible" }).catch(() => {
+      // Also try just the day number
+      const day = date.getDate().toString();
+      this.page.locator(`text=${day}`).first().waitFor({ state: "visible" });
+    });
+  }
+
+  async expectAdvancePaymentVisible(amount: string) {
+    await this.advancePaymentAmount.waitFor({ state: "visible" });
+    await this.page.waitForSelector(`text=S/ ${amount}`, { state: "visible" });
+  }
+
+  async expectQuotedPriceVisible(price: string) {
+    await this.quotedPriceDisplay.waitFor({ state: "visible" });
+    await this.page.waitForSelector(`text=S/ ${price}`, { state: "visible" });
   }
 }

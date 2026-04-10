@@ -1,0 +1,23 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:4173",
+      "localStorage": [
+        {
+          "name": "better-auth-session",
+          "value": "{\"token\":\"mock-jwt-token\",\"user\":{\"id\":\"user-demo\",\"email\":\"demo@avileo.com\",\"name\":\"Usuario Demo\"}}"
+        }
+      ]
+    },
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "better-auth-session",
+          "value": "{\"token\":\"mock-jwt-token\",\"user\":{\"id\":\"user-demo\",\"email\":\"demo@avileo.com\",\"name\":\"Usuario Demo\"}}"
+        }
+      ]
+    }
+  ]
+}
