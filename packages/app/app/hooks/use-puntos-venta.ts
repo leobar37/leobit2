@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractData } from "~/lib/api-client";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
 export type PuntoVenta = {
   id: string;
@@ -31,9 +32,9 @@ export type CreatePuntoVentaInput = {
 export type UpdatePuntoVentaInput = Partial<CreatePuntoVentaInput>;
 
 const QUERY_KEYS = {
-  puntosVenta: ["puntos-venta"],
-  puntoVenta: (id: string) => ["puntos-venta", id],
-  puntosVentaActive: ["puntos-venta", "active"],
+  puntosVenta: PERSISTED_REMOTE_QUERY_KEYS.puntosVenta,
+  puntoVenta: PERSISTED_REMOTE_QUERY_KEYS.puntoVenta,
+  puntosVentaActive: PERSISTED_REMOTE_QUERY_KEYS.puntosVentaActive,
 } as const;
 
 /**

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
 import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
@@ -14,10 +15,10 @@ import { EngineProvider, useEngine } from "~/engine";
 import { ServicesProvider } from "~/lib/sync/service-provider";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
-import { useBusinessWithCacheStatus } from "~/hooks/use-business";
+import { useBusiness } from "~/hooks/use-business";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
-import { useCachedBusiness } from "~/hooks/use-cached-business";
 
 function OutletWithLog() {
   useAutoFileUploadProcessor();
@@ -36,12 +37,10 @@ function ServicesProviderWrapper({
   children: React.ReactNode;
 }) {
   const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
+  const queryClient = useQueryClient();
 
   // ALL hooks must be called before any conditional returns (Rules of Hooks)
-  const { data: businessData, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness } = useBusinessWithCacheStatus();
-
-  const business = businessData;
-  const businessFromCache = businessData?.fromCache === true;
+  const { data: business, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness, isFetching } = useBusiness();
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [hasTimedOut, setHasTimedOut] = useState(false);
@@ -49,16 +48,22 @@ function ServicesProviderWrapper({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Use synchronous cache check via useQuery with staleTime: Infinity
-  const { data: cachedBusinessData } = useCachedBusiness(pg ?? null);
-
-  // Clear cache when business loads successfully from API
+  // Consistency check: validate persisted cache matches localStorage businessId
   useEffect(() => {
-    if (business && !businessData?.fromCache) {
-      // Business loaded from API successfully, any cached data is now stale
-      // The cache will be updated with fresh data on next successful API call
+    if (business && business.id) {
+      const storedBusinessId = getStoredBusinessId();
+      if (storedBusinessId && storedBusinessId !== business.id) {
+        console.warn(`[ServicesProviderWrapper] Business ID mismatch: cached=${business.id}, localStorage=${storedBusinessId}. Invalidating cache.`);
+        // Invalidate the business query to force refetch
+        queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
+        // Also remove the stale cached data immediately
+        queryClient.removeQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
+      }
     }
-  }, [business, businessData?.fromCache]);
+  }, [business, queryClient]);
+
+  // Detect offline mode: we have cached data but query is stale/fetching with error or offline
+  const isOfflineMode = business && (businessError || (!navigator.onLine && isFetching));
 
   useEffect(() => {
     if (isBusinessLoading && !business) {
@@ -170,8 +175,9 @@ function ServicesProviderWrapper({
     );
   }
 
-  if (business && businessFromCache) {
-    const businessUserId = business.businessUserId || cachedBusinessData?.businessUserId || getStoredBusinessUserId() || "";
+  // Offline mode: we have cached business data from persister but API failed or we're offline
+  if (isOfflineMode && business) {
+    const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
     return (
       <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
         <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
@@ -183,24 +189,11 @@ function ServicesProviderWrapper({
     );
   }
 
-  if (businessError && cachedBusinessData) {
-    // API failed but we have cached data - use it
-    const businessUserId = cachedBusinessData.businessUserId || getStoredBusinessUserId() || "";
-    return (
-      <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
-        <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
-          <WifiOff className="h-3 w-3" />
-          Modo offline - datos del negocio en cache
-        </div>
-        {children}
-      </ServicesProvider>
-    );
-  }
-
+  // Timeout with cached data - use persisted data from TanStack Query
   if (hasTimedOut && (isBusinessLoading || !business)) {
-    if (cachedBusinessData) {
-      // Timeout but we have cached data - use it
-      const businessUserId = cachedBusinessData.businessUserId || getStoredBusinessUserId() || "";
+    // If we have business data from persister, use it even on timeout
+    if (business) {
+      const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
       return (
         <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
           <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
@@ -252,7 +245,7 @@ function ServicesProviderWrapper({
   }
 
   if (businessError) {
-    // API error and no cache - show error UI
+    // API error and no cached data - show error UI
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">

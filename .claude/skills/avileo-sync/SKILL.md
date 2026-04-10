@@ -2,16 +2,19 @@
 name: avileo-sync
 description: |
   Analyze, debug, and extend Avileo's offline-first sync engine. Use when:
-  - Finding bugs in sync operations, syncGroupId, or conflict resolution
-  - Adding new entities to the sync system
-  - Creating new sync flows for sales, purchases, or other entities
-  - Debugging "sync pending", "sync failed", or "conflict" issues
-  - Understanding how syncGroupId groups operations
-  - Adding new sync handlers on backend
-  - Questions about sync status fields or schema declarations
+  - Finding bugs in push sync, pull sync, syncGroupId, or conflict resolution
+  - Adding new entities to the sync system (14 entities: customers, sales, sale_items, abonos,
+    distribuciones, products, product_variants, tags, customer_tags, purchases, purchase_items,
+    customer_groups, customer_group_members, visitas, suppliers)
+  - Creating new sync handlers on backend
+  - Debugging "sync pending", "sync failed", "conflict", or "stuck" issues
+  - Understanding the 3-stage pull strategy (CRITICAL → RECENT_SALES → HISTORICAL)
+  - Understanding version-based conflict detection and multi-device race conditions
+  - Questions about sync status fields, cursor pagination, or dead letter queue
 
-  Covers: push sync, pull sync, syncGroupId, operation sorting, handlers,
-  conflict resolution, and schema requirements. Sync hooks are disabled.
+  Covers: push sync (SyncService), pull sync (PullService), SyncCoordinator, syncGroupId,
+  operation sorting, entity handlers, conflict resolution (version-based), staged pull,
+  dead letter queue, exponential backoff, stale pull detection. Sync hooks are disabled.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -21,78 +24,95 @@ This skill provides comprehensive knowledge about Avileo's offline-first synchro
 
 ## Quick Reference
 
-### Sync Group ID Function
-**Location**: `packages/app/app/lib/services/base-service.ts:140-142`
+### Sync Coordinator Lifecycle
+**Location**: `packages/app/app/lib/sync/coordinator.ts`
+
+The `SyncCoordinator` orchestrates push + pull together:
+- `start()` — initializes SyncService + PullService, starts auto-sync
+- `forceSync()` — forces immediate push + pull
+- `forceResetSync()` — clears cursor and restarts when stuck
+- Listens to `online`/`offline` events, resets backoffs on reconnect
+- Emits `pull:stale` events when cursor gets stuck (≥3 pulls) or too many empty pulls (≥5)
+
+### Entity Priority Map (2-Tier from sync-config.ts)
+**Location**: `packages/shared/src/sync-config.ts:33-52`
 
 ```typescript
-protected generateSyncGroup(): string {
-  return crypto.randomUUID();
-}
-```
+// Tier 1: Root/parent entities (processed first)
+sales: 1, purchases: 1, products: 1, customers: 1, suppliers: 1,
+customer_groups: 1, distribuciones: 1, tags: 1, visitas: 1, abonos: 1
 
-**Purpose**: Groups related operations (sale + items + payments) so they:
-1. Are sent together in a single batch
-2. Are processed in correct dependency order (parent before child)
-
-### Entity Priority Map (Backend)
-**Location**: `packages/backend/src/services/sync/framework/OperationSorter.ts:9-18`
-
-```typescript
-private entityPriority: Record<string, number> = {
-  sales: 1,
-  sale_items: 2,
-  customer_groups: 3,
-  customer_group_members: 4,
-  purchases: 1,
-  purchase_items: 2,
-  distribucion: 1,
-  distribucion_items: 2,
-};
+// Tier 2: Child entities
+sale_items: 2, purchase_items: 2, product_variants: 2,
+customer_group_members: 2, customer_tags: 2
 ```
 
 ### Key Files
 
-| Component | File | Key Lines |
-|-----------|------|-----------|
-| Sync Service (client) | `packages/app/app/lib/sync/sync-service.ts` | 570-634 (grouping logic) |
-| BaseService | `packages/app/app/lib/services/base-service.ts` | 140-189 |
-| SaleService | `packages/app/app/lib/services/sale-service.ts` | 366, 406, 433 |
-| SyncEngine (backend) | `packages/backend/src/services/sync/framework/SyncEngine.ts` | 60-177 |
-| OperationSorter | `packages/backend/src/services/sync/framework/OperationSorter.ts` | 20-41 |
-| Sync API | `packages/backend/src/api/sync.ts` | 20-156 |
+| Component | File | Notes |
+|-----------|------|-------|
+| SyncCoordinator | `packages/app/app/lib/sync/coordinator.ts` | Orchestrates push+pull, online/offline |
+| SyncService (client) | `packages/app/app/lib/sync/sync-service.ts` | Local queue, push batching, DLQ, self-heal |
+| PullService (client) | `packages/app/app/lib/sync/pull-service.ts` | Cursor-based pull, stale detection |
+| ChangeApplier | `packages/app/app/lib/sync/change-applier.ts` | Applies server→client changes via raw SQL UPSERT |
+| BaseSyncHandler | `packages/backend/src/services/sync/handlers/BaseSyncHandler.ts` | handleCreate/handleUpdate/handleDelete |
+| SyncEngine (backend) | `packages/backend/src/services/sync/framework/SyncEngine.ts` | Batch with per-op savepoints |
+| ConflictResolver | `packages/backend/src/services/sync/framework/ConflictResolver.ts` | Version-based per-entity detection |
+| SyncService (backend) | `packages/backend/src/services/sync/sync.service.ts` | Registers 14 handlers |
+| Sync API | `packages/backend/src/api/sync.ts` | 6 routes: batch, changes, health, conflicts |
+| Entity Priority | `packages/shared/src/sync-config.ts` | SYNC_ENTITIES, ENTITY_PRIORITIES |
+| Sync Stages | `packages/shared/src/sync-stages.ts` | 3-stage pull: CRITICAL, RECENT_SALES, HISTORICAL |
 
-## Required Fields for Sync
+### Required Fields for Sync
 
-### 1. All Sync-Capable Tables Need
+#### 1. All Sync-Capable Tables Need
 | Field | Type | Purpose |
 |-------|------|---------|
 | `sync_status` | text | `pending`, `synced`, `error` |
 | `sync_attempts` | integer | Number of sync attempts |
 
-### 2. Parent Tables Need (for grouping)
+#### 2. Parent Tables Need (for grouping)
 | Table | Column | Purpose |
 |-------|--------|---------|
 | `sales` | `sync_group_id` | Groups sale + items + payments |
 | `purchases` | `sync_group_id` | Groups purchase + items |
 
-### 3. Frontend sync_operations Table
+#### 3. Frontend sync_operations Table (PGlite)
 ```sql
 CREATE TABLE sync_operations (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
   sync_group_id TEXT,
-  operation TEXT NOT NULL,
+  operation TEXT NOT NULL,  -- 'create' | 'update' | 'delete'
   payload JSONB,
   status TEXT NOT NULL DEFAULT 'pending',
   version INTEGER NOT NULL DEFAULT 1,
   sync_attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  last_attempt_at TIMESTAMP,
   idempotency_key TEXT UNIQUE,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+#### 4. Backend sync_operations (Drizzle)
+| Column | Purpose |
+|--------|---------|
+| `id` | Primary key |
+| `business_id` | Multi-tenancy |
+| `operation_id` | Idempotency key |
+| `entity` | Entity type |
+| `action` | create/update/delete |
+| `entity_id` | Entity ID |
+| `payload` | JSONB |
+| `status` | pending/processed/failed |
+| `client_timestamp` | When client created it |
+| `processed_at` | When server processed it |
+| `sync_group_id` | Groups operations |
+| `device_id` | Source device (new) |
 
 ## Schema Declaration Locations
 
@@ -101,58 +121,79 @@ CREATE TABLE sync_operations (
 | Shared (PGlite + PG) | `packages/shared/src/schema.ts` |
 | Backend DB | `packages/backend/src/db/schema/*.ts` |
 | Zod Validation | `packages/backend/src/services/sync/schemas/index.ts` |
-| API Body | `packages/backend/src/api/sync.ts:121-155` |
+| API Body | `packages/backend/src/api/sync.ts:176-198` |
+| Sync Config | `packages/shared/src/sync-config.ts` |
+| Sync Stages | `packages/shared/src/sync-stages.ts` |
 
 ## Adding New Entity to Sync
 
 ### Steps
-1. **Backend Schema**: Add `sync_status`, `sync_attempts` to table
+1. **Backend Schema**: Add `version` column to table
 2. **Shared Schema**: Add same fields to `packages/shared/src/schema.ts`
-3. **Create Handler**: `packages/backend/src/services/sync/handlers/[Entity]SyncHandler.ts`
-4. **Register Handler**: Update `packages/backend/src/services/sync/framework/HandlerRegistry.ts`
-5. **Add Priority**: Update `entityPriority` in OperationSorter.ts
-6. **Frontend Service**: Use `queueSync()` with `syncGroupId` for parent entities
+3. **Sync Config**: Add to `SYNC_ENTITIES` and `ENTITY_PRIORITIES` in `packages/shared/src/sync-config.ts`
+4. **Create Handler**: `packages/backend/src/services/sync/handlers/[Entity]SyncHandler.ts`
+5. **Register Handler**: Update `packages/backend/src/services/sync/sync.service.ts` constructor
+6. **Conflict Resolver**: Add to `packages/backend/src/services/sync/framework/ConflictResolver.ts`
+7. **Frontend Service**: Use `queueSync()` with `syncGroupId` for parent entities
 
-### Handler Template
+### Handler Template (current pattern)
 ```typescript
 // packages/backend/src/services/sync/handlers/NewEntitySyncHandler.ts
 import { BaseSyncHandler } from "./BaseSyncHandler";
-import type { ISyncHandlerDeps } from "../framework/types";
+import type { SyncOperationInput } from "../types";
+import type { SyncHandlerResult } from "../framework/types";
 
 export class NewEntitySyncHandler extends BaseSyncHandler {
   readonly entityType = "new_entities";
 
-  async validateBusinessRules(
-    ctx: RequestContext,
-    payload: Record<string, unknown>
-  ): Promise<void> {
-    // Add entity-specific validation
-  }
-
-  async executeInsert(
+  async execute(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    tx: DbTransaction
+    tx?: DbTransaction
   ): Promise<SyncHandlerResult> {
-    // Insert logic
+    try {
+      if (operation.operation === "create") {
+        await this.handleCreate(ctx, operation, tx);
+      } else if (operation.operation === "update") {
+        await this.handleUpdate(ctx, operation, tx);
+      } else if (operation.operation === "delete") {
+        await this.handleDelete(ctx, operation, tx);
+      } else {
+        throw new Error(`Unsupported action: ${operation.operation}`);
+      }
+      return this.createSuccessResult(operation);
+    } catch (error) {
+      return this.createErrorResult(operation, error instanceof Error ? error.message : String(error));
+    }
   }
 
-  async executeUpdate(
-    ctx: RequestContext,
-    operation: SyncOperationInput,
-    tx: DbTransaction
-  ): Promise<SyncHandlerResult> {
-    // Update logic
-  }
+  private async handleCreate(ctx, operation, tx) { /* ... */ }
+  private async handleUpdate(ctx, operation, tx) { /* ... */ }
+  private async handleDelete(ctx, operation, tx) { /* ... */ }
+}
+```
 
-  async executeDelete(
-    ctx: RequestContext,
-    operation: SyncOperationInput,
-    tx: DbTransaction
-  ): Promise<SyncHandlerResult> {
-    // Delete logic
+### Register in SyncService (sync.service.ts:42-101)
+```typescript
+HandlerRegistry.register("new_entities", () => {
+  return new NewEntitySyncHandler(deps.newEntityRepo);
+});
+```
+
+### Add Conflict Resolver (ConflictResolver.ts)
+```typescript
+class NewEntityConflictResolver extends BaseVersionConflictResolver {
+  protected getEntityName() { return "NewEntity"; }
+  protected getTable() { return newEntities; }
+  protected getIdField() { return "id"; }
+  protected getBusinessIdField() { return "businessId"; }
+  protected getVersionField() { return "version"; }
+  protected getServerDataFields(record) {
+    return { /* relevant fields + version */ };
   }
 }
+// Add to resolvers map:
+new_entities: new NewEntityConflictResolver(),
 ```
 
 ## Common Issues
@@ -161,20 +202,42 @@ export class NewEntitySyncHandler extends BaseSyncHandler {
 - Check if `syncGroupId` is being passed to `queueSync()`
 - Ensure parent entity is created before children
 
-### 2. Sync hook blocking valid operations
-- **NOTE**: Sync hooks are disabled. The `registry.ts` returns `allow: true` for all operations. If you need hooks in the future, re-implement using `createSyncHook()`.
+### 2. Pull sync stuck (cursor not advancing)
+- Check `PullService.getIsStuck()` — returns true if ≥3 stale pulls or ≥5 empty pulls
+- Call `coordinator.forceResetSync()` to clear cursor and restart
+- Check `pull:stale` event for reason: `'cursor-stuck'` or `'empty-pulls'`
 
-### 3. Conflict not resolving
+### 3. Sync hooks disabled
+- **NOTE**: Sync hooks are disabled. `registry.ts` returns `allow: true` for all operations.
+
+### 4. Conflict not resolving
 - Check `packages/backend/src/services/sync/framework/ConflictResolver.ts`
-- Ensure version field is incrementing on updates
+- Ensure `version` column increments on every update
+- sale_items conflict detection delegates to parent sale's version
+
+### 5. Dead letter queue building up
+- Check `syncService.getDeadLetterOperations()`
+- After MAX_RETRIES (5), operations move to DLQ
+- Use `retryAllDeadLetterOperations()` or `retryDeadLetterOperation(id)`
+
+### 6. Changes not arriving from server (pull)
+- Check cursor in localStorage: `localStorage.getItem('pglite_sync_cursor_<namespace>')`
+- Verify `PullService.getStatus()` shows `isPulling: false` and `isStuck: false`
+- Ensure `processPending` isn't blocking (check `isProcessing` flag)
 
 ## Debugging Commands
 
 ```bash
-# Check pending sync operations (client)
-# In browser console or dev tools:
+# Check combined push+pull status
+await coordinator.getCombinedStatus()
+
+# Check push queue
 await syncService.getStatus()
 await syncService.logDetailedStatus()
+
+# Check pull status
+pullService.getStatus()
+# { isPulling, lastPullTime, lastError, consecutiveFailures, cursor, isStuck, consecutiveStalePulls }
 
 # Check failed operations
 await syncService.getFailedOperations()
@@ -182,8 +245,20 @@ await syncService.getFailedOperations()
 # Retry a failed operation
 await syncService.retryOperation(operationId)
 
-# Force process pending
-await syncService.processPending()
+# Retry all dead letter operations
+await syncService.retryAllDeadLetterOperations()
+
+# Force sync (push then pull)
+await coordinator.forceSync()
+
+# Force reset when stuck
+await coordinator.forceResetSync()
+
+# Check dead letter queue
+await syncService.getDeadLetterOperations()
+
+# Clear dead letter queue
+await syncService.clearDeadLetterOperations()
 ```
 
 ## For Detailed Information
@@ -192,4 +267,7 @@ await syncService.processPending()
 - [Sync Group ID Deep Dive](references/sync-group-id.md)
 - [Adding New Entity to Sync](references/adding-entity.md)
 - [Troubleshooting Guide](references/troubleshooting.md)
+- [Pull Sync Mechanics](references/pull-sync.md)
+- [Conflict Resolution](references/conflict-resolution.md)
+- [3-Stage Pull Strategy](references/staged-pull.md)
 - [Code Examples](examples/sync-flow-examples.md)

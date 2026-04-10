@@ -1,6 +1,6 @@
 # Sync Flow Examples
 
-## Example 1: Creating a Sale with Items
+## Example 1: Creating a Sale with Items (Push)
 
 ### Flow Summary
 1. Generate syncGroupId
@@ -30,6 +30,7 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
     status: "draft",
     syncStatus: "pending",
     syncAttempts: 0,
+    version: 1,
     createdAt: this.now(),
     updatedAt: this.now(),
   };
@@ -38,7 +39,7 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
   await this.pg.insert(sales).values(sale);
 
   // Queue with syncGroupId
-  await this.queueSync("insert", id, sale, syncGroupId);
+  await this.queueSync("create", id, sale, syncGroupId);
 
   // Create items if provided
   if (data.items && data.items.length > 0) {
@@ -61,7 +62,7 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
       await this.pg.insert(saleItems).values(itemData);
 
       // Queue item with SAME syncGroupId
-      await this.queueSync("insert", itemId, itemData, syncGroupId, "sale_items");
+      await this.queueSync("create", itemId, itemData, syncGroupId, "sale_items");
     }
   }
 
@@ -79,18 +80,20 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
 //    - Same syncGroupId groups them together
 
 // 2. Each operation runs in a SAVEPOINT:
-//    for (const operation of sortedOperations) {
-//      await tx.execute(sql.raw(`SAVEPOINT sp_${i}`));
-//      try {
-//        const handler = HandlerRegistry.getHandler(operation.entityType);
-//        const result = await handler.execute(operation);
-//        results.push(result);
-//        await tx.execute(sql.raw(`RELEASE SAVEPOINT sp_${i}`));
-//      } catch (error) {
-//        await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT sp_${i}`));
-//        // Next operation continues
-//      }
-//    }
+for (let i = 0; i < sortedOperations.length; i++) {
+  const operation = sortedOperations[i];
+  const savepointName = `sp_op_${i}`;
+
+  await tx.execute(sql.raw(`SAVEPOINT ${savepointName}`));
+  try {
+    const result = await this.processOperation(ctx, operation, correlationId, batchCorrelationId, tx, nowIso, registry);
+    results.push(result);
+    await tx.execute(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
+  } catch (opError) {
+    await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
+    results.push({ success: false, error: opError.message, ... });
+  }
+}
 ```
 
 ## Example 2: Adding Item to Existing Sale
@@ -131,7 +134,7 @@ async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
   await this.pg.insert(saleItems).values(itemData);
 
   // Queue with sale's syncGroupId (or new group if sale has none)
-  await this.queueSync("insert", itemId, itemData, syncGroupId, "sale_items");
+  await this.queueSync("create", itemId, itemData, syncGroupId, "sale_items");
 
   // If sale had no syncGroupId, update it
   if (!existingGroupId) {
@@ -145,7 +148,7 @@ async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
 }
 ```
 
-## Example 3: Queueing Independent Operations
+## Example 3: Queuing Independent Operations
 
 ### When to Use
 - Simple entities without children
@@ -155,57 +158,56 @@ async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
 
 ```typescript
 // No syncGroupId needed for independent operations
-await this.queueSync("insert", customerId, customerData);
+await this.queueSync("create", customerId, customerData);
 // No third argument = no grouping
 
 // Or explicitly pass undefined
-await this.queueSync("insert", customerId, customerData, undefined);
+await this.queueSync("create", customerId, customerData, undefined);
 ```
 
-## Example 4: Backend Conflict Resolution
+## Example 4: Conflict Resolution
 
 ### Flow Summary
 1. Client sends operation with localVersion
-2. Server checks if serverVersion > localVersion
-3. If conflict, return conflict with server data
-4. Client can resolve (server wins, local wins, or merge)
+2. Server detects serverVersion > localVersion
+3. Conflict persisted, returned to client
+4. Client offers UI: keep server / keep local / merge
 
-### Backend Code
+### Backend Conflict Detection
 
 ```typescript
-// packages/backend/src/services/sync/framework/ConflictResolver.ts
+// packages/backend/src/services/sync/framework/SyncEngine.ts:230-271
 
-async checkConflict(
-  ctx: RequestContext,
-  operation: SyncOperationInput,
-  tx: DbTransaction
-): Promise<{ hasConflict: boolean; serverVersion?: number; serverData?: Record<string, unknown> }> {
-  const { entityType, entityId, localVersion } = operation;
+const conflictResolver = ConflictResolverRegistry.getResolver(operation.entityType);
+const conflict = await conflictResolver.checkConflict(ctx, operation, tx);
 
-  // Get current server version
-  const handler = HandlerRegistry.getHandler(entityType, this.deps);
-  const serverEntity = await handler.getById(ctx, entityId, tx);
+if (conflict.hasConflict) {
+  // Persist for admin resolution
+  await this.syncConflictRepo.create(ctx, {
+    operationId: operation.idempotencyKey,
+    entityType: operation.entityType,
+    entityId: operation.entityId,
+    localData: operation.payload,
+    serverData: conflict.serverData!,
+    localVersion: operation.localVersion,
+    serverVersion: conflict.serverVersion!,
+    sourceDeviceId: operation.deviceId,
+    sourceFingerprint: operation.sourceFingerprint,
+  }, tx);
 
-  if (!serverEntity) {
-    return { hasConflict: false };
-  }
-
-  const serverVersion = serverEntity.version || 0;
-
-  // Conflict if server has newer version
-  if (serverVersion > localVersion) {
-    return {
-      hasConflict: true,
-      serverVersion,
-      serverData: serverEntity,
-    };
-  }
-
-  return { hasConflict: false };
+  return {
+    idempotencyKey: operation.idempotencyKey,
+    success: false,
+    conflict: {
+      serverVersion: conflict.serverVersion!,
+      serverData: conflict.serverData!,
+    },
+    serverTimestamp: nowIso,
+  };
 }
 ```
 
-### Resolution Strategies
+### Client Resolution
 
 ```typescript
 // packages/app/app/lib/sync/sync-service.ts
@@ -217,12 +219,12 @@ async resolveConflict(
 ): Promise<boolean> {
   switch (resolution) {
     case CONFLICT_STRATEGY.SERVER_WINS:
-      // Just mark as completed, discard local
+      // Mark completed, discard local
       await this.markCompleted(operationId);
       return true;
 
     case CONFLICT_STRATEGY.CLIENT_WINS:
-      // Retry with merged data
+      // Retry with local/mixed data
       await this.markProcessing(operationId);
       const result = await this.syncOperation({
         ...op,
@@ -234,140 +236,217 @@ async resolveConflict(
       }
       return false;
 
+    case CONFLICT_STRATEGY.FIELD_MERGE:
+      // Apply UI-merged data
+      await this.markProcessing(operationId);
+      const result = await this.syncOperation({ ...op, payload: mergedData });
+      if (result.success) {
+        await this.markCompleted(operationId);
+        return true;
+      }
+      return false;
+
     case CONFLICT_STRATEGY.MANUAL:
-      // Don't auto-resolve, show UI to user
       return false;
   }
 }
 ```
 
-## Example 5: Manual Sync Trigger
+## Example 5: Pull Sync (Server → Client)
 
 ### Frontend Code
 
 ```typescript
-// Trigger manual sync
-async function manualSync() {
-  try {
-    // Process pending uploads
-    const pushResult = await syncService.processPending();
-    console.log("Push result:", pushResult);
+// Trigger pull manually
+const result = await pullService.pull();
+console.log("Pull result:", result);
+// { success: true, changesApplied: 5, hasMore: false, error: undefined }
 
-    // Pull latest from server
-    await pullService.pull();
-    console.log("Pull completed");
+// Force pull now (wait for completion)
+const forceResult = await pullService.forcePullNow();
 
-  } catch (error) {
-    console.error("Sync failed:", error);
-  }
-}
-
-// In UI
-<Button onClick={manualSync}>
-  Sync Now
-</Button>
+// Check status
+const status = pullService.getStatus();
+console.log("Pull status:", status);
+// { isPulling: false, lastPullTime: Date, lastError: null,
+//   consecutiveFailures: 0, cursor: "...", isStuck: false, consecutiveStalePulls: 0 }
 ```
 
-## Example 6: Checking Sync Status
-
-### Frontend Code
+### Backend: GET /sync/changes
 
 ```typescript
-async function checkSyncHealth() {
-  // Get queue status
-  const status = await syncService.getStatus();
-  console.log("Queue status:", status);
-  // { pending: 5, processing: 0, completed: 100, failed: 2, ... }
+// packages/backend/src/services/sync/sync.service.ts:111-192
 
-  // Get failed operations
-  const failed = await syncService.getFailedOperations();
-  console.log("Failed ops:", failed.map(op => ({
-    entityType: op.entity_type,
-    entityId: op.entity_id,
-    error: op.last_error,
-    attempts: op.sync_attempts,
-  })));
+async getChanges(ctx, since?, limit=100, syncGroupId?, entityTypes?, cursorOperationId?) {
+  const effectiveLimit = Math.min(limit, 500);
 
-  // Get dead letter queue
-  const dlq = await syncService.getDeadLetterOperations();
-  console.log("DLQ:", dlq);
-}
-```
+  // Build where clause with filters
+  const baseConditions = [
+    eq(syncOperations.businessId, ctx.businessId),
+    eq(syncOperations.status, "processed"),
+  ];
 
-## Example 7: Backend Batch Processing
-
-### API Endpoint
-
-```typescript
-// packages/backend/src/api/sync.ts
-
-.post("/batch", async ({ syncService, ctx, body }) => {
-  // Enforce max batch size
-  if (body.operations.length > MAX_BATCH_SIZE) {
-    return {
-      success: false,
-      error: { code: "BATCH_TOO_LARGE", ... }
-    };
+  if (syncGroupId) {
+    baseConditions.push(or(
+      eq(syncOperations.syncGroupId, syncGroupId),
+      isNull(syncOperations.syncGroupId)
+    )!);
   }
 
-  // Validate operations
-  for (const op of body.operations) {
-    if (!op.idempotencyKey || !op.entityId) {
-      return { success: false, error: { code: "INVALID_OPERATION", ... } };
+  if (since) {
+    if (cursorOperationId) {
+      baseConditions.push(or(
+        gt(syncOperations.processedAt, since),
+        and(eq(syncOperations.processedAt, since), gt(syncOperations.operationId, cursorOperationId))
+      )!);
+    } else {
+      baseConditions.push(gt(syncOperations.processedAt, since));
     }
   }
 
-  // Process batch
-  const result = await syncService.processBatch(ctx, body.operations);
+  if (entityTypes && entityTypes.length > 0) {
+    baseConditions.push(inArray(syncOperations.entity, entityTypes));
+  }
 
-  return { success: true, data: result };
-})
-```
-
-### Processing Flow
-
-```typescript
-// packages/backend/src/services/sync/sync.service.ts
-
-async processBatch(ctx: RequestContext, operations: SyncOperationInput[]): Promise<SyncBatchResult> {
-  // 1. Sort operations by syncGroupId and priority
-  const sorter = new OperationSorter();
-  const { operations: sortedOps } = sorter.sort(operations);
-
-  const results: SyncOperationResult[] = [];
-
-  // 2. Process with SAVEPOINTs per operation
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < sortedOps.length; i++) {
-      const op = sortedOps[i];
-      const savepointName = `sp_op_${i}`;
-
-      try {
-        await tx.execute(sql.raw(`SAVEPOINT ${savepointName}`));
-
-        const result = await this.processOperation(ctx, op, tx);
-        results.push(result);
-
-        await tx.execute(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
-      } catch (error) {
-        await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
-        results.push({
-          idempotencyKey: op.idempotencyKey,
-          success: false,
-          error: error.message,
-        });
-      }
-    }
+  const operations = await db.query.syncOperations.findMany({
+    where: and(...baseConditions),
+    orderBy: [asc(syncOperations.processedAt), asc(syncOperations.operationId)],
+    limit: effectiveLimit + 1,
   });
 
+  const hasMore = operations.length > effectiveLimit;
+  const results = hasMore ? operations.slice(0, effectiveLimit) : operations;
+
+  const nextSince = last?.processedAt && last.operationId
+    ? `${last.processedAt.toISOString()}_${last.operationId}`
+    : serverTimestamp;
+
   return {
-    results,
-    summary: {
-      total: results.length,
-      succeeded: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length,
-      conflicts: results.filter(r => r.conflict).length,
-    }
+    changes: results.map(item => ({
+      idempotencyKey: item.operationId,
+      entityType: item.entity,
+      operation: item.action,
+      entityId: item.entityId,
+      payload: item.payload,
+      localTimestamp: item.clientTimestamp.toISOString(),
+      processedAt: item.processedAt?.toISOString(),
+    })),
+    nextSince,
+    serverTimestamp,
+    hasMore,
   };
+}
+```
+
+## Example 6: Staged Pull (Initial Sync)
+
+### Frontend Code
+
+```typescript
+// packages/app/app/lib/sync/staged-pull-coordinator.ts
+
+async executeStagedPull(): Promise<void> {
+  const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+  const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+
+  // Stage 1: CRITICAL - block UI
+  console.log("Stage 1: Loading CRITICAL entities...");
+  const stage1 = await pullService.pullWithOptions({
+    entityTypes: ["customers", "products", "product_variants"],
+    since: thirtyDaysAgo,
+  });
+  console.log(`CRITICAL done: ${stage1.changesApplied} changes`);
+
+  // Stage 2: RECENT_SALES - block UI
+  console.log("Stage 2: Loading RECENT_SALES...");
+  const stage2 = await pullService.pullWithOptions({
+    entityTypes: ["sales", "sale_items"],
+    since: sevenDaysAgo,
+  });
+  console.log(`RECENT_SALES done: ${stage2.changesApplied} changes`);
+
+  // Stage 3: HISTORICAL - background
+  console.log("Stage 3: Loading HISTORICAL in background...");
+  pullService.pullWithOptions({
+    entityTypes: ["abonos", "purchases", "purchase_items", "distribuciones",
+                  "suppliers", "visitas", "tags", "customer_tags",
+                  "customer_groups", "customer_group_members"],
+    // No since = full history
+  });
+}
+```
+
+## Example 7: Force Sync and Reset
+
+### Frontend Code
+
+```typescript
+// Force full sync (push then pull)
+await coordinator.forceSync();
+
+// Force reset when stuck
+await coordinator.forceResetSync();
+
+// Manual push only
+const pushResult = await syncService.processPending(true); // true = ignoreOnlineCheck
+
+// Check if sync is running
+console.log("Push running:", syncService.isRunning());
+console.log("Pull running:", pullService.isRunning());
+```
+
+## Example 8: Backend Handler Pattern (Current)
+
+```typescript
+// packages/backend/src/services/sync/handlers/SaleSyncHandler.ts
+
+export class SaleSyncHandler extends BaseSyncHandler {
+  readonly entityType = "sales";
+
+  async execute(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<SyncHandlerResult> {
+    try {
+      if (operation.operation === "create") {
+        await this.handleCreate(ctx, operation, tx);
+      } else if (operation.operation === "update") {
+        await this.handleUpdate(ctx, operation, tx);
+      } else if (operation.operation === "delete") {
+        await this.handleDelete(ctx, operation, tx);
+      } else {
+        throw new Error(`Unsupported action: ${operation.operation}`);
+      }
+      this.logSuccess(ctx, operation);
+      return this.createSuccessResult(operation);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logError(ctx, operation, err);
+      return this.createErrorResult(operation, err.message);
+    }
+  }
+
+  async validateBusinessRules(
+    ctx: RequestContext,
+    payload: Record<string, unknown>,
+    operation?: string
+  ): Promise<void> {
+    this.validatePayload(payload, saleCreateSchema, saleUpdateSchema, operation);
+  }
+
+  private async handleCreate(ctx, operation, tx) {
+    const parsed = saleCreateSchema.parse(operation.payload);
+    // ... create logic using repo
+  }
+
+  private async handleUpdate(ctx, operation, tx) {
+    const parsed = saleUpdateSchema.parse(operation.payload);
+    // ... update logic with version check
+    if (existing.version > clientExpectedVersion) {
+      throw new Error(`Version conflict: expected ${clientExpectedVersion} but server has ${existing.version}`);
+    }
+    // ... update logic
+  }
 }
 ```

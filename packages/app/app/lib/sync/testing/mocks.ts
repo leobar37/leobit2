@@ -223,6 +223,10 @@ export class MockSyncHttpClient implements ISyncHttpClient {
       data: { id: conflictId, resolution, mergedData },
     };
   }
+
+  abort(): void {
+    // No-op for tests
+  }
 }
 
 /**
@@ -231,18 +235,15 @@ export class MockSyncHttpClient implements ISyncHttpClient {
 export function createMockSyncService() {
   const queue = new MockSyncQueue();
   const httpClient = new MockSyncHttpClient();
-  const backoff = new MockBackoffStrategy();
   
   return {
     mocks: {
       queue,
       httpClient,
-      backoff,
     },
     service: {
       queue,
       httpClient,
-      backoff,
     },
   };
 }

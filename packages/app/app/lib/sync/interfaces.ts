@@ -26,7 +26,12 @@ import type {
 } from "./types";
 
 // Import types from sync-service for interface definition
-import type { EnqueueParams, SyncOperationRecord, SyncStatus, DeadLetterOperationRecord, BatchSyncResponse } from "./sync-service";
+import type {
+  EnqueueParams,
+  SyncOperationRecord,
+  SyncStatus,
+  DeadLetterOperationRecord,
+} from "./types";
 import type { ConflictStrategy } from "./config";
 
 /**

@@ -42,15 +42,15 @@ export const VALID_TABLES = new Set([
 const TABLE_COLUMNS: Record<string, Set<string>> = {
   customers: new Set([
     "id", "business_id", "name", "dni", "phone", "address", "notes",
-    "sync_status", "sync_attempts", "created_at", "updated_at"
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
   ]),
   products: new Set([
     "id", "business_id", "name", "unit", "base_price", "cost_price", "is_active",
     "sync_status", "sync_attempts", "created_at", "updated_at"
   ]),
   product_variants: new Set([
-    "id", "business_id", "product_id", "name", "unit_quantity", "price", "cost_price",
-    "sort_order", "is_active", "sync_status", "sync_attempts", "created_at", "updated_at"
+    "id", "business_id", "product_id", "name", "sku", "unit_quantity", "price", "cost_price",
+    "sort_order", "is_active", "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
   ]),
   sales: new Set([
     "id", "business_id", "customer_id", "seller_id", "distribucion_id", "visita_id",
@@ -65,40 +65,42 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
   sale_items: new Set([
     "id", "business_id", "sale_id", "product_id", "variant_id", "product_name",
     "variant_name", "quantity", "ordered_quantity", "delivered_quantity", "unit_price",
-    "unit_price_quoted", "unit_price_final", "subtotal", "is_modified", "original_quantity",
-    "sync_status", "sync_attempts", "created_at", "updated_at"
+    "unit_price_quoted", "unit_price_final", "cost_price_snapshot", "subtotal", "is_modified", "original_quantity",
+    "sync_status", "sync_attempts", "sync_group_id", "created_at", "updated_at"
   ]),
   abonos: new Set([
-    "id", "business_id", "customer_id", "sale_id", "amount", "payment_method",
-    "reference_number", "notes", "proof_image_id", "sync_status", "sync_attempts",
+    "id", "business_id", "customer_id", "seller_id", "related_sale_id", "amount", "payment_method",
+    "reference_number", "notes", "proof_image_id", "sync_status", "sync_attempts", "sync_version",
     "created_at", "updated_at"
   ]),
   purchases: new Set([
     "id", "business_id", "supplier_id", "purchase_date", "status", "total_amount",
-    "sync_status", "sync_attempts", "created_at", "updated_at"
+    "invoice_number", "receipt_image_id", "notes",
+    "sync_status", "sync_attempts", "sync_version", "sync_group_id", "created_at", "updated_at"
   ]),
   purchase_items: new Set([
-    "id", "business_id", "purchase_id", "product_id", "variant_id", "quantity",
-    "unit_cost", "total_cost", "sync_status", "sync_attempts", "created_at", "updated_at"
+    "id", "business_id", "purchase_id", "product_id", "variant_id", "unit_id", "quantity",
+    "unit_cost", "total_cost", "sync_status", "sync_attempts", "sync_version", "sync_group_id", "created_at", "updated_at"
   ]),
   suppliers: new Set([
-    "id", "business_id", "name", "type", "ruc", "phone", "email", "address",
-    "is_active", "sync_status", "sync_attempts", "created_at", "updated_at"
+    "id", "business_id", "name", "type", "ruc", "phone", "email", "address", "notes",
+    "is_active", "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
   ]),
   distribuciones: new Set([
-    "id", "business_id", "vendedor_id", "punto_venta_id", "fecha", "estado",
-    "monto_recaudado", "sync_status", "sync_attempts", "created_at", "updated_at"
+    "id", "business_id", "vendedor_id", "punto_venta", "punto_venta_id", "fecha", "estado", "modo",
+    "monto_recaudado", "nota_creacion", "nota_cierre",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
   ]),
   distribucion_items: new Set([
-    "id", "business_id", "distribucion_id", "product_id", "variant_id", "cantidad",
-    "precio_unitario", "subtotal", "sync_status", "sync_attempts", "created_at", "updated_at"
+    "id", "business_id", "distribucion_id", "variant_id", "cantidad_asignada", "cantidad_vendida", "unidad",
+    "sync_status", "sync_attempts", "sync_version", "created_at", "updated_at"
   ]),
   tags: new Set([
     "id", "business_id", "name", "color", "sync_status", "sync_attempts",
     "created_at", "updated_at"
   ]),
   customer_tags: new Set([
-    "id", "business_id", "customer_id", "tag_id", "sync_status", "sync_attempts",
+    "business_id", "customer_id", "tag_id", "assigned_at", "assigned_by", "sync_status", "sync_attempts",
     "created_at", "updated_at"
   ]),
   customer_groups: new Set([
@@ -110,7 +112,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at", "updated_at"
   ]),
   visitas: new Set([
-    "id", "business_id", "distribucion_id", "customer_id", "status", "order_in_route",
+    "id", "business_id", "distribucion_id", "customer_id", "vendedor_id", "status", "motivo_no_compra", "sale_id",
     "sync_status", "sync_attempts", "created_at", "updated_at"
   ]),
   variant_inventory: new Set([

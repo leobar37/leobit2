@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "../lib/query/persisted-query-keys";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicesProvider } from "../lib/sync/service-provider";
@@ -13,7 +14,7 @@ function createWrapper(businessUserId?: string) {
   const queryClient = new QueryClient();
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   invalidateSpy.mockImplementation(mockInvalidateQueries);
-  queryClient.setQueryData(["business"], {
+  queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.business, {
     businessUserId,
   });
   const pg = {

@@ -87,13 +87,18 @@ export class SyncCoordinator {
     this.pullBackoff.reset();
     this.syncService.resetBackoff();
 
-    // If pull service is stuck (stale pull detected previously), force reset
+    // If pull service is stuck (stale pull detected previously), force reset and skip normal reconnect flow
     if (this.pullService.getIsStuck()) {
       console.log("[SyncCoordinator] Sync was stuck - forcing reset");
       await this.forceResetSync();
       return;
     }
 
+    // Normal reconnect: restart stopped services and retry DLQ
+    await this.handleNormalReconnect();
+  };
+
+  private handleNormalReconnect = async (): Promise<void> => {
     // Restart services if they were stopped (e.g., due to stale pulls)
     if (!this.syncService.isRunning()) {
       console.log("[SyncCoordinator] Restarting sync service");

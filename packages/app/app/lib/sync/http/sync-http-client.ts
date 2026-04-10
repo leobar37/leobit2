@@ -6,7 +6,7 @@
  * and enables easier testing.
  */
 
-import type { SyncOperationRecord, BatchSyncResponse } from "../sync-service";
+import type { SyncOperationRecord, BatchSyncResponse } from "../types";
 
 /**
  * Options for querying conflicts

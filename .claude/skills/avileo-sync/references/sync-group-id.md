@@ -21,7 +21,7 @@ protected generateSyncGroup(): string {
 
 ### Frontend: Grouping Operations
 
-**Location**: `packages/app/app/lib/sync/sync-service.ts:570-634`
+**Location**: `packages/app/app/lib/sync/sync-service.ts:400-446`
 
 ```typescript
 // Group operations by sync_group_id
@@ -57,21 +57,10 @@ for (const [groupId, ops] of grouped) {
 }
 
 // Sort within each group by entity priority
-const entityPriority: Record<string, number> = {
-  'sales': 1,
-  'sale_items': 2,
-  'customer_groups': 3,
-  'customer_group_members': 4,
-  'purchases': 1,
-  'purchase_items': 2,
-  'distribucion': 1,
-  'distribucion_items': 2,
-};
-
 for (const [groupId, ops] of grouped) {
   const sortedOps = [...ops].sort((a, b) => {
-    const priorityA = entityPriority[a.entity_type] ?? 99;
-    const priorityB = entityPriority[b.entity_type] ?? 99;
+    const priorityA = ENTITY_PRIORITIES[a.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
+    const priorityB = ENTITY_PRIORITIES[b.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
     if (priorityA !== priorityB) {
       return priorityA - priorityB;
     }
@@ -83,7 +72,7 @@ for (const [groupId, ops] of grouped) {
 
 ### Backend: Sorting Operations
 
-**Location**: `packages/backend/src/services/sync/framework/OperationSorter.ts:20-41`
+**Location**: `packages/backend/src/services/sync/framework/OperationSorter.ts`
 
 ```typescript
 sort(operations: SyncOperationInput[]): SortResult {
@@ -117,19 +106,16 @@ sort(operations: SyncOperationInput[]): SortResult {
 ### Creating a Draft Sale
 
 ```typescript
-// Line 366 - Generate sync group
+// Generate sync group
 const syncGroupId = this.generateSyncGroup();
 
-// Line 406 - Queue sale with syncGroupId
-await this.queueSync("insert", sale.id, saleData, syncGroupId);
+// Queue sale with syncGroupId
+await this.queueSync("create", sale.id, saleData, syncGroupId);
 
-// Line 433 - Queue items with same syncGroupId
+// Queue items with same syncGroupId
 for (const item of items) {
-  await this.queueSync("insert", item.id, itemData, syncGroupId, "sale_items");
+  await this.queueSync("create", item.id, itemData, syncGroupId, "sale_items");
 }
-
-// Line 452 - createInstantSale also generates new group
-const syncGroupId = this.generateSyncGroup();
 ```
 
 ### Item Operations
@@ -137,8 +123,8 @@ const syncGroupId = this.generateSyncGroup();
 Items inherit the parent's syncGroupId:
 
 ```typescript
-// Lines 963-1176 - Item/payment operations reuse parent's syncGroupId
-await this.queueSync("insert", item.id, itemData, syncGroupId, "sale_items");
+// Item/payment operations reuse parent's syncGroupId
+await this.queueSync("create", item.id, itemData, syncGroupId, "sale_items");
 ```
 
 ## Usage in Purchase Flow
@@ -146,15 +132,15 @@ await this.queueSync("insert", item.id, itemData, syncGroupId, "sale_items");
 **Location**: `packages/app/app/lib/services/purchase-service.ts`
 
 ```typescript
-// Line 187 - Generate sync group
+// Generate sync group
 const syncGroupId = this.generateSyncGroup();
 
-// Lines 260-261 - Queue purchase with syncGroupId
-await this.queueSync("insert", purchase.id, purchaseData, syncGroupId);
+// Queue purchase with syncGroupId
+await this.queueSync("create", purchase.id, purchaseData, syncGroupId);
 
-// Line 273 - Queue items with same syncGroupId
+// Queue items with same syncGroupId
 for (const item of items) {
-  await this.queueSync("insert", item.id, itemData, syncGroupId, "purchase_items");
+  await this.queueSync("create", item.id, itemData, syncGroupId, "purchase_items");
 }
 ```
 
@@ -162,7 +148,7 @@ for (const item of items) {
 
 ### Backend Tables
 
-**sales**: `packages/backend/src/db/schema/sales.ts:85`
+**sales**: `packages/backend/src/db/schema/sales.ts`
 ```typescript
 syncGroupId: varchar("sync_group_id", { length: 100 }),
 ```
@@ -172,14 +158,14 @@ syncGroupId: varchar("sync_group_id", { length: 100 }),
 syncGroupId: varchar("sync_group_id", { length: 100 }),
 ```
 
-**sync_operations**: `packages/backend/src/db/schema/sync-operations.ts:25`
+**sync_operations**: `packages/backend/src/db/schema/sync-operations.ts`
 ```typescript
 syncGroupId: varchar("sync_group_id", { length: 128 }),
 ```
 
 ### Frontend (PGlite)
 
-**sync_operations**: Created in `packages/app/app/lib/sync/sync-service.ts:302-337`
+**sync_operations**: Created in `packages/app/app/lib/sync/sync-service.ts:260-295`
 ```sql
 CREATE TABLE IF NOT EXISTS sync_operations (
   -- ...
@@ -190,18 +176,25 @@ CREATE TABLE IF NOT EXISTS sync_operations (
 
 ## Entity Priority Map
 
-Current priorities (lower = processed first):
+Current priorities from `packages/shared/src/sync-config.ts` (lower = processed first):
 
 | Priority | Entity | Description |
 |----------|--------|-------------|
 | 1 | `sales` | Parent sale record |
 | 1 | `purchases` | Parent purchase record |
-| 1 | `distribuciones` | Parent distribution record |
+| 1 | `products` | Product reference |
+| 1 | `customers` | Customer reference |
+| 1 | `suppliers` | Supplier reference |
+| 1 | `customer_groups` | Customer group |
+| 1 | `distribuciones` | Distribution record |
+| 1 | `tags` | Tag reference |
+| 1 | `visitas` | Visit record |
+| 1 | `abonos` | Payment/abono |
 | 2 | `sale_items` | Sale line items |
 | 2 | `purchase_items` | Purchase line items |
-| 2 | `distribucion_items` | Distribution items |
-| 3 | `customer_groups` | Customer groups |
-| 4 | `customer_group_members` | Group membership |
+| 2 | `product_variants` | Product variants |
+| 2 | `customer_group_members` | Group membership |
+| 2 | `customer_tags` | Customer tags |
 | 99 | * | Everything else (fallback) |
 
 ## When to Use syncGroupId
@@ -223,12 +216,12 @@ Current priorities (lower = processed first):
 **Fix**: Ensure parent entity's syncGroupId is passed to all child operations
 
 ### Issue: Items processed before parent
-**Cause**: Priority not set correctly in entityPriority map
-**Fix**: Update `entityPriority` in both frontend and backend
+**Cause**: Priority not set correctly in ENTITY_PRIORITIES
+**Fix**: Update `packages/shared/src/sync-config.ts` ENTITY_PRIORITIES
 
 ### Issue: Group sent but partial failure
 **Cause**: Server-side SAVEPOINT per operation allows partial rollback
-**Fix**: This is expected behavior - failed ops stay in queue for retry
+**Fix**: This is expected behavior — failed ops stay in queue for retry
 
 ### Issue: Missing sync_group_id column
 **Cause**: Schema not updated with new column

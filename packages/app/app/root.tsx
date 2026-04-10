@@ -11,11 +11,14 @@ import {
 import type { Route } from "./+types/root";
 
 import { Loader2 } from "lucide-react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Provider as JotaiProvider } from "jotai";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import { createQueryPersister } from "~/lib/query/persister";
+import { getStoredBusinessId } from "~/lib/session-storage";
 
 export function HydrateFallback() {
   return (
@@ -66,9 +69,14 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: true,
       refetchInterval: 30000,
+      gcTime: 1000 * 60 * 60 * 24,
     },
   },
 });
+
+// Create persister with buster based on current businessId
+// This invalidates cache when switching businesses
+const queryPersister = createQueryPersister(undefined, getStoredBusinessId() ?? undefined);
 
 export default function App() {
   useEffect(() => {
@@ -96,12 +104,15 @@ export default function App() {
 
   return (
     <JotaiProvider>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: queryPersister }}
+      >
         <NuqsAdapter>
           <Outlet />
         </NuqsAdapter>
         <Toaster position="top-center" />
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </JotaiProvider>
   );
 }

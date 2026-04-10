@@ -6,52 +6,9 @@ import type { RequestContext } from "../context/request-context";
 import { createLogger } from "../lib/logger";
 import { SyncConflictRepository } from "../services/sync/framework/SyncConflictRepository";
 import type { SyncOperationInput } from "../services/sync/types";
+import { parseCursor } from "./sync-cursor";
 
 const logger = createLogger("SyncRoute");
-
-/**
- * Parse cursor from client
- * Supports two formats:
- * 1. Legacy: ISO 8601 timestamp (e.g., "2026-03-07T18:07:41.784Z")
- * 2. New: timestamp_operationId (e.g., "2026-03-07T18:07:41.784Z_op-123")
- */
-interface ParseCursorResult {
-  valid: boolean;
-  date?: Date;
-  operationId?: string;
-  error?: string;
-}
-
-function parseCursor(cursor: string): ParseCursorResult {
-  if (!cursor || typeof cursor !== "string") {
-    return { valid: false, error: "Cursor is required" };
-  }
-
-  // Check for new format: timestamp_operationId
-  const underscoreIndex = cursor.lastIndexOf("_");
-  if (underscoreIndex > 0) {
-    const timestampPart = cursor.slice(0, underscoreIndex);
-    const operationId = cursor.slice(underscoreIndex + 1);
-
-    const date = new Date(timestampPart);
-    if (isNaN(date.getTime())) {
-      return { valid: false, error: "Invalid timestamp in cursor" };
-    }
-
-    return { valid: true, date, operationId };
-  }
-
-  // Legacy format: just timestamp
-  const date = new Date(cursor);
-  if (isNaN(date.getTime())) {
-    return { valid: false, error: "Invalid cursor format. Expected ISO 8601 timestamp." };
-  }
-
-  // Log legacy format detection for monitoring
-  logger.debug({ msg: "Legacy cursor format detected", cursor: cursor.slice(0, 30) });
-
-  return { valid: true, date };
-}
 
 // Maximum operations per batch request
 const MAX_BATCH_SIZE = 100;
@@ -218,6 +175,10 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
               message: cursorResult.error || "Invalid cursor format.",
             },
           };
+        }
+
+        if (cursorResult.isLegacy) {
+          logger.debug({ msg: "Legacy cursor format detected", cursor: query.since.slice(0, 30) });
         }
 
         since = cursorResult.date;

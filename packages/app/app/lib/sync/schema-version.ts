@@ -6,6 +6,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
+import { ensureSyncSchema } from "./schema";
 
 export const SYNC_SCHEMA_VERSION = 1;
 
@@ -17,7 +18,10 @@ export interface SchemaVersionRecord {
 /**
  * Check current schema version and run migrations if needed
  */
-export async function checkAndMigrateSchema(pg: PGlite): Promise<void> {
+export async function checkAndMigrateSchema(
+  pg: PGlite,
+  businessId?: string
+): Promise<void> {
   // Ensure schema_version table exists
   await pg.exec(`
     CREATE TABLE IF NOT EXISTS sync_schema_version (
@@ -36,7 +40,9 @@ export async function checkAndMigrateSchema(pg: PGlite): Promise<void> {
 
   if (currentVersion < SYNC_SCHEMA_VERSION) {
     console.log(`[SchemaVersion] Migrating from ${currentVersion} to ${SYNC_SCHEMA_VERSION}`);
-    await runMigrations(pg, currentVersion, SYNC_SCHEMA_VERSION);
+    await runMigrations(pg, currentVersion, SYNC_SCHEMA_VERSION, businessId);
+  } else {
+    await ensureSyncSchema(pg, businessId);
   }
 }
 
@@ -46,15 +52,15 @@ export async function checkAndMigrateSchema(pg: PGlite): Promise<void> {
 async function runMigrations(
   pg: PGlite,
   fromVersion: number,
-  toVersion: number
+  toVersion: number,
+  businessId?: string
 ): Promise<void> {
   for (let version = fromVersion + 1; version <= toVersion; version++) {
     console.log(`[SchemaVersion] Running migration ${version}`);
     
     switch (version) {
       case 1:
-        // Initial schema - sync_operations and sync_dead_letter tables
-        // These are created by SyncService.initTables()
+        await ensureSyncSchema(pg, businessId);
         break;
       
       // Future migrations go here:

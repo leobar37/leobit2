@@ -180,3 +180,32 @@ export async function initAllTables(pg: PGlite): Promise<void> {
   await initEntityTables(pg);
   await initSyncTables(pg);
 }
+
+/**
+ * Ensure sync-specific tables and indexes exist and backfill business ownership
+ * for legacy records created before business_id was enforced.
+ */
+export async function ensureSyncSchema(
+  pg: PGlite,
+  businessId?: string
+): Promise<void> {
+  await initSyncTables(pg);
+
+  if (!businessId) {
+    return;
+  }
+
+  await pg.query(
+    `UPDATE sync_operations
+     SET business_id = $1
+     WHERE business_id IS NULL`,
+    [businessId]
+  );
+
+  await pg.query(
+    `UPDATE sync_dead_letter
+     SET business_id = $1
+     WHERE business_id IS NULL`,
+    [businessId]
+  );
+}

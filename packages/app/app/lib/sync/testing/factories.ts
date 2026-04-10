@@ -7,7 +7,7 @@
 import { vi } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import type { SyncOperationRecord, DeadLetterOperationRecord } from "../sync-service";
+import type { SyncOperationRecord, DeadLetterOperationRecord } from "../types";
 
 export function createSyncOperation(overrides: Partial<SyncOperationRecord> = {}): SyncOperationRecord {
   return {

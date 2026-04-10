@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TeamMember, UpdateTeamMemberInput } from "@avileo/shared";
 import { api } from "~/lib/api-client";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
 async function getTeam(): Promise<TeamMember[]> {
   const { data, error } = await api.businesses.me.members.get();
@@ -42,7 +43,7 @@ async function deactivateTeamMember(id: string): Promise<void> {
 
 export function useTeam() {
   return useQuery({
-    queryKey: ["team"],
+    queryKey: PERSISTED_REMOTE_QUERY_KEYS.team,
     queryFn: getTeam,
   });
 }
@@ -54,7 +55,7 @@ export function useUpdateTeamMember() {
     mutationFn: ({ id, input }: { id: string; input: UpdateTeamMemberInput }) =>
       updateTeamMember(id, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team"] });
+      queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.team });
     },
   });
 }
@@ -65,7 +66,7 @@ export function useDeactivateTeamMember() {
   return useMutation({
     mutationFn: deactivateTeamMember,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team"] });
+      queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.team });
     },
   });
 }

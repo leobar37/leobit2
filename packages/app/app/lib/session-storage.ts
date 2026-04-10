@@ -1,3 +1,5 @@
+import { clearPersistedQueryCache } from "./query/persister";
+
 const AUTH_TOKEN_KEY = "bearer_token";
 const CURRENT_BUSINESS_ID_KEY = "current_business_id";
 const CURRENT_BUSINESS_USER_ID_KEY = "current_business_user_id";
@@ -227,6 +229,8 @@ export async function clearSyncStorage(
     console.log("[ClearSync] Clearing session storage...");
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(CURRENT_BUSINESS_ID_KEY);
+    // Clear TanStack Query persisted cache
+    clearPersistedQueryCache();
     console.log("[ClearSync] Session storage cleared");
   }
 

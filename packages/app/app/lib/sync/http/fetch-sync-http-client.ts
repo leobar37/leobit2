@@ -13,7 +13,7 @@
  */
 
 import type { ISyncHttpClient, ConflictQueryOptions } from "./sync-http-client";
-import type { SyncOperationRecord, BatchSyncResponse } from "../sync-service";
+import type { SyncOperationRecord, BatchSyncResponse } from "../types";
 import { getDeviceId, getDeviceFingerprint } from "../device-fingerprint";
 import { BaseHttpClient, createHeaderInterceptor, createLoggingInterceptor } from "../../http/base-http-client";
 import { getStoredAuthToken } from "../../session-storage";

@@ -189,8 +189,8 @@ describe("SaleSyncHandler - Multi-Device Race Conditions", () => {
       const result = await handler.execute(mockCtx, operation);
 
       expect(result.success).toBe(true);
-      // The handler should process the operation with device info
-      // (actual storage of device info depends on repository implementation)
+      // Device info flows through SyncOperationInput and is stored by SyncOperationRepository
+      // (see SyncOperationRepository.insertOrUpdate for actual persistence)
     });
   });
 

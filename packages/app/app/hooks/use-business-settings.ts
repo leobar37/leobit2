@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import type { BusinessCalculatorSettings } from "@avileo/shared";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
-const CALCULATOR_SETTINGS_KEY = ["business", "calculator-settings"];
+const CALCULATOR_SETTINGS_KEY = PERSISTED_REMOTE_QUERY_KEYS.businessCalculatorSettings;
 
 async function fetchCalculatorSettings(): Promise<BusinessCalculatorSettings> {
   const { data, error } = await api.businesses.me["calculator-settings"].get();

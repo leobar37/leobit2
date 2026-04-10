@@ -2,7 +2,7 @@
  * Punto de Venta Form Component
  * Form for creating or editing puntos de venta
  */
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormInput } from "~/components/forms/form-input";
@@ -78,7 +78,8 @@ export function PuntoVentaForm({ puntoVenta, onClose, onSuccess }: PuntoVentaFor
   const selectedType = form.watch("type");
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <FormProvider {...form}>
+      <form onSubmit={onSubmit} className="space-y-4">
       <FormInput
         {...form.register("name", { required: "El nombre es requerido" })}
         label="Nombre"
@@ -143,6 +144,7 @@ export function PuntoVentaForm({ puntoVenta, onClose, onSuccess }: PuntoVentaFor
             : "Crear"}
         </Button>
       </div>
-    </form>
+      </form>
+    </FormProvider>
   );
 }

@@ -98,6 +98,8 @@ export class SyncOperationRepository {
           error: null,
           processedAt: null,
           syncGroupId: operation.syncGroupId ?? null,
+          deviceId: operation.deviceId ?? null,
+          sourceFingerprint: operation.sourceFingerprint ?? null,
         })
         .where(
           and(
@@ -119,6 +121,8 @@ export class SyncOperationRepository {
         status: "pending",
         clientTimestamp: new Date(operation.localTimestamp),
         syncGroupId: operation.syncGroupId ?? null,
+        deviceId: operation.deviceId ?? null,
+        sourceFingerprint: operation.sourceFingerprint ?? null,
       });
       return "inserted";
     } catch (error) {
@@ -145,6 +149,8 @@ export class SyncOperationRepository {
               error: null,
               processedAt: null,
               syncGroupId: operation.syncGroupId ?? null,
+              deviceId: operation.deviceId ?? null,
+              sourceFingerprint: operation.sourceFingerprint ?? null,
             })
             .where(
               and(
