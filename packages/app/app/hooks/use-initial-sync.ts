@@ -277,7 +277,8 @@ export function useInitialSync(): UseInitialSyncReturn {
     const businessId = getStoredBusinessId();
 
     if (!token || !businessId) {
-      setError("No hay sesión activa. Por favor, inicia sesión nuevamente.");
+      // Don't show error message, just redirect - this is expected when session expired
+      console.log("[useInitialSync] No token or businessId, redirecting to login");
       navigate("/login", { replace: true });
       return;
     }

@@ -118,9 +118,11 @@ export const ENTITY_SUMMARY_CONFIG = SYNCED_TABLES.map((table) => ({
 }));
 
 export const OPERATION_TABS = [
-  { value: "tables", label: "Tablas" },
+  { value: "status", label: "Estado" },
   { value: "operations", label: "Operaciones" },
   { value: "dead-letter", label: "DLQ" },
+  { value: "tables", label: "Tablas" },
+  { value: "database", label: "BD" },
 ] as const;
 
 export type ActiveTab = (typeof OPERATION_TABS)[number]["value"];

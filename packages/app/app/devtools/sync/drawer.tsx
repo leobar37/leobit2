@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useId } from "react";
 import { useEngine } from "~/engine";
 import { useClearSyncStorage } from "@/hooks/use-clear-sync-storage";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
-  Wifi,
-  WifiOff,
   Database,
   Trash2,
   Play,
@@ -23,36 +20,43 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useSync } from "~/components/sync/sync-status";
-import { useSyncService } from "~/lib/sync/service-provider";
+import { useSyncState, useSyncService } from "~/lib/sync/service-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { runManualSync } from "~/lib/sync/manual-sync";
 import { useToast } from "~/hooks/use-toast";
 import { useDevToolsData } from "./hooks/use-devtools-data";
+import { useDatabaseData } from "./hooks/use-database-data";
 import { OPERATION_TABS, type ActiveTab } from "./types";
-import { StatCard } from "./components/stat-card";
+import { StatusTab } from "./tabs/status-tab";
 import { TablesTab } from "./tabs/tables-tab";
 import { OperationsTab } from "./tabs/operations-tab";
 import { DLQTab } from "./tabs/dlq-tab";
+import { DatabaseTab } from "./tabs/database-tab";
 
 interface SyncDevToolsDrawerProps {
   triggerClassName?: string;
 }
 
 export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps = {}) {
-  const { isOnline: engineOnline, isSyncing, isInitialized } = useEngine();
+  const { isSyncing, isInitialized } = useEngine();
   const { isOnline, actualIsOnline } = useSync();
+  const syncState = useSyncState();
   const syncService = useSyncService();
   const { confirm, ConfirmDialog: DeleteConfirmDialog } = useConfirmDialog();
   const clearSync = useClearSyncStorage();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("tables");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("status");
   const [isCopyingReport, setIsCopyingReport] = useState(false);
   const [reportCopied, setReportCopied] = useState(false);
   const [isForceSyncing, setIsForceSyncing] = useState(false);
 
   const { status, operations, deadLetterOperations, entitySummaries, refetch } = 
     useDevToolsData(isOpen, isInitialized);
+
+  const { dbInfo } = useDatabaseData(isOpen, isInitialized);
+
+  const sheetId = useId();
 
   const handleForceSync = async () => {
     if (!isInitialized) return;
@@ -290,30 +294,45 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
         )}
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[80vh] flex flex-col">
-        <SheetHeader className="pb-4 border-b">
+        <SheetHeader className="pb-3 border-b">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
               DevTools de Sincronización
             </SheetTitle>
-            <div className="flex items-center gap-2">
-              {isOnline ? (
-                <Badge variant="default" className="bg-green-500">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  Online
-                </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <WifiOff className="h-3 w-3 mr-1" />
-                  Offline
-                </Badge>
-              )}
-              {isSyncing && (
-                <Badge variant="outline">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleForceSync}
+                disabled={isForceSyncing || status.pending === 0 || !isOnline}
+                className="h-7 text-xs"
+              >
+                {isForceSyncing ? (
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Syncing
-                </Badge>
-              )}
+                ) : (
+                  <Play className="h-3 w-3 mr-1" />
+                )}
+                Sync
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCopyReport} disabled={isCopyingReport} className="h-7 text-xs">
+                {isCopyingReport ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : reportCopied ? (
+                  <Check className="h-3 w-3 mr-1 text-green-500" />
+                ) : (
+                  <Copy className="h-3 w-3 mr-1" />
+                )}
+                {reportCopied ? "OK" : "Reporte"}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={handleClearStorage} disabled={clearSync.isPending} className="h-7 text-xs">
+                {clearSync.isPending ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3 mr-1" />
+                )}
+                Limpiar
+              </Button>
             </div>
           </div>
         </SheetHeader>
@@ -328,86 +347,53 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
         ) : (
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4 py-4 pr-1">
-              <div className="grid grid-cols-3 gap-3">
-                <StatCard label="Pendientes" value={status.pending} icon={Loader2} color="bg-yellow-500" />
-                <StatCard label="Fallidos" value={status.failed} icon={Loader2} color="bg-red-500" />
-                <StatCard label="Conflictos" value={status.conflict} icon={Loader2} color="bg-orange-500" />
-                <StatCard label="Completados" value={status.completed} icon={Loader2} color="bg-green-500" />
-                <StatCard label="Dead Letter" value={status.deadLetter} icon={Database} color="bg-gray-500" />
-                <StatCard label="Total" value={status.total} icon={Database} color="bg-blue-500" />
+              <div className="grid grid-cols-5 gap-1 rounded-2xl border border-border/70 bg-muted/40 p-1">
+                {OPERATION_TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveTab(tab.value)}
+                    className={cn(
+                      "rounded-xl px-2 py-2 text-xs font-medium transition-colors",
+                      activeTab === tab.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleForceSync}
-                  disabled={isForceSyncing || status.pending === 0 || !isOnline}
-                  className="flex-1"
-                >
-                  {isForceSyncing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  Forzar Sync
-                </Button>
-                <Button variant="outline" onClick={handleCopyReport} disabled={isCopyingReport}>
-                  {isCopyingReport ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : reportCopied ? (
-                    <Check className="h-4 w-4 mr-2 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4 mr-2" />
-                  )}
-                  {reportCopied ? "Copiado" : "Reporte"}
-                </Button>
-                <Button variant="destructive" onClick={handleClearStorage} disabled={clearSync.isPending}>
-                  {clearSync.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Limpiar
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/70 bg-muted/40 p-1">
-                  {OPERATION_TABS.map((tab) => (
-                    <button
-                      key={tab.value}
-                      type="button"
-                      onClick={() => setActiveTab(tab.value)}
-                      className={cn(
-                        "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                        activeTab === tab.value
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {activeTab === "tables" && <TablesTab entitySummaries={entitySummaries} />}
-                {activeTab === "operations" && (
-                  <OperationsTab
-                    operations={operations}
-                    onDeleteOperation={handleDeleteOperation}
-                    onDeleteAll={handleDeleteAllOperations}
-                    canDelete={!!syncService}
-                  />
-                )}
-                {activeTab === "dead-letter" && (
-                  <DLQTab
-                    deadLetterOperations={deadLetterOperations}
-                    onRetry={handleRetryDeadLetter}
-                    onDelete={handleDeleteDeadLetter}
-                    onClearAll={handleClearDeadLetter}
-                    canAct={!!syncService}
-                  />
-                )}
-              </div>
+              {activeTab === "status" && (
+                <StatusTab
+                  status={status}
+                  isOnline={isOnline}
+                  isSyncing={isSyncing}
+                  isStuck={syncState.isStuck}
+                  lastSyncTime={syncState.lastSyncTime}
+                  consecutiveFailures={syncState.pull.consecutiveFailures}
+                />
+              )}
+              {activeTab === "operations" && (
+                <OperationsTab
+                  operations={operations}
+                  onDeleteOperation={handleDeleteOperation}
+                  onDeleteAll={handleDeleteAllOperations}
+                  canDelete={!!syncService}
+                />
+              )}
+              {activeTab === "dead-letter" && (
+                <DLQTab
+                  deadLetterOperations={deadLetterOperations}
+                  onRetry={handleRetryDeadLetter}
+                  onDelete={handleDeleteDeadLetter}
+                  onClearAll={handleClearDeadLetter}
+                  canAct={!!syncService}
+                />
+              )}
+              {activeTab === "tables" && <TablesTab entitySummaries={entitySummaries} />}
+              {activeTab === "database" && <DatabaseTab dbInfo={dbInfo} />}
             </div>
           </ScrollArea>
         )}

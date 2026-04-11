@@ -117,6 +117,10 @@ export interface SalePageQuery {
   distribucionId?: string | "none" | "all";
   search?: string;
   type?: SaleType;
+  saleType?: SalePaymentType;
+  startDate?: string;
+  endDate?: string;
+  hasBalanceDue?: boolean;
 }
 
 export interface SaleListPage {
@@ -227,6 +231,22 @@ export class SaleService extends BaseService {
       conditions.push(eq(salesTable.type, query.type));
     }
 
+    if (query.saleType) {
+      conditions.push(eq(salesTable.saleType, query.saleType));
+    }
+
+    if (query.startDate) {
+      conditions.push(sql`${salesTable.saleDate} >= ${query.startDate}`);
+    }
+
+    if (query.endDate) {
+      conditions.push(sql`${salesTable.saleDate} <= ${query.endDate}`);
+    }
+
+    if (query.hasBalanceDue) {
+      conditions.push(sql`${salesTable.balanceDue} > '0'`);
+    }
+
     if (query.search?.trim()) {
       const searchPattern = `%${query.search.trim()}%`;
       conditions.push(
@@ -239,6 +259,12 @@ export class SaleService extends BaseService {
               AND c.name LIKE ${searchPattern}
           )
           OR ${salesTable.saleType} LIKE ${searchPattern}
+          OR EXISTS (
+            SELECT 1
+            FROM sale_items si
+            WHERE si.sale_id = ${salesTable.id}
+              AND si.product_name LIKE ${searchPattern}
+          )
         )`
       );
     }

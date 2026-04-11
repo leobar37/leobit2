@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { ShoppingCart, Search, Plus, MapPin } from "lucide-react";
+import { ShoppingCart, Search, Plus, MapPin, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,10 @@ import { usePaginatedSales } from "~/hooks/use-sales";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useSaleFilters } from "~/hooks/use-sale-filters";
 import { SaleCard } from "~/components/sales/sale-card";
+import { SaleFilterSection } from "~/components/sales/sale-filter-section";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
+import { formatDisplayDate } from "~/lib/date-utils";
 import type { Sale as SaleCardData } from "~/lib/db/schemas/sale";
 
 export default function SalesPage() {
@@ -30,6 +32,16 @@ export default function SalesPage() {
     setSearch,
     debouncedSearch,
     isFiltering,
+    saleType,
+    setSaleType,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    hasBalanceDue,
+    setHasBalanceDue,
+    clearAdvancedFilters,
+    activeFilterCount,
   } = useSaleFilters({ miDistribucionId: miDistribucion?.id });
 
   const pageSize = 100;
@@ -51,6 +63,10 @@ export default function SalesPage() {
     status,
     type,
     search: debouncedSearch || undefined,
+    saleType: saleType || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    hasBalanceDue: hasBalanceDue || undefined,
   });
 
   const sales = salesPage?.items ?? [];
@@ -65,7 +81,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [tab, tipo, debouncedSearch]);
+  }, [tab, tipo, debouncedSearch, saleType, startDate, endDate, hasBalanceDue]);
 
   // Log any query errors for debugging
   useEffect(() => {
@@ -80,12 +96,61 @@ export default function SalesPage() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar venta..."
+            placeholder="Buscar venta, cliente o producto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
           />
         </div>
+
+        <SaleFilterSection
+          saleType={saleType}
+          onSaleTypeChange={setSaleType}
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          hasBalanceDue={hasBalanceDue}
+          onHasBalanceDueChange={setHasBalanceDue}
+          activeFilterCount={activeFilterCount}
+          onClearAll={clearAdvancedFilters}
+        />
+
+        {activeFilterCount > 0 && (
+          <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5 hide-scrollbar sm:-mx-4 sm:px-4">
+            {startDate && (
+              <button
+                type="button"
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+              >
+                {formatDisplayDate(startDate)}
+                {endDate && endDate !== startDate && ` - ${formatDisplayDate(endDate)}`}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {saleType && (
+              <button
+                type="button"
+                onClick={() => setSaleType("")}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+              >
+                {saleType === "contado" ? "Contado" : "Crédito"}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {hasBalanceDue && (
+              <button
+                type="button"
+                onClick={() => setHasBalanceDue(false)}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+              >
+                Con deuda
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="-mx-3 overflow-x-auto px-3 pb-1 hide-scrollbar sm:-mx-4 sm:px-4">
