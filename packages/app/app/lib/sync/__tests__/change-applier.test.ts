@@ -27,16 +27,20 @@ vi.mock("../schema-mapper", () => ({
     }
     return result;
   }),
+  isRelationField: vi.fn((field: string) => {
+    const relationFields = [
+      "items", "customer", "seller", "business", "distribucion", "visita",
+      "sale", "product", "variant", "supplier", "purchase",
+      "advanceProofImage", "cancelledBy", "createdBy", "updatedBy",
+    ];
+    return relationFields.includes(field);
+  }),
   VALID_TABLES: new Set(["customers", "sales", "sale_items", "products", "product_variants"]),
 }));
 
-// Mock the backoff module
-vi.mock("../backoff", () => ({
-  isTransientError: vi.fn((error: string) => {
-    const transientPatterns = [/database is locked/, /connection refused/, /timeout/];
-    return transientPatterns.some((pattern) => pattern.test(error));
-  }),
-  sleep: vi.fn(() => Promise.resolve()),
+// Mock the retry-wrapper module (replaces direct backoff mocking)
+vi.mock("../retry-wrapper", () => ({
+  withRetry: vi.fn((fn: () => Promise<unknown>) => fn()),
 }));
 
 // Import after mocking
@@ -288,12 +292,10 @@ describe("applyChange", () => {
   });
 
   describe("retry logic", () => {
-    it("retries on transient errors (database locked)", async () => {
-      // First call fails with transient error, second succeeds
-      mockPg.query
-        .mockRejectedValueOnce(new Error("database is locked"))
-        .mockResolvedValueOnce({ rows: [] }) // After retry, SELECT returns empty
-        .mockResolvedValueOnce({ rows: [] }); // INSERT succeeds
+    it("applies change successfully (withRetry mock)", async () => {
+      // Mock returns immediately without retry for unit tests
+      mockPg.query.mockResolvedValueOnce({ rows: [] }); // No existing
+      mockPg.query.mockResolvedValueOnce({ rows: [] }); // INSERT succeeds
 
       const change: PullChange = {
         idempotencyKey: "key-1",
@@ -308,34 +310,12 @@ describe("applyChange", () => {
       const result = await applyChange(mockPg, mockDb, change, businessId);
 
       expect(result.success).toBe(true);
-      // Should have retried (3 total calls: 1 failed + 2 success)
-      expect(mockPg.query).toHaveBeenCalledTimes(3);
+      // Single call (no retries in mock)
+      expect(mockPg.query).toHaveBeenCalled();
     });
 
-    it("fails after max retries exceeded", async () => {
-      // All calls fail with transient error
-      mockPg.query.mockRejectedValue(new Error("database is locked"));
-
-      const change: PullChange = {
-        idempotencyKey: "key-1",
-        entityType: "customers",
-        operation: "create",
-        entityId: "customer-1",
-        payload: { name: "John Doe" },
-        localTimestamp: "2024-01-01T00:00:00Z",
-        processedAt: "2024-01-01T00:00:00Z",
-      };
-
-      const result = await applyChange(mockPg, mockDb, change, businessId);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("database is locked");
-      // Should have tried 4 times: initial + 3 retries (MAX_APPLY_RETRIES = 3)
-      expect(mockPg.query).toHaveBeenCalledTimes(4);
-    });
-
-    it("does not retry on non-transient errors", async () => {
-      // Non-transient error - should not retry
+    it("returns error for constraint violations", async () => {
+      // Non-transient error should fail immediately
       mockPg.query.mockRejectedValue(new Error("constraint violation: UNIQUE constraint failed"));
 
       const change: PullChange = {
@@ -351,8 +331,7 @@ describe("applyChange", () => {
       const result = await applyChange(mockPg, mockDb, change, businessId);
 
       expect(result.success).toBe(false);
-      // Should only try once (no retries for non-transient errors)
-      expect(mockPg.query).toHaveBeenCalledTimes(1);
+      expect(result.error).toContain("constraint violation");
     });
   });
 

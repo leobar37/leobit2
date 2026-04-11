@@ -1,11 +1,27 @@
 /**
  * Staged Sync Configuration
- * 
+ *
  * Defines the three loading stages for optimized sync performance:
  * - CRITICAL: Essential reference data needed immediately (customers, products)
  * - RECENT_SALES: Recent operational data (last 7 days of sales)
  * - HISTORICAL: Complete historical data loaded in background (abonos, purchases, etc.)
  */
+
+import { createStateMachine } from "./state-machine";
+
+/** Behavior configuration for a sync stage */
+export interface StageBehaviorConfig {
+  /** Maximum iterations for loop protection */
+  maxIterations: number;
+  /** Number of retry attempts on failure */
+  retryAttempts: number;
+  /** Delay between retry attempts in ms */
+  retryDelayMs?: number;
+  /** Error handling strategy: 'throw' to fail fast, 'continue' to log and proceed */
+  onError: "throw" | "continue";
+  /** Delay between batches in ms (for background stages) */
+  batchDelayMs?: number;
+}
 
 export const SYNC_STAGES = {
   /**
@@ -20,6 +36,12 @@ export const SYNC_STAGES = {
     lookbackDays: 30,
     description: "Datos de referencia esenciales",
     blocking: true,
+    behavior: {
+      maxIterations: 1000,
+      retryAttempts: 3,
+      retryDelayMs: 1000,
+      onError: "throw",
+    } satisfies StageBehaviorConfig,
   },
 
   /**
@@ -34,6 +56,12 @@ export const SYNC_STAGES = {
     lookbackDays: 7,
     description: "Ventas recientes",
     blocking: true,
+    behavior: {
+      maxIterations: 1000,
+      retryAttempts: 3,
+      retryDelayMs: 1000,
+      onError: "throw",
+    } satisfies StageBehaviorConfig,
   },
 
   /**
@@ -60,6 +88,13 @@ export const SYNC_STAGES = {
     lookbackDays: null, // All historical data
     description: "Histórico completo",
     blocking: false,
+    behavior: {
+      maxIterations: 1000,
+      retryAttempts: 3,
+      retryDelayMs: 1000,
+      onError: "continue", // Background: don't block on transient errors
+      batchDelayMs: 100,
+    } satisfies StageBehaviorConfig,
   },
 } as const;
 
@@ -95,7 +130,7 @@ export function getStageForEntity(entity: string): SyncStage | null {
   if (!allEntities.includes(entity)) {
     return null;
   }
-  
+
   for (const stageName of Object.keys(SYNC_STAGES) as SyncStage[]) {
     if (getEntitiesForStage(stageName).includes(entity)) {
       return stageName;
@@ -103,3 +138,99 @@ export function getStageForEntity(entity: string): SyncStage | null {
   }
   return null;
 }
+
+// =============================================================================
+// Sync Stage State Machine
+// =============================================================================
+
+/** States for sync stage lifecycle */
+export type SyncStageState = "pending" | "loading" | "paused" | "complete" | "error";
+
+/** Events that trigger state transitions */
+export type SyncStageEvent = "start" | "pause" | "resume" | "success" | "fail" | "retry" | "reset";
+
+/**
+ * Pre-configured state machine for sync stage lifecycle.
+ *
+ * State transitions:
+ * ```
+ * pending --start--> loading --success--> complete
+ *    |                |            |
+ *    |                |--fail--> error
+ *    |                |            |
+ *    |                |--pause--> paused
+ *    |                             |
+ *    +----------reset--------------+
+ * ```
+ *
+ * @example
+ * // Basic usage
+ * const machine = createSyncStageMachine();
+ * machine.transition("start");   // pending -> loading
+ * machine.transition("success"); // loading -> complete
+ * machine.transition("reset");   // complete -> pending
+ *
+ * @example
+ * // With subscription for progress tracking
+ * const machine = createSyncStageMachine();
+ * machine.subscribe((state, previous, event) => {
+ *   console.log(`Sync: ${previous} -> ${state} via ${event}`);
+ * });
+ *
+ * @example
+ * // Check valid transitions before attempting
+ * if (machine.canTransition("start")) {
+ *   machine.transition("start");
+ * }
+ *
+ * @returns State machine instance for sync stage lifecycle
+ */
+export function createSyncStageMachine() {
+  return createStateMachine<SyncStageState, SyncStageEvent>({
+    initial: "pending",
+    states: {
+      pending: {
+        on: { start: "loading" },
+      },
+      loading: {
+        on: {
+          success: "complete",
+          fail: "error",
+          pause: "paused",
+        },
+      },
+      paused: {
+        on: { resume: "loading", reset: "pending" },
+      },
+      complete: {
+        on: { reset: "pending" },
+      },
+      error: {
+        on: { retry: "loading", reset: "pending" },
+      },
+    },
+  });
+}
+
+/**
+ * Shared sync stage state machine instance.
+ * Use this for singleton-like behavior or create your own with createSyncStageMachine().
+ *
+ * @example
+ * // Use the shared instance for simple cases
+ * import { syncStageMachine } from "@avileo/shared";
+ *
+ * syncStageMachine.transition("start");
+ * syncStageMachine.subscribe((state) => updateUI(state));
+ *
+ * @example
+ * // Create separate instances for multiple parallel syncs
+ * import { createSyncStageMachine } from "@avileo/shared";
+ *
+ * const criticalMachine = createSyncStageMachine();
+ * const recentMachine = createSyncStageMachine();
+ *
+ * criticalMachine.transition("start");
+ * recentMachine.transition("start");
+ */
+export const syncStageMachine = createSyncStageMachine();

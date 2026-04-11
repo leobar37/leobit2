@@ -1,11 +1,10 @@
 import { getDatabase } from "~/engine";
 import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
-import { canProcessSync } from "~/lib/sync/dev-network-override";
 
 export async function runManualSync(options?: { actualOnline?: boolean }) {
   const actualOnline = options?.actualOnline ?? (typeof navigator !== "undefined" ? navigator.onLine : true);
 
-  if (!canProcessSync(actualOnline)) {
+  if (!actualOnline) {
     throw new Error("Manual sync is unavailable while offline.");
   }
 

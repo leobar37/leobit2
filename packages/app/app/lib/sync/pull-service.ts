@@ -244,251 +244,56 @@ export class PullService {
   }
 
   /**
-   * Core pull execution logic shared by pull() and pullWithOptions()
+   * Core pull execution logic shared by pull() and pullWithOptions().
+   * Refactored into smaller private methods for maintainability.
    */
   private async executePull(config: PullExecutionConfig): Promise<PullResult & { nextSince: string | null }> {
-    // Prevent concurrent pulls
-    if (this.isPullingFlag) {
-      return {
-        success: false,
-        changesApplied: 0,
-        hasMore: false,
-        error: "Pull already in progress",
-        nextSince: null
-      };
+    // Guard: prevent concurrent pulls
+    const { canProceed, result: earlyResult } = this.canStartPull();
+    if (!canProceed) {
+      return earlyResult!;
     }
 
-    // Cancel any in-flight request
-    if (this.abortController) {
-      this.abortController.abort();
-    }
-    this.abortController = new AbortController();
-
-    this.isPullingFlag = true;
+    this.setupPull();
 
     try {
-      // Apply backoff only for regular pull (not staged loading)
-      if (config.applyBackoff && this.currentBackoff > 0) {
-        console.log(`[PullService] Waiting ${this.currentBackoff}ms due to previous failures`);
-        await new Promise((resolve) => setTimeout(resolve, this.currentBackoff));
+      // Pre-pull setup: backoff, build URL, fetch
+      await this.maybeApplyBackoff(config);
+      const url = this.buildPullUrl(config);
+
+      // Execute fetch and handle HTTP/validation errors
+      const fetchResult = await this.executeFetch(url, config);
+      if (!fetchResult.success) {
+        return fetchResult.result;
       }
 
-      const url = new URL(`${API_URL}/sync/changes`);
-      
-      // Determine which cursor to use
-      // Priority: 1) saved stage cursor, 2) since parameter, 3) default cursor
-      const cursor = config.useDefaultCursor
-        ? this.lastSince
-        : (this.loadStageCursor(config.cursorKey) ?? config.since);
-        
-      if (cursor) {
-        url.searchParams.set("since", cursor);
-      }
-      
-      url.searchParams.set("limit", String(config.limit ?? 100));
-      
-      // Add entity types filter for staged loading
-      if (config.entityTypes && config.entityTypes.length > 0) {
-        url.searchParams.set("entityTypes", config.entityTypes.join(","));
-      }
-
-      if (this.syncGroupId) {
-        url.searchParams.set("syncGroupId", this.syncGroupId);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.authToken}`,
-          "x-business-id": this.businessId,
-        },
-        signal: this.abortController.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // Track failures only for regular pull with backoff
-        if (config.applyBackoff) {
-          this.consecutiveFailures++;
-          this.currentBackoff = this.getBackoffDelay();
-          this.lastError = `Pull failed: ${response.status} ${errorText}`;
-        }
-        
-        return {
-          success: false,
-          changesApplied: 0,
-          hasMore: false,
-          error: config.applyBackoff ? (this.lastError ?? undefined) : `Pull failed: ${response.status} ${errorText}`,
-          nextSince: null,
-        };
-      }
-
-      const body = (await response.json()) as { 
-        success: boolean; 
-        data?: PullResponse;
-        error?: { code: string; message: string };
-      };
-
-      if (!body.success || !body.data?.changes) {
-        const errorMsg = body.error?.message || "Invalid response from server";
-        
-        if (config.applyBackoff) {
-          this.consecutiveFailures++;
-          this.currentBackoff = this.getBackoffDelay();
-          this.lastError = errorMsg;
-        }
-        
-        return {
-          success: false,
-          changesApplied: 0,
-          hasMore: false,
-          error: errorMsg,
-          nextSince: null,
-        };
-      }
-
-      // Reset failure count on success (only for regular pull)
-      if (config.applyBackoff) {
-        this.consecutiveFailures = 0;
-        this.currentBackoff = 0;
-        this.lastError = null;
-      }
-
-      const { changes, nextSince, hasMore = false, serverTimestamp } = body.data;
+      const { body, cursor } = fetchResult;
+      const { changes, nextSince, hasMore = false } = body.data!;
 
       // Log received changes
-      const entityCounts = changes.reduce((acc, c) => {
-        acc[c.entityType] = (acc[c.entityType] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      console.log(`[PULL] 📥 Received changes:`, {
-        count: changes.length,
+      console.log(`[PULL] 📥 Received ${changes.length} changes`, {
         cursor: cursor?.slice(0, 20),
         nextSince: nextSince?.slice(0, 20),
         hasMore,
-        serverTimestamp,
-        entityTypes: entityCounts,
       });
 
-      // STALE PULL DETECTION - only for regular pulls with auto-pull
-      if (config.applyBackoff) {
-        const cursorAdvanced = nextSince && nextSince !== this.lastNextSince;
-        
-        if (cursorAdvanced) {
-          // Cursor advanced - reset stale counters
-          this.consecutiveStalePulls = 0;
-          this.consecutiveEmptyPulls = 0;
-          console.log(`[PULL] ✅ Cursor advanced, stale counters reset`);
-        } else if (hasMore) {
-          // Cursor didn't advance but server says there's more - potential infinite loop
-          if (changes.length === 0) {
-            this.consecutiveEmptyPulls++;
-            syncLogger.warn('[PULL]', `Empty pull #${this.consecutiveEmptyPulls} with hasMore=true`);
-            
-            if (this.consecutiveEmptyPulls >= MAX_EMPTY_PULLS) {
-              this.isStuck = true;
-              syncLogger.error('[PULL]', `STUCK: ${MAX_EMPTY_PULLS} consecutive empty pulls`);
-              syncEvents.emit("pull:stale", { 
-                consecutiveStalePulls: this.consecutiveEmptyPulls, 
-                reason: 'empty-pulls' 
-              });
-              // Force stop auto-pull
-              this.stopAutoPull();
-              return {
-                success: false,
-                changesApplied: 0,
-                hasMore: false,
-                error: `Sync stuck: ${MAX_EMPTY_PULLS} empty pulls. Please refresh or re-login.`,
-                nextSince: null,
-              };
-            }
-          } else {
-            // Cursor didn't advance but we got changes - still counts as stale
-            this.consecutiveStalePulls++;
-            syncLogger.warn('[PULL]', `Cursor stuck #${this.consecutiveStalePulls} (got ${changes.length} changes but cursor same)`);
-            
-            if (this.consecutiveStalePulls >= MAX_STALE_PULLS) {
-              this.isStuck = true;
-              syncLogger.error('[PULL]', `STUCK: Cursor stuck after ${MAX_STALE_PULLS} pulls`);
-              syncEvents.emit("pull:stale", { 
-                consecutiveStalePulls: this.consecutiveStalePulls, 
-                reason: 'cursor-stuck' 
-              });
-              // Force stop auto-pull
-              this.stopAutoPull();
-              return {
-                success: false,
-                changesApplied: 0,
-                hasMore: false,
-                error: `Sync stuck: cursor not advancing after ${MAX_STALE_PULLS} pulls. Please refresh or re-login.`,
-                nextSince: null,
-              };
-            }
-          }
-        }
-        
-        // Update last cursor for next comparison
-        this.lastNextSince = nextSince;
+      // Stale pull detection
+      const staleCheck = this.checkStalePull(config, cursor, nextSince, hasMore, changes.length);
+      if (staleCheck.isStuck) {
+        return staleCheck.result!;
       }
 
+      // Early exit for no changes
       if (changes.length === 0) {
         console.log(`[PULL] ✅ No new changes`);
-        return {
-          success: true,
-          changesApplied: 0,
-          hasMore,
-          nextSince,
-        };
+        return { success: true, changesApplied: 0, hasMore, nextSince };
       }
 
-      // Update last pull time (only for regular pull)
-      if (config.applyBackoff) {
-        this.lastPullTime = serverTimestamp ? new Date(serverTimestamp) : new Date();
-      }
+      // Persist cursor BEFORE applying changes (crash safety)
+      this.persistCursor(config, nextSince);
 
-      // Persist cursor FIRST — before applying changes
-      // This ensures progress is saved even if the app crashes during change application
-      if (nextSince) {
-        if (config.cursorKey) {
-          this.saveStageCursor(config.cursorKey, nextSince);
-        } else if (config.useDefaultCursor) {
-          this.saveCursor(nextSince);
-          console.log(`[PULL] 💾 Cursor saved:`, {
-            cursor: nextSince.slice(0, 20),
-            memoryCursor: this.lastSince?.slice(0, 20),
-            storageOk: this.failedStorageAttempts === 0,
-          });
-        }
-      }
-
-      // Apply each change to local database using batched conflict checks
-      const { entityTypes, failedChanges } = await applyChangesBatch(
-        this.pg,
-        this.db,
-        changes,
-        this.businessId
-      );
-      const appliedCount = changes.length - failedChanges.length;
-
-      // Notify about changes via callback and events
-      if (entityTypes.size > 0) {
-        if (this.onChangesApplied) {
-          this.onChangesApplied(Array.from(entityTypes));
-        }
-        syncEvents.emit("pull:completed", {
-          changesApplied: appliedCount,
-          entityTypes: Array.from(entityTypes)
-        });
-      }
-
-      // Log summary
-      if (failedChanges.length > 0) {
-        syncLogger.warn('[Pull]', `Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
-      } else {
-        console.log(`[Pull] ✅ Applied all ${appliedCount} changes successfully`);
-      }
+      // Apply changes and notify
+      const { appliedCount } = await this.applyChanges(changes, config);
 
       return {
         success: true,
@@ -497,39 +302,339 @@ export class PullService {
         nextSince,
       };
     } catch (error) {
-      // Handle abort gracefully
-      if (error instanceof Error && error.name === "AbortError") {
-        console.log("[PullService] Pull was aborted");
-        this.isPullingFlag = false;
-        return {
+      return this.handlePullError(error, config);
+    } finally {
+      this.isPullingFlag = false;
+    }
+  }
+
+  // ==================== Private Helper Methods ====================
+
+  /**
+   * Check if pull can proceed (not already in progress)
+   */
+  private canStartPull(): { canProceed: boolean; result?: PullResult & { nextSince: string | null } } {
+    if (this.isPullingFlag) {
+      return {
+        canProceed: false,
+        result: {
           success: false,
           changesApplied: 0,
           hasMore: false,
-          error: "Aborted",
+          error: "Pull already in progress",
           nextSince: null,
-        };
-      }
+        },
+      };
+    }
+    return { canProceed: true };
+  }
 
-      const errorMessage = error instanceof Error ? error.message : String(error);
+  /**
+   * Setup abort controller for the pull
+   */
+  private setupPull(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    this.isPullingFlag = true;
+  }
+
+  /**
+   * Apply backoff delay if needed
+   */
+  private async maybeApplyBackoff(config: PullExecutionConfig): Promise<void> {
+    if (config.applyBackoff && this.currentBackoff > 0) {
+      console.log(`[PullService] Waiting ${this.currentBackoff}ms due to previous failures`);
+      await new Promise((resolve) => setTimeout(resolve, this.currentBackoff));
+    }
+  }
+
+  /**
+   * Build the pull URL with all query parameters
+   */
+  private buildPullUrl(config: PullExecutionConfig): URL {
+    const url = new URL(`${API_URL}/sync/changes`);
+
+    // Determine which cursor to use
+    // Priority: 1) saved stage cursor, 2) since parameter, 3) default cursor
+    const cursor = config.useDefaultCursor
+      ? this.lastSince
+      : (this.loadStageCursor(config.cursorKey) ?? config.since);
+
+    if (cursor) {
+      url.searchParams.set("since", cursor);
+    }
+
+    url.searchParams.set("limit", String(config.limit ?? 100));
+
+    // Add entity types filter for staged loading
+    if (config.entityTypes && config.entityTypes.length > 0) {
+      url.searchParams.set("entityTypes", config.entityTypes.join(","));
+    }
+
+    if (this.syncGroupId) {
+      url.searchParams.set("syncGroupId", this.syncGroupId);
+    }
+
+    return url;
+  }
+
+  /**
+   * Execute the fetch request and handle HTTP errors
+   */
+  private async executeFetch(
+    url: URL,
+    config: PullExecutionConfig
+  ): Promise<
+    | { success: true; body: { success: boolean; data?: PullResponse; error?: { code: string; message: string } }; cursor: string | null }
+    | { success: false; result: PullResult & { nextSince: string | null } }
+  > {
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.authToken}`,
+        "x-business-id": this.businessId,
+      },
+      signal: this.abortController!.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
 
       if (config.applyBackoff) {
         this.consecutiveFailures++;
         this.currentBackoff = this.getBackoffDelay();
-        this.lastError = errorMessage;
+        this.lastError = `Pull failed: ${response.status} ${errorText}`;
       }
-      
-      syncEvents.emit("pull:error", { error: errorMessage });
-      
+
+      return {
+        success: false,
+        result: {
+          success: false,
+          changesApplied: 0,
+          hasMore: false,
+          error: config.applyBackoff ? (this.lastError ?? undefined) : `Pull failed: ${response.status} ${errorText}`,
+          nextSince: null,
+        },
+      };
+    }
+
+    const body = (await response.json()) as {
+      success: boolean;
+      data?: PullResponse;
+      error?: { code: string; message: string };
+    };
+
+    // Validate response
+    if (!body.success || !body.data?.changes) {
+      const errorMsg = body.error?.message || "Invalid response from server";
+
+      if (config.applyBackoff) {
+        this.consecutiveFailures++;
+        this.currentBackoff = this.getBackoffDelay();
+        this.lastError = errorMsg;
+      }
+
+      return {
+        success: false,
+        result: {
+          success: false,
+          changesApplied: 0,
+          hasMore: false,
+          error: errorMsg,
+          nextSince: null,
+        },
+      };
+    }
+
+    // Success - reset failure count
+    if (config.applyBackoff) {
+      this.consecutiveFailures = 0;
+      this.currentBackoff = 0;
+      this.lastError = null;
+    }
+
+    // Extract cursor from URL for logging
+    const cursor = url.searchParams.get("since");
+
+    return { success: true, body, cursor };
+  }
+
+  /**
+   * Check for stale pull conditions
+   */
+  private checkStalePull(
+    config: PullExecutionConfig,
+    cursor: string | null,
+    nextSince: string,
+    hasMore: boolean,
+    changesCount: number
+  ): { isStuck: boolean; result?: PullResult & { nextSince: string | null } } {
+    if (!config.applyBackoff) {
+      return { isStuck: false };
+    }
+
+    const cursorAdvanced = nextSince && nextSince !== this.lastNextSince;
+
+    if (cursorAdvanced) {
+      // Cursor advanced - reset stale counters
+      this.consecutiveStalePulls = 0;
+      this.consecutiveEmptyPulls = 0;
+      console.log(`[PULL] ✅ Cursor advanced, stale counters reset`);
+    } else if (hasMore) {
+      // Cursor didn't advance but server says there's more - potential infinite loop
+      if (changesCount === 0) {
+        this.consecutiveEmptyPulls++;
+        syncLogger.warn("[PULL]", `Empty pull #${this.consecutiveEmptyPulls} with hasMore=true`);
+
+        if (this.consecutiveEmptyPulls >= MAX_EMPTY_PULLS) {
+          this.isStuck = true;
+          syncLogger.error("[PULL]", `STUCK: ${MAX_EMPTY_PULLS} consecutive empty pulls`);
+          syncEvents.emit("pull:stale", {
+            consecutiveStalePulls: this.consecutiveEmptyPulls,
+            reason: "empty-pulls",
+          });
+          this.stopAutoPull();
+          return {
+            isStuck: true,
+            result: {
+              success: false,
+              changesApplied: 0,
+              hasMore: false,
+              error: `Sync stuck: ${MAX_EMPTY_PULLS} empty pulls. Please refresh or re-login.`,
+              nextSince: null,
+            },
+          };
+        }
+      } else {
+        // Cursor didn't advance but we got changes - still counts as stale
+        this.consecutiveStalePulls++;
+        syncLogger.warn("[PULL]", `Cursor stuck #${this.consecutiveStalePulls} (got ${changesCount} changes but cursor same)`);
+
+        if (this.consecutiveStalePulls >= MAX_STALE_PULLS) {
+          this.isStuck = true;
+          syncLogger.error("[PULL]", `STUCK: Cursor stuck after ${MAX_STALE_PULLS} pulls`);
+          syncEvents.emit("pull:stale", {
+            consecutiveStalePulls: this.consecutiveStalePulls,
+            reason: "cursor-stuck",
+          });
+          this.stopAutoPull();
+          return {
+            isStuck: true,
+            result: {
+              success: false,
+              changesApplied: 0,
+              hasMore: false,
+              error: `Sync stuck: cursor not advancing after ${MAX_STALE_PULLS} pulls. Please refresh or re-login.`,
+              nextSince: null,
+            },
+          };
+        }
+      }
+    }
+
+    // Update last cursor for next comparison
+    this.lastNextSince = nextSince;
+
+    return { isStuck: false };
+  }
+
+  /**
+   * Persist the cursor to storage
+   */
+  private persistCursor(config: PullExecutionConfig, nextSince: string | undefined): void {
+    if (!nextSince) return;
+
+    if (config.cursorKey) {
+      this.saveStageCursor(config.cursorKey, nextSince);
+    } else if (config.useDefaultCursor) {
+      this.saveCursor(nextSince);
+      console.log(`[PULL] 💾 Cursor saved:`, {
+        cursor: nextSince.slice(0, 20),
+        memoryCursor: this.lastSince?.slice(0, 20),
+        storageOk: this.failedStorageAttempts === 0,
+      });
+    }
+  }
+
+  /**
+   * Apply changes to local database and notify listeners
+   */
+  private async applyChanges(
+    changes: PullChange[],
+    config: PullExecutionConfig
+  ): Promise<{ appliedCount: number; entityTypes: Set<string> }> {
+    const { entityTypes, failedChanges } = await applyChangesBatch(
+      this.pg,
+      this.db,
+      changes,
+      this.businessId
+    );
+    const appliedCount = changes.length - failedChanges.length;
+
+    // Update last pull time
+    if (config.applyBackoff) {
+      this.lastPullTime = new Date();
+    }
+
+    // Notify about changes via callback and events
+    if (entityTypes.size > 0) {
+      if (this.onChangesApplied) {
+        this.onChangesApplied(Array.from(entityTypes));
+      }
+      syncEvents.emit("pull:completed", {
+        changesApplied: appliedCount,
+        entityTypes: Array.from(entityTypes),
+      });
+    }
+
+    // Log summary
+    if (failedChanges.length > 0) {
+      syncLogger.warn("[Pull]", `Applied ${appliedCount}/${changes.length} changes. ${failedChanges.length} failed.`);
+    } else {
+      console.log(`[Pull] ✅ Applied all ${appliedCount} changes successfully`);
+    }
+
+    return { appliedCount, entityTypes };
+  }
+
+  /**
+   * Handle pull error (abort vs other errors)
+   */
+  private handlePullError(
+    error: unknown,
+    config: PullExecutionConfig
+  ): PullResult & { nextSince: string | null } {
+    // Handle abort gracefully
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log("[PullService] Pull was aborted");
       return {
         success: false,
         changesApplied: 0,
         hasMore: false,
-        error: errorMessage,
+        error: "Aborted",
         nextSince: null,
       };
-    } finally {
-      this.isPullingFlag = false;
     }
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (config.applyBackoff) {
+      this.consecutiveFailures++;
+      this.currentBackoff = this.getBackoffDelay();
+      this.lastError = errorMessage;
+    }
+
+    syncEvents.emit("pull:error", { error: errorMessage });
+
+    return {
+      success: false,
+      changesApplied: 0,
+      hasMore: false,
+      error: errorMessage,
+      nextSince: null,
+    };
   }
 
   /**

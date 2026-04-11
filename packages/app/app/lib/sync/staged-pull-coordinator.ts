@@ -1,18 +1,22 @@
 /**
  * Staged Pull Coordinator
- * 
+ *
  * Orchestrates the loading of sync data in 3 stages:
  * 1. CRITICAL: Essential reference data (customers, products) - blocking
- * 2. RECENT_SALES: Recent operational data (sales, sale_items) - blocking  
+ * 2. RECENT_SALES: Recent operational data (sales, sale_items) - blocking
  * 3. HISTORICAL: Complete historical data (abonos, purchases, etc.) - background
- * 
+ *
  * All processing is sequential to avoid race conditions.
  */
 
-import { 
-  SYNC_STAGES, 
-  type SyncStage, 
-  getEntitiesForStage 
+import {
+  SYNC_STAGES,
+  type SyncStage,
+  type StageBehaviorConfig,
+  type SyncStageState,
+  getEntitiesForStage,
+  createSyncStageMachine,
+  type StateMachine,
 } from "@avileo/shared";
 import type { PullService } from "./pull-service";
 
@@ -31,22 +35,49 @@ export interface StagedPullResult {
 
 export type StagedPullProgressCallback = (state: StagedPullState) => void;
 
+/** Configuration for executing a paginated load operation */
+interface PaginatedLoadConfig {
+  entityTypes: string[];
+  since?: string;
+  cursorKey: string;
+  behavior: StageBehaviorConfig;
+}
+
+/** Result of a paginated load operation */
+interface PaginatedLoadResult {
+  totalApplied: number;
+  batches: number;
+}
+
 export class StagedPullCoordinator {
   private pullService: PullService;
   private state: Map<SyncStage, StagedPullState> = new Map();
+  private machines: Map<SyncStage, StateMachine<SyncStageState, "start" | "pause" | "resume" | "success" | "fail" | "reset">> = new Map();
   private onProgress: StagedPullProgressCallback | null = null;
   private aborted = false;
 
   constructor(pullService: PullService) {
     this.pullService = pullService;
-    
-    // Initialize state for all stages
+
+    // Initialize state and state machines for all stages
     for (const stage of Object.keys(SYNC_STAGES) as SyncStage[]) {
-      this.state.set(stage, {
+      // Initialize state
+      const stageState: StagedPullState = {
         stage,
         status: "pending",
         changesApplied: 0,
+      };
+      this.state.set(stage, stageState);
+
+      // Initialize state machine with subscriptions
+      const machine = createSyncStageMachine();
+      machine.subscribe((status) => {
+        // Update our state when machine changes
+        const currentState = this.state.get(stage)!;
+        currentState.status = status;
+        this.notifyProgress(currentState);
       });
+      this.machines.set(stage, machine);
     }
   }
 
@@ -63,204 +94,136 @@ export class StagedPullCoordinator {
   }
 
   /**
-   * Stage 1: Load critical reference data (blocking)
-   * - customers, products, product_variants
-   * - Last 30 days
-   * - App waits for this to complete
-   * - Can resume from previous partial sync
+   * Generic stage loader. Loads any sync stage based on its configuration.
+   * This is the primary method for loading data - specific methods delegate here.
+   *
+   * @param stage - The sync stage to load (CRITICAL, RECENT_SALES, HISTORICAL)
+   * @returns The final state of the loaded stage
    */
-  async loadCriticalData(): Promise<StagedPullState> {
-    const stage: SyncStage = "CRITICAL";
+  async loadStage(stage: SyncStage): Promise<StagedPullState> {
     const config = SYNC_STAGES[stage];
     const state = this.getState(stage);
+    const machine = this.machines.get(stage)!;
+    const behavior = config.behavior;
 
     // Check if we can resume from a previous partial sync
     const canResume = this.canResumeStage(stage);
-    const initialSince = this.getSinceDate(config.lookbackDays);
+    const since = config.lookbackDays
+      ? this.getSinceDate(config.lookbackDays)
+      : undefined;
 
-    state.status = "loading";
-    this.notifyProgress(state);
+    // Transition to loading state via state machine
+    machine.transition("start");
 
-    console.log(`[StagedPullCoordinator] Critical stage starting${canResume ? ' (resuming from saved cursor)' : ''}`);
+    const entityList = getEntitiesForStage(stage).join(", ");
+    console.log(
+      `[StagedPullCoordinator] ${stage} starting${canResume ? " (resuming)" : ""} - Entities: ${entityList}`
+    );
 
     try {
-      const entityTypes = getEntitiesForStage(stage);
+      const result = await this.executePaginatedLoad({
+        entityTypes: getEntitiesForStage(stage),
+        since: canResume ? undefined : since,
+        cursorKey: stage.toLowerCase(),
+        behavior,
+      });
 
-      let totalApplied = 0;
-      let hasMore = true;
-      let lastCursor: string | null = null;
+      // Success - transition to complete
+      machine.transition("success");
+      state.changesApplied = result.totalApplied;
 
-      // Load all data for this stage (paginated)
-      let iterations = 0;
-      const MAX_ITERATIONS = 1000; // Safety limit to prevent infinite loops
-
-      while (hasMore && !this.aborted && navigator.onLine) {
-        iterations++;
-        if (iterations > MAX_ITERATIONS) {
-          throw new Error(`Loop protection: exceeded ${MAX_ITERATIONS} iterations in critical stage`);
-        }
-
-        const result = await this.pullService.pullWithOptions({
-          entityTypes,
-          // Only pass since on first load; if resuming, cursor takes precedence
-          since: canResume ? undefined : initialSince,
-          cursorKey: stage.toLowerCase(),
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to load critical data");
-        }
-
-        totalApplied += result.changesApplied;
-
-        // Detect stuck cursor (cursor not advancing but server says there's more)
-        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
-          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in critical stage, breaking loop`);
-          break;
-        }
-
-        hasMore = result.hasMore;
-        lastCursor = result.nextSince;
-      }
-
-      state.status = "complete";
-      state.changesApplied = totalApplied;
-      console.log(`[StagedPullCoordinator] Critical stage complete: ${totalApplied} changes`);
+      console.log(
+        `[StagedPullCoordinator] ${stage} complete: ${result.totalApplied} changes in ${result.batches} batches`
+      );
     } catch (error) {
-      state.status = "error";
+      // Failure - transition to error
+      machine.transition("fail");
       state.error = error instanceof Error ? error.message : String(error);
-      console.error(`[StagedPullCoordinator] Critical stage failed:`, state.error);
+
+      if (behavior.onError === "throw") {
+        console.error(
+          `[StagedPullCoordinator] ${stage} failed:`,
+          state.error
+        );
+        throw error;
+      } else {
+        console.warn(
+          `[StagedPullCoordinator] ${stage} error (non-blocking):`,
+          state.error
+        );
+      }
     }
 
-    this.notifyProgress(state);
     return state;
   }
 
   /**
-   * Stage 2: Load recent sales data (blocking)
-   * - sales, sale_items
-   * - Last 7 days
-   * - App waits for this to complete
-   * - Can resume from previous partial sync
+   * Executes a paginated load operation with loop protection and error handling.
+   * Contains the common logic shared across all sync stages.
+   *
+   * @param config - Configuration for the paginated load
+   * @returns Result with total changes applied and batch count
    */
-  async loadRecentSales(): Promise<StagedPullState> {
-    const stage: SyncStage = "RECENT_SALES";
-    const config = SYNC_STAGES[stage];
-    const state = this.getState(stage);
+  private async executePaginatedLoad(
+    config: PaginatedLoadConfig
+  ): Promise<PaginatedLoadResult> {
+    const { entityTypes, since, cursorKey, behavior } = config;
 
-    // Check if we can resume from a previous partial sync
-    const canResume = this.canResumeStage(stage);
-    const initialSince = this.getSinceDate(config.lookbackDays);
+    let totalApplied = 0;
+    let hasMore = true;
+    let lastCursor: string | null = null;
+    let batches = 0;
+    let iterations = 0;
+    let consecutiveErrors = 0;
 
-    state.status = "loading";
-    this.notifyProgress(state);
+    while (hasMore && !this.aborted && navigator.onLine) {
+      iterations++;
 
-    console.log(`[StagedPullCoordinator] Recent sales stage starting${canResume ? ' (resuming from saved cursor)' : ''}`);
-
-    try {
-      const entityTypes = getEntitiesForStage(stage);
-
-      let totalApplied = 0;
-      let hasMore = true;
-      let lastCursor: string | null = null;
-
-      // Load all data for this stage (paginated)
-      let iterations = 0;
-      const MAX_ITERATIONS = 1000;
-
-      while (hasMore && !this.aborted && navigator.onLine) {
-        iterations++;
-        if (iterations > MAX_ITERATIONS) {
-          throw new Error(`Loop protection: exceeded ${MAX_ITERATIONS} iterations in recent sales stage`);
-        }
-
-        const result = await this.pullService.pullWithOptions({
-          entityTypes,
-          // Only pass since on first load; if resuming, cursor takes precedence
-          since: canResume ? undefined : initialSince,
-          cursorKey: stage.toLowerCase(),
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to load recent sales");
-        }
-
-        totalApplied += result.changesApplied;
-
-        // Detect stuck cursor
-        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
-          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in recent stage, breaking loop`);
-          break;
-        }
-
-        hasMore = result.hasMore;
-        lastCursor = result.nextSince;
+      // Loop protection: max iterations
+      if (iterations > behavior.maxIterations) {
+        throw new Error(
+          `Loop protection: exceeded ${behavior.maxIterations} iterations`
+        );
       }
 
-      state.status = "complete";
-      state.changesApplied = totalApplied;
-      console.log(`[StagedPullCoordinator] Recent sales stage complete: ${totalApplied} changes`);
-    } catch (error) {
-      state.status = "error";
-      state.error = error instanceof Error ? error.message : String(error);
-      console.error(`[StagedPullCoordinator] Recent sales stage failed:`, state.error);
-    }
-
-    this.notifyProgress(state);
-    return state;
-  }
-
-  /**
-   * Stage 3: Load historical data (background/non-blocking)
-   * - abonos, purchases, distribuciones, etc.
-   * - All historical data
-   * - App is usable during this stage
-   */
-  async loadHistoricalData(): Promise<StagedPullState> {
-    const stage: SyncStage = "HISTORICAL";
-    const state = this.getState(stage);
-    
-    state.status = "loading";
-    this.notifyProgress(state);
-
-    try {
-      const entityTypes = getEntitiesForStage(stage);
-
-      let totalApplied = 0;
-      let hasMore = true;
-      let batches = 0;
-      let lastCursor: string | null = null;
-      let iterations = 0;
-      const MAX_ITERATIONS = 1000;
-
-      while (hasMore && !this.aborted && navigator.onLine) {
-        iterations++;
-        if (iterations > MAX_ITERATIONS) {
-          console.warn(`[StagedPullCoordinator] Loop protection: exceeded ${MAX_ITERATIONS} iterations in historical stage`);
-          break;
-        }
-
+      try {
         const result = await this.pullService.pullWithOptions({
           entityTypes,
-          cursorKey: stage.toLowerCase(),
+          since,
+          cursorKey,
         });
 
         if (!result.success) {
-          // For background stage, log error but don't throw immediately
-          // Try a couple more times before giving up
-          if (batches < 3) {
-            console.warn(`[StagedPullCoordinator] Historical batch failed, retrying...`);
-            await this.sleep(1000);
+          consecutiveErrors++;
+
+          // Retry logic for transient failures
+          if (consecutiveErrors <= behavior.retryAttempts) {
+            console.warn(
+              `[StagedPullCoordinator] Batch failed (attempt ${consecutiveErrors}/${behavior.retryAttempts}), retrying...`
+            );
+            await this.sleep(behavior.retryDelayMs ?? 1000);
             continue;
           }
-          throw new Error(result.error || "Failed to load historical data after retries");
+
+          throw new Error(
+            result.error ||
+              `Failed after ${behavior.retryAttempts} retry attempts`
+          );
         }
 
+        // Reset consecutive errors on success
+        consecutiveErrors = 0;
         totalApplied += result.changesApplied;
 
-        // Detect stuck cursor
-        if (hasMore && result.nextSince === lastCursor && result.changesApplied === 0) {
-          console.warn(`[StagedPullCoordinator] Cursor stuck at ${lastCursor} in historical stage, breaking loop`);
+        // Detect stuck cursor: cursor not advancing with no changes
+        if (
+          hasMore &&
+          result.nextSince === lastCursor &&
+          result.changesApplied === 0
+        ) {
+          console.warn(
+            `[StagedPullCoordinator] Cursor stuck at ${String(lastCursor)}, breaking loop`
+          );
           break;
         }
 
@@ -268,23 +231,69 @@ export class StagedPullCoordinator {
         lastCursor = result.nextSince;
         batches++;
 
-        // Small delay between batches to avoid overwhelming the device
-        if (hasMore) {
-          await this.sleep(100);
+        // Delay between batches for background stages
+        if (hasMore && behavior.batchDelayMs) {
+          await this.sleep(behavior.batchDelayMs);
         }
+      } catch (error) {
+        // If we've exhausted retries, propagate the error
+        if (consecutiveErrors > behavior.retryAttempts) {
+          throw error;
+        }
+        // Otherwise, the retry logic above will handle it
       }
-
-      state.status = "complete";
-      state.changesApplied = totalApplied;
-      console.log(`[StagedPullCoordinator] Historical stage complete: ${totalApplied} changes`);
-    } catch (error) {
-      state.status = "error";
-      state.error = error instanceof Error ? error.message : String(error);
-      console.error(`[StagedPullCoordinator] Historical stage failed:`, state.error);
     }
 
-    this.notifyProgress(state);
-    return state;
+    return { totalApplied, batches };
+  }
+
+  /**
+   * Stage 1: Load critical reference data (blocking)
+   * - customers, products, product_variants
+   * - Last 30 days
+   * - App waits for this to complete
+   *
+   * @deprecated Use loadStage("CRITICAL") instead. Note: loadStage throws on error while this method returns error state.
+   */
+  async loadCriticalData(): Promise<StagedPullState> {
+    try {
+      return await this.loadStage("CRITICAL");
+    } catch (error) {
+      // Backward compatibility: return error state instead of throwing
+      const state = this.getState("CRITICAL");
+      return state;
+    }
+  }
+
+  /**
+   * Stage 2: Load recent sales data (blocking)
+   * - sales, sale_items
+   * - Last 7 days
+   * - App waits for this to complete
+   *
+   * @deprecated Use loadStage("RECENT_SALES") instead. Note: loadStage throws on error while this method returns error state.
+   */
+  async loadRecentSales(): Promise<StagedPullState> {
+    try {
+      return await this.loadStage("RECENT_SALES");
+    } catch (error) {
+      // Backward compatibility: return error state instead of throwing
+      const state = this.getState("RECENT_SALES");
+      return state;
+    }
+  }
+
+  /**
+   * Stage 3: Load historical data (background/non-blocking)
+   * - abonos, purchases, distribuciones, etc.
+   * - All historical data
+   * - App is usable during this stage
+   *
+   * @deprecated Use loadStage("HISTORICAL") instead. Note: loadStage throws on error while this method returns error state.
+   */
+  async loadHistoricalData(): Promise<StagedPullState> {
+    // HISTORICAL has onError: "continue" so it never throws
+    return this.loadStage("HISTORICAL");
   }
 
   /**
@@ -300,15 +309,15 @@ export class StagedPullCoordinator {
     this.aborted = false;
 
     // Stage 1: Critical (blocking)
-    const critical = await this.loadCriticalData();
-    
+    const critical = await this.loadStage("CRITICAL");
+
     // Stage 2: Recent Sales (blocking)
-    const recent = await this.loadRecentSales();
-    
+    const recent = await this.loadStage("RECENT_SALES");
+
     // Return control to app - it's now usable
     // Stage 3: Historical (background)
-    const historical = this.loadHistoricalData();
-    
+    const historical = this.loadStage("HISTORICAL");
+
     return { critical, recent, historical };
   }
 
@@ -356,6 +365,10 @@ export class StagedPullCoordinator {
    */
   reset(): void {
     for (const stage of Object.keys(SYNC_STAGES) as SyncStage[]) {
+      // Reset state machine
+      this.machines.get(stage)?.reset();
+
+      // Reset state
       this.state.set(stage, {
         stage,
         status: "pending",
@@ -382,7 +395,7 @@ export class StagedPullCoordinator {
 
   private getSinceDate(days: number | null): string | undefined {
     if (!days) return undefined;
-    
+
     const date = new Date();
     date.setDate(date.getDate() - days);
     return date.toISOString();

@@ -7,6 +7,37 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import * as schema from "@avileo/shared";
 
 /**
+ * Fields that represent relations/nested objects, not actual columns.
+ * These should be excluded from INSERT/UPDATE operations.
+ */
+const RELATION_FIELDS = new Set([
+  "items",
+  "customer",
+  "seller",
+  "business",
+  "distribucion",
+  "visita",
+  "sale",
+  "product",
+  "variant",
+  "supplier",
+  "purchase",
+  "advanceProofImage",
+  "cancelledBy",
+  "createdBy",
+  "updatedBy",
+]);
+
+/**
+ * Check if a field name represents a relation/nested object.
+ * @param field - Field name to check
+ * @returns True if the field is a relation field
+ */
+export function isRelationField(field: string): boolean {
+  return RELATION_FIELDS.has(field);
+}
+
+/**
  * Pull/apply safety whitelist for entity-to-table mapping.
  *
  * Classification:
@@ -220,11 +251,11 @@ export function filterValidColumns(
   const removed: string[] = [];
 
   for (const [key, value] of Object.entries(payload)) {
-    // Skip relation fields
-    if (key.startsWith('_') || ['items', 'customer', 'seller', 'business'].includes(key)) {
+    // Skip private fields and relation fields
+    if (key.startsWith("_") || isRelationField(key)) {
       continue;
     }
-    
+
     if (validColumns.has(key)) {
       filtered[key] = value;
     } else {

@@ -386,8 +386,22 @@ export {
   SYNC_STAGES,
   type SyncStage,
   type SyncStageConfig,
+  type StageBehaviorConfig,
+  type SyncStageState,
+  type SyncStageEvent,
   getEntitiesForStage,
   getAllStagedEntities,
   isEntityInStage,
   getStageForEntity,
+  createSyncStageMachine,
+  syncStageMachine,
 } from "./sync-stages";
+
+// State machine exports
+export {
+  createStateMachine,
+  createStrictStateMachine,
+  type StateMachine,
+  type StateMachineConfig,
+  type StateConfig,
+} from "./state-machine";

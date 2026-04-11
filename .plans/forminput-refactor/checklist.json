@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "plan": "forminput-refactor",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Core FormInput Flexibility",
+      "file": "tasks/01-core-forminput-flexibility.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": ["FR-001", "FR-002", "FR-003", "NFR-001", "NFR-002"]
+    },
+    {
+      "id": "T-002",
+      "title": "Align FormSelect and FormDate",
+      "file": "tasks/02-align-form-select-date.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-004", "FR-005", "NFR-001"]
+    },
+    {
+      "id": "T-003",
+      "title": "Refactor Tag Form",
+      "file": "tasks/03-refactor-tag-form.md",
+      "status": "pending",
+      "phase": "refactor",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-006", "NFR-003"]
+    },
+    {
+      "id": "T-004",
+      "title": "Refactor Quick Tag Modal",
+      "file": "tasks/04-refactor-quick-tag-modal.md",
+      "status": "pending",
+      "phase": "refactor",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-007", "NFR-003"]
+    },
+    {
+      "id": "T-005",
+      "title": "Refactor Invitations Page",
+      "file": "tasks/05-refactor-invitations.md",
+      "status": "pending",
+      "phase": "refactor",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-008", "NFR-003"]
+    },
+    {
+      "id": "T-006",
+      "title": "Refactor Team Page",
+      "file": "tasks/06-refactor-team.md",
+      "status": "pending",
+      "phase": "refactor",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-009", "NFR-003"]
+    },
+    {
+      "id": "T-007",
+      "title": "Refactor Compras Page",
+      "file": "tasks/07-refactor-compras-page.md",
+      "status": "pending",
+      "phase": "refactor",
+      "dependencies": ["T-001", "T-002"],
+      "requirements": ["FR-010", "NFR-003"]
+    },
+    {
+      "id": "T-008",
+      "title": "Create Forms Documentation",
+      "file": "tasks/08-create-documentation.md",
+      "status": "pending",
+      "phase": "documentation",
+      "dependencies": ["T-001", "T-002"],
+      "requirements": ["NFR-005"]
+    }
+  ]
+}

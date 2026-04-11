@@ -1,0 +1,220 @@
+{
+  "planName": "e2e-sales-orders-testing",
+  "version": "1.0",
+  "tasks": [
+    {
+      "id": "T-001",
+      "name": "Create mock factories",
+      "status": "completed",
+      "priority": "P0",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "name": "Extend MSW handlers with volume support",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-003",
+      "name": "Create SalesListPage page object",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": []
+    },
+    {
+      "id": "T-004",
+      "name": "Create SaleDetailPage page object",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": []
+    },
+    {
+      "id": "T-005",
+      "name": "Implement cash sale tests",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-006",
+      "name": "Implement credit sale tests",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-007",
+      "name": "Implement sale validation tests",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-005",
+        "T-006"
+      ]
+    },
+    {
+      "id": "T-008",
+      "name": "Implement sale cancellation tests",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-009",
+      "name": "Extend NewSalePage with missing methods",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": []
+    },
+    {
+      "id": "T-010",
+      "name": "Create DashboardPage page object",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": []
+    },
+    {
+      "id": "T-011",
+      "name": "Implement order creation tests",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-002"
+      ]
+    },
+    {
+      "id": "T-012",
+      "name": "Implement order lifecycle tests",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-011"
+      ]
+    },
+    {
+      "id": "T-013",
+      "name": "Extend NewOrderPage with item methods",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": []
+    },
+    {
+      "id": "T-014",
+      "name": "Extend OrderDetailPage with token/permission methods",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": []
+    },
+    {
+      "id": "T-015",
+      "name": "Create PublicSalePage page object",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": []
+    },
+    {
+      "id": "T-016",
+      "name": "Create volume data generators",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-017",
+      "name": "Create volume MSW handlers",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-016"
+      ]
+    },
+    {
+      "id": "T-018",
+      "name": "Create sync MSW handlers",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-017"
+      ]
+    },
+    {
+      "id": "T-019",
+      "name": "Implement volume performance tests",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-017",
+        "T-018"
+      ]
+    },
+    {
+      "id": "T-020",
+      "name": "Implement sync tests",
+      "status": "pending",
+      "priority": "P1",
+      "dependencies": [
+        "T-018"
+      ]
+    },
+    {
+      "id": "T-021",
+      "name": "Implement E2E integration flows",
+      "status": "pending",
+      "priority": "P0",
+      "dependencies": [
+        "T-005",
+        "T-006",
+        "T-011",
+        "T-012"
+      ]
+    },
+    {
+      "id": "T-022",
+      "name": "Document reusable patterns",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": []
+    },
+    {
+      "id": "T-023",
+      "name": "Create test utilities library",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": []
+    },
+    {
+      "id": "T-024",
+      "name": "Update playwright config for volume tests",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": [
+        "T-019"
+      ]
+    },
+    {
+      "id": "T-025",
+      "name": "Add package.json scripts",
+      "status": "pending",
+      "priority": "P2",
+      "dependencies": [
+        "T-024"
+      ]
+    }
+  ]
+}

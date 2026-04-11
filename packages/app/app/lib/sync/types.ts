@@ -6,7 +6,7 @@
 export interface PullChange {
   idempotencyKey: string;
   entityType: string;
-  operation: "create" | "update" | "delete";
+  operation: "create" | "update" | "delete" | "insert";
   entityId: string;
   payload: Record<string, unknown>;
   localTimestamp: string;
@@ -42,7 +42,7 @@ export interface ChangeApplicationResult {
   error?: string;
 }
 
-export type SyncOperation = "create" | "update" | "delete";
+export type SyncOperation = "create" | "update" | "delete" | "insert";
 
 // Re-export from types/index.ts barrel
 export type { ISyncQueue } from "./types/index";

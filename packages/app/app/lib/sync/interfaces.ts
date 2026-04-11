@@ -6,7 +6,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { SyncStage } from "@avileo/shared";
+import type { SyncStage, SyncStageState } from "@avileo/shared";
 
 // Re-export existing types from types.ts
 export type {
@@ -245,7 +245,7 @@ export interface IChangeApplier {
  */
 export interface StagedPullState {
   stage: SyncStage;
-  status: "pending" | "loading" | "complete" | "error";
+  status: SyncStageState; // "pending" | "loading" | "paused" | "complete" | "error"
   changesApplied: number;
   error?: string;
 }
@@ -266,7 +266,7 @@ export type StagedPullProgressCallback = (state: StagedPullState) => void;
 
 /**
  * IStagedPullCoordinator interface
- * 
+ *
  * Contract for the staged pull coordinator that orchestrates
  * multi-stage data loading.
  */
@@ -277,17 +277,27 @@ export interface IStagedPullCoordinator {
   setOnProgress(callback: StagedPullProgressCallback): void;
 
   /**
+   * Load any sync stage by name. This is the primary method for loading data.
+   *
+   * @param stage - The sync stage to load (CRITICAL, RECENT_SALES, HISTORICAL)
+   */
+  loadStage(stage: SyncStage): Promise<StagedPullState>;
+
+  /**
    * Load CRITICAL stage data
+   * @deprecated Use loadStage("CRITICAL") instead
    */
   loadCriticalData(): Promise<StagedPullState>;
 
   /**
    * Load RECENT_SALES stage data
+   * @deprecated Use loadStage("RECENT_SALES") instead
    */
   loadRecentSales(): Promise<StagedPullState>;
 
   /**
    * Load HISTORICAL stage data
+   * @deprecated Use loadStage("HISTORICAL") instead
    */
   loadHistoricalData(): Promise<StagedPullState>;
 

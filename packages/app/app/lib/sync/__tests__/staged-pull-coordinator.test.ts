@@ -18,6 +18,12 @@ vi.mock("@avileo/shared", () => ({
       lookbackDays: 30,
       description: "Datos de referencia esenciales",
       blocking: true,
+      behavior: {
+        maxIterations: 1000,
+        retryAttempts: 3,
+        retryDelayMs: 10,
+        onError: "throw",
+      },
     },
     RECENT_SALES: {
       name: "RECENT_SALES",
@@ -25,6 +31,12 @@ vi.mock("@avileo/shared", () => ({
       lookbackDays: 7,
       description: "Ventas recientes",
       blocking: true,
+      behavior: {
+        maxIterations: 1000,
+        retryAttempts: 3,
+        retryDelayMs: 10,
+        onError: "throw",
+      },
     },
     HISTORICAL: {
       name: "HISTORICAL",
@@ -40,6 +52,13 @@ vi.mock("@avileo/shared", () => ({
       lookbackDays: null,
       description: "Histórico completo",
       blocking: false,
+      behavior: {
+        maxIterations: 1000,
+        retryAttempts: 3,
+        retryDelayMs: 10,
+        onError: "continue",
+        batchDelayMs: 10,
+      },
     },
   },
   getEntitiesForStage: vi.fn((stage: string) => {
@@ -89,27 +108,152 @@ describe("StagedPullCoordinator", () => {
     vi.clearAllMocks();
   });
 
-  describe("loadCriticalData", () => {
-    it("should load data and complete successfully", async () => {
-      // Setup: return data on first call, then no more
+  describe("loadStage (generic method)", () => {
+    it("should load CRITICAL stage successfully", async () => {
+      mockPullService.pullWithOptions.mockResolvedValueOnce({
+        success: true,
+        changesApplied: 10,
+        hasMore: false,
+        nextSince: "2024-01-01T00:00:00Z",
+      });
+
+      const result = await coordinator.loadStage("CRITICAL");
+
+      expect(result.stage).toBe("CRITICAL");
+      expect(result.status).toBe("complete");
+      expect(result.changesApplied).toBe(10);
+      expect(progressCallback).toHaveBeenCalledTimes(2);
+    });
+
+    it("should load RECENT_SALES stage successfully", async () => {
+      mockPullService.pullWithOptions.mockResolvedValueOnce({
+        success: true,
+        changesApplied: 25,
+        hasMore: false,
+        nextSince: "2024-01-01T00:00:00Z",
+      });
+
+      const result = await coordinator.loadStage("RECENT_SALES");
+
+      expect(result.stage).toBe("RECENT_SALES");
+      expect(result.status).toBe("complete");
+      expect(result.changesApplied).toBe(25);
+    });
+
+    it("should load HISTORICAL stage with non-blocking error handling", async () => {
+      // HISTORICAL has onError: "continue" so it shouldn't throw
+      mockPullService.pullWithOptions.mockResolvedValueOnce({
+        success: true,
+        changesApplied: 100,
+        hasMore: false,
+        nextSince: "2024-01-01T00:00:00Z",
+      });
+
+      const result = await coordinator.loadStage("HISTORICAL");
+
+      expect(result.stage).toBe("HISTORICAL");
+      expect(result.status).toBe("complete");
+    });
+
+    it("should throw error for CRITICAL stage when onError is 'throw'", async () => {
+      // Simulate a failure that persists after all retries
+      let callCount = 0;
+      mockPullService.pullWithOptions.mockImplementation(() => {
+        callCount++;
+        return Promise.resolve({
+          success: false,
+          error: "Network failure",
+        });
+      });
+
+      // The error message comes from result.error
+      await expect(coordinator.loadStage("CRITICAL")).rejects.toThrow("Network failure");
+    });
+
+    it("should handle pagination across any stage", async () => {
       mockPullService.pullWithOptions
         .mockResolvedValueOnce({
           success: true,
-          changesApplied: 10,
+          changesApplied: 50,
+          hasMore: true,
+          nextSince: "cursor-1",
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          changesApplied: 30,
           hasMore: false,
-          nextSince: "2024-01-01T00:00:00Z",
+          nextSince: null,
         });
+
+      const result = await coordinator.loadStage("RECENT_SALES");
+
+      expect(result.status).toBe("complete");
+      expect(result.changesApplied).toBe(80);
+      expect(mockPullService.pullWithOptions).toHaveBeenCalledTimes(2);
+    });
+
+    it("should use correct cursorKey for each stage", async () => {
+      mockPullService.pullWithOptions.mockResolvedValue({
+        success: true,
+        changesApplied: 5,
+        hasMore: false,
+        nextSince: null,
+      });
+
+      await coordinator.loadStage("CRITICAL");
+      expect(mockPullService.pullWithOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ cursorKey: "critical" })
+      );
+
+      vi.clearAllMocks();
+      await coordinator.loadStage("RECENT_SALES");
+      expect(mockPullService.pullWithOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ cursorKey: "recent_sales" })
+      );
+
+      vi.clearAllMocks();
+      await coordinator.loadStage("HISTORICAL");
+      expect(mockPullService.pullWithOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ cursorKey: "historical" })
+      );
+    });
+
+    it("should pass since date for stages with lookbackDays", async () => {
+      mockPullService.pullWithOptions.mockResolvedValue({
+        success: true,
+        changesApplied: 5,
+        hasMore: false,
+        nextSince: null,
+      });
+
+      await coordinator.loadStage("CRITICAL");
+      const criticalCall = mockPullService.pullWithOptions.mock.calls[0][0];
+      expect(criticalCall.since).toBeDefined();
+
+      await coordinator.loadStage("HISTORICAL");
+      const historicalCall = mockPullService.pullWithOptions.mock.calls[1][0];
+      expect(historicalCall.since).toBeUndefined();
+    });
+  });
+
+  describe("loadCriticalData (legacy delegates to loadStage)", () => {
+    it("should load data and complete successfully", async () => {
+      mockPullService.pullWithOptions.mockResolvedValueOnce({
+        success: true,
+        changesApplied: 10,
+        hasMore: false,
+        nextSince: "2024-01-01T00:00:00Z",
+      });
 
       const result = await coordinator.loadCriticalData();
 
       expect(result.stage).toBe("CRITICAL");
       expect(result.status).toBe("complete");
       expect(result.changesApplied).toBe(10);
-      expect(progressCallback).toHaveBeenCalledTimes(2); // loading + complete
+      expect(progressCallback).toHaveBeenCalledTimes(2);
     });
 
     it("should handle pagination correctly", async () => {
-      // First page
       mockPullService.pullWithOptions
         .mockResolvedValueOnce({
           success: true,
@@ -117,7 +261,6 @@ describe("StagedPullCoordinator", () => {
           hasMore: true,
           nextSince: "2024-01-01T00:00:00Z",
         })
-        // Second page
         .mockResolvedValueOnce({
           success: true,
           changesApplied: 30,
@@ -132,16 +275,16 @@ describe("StagedPullCoordinator", () => {
       expect(mockPullService.pullWithOptions).toHaveBeenCalledTimes(2);
     });
 
-    it("should set status to error on failure", async () => {
-      mockPullService.pullWithOptions.mockResolvedValueOnce({
+    it("should set status to error on failure (backward compatibility - no throw)", async () => {
+      // Simulate persistent failure after all retries
+      mockPullService.pullWithOptions.mockResolvedValue({
         success: false,
-        changesApplied: 0,
-        hasMore: false,
         error: "Network error",
       });
 
       const result = await coordinator.loadCriticalData();
 
+      // Legacy method returns error state instead of throwing
       expect(result.status).toBe("error");
       expect(result.error).toBe("Network error");
     });
@@ -162,7 +305,6 @@ describe("StagedPullCoordinator", () => {
 
     it("should notify progress when loading starts", async () => {
       mockPullService.pullWithOptions.mockImplementation(async () => {
-        // Small delay to ensure the loading state is observed
         await new Promise((resolve) => setTimeout(resolve, 10));
         return {
           success: true,
@@ -174,7 +316,6 @@ describe("StagedPullCoordinator", () => {
 
       const loadPromise = coordinator.loadCriticalData();
 
-      // Check that loading state was reported
       expect(progressCallback).toHaveBeenCalledWith(
         expect.objectContaining({
           stage: "CRITICAL",
@@ -186,7 +327,7 @@ describe("StagedPullCoordinator", () => {
     });
   });
 
-  describe("loadRecentSales", () => {
+  describe("loadRecentSales (legacy delegates to loadStage)", () => {
     it("should load recent sales data successfully", async () => {
       mockPullService.pullWithOptions.mockResolvedValueOnce({
         success: true,
@@ -202,20 +343,22 @@ describe("StagedPullCoordinator", () => {
       expect(result.changesApplied).toBe(25);
     });
 
-    it("should propagate error to status", async () => {
-      mockPullService.pullWithOptions.mockResolvedValueOnce({
+    it("should set status to error without throwing (backward compatibility)", async () => {
+      // Simulate persistent failure after all retries
+      mockPullService.pullWithOptions.mockResolvedValue({
         success: false,
         error: "Server error",
       });
 
       const result = await coordinator.loadRecentSales();
 
+      // Legacy method returns error state instead of throwing
       expect(result.status).toBe("error");
       expect(result.error).toBe("Server error");
     });
   });
 
-  describe("loadHistoricalData", () => {
+  describe("loadHistoricalData (legacy delegates to loadStage)", () => {
     it("should load historical data in background", async () => {
       mockPullService.pullWithOptions.mockResolvedValueOnce({
         success: true,
@@ -232,8 +375,7 @@ describe("StagedPullCoordinator", () => {
     });
 
     it("should not throw error even if historical fails", async () => {
-      // HISTORICAL stage should be non-blocking
-      // First 3 calls fail (retries), 4th call succeeds
+      // HISTORICAL has onError: "continue" so it shouldn't throw
       let callCount = 0;
       mockPullService.pullWithOptions.mockImplementation(() => {
         callCount++;

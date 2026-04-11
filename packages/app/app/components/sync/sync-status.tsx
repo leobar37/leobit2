@@ -5,34 +5,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  getEffectiveOnlineStatus,
-  getSimulatedOffline,
-  setSimulatedOffline,
-  subscribeToSimulatedOffline,
-} from "~/lib/sync/dev-network-override";
 
 interface SyncContextValue {
   isOnline: boolean;
   actualIsOnline: boolean;
-  isSimulatedOffline: boolean;
-  setSimulatedOffline: (value: boolean) => void;
   lastSync: Date | null;
 }
 
 const SyncContext = createContext<SyncContextValue>({
   isOnline: true,
   actualIsOnline: true,
-  isSimulatedOffline: false,
-  setSimulatedOffline: () => {},
   lastSync: null,
 });
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const [actualIsOnline, setActualIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
-  const [isSimulatedOffline, setIsSimulatedOfflineState] = useState(getSimulatedOffline());
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const isOnline = getEffectiveOnlineStatus(actualIsOnline);
+  const isOnline = actualIsOnline;
 
   useEffect(() => {
     const handleOnline = () => setActualIsOnline(true);
@@ -47,24 +36,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    return subscribeToSimulatedOffline(setIsSimulatedOfflineState);
-  }, []);
-
   // Update lastSync when online status changes to true
   useEffect(() => {
-    if (isOnline && !isSimulatedOffline) {
+    if (isOnline) {
       setLastSync(new Date());
     }
-  }, [isOnline, isSimulatedOffline]);
+  }, [isOnline]);
 
   return (
     <SyncContext.Provider
       value={{
         isOnline,
         actualIsOnline,
-        isSimulatedOffline,
-        setSimulatedOffline,
         lastSync,
       }}
     >

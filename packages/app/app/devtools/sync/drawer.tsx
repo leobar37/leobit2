@@ -18,8 +18,6 @@ import {
   Database,
   Trash2,
   Play,
-  ToggleLeft,
-  ToggleRight,
   Copy,
   Check,
 } from "lucide-react";
@@ -42,7 +40,7 @@ interface SyncDevToolsDrawerProps {
 
 export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps = {}) {
   const { isOnline: engineOnline, isSyncing, isInitialized } = useEngine();
-  const { isOnline, actualIsOnline, isSimulatedOffline, setSimulatedOffline } = useSync();
+  const { isOnline, actualIsOnline } = useSync();
   const syncService = useSyncService();
   const { confirm, ConfirmDialog: DeleteConfirmDialog } = useConfirmDialog();
   const clearSync = useClearSyncStorage();
@@ -316,11 +314,6 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
                   Syncing
                 </Badge>
               )}
-              {import.meta.env.DEV && isSimulatedOffline && actualIsOnline && (
-                <Badge variant="outline" className="border-orange-200 text-orange-700">
-                  Simulado
-                </Badge>
-              )}
             </div>
           </div>
         </SheetHeader>
@@ -376,36 +369,6 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
                   Limpiar
                 </Button>
               </div>
-
-              {import.meta.env.DEV && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setSimulatedOffline(!isSimulatedOffline)}
-                    className="flex w-full items-center justify-between rounded-xl border bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">Simular sin conexión</p>
-                      <p className="text-xs text-muted-foreground">
-                        Fuerza el estado offline en la UI y bloquea el sync manual.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <span>{isSimulatedOffline ? "Activo" : "Inactivo"}</span>
-                      {isSimulatedOffline ? (
-                        <ToggleRight className="h-5 w-5 text-orange-600" />
-                      ) : (
-                        <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </button>
-                  {!engineOnline && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      La red real ya está offline; el simulador no cambia ese estado.
-                    </p>
-                  )}
-                </div>
-              )}
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/70 bg-muted/40 p-1">

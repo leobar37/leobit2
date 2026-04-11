@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StagedPullCoordinator - Flujo Interno</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .stage-critical { border-left: 4px solid #f97316; }
+    .stage-recent { border-left: 4px solid #3b82f6; }
+    .stage-historical { border-left: 4px solid #8b5cf6; }
+
+    .pulse-dot {
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .flow-arrow {
+      animation: flow-down 2s ease-in-out infinite;
+    }
+    @keyframes flow-down {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    .data-drop {
+      animation: drop-in 0.4s ease-out;
+    }
+    @keyframes drop-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cursor-move {
+      animation: cursor-advance 1s ease-in-out infinite alternate;
+    }
+    @keyframes cursor-advance {
+      from { transform: translateX(0); }
+      to { transform: translateX(6px); }
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            critical: '#f97316',
+            recent: '#3b82f6',
+            historical: '#8b5cf6',
+            shell: '#faf9f7',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-shell min-h-screen" x-data="coordinator()">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">StagedPullCoordinator</h1>
+        <p class="text-sm text-gray-500">Flujo interno del pull sincronizado en 3 etapas</p>
+      </div>
+      <div class="flex gap-3">
+        <button @click="reset()" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg transition">Reiniciar</button>
+        <button @click="startSimulation()" :disabled="running" class="px-4 py-2 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 rounded-lg transition disabled:opacity-50">
+          <span x-show="!running">Simular Pull</span>
+          <span x-show="running" class="flex items-center gap-2">
+            <span class="pulse-dot inline-block w-2 h-2 bg-white rounded-full"></span>
+            Sincronizando...
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <!-- Overview: 3 Stage Timeline -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Vision General: 3 Etapas</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Critical -->
+        <div class="stage-critical bg-white rounded-xl p-5 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-3 h-3 rounded-full bg-critical"></div>
+            <span class="font-semibold text-gray-800">CRITICAL</span>
+            <span class="ml-auto text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium">Bloqueante</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-3">Datos de referencia esenciales para que la app funcione</p>
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <span class="mono bg-orange-50 px-1.5 py-0.5 rounded">customers</span>
+              <span class="mono bg-orange-50 px-1.5 py-0.5 rounded">products</span>
+              <span class="mono bg-orange-50 px-1.5 py-0.5 rounded">product_variants</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Ultimos 30 dias &middot; lookbackDays: 30</p>
+          </div>
+        </div>
+        <!-- Recent -->
+        <div class="stage-recent bg-white rounded-xl p-5 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-3 h-3 rounded-full bg-recent"></div>
+            <span class="font-semibold text-gray-800">RECENT_SALES</span>
+            <span class="ml-auto text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">Bloqueante</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-3">Datos operativos recientes de ventas</p>
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <span class="mono bg-blue-50 px-1.5 py-0.5 rounded">sales</span>
+              <span class="mono bg-blue-50 px-1.5 py-0.5 rounded">sale_items</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Ultimos 7 dias &middot; lookbackDays: 7</p>
+          </div>
+        </div>
+        <!-- Historical -->
+        <div class="stage-historical bg-white rounded-xl p-5 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-3 h-3 rounded-full bg-historical"></div>
+            <span class="font-semibold text-gray-800">HISTORICAL</span>
+            <span class="ml-auto text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">Background</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-3">Historial completo - la app ya es usable</p>
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-1 text-xs text-gray-500">
+              <span class="mono bg-purple-50 px-1.5 py-0.5 rounded">abonos</span>
+              <span class="mono bg-purple-50 px-1.5 py-0.5 rounded">purchases</span>
+              <span class="mono bg-purple-50 px-1.5 py-0.5 rounded">distribuciones</span>
+              <span class="text-gray-400">+ mas</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Todo el historial &middot; sin lookback</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Simulation Panel -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Simulacion en Vivo</h2>
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <!-- Stage Progress Bars -->
+        <div class="space-y-6">
+          <!-- Critical Stage -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full" :class="stageColor('CRITICAL')"></div>
+                <span class="font-semibold text-sm text-gray-800">Stage 1: CRITICAL</span>
+                <span class="text-xs mono px-2 py-0.5 rounded" :class="stageBadge('CRITICAL')" x-text="stages.CRITICAL.status"></span>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-medium text-gray-700" x-text="stages.CRITICAL.changesApplied + ' cambios'"></span>
+              </div>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 ease-out" :class="stageBarColor('CRITICAL')" :style="`width: ${stageProgress('CRITICAL')}%`"></div>
+            </div>
+            <!-- Cursor info -->
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500" x-show="stages.CRITICAL.status === 'loading'">
+              <span class="flex items-center gap-1">
+                <span class="cursor-move inline-block">&rarr;</span>
+                Cursor: <span class="mono bg-gray-100 px-1 rounded" x-text="cursors.CRITICAL || 'inicio'"></span>
+              </span>
+              <span x-show="canResume.CRITICAL" class="text-orange-600 font-medium">(reanudando desde cursor guardado)</span>
+            </div>
+            <!-- Applied changes list -->
+            <div class="mt-2 flex flex-wrap gap-1" x-show="stages.CRITICAL.changes.length > 0">
+              <template x-for="(change, i) in stages.CRITICAL.changes" :key="i">
+                <span class="data-drop inline-block text-xs mono bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded" x-text="change"></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Recent Stage -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full" :class="stageColor('RECENT_SALES')"></div>
+                <span class="font-semibold text-sm text-gray-800">Stage 2: RECENT_SALES</span>
+                <span class="text-xs mono px-2 py-0.5 rounded" :class="stageBadge('RECENT_SALES')" x-text="stages.RECENT_SALES.status"></span>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-medium text-gray-700" x-text="stages.RECENT_SALES.changesApplied + ' cambios'"></span>
+              </div>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 ease-out" :class="stageBarColor('RECENT_SALES')" :style="`width: ${stageProgress('RECENT_SALES')}%`"></div>
+            </div>
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500" x-show="stages.RECENT_SALES.status === 'loading'">
+              <span class="flex items-center gap-1">
+                <span class="cursor-move inline-block">&rarr;</span>
+                Cursor: <span class="mono bg-gray-100 px-1 rounded" x-text="cursors.RECENT_SALES || 'inicio'"></span>
+              </span>
+              <span x-show="canResume.RECENT_SALES" class="text-blue-600 font-medium">(reanudando desde cursor guardado)</span>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-1" x-show="stages.RECENT_SALES.changes.length > 0">
+              <template x-for="(change, i) in stages.RECENT_SALES.changes" :key="i">
+                <span class="data-drop inline-block text-xs mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded" x-text="change"></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Historical Stage -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full" :class="stageColor('HISTORICAL')"></div>
+                <span class="font-semibold text-sm text-gray-800">Stage 3: HISTORICAL</span>
+                <span class="text-xs mono px-2 py-0.5 rounded" :class="stageBadge('HISTORICAL')" x-text="stages.HISTORICAL.status"></span>
+                <span x-show="stages.HISTORICAL.status === 'loading'" class="text-xs text-purple-500 italic">(en background)</span>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-medium text-gray-700" x-text="stages.HISTORICAL.changesApplied + ' cambios'"></span>
+              </div>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 ease-out" :class="stageBarColor('HISTORICAL')" :style="`width: ${stageProgress('HISTORICAL')}%`"></div>
+            </div>
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500" x-show="stages.HISTORICAL.status === 'loading'">
+              <span class="flex items-center gap-1">
+                <span class="cursor-move inline-block">&rarr;</span>
+                Cursor: <span class="mono bg-gray-100 px-1 rounded" x-text="cursors.HISTORICAL || 'inicio'"></span>
+              </span>
+              <span x-show="historicalRetries > 0" class="text-red-500 font-medium" x-text="'reintento ' + historicalRetries + '/3'"></span>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-1" x-show="stages.HISTORICAL.changes.length > 0">
+              <template x-for="(change, i) in stages.HISTORICAL.changes" :key="i">
+                <span class="data-drop inline-block text-xs mono bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded" x-text="change"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- App Usability Indicator -->
+        <div class="mt-6 p-4 rounded-xl border-2 transition-all duration-300" :class="appUsable ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'">
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-full flex items-center justify-center" :class="appUsable ? 'bg-green-500' : 'bg-gray-300'">
+              <svg x-show="appUsable" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <span class="font-semibold text-sm" :class="appUsable ? 'text-green-800' : 'text-gray-600'" x-text="appUsable ? 'App Usable' : 'App Bloqueada'"></span>
+              <p class="text-xs mt-0.5" :class="appUsable ? 'text-green-600' : 'text-gray-400'" x-text="appUsable ? 'CRITICAL + RECENT_SALES completadas. El usuario puede operar.' : 'Esperando a que CRITICAL y RECENT_SALES terminen...'"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Log de eventos</span>
+            <button @click="log = []" class="text-xs text-gray-400 hover:text-gray-600">Limpiar</button>
+          </div>
+          <div class="bg-gray-900 rounded-lg p-3 h-36 overflow-y-auto text-xs mono text-gray-300 space-y-0.5">
+            <template x-for="(entry, i) in log" :key="i">
+              <div :class="entry.color" x-text="entry.text"></div>
+            </template>
+            <div x-show="log.length === 0" class="text-gray-600">Presiona "Simular Pull" para iniciar...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Internal Flow Diagram -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Flujo Interno: Paginacion con Cursor</h2>
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <svg viewBox="0 0 800 320" class="w-full max-w-3xl mx-auto" xmlns="http://www.w3.org/2000/svg">
+          <!-- Title -->
+          <text x="400" y="24" text-anchor="middle" class="text-sm font-semibold fill-gray-700" style="font-size:14px;font-weight:600">Loop paginado dentro de cada etapa</text>
+
+          <!-- Step 1: Check resume -->
+          <rect x="20" y="50" width="160" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="100" y="72" text-anchor="middle" style="font-size:11px" fill="#92400e">canResumeStage()?</text>
+          <text x="100" y="88" text-anchor="middle" style="font-size:10px" fill="#a16207">Verificar cursor guardado</text>
+
+          <!-- Arrow: Yes/No from resume -->
+          <line x1="180" y1="75" x2="230" y2="75" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="195" y="68" style="font-size:9px" fill="#6b7280">No</text>
+          <line x1="100" y1="100" x2="100" y2="140" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="110" y="125" style="font-size:9px" fill="#16a34a">Si</text>
+
+          <!-- Step 2a: since date -->
+          <rect x="30" y="145" width="140" height="40" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+          <text x="100" y="163" text-anchor="middle" style="font-size:10px" fill="#c2410c">getSinceDate(lookback)</text>
+          <text x="100" y="178" text-anchor="middle" style="font-size:9px" fill="#ea580c">Ej: 30 dias atras</text>
+
+          <!-- Step 2b: cursor path -->
+          <rect x="220" y="50" width="140" height="50" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="290" y="72" text-anchor="middle" style="font-size:10px" fill="#1e40af">Usar cursor guardado</text>
+          <text x="290" y="88" text-anchor="middle" style="font-size:9px" fill="#2563eb">skip since</text>
+
+          <!-- Both merge into pullWithOptions -->
+          <line x1="170" y1="165" x2="400" y2="165" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4"/>
+          <line x1="360" y1="75" x2="400" y2="75" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4"/>
+
+          <!-- PullWithOptions box -->
+          <rect x="400" y="45" width="180" height="140" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+          <text x="490" y="70" text-anchor="middle" style="font-size:12px;font-weight:600" fill="#166534">pullWithOptions()</text>
+          <text x="490" y="90" text-anchor="middle" style="font-size:9px" fill="#15803d">─────────────────</text>
+          <text x="490" y="108" text-anchor="middle" style="font-size:10px" fill="#166534">entityTypes</text>
+          <text x="490" y="124" text-anchor="middle" style="font-size:10px" fill="#166534">since? (solo 1ra vez)</text>
+          <text x="490" y="140" text-anchor="middle" style="font-size:10px" fill="#166534">cursorKey</text>
+          <text x="490" y="160" text-anchor="middle" style="font-size:10px" fill="#166534">&darr;</text>
+          <text x="490" y="175" text-anchor="middle" style="font-size:9px" fill="#15803d">POST /sync/changes</text>
+
+          <!-- Result -->
+          <rect x="620" y="45" width="160" height="140" rx="8" fill="#fdf4ff" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="700" y="68" text-anchor="middle" style="font-size:10px;font-weight:600" fill="#7e22ce">Resultado</text>
+          <text x="700" y="88" text-anchor="middle" style="font-size:9px" fill="#86198f">changesApplied: N</text>
+          <text x="700" y="104" text-anchor="middle" style="font-size:9px" fill="#86198f">nextSince (cursor)</text>
+          <text x="700" y="120" text-anchor="middle" style="font-size:9px" fill="#86198f">hasMore: bool</text>
+
+          <line x1="580" y1="115" x2="620" y2="115" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- Loop back arrow -->
+          <path d="M700,185 L700,220 L490,220 L490,185" fill="none" stroke="#f97316" stroke-width="2" marker-end="url(#arrowOrange)"/>
+          <text x="595" y="240" text-anchor="middle" style="font-size:10px;font-weight:600" fill="#ea580c">while (hasMore)</text>
+
+          <!-- Stuck cursor detection -->
+          <rect x="620" y="220" width="160" height="55" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="700" y="240" text-anchor="middle" style="font-size:10px;font-weight:600" fill="#dc2626">Cursor Atascado?</text>
+          <text x="700" y="256" text-anchor="middle" style="font-size:8px" fill="#b91c1c">nextSince === lastCursor</text>
+          <text x="700" y="268" text-anchor="middle" style="font-size:8px" fill="#b91c1c">&amp;&amp; changesApplied === 0</text>
+
+          <line x1="780" y1="115" x2="800" y2="115" stroke="none"/>
+          <line x1="700" y1="185" x2="700" y2="220" stroke="#ef4444" stroke-width="1" stroke-dasharray="3"/>
+
+          <!-- Max iterations -->
+          <rect x="200" y="260" width="180" height="40" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1"/>
+          <text x="290" y="280" text-anchor="middle" style="font-size:9px;font-weight:600" fill="#dc2626">MAX_ITERATIONS = 1000</text>
+          <text x="290" y="293" text-anchor="middle" style="font-size:8px" fill="#b91c1c">Proteccion contra loops infinitos</text>
+
+          <!-- Arrow marker defs -->
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#9ca3af"/>
+            </marker>
+            <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#f97316"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
+    <!-- executeStagedLoad Sequence -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Secuencia: executeStagedLoad()</h2>
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <svg viewBox="0 0 700 400" class="w-full max-w-2xl mx-auto" xmlns="http://www.w3.org/2000/svg">
+          <!-- Timeline line -->
+          <line x1="120" y1="30" x2="120" y2="380" stroke="#d1d5db" stroke-width="2"/>
+
+          <!-- Stage 1: Critical -->
+          <circle cx="120" cy="50" r="6" fill="#f97316"/>
+          <rect x="140" y="35" width="200" height="55" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+          <text x="240" y="55" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#c2410c">await loadCriticalData()</text>
+          <text x="240" y="72" text-anchor="middle" style="font-size:9px" fill="#ea580c">clientes, productos, variantes</text>
+          <text x="240" y="84" text-anchor="middle" style="font-size:9px" fill="#9a3412">Bloqueante - la app espera</text>
+
+          <!-- Stage 2: Recent -->
+          <circle cx="120" cy="140" r="6" fill="#3b82f6"/>
+          <rect x="140" y="125" width="200" height="55" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="240" y="145" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#1e40af">await loadRecentSales()</text>
+          <text x="240" y="162" text-anchor="middle" style="font-size:9px" fill="#2563eb">ventas, items de venta</text>
+          <text x="240" y="174" text-anchor="middle" style="font-size:9px" fill="#1e3a8a">Bloqueante - la app espera</text>
+
+          <!-- RETURN POINT -->
+          <rect x="140" y="210" width="220" height="35" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+          <text x="250" y="232" text-anchor="middle" style="font-size:11px;font-weight:700" fill="#166534">return { critical, recent, historical: Promise }</text>
+          <circle cx="120" cy="228" r="8" fill="#22c55e" stroke="#166534" stroke-width="2"/>
+          <text x="120" y="232" text-anchor="middle" style="font-size:8px;font-weight:700" fill="white">&#10003;</text>
+
+          <!-- Arrow to "App usable" -->
+          <line x1="360" y1="228" x2="440" y2="228" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+          <rect x="445" y="210" width="130" height="35" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="510" y="226" text-anchor="middle" style="font-size:10px;font-weight:600" fill="#166534">App Usable!</text>
+          <text x="510" y="240" text-anchor="middle" style="font-size:8px" fill="#15803d">El usuario puede operar</text>
+
+          <!-- Stage 3: Historical (background) -->
+          <circle cx="120" cy="310" r="6" fill="#8b5cf6"/>
+          <line x1="120" y1="245" x2="120" y2="310" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="5"/>
+          <rect x="140" y="290" width="200" height="55" rx="8" fill="#faf5ff" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="240" y="310" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#6d28d9">loadHistoricalData()</text>
+          <text x="240" y="327" text-anchor="middle" style="font-size:9px" fill="#7c3aed">abonos, compras, distribuciones...</text>
+          <text x="240" y="339" text-anchor="middle" style="font-size:9px" fill="#5b21b6">Background - sin await</text>
+
+          <!-- Delay indicator -->
+          <text x="370" y="320" style="font-size:9px" fill="#8b5cf6">sleep(100ms)</text>
+          <text x="370" y="335" style="font-size:8px" fill="#a78bfa">entre batches</text>
+
+          <defs>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#22c55e"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Key Protections -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Protecciones Internas</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-400">
+          <h3 class="font-semibold text-sm text-gray-800 mb-2">Cursor Atascado</h3>
+          <p class="text-xs text-gray-600 mb-2">Si el cursor no avanza y no hay cambios aplicados, el loop se rompe automaticamente:</p>
+          <code class="text-xs mono bg-red-50 text-red-700 px-2 py-1 rounded block">nextSince === lastCursor && changesApplied === 0</code>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-400">
+          <h3 class="font-semibold text-sm text-gray-800 mb-2">Loop Protection</h3>
+          <p class="text-xs text-gray-600 mb-2">Maximo 1000 iteraciones por etapa para evitar loops infinitos:</p>
+          <code class="text-xs mono bg-yellow-50 text-yellow-700 px-2 py-1 rounded block">MAX_ITERATIONS = 1000</code>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-400">
+          <h3 class="font-semibold text-sm text-gray-800 mb-2">Retry Tolerante (Historical)</h3>
+          <p class="text-xs text-gray-600 mb-2">Solo la etapa historica reintenta (3 veces) antes de fallar, con sleep entre reintentos:</p>
+          <code class="text-xs mono bg-blue-50 text-blue-700 px-2 py-1 rounded block">if (batches &lt; 3) { sleep(1000); continue; }</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- State Machine -->
+    <section class="mb-10">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">Maquina de Estados por Etapa</h2>
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <svg viewBox="0 0 600 180" class="w-full max-w-2xl mx-auto" xmlns="http://www.w3.org/2000/svg">
+          <!-- Pending -->
+          <rect x="20" y="60" width="100" height="45" rx="10" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+          <text x="70" y="85" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#6b7280">pending</text>
+
+          <!-- Arrow pending -> loading -->
+          <line x1="120" y1="82" x2="175" y2="82" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+          <text x="148" y="75" text-anchor="middle" style="font-size:8px" fill="#6b7280">start</text>
+
+          <!-- Loading -->
+          <rect x="180" y="55" width="110" height="55" rx="10" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+          <text x="235" y="80" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#c2410c">loading</text>
+          <text x="235" y="98" text-anchor="middle" style="font-size:8px" fill="#ea580c">pull paginado</text>
+
+          <!-- Arrow loading -> complete -->
+          <line x1="290" y1="82" x2="355" y2="82" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arrowGreen2)"/>
+          <text x="322" y="75" text-anchor="middle" style="font-size:8px" fill="#16a34a">!hasMore</text>
+
+          <!-- Arrow loading -> error -->
+          <line x1="235" y1="110" x2="235" y2="140" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+          <text x="260" y="130" style="font-size:8px" fill="#dc2626">throw</text>
+
+          <!-- Complete -->
+          <rect x="360" y="55" width="110" height="55" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+          <text x="415" y="80" text-anchor="middle" style="font-size:11px;font-weight:600" fill="#166534">complete</text>
+          <text x="415" y="98" text-anchor="middle" style="font-size:8px" fill="#15803d">N changes applied</text>
+
+          <!-- Error -->
+          <rect x="180" y="145" width="110" height="30" rx="10" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="235" y="165" text-anchor="middle" style="font-size:10px;font-weight:600" fill="#dc2626">error</text>
+
+          <!-- Progress callback arrow -->
+          <path d="M235,55 L235,30 L500,30 L500,55" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="4"/>
+          <text x="370" y="24" text-anchor="middle" style="font-size:8px" fill="#4f46e5">notifyProgress()</text>
+
+          <!-- Aborted path -->
+          <line x1="290" y1="95" x2="360" y2="145" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3"/>
+          <text x="340" y="148" style="font-size:8px" fill="#6b7280">aborted</text>
+
+          <defs>
+            <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#9ca3af"/>
+            </marker>
+            <marker id="arrowGreen2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#22c55e"/>
+            </marker>
+            <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6" fill="#ef4444"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function coordinator() {
+      return {
+        running: false,
+        historicalRetries: 0,
+        stages: {
+          CRITICAL: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+          RECENT_SALES: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+          HISTORICAL: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+        },
+        cursors: { CRITICAL: null, RECENT_SALES: null, HISTORICAL: null },
+        canResume: { CRITICAL: false, RECENT_SALES: false, HISTORICAL: false },
+        log: [],
+
+        get appUsable() {
+          return this.stages.CRITICAL.status === 'complete' && this.stages.RECENT_SALES.status === 'complete'
+        },
+
+        stageColor(stage) {
+          const s = this.stages[stage].status
+          const colors = { pending: 'bg-gray-300', loading: { CRITICAL: 'bg-orange-500 pulse-dot', RECENT_SALES: 'bg-blue-500 pulse-dot', HISTORICAL: 'bg-purple-500 pulse-dot' }[stage], complete: 'bg-green-500', error: 'bg-red-500' }
+          return colors[s] || 'bg-gray-300'
+        },
+
+        stageBadge(stage) {
+          const s = this.stages[stage].status
+          return { pending: 'bg-gray-100 text-gray-600', loading: { CRITICAL: 'bg-orange-100 text-orange-700', RECENT_SALES: 'bg-blue-100 text-blue-700', HISTORICAL: 'bg-purple-100 text-purple-700' }[stage], complete: 'bg-green-100 text-green-700', error: 'bg-red-100 text-red-700' }[s] || 'bg-gray-100 text-gray-600'
+        },
+
+        stageBarColor(stage) {
+          const s = this.stages[stage].status
+          return { pending: 'bg-gray-300', loading: { CRITICAL: 'bg-orange-500', RECENT_SALES: 'bg-blue-500', HISTORICAL: 'bg-purple-500' }[stage], complete: 'bg-green-500', error: 'bg-red-500' }[s] || 'bg-gray-300'
+        },
+
+        stageProgress(stage) {
+          const s = this.stages[stage]
+          if (s.status === 'complete') return 100
+          if (s.status === 'error') return 0
+          if (s.status === 'loading' && s.total > 0) return Math.min(95, Math.round((s.changesApplied / s.total) * 100))
+          return s.status === 'loading' ? 15 : 0
+        },
+
+        addLog(text, color = 'text-gray-300') {
+          this.log.push({ text: `[${new Date().toLocaleTimeString('es-PE')}] ${text}`, color })
+        },
+
+        async sleep(ms) {
+          return new Promise(r => setTimeout(r, ms))
+        },
+
+        randomId() {
+          return Math.random().toString(36).substring(2, 8)
+        },
+
+        async simulateStage(stageKey, entities, totalChanges, barColor) {
+          const stage = this.stages[stageKey]
+          stage.status = 'loading'
+          stage.total = totalChanges
+          stage.changesApplied = 0
+          stage.changes = []
+
+          const canResume = this.canResume[stageKey]
+          this.addLog(`${stageKey}: Iniciando${canResume ? ' (reanudando desde cursor)' : ''}`, barColor)
+
+          let applied = 0
+          let cursor = null
+          let batchNum = 0
+
+          while (applied < totalChanges) {
+            const batchSize = Math.min(Math.floor(Math.random() * 5) + 3, totalChanges - applied)
+            batchNum++
+
+            for (let i = 0; i < batchSize; i++) {
+              const entity = entities[Math.floor(Math.random() * entities.length)]
+              const change = `${entity}#${this.randomId()}`
+              stage.changes.push(change)
+              applied++
+            }
+
+            stage.changesApplied = applied
+            cursor = `cursor_${stageKey.toLowerCase()}_${batchNum}`
+            this.cursors[stageKey] = cursor
+
+            this.addLog(`${stageKey}: Batch ${batchNum} - ${batchSize} cambios aplicados (total: ${applied}/${totalChanges})`, barColor)
+
+            // Historical has delay between batches
+            if (stageKey === 'HISTORICAL') {
+              await this.sleep(400)
+            } else {
+              await this.sleep(300)
+            }
+          }
+
+          stage.status = 'complete'
+          this.cursors[stageKey] = null
+          this.addLog(`${stageKey}: Completada - ${applied} cambios totales`, 'text-green-400')
+        },
+
+        async startSimulation() {
+          if (this.running) return
+          this.running = true
+
+          // Simulate canResume for demo
+          this.canResume.CRITICAL = Math.random() > 0.6
+          this.canResume.RECENT_SALES = Math.random() > 0.7
+          this.canResume.HISTORICAL = false
+
+          this.addLog('executeStagedLoad() iniciado', 'text-white font-semibold')
+
+          // Stage 1: Critical (blocking)
+          await this.simulateStage('CRITICAL', ['customers', 'products', 'product_variants'], 18, 'text-orange-400')
+
+          // Stage 2: Recent (blocking)
+          await this.simulateStage('RECENT_SALES', ['sales', 'sale_items'], 12, 'text-blue-400')
+
+          // App is usable now!
+          this.addLog('>>> App Usable! Retornando control al usuario <<<', 'text-green-400 font-bold')
+
+          // Stage 3: Historical (background)
+          await this.simulateStage('HISTORICAL', ['abonos', 'purchases', 'distribuciones', 'visitas', 'inventory_movements'], 25, 'text-purple-400')
+
+          this.addLog('Todas las etapas completadas. Sincronizacion completa.', 'text-green-300 font-semibold')
+          this.running = false
+        },
+
+        reset() {
+          this.running = false
+          this.historicalRetries = 0
+          this.stages = {
+            CRITICAL: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+            RECENT_SALES: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+            HISTORICAL: { status: 'pending', changesApplied: 0, changes: [], total: 0 },
+          }
+          this.cursors = { CRITICAL: null, RECENT_SALES: null, HISTORICAL: null }
+          this.canResume = { CRITICAL: false, RECENT_SALES: false, HISTORICAL: false }
+          this.log = []
+        }
+      }
+    }
+  </script>
+</body>
+</html>

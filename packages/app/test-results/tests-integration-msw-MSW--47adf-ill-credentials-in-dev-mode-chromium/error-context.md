@@ -1,0 +1,52 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - img [ref=e8]
+      - generic [ref=e12]:
+        - paragraph [ref=e13]: Avileo
+        - generic [ref=e14]: Bienvenido
+        - generic [ref=e15]: Ingresa tus credenciales para continuar.
+        - generic [ref=e16]: Modo desarrollo
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - text: Correo electrónico
+          - textbox "tu@email.com" [ref=e20]
+          - paragraph [ref=e21]
+        - generic [ref=e22]:
+          - text: Contraseña
+          - generic [ref=e23]:
+            - textbox "........" [ref=e24]: demo123456
+            - button [ref=e25] [cursor=pointer]:
+              - img
+          - paragraph [ref=e26]
+      - generic [ref=e27]:
+        - button "Iniciar sesión" [ref=e28] [cursor=pointer]
+        - paragraph [ref=e29]:
+          - text: ¿No tienes cuenta?
+          - link "Regístrate" [ref=e30] [cursor=pointer]:
+            - /url: /register
+  - region "Notifications alt+T"
+  - generic [ref=e32]:
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - button "Select element" [ref=e38] [cursor=pointer]:
+          - img [ref=e39]
+        - generic:
+          - generic:
+            - button "Open history":
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button "Copy all history items":
+              - img
+        - button "Open more actions menu" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+      - button "Disable React Grab" [pressed] [ref=e50] [cursor=pointer]
+    - button "Collapse toolbar" [ref=e53] [cursor=pointer]:
+      - img [ref=e54]
+```
