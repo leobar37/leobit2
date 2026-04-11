@@ -52,6 +52,8 @@ export const customers = pgTable(
     index("idx_customers_business_id").on(table.businessId),
     index("idx_customers_sync_status").on(table.syncStatus),
     index("idx_customers_created_by").on(table.createdBy),
+    index("idx_customers_business_name").on(table.businessId, table.name),
+    index("idx_customers_business_dni").on(table.businessId, table.dni),
   ]
 );
 

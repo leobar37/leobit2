@@ -20,8 +20,9 @@ import {
   BulkGroupAssignmentDrawer,
   useBulkGroupAssignmentDrawer,
 } from "~/components/customers/bulk-group-assignment-drawer";
+import { CustomerFilterPopover } from "~/components/customers/customer-filter-popover";
 import { CustomerCard } from "~/components/customers/customer-card";
-import { TagFilter, QuickTagModal, useQuickTagModal } from "~/components/tags";
+import { QuickTagModal, useQuickTagModal } from "~/components/tags";
 
 export default function CustomersPage() {
   const navigate = useNavigate();
@@ -34,6 +35,8 @@ export default function CustomersPage() {
   const {
     tagIds,
     setTagIds,
+    groupIds,
+    setGroupIds,
     search,
     setSearch,
     isSearching,
@@ -46,6 +49,7 @@ export default function CustomersPage() {
   const { data: customersPage, isLoading } = usePaginatedCustomers({
     search: search || undefined,
     tagIds,
+    groupIds,
     limit: pageSize,
     offset,
   });
@@ -91,7 +95,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, tagIds]);
+  }, [search, tagIds, groupIds]);
 
   const toggleCustomerSelection = (customerId: string) => {
     setSelectedCustomerIds((prev) => {
@@ -133,9 +137,11 @@ export default function CustomersPage() {
             />
           </div>
           <div className="w-full">
-            <TagFilter
+            <CustomerFilterPopover
               selectedTagIds={tagIds}
-              onChange={setTagIds}
+              onTagIdsChange={setTagIds}
+              selectedGroupIds={groupIds}
+              onGroupIdsChange={setGroupIds}
               onCreateClick={() => quickTagModal.open()}
             />
           </div>

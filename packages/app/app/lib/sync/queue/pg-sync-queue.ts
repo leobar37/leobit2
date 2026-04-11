@@ -1,6 +1,6 @@
 /**
  * PGlite Sync Queue Implementation
- * 
+ *
  * Implements ISyncQueue using PGlite for local storage.
  * Extracted from SyncService to enable testing and separation of concerns.
  */
@@ -13,116 +13,8 @@ import { normalizeDatesToISO, parsePayload } from "../types";
 import { OPERATION_STATUS } from "../config";
 import { ENTITY_PRIORITIES } from "@avileo/shared";
 import { syncLogger } from "../sync-logger";
-
-/**
- * Merge two arrays of objects by their `id` field.
- * Items in `b` that already exist in `a` (by id) are replaced;
- * items in `b` that don't exist in `a` are appended.
- * Maintains original order from `a` plus new items from `b`.
- */
-function mergeArrayById<T extends { id: string }>(a: T[], b: T[]): T[] {
-  const result = [...a];
-  const existingIds = new Set(a.map((item) => item.id));
-
-  for (const item of b) {
-    const idx = result.findIndex((r) => r.id === item.id);
-    if (idx >= 0) {
-      result[idx] = item;
-    } else {
-      result.push(item);
-    }
-  }
-
-  return result;
-}
-
-/**
- * Recursively deep-merges `b` into `a`.
- * Arrays are merged by `id` field using `mergeArrayById`.
- * Primitives and other values in `b` overwrite `a`.
- */
-function deepMerge(
-  a: Record<string, unknown>,
-  b: Record<string, unknown>
-): Record<string, unknown> {
-  const result: Record<string, unknown> = { ...a };
-
-  for (const key of Object.keys(b)) {
-    const aVal = a[key];
-    const bVal = b[key];
-
-    if (
-      Array.isArray(aVal) &&
-      Array.isArray(bVal) &&
-      aVal.length > 0 &&
-      bVal.length > 0 &&
-      typeof aVal[0] === "object" &&
-      typeof bVal[0] === "object" &&
-      "id" in (aVal[0] as Record<string, unknown>) &&
-      "id" in (bVal[0] as Record<string, unknown>)
-    ) {
-      result[key] = mergeArrayById(
-        aVal as { id: string }[],
-        bVal as { id: string }[]
-      );
-    } else {
-      result[key] = bVal;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Coalescing plan for merging operations
- */
-type CoalescePlan =
-  | { type: "merge"; operation: "create" | "update" | "delete"; payload: Record<string, unknown> }
-  | { type: "replace"; operation: "create" | "update" | "delete"; payload: Record<string, unknown> }
-  | { type: "cancel" }
-  | { type: "none" };
-
-/**
- * Get coalescing plan for merging operations
- */
-function getCoalescePlan(
-  existing: SyncOperationRecord,
-  incoming: EnqueueParams
-): CoalescePlan {
-  const existingPayload = parsePayload(existing.payload);
-
-  if (existing.operation === "create") {
-    if (incoming.operation === "create" || incoming.operation === "update") {
-      return {
-        type: "merge",
-        operation: "create",
-        payload: deepMerge(existingPayload, incoming.data),
-      };
-    }
-    if (incoming.operation === "delete") {
-      return { type: "cancel" };
-    }
-  }
-
-  if (existing.operation === "update") {
-    if (incoming.operation === "update") {
-      return {
-        type: "merge",
-        operation: "update",
-        payload: deepMerge(existingPayload, incoming.data),
-      };
-    }
-    if (incoming.operation === "delete") {
-      return {
-        type: "replace",
-        operation: "delete",
-        payload: incoming.data,
-      };
-    }
-  }
-
-  return { type: "none" };
-}
+import { generateId } from "~/lib/utils/id-generator";
+import { getCoalescePlan, type CoalescePlan } from "./coalesce";
 
 /**
  * Normalize status key for SyncStatus object
@@ -150,8 +42,8 @@ export class PgSyncQueue implements ISyncQueue {
   ) {}
 
   async enqueue(params: EnqueueParams): Promise<string> {
-    const id = crypto.randomUUID();
-    const idempotencyKey = params.idempotencyKey || crypto.randomUUID();
+    const id = generateId();
+    const idempotencyKey = params.idempotencyKey || generateId();
 
     syncLogger.warn(`[PgSyncQueue]`, `Enqueuing operation`, {
       entityType: params.entity_type,
@@ -161,8 +53,79 @@ export class PgSyncQueue implements ISyncQueue {
       syncGroupId: params.syncGroupId,
     });
 
-    // Check for existing pending/failed operation on same entity
-    const existingOp = await this.pg.query<SyncOperationRecord>(
+    // Step 1: Check idempotency - if same key exists with non-completed status, return it
+    const existingByKey = await this.getByIdempotencyKey(idempotencyKey);
+    if (existingByKey && existingByKey.status !== OPERATION_STATUS.COMPLETED) {
+      syncLogger.warn(`[PgSyncQueue]`, `Idempotency hit for ${params.entity_type}:${params.entityId} -> ${existingByKey.id}`);
+      return existingByKey.id;
+    }
+
+    // Step 2: Find existing pending/failed operation for same entity
+    const existingOp = await this.getPendingForEntity(params.entity_type, params.entityId);
+
+    // Step 3: Apply coalescing logic (pure JS, testable)
+    if (existingOp) {
+      const plan = getCoalescePlan(existingOp, params);
+
+      if (plan.type === "cancel") {
+        // create + delete = cancel (entity never reached server)
+        await this.deleteOperation(existingOp.id);
+        syncLogger.warn(`[PgSyncQueue]`, `Coalesced (cancelled) operation for ${params.entity_type}:${params.entityId}`);
+        return existingOp.id;
+      }
+
+      if (plan.type === "merge" || plan.type === "replace") {
+        // Merge/replace existing operation
+        await this.updateOperationCoalesced(existingOp.id, {
+          operation: plan.operation,
+          payload: plan.payload,
+          idempotencyKey,
+        });
+        syncLogger.warn(`[PgSyncQueue]`, `Coalesced (${plan.type}) operation for ${params.entity_type}:${params.entityId} -> ${existingOp.id}`);
+        return existingOp.id;
+      }
+    }
+
+    // Step 4: Insert new operation
+    await this.insertOperation({
+      id,
+      businessId: this.businessId,
+      entityType: params.entity_type,
+      operation: params.operation,
+      entityId: params.entityId,
+      payload: normalizeDatesToISO(params.data),
+      idempotencyKey,
+      syncGroupId: params.syncGroupId,
+      version: (params.data?._localVersion as number) ?? 1,
+    });
+
+    syncLogger.warn(`[PgSyncQueue]`, `Enqueued operation ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
+    return id;
+  }
+
+  /**
+   * Get operation by idempotency key (excluding completed)
+   */
+  private async getByIdempotencyKey(key: string): Promise<SyncOperationRecord | null> {
+    const result = await this.pg.query<SyncOperationRecord>(
+      `SELECT * FROM sync_operations
+       WHERE business_id = $1
+         AND idempotency_key = $2
+         AND status != $3
+       LIMIT 1`,
+      [this.businessId, key, OPERATION_STATUS.COMPLETED]
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * Get pending or failed operation for a specific entity
+   */
+  private async getPendingForEntity(
+    entityType: string,
+    entityId: string
+  ): Promise<SyncOperationRecord | null> {
+    const result = await this.pg.query<SyncOperationRecord>(
       `SELECT * FROM sync_operations
        WHERE business_id = $1
          AND entity_type = $2
@@ -170,67 +133,56 @@ export class PgSyncQueue implements ISyncQueue {
          AND status IN ($4, $5)
        ORDER BY created_at ASC
        LIMIT 1`,
+      [this.businessId, entityType, entityId, OPERATION_STATUS.PENDING, OPERATION_STATUS.FAILED]
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * Update an existing operation during coalescing
+   */
+  private async updateOperationCoalesced(
+    id: string,
+    data: {
+      operation: "create" | "update" | "delete";
+      payload: Record<string, unknown>;
+      idempotencyKey: string;
+    }
+  ): Promise<void> {
+    await this.pg.query(
+      `UPDATE sync_operations
+       SET operation = $1,
+           payload = $2::jsonb,
+           idempotency_key = $3,
+           status = $4,
+           last_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5 AND business_id = $6`,
       [
-        this.businessId,
-        params.entity_type,
-        params.entityId,
+        data.operation,
+        JSON.stringify(data.payload),
+        data.idempotencyKey,
         OPERATION_STATUS.PENDING,
-        OPERATION_STATUS.FAILED,
+        id,
+        this.businessId,
       ]
     );
+  }
 
-    if (existingOp.rows.length > 0) {
-      const existing = existingOp.rows[0];
-      const plan = getCoalescePlan(existing, params);
-
-      if (plan.type === "cancel") {
-        await this.pg.query(
-          `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
-          [existing.id, this.businessId]
-        );
-        syncLogger.warn(`[PgSyncQueue]`, `Cancelled coalesced operations for ${params.entity_type}:${params.entityId}`);
-        return existing.id;
-      }
-
-      if (plan.type === "merge" || plan.type === "replace") {
-        await this.pg.query(
-          `UPDATE sync_operations
-           SET operation = $1,
-               payload = $2::jsonb,
-               idempotency_key = $3,
-               status = $4,
-               last_error = NULL,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $5 AND business_id = $6`,
-          [
-            plan.operation,
-            JSON.stringify(normalizeDatesToISO(plan.payload)),
-            idempotencyKey,
-            OPERATION_STATUS.PENDING,
-            existing.id,
-            this.businessId,
-          ]
-        );
-        syncLogger.warn(`[PgSyncQueue]`, `Coalesced ${existing.operation}+${params.operation} for ${params.entity_type}:${params.entityId}`);
-        return existing.id;
-      }
-    }
-
-    // Check for existing idempotent operation
-    const existingIdempotent = await this.pg.query<{ id: string }>(
-      `SELECT id FROM sync_operations
-       WHERE business_id = $1
-         AND idempotency_key = $2
-         AND status != $3
-       LIMIT 1`,
-      [this.businessId, idempotencyKey, OPERATION_STATUS.COMPLETED]
-    );
-
-    if (existingIdempotent.rows.length > 0) {
-      return existingIdempotent.rows[0].id;
-    }
-
-    // Insert new operation
+  /**
+   * Insert a new operation
+   */
+  private async insertOperation(data: {
+    id: string;
+    businessId: string;
+    entityType: string;
+    operation: "create" | "update" | "delete";
+    entityId: string;
+    payload: Record<string, unknown>;
+    idempotencyKey: string;
+    syncGroupId?: string;
+    version: number;
+  }): Promise<void> {
     await this.pg.query(
       `INSERT INTO sync_operations (
          id, business_id, entity_type, operation, entity_id,
@@ -241,20 +193,18 @@ export class PgSyncQueue implements ISyncQueue {
          NULL, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
        )`,
       [
-        id,
-        this.businessId,
-        params.entity_type,
-        params.operation,
-        params.entityId,
-        JSON.stringify(normalizeDatesToISO(params.data)),
+        data.id,
+        data.businessId,
+        data.entityType,
+        data.operation,
+        data.entityId,
+        JSON.stringify(data.payload),
         OPERATION_STATUS.PENDING,
-        (params.data?._localVersion as number) ?? 1,
-        params.idempotencyKey ?? null,
-        params.syncGroupId ?? null,
+        data.version,
+        data.idempotencyKey,
+        data.syncGroupId ?? null,
       ]
     );
-
-    return id;
   }
 
   async getPending(limit: number, options?: QueueOptions): Promise<SyncOperationRecord[]> {
@@ -361,7 +311,7 @@ export class PgSyncQueue implements ISyncQueue {
   }
 
   async moveToDeadLetter(operation: SyncOperationRecord, error: string): Promise<void> {
-    const dlqId = crypto.randomUUID();
+    const dlqId = generateId();
 
     await this.pg.query(
       `INSERT INTO sync_dead_letter (

@@ -68,12 +68,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="app-shell flex min-h-[100svh] items-center px-4 py-5 sm:px-6 sm:py-8">
-      <div className="mx-auto w-full max-w-sm">
-        <Card className="shell-card-flat w-full overflow-hidden rounded-[28px] border-stone-200/90">
+    <div className="app-shell flex min-h-[100svh] items-center sm:px-6 sm:py-8">
+      <div className="mx-auto w-full sm:max-w-sm">
+        <Card className="shell-card-flat w-full overflow-hidden sm:rounded-[28px] border-stone-200/90 min-h-[100svh] sm:min-h-0">
           <div className="h-1.5 w-full bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300" />
 
-          <CardHeader className="space-y-4 px-5 pb-2 pt-5 sm:px-6">
+          <CardHeader className="space-y-4 px-4 pb-2 pt-6 sm:px-6 sm:pt-5">
             <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
               <Route className="h-7 w-7 text-white" />
             </div>
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
           <FormProvider {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="space-y-3 px-5 pb-2 sm:px-6">
+              <CardContent className="space-y-3 px-4 pb-2 sm:px-6">
                 <FormInput
                   label="Correo electrónico"
                   type="email"
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 )}
               </CardContent>
 
-              <CardFooter className="flex flex-col gap-3 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+              <CardFooter className="flex flex-col gap-3 px-4 pb-6 pt-4 sm:px-6 sm:pb-6">
                 <Button
                   type="submit"
                   className="h-12 w-full rounded-[18px] bg-orange-500 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"

@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -70,34 +70,35 @@ function QuickTagModalContent({ close }: { close: () => void }) {
         </DrawerDescription>
       </DrawerHeader>
 
-      <form onSubmit={onSubmit} className="px-4 py-4 space-y-4">
-        <FormInput
-          {...form.register("name", { required: "El nombre es requerido" })}
-          label="Nombre"
-          placeholder="Ej: Cliente VIP"
-          error={form.formState.errors.name?.message}
-          required
-        />
+      <FormProvider {...form}>
+        <form onSubmit={onSubmit} className="px-4 py-4 space-y-4">
+          <FormInput
+            name="name"
+            label="Nombre"
+            placeholder="Ej: Cliente VIP"
+            required
+          />
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Color</label>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => form.setValue("color", color)}
-                className={`w-8 h-8 rounded-lg transition-all ${
-                  selectedColor === color
-                    ? "ring-2 ring-offset-2 ring-orange-500 scale-110"
-                    : "hover:scale-105"
-                }`}
-                style={{ backgroundColor: color }}
-              />
-            ))}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Color</label>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => form.setValue("color", color)}
+                  className={`w-8 h-8 rounded-lg transition-all ${
+                    selectedColor === color
+                      ? "ring-2 ring-offset-2 ring-orange-500 scale-110"
+                      : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </FormProvider>
 
       <DrawerFooter className="mt-auto flex-row gap-3 px-4 pb-6 pt-2 sm:flex-row sm:space-x-0">
         <Button

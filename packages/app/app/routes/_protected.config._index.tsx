@@ -112,7 +112,7 @@ const tagsConfigItem: ConfigItem = {
   icon: Tag,
   title: "Etiquetas",
   description: "Gestiona etiquetas para clientes",
-  href: "/tags",
+  href: "/config/tags",
   color: "text-indigo-600",
   iconBg: "bg-indigo-100",
 };

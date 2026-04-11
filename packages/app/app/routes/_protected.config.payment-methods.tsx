@@ -22,7 +22,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FormInput } from "@/components/forms/form-input";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   usePaymentMethodsConfig,
@@ -305,30 +306,36 @@ export default function PaymentMethodsConfigPage() {
                       <div className="mt-4 pt-4 border-t border-orange-200 space-y-3">
                         {(methodDef.id === "yape" || methodDef.id === "plin") && (
                           <>
-                            <FormInput
-                              label="Número de celular"
-                              placeholder="999 999 999"
-                              value={methodData.phone || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "phone",
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <FormInput
-                              label="Nombre del titular"
-                              placeholder="Nombre completo"
-                              value={methodData.accountName || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "accountName",
-                                  e.target.value
-                                )
-                              }
-                            />
+                            <div className="space-y-2">
+                              <Label>Número de celular</Label>
+                              <Input
+                                placeholder="999 999 999"
+                                value={methodData.phone || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "phone",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Nombre del titular</Label>
+                              <Input
+                                placeholder="Nombre completo"
+                                value={methodData.accountName || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "accountName",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
                             <QRImageUpload
                               methodId={methodDef.id}
                               qrImageUrl={methodData.qrImageUrl}
@@ -339,54 +346,66 @@ export default function PaymentMethodsConfigPage() {
 
                         {methodDef.id === "transferencia" && (
                           <>
-                            <FormInput
-                              label="Banco"
-                              placeholder="Nombre del banco"
-                              value={methodData.bank || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "bank",
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <FormInput
-                              label="Número de cuenta"
-                              placeholder="0000 0000 0000 0000"
-                              value={methodData.accountNumber || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "accountNumber",
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <FormInput
-                              label="CCI (Código de Cuenta Interbancario)"
-                              placeholder="00200000000000000000"
-                              value={methodData.cci || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "cci",
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <FormInput
-                              label="Titular de la cuenta"
-                              placeholder="Nombre completo"
-                              value={methodData.accountName || ""}
-                              onChange={(e) =>
-                                updateMethodDetails(
-                                  methodDef.id,
-                                  "accountName",
-                                  e.target.value
-                                )
-                              }
-                            />
+                            <div className="space-y-2">
+                              <Label>Banco</Label>
+                              <Input
+                                placeholder="Nombre del banco"
+                                value={methodData.bank || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "bank",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Número de cuenta</Label>
+                              <Input
+                                placeholder="0000 0000 0000 0000"
+                                value={methodData.accountNumber || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "accountNumber",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>CCI (Código de Cuenta Interbancario)</Label>
+                              <Input
+                                placeholder="00200000000000000000"
+                                value={methodData.cci || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "cci",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Titular de la cuenta</Label>
+                              <Input
+                                placeholder="Nombre completo"
+                                value={methodData.accountName || ""}
+                                onChange={(e) =>
+                                  updateMethodDetails(
+                                    methodDef.id,
+                                    "accountName",
+                                    e.target.value
+                                  )
+                                }
+                                className="shell-field h-12 rounded-[16px] px-4"
+                              />
+                            </div>
                           </>
                         )}
                       </div>

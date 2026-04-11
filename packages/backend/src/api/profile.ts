@@ -34,7 +34,7 @@ export const profileRoutes = new Elysia({ prefix: "/profile" })
     "/me",
     async (ctx) => {
       const user = (ctx as any).user;
-      const body = ctx.body as any;
+      const body = ctx.body as Record<string, unknown>;
       if (!user?.id) {
         throw new UnauthorizedError();
       }
@@ -43,12 +43,17 @@ export const profileRoutes = new Elysia({ prefix: "/profile" })
         where: eq(userProfiles.userId, user.id),
       });
 
+      const dniValue = body.dni;
+      const phoneValue = body.phone;
+      const birthDateValue = body.birthDate;
+      const avatarIdValue = body.avatarId;
+
       const profileData = {
         userId: user.id,
-        dni: body.dni ?? null,
-        phone: body.phone ?? null,
-        birthDate: body.birthDate ?? null,
-        avatarId: body.avatarId ?? existingProfile?.avatarId ?? null,
+        dni: dniValue === "" || dniValue === undefined || dniValue === null ? null : String(dniValue),
+        phone: phoneValue === "" || phoneValue === undefined || phoneValue === null ? null : String(phoneValue),
+        birthDate: birthDateValue === "" || birthDateValue === undefined || birthDateValue === null ? null : String(birthDateValue),
+        avatarId: avatarIdValue === "" || avatarIdValue === undefined || avatarIdValue === null ? (existingProfile?.avatarId ?? null) : String(avatarIdValue),
         updatedAt: new Date(),
       };
 
@@ -78,10 +83,10 @@ export const profileRoutes = new Elysia({ prefix: "/profile" })
     },
     {
       body: t.Object({
-        dni: t.Optional(t.String({ maxLength: 20 })),
-        phone: t.Optional(t.String({ maxLength: 50 })),
-        birthDate: t.Optional(t.String({ format: "date" })),
-        avatarId: t.Optional(t.String()),
+        dni: t.Optional(t.Union([t.String({ maxLength: 20 }), t.Null()])),
+        phone: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
+        birthDate: t.Optional(t.Union([t.String({ format: "date" }), t.Null()])),
+        avatarId: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   );

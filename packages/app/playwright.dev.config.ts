@@ -1,12 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Playwright Configuration for E2E Tests with MSW (Mock Service Worker)
+ * Playwright Configuration for E2E Tests with Dev Server
  *
- * This configuration runs tests against a static build with MSW enabled,
- * eliminating the need for a running backend server.
- *
- * Usage: bun run test:e2e:msw
+ * This configuration runs tests against the development server,
+ * which has DEV_CREDENTIALS pre-filled for easy testing.
  */
 
 export default defineConfig({
@@ -27,10 +25,13 @@ export default defineConfig({
   /* Reporter to use */
   reporter: [["list"], ["html", { open: "never" }]],
 
+  /* Timeout for all tests - increased for PGlite initialization */
+  timeout: 300000, // 5 minutes
+
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: "http://localhost:4173",
+    baseURL: "http://localhost:5173",
 
     /* Run in headless mode by default */
     headless: true,
@@ -47,17 +48,11 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    // MSW injection setup - runs before each test
-    {
-      name: "chromium",
-      testMatch: /playwright\.setup\.ts/,
-    },
     {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 720 },
-        storageState: "e2e/.auth/user.json",
       },
       testMatch: /.*\.spec\.ts/,
     },
@@ -66,17 +61,18 @@ export default defineConfig({
       name: "Mobile Chrome",
       use: {
         ...devices["Pixel 5"],
-        storageState: "e2e/.auth/user.json",
       },
       testMatch: /.*\.spec\.ts/,
     },
   ],
 
-  /* Build and serve the app with MSW */
+  /* Start dev server */
   webServer: {
-    command: "bun run build && bunx serve -s build/client -l 4173",
-    url: "http://localhost:4173",
+    command: "bun run dev",
+    url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    stdout: "ignore",
+    stderr: "pipe",
   },
 });

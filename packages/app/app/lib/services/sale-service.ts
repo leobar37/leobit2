@@ -251,7 +251,7 @@ export class SaleService extends BaseService {
    */
   async findById(id: string): Promise<SaleWithItems | null> {
     const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE id = $1`,
+      `SELECT * FROM sales WHERE id = ?`,
       [id]
     );
 
@@ -265,7 +265,7 @@ export class SaleService extends BaseService {
     let customer: SaleCustomer | null = null;
     if (sale.customerId) {
       const customerResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
+        `SELECT id, name, dni, phone FROM customers WHERE id = ?`,
         [sale.customerId]
       );
       if (customerResult.rows.length > 0) {
@@ -1213,11 +1213,11 @@ export class SaleService extends BaseService {
       throw new Error("Only draft sales can be deleted");
     }
 
-    // Delete sale items first using Drizzle (cascade on server will handle the sync)
-    await this.db.delete(saleItemsTable).where(eq(saleItemsTable.saleId, id));
+    // Delete sale items first (cascade on server will handle the sync)
+    await this.pg.query(`DELETE FROM sale_items WHERE sale_id = ?`, [id]);
 
     // Delete the sale
-    await this.pg.query(`DELETE FROM sales WHERE id = $1`, [id]);
+    await this.pg.query(`DELETE FROM sales WHERE id = ?`, [id]);
 
     // Queue deletion sync for the sale only (items are handled by cascade)
     await this.queueSync(

@@ -1,6 +1,6 @@
-import { eq, and, desc, like, sql, inArray, ne } from "drizzle-orm";
+import { eq, and, desc, like, sql, inArray, ne, count } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
+import { customers, sales, abonos, customerTags, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { saleStatusEnum } from "../../db/schema/enums";
 import type { DbTransaction } from "../../lib/txid";
@@ -21,11 +21,47 @@ export class CustomerRepository {
       limit?: number;
       offset?: number;
       customerIds?: string[]; // Filter by specific IDs (from tag filter)
+      tagIds?: string[]; // Filter by tags — uses JOIN internally to avoid N+1
     }
   ): Promise<Customer[]> {
     // If customerIds provided but empty, return empty array
     if (filters?.customerIds && filters.customerIds.length === 0) {
       return [];
+    }
+
+    // If tagIds provided, filter using JOIN with customerTags to avoid N+1
+    if (filters?.tagIds && filters.tagIds.length > 0) {
+      // Join customerTags with customers to filter by businessId
+      const tagCustomerIds = await db
+        .select({ customerId: customerTags.customerId })
+        .from(customerTags)
+        .innerJoin(customers, eq(customerTags.customerId, customers.id))
+        .where(
+          and(
+            inArray(customerTags.tagId, filters.tagIds),
+            eq(customers.businessId, ctx.businessId)
+          )
+        )
+        .groupBy(customerTags.customerId)
+        .having(sql`count(distinct ${customerTags.tagId}) = ${filters.tagIds.length}`);
+
+      const ids = tagCustomerIds.map(r => r.customerId);
+      if (ids.length === 0) return [];
+
+      return db.query.customers.findMany({
+        where: and(
+          eq(customers.businessId, ctx.businessId),
+          filters.search
+            ? like(customers.name, `%${filters.search}%`)
+            : undefined,
+          filters.customerIds && filters.customerIds.length > 0
+            ? and(inArray(customers.id, ids), inArray(customers.id, filters.customerIds))
+            : inArray(customers.id, ids)
+        ),
+        orderBy: desc(customers.createdAt),
+        limit: filters.limit,
+        offset: filters.offset,
+      });
     }
 
     const query = db.query.customers.findMany({
@@ -177,66 +213,49 @@ export class CustomerRepository {
       )`
       : undefined;
 
+    // Use LATERAL JOIN to get totalPayments in a single query instead of N+1 per customer
     const customersWithDebt = await db
       .select({
         customer: customers,
         totalDebt: sql<number>`
-          COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
-            SELECT SUM(${abonos.amount}) 
-            FROM ${abonos} 
-            WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
-          ), 0)
+          COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE(abonos_lateral.total_paid, 0)
         `,
         totalSales: sql<number>`COALESCE(SUM(${sales.totalAmount}), 0)`,
         lastSaleDate: sql<Date | null>`MAX(${sales.saleDate})`,
+        totalPayments: sql<number>`COALESCE(abonos_lateral.total_paid, 0)`,
       })
       .from(customers)
       .leftJoin(sales, and(
         eq(sales.customerId, customers.id),
         eq(sales.businessId, ctx.businessId)
       ))
+      .leftJoin(
+        sql`LATERAL (
+          SELECT COALESCE(SUM(${abonos.amount}), 0) AS total_paid
+          FROM ${abonos}
+          WHERE ${abonos.customerId} = ${customers.id}
+            AND ${abonos.businessId} = ${ctx.businessId}
+        ) AS abonos_lateral`,
+        sql`true`
+      )
       .where(and(
         eq(customers.businessId, ctx.businessId),
         searchFilter,
         minBalanceFilter
       ))
-      .groupBy(customers.id)
-      .having(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
-        SELECT SUM(${abonos.amount}) 
-        FROM ${abonos} 
-        WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
-      ), 0) > 0`)
-      .orderBy(desc(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE((
-        SELECT SUM(${abonos.amount}) 
-        FROM ${abonos} 
-        WHERE ${abonos.customerId} = ${customers.id} AND ${abonos.businessId} = ${ctx.businessId}
-      ), 0)`))
+      .groupBy(customers.id, sql`abonos_lateral.total_paid`)
+      .having(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE(abonos_lateral.total_paid, 0) > 0`)
+      .orderBy(desc(sql`COALESCE(SUM(${creditSalesExpression}), 0) - COALESCE(abonos_lateral.total_paid, 0)`))
       .limit(filters?.limit ?? 100)
       .offset(filters?.offset ?? 0);
 
-    const result: AccountsReceivableItem[] = [];
-    
-    for (const row of customersWithDebt) {
-      const totalPaymentsResult = await db
-        .select({ total: sql<number>`COALESCE(SUM(${abonos.amount}), 0)` })
-        .from(abonos)
-        .where(and(
-          eq(abonos.customerId, row.customer.id),
-          eq(abonos.businessId, ctx.businessId)
-        ));
-      
-      const totalPayments = totalPaymentsResult[0]?.total ?? 0;
-      
-      result.push({
-        customer: row.customer,
-        totalDebt: Number(row.totalDebt),
-        totalSales: Number(row.totalSales),
-        totalPayments: totalPayments,
-        lastSaleDate: row.lastSaleDate,
-      });
-    }
-
-    return result;
+    return customersWithDebt.map((row) => ({
+      customer: row.customer,
+      totalDebt: Number(row.totalDebt),
+      totalSales: Number(row.totalSales),
+      totalPayments: Number(row.totalPayments),
+      lastSaleDate: row.lastSaleDate,
+    }));
   }
 
   async getTotalAccountsReceivable(ctx: RequestContext): Promise<number> {

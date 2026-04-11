@@ -54,12 +54,16 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      // Filter out empty strings - backend rejects empty strings for date format
-      const payload = {
-        ...(data.dni && { dni: data.dni }),
-        ...(data.phone && { phone: data.phone }),
-        ...(data.birthDate && { birthDate: data.birthDate }),
-      };
+      const payload: Record<string, string> = {};
+      if (data.dni && data.dni.trim()) {
+        payload.dni = data.dni.trim();
+      }
+      if (data.phone && data.phone.trim()) {
+        payload.phone = data.phone.trim();
+      }
+      if (data.birthDate && data.birthDate.trim()) {
+        payload.birthDate = data.birthDate.trim();
+      }
       await updateProfile.mutateAsync(payload);
       toast.success("Perfil actualizado correctamente");
     } catch (error) {

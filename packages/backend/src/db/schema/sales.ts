@@ -117,6 +117,7 @@ export const sales = pgTable(
     index("idx_sales_cancelled_at").on(table.cancelledAt),
     index("idx_sales_sale_date").on(table.saleDate),
     index("idx_sales_delivery_date").on(table.deliveryDate),
+    index("idx_sales_business_status_date").on(table.businessId, table.status, table.saleDate),
   ]
 );
 

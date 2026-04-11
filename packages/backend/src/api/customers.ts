@@ -8,22 +8,18 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
   .use(servicesPlugin)
   .get(
     "/",
-    async ({ customerService, customerTagService, ctx, query }) => {
-      let customerIds: string[] | undefined;
-
-      // If tagIds provided, filter by tags
-      if (query.tagIds) {
-        const tagIds = query.tagIds.split(",").filter(Boolean);
-        if (tagIds.length > 0) {
-          customerIds = await customerTagService.getCustomersByTags(ctx as RequestContext, tagIds);
-        }
-      }
+    async ({ customerService, ctx, query }) => {
+      // tagIds are passed directly to the repository which handles the JOIN internally
+      // This avoids the previous N+1 pattern (getCustomerIds then getCustomers)
+      const tagIds = query.tagIds
+        ? query.tagIds.split(",").filter(Boolean)
+        : undefined;
 
       const customers = await customerService.getCustomers(ctx as RequestContext, {
         search: query.search,
         limit: query.limit ? parseInt(query.limit) : undefined,
         offset: query.offset ? parseInt(query.offset) : undefined,
-        customerIds, // Filter by tag results if provided
+        tagIds: tagIds && tagIds.length > 0 ? tagIds : undefined,
       });
       return { success: true, data: customers };
     },

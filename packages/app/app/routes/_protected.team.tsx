@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { FormInput } from "@/components/forms/form-input";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { TeamMember } from "@avileo/shared";
@@ -256,49 +256,50 @@ export default function TeamPage() {
               Actualiza el rol o punto de venta de {editingMember?.name}
             </DrawerDescription>
           </DrawerHeader>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Rol</label>
-              <select
-                value={form.watch("role")}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  form.setValue("role", e.target.value as "ADMIN_NEGOCIO" | "VENDEDOR")
-                }
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="ADMIN_NEGOCIO">Administrador</option>
-                <option value="VENDEDOR">Vendedor</option>
-              </select>
-            </div>
+          <FormProvider {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Rol</label>
+                <select
+                  value={form.watch("role")}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    form.setValue("role", e.target.value as "ADMIN_NEGOCIO" | "VENDEDOR")
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="ADMIN_NEGOCIO">Administrador</option>
+                  <option value="VENDEDOR">Vendedor</option>
+                </select>
+              </div>
 
-            <FormInput
-              label="Punto de venta"
-              placeholder="Ej: Carro A, Casa, etc."
-              error={form.formState.errors.salesPoint?.message}
-              {...form.register("salesPoint")}
-            />
+              <FormInput
+                name="salesPoint"
+                label="Punto de venta"
+                placeholder="Ej: Carro A, Casa, etc."
+              />
 
-            {form.formState.errors.root && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.root.message}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={updateMember.isPending || !form.formState.isValid}
-            >
-              {updateMember.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                "Guardar cambios"
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.root.message}
+                </p>
               )}
-            </Button>
-          </form>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={updateMember.isPending || !form.formState.isValid}
+              >
+                {updateMember.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar cambios"
+                )}
+              </Button>
+            </form>
+          </FormProvider>
         </DrawerContent>
       </Drawer>
 

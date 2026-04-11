@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, useCallback } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,25 @@ const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
   ) => {
     const [showPassword, setShowPassword] = useState(false);
 
+    const mergedRef = useCallback(
+      (node: HTMLInputElement | null) => {
+        const propsRef = (props as Record<string, unknown>).ref;
+        if (propsRef) {
+          if (typeof propsRef === "function") {
+            (propsRef as (n: HTMLInputElement | null) => void)(node);
+          } else if (typeof propsRef === "object" && propsRef && "current" in propsRef) {
+            (propsRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+          }
+        }
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+        }
+      },
+      [ref]
+    );
+
     return (
       <FormFieldShell
         description={description}
@@ -39,7 +58,7 @@ const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
       >
         <div className="relative">
           <Input
-            ref={ref}
+            ref={mergedRef}
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             data-testid={props.name ? `input-${props.name}` : "input-password"}

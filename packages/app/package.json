@@ -17,6 +17,9 @@
     "test:e2e:with-server": "WEB_SERVER=1 playwright test --config=playwright.config.ts",
     "test:e2e:msw": "playwright test --config=playwright.msw.config.ts",
     "test:e2e:msw:headed": "HEADED=1 playwright test --config=playwright.msw.config.ts",
+    "test:e2e:volume": "playwright test --config=playwright.volume.config.ts",
+    "test:e2e:perf": "playwright test --config=playwright.perf.config.ts",
+    "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts",
     "db:migrate": "bun scripts/migrate-to-pglite.ts",
     "db:rollback": "bun scripts/rollback-migration.ts",
     "db:rollback:verify": "bun scripts/rollback-migration.ts --verify-only",
@@ -73,6 +76,7 @@
   },
   "devDependencies": {
     "@avileo/backend": "workspace:*",
+    "@faker-js/faker": "^10.4.0",
     "@playwright/test": "^1.58.2",
     "@react-router/dev": "^7.9.2",
     "@resvg/resvg-js": "^2.6.2",

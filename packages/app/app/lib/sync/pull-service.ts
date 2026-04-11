@@ -14,7 +14,7 @@ import { syncLogger } from "./sync-logger";
 
 // Re-export types for backward compatibility
 export type { PullStatus, PullResult, PullChange, PullResponse } from "./types";
-import { applyChange } from "./change-applier";
+import { applyChange, applyChangesBatch } from "./change-applier";
 import { calculateBackoffDelay } from "./backoff";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
@@ -463,31 +463,23 @@ export class PullService {
         }
       }
 
-      // Apply each change to local database
-      const entityTypes = new Set<string>();
-      let appliedCount = 0;
-      const failedChanges: Array<{ change: PullChange; error: string }> = [];
-
-      for (const change of changes) {
-        const result = await applyChange(this.pg, this.db, change, this.businessId);
-
-        if (result.success) {
-          entityTypes.add(change.entityType);
-          appliedCount++;
-        } else {
-          syncLogger.error('[Pull]', `Failed to apply change for ${change.entityType}:${change.entityId}`, result.error);
-          failedChanges.push({ change, error: result.error || "Unknown error" });
-        }
-      }
+      // Apply each change to local database using batched conflict checks
+      const { entityTypes, failedChanges } = await applyChangesBatch(
+        this.pg,
+        this.db,
+        changes,
+        this.businessId
+      );
+      const appliedCount = changes.length - failedChanges.length;
 
       // Notify about changes via callback and events
       if (entityTypes.size > 0) {
         if (this.onChangesApplied) {
           this.onChangesApplied(Array.from(entityTypes));
         }
-        syncEvents.emit("pull:completed", { 
-          changesApplied: appliedCount, 
-          entityTypes: Array.from(entityTypes) 
+        syncEvents.emit("pull:completed", {
+          changesApplied: appliedCount,
+          entityTypes: Array.from(entityTypes)
         });
       }
 

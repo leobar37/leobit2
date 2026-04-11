@@ -55,4 +55,5 @@ CREATE INDEX IF NOT EXISTS idx_sales_visita_id ON sales(visita_id);
 CREATE INDEX IF NOT EXISTS idx_sales_sync_status ON sales(sync_status);
 CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
 CREATE INDEX IF NOT EXISTS idx_sales_sale_date ON sales(sale_date);
+CREATE INDEX IF NOT EXISTS idx_sales_business_status_date ON sales(business_id, status, sale_date);
 `.trim();

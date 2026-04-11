@@ -19,6 +19,7 @@ export class CustomerService {
       limit?: number;
       offset?: number;
       customerIds?: string[]; // Filter by specific customer IDs (from tag filter)
+      tagIds?: string[]; // Filter by tags — handled in repository to avoid N+1
     }
   ) {
     if (!ctx.hasPermission("customers.read")) {

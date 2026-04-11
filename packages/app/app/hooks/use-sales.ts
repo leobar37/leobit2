@@ -373,16 +373,10 @@ export function useDeleteSale() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      // Get sale to check its status
-      const sale = await saleService.findById(id);
-      if (!sale) {
-        throw new Error("Venta no encontrada");
-      }
-
+    mutationFn: async ({ id, status }: { id: string; status: string }): Promise<void> => {
       // Draft sales: hard delete locally
       // Processed sales: soft delete via API
-      if (sale.status === "draft") {
+      if (status === "draft") {
         return saleService.delete(id);
       } else {
         // Call backend API for soft delete
@@ -392,7 +386,7 @@ export function useDeleteSale() {
         }
       }
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });

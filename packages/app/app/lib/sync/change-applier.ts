@@ -243,6 +243,112 @@ async function applyUpdate(
 }
 
 /**
+ * Batch-apply multiple changes with pre-computed conflict set.
+ * Replaces N individual hasUnsyncedLocalChanges queries with 1 batch query.
+ */
+export async function applyChangesBatch(
+  pg: PGlite,
+  _db: unknown,
+  changes: PullChange[],
+  businessId: string,
+  checkConflicts: boolean = true
+): Promise<{ entityTypes: Set<string>; failedChanges: Array<{ change: PullChange; error: string }> }> {
+  // Pre-compute conflicting entity IDs in a single batch query
+  const conflictedIds = new Set<string>();
+  if (checkConflicts) {
+    const updateChanges = changes.filter(c => c.operation === 'update');
+    if (updateChanges.length > 0) {
+      // Group by table for batch querying
+      const byTable = new Map<string, string[]>();
+      for (const change of updateChanges) {
+        const ids = byTable.get(change.entityType) || [];
+        ids.push(change.entityId);
+        byTable.set(change.entityType, ids);
+      }
+
+      // One query per table instead of N queries per change
+      for (const [tableName, entityIds] of byTable) {
+        if (!isValidTableName(tableName)) continue;
+        try {
+          const result = await pg.query(
+            `SELECT id FROM "${tableName}" WHERE id = ANY($1) AND sync_status IN ('pending','syncing','failed')`,
+            [entityIds]
+          );
+          for (const row of result.rows) {
+            conflictedIds.add(`${tableName}:${row.id}`);
+          }
+        } catch {
+          // Table may not exist — skip
+        }
+      }
+    }
+  }
+
+  const entityTypes = new Set<string>();
+  const failedChanges: Array<{ change: PullChange; error: string }> = [];
+
+  for (const change of changes) {
+    const result = await applyChangeWithConflictSet(pg, _db, change, businessId, conflictedIds, checkConflicts);
+
+    if (result.success) {
+      entityTypes.add(change.entityType);
+    } else {
+      syncLogger.error('[Pull]', `Failed to apply change for ${change.entityType}:${change.entityId}`, result.error);
+      failedChanges.push({ change, error: result.error || "Unknown error" });
+    }
+  }
+
+  return { entityTypes, failedChanges };
+}
+
+/**
+ * Apply a single change using a pre-computed conflict set (O(1) lookup).
+ */
+async function applyChangeWithConflictSet(
+  pg: PGlite,
+  _db: unknown,
+  change: PullChange,
+  businessId: string,
+  conflictedIds: Set<string>,
+  checkConflicts: boolean = true,
+  retriesLeft: number = MAX_APPLY_RETRIES,
+): Promise<ChangeApplicationResult> {
+  const tableName = change.entityType;
+
+  if (!isValidTableName(tableName)) {
+    return { success: false, error: `Invalid table name: ${tableName}` };
+  }
+
+  try {
+    // O(1) lookup in pre-computed set instead of per-change DB query
+    if (checkConflicts && change.operation === 'update') {
+      if (conflictedIds.has(`${tableName}:${change.entityId}`)) {
+        syncLogger.warn('[ChangeApplier]', `Potential conflict: ${tableName}:${change.entityId} has unsynced local changes`);
+      }
+    }
+
+    switch (change.operation) {
+      case "create":
+      case "insert":
+        return await applyInsert(pg, tableName, change, businessId);
+      case "update":
+        return await applyUpdate(pg, tableName, change, businessId);
+      case "delete":
+        return await applyDelete(pg, tableName, change, businessId);
+      default:
+        return { success: false, error: `Unknown operation: ${change.operation}` };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (retriesLeft > 0 && isTransientError(errorMessage)) {
+      await sleep(100);
+      return applyChangeWithConflictSet(pg, _db, change, businessId, conflictedIds, checkConflicts, retriesLeft - 1);
+    }
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Apply a delete operation using raw SQL
  */
 async function applyDelete(

@@ -26,4 +26,6 @@ export const CREATE_CUSTOMERS_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 CREATE INDEX IF NOT EXISTS idx_customers_business_id ON customers(business_id);
 CREATE INDEX IF NOT EXISTS idx_customers_sync_status ON customers(sync_status);
+CREATE INDEX IF NOT EXISTS idx_customers_business_name ON customers(business_id, name);
+CREATE INDEX IF NOT EXISTS idx_customers_business_dni ON customers(business_id, dni);
 `.trim();

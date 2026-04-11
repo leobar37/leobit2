@@ -7,7 +7,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, customers, customerTags, tags } from "@avileo/shared";
+import { SyncStatus, customers, customerTags, customerGroupMembers, tags } from "@avileo/shared";
 import type { Customer } from "@avileo/shared";
 import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
 
@@ -35,6 +35,7 @@ export interface CustomerSearchFilters {
   hasDni?: boolean;
   hasPhone?: boolean;
   tagIds?: string[];
+  groupIds?: string[];
 }
 
 export interface CustomerPageQuery extends CustomerSearchFilters {
@@ -127,6 +128,52 @@ export class CustomerService extends BaseService {
     return rows.map((row) => row.customerId);
   }
 
+  private async filterCustomerIdsByGroups(groupIds: string[]): Promise<string[] | null> {
+    if (groupIds.length === 0) {
+      return null;
+    }
+
+    const rows = await this.db
+      .selectDistinct({ customerId: customerGroupMembers.customerId })
+      .from(customerGroupMembers)
+      .innerJoin(customers, eq(customerGroupMembers.customerId, customers.id))
+      .where(
+        and(
+          eq(customers.businessId, this.businessId),
+          eq(customerGroupMembers.businessId, this.businessId),
+          inArray(customerGroupMembers.groupId, groupIds)
+        )
+      );
+
+    return rows.map((row) => row.customerId);
+  }
+
+  private async resolveFilteredCustomerIds(filters?: CustomerSearchFilters): Promise<string[] | null> {
+    const [tagFilteredIds, groupFilteredIds] = await Promise.all([
+      this.filterCustomerIdsByTags(filters?.tagIds ?? []),
+      this.filterCustomerIdsByGroups(filters?.groupIds ?? []),
+    ]);
+
+    if (tagFilteredIds && tagFilteredIds.length === 0) {
+      return [];
+    }
+
+    if (groupFilteredIds && groupFilteredIds.length === 0) {
+      return [];
+    }
+
+    if (!tagFilteredIds && !groupFilteredIds) {
+      return null;
+    }
+
+    if (tagFilteredIds && groupFilteredIds) {
+      const groupSet = new Set(groupFilteredIds);
+      return tagFilteredIds.filter((customerId) => groupSet.has(customerId));
+    }
+
+    return tagFilteredIds ?? groupFilteredIds;
+  }
+
   /**
    * Find a customer by ID
    */
@@ -149,15 +196,15 @@ export class CustomerService extends BaseService {
    * Optionally filtered by search query
    */
   async findByBusiness(filters?: CustomerSearchFilters): Promise<Customer[]> {
-    const tagFilteredIds = await this.filterCustomerIdsByTags(filters?.tagIds ?? []);
-    if (tagFilteredIds && tagFilteredIds.length === 0) {
+    const filteredIds = await this.resolveFilteredCustomerIds(filters);
+    if (filteredIds && filteredIds.length === 0) {
       return [];
     }
 
     const conditions = this.buildFilterConditions(filters);
 
-    if (tagFilteredIds) {
-      conditions.push(inArray(customers.id, tagFilteredIds) as never);
+    if (filteredIds) {
+      conditions.push(inArray(customers.id, filteredIds) as never);
     }
 
     const result = await this.db
@@ -170,15 +217,15 @@ export class CustomerService extends BaseService {
   }
 
   async countByBusiness(filters?: CustomerSearchFilters): Promise<number> {
-    const tagFilteredIds = await this.filterCustomerIdsByTags(filters?.tagIds ?? []);
-    if (tagFilteredIds && tagFilteredIds.length === 0) {
+    const filteredIds = await this.resolveFilteredCustomerIds(filters);
+    if (filteredIds && filteredIds.length === 0) {
       return 0;
     }
 
     const conditions = this.buildFilterConditions(filters);
 
-    if (tagFilteredIds) {
-      conditions.push(inArray(customers.id, tagFilteredIds) as never);
+    if (filteredIds) {
+      conditions.push(inArray(customers.id, filteredIds) as never);
     }
 
     const result = await this.db
@@ -190,15 +237,15 @@ export class CustomerService extends BaseService {
   }
 
   async findPageByBusiness(query: CustomerPageQuery): Promise<CustomerListPage> {
-    const tagFilteredIds = await this.filterCustomerIdsByTags(query.tagIds ?? []);
-    if (tagFilteredIds && tagFilteredIds.length === 0) {
+    const filteredIds = await this.resolveFilteredCustomerIds(query);
+    if (filteredIds && filteredIds.length === 0) {
       return { items: [], total: 0 };
     }
 
     const conditions = this.buildFilterConditions(query);
 
-    if (tagFilteredIds) {
-      conditions.push(inArray(customers.id, tagFilteredIds) as never);
+    if (filteredIds) {
+      conditions.push(inArray(customers.id, filteredIds) as never);
     }
 
     const [items, totalResult] = await Promise.all([

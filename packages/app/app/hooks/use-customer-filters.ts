@@ -20,6 +20,8 @@ interface UseCustomerFiltersResult {
   filteredCustomers: Customer[];
   tagIds: string[];
   setTagIds: (value: string[] | ((prev: string[]) => string[])) => void;
+  groupIds: string[];
+  setGroupIds: (value: string[] | ((prev: string[]) => string[])) => void;
   search: string;
   setSearch: (value: string | ((prev: string) => string)) => void;
   isSearching: boolean;
@@ -42,6 +44,11 @@ export function useCustomerFilters({
 
   const [tagIds, setTagIds] = useQueryState(
     "tags",
+    parseAsArrayOf(parseAsString).withDefault([])
+  );
+
+  const [groupIds, setGroupIds] = useQueryState(
+    "groups",
     parseAsArrayOf(parseAsString).withDefault([])
   );
 
@@ -104,6 +111,14 @@ export function useCustomerFilters({
     }
   };
 
+  const handleSetGroupIds = (value: string[] | ((prev: string[]) => string[])) => {
+    if (typeof value === "function") {
+      setGroupIds(value(groupIds));
+    } else {
+      setGroupIds(value.length > 0 ? value : null);
+    }
+  };
+
   const handleSetSearch = (value: string | ((prev: string) => string)) => {
     if (typeof value === "function") {
       const newValue = value(search);
@@ -117,9 +132,11 @@ export function useCustomerFilters({
     filteredCustomers,
     tagIds,
     setTagIds: handleSetTagIds,
+    groupIds,
+    setGroupIds: handleSetGroupIds,
     search,
     setSearch: handleSetSearch,
     isSearching: search.length > 0,
-    isFiltering: tagIds.length > 0,
+    isFiltering: tagIds.length > 0 || groupIds.length > 0,
   };
 }

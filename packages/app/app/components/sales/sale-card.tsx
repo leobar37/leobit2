@@ -1,8 +1,6 @@
 import {
   CalendarDays,
   ChevronRight,
-  Package,
-  ShoppingCart,
   Trash2,
   User,
 } from "lucide-react";
@@ -62,7 +60,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
     if (confirmed) {
       try {
-        await deleteSale.mutateAsync(sale.id);
+        await deleteSale.mutateAsync({ id: sale.id, status: sale.status });
       } catch (error) {
         console.error("Error deleting sale:", error);
       }
@@ -77,118 +75,101 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
       >
         <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90">
           <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className={cn(
-                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ring-1",
-                isPreOrder
-                  ? "bg-indigo-50 ring-indigo-100/80"
-                  : "bg-orange-50 ring-orange-100/80"
-              )}>
-                {isPreOrder ? (
-                  <Package className="h-[18px] w-[18px] text-indigo-600" />
-                ) : (
-                  <ShoppingCart className="h-[18px] w-[18px] text-orange-600" />
-                )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-[1.05rem] font-semibold leading-tight text-foreground sm:text-lg">
+                  {customerName}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {saleTypeLabel[sale.type]} #{sale.id.slice(-6)}
+                </p>
               </div>
 
+              <div className="flex items-center gap-2">
+                {isDraft && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600"
+                    onClick={handleDelete}
+                    disabled={deleteSale.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+
+                <div className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90">
+                  <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[1.05rem] font-semibold leading-tight text-foreground sm:text-lg">
-                      {customerName}
-                    </p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {saleTypeLabel[sale.type]} #{sale.id.slice(-6)}
-                    </p>
-                  </div>
+                <p className="max-w-full whitespace-nowrap text-[clamp(1.5rem,6vw,1.8rem)] font-bold leading-tight tracking-[-0.035em] text-foreground">
+                  S/ {formatCurrency(sale.totalAmount)}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {isCredit ? "Crédito" : "Contado"}
+                </p>
+              </div>
 
-                  <div className="flex items-center gap-2">
-                    {isDraft && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600"
-                        onClick={handleDelete}
-                        disabled={deleteSale.isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+              <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
+                    isDraft
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-green-100 text-green-700"
+                  )}
+                >
+                  {saleStatusLabel[sale.status]}
+                </Badge>
 
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90">
-                      <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
-                    </div>
-                  </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
+                    sale.syncStatus === "error"
+                      ? "bg-red-100 text-red-700"
+                      : sale.syncStatus === "pending"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-700"
+                  )}
+                >
+                  {syncStatusLabel[sale.syncStatus]}
+                </Badge>
+
+                {hasBalanceDue && (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-0 bg-orange-100 px-2.5 py-1 text-[11px] font-semibold leading-none text-orange-700"
+                  >
+                    Debe S/ {formatCurrency(sale.balanceDue)}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                  <User className="h-3.5 w-3.5" />
                 </div>
+                <span className="truncate">{customerName}</span>
+              </div>
 
-                <div className="mt-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="max-w-full whitespace-nowrap text-[clamp(1.5rem,6vw,1.8rem)] font-bold leading-tight tracking-[-0.035em] text-foreground">
-                      S/ {formatCurrency(sale.totalAmount)}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {isCredit ? "Crédito" : "Contado"}
-                    </p>
-                  </div>
-
-                  <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
-                        isDraft
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-green-100 text-green-700"
-                      )}
-                    >
-                      {saleStatusLabel[sale.status]}
-                    </Badge>
-
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
-                        sale.syncStatus === "error"
-                          ? "bg-red-100 text-red-700"
-                          : sale.syncStatus === "pending"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-slate-100 text-slate-700"
-                      )}
-                    >
-                      {syncStatusLabel[sale.syncStatus]}
-                    </Badge>
-
-                    {hasBalanceDue && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-0 bg-orange-100 px-2.5 py-1 text-[11px] font-semibold leading-none text-orange-700"
-                      >
-                        Debe S/ {formatCurrency(sale.balanceDue)}
-                      </Badge>
-                    )}
-                  </div>
+              <div className="flex min-w-0 items-center gap-2 sm:justify-end">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                  <CalendarDays className="h-3.5 w-3.5" />
                 </div>
-
-                <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-                      <User className="h-3.5 w-3.5" />
-                    </div>
-                    <span className="truncate">{customerName}</span>
-                  </div>
-
-                  <div className="flex min-w-0 items-center gap-2 sm:justify-end">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                    </div>
-                    <span className="truncate">
-                      {isPreOrder
-                        ? formatDeliveryCountdown(sale.deliveryDate)
-                        : formatRecentDateTime(sale.saleDate)}
-                    </span>
-                  </div>
-                </div>
+                <span className="truncate">
+                  {isPreOrder
+                    ? formatDeliveryCountdown(sale.deliveryDate)
+                    : formatRecentDateTime(sale.saleDate)}
+                </span>
               </div>
             </div>
           </CardContent>

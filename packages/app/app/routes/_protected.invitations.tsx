@@ -20,7 +20,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { FormInput } from "@/components/forms/form-input";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Invitation } from "@avileo/shared";
@@ -217,46 +217,45 @@ export default function InvitationsPage() {
                   Crea una invitación para unir un vendedor a tu negocio
                 </DrawerDescription>
               </DrawerHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormInput
-                  label="Nombre del vendedor"
-                  placeholder="Ej: Juan Pérez"
-                  error={form.formState.errors.name?.message}
-                  {...form.register("name")}
-                />
-                <FormInput
-                  label="Email"
-                  type="email"
-                  placeholder="vendedor@email.com"
-                  error={form.formState.errors.email?.message}
-                  {...form.register("email")}
-                />
-                <FormInput
-                  label="Punto de venta (opcional)"
-                  placeholder="Ej: Carro A, Casa, etc."
-                  error={form.formState.errors.salesPoint?.message}
-                  {...form.register("salesPoint")}
-                />
-                {form.formState.errors.root && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.root.message}
-                  </p>
-                )}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createInvitation.isPending || !form.formState.isValid}
-                >
-                  {createInvitation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creando...
-                    </>
-                  ) : (
-                    "Crear invitación"
+              <FormProvider {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormInput
+                    name="name"
+                    label="Nombre del vendedor"
+                    placeholder="Ej: Juan Pérez"
+                  />
+                  <FormInput
+                    name="email"
+                    label="Email"
+                    type="email"
+                    placeholder="vendedor@email.com"
+                  />
+                  <FormInput
+                    name="salesPoint"
+                    label="Punto de venta (opcional)"
+                    placeholder="Ej: Carro A, Casa, etc."
+                  />
+                  {form.formState.errors.root && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.root.message}
+                    </p>
                   )}
-                </Button>
-              </form>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createInvitation.isPending || !form.formState.isValid}
+                  >
+                    {createInvitation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creando...
+                      </>
+                    ) : (
+                      "Crear invitación"
+                    )}
+                  </Button>
+                </form>
+              </FormProvider>
             </DrawerContent>
           </Drawer>
         </div>

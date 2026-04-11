@@ -1,5 +1,5 @@
 import { forwardRef, useState } from "react";
-import { useFormContext, Controller } from "react-hook-form";
+import { useFormContext, Controller, type Control } from "react-hook-form";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppDrawer } from "@/components/ui/app-drawer";
@@ -25,6 +25,11 @@ export interface FormSelectProps {
   className?: string;
   triggerClassName?: string;
   "data-testid"?: string;
+  /**
+   * Optional control from react-hook-form.
+   * If not provided, FormSelect must be used within a FormProvider.
+   */
+  control?: Control;
 }
 
 const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
@@ -41,10 +46,22 @@ const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
       placeholder = "Seleccionar...",
       reserveMessageSpace = true,
       "data-testid": dataTestId,
+      control: controlProp,
     },
     ref
   ) => {
-    const { control, formState: { errors } } = useFormContext();
+    const formContext = useFormContext();
+
+    // Guard clause: throw descriptive error if neither control prop nor context is available
+    if (!controlProp && !formContext) {
+      throw new Error(
+        "FormSelect must be used within a FormProvider or receive a control prop. " +
+        "Either wrap your form with <FormProvider {...form}> or pass control={form.control} to FormSelect."
+      );
+    }
+
+    const control = controlProp || formContext?.control;
+    const errors = formContext?.formState?.errors || {};
     const [open, setOpen] = useState(false);
 
     const fieldError = errors[name]?.message as string | undefined;

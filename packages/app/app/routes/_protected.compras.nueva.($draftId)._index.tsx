@@ -8,6 +8,7 @@ import { FormDate } from "@/components/forms/form-date";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { SupplierSelector } from "~/components/purchases/supplier-selector";
 import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
+import { FormProvider } from "react-hook-form";
 import { PurchaseCartSection } from "~/components/purchases/calculator";
 import { FormPage } from "~/components/layout/form-page";
 import type { Supplier } from "~/hooks/use-suppliers";
@@ -73,7 +74,8 @@ function PurchaseFormInner() {
 
   return (
     <>
-      <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+      <FormProvider {...form}>
+        <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
         <DraftIndicator />
 
         <div className="space-y-4">
@@ -171,7 +173,8 @@ function PurchaseFormInner() {
             <p className="text-sm text-red-600 text-center">{errorMessage}</p>
           </div>
         )}
-      </form>
+        </form>
+      </FormProvider>
     </>
   );
 }
