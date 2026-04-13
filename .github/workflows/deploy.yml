@@ -80,9 +80,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:sha-${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:latest
-          cache-from: type=gha
+          cache-from: type=gha,type=none
           cache-to: type=gha,mode=max
-          no-cache-to: true
 
       - name: Build and push App
         uses: docker/build-push-action@v6
@@ -96,9 +95,9 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:sha-${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:latest
-          cache-from: type=gha
+          cache-from: type=gha,type=none
           cache-to: type=gha,mode=max
-          no-cache-to: true
+          pull: true
 
       - name: Verify Required Environment Variables
         run: |
