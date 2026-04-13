@@ -12,7 +12,8 @@ COPY packages/app/package.json ./packages/app/
 COPY packages/backend/package.json ./packages/backend/
 
 # Instalar dependencias (esta layer se cachea si los lockfiles no cambian)
-RUN bun install --frozen-lockfile
+# No usamos --frozen-lockfile porque el cache-from puede traer un estado diferente
+RUN bun install
 
 # Stage 2: Builder (Node.js para compatibilidad con React Router)
 FROM node:20-slim AS builder
@@ -56,7 +57,7 @@ COPY packages/app/package.json ./packages/app/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/backend/package.json ./packages/backend/
 
-RUN bun install --frozen-lockfile --production
+RUN bun install --production
 
 # Install Doppler CLI
 RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg wget && \

@@ -11,7 +11,8 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/backend/package.json ./packages/backend/
 
 # Instalar dependencias (esta layer se cachea si los lockfiles no cambian)
-RUN bun install --frozen-lockfile
+# No usamos --frozen-lockfile porque el cache-from puede traer un estado diferente
+RUN bun install
 
 # Stage 2: Builder
 FROM oven/bun:1.2.10-slim AS builder
