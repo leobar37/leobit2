@@ -18,10 +18,8 @@ RUN bun install
 FROM oven/bun:1.2.10-slim AS builder
 WORKDIR /app
 
-# Copiar dependencias instaladas
+# Copiar dependencias instaladas (bun monorepo hoists all deps to root node_modules)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copiar el código fuente
 COPY . .
@@ -44,10 +42,8 @@ COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 
-# Copy node_modules from deps stage (avoids frozen lockfile issues in monorepo)
+# Copy node_modules from deps stage (bun monorepo hoists all deps to root node_modules)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
