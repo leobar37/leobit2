@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerDescription,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
-import { getToday, subDays, toDateString, parseDateString, addDays } from "~/lib/date-utils";
+import { getToday, subDays, toDateString, parseDateString, addDays, formatDisplayDate } from "~/lib/date-utils";
 import type { DateRange } from "react-day-picker";
 
 type PresetKey = "today" | "yesterday" | "this_week" | "this_month";
@@ -75,12 +84,15 @@ export function DateRangePicker({
   onStartDateChange,
   onEndDateChange,
 }: DateRangePickerProps) {
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<DateRange | undefined>(undefined);
 
   const activePreset = PRESETS.find((p) => {
     const range = p.getRange();
     return toDateString(range.from) === startDate && toDateString(range.to) === endDate;
   });
+
+  const isCustomActive = !activePreset && startDate !== "" && endDate !== "";
 
   const calendarRange: DateRange | undefined =
     startDate && endDate
@@ -93,32 +105,41 @@ export function DateRangePicker({
     const range = preset.getRange();
     onStartDateChange(toDateString(range.from));
     onEndDateChange(toDateString(range.to));
-    setShowCalendar(false);
   };
 
-  const handleCalendarSelect = (range: DateRange | undefined) => {
-    if (!range) {
-      onStartDateChange("");
-      onEndDateChange("");
-      return;
-    }
-    if (range.from) {
-      onStartDateChange(toDateString(range.from));
-    }
-    if (range.to) {
-      onEndDateChange(toDateString(range.to));
-    } else if (range.from) {
-      onEndDateChange(toDateString(addDays(range.from, 1)));
+  const openCustomDrawer = () => {
+    setDraftRange(calendarRange);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerSelect = (range: DateRange | undefined) => {
+    setDraftRange(range);
+  };
+
+  const applyCustomRange = () => {
+    if (draftRange?.from && draftRange?.to) {
+      onStartDateChange(toDateString(draftRange.from));
+      onEndDateChange(toDateString(draftRange.to));
+      setDrawerOpen(false);
+    } else if (draftRange?.from) {
+      onStartDateChange(toDateString(draftRange.from));
+      onEndDateChange(toDateString(addDays(draftRange.from, 1)));
+      setDrawerOpen(false);
     }
   };
 
   const clear = () => {
     onStartDateChange("");
     onEndDateChange("");
-    setShowCalendar(false);
   };
 
   const hasSelection = startDate !== "" || endDate !== "";
+
+  const draftLabel = draftRange?.from && draftRange?.to
+    ? `${formatDisplayDate(draftRange.from)} - ${formatDisplayDate(draftRange.to)}`
+    : draftRange?.from
+      ? `${formatDisplayDate(draftRange.from)} - ...`
+      : "Seleccionar rango";
 
   return (
     <div className="space-y-3">
@@ -153,31 +174,67 @@ export function DateRangePicker({
         ))}
         <button
           type="button"
-          onClick={() => setShowCalendar(!showCalendar)}
+          onClick={openCustomDrawer}
           className={cn(
             "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-            showCalendar
+            isCustomActive
               ? "bg-orange-100 text-orange-700"
-              : !activePreset && hasSelection
-                ? "bg-orange-100 text-orange-700"
-                : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              : "bg-stone-100 text-stone-600 hover:bg-stone-200"
           )}
         >
           Personalizado
         </button>
       </div>
 
-      {showCalendar && (
-        <div className="flex justify-center pt-1">
-          <Calendar
-            mode="range"
-            selected={calendarRange}
-            onSelect={handleCalendarSelect}
-            numberOfMonths={1}
-            defaultMonth={parseDateString(getToday())}
-          />
-        </div>
-      )}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent className="rounded-t-[24px]">
+          <DrawerHeader className="px-4 pb-3 pt-2">
+            <DrawerTitle className="text-lg font-semibold">
+              Seleccionar rango de fechas
+            </DrawerTitle>
+            <DrawerDescription className="text-sm text-muted-foreground">
+              Toca una fecha de inicio y otra de fin
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="overflow-y-auto px-4 pb-2">
+            <div className="flex justify-center">
+              <Calendar
+                mode="range"
+                selected={draftRange}
+                onSelect={handleDrawerSelect}
+                numberOfMonths={1}
+                defaultMonth={parseDateString(getToday())}
+              />
+            </div>
+          </div>
+
+          <div className="px-4 pb-1 pt-2">
+            <p className="text-center text-sm text-muted-foreground">
+              {draftLabel}
+            </p>
+          </div>
+
+          <DrawerFooter className="px-4 pb-6 pt-2">
+            <Button
+              type="button"
+              onClick={applyCustomRange}
+              disabled={!draftRange?.from}
+              className="w-full rounded-xl h-12 bg-orange-500 text-white hover:bg-orange-600"
+            >
+              Aplicar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDrawerOpen(false)}
+              className="w-full rounded-xl h-12 border-stone-200 text-stone-600 hover:bg-stone-50"
+            >
+              Cancelar
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

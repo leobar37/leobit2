@@ -61,9 +61,10 @@ export class AbonoSyncHandler extends BaseSyncHandler {
     // Auto-inyectar sellerId desde contexto si no está presente en payload
     // Esto asegura que siempre tengamos un sellerId válido
     const rawPayload = operation.payload;
+    const effectiveSellerId = (rawPayload.sellerId as string) || ctx.businessUserId;
     const payloadWithSeller = {
       ...rawPayload,
-      sellerId: rawPayload.sellerId || ctx.businessUserId,
+      sellerId: effectiveSellerId,
     };
 
     const parsed = abonoCreateSchema.parse(payloadWithSeller);
@@ -82,7 +83,13 @@ export class AbonoSyncHandler extends BaseSyncHandler {
       paymentMethod: parsed.paymentMethod,
       notes: parsed.notes,
     }, tx);
-    // Note: sellerId is automatically injected by paymentRepo from ctx.businessUserId
+
+    // Update the operation payload to include the sellerId for sync to other clients
+    // This ensures all clients receive the complete data including server-injected fields
+    operation.payload = {
+      ...operation.payload,
+      sellerId: effectiveSellerId,
+    };
   }
 
   private async handleDelete(
@@ -110,10 +117,20 @@ export class AbonoSyncHandler extends BaseSyncHandler {
       throw new Error("Abono no encontrado");
     }
 
+    // Version-based conflict detection for concurrent edits
+    const clientExpectedVersion = operation.localVersion ?? parsed.version ?? existing.version;
+    if (existing.version > clientExpectedVersion) {
+      throw new Error(
+        `Version conflict: expected version ${clientExpectedVersion} but server has version ${existing.version}. ` +
+        `The payment was modified by another device. Please refresh and try again.`
+      );
+    }
+
     await this.paymentRepo.update(ctx, operation.entityId, {
       proofImageId: parsed.proofImageId,
       referenceNumber: parsed.referenceNumber,
       notes: parsed.notes,
-    }, tx);
+      version: clientExpectedVersion + 1,
+    }, tx, clientExpectedVersion);
   }
 }

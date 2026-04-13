@@ -165,14 +165,8 @@ export class SaleSyncHandler extends BaseSyncHandler {
       return;
     }
 
-    // Check for version conflict before applying update
-    // This prevents race conditions when same sale is edited from multiple devices
-    if (existing.version > clientExpectedVersion) {
-      throw new Error(
-        `Version conflict: expected version ${clientExpectedVersion} but server has version ${existing.version}. ` +
-        `The sale was modified by another device. Please refresh and try again.`
-      );
-    }
+    // Note: Version conflict detection is handled atomically by the repository's UPDATE WHERE clause.
+    // The repository's update method will fail if the version doesn't match, preventing TOCTOU race conditions.
 
     if (parsed.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
       await this.saleRepo.update(ctx, operation.entityId, {

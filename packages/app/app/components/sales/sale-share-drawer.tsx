@@ -52,18 +52,19 @@ export function SaleShareDrawer({
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
-  const { isSynced } = useSaleSyncStatus(saleId);
+  const { isSynced, ensureSynced } = useSaleSyncStatus(saleId);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!isOnline) {
       toast.error("Se requiere conexión a internet para generar el enlace de compartir");
       return;
     }
     if (!isSynced) {
-      toast.error("Sincroniza la venta antes de compartir", {
-        description: "La venta aún no se ha guardado en el servidor",
-      });
-      return;
+      const synced = await ensureSynced();
+      if (!synced) {
+        toast.error("No se pudo sincronizar la venta. Intenta de nuevo.");
+        return;
+      }
     }
     generateToken.mutate(saleId);
   };

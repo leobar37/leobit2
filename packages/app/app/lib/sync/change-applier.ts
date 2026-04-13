@@ -34,6 +34,11 @@ const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> = {
     cost_price: "0",
     unit_quantity: "1",
   },
+  abonos: {
+    // seller_id may be null for legacy data; use empty string as placeholder
+    // (will be visible in UI as missing seller until data is corrected)
+    seller_id: "",
+  },
 };
 
 // Types for conflict checking strategy
@@ -228,6 +233,10 @@ async function applyInsert(
     }
   }
 
+  // Force sync_status to 'synced' since this data came from the server
+  data.sync_status = 'synced';
+  data.sync_attempts = 0;
+
   const id = change.entityId;
 
   // Build column/value pairs, skipping relation fields
@@ -284,6 +293,10 @@ async function applyUpdate(
   if (Object.keys(data).length === 0) {
     return { success: false, error: "Empty payload for update operation" };
   }
+
+  // Force sync_status to 'synced' since this data came from the server
+  data.sync_status = 'synced';
+  data.sync_attempts = 0;
 
   const id = change.entityId;
 

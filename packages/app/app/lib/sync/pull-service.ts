@@ -16,6 +16,7 @@ import { syncLogger } from "./sync-logger";
 export type { PullStatus, PullResult, PullChange, PullResponse } from "./types";
 import { applyChange, applyChangesBatch } from "./change-applier";
 import { calculateBackoffDelay } from "./backoff";
+import { syncMutex } from "./sync-mutex";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
 
@@ -40,11 +41,11 @@ export class PullService {
   private pullIntervalId: ReturnType<typeof setInterval> | null = null;
   private lastSince: string | null = null;
   private onChangesApplied: ((entityTypes: string[]) => void) | null = null;
-  
+
   // Retry backoff state
   private consecutiveFailures: number = 0;
   private currentBackoff: number = 0;
-  
+
   // Status tracking
   private isPullingFlag: boolean = false;
   private lastPullTime: Date | null = null;
@@ -213,7 +214,7 @@ export class PullService {
       useDefaultCursor: true,
       applyBackoff: true,
     });
-    
+
     return {
       success: result.success,
       changesApplied: result.changesApplied,
@@ -252,6 +253,19 @@ export class PullService {
     const { canProceed, result: earlyResult } = this.canStartPull();
     if (!canProceed) {
       return earlyResult!;
+    }
+
+    // Acquire mutex to coordinate with push operations
+    // Pull will wait if a push is in progress
+    const acquired = await syncMutex.acquire("pull");
+    if (!acquired) {
+      return {
+        success: false,
+        changesApplied: 0,
+        hasMore: false,
+        error: "Could not acquire sync mutex - push in progress",
+        nextSince: null,
+      };
     }
 
     this.setupPull();
@@ -305,6 +319,7 @@ export class PullService {
       return this.handlePullError(error, config);
     } finally {
       this.isPullingFlag = false;
+      syncMutex.release();
     }
   }
 
@@ -569,7 +584,8 @@ export class PullService {
       this.pg,
       this.db,
       changes,
-      this.businessId
+      this.businessId,
+      { useTransaction: true, checkConflicts: true }
     );
     const appliedCount = changes.length - failedChanges.length;
 
@@ -646,7 +662,7 @@ export class PullService {
 
     while (true) {
       const result = await this.pull();
-      
+
       if (!result.success) {
         if (result.error) {
           errors.push(result.error);

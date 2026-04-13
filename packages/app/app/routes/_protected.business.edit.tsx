@@ -198,32 +198,32 @@ export default function EditBusinessPage() {
               <FormInput
                 label="Nombre del negocio"
                 error={form.formState.errors.name?.message}
-                {...form.register("name")}
+                register={form.register("name")}
               />
 
               <FormInput
                 label="RUC"
                 error={form.formState.errors.ruc?.message}
-                {...form.register("ruc")}
+                register={form.register("ruc")}
               />
 
               <FormInput
                 label="Dirección"
                 error={form.formState.errors.address?.message}
-                {...form.register("address")}
+                register={form.register("address")}
               />
 
               <FormInput
                 label="Teléfono"
                 error={form.formState.errors.phone?.message}
-                {...form.register("phone")}
+                register={form.register("phone")}
               />
 
               <FormInput
                 label="Email"
                 type="email"
                 error={form.formState.errors.email?.message}
-                {...form.register("email")}
+                register={form.register("email")}
               />
 
               <div className="pt-6 border-t border-gray-200">

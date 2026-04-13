@@ -29,6 +29,7 @@ import { SyncEntityStatusUpdater } from "./sync-entity-status-updater";
 import { SyncOperationLifecycleService } from "./sync-operation-lifecycle-service";
 import { SyncBatchProcessor } from "./sync-batch-processor";
 import { SyncCleanupService } from "./cleanup-service";
+import { syncMutex } from "./sync-mutex";
 
 export class SyncService {
   private readonly queue: ISyncQueue;
@@ -126,8 +127,16 @@ export class SyncService {
   ): Promise<{ processed: number; failed: number; conflicts: number }> {
     this.ensureInitialized();
 
+    // Acquire mutex to coordinate with pull operations
+    const acquired = await syncMutex.acquire("push");
+    if (!acquired) {
+      console.log("[SYNC] Could not acquire mutex, another operation in progress");
+      return { processed: 0, failed: 0, conflicts: 0 };
+    }
+
     if (this.isProcessing) {
       console.log("[SYNC] Already processing, skipping");
+      syncMutex.release();
       return { processed: 0, failed: 0, conflicts: 0 };
     }
 
@@ -137,6 +146,7 @@ export class SyncService {
       return await this.batchProcessor.processPending(ignoreOnlineCheck);
     } finally {
       this.isProcessing = false;
+      syncMutex.release();
     }
   }
 
@@ -144,7 +154,18 @@ export class SyncService {
     groupId: string
   ): Promise<{ success: boolean; errors: string[] }> {
     this.ensureInitialized();
-    return this.batchProcessor.processGroup(groupId);
+
+    // Acquire mutex to coordinate with pull operations
+    const acquired = await syncMutex.acquire("push");
+    if (!acquired) {
+      return { success: false, errors: ["Could not acquire sync mutex"] };
+    }
+
+    try {
+      return await this.batchProcessor.processGroup(groupId);
+    } finally {
+      syncMutex.release();
+    }
   }
 
   async resolveConflict(
@@ -170,6 +191,12 @@ export class SyncService {
           resolution === CONFLICT_STRATEGY.FIELD_MERGE &&
           !mergedData
         ) {
+          return false;
+        }
+
+        // Acquire mutex to coordinate with pull operations
+        const acquired = await syncMutex.acquire("push");
+        if (!acquired) {
           return false;
         }
 
@@ -208,6 +235,8 @@ export class SyncService {
             error instanceof Error ? error.message : String(error)
           );
           return false;
+        } finally {
+          syncMutex.release();
         }
       }
 

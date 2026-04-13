@@ -168,6 +168,7 @@ export const abonoUpdateSchema = z.object({
   proofImageId: z.string().optional(),
   referenceNumber: z.string().optional(),
   notes: z.string().optional(),
+  version: z.number().optional(),
 });
 
 export type AbonoUpdateInput = z.infer<typeof abonoUpdateSchema>;

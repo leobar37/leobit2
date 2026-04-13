@@ -5,6 +5,8 @@ import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
 import { createLogger } from "../lib/logger";
 import { SyncConflictRepository } from "../services/sync/framework/SyncConflictRepository";
+import { SyncDeadLetterRepository } from "../services/sync/framework/SyncDeadLetterRepository";
+import { SyncMetricsService } from "../services/sync/framework/SyncMetricsService";
 import type { SyncOperationInput } from "../services/sync/types";
 import { parseCursor } from "./sync-cursor";
 
@@ -412,6 +414,130 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
           t.Literal("merge"),
         ]),
         mergedData: t.Optional(t.Record(t.String(), t.Unknown())),
+      }),
+    }
+  )
+  // Dead Letter Queue endpoints
+  .get(
+    "/dead-letter",
+    async ({ ctx, query }) => {
+      const dlqRepo = new SyncDeadLetterRepository();
+
+      let limit = 50;
+      if (query.limit) {
+        const parsedLimit = parseInt(query.limit, 10);
+        if (!isNaN(parsedLimit) && parsedLimit > 0) {
+          limit = Math.min(parsedLimit, 100);
+        }
+      }
+
+      let offset = 0;
+      if (query.offset) {
+        const parsedOffset = parseInt(query.offset, 10);
+        if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+          offset = parsedOffset;
+        }
+      }
+
+      const [items, total] = await Promise.all([
+        dlqRepo.findByBusiness(ctx as RequestContext, {
+          limit,
+          offset,
+          entity: query.entity,
+        }),
+        dlqRepo.countByBusiness(ctx as RequestContext),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          items,
+          total,
+          pagination: { limit, offset, hasMore: items.length === limit },
+        },
+      };
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+        entity: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
+    "/dead-letter/:id",
+    async ({ ctx, params }) => {
+      const dlqRepo = new SyncDeadLetterRepository();
+
+      const item = await dlqRepo.findById(ctx as RequestContext, params.id);
+
+      if (!item) {
+        return {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Dead letter entry not found",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: item,
+      };
+    }
+  )
+  .delete(
+    "/dead-letter/:id",
+    async ({ ctx, params }) => {
+      const dlqRepo = new SyncDeadLetterRepository();
+
+      const deleted = await dlqRepo.delete(ctx as RequestContext, params.id);
+
+      if (!deleted) {
+        return {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Dead letter entry not found",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: { id: params.id, deleted: true },
+      };
+    }
+  )
+  // Sync Health Metrics endpoint
+  .get(
+    "/metrics",
+    async ({ ctx, query }) => {
+      const metricsService = new SyncMetricsService();
+
+      let hours = 24;
+      if (query.hours) {
+        const parsedHours = parseInt(query.hours, 10);
+        if (!isNaN(parsedHours) && parsedHours > 0) {
+          hours = Math.min(parsedHours, 168); // Max 1 week
+        }
+      }
+
+      const metrics = await metricsService.getMetrics(
+        ctx as RequestContext,
+        hours
+      );
+
+      return {
+        success: true,
+        data: metrics,
+      };
+    },
+    {
+      query: t.Object({
+        hours: t.Optional(t.String()),
       }),
     }
   );

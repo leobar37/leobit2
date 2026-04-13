@@ -303,12 +303,21 @@ export class SyncEngine {
 
     const result = await syncPipeline.execute(context, operation, handler, tx);
 
+    // Inject syncStatus: 'synced' into payload before saving
+    // This ensures clients receiving this data via pull know it's already synced
+    const enrichedPayload = {
+      ...operation.payload,
+      syncStatus: "synced",
+      syncAttempts: 0,
+    };
+
     await this.syncOpRepo.updateStatus(
       ctx,
       operation.idempotencyKey,
       result.success ? "processed" : "failed",
       result.error ?? null,
-      tx
+      tx,
+      enrichedPayload // Pass updated payload with server-injected fields
     );
 
     return {

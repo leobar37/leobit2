@@ -171,17 +171,25 @@ export class SyncOperationRepository {
     idempotencyKey: string,
     status: "processed" | "failed",
     error: string | null,
-    tx?: DbTransaction
+    tx?: DbTransaction,
+    payload?: Record<string, unknown>
   ): Promise<void> {
     const dbOrTx = tx || db;
 
+    const updateData: Record<string, unknown> = {
+      status,
+      error,
+      processedAt: now(),
+    };
+
+    // If payload is provided, update it with the enriched data (e.g., server-injected fields)
+    if (payload) {
+      updateData.payload = payload;
+    }
+
     await dbOrTx
       .update(syncOperations)
-      .set({
-        status,
-        error,
-        processedAt: now(),
-      })
+      .set(updateData)
       .where(
         and(
           eq(syncOperations.businessId, ctx.businessId),

@@ -3,10 +3,12 @@
  * Reactively fetch and mutate sales using PGlite services
  */
 
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSaleService } from "~/lib/sync/service-provider";
 import { useToastError } from "~/hooks/use-toast-error";
+import { useManualSync } from "~/hooks/use-manual-sync";
 import type {
   Sale,
   SaleWithItems,
@@ -107,6 +109,17 @@ export function useSale(id: string | null) {
  */
 export function useSaleSyncStatus(saleId: string | null) {
   const { data: sale, isLoading, error } = useSale(saleId);
+  const { pushNow } = useManualSync();
+  const queryClient = useQueryClient();
+
+  const ensureSynced = useCallback(async (): Promise<boolean> => {
+    if (sale?.syncStatus === "synced") return true;
+    const result = await pushNow();
+    if (result.failed === 0) {
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(saleId!) });
+    }
+    return result.failed === 0;
+  }, [sale?.syncStatus, pushNow, queryClient, saleId]);
 
   return {
     isSynced: sale?.syncStatus === "synced",
@@ -117,6 +130,7 @@ export function useSaleSyncStatus(saleId: string | null) {
     sale,
     isLoading,
     error,
+    ensureSynced,
   };
 }
 

@@ -213,6 +213,12 @@ export {
 } from "./sync-conflicts";
 
 export {
+  syncDeadLetter,
+  type SyncDeadLetter,
+  type NewSyncDeadLetter,
+} from "./sync-dead-letter";
+
+export {
   suppliers,
   suppliersRelations,
   type Supplier,

@@ -129,17 +129,29 @@ export class PaymentRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes">>,
-    tx?: DbTransaction
+    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes"> & { version?: number }>,
+    tx?: DbTransaction,
+    expectedVersion?: number
   ): Promise<Abono> {
     const executor = tx ?? db;
+
+    const conditions = [
+      eq(abonos.id, id),
+      eq(abonos.businessId, ctx.businessId)
+    ];
+
+    if (expectedVersion !== undefined) {
+      conditions.push(eq(abonos.version, expectedVersion));
+    }
+
     const [abono] = await executor
       .update(abonos)
-      .set(data)
-      .where(and(
-        eq(abonos.id, id),
-        eq(abonos.businessId, ctx.businessId)
-      ))
+      .set({
+        ...data,
+        updatedAt: new Date(),
+        version: expectedVersion !== undefined ? data.version ?? (expectedVersion + 1) : undefined,
+      })
+      .where(and(...conditions))
       .returning();
 
     return abono;
