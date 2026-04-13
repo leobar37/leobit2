@@ -82,6 +82,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache-to: true
 
       - name: Build and push App
         uses: docker/build-push-action@v6
@@ -97,6 +98,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache-to: true
 
       - name: Verify Required Environment Variables
         run: |
