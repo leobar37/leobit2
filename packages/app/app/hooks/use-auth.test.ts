@@ -29,6 +29,7 @@ let signOutMock: ReturnType<typeof vi.fn>;
 let changePasswordMock: ReturnType<typeof vi.fn>;
 let getBusinessMock: ReturnType<typeof vi.fn>;
 let refreshSessionMock: ReturnType<typeof vi.fn>;
+let clearAuthSessionCacheMock: ReturnType<typeof vi.fn>;
 
 vi.mock("react-router", () => ({
   useNavigate: () => {
@@ -43,6 +44,7 @@ vi.mock("../lib/auth-client", () => {
   signOutMock = vi.fn();
   changePasswordMock = vi.fn();
   refreshSessionMock = vi.fn();
+  clearAuthSessionCacheMock = vi.fn();
 
   return {
     authClient: {
@@ -54,7 +56,7 @@ vi.mock("../lib/auth-client", () => {
       },
       signOut: signOutMock,
     },
-    useSession: () => ({
+    useAuthSession: () => ({
       data: {
         user: {
           id: "user-1",
@@ -66,6 +68,7 @@ vi.mock("../lib/auth-client", () => {
     }),
     changePassword: changePasswordMock,
     refreshSession: refreshSessionMock,
+    clearAuthSessionCache: clearAuthSessionCacheMock,
   };
 });
 
@@ -127,13 +130,27 @@ describe("useAuth", () => {
         },
       },
     });
-    signUpEmailMock.mockResolvedValue({
-      error: null,
-      data: {
-        user: {
-          id: "user-2",
+    signInEmailMock.mockImplementation(async () => {
+      localStorage.setItem("bearer_token", "token-1");
+      return {
+        error: null,
+        data: {
+          user: {
+            id: "user-1",
+          },
         },
-      },
+      };
+    });
+    signUpEmailMock.mockImplementation(async () => {
+      localStorage.setItem("bearer_token", "token-2");
+      return {
+        error: null,
+        data: {
+          user: {
+            id: "user-2",
+          },
+        },
+      };
     });
     signOutMock.mockResolvedValue(undefined);
     changePasswordMock.mockResolvedValue({ error: null, data: null });
@@ -229,6 +246,7 @@ describe("useAuth", () => {
     expect(localStorage.getItem("avileo_pull_cursor")).toBeNull();
     expect(localStorage.getItem("avileo_pull_cursor:user-1__biz-1__session-1")).toBeNull();
     expect(localStorage.getItem("avileo_pull_cursor:user-2__biz-2__session-2")).toBeNull();
+    expect(clearAuthSessionCacheMock).toHaveBeenCalledTimes(1);
     expect(navigateMock).toHaveBeenCalledWith("/login", { replace: true });
   });
 });

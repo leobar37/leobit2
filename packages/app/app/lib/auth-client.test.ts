@@ -1,14 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { queryClient } from "~/lib/query/client";
+import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
-const {
-  getSessionMock,
-  clearStoredAuthStateMock,
-  getStoredAuthTokenMock,
-} = vi.hoisted(() => ({
-  getSessionMock: vi.fn(),
-  clearStoredAuthStateMock: vi.fn(),
-  getStoredAuthTokenMock: vi.fn(() => "token"),
-}));
+const getSessionMock = vi.fn();
+const clearStoredAuthStateMock = vi.fn();
 
 vi.mock("better-auth/react", () => ({
   createAuthClient: vi.fn(() => ({
@@ -23,35 +18,40 @@ vi.mock("better-auth/react", () => ({
 
 vi.mock("./session-storage", () => ({
   clearStoredAuthState: clearStoredAuthStateMock,
-  getStoredAuthToken: getStoredAuthTokenMock,
+  getStoredAuthToken: vi.fn(() => "token"),
 }));
 
 import { refreshSession } from "./auth-client";
 
 describe("refreshSession", () => {
   beforeEach(() => {
+    queryClient.clear();
     getSessionMock.mockReset();
     clearStoredAuthStateMock.mockReset();
-    getStoredAuthTokenMock.mockReset();
-    getStoredAuthTokenMock.mockReturnValue("token");
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { onLine: true },
+    });
   });
 
-  it("returns session data when getSession succeeds", async () => {
+  it("returns null when getSession succeeds but no data is returned", async () => {
     getSessionMock.mockResolvedValue({
-      data: { user: { id: "user-1" }, session: { id: "session-1" } },
+      data: null,
       error: null,
     });
 
     const result = await refreshSession();
 
-    expect(result).toEqual({
-      user: { id: "user-1" },
-      session: { id: "session-1" },
-    });
+    expect(result).toBeNull();
     expect(clearStoredAuthStateMock).not.toHaveBeenCalled();
   });
 
   it("clears auth state when session error is authentication-related", async () => {
+    queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.authSession, {
+      user: { id: "cached-user" },
+      session: { id: "cached-session" },
+    });
+
     getSessionMock.mockResolvedValue({
       data: null,
       error: { status: 401, message: "Unauthorized" },
@@ -61,29 +61,26 @@ describe("refreshSession", () => {
 
     expect(result).toBeNull();
     expect(clearStoredAuthStateMock).toHaveBeenCalledTimes(1);
+    expect(queryClient.getQueryData(PERSISTED_REMOTE_QUERY_KEYS.authSession)).toBeUndefined();
   });
 
-  it("preserves auth state when session error is network-related", async () => {
-    getSessionMock.mockResolvedValue({
-      data: null,
-      error: { message: "Failed to fetch" },
+  it("returns cached session while offline without network call", async () => {
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { onLine: false },
+    });
+
+    queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.authSession, {
+      user: { id: "cached-user" },
+      session: { id: "cached-session" },
     });
 
     const result = await refreshSession();
 
-    expect(result).toBeNull();
-    expect(clearStoredAuthStateMock).not.toHaveBeenCalled();
-  });
-
-  it("treats expired session messages as authentication errors", async () => {
-    getSessionMock.mockResolvedValue({
-      data: null,
-      error: { message: "Session expired" },
+    expect(getSessionMock).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      user: { id: "cached-user" },
+      session: { id: "cached-session" },
     });
-
-    const result = await refreshSession();
-
-    expect(result).toBeNull();
-    expect(clearStoredAuthStateMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -18,9 +18,14 @@ import { SYNC_STAGES, type SyncStage } from "@avileo/shared";
 import {
   getStoredAuthToken,
   getStoredBusinessId,
+  setStoredBusinessId,
+  setStoredBusinessUserId,
+  clearStoredAuthState,
+  clearStoredBusinessId,
   getLocalDatabaseNamespace,
   getPullCursorStorageKey,
 } from "~/lib/session-storage";
+import { api } from "~/lib/api-client";
 import { isSchemaError } from "~/lib/sync/schema-error";
 
 export type SyncStageStatus = "initializing" | "pulling" | "completed" | "error";
@@ -57,6 +62,34 @@ export interface UseInitialSyncReturn {
     /** Reset database and re-sync */
     resetAndSync: () => Promise<void>;
   };
+}
+
+/**
+ * Attempt to hydrate businessId from API when missing in storage
+ * This handles the case where user has valid token but businessId was lost/corrupted
+ */
+async function hydrateBusinessFromAPI(): Promise<string | null> {
+  try {
+    console.log("[useInitialSync] Attempting to hydrate businessId from API...");
+    const { data, error } = await api.businesses.me.get();
+
+    if (error || !data?.success || !data.data?.id) {
+      console.warn("[useInitialSync] Failed to hydrate businessId from API:", error);
+      return null;
+    }
+
+    // Store the retrieved businessId
+    setStoredBusinessId(data.data.id);
+    if (data.data.businessUserId) {
+      setStoredBusinessUserId(data.data.businessUserId);
+    }
+
+    console.log("[useInitialSync] Successfully hydrated businessId:", data.data.id);
+    return data.data.id;
+  } catch (err) {
+    console.error("[useInitialSync] Exception hydrating businessId:", err);
+    return null;
+  }
 }
 
 interface StageProgressConfig {
@@ -273,12 +306,30 @@ export function useInitialSync(): UseInitialSyncReturn {
     });
 
     // Get auth data immediately (no polling per requirements)
-    const token = getStoredAuthToken();
-    const businessId = getStoredBusinessId();
+    let token = getStoredAuthToken();
+    let businessId = getStoredBusinessId();
 
-    if (!token || !businessId) {
-      // Don't show error message, just redirect - this is expected when session expired
-      console.log("[useInitialSync] No token or businessId, redirecting to login");
+    // Handle case: token exists but businessId is missing (inconsistent state)
+    if (token && !businessId) {
+      console.log("[useInitialSync] Token exists but businessId missing, attempting recovery...");
+      const hydratedBusinessId = await hydrateBusinessFromAPI();
+
+      if (hydratedBusinessId) {
+        businessId = hydratedBusinessId;
+        console.log("[useInitialSync] Recovery successful, continuing with sync");
+      } else {
+        // Recovery failed - clear auth state to force fresh login
+        console.log("[useInitialSync] Recovery failed, clearing auth state and redirecting to login");
+        clearStoredAuthState();
+        clearStoredBusinessId();
+        navigate("/login", { replace: true });
+        return;
+      }
+    }
+
+    // Handle case: no token at all (genuinely not logged in)
+    if (!token) {
+      console.log("[useInitialSync] No token, redirecting to login");
       navigate("/login", { replace: true });
       return;
     }
@@ -297,6 +348,13 @@ export function useInitialSync(): UseInitialSyncReturn {
       const namespace = getLocalDatabaseNamespace();
       const cursorKey = getPullCursorStorageKey(namespace);
       const hasCursor = !!localStorage.getItem(cursorKey);
+
+      // Type guard: businessId should never be null at this point, but TypeScript needs assurance
+      if (!businessId) {
+        console.error("[useInitialSync] Unexpected state: businessId is null after auth checks");
+        navigate("/login", { replace: true });
+        return;
+      }
 
       const pullService = new PullService(pg, db, businessId, token);
 

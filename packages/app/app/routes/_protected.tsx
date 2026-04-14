@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
-import { SyncErrorMonitor } from "~/components/sync/sync-error-monitor";
 import { DebugWidget, SyncDevToolsDrawer } from "~/devtools";
 import {
   ConflictResolver,
@@ -414,7 +413,6 @@ export default function ProtectedLayout() {
               <SyncDevToolsDrawer triggerClassName="text-muted-foreground hover:text-foreground" />
             }
           >
-            <SyncErrorMonitor />
             <OutletWithLog />
             <ConflictResolver
               conflict={activeConflict}

@@ -11,14 +11,16 @@ import {
 import type { Route } from "./+types/root";
 
 import { Loader2 } from "lucide-react";
-import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { Provider as JotaiProvider } from "jotai";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { createQueryPersister } from "~/lib/query/persister";
+import { queryClient } from "~/lib/query/client";
 import { getStoredBusinessId } from "~/lib/session-storage";
+// @ts-expect-error virtual module provided by vite-plugin-pwa
+import { registerSW } from "virtual:pwa-register";
 
 export function HydrateFallback() {
   return (
@@ -62,23 +64,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-      refetchOnWindowFocus: true,
-      refetchInterval: 30000,
-      gcTime: 1000 * 60 * 60 * 24,
-    },
-  },
-});
-
 // Create persister with buster based on current businessId
 // This invalidates cache when switching businesses
 const queryPersister = createQueryPersister(undefined, getStoredBusinessId() ?? undefined);
 
 export default function App() {
+  useEffect(() => {
+    if (typeof registerSW === "function") {
+      const updateSW = registerSW({
+        immediate: true,
+        onRegistered(r) {
+          console.log("[PWA] Service Worker registered:", r);
+        },
+        onRegisterError(error) {
+          console.error("[PWA] Service Worker registration failed:", error);
+        },
+        onOfflineReady() {
+          console.log("[PWA] Ready to work offline");
+        },
+      });
+
+      return () => {
+        updateSW && updateSW();
+      };
+    }
+  }, []);
+
   useEffect(() => {
     if (import.meta.env.DEV && typeof window !== "undefined" && !import.meta.env.VITE_E2E_MODE) {
       import("react-grab");

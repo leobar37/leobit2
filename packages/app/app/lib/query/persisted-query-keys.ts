@@ -14,6 +14,7 @@ export function isPersistedRemoteQueryKey(queryKey: readonly unknown[]): boolean
 }
 
 export const PERSISTED_REMOTE_QUERY_KEYS = {
+  authSession: withPersistedRemotePrefix(["auth", "session"] as const),
   business: withPersistedRemotePrefix(["business"] as const),
   team: withPersistedRemotePrefix(["team"] as const),
   businessCalculatorSettings: withPersistedRemotePrefix(

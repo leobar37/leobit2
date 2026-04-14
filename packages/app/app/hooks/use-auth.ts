@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { authClient, useSession, changePassword, refreshSession } from "../lib/auth-client";
+import { authClient, useAuthSession, changePassword, refreshSession, clearAuthSessionCache } from "../lib/auth-client";
 import { api } from "../lib/api-client";
 import {
   clearStoredAuthState,
@@ -69,7 +69,7 @@ export type RegisterResult = { needsRedirect: false } | { needsRedirect: true; r
 
 export function useAuth() {
   const navigate = useNavigate();
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useAuthSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const login = async (email: string, password: string): Promise<LoginResult> => {
@@ -159,6 +159,7 @@ export function useAuth() {
     setIsLoggingOut(true);
 
     clearStoredAuthState();
+    clearAuthSessionCache();
     clearStoredBusinessId();
     clearLocalDatabaseNamespace();
     clearSyncKeys();

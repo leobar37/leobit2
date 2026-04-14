@@ -34,6 +34,9 @@ function crossOriginIsolation(): Plugin {
 }
 
 export default defineConfig({
+  resolve: {
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+  },
   plugins: [
     isDev && suppressReactDevToolsWarning(),
     crossOriginIsolation(),
@@ -43,13 +46,24 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: "autoUpdate",
+      // Enable in dev for offline testing
+      disable: false,
       devOptions: {
         enabled: true,
+        type: "module",
       },
       workbox: {
+        // Cache all static assets for offline
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wasm,data}"],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB to accommodate PGlite WASM files
+        // Increase limit for PGlite WASM files (~9MB wasm + ~5MB data)
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        // SPA fallback - all routes return index.html for React Router
+        navigateFallback: "index.html",
+        navigateFallbackAllowlist: [/^\/.*$/],
+        // Clean old caches when SW updates
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
+          // Google Fonts
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "StaleWhileRevalidate",
@@ -72,6 +86,21 @@ export default defineConfig({
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          // PGlite WASM files - cache for offline database initialization
+          {
+            urlPattern: /\.(wasm|data)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pglite-cache",
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: {
                 statuses: [0, 200],
