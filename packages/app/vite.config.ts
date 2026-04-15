@@ -49,7 +49,7 @@ export default defineConfig({
       // Enable in dev for offline testing
       disable: false,
       devOptions: {
-        enabled: true,
+        enabled: false, // Disable SW in dev to avoid intercepting API requests
         type: "module",
       },
       workbox: {

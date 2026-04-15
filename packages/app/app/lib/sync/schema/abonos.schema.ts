@@ -8,7 +8,7 @@ export const CREATE_ABONOS_TABLE = `
 CREATE TABLE IF NOT EXISTS abonos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL,
-  seller_id UUID NOT NULL,
+  seller_id UUID,
   business_id UUID NOT NULL,
   related_sale_id UUID,
   amount DECIMAL(12,2) NOT NULL,

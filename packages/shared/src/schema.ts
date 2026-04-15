@@ -159,7 +159,7 @@ export const sales = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     businessId: uuid("business_id").notNull(),
     customerId: uuid("customer_id"),
-    sellerId: uuid("seller_id").notNull(),
+    sellerId: uuid("seller_id"),
     distribucionId: uuid("distribucion_id"),
     type: text("type").notNull().default(TransactionType.INSTANT_SALE),
     saleType: text("sale_type").notNull().default(SaleType.CONTADO),
@@ -257,7 +257,7 @@ export const abonos = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     customerId: uuid("customer_id").notNull(),
-    sellerId: uuid("seller_id").notNull(),
+    sellerId: uuid("seller_id"),
     businessId: uuid("business_id").notNull(),
     relatedSaleId: uuid("related_sale_id"),
     amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),

@@ -33,6 +33,7 @@ export function useLoginHealth(): LoginHealthState & LoginHealthActions {
   const [isChecking, setIsChecking] = useState(true);
 
   const runValidation = useCallback(async () => {
+    console.log("[DEBUG LoginHealth] runValidation START");
     setIsChecking(true);
     setStatus("checking");
 

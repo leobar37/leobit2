@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS sales (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL,
   customer_id UUID,
-  seller_id UUID NOT NULL,
+  seller_id UUID,
   distribucion_id UUID,
   visita_id UUID,
   type TEXT NOT NULL DEFAULT 'instant_sale',

@@ -77,7 +77,7 @@ export const saleItemSchema = z.object({
 });
 
 export const saleCreateSchema = z.object({
-  sellerId: z.string().min(1, "sellerId es requerido"),
+  sellerId: z.string().optional(),
   customerId: z.string().optional(),
   distribucionId: z.string().optional(),
   visitaId: z.string().optional(),
@@ -153,7 +153,7 @@ export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
 
 export const abonoCreateSchema = z.object({
   customerId: z.string().min(1, "customerId es requerido"),
-  sellerId: z.string().min(1, "sellerId es requerido"),
+  sellerId: z.string().optional(),
   amount: numericStringTransform.refine(
     (val) => Number(val) > 0,
     { message: "amount es requerido y debe ser mayor a 0" }

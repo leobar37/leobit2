@@ -281,6 +281,27 @@
       "when": 1744041700000,
       "tag": "0052_add_sync_device_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1744041800000,
+      "tag": "0053_add_performance_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1744041900000,
+      "tag": "0054_add_sync_dead_letter_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1744713600000,
+      "tag": "0055_make_seller_id_optional",
+      "breakpoints": true
     }
   ]
 }

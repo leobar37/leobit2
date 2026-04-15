@@ -2,6 +2,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link } from "react-router";
 import { Route, Loader2, AlertTriangle, ShieldAlert, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
 import { useLoginHealth } from "@/hooks/use-login-health";
@@ -31,6 +32,23 @@ export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const health = useLoginHealth();
 
+  // Fallback timeout - if isLoading persists for more than 10s, assume stuck and show login
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    console.log("[DEBUG LoginPage] Loading timeout effect - isLoading:", isLoading);
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        console.log("[DEBUG LoginPage] Loading timeout triggered!");
+        setLoadingTimeout(true);
+      }, 10000);
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoading]);
+
+  console.log("[DEBUG LoginPage] Render - isLoading:", isLoading, "user:", user, "healthStatus:", health.status, "loadingTimeout:", loadingTimeout);
+
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     mode: "onChange",
@@ -40,7 +58,8 @@ export default function LoginPage() {
     },
   });
 
-  if (isLoading) {
+  // Show loading only if: isLoading AND not timed out yet
+  if (isLoading && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -48,6 +67,7 @@ export default function LoginPage() {
     );
   }
 
+  // If timed out or not loading, proceed to render login form (even if isLoading is true after timeout)
   if (user) {
     return <Navigate to="/sync" replace />;
   }

@@ -16,7 +16,7 @@
       body { margin: 0; font-family: system-ui, sans-serif; }
       #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
       .loading { text-align: center; color: white; }
-      .loading-icon { font-size: 64px; margin-bottom: 16px; }
+      .loading-icon-img { width: 80px; height: 80px; margin-bottom: 16px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1)); }
       .loading-title { font-size: 32px; font-weight: bold; margin-bottom: 8px; }
       .loading-text { font-size: 16px; opacity: 0.9; }
     </style>
@@ -24,7 +24,7 @@
   <body>
     <div id="root">
       <div class="loading">
-        <div class="loading-icon">🐔</div>
+        <img src="/logo.svg" alt="Avileo" class="loading-icon-img" />
         <div class="loading-title">Avileo</div>
         <div class="loading-text">Cargando...</div>
       </div>

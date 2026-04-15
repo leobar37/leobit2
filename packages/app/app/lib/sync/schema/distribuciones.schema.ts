@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS distribuciones (
   punto_venta VARCHAR(100) NOT NULL,
   punto_venta_id UUID,
   monto_recaudado DECIMAL(12,2) NOT NULL DEFAULT '0',
+  nota_creacion TEXT,
+  nota_cierre TEXT,
   fecha DATE NOT NULL,
   estado TEXT NOT NULL DEFAULT 'activo',
   modo TEXT NOT NULL DEFAULT 'estricto',

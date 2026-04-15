@@ -34,11 +34,6 @@ const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> = {
     cost_price: "0",
     unit_quantity: "1",
   },
-  abonos: {
-    // seller_id may be null for legacy data; use empty string as placeholder
-    // (will be visible in UI as missing seller until data is corrected)
-    seller_id: "",
-  },
 };
 
 // Types for conflict checking strategy

@@ -253,6 +253,7 @@ function validateStorage(): ValidationIssue[] {
  * This is async and should be called separately
  */
 export async function checkIndexedDBHealth(): Promise<ValidationIssue[]> {
+  console.log("[DEBUG LoginValidator] checkIndexedDBHealth START");
   const issues: ValidationIssue[] = [];
   
   if (typeof window === "undefined" || !window.indexedDB) {

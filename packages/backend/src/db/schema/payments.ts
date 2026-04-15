@@ -33,8 +33,8 @@ export const abonos = pgTable(
       .notNull()
       .references(() => customers.id),
     // sellerId apunta a business_users (quien recibe el pago dentro del negocio)
+    // Optional for legacy data - may be null for historical records
     sellerId: uuid("seller_id")
-      .notNull()
       .references(() => businessUsers.id),
 
     // Payment details

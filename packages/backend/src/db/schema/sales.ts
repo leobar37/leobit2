@@ -36,8 +36,8 @@ export const sales = pgTable(
       .references(() => businesses.id),
     customerId: uuid("customer_id").references(() => customers.id),
     // sellerId apunta a business_users (usuario dentro de un negocio específico)
+    // Optional for legacy data - may be null for historical records
     sellerId: uuid("seller_id")
-      .notNull()
       .references(() => businessUsers.id),
     distribucionId: uuid("distribucion_id").references(
       () => distribuciones.id

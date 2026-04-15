@@ -31,15 +31,15 @@ describe("abonoCreateSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("should reject abono without sellerId", () => {
-    const invalidAbono = {
+  it("should accept abono without sellerId (optional field)", () => {
+    const validAbono = {
       customerId: "cust-123",
       amount: "100.50",
       paymentMethod: "efectivo",
     };
 
-    const result = abonoCreateSchema.safeParse(invalidAbono);
-    expect(result.success).toBe(false);
+    const result = abonoCreateSchema.safeParse(validAbono);
+    expect(result.success).toBe(true);
   });
 
   it("should reject abono without amount", () => {
@@ -216,7 +216,7 @@ describe("AbonoSyncHandler - sellerId auto-injection", () => {
     );
   });
 
-  it("should fail validation when both payload and context lack sellerId", async () => {
+  it("should succeed when both payload and context lack sellerId (optional field)", async () => {
     const ctxWithoutSellerId = {
       ...mockCtx,
       businessUserId: undefined,
@@ -231,7 +231,6 @@ describe("AbonoSyncHandler - sellerId auto-injection", () => {
         customerId: "cust-123",
         amount: "100",
         paymentMethod: "efectivo",
-        // sellerId is missing!
       },
       localVersion: 1,
       localTimestamp: "2024-01-01T00:00:00Z",
@@ -239,7 +238,6 @@ describe("AbonoSyncHandler - sellerId auto-injection", () => {
 
     const result = await handler.execute(ctxWithoutSellerId, operation);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("sellerId");
+    expect(result.success).toBe(true);
   });
 });
