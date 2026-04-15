@@ -118,6 +118,28 @@ for (const item of items) {
 }
 ```
 
+### Creating a Draft Sale (hot-path hardened)
+
+```typescript
+await this.queueSync(
+  "create",
+  saleId,
+  payload,
+  syncGroupId,
+  undefined,
+  undefined,
+  {
+    fastPath: true,
+    idempotencyKey: `sale:create:${saleId}`,
+  }
+);
+```
+
+Notes:
+- `fastPath` reduces enqueue latency by skipping non-essential prechecks in the immediate path.
+- `idempotencyKey` should be stable where duplicate create submission is plausible.
+- `syncGroupId` remains required for correct ordering across related entities.
+
 ### Item Operations
 
 Items inherit the parent's syncGroupId:

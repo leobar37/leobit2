@@ -47,6 +47,11 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
   const [loading, setLoading] = useState(false);
 
   const handleVentaDirecta = async () => {
+    // Prevent duplicate creation from rapid clicks
+    if (createDraftSale.isPending || loading) {
+      return;
+    }
+
     if (!business?.businessUserId) {
       toast.error("Error al crear venta", {
         description: "No se encontró el usuario vendedor",
@@ -56,8 +61,13 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
 
     setLoading(true);
     try {
+      const perfStart = performance.now();
       const sale = await createDraftSale.mutateAsync({ type: "instant_sale" });
       onOpenChange(false);
+      console.log("[Perf][CreateSaleTypeSheet] direct draft created", {
+        saleId: sale.id,
+        totalMs: Number((performance.now() - perfStart).toFixed(2)),
+      });
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       toast.error("Error al crear venta", {
@@ -106,6 +116,11 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
   };
 
   const handleConfirmProgramar = async () => {
+    // Prevent duplicate creation from rapid clicks
+    if (createDraftSale.isPending || loading) {
+      return;
+    }
+
     if (!deliveryDate) {
       toast.error("Selecciona una fecha de entrega");
       return;
@@ -120,12 +135,17 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
 
     setLoading(true);
     try {
+      const perfStart = performance.now();
       const sale = await createDraftSale.mutateAsync({
         type: "pre_order",
         deliveryDate,
       });
       setShowDatePicker(false);
       onOpenChange(false);
+      console.log("[Perf][CreateSaleTypeSheet] pre-order draft created", {
+        saleId: sale.id,
+        totalMs: Number((performance.now() - perfStart).toFixed(2)),
+      });
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       toast.error("Error al crear venta", {

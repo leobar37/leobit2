@@ -14,7 +14,8 @@ description: |
 
   Covers: push sync (SyncService), pull sync (PullService), SyncCoordinator, syncGroupId,
   operation sorting, entity handlers, conflict resolution (version-based), staged pull,
-  dead letter queue, exponential backoff, stale pull detection. Sync hooks are disabled.
+  dead letter queue, exponential backoff, stale pull detection, queue fast-path, and
+  worker/runtime performance hardening. Sync hooks are disabled.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -62,6 +63,34 @@ customer_group_members: 2, customer_tags: 2
 | Sync API | `packages/backend/src/api/sync.ts` | 6 routes: batch, changes, health, conflicts |
 | Entity Priority | `packages/shared/src/sync-config.ts` | SYNC_ENTITIES, ENTITY_PRIORITIES |
 | Sync Stages | `packages/shared/src/sync-stages.ts` | 3-stage pull: CRITICAL, RECENT_SALES, HISTORICAL |
+
+## Performance Hardening (2026-04)
+
+These are now part of the expected sync architecture for hot sales flows:
+
+1. **Queue fast-path for critical writes**
+   - `EnqueueParams` supports `fastPath?: boolean`
+   - Fast-path performs durable append immediately and skips precheck/coalescing lookup work
+   - Used for create/update/delete operations in sales hot paths where latency matters
+
+2. **Deterministic idempotency keys when needed**
+   - `queueSync()` now accepts optional `idempotencyKey`
+   - For create draft sale, a deterministic key like `sale:create:<saleId>` is preferred
+
+3. **Immediate push attempt on startup**
+   - `SyncService.startAutoSync()` starts interval and triggers one immediate `processPending()`
+   - Avoids waiting full interval after refresh/reopen
+
+4. **PGlite worker is feature-flagged**
+   - Controlled by `VITE_ENABLE_PGLITE_WORKER`
+   - Safe fallback to direct PGlite instance remains default path
+   - `relaxedDurability: true` is enabled for local performance
+
+5. **Operational performance logs are expected**
+   - `[Perf][SyncQueue] enqueue timing`
+   - `[Perf][ServicesProvider] startup`
+   - `[Perf][EngineProvider] initDatabase`
+   - `[Perf][SaleService] ...` for hot sale operations
 
 ### Required Fields for Sync
 
@@ -267,6 +296,7 @@ await syncService.clearDeadLetterOperations()
 - [Sync Group ID Deep Dive](references/sync-group-id.md)
 - [Adding New Entity to Sync](references/adding-entity.md)
 - [Troubleshooting Guide](references/troubleshooting.md)
+- [Operational Checklist](references/runbook-sync-performance.md)
 - [Pull Sync Mechanics](references/pull-sync.md)
 - [Conflict Resolution](references/conflict-resolution.md)
 - [3-Stage Pull Strategy](references/staged-pull.md)

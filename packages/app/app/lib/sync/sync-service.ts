@@ -317,6 +317,8 @@ export class SyncService {
 
   startAutoSync(): void {
     this.autoRunner.start(() => this.processPending(), SYNC_INTERVAL_MS);
+    // Kick one immediate processing pass on startup/restart to avoid waiting full interval.
+    void this.processPending();
   }
 
   stopAutoSync(): void {

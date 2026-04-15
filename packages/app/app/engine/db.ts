@@ -10,6 +10,55 @@ let initPromise: Promise<{ pg: import("@electric-sql/pglite").PGlite; db: Return
 const VERSION_KEY = "avileo_schema_hash";
 export const SCHEMA_HASH_KEY = VERSION_KEY;
 
+function locatePgliteFile(file: string): string {
+  if (file === "postgres.data") {
+    return "/pglite.data";
+  }
+  if (file === "postgres.wasm") {
+    return "/pglite.wasm";
+  }
+  return file;
+}
+
+async function createPrimaryPGliteInstance(dataDir: string): Promise<import("@electric-sql/pglite").PGlite> {
+  // Worker is enabled by default. Use VITE_DISABLE_PGLITE_WORKER=1 to force synchronous mode.
+  const workerDisabled =
+    typeof import.meta !== "undefined" &&
+    Boolean(import.meta.env?.VITE_DISABLE_PGLITE_WORKER);
+
+  if (!workerDisabled && typeof window !== "undefined" && "Worker" in window) {
+    try {
+      const [{ PGliteWorker }] = await Promise.all([
+        import("@electric-sql/pglite/worker"),
+      ]);
+
+      const workerInstance = await PGliteWorker.create(
+        new Worker(new URL("./pglite.worker.ts", import.meta.url), {
+          type: "module",
+        }),
+        {
+          dataDir,
+          relaxedDurability: true,
+        }
+      );
+
+      return workerInstance as unknown as import("@electric-sql/pglite").PGlite;
+    } catch (error) {
+      console.warn("[DB] Failed to initialize PGliteWorker, falling back to direct instance", error);
+    }
+  }
+
+  const [{ PGlite }] = await Promise.all([
+    import("@electric-sql/pglite"),
+  ]);
+
+  return PGlite.create({
+    dataDir,
+    relaxedDurability: true,
+    locateFile: locatePgliteFile,
+  });
+}
+
 // Schema SQL is now imported from ~/lib/sync/schema
 
 async function computeSchemaHash(sql: string): Promise<string> {
@@ -223,18 +272,7 @@ export async function initDatabase(): Promise<{
     localStorage.setItem(VERSION_KEY, currentHash);
 
     // Create fresh database instance
-    const pgInstance = await PGlite.create({
-      dataDir,
-      locateFile: (file: string) => {
-        if (file === "postgres.data") {
-          return "/pglite.data";
-        }
-        if (file === "postgres.wasm") {
-          return "/pglite.wasm";
-        }
-        return file;
-      },
-    });
+    const pgInstance = await createPrimaryPGliteInstance(dataDir);
 
     // Create all tables with complete schema
     await createTables(pgInstance);
@@ -279,15 +317,8 @@ async function exportPendingData(): Promise<PendingData> {
 
     const tempPg = await PGlite.create({
       dataDir: `idb://${getLocalDatabaseName()}`,
-      locateFile: (file: string) => {
-        if (file === "postgres.data") {
-          return "/pglite.data";
-        }
-        if (file === "postgres.wasm") {
-          return "/pglite.wasm";
-        }
-        return file;
-      },
+      relaxedDurability: true,
+      locateFile: locatePgliteFile,
     });
 
     try {

@@ -22,7 +22,7 @@ import { useNewSaleContext } from "~/components/sales/new-sale-context";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useSale, useSaleItems } from "~/hooks/use-sales-db";
+import { useSale } from "~/hooks/use-sales-db";
 import { getSaleCalculatorPath } from "~/lib/sales/navigation";
 import { SaleShareDrawer } from "~/components/sales/sale-share-drawer";
 import { RescheduleSaleDialog } from "~/components/sales/reschedule-sale-dialog";
@@ -40,9 +40,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "~/lib/utils";
 
 function HeaderTotal() {
-  const { saleId } = useNewSaleContext();
-  const { data: sale } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
+  const { sale, items } = useNewSaleContext();
 
   const calculations = useSaleCalculations(sale, items);
 
@@ -78,6 +76,18 @@ export default function SaleEditorPage() {
       setLinkedVisitaId(sale.visitaId);
     }
   }, [sale?.visitaId, setLinkedVisitaId]);
+
+  useEffect(() => {
+    if (!saleId) return;
+
+    const startedAt = performance.now();
+    return () => {
+      console.log("[Perf][SaleEditorPage] lifetime", {
+        saleId,
+        visibleMs: Number((performance.now() - startedAt).toFixed(2)),
+      });
+    };
+  }, [saleId]);
 
   if (!saleId) {
     return <Navigate to="/ventas" replace />;

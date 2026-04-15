@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "plan": "offline-sales-performance-hardening",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Baseline and instrumentation",
+      "file": "tasks/01-baseline-and-instrumentation.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "NFR-001",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Create draft hot path",
+      "file": "tasks/02-create-draft-hot-path.md",
+      "status": "completed",
+      "phase": "hot-path",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-002",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "PGlite worker and runtime strategy",
+      "file": "tasks/03-pglite-worker-and-runtime.md",
+      "status": "completed",
+      "phase": "runtime",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-001",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Editor mutation cache strategy",
+      "file": "tasks/04-editor-mutation-cache-strategy.md",
+      "status": "completed",
+      "phase": "hot-path",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-003",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Outbox fast path and durability",
+      "file": "tasks/05-outbox-fast-path-and-durability.md",
+      "status": "completed",
+      "phase": "sync-core",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-004",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Refresh resilience and recovery",
+      "file": "tasks/06-refresh-resilience-and-recovery.md",
+      "status": "completed",
+      "phase": "sync-core",
+      "dependencies": [
+        "T-003",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-004",
+        "FR-006"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Sales list and search optimization",
+      "file": "tasks/07-sales-list-search-optimization.md",
+      "status": "completed",
+      "phase": "read-model",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-005",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Performance validation and rollout",
+      "file": "tasks/08-performance-validation-and-rollout.md",
+      "status": "completed",
+      "phase": "validation",
+      "dependencies": [
+        "T-004",
+        "T-006",
+        "T-007"
+      ],
+      "requirements": [
+        "NFR-001",
+        "NFR-002",
+        "NFR-003",
+        "NFR-004"
+      ]
+    }
+  ]
+}

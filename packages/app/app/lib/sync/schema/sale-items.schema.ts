@@ -35,6 +35,8 @@ export const CREATE_SALE_ITEMS_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_business_id ON sale_items(business_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale_business ON sale_items(sale_id, business_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sync_status ON sale_items(sync_status);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sync_group_id ON sale_items(sync_group_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_product_name ON sale_items(product_name);
 `.trim();

@@ -2,6 +2,13 @@
 
 ## Example 1: Creating a Sale with Items (Push)
 
+### Notes (current best practice)
+
+- Use `fastPath: true` for latency-critical local writes in POS flows.
+- Keep `syncGroupId` across related entities (sale + sale_items).
+- Prefer deterministic `idempotencyKey` for draft-sale create operations.
+- Durable outbox append remains mandatory before reporting local success.
+
 ### Flow Summary
 1. Generate syncGroupId
 2. Insert sale record locally
@@ -38,8 +45,19 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
   // Insert locally
   await this.pg.insert(sales).values(sale);
 
-  // Queue with syncGroupId
-  await this.queueSync("create", id, sale, syncGroupId);
+  // Queue with syncGroupId (hot-path hardened)
+  await this.queueSync(
+    "create",
+    id,
+    sale,
+    syncGroupId,
+    undefined,
+    undefined,
+    {
+      fastPath: true,
+      idempotencyKey: `sale:create:${id}`,
+    }
+  );
 
   // Create items if provided
   if (data.items && data.items.length > 0) {
@@ -62,7 +80,17 @@ async createDraft(data: CreateSaleInput): Promise<Sale> {
       await this.pg.insert(saleItems).values(itemData);
 
       // Queue item with SAME syncGroupId
-      await this.queueSync("create", itemId, itemData, syncGroupId, "sale_items");
+      await this.queueSync(
+        "create",
+        itemId,
+        itemData,
+        syncGroupId,
+        "sale_items",
+        undefined,
+        {
+          fastPath: true,
+        }
+      );
     }
   }
 
@@ -134,7 +162,17 @@ async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
   await this.pg.insert(saleItems).values(itemData);
 
   // Queue with sale's syncGroupId (or new group if sale has none)
-  await this.queueSync("create", itemId, itemData, syncGroupId, "sale_items");
+  await this.queueSync(
+    "create",
+    itemId,
+    itemData,
+    syncGroupId,
+    "sale_items",
+    undefined,
+    {
+      fastPath: true,
+    }
+  );
 
   // If sale had no syncGroupId, update it
   if (!existingGroupId) {

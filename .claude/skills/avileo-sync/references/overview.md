@@ -93,6 +93,25 @@
 | **SchemaMapper** | `packages/app/app/lib/sync/schema-mapper.ts` | camelCase↔snake_case for PGlite |
 | **StagedPullCoordinator** | `packages/app/app/lib/sync/staged-pull-coordinator.ts` | 3-stage pull orchestration |
 
+## Recent Performance Notes (Important)
+
+### Queue fast-path
+
+- `EnqueueParams.fastPath` allows low-latency enqueue for critical paths.
+- In fast-path mode, sync operation is durably inserted first, and expensive prechecks/coalescing are skipped in the immediate path.
+- This keeps offline correctness (durable outbox) while reducing UX latency.
+
+### Startup behavior
+
+- `SyncService.startAutoSync()` now executes one immediate `processPending()` call in addition to interval scheduling.
+- This improves post-refresh/reopen recovery responsiveness.
+
+### Runtime strategy
+
+- PGlite worker path exists but is gated behind `VITE_ENABLE_PGLITE_WORKER`.
+- Default behavior is safe fallback (non-worker) if flag is not set or worker init fails.
+- `relaxedDurability: true` is enabled to reduce write latency overhead.
+
 ### Backend Components
 
 | Component | Location | Purpose |
@@ -205,6 +224,12 @@ When multiple operations target the same entity before sync sends:
 | update | delete | replace with delete |
 
 See: `packages/app/app/lib/sync/sync-service.ts` (`getCoalescePlan()`)
+
+### Fast-path interaction with coalescing
+
+- Coalescing remains part of the sync architecture.
+- For operations enqueued with `fastPath`, coalescing is intentionally not part of the immediate hot path.
+- This is a deliberate tradeoff to prioritize local write responsiveness while preserving durable queue semantics.
 
 ## Self-Heal
 

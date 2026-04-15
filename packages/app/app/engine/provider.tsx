@@ -68,6 +68,7 @@ export function EngineProvider({
       console.log(`[ENGINE-PROVIDER] token present: ${!!token}`);
 
       try {
+        const perfStart = performance.now();
         setIsSyncing(true);
         setError(null);
 
@@ -90,6 +91,10 @@ export function EngineProvider({
 
         console.log(`[ENGINE-PROVIDER] Setting isInitialized = true`);
         setIsInitialized(true);
+        console.log("[Perf][EngineProvider] initDatabase", {
+          totalMs: Number((performance.now() - perfStart).toFixed(2)),
+          businessId,
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to initialize engine";
         const errorObj = err instanceof Error ? err : new Error(String(err));

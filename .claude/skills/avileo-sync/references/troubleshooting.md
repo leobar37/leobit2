@@ -29,6 +29,18 @@ await syncService.getStatus()
 // Returns: { pending: 0, processing: 0, completed: 100, failed: 2, ... }
 ```
 
+#### Cause: Enqueue is slow in hot paths
+```typescript
+// Check perf logs
+// [Perf][SyncQueue] enqueue timing
+// [Perf][SyncQueue] enqueue fastPath timing
+```
+
+**Fix**:
+- Use `fastPath: true` for latency-critical local writes (sales create/edit hot path)
+- Keep durable append mandatory
+- Avoid moving correctness-critical checks out of sync pipeline
+
 ### 2. Operations Not Grouped
 
 **Symptoms**: Sale items sync before sale parent, causing errors.
@@ -223,6 +235,37 @@ coordinator.forceResetSync()
 **Symptoms**: `deviceId` field not being captured in sync operations.
 
 **Note**: `sync_device_tracking` table exists (migration 0052) but is not yet wired into the sync flow. The `deviceId` field is captured in `SyncOperationInput` but not currently persisted to `sync_device_tracking`. This is known partial infrastructure.
+
+### 13. Sync resume feels slow after refresh/reopen
+
+**Symptoms**: After page refresh, pending operations stay visible for several seconds before push starts.
+
+**Expected Behavior**:
+- `startAutoSync()` should trigger one immediate `processPending()` plus interval scheduling.
+
+**Debug**:
+```typescript
+// Confirm startup logs
+// [Perf][ServicesProvider] startup
+// [Perf][EngineProvider] initDatabase
+```
+
+**Fix**:
+- Ensure `SyncService.startAutoSync()` includes immediate `processPending()` call
+- Verify provider startup sequence does not skip sync initialization
+
+### 14. Worker mode broke sync/database startup
+
+**Symptoms**: Sync/database init fails only when worker mode is enabled.
+
+**Expected Architecture**:
+- Worker mode is feature-flagged by `VITE_ENABLE_PGLITE_WORKER`
+- Safe fallback to direct PGlite instance must remain available
+
+**Fix**:
+- Disable worker flag to confirm fallback path
+- Verify worker entrypoint and bundling (`pglite.worker.ts`)
+- Do not force worker mode in production without staged validation
 
 ## Debugging Tools
 

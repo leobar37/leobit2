@@ -30,6 +30,7 @@ export interface EnqueueParams {
   data: Record<string, unknown>;
   idempotencyKey?: string;
   syncGroupId?: string;
+  fastPath?: boolean;
 }
 
 /**

@@ -93,7 +93,7 @@ export interface Sale {
   cancelReason: string | null;
   refundAmount: string | null;
   refundDate: string | null;
-  refundMethod: string | null;
+  refundMethod: "efectivo" | "yape" | "plin" | "transferencia" | "saldo" | null;
   refundReference: string | null;
   refundNotes: string | null;
   advancePaymentMethod: string | null;
@@ -244,7 +244,7 @@ export class SaleService extends BaseService {
     }
 
     if (query.hasBalanceDue) {
-      conditions.push(sql`${salesTable.balanceDue} > '0'`);
+      conditions.push(sql`CAST(${salesTable.balanceDue} AS NUMERIC) > 0`);
     }
 
     if (query.search?.trim()) {
@@ -259,12 +259,6 @@ export class SaleService extends BaseService {
               AND c.name LIKE ${searchPattern}
           )
           OR ${salesTable.saleType} LIKE ${searchPattern}
-          OR EXISTS (
-            SELECT 1
-            FROM sale_items si
-            WHERE si.sale_id = ${salesTable.id}
-              AND si.product_name LIKE ${searchPattern}
-          )
         )`
       );
     }
@@ -384,6 +378,7 @@ export class SaleService extends BaseService {
   }
 
   async findPageByBusiness(query: SalePageQuery): Promise<SaleListPage> {
+    const perfStart = performance.now();
     const where = this.buildPagedSalesWhere(query);
 
     const [rows, totalResult] = await Promise.all([
@@ -422,13 +417,23 @@ export class SaleService extends BaseService {
       }
     }
 
-    return {
+    const result = {
       items: sales.map((sale) => ({
         ...sale,
         customer: sale.customerId ? customerMap.get(sale.customerId) ?? null : null,
       })),
       total: totalResult[0]?.count ?? 0,
     };
+
+    console.log("[Perf][SaleService] findPageByBusiness", {
+      offset: query.offset,
+      limit: query.limit,
+      rows: result.items.length,
+      hasSearch: Boolean(query.search?.trim()),
+      totalMs: Number((performance.now() - perfStart).toFixed(2)),
+    });
+
+    return result;
   }
 
   /**
@@ -496,16 +501,17 @@ export class SaleService extends BaseService {
    * Used for creating a new sale that will be edited later
    */
   async createDraft(saleInput: Omit<CreateSaleInput, "totalAmount"> & { totalAmount?: number }): Promise<Sale> {
-    console.log("[SaleService] createDraft called with saleInput:", saleInput);
-    console.log("[SaleService] this.businessId:", this.businessId);
-    console.log("[SaleService] sellerId:", saleInput.sellerId);
+    const perfStart = performance.now();
 
     const syncGroupId = this.generateSyncGroup();
     const now = this.now();
     const saleId = generateId();
     const sellerId = saleInput.sellerId;
+    const totalAmount = saleInput.totalAmount || 0;
+    const type = saleInput.type || "instant_sale";
+    const saleType = saleInput.saleType || "contado";
 
-    console.log("[SaleService] Starting transaction for saleId:", saleId);
+    const insertStart = performance.now();
     await this.pg.exec("BEGIN");
 
     try {
@@ -524,12 +530,12 @@ export class SaleService extends BaseService {
           sellerId,
           saleInput.distribucionId || null,
           saleInput.visitaId || null,
-          saleInput.type || "instant_sale",
-          saleInput.saleType || "contado",
+          type,
+          saleType,
           saleInput.paymentMode || null,
-          saleInput.totalAmount || 0,
+          totalAmount,
           0,
-          saleInput.totalAmount || 0,
+          totalAmount,
           saleInput.tara || null,
           saleInput.netWeight || null,
           now,
@@ -546,7 +552,9 @@ export class SaleService extends BaseService {
       );
 
       await this.pg.exec("COMMIT");
+      const insertMs = performance.now() - insertStart;
 
+      const enqueueStart = performance.now();
       await this.queueSync(
         "create",
         saleId,
@@ -555,27 +563,78 @@ export class SaleService extends BaseService {
           sellerId,
           distribucionId: saleInput.distribucionId,
           visitaId: saleInput.visitaId,
-          type: saleInput.type || "instant_sale",
-          saleType: saleInput.saleType || "contado",
+          type,
+          saleType,
           paymentMode: saleInput.paymentMode,
-          totalAmount: saleInput.totalAmount || 0,
+          totalAmount,
           amountPaid: 0,
-          balanceDue: saleInput.totalAmount || 0,
+          balanceDue: totalAmount,
           tara: saleInput.tara,
           netWeight: saleInput.netWeight,
           deliveryDate: saleInput.deliveryDate,
           orderDate: saleInput.orderDate,
           items: [],
         },
-        syncGroupId
+        syncGroupId,
+        undefined,
+        undefined,
+        {
+          fastPath: true,
+          idempotencyKey: `sale:create:${saleId}`,
+        }
       );
+      const enqueueMs = performance.now() - enqueueStart;
 
-      const createdSale = await this.findById(saleId);
-      if (!createdSale) {
-        throw new Error("Failed to retrieve created sale");
-      }
+      const totalMs = performance.now() - perfStart;
+      console.log("[Perf][SaleService] createDraft", {
+        saleId,
+        type,
+        saleType,
+        insertMs: Number(insertMs.toFixed(2)),
+        enqueueMs: Number(enqueueMs.toFixed(2)),
+        totalMs: Number(totalMs.toFixed(2)),
+      });
 
-      return createdSale;
+      return {
+        id: saleId,
+        businessId: this.businessId,
+        customerId: saleInput.customerId || null,
+        customer: null,
+        sellerId,
+        distribucionId: saleInput.distribucionId || null,
+        visitaId: saleInput.visitaId || null,
+        type,
+        saleType,
+        paymentMode: saleInput.paymentMode || null,
+        totalAmount: totalAmount.toString(),
+        amountPaid: "0",
+        balanceDue: totalAmount.toString(),
+        tara: saleInput.tara?.toString() ?? null,
+        netWeight: saleInput.netWeight?.toString() ?? null,
+        saleDate: now,
+        deliveryDate: saleInput.deliveryDate || null,
+        orderDate: saleInput.orderDate || null,
+        status: "draft",
+        version: 1,
+        confirmedSnapshot: null,
+        deliveredSnapshot: null,
+        allowCustomerEdit: true,
+        syncStatus: SyncStatus.PENDING,
+        syncAttempts: 0,
+        cancelledAt: null,
+        cancelledBy: null,
+        cancelReason: null,
+        refundAmount: null,
+        refundDate: null,
+        refundMethod: null,
+        refundReference: null,
+        refundNotes: null,
+        advancePaymentMethod: null,
+        advanceReferenceNumber: null,
+        advanceProofImageId: null,
+        createdAt: now,
+        updatedAt: now,
+      };
     } catch (error) {
       console.error("[SaleService] createDraft error:", error);
       await this.pg.exec("ROLLBACK");
@@ -1221,7 +1280,10 @@ export class SaleService extends BaseService {
       input as Record<string, unknown>,
       syncGroupId,
       undefined,
-      sale.version
+      sale.version,
+      {
+        fastPath: true,
+      }
     );
   }
 
@@ -1267,33 +1329,41 @@ export class SaleService extends BaseService {
    * Add an item to an existing sale
    */
   async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
-    const sale = await this.findById(saleId);
+    const perfStart = performance.now();
+    const saleResult = await this.pg.query<Record<string, unknown>>(
+      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      [saleId, this.businessId]
+    );
 
-    if (!sale) {
+    if (saleResult.rows.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
-    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
+      id: string;
+      type: SaleType;
+      status: SaleStatus;
+      syncGroupId?: string | null;
+    };
+
+    const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
+    if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items added");
     }
 
-    // Check for existing item with same product + variant
-    const existingItemsResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-      [saleId, this.businessId]
-    );
-    const existingItems = existingItemsResult.rows.map((row) => mapToCamelCase(row) as unknown as SaleItem);
-    const existingItem = existingItems.find(
-      (i) => i.productId === item.productId && i.variantId === item.variantId
+    const existingItemResult = await this.pg.query<Record<string, unknown>>(
+      `SELECT id
+       FROM sale_items
+       WHERE sale_id = $1 AND business_id = $2 AND product_id = $3 AND variant_id = $4
+       LIMIT 1`,
+      [saleId, this.businessId, item.productId, item.variantId]
     );
     
-    if (existingItem) {
+    if (existingItemResult.rows.length > 0) {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
 
-    // Get the sale's syncGroupId to ensure items are synced in the correct order
-    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
+    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
 
     const itemId = this.generateId();
     const now = this.now();
@@ -1345,7 +1415,11 @@ export class SaleService extends BaseService {
         subtotal: item.subtotal,
       },
       saleSyncGroupId,
-      "sale_items"
+      "sale_items",
+      undefined,
+      {
+        fastPath: true,
+      }
     );
 
     // Return the created item
@@ -1353,6 +1427,12 @@ export class SaleService extends BaseService {
       `SELECT * FROM sale_items WHERE id = $1`,
       [itemId]
     );
+
+    console.log("[Perf][SaleService] addItem", {
+      saleId,
+      itemId,
+      totalMs: Number((performance.now() - perfStart).toFixed(2)),
+    });
 
     return mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem;
   }
@@ -1369,14 +1449,25 @@ export class SaleService extends BaseService {
       subtotal?: number;
     }
   ): Promise<SaleItem> {
-    const sale = await this.findById(saleId);
+    const perfStart = performance.now();
+    const saleResult = await this.pg.query<Record<string, unknown>>(
+      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      [saleId, this.businessId]
+    );
 
-    if (!sale) {
+    if (saleResult.rows.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
-    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
+      id: string;
+      type: SaleType;
+      status: SaleStatus;
+      syncGroupId?: string | null;
+    };
+
+    const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
+    if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items updated");
     }
 
@@ -1420,7 +1511,7 @@ export class SaleService extends BaseService {
     }
 
     // Queue sync for the updated item with same syncGroupId as the sale insert
-    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
+    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
     await this.queueSync(
       "update",
       itemId,
@@ -1431,7 +1522,11 @@ export class SaleService extends BaseService {
         subtotal: data.subtotal,
       },
       saleSyncGroupId,
-      "sale_items"
+      "sale_items",
+      undefined,
+      {
+        fastPath: true,
+      }
     );
 
     // Return updated item
@@ -1440,6 +1535,12 @@ export class SaleService extends BaseService {
       [itemId]
     );
 
+    console.log("[Perf][SaleService] updateItem", {
+      saleId,
+      itemId,
+      totalMs: Number((performance.now() - perfStart).toFixed(2)),
+    });
+
     return mapToCamelCase(updatedResult.rows[0]) as unknown as SaleItem;
   }
 
@@ -1447,14 +1548,25 @@ export class SaleService extends BaseService {
    * Remove an item from a sale
    */
   async removeItem(saleId: string, itemId: string): Promise<void> {
-    const sale = await this.findById(saleId);
+    const perfStart = performance.now();
+    const saleResult = await this.pg.query<Record<string, unknown>>(
+      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      [saleId, this.businessId]
+    );
 
-    if (!sale) {
+    if (saleResult.rows.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const isConfirmedPreOrder = sale.type === "pre_order" && sale.status === "confirmed";
-    if (sale.status !== "draft" && !isConfirmedPreOrder) {
+    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
+      id: string;
+      type: SaleType;
+      status: SaleStatus;
+      syncGroupId?: string | null;
+    };
+
+    const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
+    if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items removed");
     }
 
@@ -1486,7 +1598,7 @@ export class SaleService extends BaseService {
     );
 
     // Queue sync for the deleted item with same syncGroupId as the sale insert
-    const saleSyncGroupId = await this.getSaleSyncGroupId(saleId);
+    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
     await this.queueSync(
       "delete",
       itemId,
@@ -1494,8 +1606,18 @@ export class SaleService extends BaseService {
         saleId,
       },
       saleSyncGroupId,
-      "sale_items"
+      "sale_items",
+      undefined,
+      {
+        fastPath: true,
+      }
     );
+
+    console.log("[Perf][SaleService] removeItem", {
+      saleId,
+      itemId,
+      totalMs: Number((performance.now() - perfStart).toFixed(2)),
+    });
   }
 
   /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import {
   CreditCard,
@@ -8,13 +8,11 @@ import {
   Package,
   Check,
   Calculator as CalculatorIcon,
-  Plus,
   Loader2,
   Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerSelect } from "~/components/customers/customer-select";
@@ -24,9 +22,7 @@ import { useProducts } from "~/hooks/use-products";
 import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSmartCalculator } from "~/hooks/use-smart-calculator";
 import {
-  useSale,
   useFinalizeSale,
-  useSaleItems,
   useAddSaleItem,
   useRemoveSaleItem,
   useUpdateSaleItem,
@@ -43,9 +39,7 @@ import { useToast } from "~/hooks/use-toast";
 
 
 export function CustomerSection() {
-  const { saleId, visitaId } = useNewSaleContext();
-  const { data: sale, refetch } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
+  const { saleId, visitaId, sale, items } = useNewSaleContext();
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
@@ -126,9 +120,7 @@ const paymentModes: {
 ];
 
 export function PaymentModeSection() {
-  const { saleId } = useNewSaleContext();
-  const { data: sale } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
+  const { saleId, sale, items } = useNewSaleContext();
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
@@ -258,8 +250,7 @@ export function PaymentModeSection() {
 
 function CartItemRow({ itemId }: { itemId: string }) {
   const navigate = useNavigate();
-  const { saleId, setEditingItemId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(saleId);
+  const { saleId, items, setEditingItemId } = useNewSaleContext();
   const removeItem = useRemoveSaleItem();
 
   const item = items.find((i) => i.id === itemId);
@@ -312,8 +303,7 @@ function CartItemRow({ itemId }: { itemId: string }) {
 // ============================================
 
 export function CartSection() {
-  const { saleId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(saleId);
+  const { items } = useNewSaleContext();
 
   if (items.length === 0) {
     return null;
@@ -338,9 +328,7 @@ export function CartSection() {
 // ============================================
 
 export function SaleSummaryCard() {
-  const { saleId } = useNewSaleContext();
-  const { data: sale } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
+  const { sale, items } = useNewSaleContext();
 
   const calculations = useSaleCalculations(sale, items);
 
@@ -409,9 +397,7 @@ export function SaleSummaryCard() {
 
 export function SaleSubmitBar() {
   const navigate = useNavigate();
-  const { saleId, returnTo } = useNewSaleContext();
-  const { data: sale } = useSale(saleId);
-  const { data: items = [] } = useSaleItems(saleId);
+  const { saleId, returnTo, sale, items } = useNewSaleContext();
   const { toast } = useToast();
   const finalizeSale = useFinalizeSale();
 
@@ -512,8 +498,7 @@ interface CalculatorContentProps {
 
 export function CalculatorContent({ returnPath }: CalculatorContentProps) {
   const navigate = useNavigate();
-  const { saleId, editingItemId, setEditingItemId } = useNewSaleContext();
-  const { data: saleItems = [] } = useSaleItems(saleId);
+  const { saleId, items: saleItems, editingItemId, setEditingItemId } = useNewSaleContext();
   
   const editingItem = editingItemId ? saleItems.find((i) => i.id === editingItemId) : null;
   const isEditMode = !!editingItem;

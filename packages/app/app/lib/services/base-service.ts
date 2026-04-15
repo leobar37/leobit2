@@ -152,7 +152,11 @@ export abstract class BaseService {
     payload: Record<string, unknown>,
     syncGroupId?: string,
     entityTypeOverride?: EntityType,
-    entityVersion?: number
+    entityVersion?: number,
+    options?: {
+      fastPath?: boolean;
+      idempotencyKey?: string;
+    }
   ): Promise<void> {
     const entityType = entityTypeOverride ?? this.getEntityType();
     if (!isSyncEntity(entityType)) {
@@ -167,8 +171,9 @@ export abstract class BaseService {
         ...payload,
         ...(entityVersion !== undefined && { _localVersion: entityVersion }),
       },
-      idempotencyKey: generateId(),
+      idempotencyKey: options?.idempotencyKey ?? generateId(),
       syncGroupId,
+      fastPath: options?.fastPath,
     };
 
     await this.syncService.enqueue(params);

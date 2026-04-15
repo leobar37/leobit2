@@ -2,13 +2,11 @@ import { Navigate, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { CalculatorContent } from "~/components/sales/new-sale";
 import { useNewSaleContext } from "~/components/sales/new-sale-context";
-import { useSaleItems } from "~/hooks/use-sales-db";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 
 export default function SaleEditorCalculatorPage() {
   const navigate = useNavigate();
-  const { saleId, editingItemId } = useNewSaleContext();
-  const { data: items = [] } = useSaleItems(saleId);
+  const { saleId, editingItemId, items } = useNewSaleContext();
   
   const editingItem = editingItemId ? items.find((i) => i.id === editingItemId) : null;
 

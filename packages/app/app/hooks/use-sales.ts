@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSaleService } from "~/lib/sync/service-provider";
 import { useToastError } from "~/hooks/use-toast-error";
@@ -84,6 +84,7 @@ export function usePaginatedSales(query: SalePageQuery) {
     queryFn: async (): Promise<PaginatedSalesResult> => {
       return saleService.findPageByBusiness(query);
     },
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -100,6 +101,7 @@ export function useSale(id: string | null) {
       return saleService.findById(id);
     },
     enabled: !!id,
+    staleTime: 30_000,
   });
 }
 
@@ -214,8 +216,7 @@ export function useCreateDraftSale() {
       type?: "instant_sale" | "pre_order";
       deliveryDate?: string;
     }): Promise<Sale> => {
-      console.log("[useCreateDraftSale] Mutation started");
-      console.log("[useCreateDraftSale] business?.businessUserId:", business?.businessUserId);
+      const perfStart = performance.now();
 
       const sellerId = business?.businessUserId;
 
@@ -224,7 +225,6 @@ export function useCreateDraftSale() {
         throw new Error("Business seller is not available");
       }
 
-      console.log("[useCreateDraftSale] Calling saleService.createDraft with sellerId:", sellerId);
       const sale = await saleService.createDraft({
         sellerId,
         type: options?.type ?? "instant_sale",
@@ -234,13 +234,17 @@ export function useCreateDraftSale() {
         visitaId: options?.visitaId,
         deliveryDate: options?.deliveryDate,
       });
-      console.log("[useCreateDraftSale] Sale created with id:", sale.id);
+      console.log("[Perf][useCreateDraftSale] mutationFn", {
+        saleId: sale.id,
+        totalMs: Number((performance.now() - perfStart).toFixed(2)),
+      });
       return sale;
     },
-    onSuccess: () => {
-      console.log("[useCreateDraftSale] Mutation succeeded");
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
+    onSuccess: (sale) => {
+      queryClient.setQueryData(QUERY_KEYS.sale(sale.id), {
+        ...sale,
+        items: [],
+      });
     },
   });
 }
@@ -368,11 +372,29 @@ export function useUpdateSale() {
     }): Promise<void> => {
       return saleService.update(id, input);
     },
-    onSuccess: async (_, variables) => {
-      // Invalidate the specific sale query to trigger a refetch
+    onSuccess: async (_data, variables) => {
+      // Apply partial optimistic update to sale detail cache
+      queryClient.setQueryData(
+        QUERY_KEYS.sale(variables.id),
+        (previous: SaleWithItems | null | undefined) => {
+          if (!previous) return previous;
+
+          return {
+            ...previous,
+            ...variables.input,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      );
+
+      // Invalidate page/list queries so next fetch gets fresh data
+      queryClient.invalidateQueries({ queryKey: ["sales-new", "page"], exact: false });
+    },
+    onError: (_error, variables) => {
+      // On error, invalidate the sale cache so the next read
+      // fetches authoritative data from the server instead of
+      // keeping the stale partial update from onSettled
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(variables.id) });
-      // Also invalidate the sales list
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
     },
   });
 }

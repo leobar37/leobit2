@@ -44,7 +44,7 @@ export default function SalesPage() {
     activeFilterCount,
   } = useSaleFilters({ miDistribucionId: miDistribucion?.id });
 
-  const pageSize = 100;
+  const pageSize = 50;
   const offset = (page - 1) * pageSize;
 
   const distribucionId = tab === "mine"

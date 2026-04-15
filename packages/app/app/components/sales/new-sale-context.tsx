@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { useParams, useSearchParams } from "react-router";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
 import { useSaleEditorState } from "~/hooks/use-sale-editor-state";
+import { useSale } from "~/hooks/use-sales-db";
+import type { SaleItem } from "~/lib/services/sale-service";
 
 interface NewSaleContextType {
   saleId: string | null;
@@ -10,13 +12,15 @@ interface NewSaleContextType {
   visitaId: string | null;
   setLinkedVisitaId: (id: string | null) => void;
   returnTo: string;
+  sale: ReturnType<typeof useSale>["data"];
+  items: SaleItem[];
+  isSaleLoading: boolean;
 }
 
 const NewSaleContext = createContext<NewSaleContextType | null>(null);
 
 interface NewSaleProviderProps {
   children: ReactNode;
-  /** Linked visitaId from the sale record itself (for sales created from visits) */
   linkedVisitaId?: string | null;
 }
 
@@ -26,9 +30,11 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
   const { editingItemId, setEditingItemId } = useSaleEditorState();
   const [linkedVisitaId, setLinkedVisitaId] = useState<string | null>(initialLinkedVisitaId ?? null);
 
-  const urlVisitaId = searchParams.get("visitaId");
+  const saleId = id ?? null;
+  const { data: sale, isLoading: isSaleLoading } = useSale(saleId);
+  const items = useMemo(() => sale?.items ?? [], [sale?.items]);
 
-  // Use URL visitaId if present, otherwise fall back to linked visitaId from sale
+  const urlVisitaId = searchParams.get("visitaId");
   const effectiveVisitaId = urlVisitaId || linkedVisitaId || null;
 
   const { returnTo } = useReturnNavigation({
@@ -36,20 +42,22 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
       visitaId: "/visitas",
     },
     defaultPath: "/ventas",
-    // Override the param key to use our effective visitaId
     overrideKey: effectiveVisitaId ? "visitaId" : undefined,
   });
 
   const value = useMemo(
     () => ({
-      saleId: id ?? null,
+      saleId,
       editingItemId,
       setEditingItemId,
       visitaId: effectiveVisitaId,
       setLinkedVisitaId,
       returnTo,
+      sale,
+      items,
+      isSaleLoading,
     }),
-    [id, editingItemId, effectiveVisitaId, returnTo]
+    [saleId, editingItemId, effectiveVisitaId, returnTo, sale, items, isSaleLoading]
   );
 
   return (

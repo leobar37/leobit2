@@ -42,6 +42,7 @@ export class PgSyncQueue implements ISyncQueue {
   ) {}
 
   async enqueue(params: EnqueueParams): Promise<string> {
+    const enqueueStart = performance.now();
     const id = generateId();
     const idempotencyKey = params.idempotencyKey || generateId();
 
@@ -51,26 +52,78 @@ export class PgSyncQueue implements ISyncQueue {
       entityId: params.entityId,
       idempotencyKey,
       syncGroupId: params.syncGroupId,
+      fastPath: !!params.fastPath,
     });
 
+    if (params.fastPath) {
+      const insertStart = performance.now();
+      await this.insertOperation({
+        id,
+        businessId: this.businessId,
+        entityType: params.entity_type,
+        operation: params.operation,
+        entityId: params.entityId,
+        payload: normalizeDatesToISO(params.data) as Record<string, unknown>,
+        idempotencyKey,
+        syncGroupId: params.syncGroupId,
+        version: (params.data?._localVersion as number) ?? 1,
+      });
+
+      syncLogger.warn(`[PgSyncQueue]`, `Enqueued operation (fastPath) ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
+      syncLogger.warn(`[Perf][SyncQueue]`, `enqueue fastPath timing`, {
+        entityType: params.entity_type,
+        operation: params.operation,
+        entityId: params.entityId,
+        insertMs: Number((performance.now() - insertStart).toFixed(2)),
+        totalMs: Number((performance.now() - enqueueStart).toFixed(2)),
+      });
+      return id;
+    }
+
     // Step 1: Check idempotency - if same key exists with non-completed status, return it
+    const idempotencyStart = performance.now();
     const existingByKey = await this.getByIdempotencyKey(idempotencyKey);
+    const idempotencyMs = performance.now() - idempotencyStart;
     if (existingByKey && existingByKey.status !== OPERATION_STATUS.COMPLETED) {
       syncLogger.warn(`[PgSyncQueue]`, `Idempotency hit for ${params.entity_type}:${params.entityId} -> ${existingByKey.id}`);
+      syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+        entityType: params.entity_type,
+        operation: params.operation,
+        entityId: params.entityId,
+        idempotencyLookupMs: Number(idempotencyMs.toFixed(2)),
+        pendingLookupMs: 0,
+        coalesceMs: 0,
+        insertMs: 0,
+        totalMs: Number((performance.now() - enqueueStart).toFixed(2)),
+      });
       return existingByKey.id;
     }
 
     // Step 2: Find existing pending/failed operation for same entity
+    const pendingLookupStart = performance.now();
     const existingOp = await this.getPendingForEntity(params.entity_type, params.entityId);
+    const pendingLookupMs = performance.now() - pendingLookupStart;
 
     // Step 3: Apply coalescing logic (pure JS, testable)
+    const coalesceStart = performance.now();
     if (existingOp) {
       const plan = getCoalescePlan(existingOp, params);
+      const coalesceMs = performance.now() - coalesceStart;
 
       if (plan.type === "cancel") {
         // create + delete = cancel (entity never reached server)
         await this.deleteOperation(existingOp.id);
         syncLogger.warn(`[PgSyncQueue]`, `Coalesced (cancelled) operation for ${params.entity_type}:${params.entityId}`);
+        syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+          entityType: params.entity_type,
+          operation: params.operation,
+          entityId: params.entityId,
+          idempotencyLookupMs: Number(idempotencyMs.toFixed(2)),
+          pendingLookupMs: Number(pendingLookupMs.toFixed(2)),
+          coalesceMs: Number(coalesceMs.toFixed(2)),
+          insertMs: 0,
+          totalMs: Number((performance.now() - enqueueStart).toFixed(2)),
+        });
         return existingOp.id;
       }
 
@@ -82,24 +135,48 @@ export class PgSyncQueue implements ISyncQueue {
           idempotencyKey,
         });
         syncLogger.warn(`[PgSyncQueue]`, `Coalesced (${plan.type}) operation for ${params.entity_type}:${params.entityId} -> ${existingOp.id}`);
+        syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+          entityType: params.entity_type,
+          operation: params.operation,
+          entityId: params.entityId,
+          idempotencyLookupMs: Number(idempotencyMs.toFixed(2)),
+          pendingLookupMs: Number(pendingLookupMs.toFixed(2)),
+          coalesceMs: Number(coalesceMs.toFixed(2)),
+          insertMs: 0,
+          totalMs: Number((performance.now() - enqueueStart).toFixed(2)),
+        });
         return existingOp.id;
       }
     }
 
+    const coalesceMs = performance.now() - coalesceStart;
+
     // Step 4: Insert new operation
+    const insertStart = performance.now();
     await this.insertOperation({
       id,
       businessId: this.businessId,
       entityType: params.entity_type,
       operation: params.operation,
       entityId: params.entityId,
-      payload: normalizeDatesToISO(params.data),
+      payload: normalizeDatesToISO(params.data) as Record<string, unknown>,
       idempotencyKey,
       syncGroupId: params.syncGroupId,
       version: (params.data?._localVersion as number) ?? 1,
     });
+    const insertMs = performance.now() - insertStart;
 
     syncLogger.warn(`[PgSyncQueue]`, `Enqueued operation ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
+    syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+      entityType: params.entity_type,
+      operation: params.operation,
+      entityId: params.entityId,
+      idempotencyLookupMs: Number(idempotencyMs.toFixed(2)),
+      pendingLookupMs: Number(pendingLookupMs.toFixed(2)),
+      coalesceMs: Number(coalesceMs.toFixed(2)),
+      insertMs: Number(insertMs.toFixed(2)),
+      totalMs: Number((performance.now() - enqueueStart).toFixed(2)),
+    });
     return id;
   }
 

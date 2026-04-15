@@ -153,11 +153,26 @@ export function ServicesProvider({
 
     // Initialize services before starting
     const initAndStart = async () => {
+      const perfStart = performance.now();
       try {
+        const pushInitStart = performance.now();
         await syncService.initialize();
+        const pushInitMs = performance.now() - pushInitStart;
+
+        const pullInitStart = performance.now();
         await pullService.initialize();
+        const pullInitMs = performance.now() - pullInitStart;
+
+        const coordinatorStart = performance.now();
         coordinator.start();
-        console.log("[ServicesProvider] SyncCoordinator started");
+        const coordinatorMs = performance.now() - coordinatorStart;
+
+        console.log("[Perf][ServicesProvider] startup", {
+          pushInitMs: Number(pushInitMs.toFixed(2)),
+          pullInitMs: Number(pullInitMs.toFixed(2)),
+          coordinatorMs: Number(coordinatorMs.toFixed(2)),
+          totalMs: Number((performance.now() - perfStart).toFixed(2)),
+        });
       } catch (error) {
         console.error("[ServicesProvider] Failed to initialize sync services:", error);
       }
