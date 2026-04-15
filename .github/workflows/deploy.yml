@@ -80,7 +80,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:sha-${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-backend:latest
-          cache-from: type=none
           cache-to: type=gha,mode=max
 
       - name: Build and push App
@@ -95,7 +94,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:sha-${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:latest
-          cache-from: type=none
           cache-to: type=gha,mode=max
           pull: true
 

@@ -3,6 +3,9 @@ import * as schema from "./schema";
 import { getLocalDatabaseName } from "~/lib/session-storage";
 import { FULL_SCHEMA } from "~/lib/sync/schema";
 
+// SSR safety check - ensure we're in a browser environment
+const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
+
 let pg: import("@electric-sql/pglite").PGlite | null = null;
 let db: ReturnType<typeof drizzle> | null = null;
 let initPromise: Promise<{ pg: import("@electric-sql/pglite").PGlite; db: ReturnType<typeof drizzle> }> | null = null;
@@ -216,6 +219,11 @@ export async function initDatabase(): Promise<{
   pg: import("@electric-sql/pglite").PGlite;
   db: ReturnType<typeof drizzle>;
 }> {
+  // Guard against SSR/build execution
+  if (!isBrowser) {
+    throw new Error("Database cannot be initialized during SSR or build. Ensure this is only called in browser context.");
+  }
+
   if (pg && db) {
     return { pg, db };
   }
@@ -234,21 +242,21 @@ export async function initDatabase(): Promise<{
 
     // Migration: clean old version key if exists
     const oldVersionKey = "avileo_schema_version";
-    const oldVersion = localStorage.getItem(oldVersionKey);
+    const oldVersion = isBrowser ? localStorage.getItem(oldVersionKey) : null;
     const isMigrating = !!oldVersion;
-    if (isMigrating) {
+    if (isMigrating && isBrowser) {
       console.log("[DB] Migrating from old schema version system");
       localStorage.removeItem(oldVersionKey);
     }
 
     // Check if schema hash changed
     const currentHash = await computeSchemaHash(FULL_SCHEMA);
-    const storedHash = localStorage.getItem(VERSION_KEY) || "";
+    const storedHash = isBrowser ? localStorage.getItem(VERSION_KEY) || "" : "";
     const needsReset = isMigrating || (storedHash !== currentHash);
 
     // Check if user requested a force reset (via "Limpiar" button)
-    const forceReset = localStorage.getItem("AVILEO_FORCE_RESET") === "true";
-    if (forceReset) {
+    const forceReset = isBrowser ? localStorage.getItem("AVILEO_FORCE_RESET") === "true" : false;
+    if (forceReset && isBrowser) {
       console.log("[DB] Force reset requested - skipping data export");
       localStorage.removeItem("AVILEO_FORCE_RESET");
     }
@@ -269,7 +277,9 @@ export async function initDatabase(): Promise<{
 
     // Save schema hash BEFORE attempting database operations to prevent infinite reset loops
     // If WASM load fails, we don't want to keep trying to reset
-    localStorage.setItem(VERSION_KEY, currentHash);
+    if (isBrowser) {
+      localStorage.setItem(VERSION_KEY, currentHash);
+    }
 
     // Create fresh database instance
     const pgInstance = await createPrimaryPGliteInstance(dataDir);
@@ -634,6 +644,7 @@ async function importPendingData(pg: import("@electric-sql/pglite").PGlite, data
 }
 
 async function resetDatabaseInternal(): Promise<void> {
+  if (!isBrowser) return;
   const databaseName = getLocalDatabaseName();
 
   if (pg) {
@@ -672,6 +683,9 @@ export function getDatabase(): {
   pg: import("@electric-sql/pglite").PGlite;
   db: ReturnType<typeof drizzle>;
 } {
+  if (!isBrowser) {
+    throw new Error("Database cannot be accessed during SSR or build.");
+  }
   if (!pg || !db) {
     throw new Error("Database not initialized. Call initDatabase() first.");
   }
@@ -679,6 +693,7 @@ export function getDatabase(): {
 }
 
 export async function disposeDatabase(): Promise<void> {
+  if (!isBrowser) return;
   if (pg) {
     try {
       await pg.close();
@@ -693,6 +708,7 @@ export async function disposeDatabase(): Promise<void> {
 }
 
 export async function resetDatabase(): Promise<void> {
+  if (!isBrowser) return;
   // Clear schema version to force full reset on next init
   localStorage.removeItem(VERSION_KEY);
   await resetDatabaseInternal();

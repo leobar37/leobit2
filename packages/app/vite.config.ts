@@ -52,6 +52,11 @@ export default defineConfig({
         enabled: false, // Disable SW in dev to avoid intercepting API requests
         type: "module",
       },
+      // Exclude engine files that use browser-only APIs (causes SSR build errors)
+      exclude: [
+        /app\/engine\/.*/,
+        /node_modules\/.*/,
+      ],
       workbox: {
         // Cache all static assets for offline
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wasm,data}"],
@@ -179,8 +184,17 @@ export default defineConfig({
       transformMixedEsModules: true,
     },
     rollupOptions: {
-      external: ["@electric-sql/pglite/dist/fs/nodefs.js"],
+      external: [
+        "@electric-sql/pglite/dist/fs/nodefs.js",
+        // Exclude engine files from SSR/bundling - they use browser-only APIs
+        /app\/engine\/.*/,
+      ],
     },
+  },
+  ssr: {
+    // Exclude browser-only modules from SSR
+    external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
+    noExternal: [],
   },
   server: {
     host: "0.0.0.0",
