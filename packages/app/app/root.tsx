@@ -82,6 +82,11 @@ export default function App() {
         onOfflineReady() {
           console.log("[PWA] Ready to work offline");
         },
+        onNeedRefresh() {
+          // Force reload when new version is available to avoid stale chunks
+          console.log("[PWA] New version available, reloading...");
+          window.location.reload();
+        },
       });
 
       return () => {
@@ -111,6 +116,33 @@ export default function App() {
 
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
     return () => window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+  }, []);
+
+  // Handle module loading errors (stale service worker cache)
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      const errorMessage = String(event.message || event.error);
+      // Detect MIME type errors or failed module loads (stale SW cache)
+      if (
+        errorMessage.includes("MIME type") ||
+        errorMessage.includes("Failed to fetch dynamically imported module") ||
+        errorMessage.includes("Cannot read properties of undefined")
+      ) {
+        console.error("[App] Module loading error detected, likely stale SW cache:", errorMessage);
+        // Clear service worker and reload
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            Promise.all(regs.map((r) => r.unregister())).then(() => {
+              console.log("[App] Service workers cleared, reloading...");
+              window.location.reload();
+            });
+          });
+        }
+      }
+    };
+
+    window.addEventListener("error", handleError);
+    return () => window.removeEventListener("error", handleError);
   }, []);
 
   return (

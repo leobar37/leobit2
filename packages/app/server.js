@@ -11,8 +11,12 @@ const server = serve({
     const url = new URL(req.url);
     let path = url.pathname;
 
-    // Default to index.html for client-side routing
-    if (path === "/" || !path.includes(".")) {
+    // Determine if this is an asset request (has file extension)
+    const isAsset = /\.[a-zA-Z0-9]+$/.test(path);
+    const isAssetExt = path.match(/\.(js|css|wasm|data|png|jpg|jpeg|svg|ico|woff2|json|webmanifest)$/);
+
+    // Default to index.html for client-side routing (only for non-asset paths)
+    if (path === "/" || (!isAsset && !path.includes("."))) {
       path = "/index.html";
     }
 
@@ -29,7 +33,14 @@ const server = serve({
         },
       });
     } catch (e) {
-      // If file not found, serve index.html for client-side routing
+      // For asset files, return 404 to let the PWA know the file is missing
+      // This triggers the service worker update mechanism
+      if (isAssetExt) {
+        console.error(`[Server] Asset not found: ${path}`);
+        return new Response(`Asset not found: ${path}`, { status: 404 });
+      }
+
+      // If file not found and not an asset, serve index.html for client-side routing
       try {
         const indexFile = readFileSync(join(BUILD_DIR, "index.html"));
         return new Response(indexFile, {
