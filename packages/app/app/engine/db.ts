@@ -3,7 +3,6 @@ import * as schema from "./schema";
 import { getLocalDatabaseName } from "~/lib/session-storage";
 import { FULL_SCHEMA } from "~/lib/sync/schema";
 // Import PGlite worker as inline base64 (most reliable for production)
-// This bundles the worker directly into the main chunk, avoiding separate file issues
 import PgliteWorkerConstructor from "./pglite.worker.ts?worker&inline";
 
 // SSR safety check - ensure we're in a browser environment

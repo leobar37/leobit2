@@ -33,12 +33,25 @@ function crossOriginIsolation(): Plugin {
   };
 }
 
+// Force ES module format for workers (needed for inline workers with code-splitting)
+function workerEsFormat(): Plugin {
+  return {
+    name: "worker-es-format",
+    config(config) {
+      // @ts-expect-error Vite internal worker option
+      config.worker = { format: 'es' };
+      return config;
+    },
+  };
+}
+
 export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   plugins: [
     isDev && suppressReactDevToolsWarning(),
+    workerEsFormat(),
     crossOriginIsolation(),
     reactRouter(),
     tsconfigPaths({
@@ -229,7 +242,12 @@ export default defineConfig({
       external: [
         "@electric-sql/pglite/dist/fs/nodefs.js",
         // Exclude engine files from SSR/bundling - they use browser-only APIs
-        /app\/engine\/.*/,
+        // Use a function to ensure we only match relative imports, not absolute Docker paths
+        (id) => {
+          // Only match if it's a relative path containing "app/engine/"
+          // This avoids matching /app/packages/app/app/engine/... in Docker
+          return !id.startsWith('/') && id.includes('app/engine/');
+        },
       ],
     },
   },
