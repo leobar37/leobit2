@@ -58,8 +58,8 @@ export default defineConfig({
         /node_modules\/.*/,
       ],
       workbox: {
-        // Cache all static assets for offline
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wasm,data}"],
+        // Cache static assets but NOT index.html (prevents stale HTML with old chunk references)
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff2,wasm,data}"],
         // Increase limit for PGlite WASM files (~9MB wasm + ~5MB data)
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         // SPA fallback - all routes return index.html for React Router
@@ -67,7 +67,26 @@ export default defineConfig({
         navigateFallbackAllowlist: [/^\/.*$/],
         // Clean old caches when SW updates
         cleanupOutdatedCaches: true,
+        // Skip waiting so new SW activates immediately
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
+          // HTML files - NetworkFirst to always get fresh index.html
+          // but fallback to cache if offline
+          {
+            urlPattern: /\.html$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-cache",
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Google Fonts
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
