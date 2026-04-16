@@ -97,6 +97,21 @@ export default function App() {
         immediate: true,
         onRegistered(r) {
           console.log("[PWA] Service Worker registered:", r);
+          // Check for updates immediately and periodically
+          if (r) {
+            // Check for updates every 5 minutes
+            setInterval(() => {
+              console.log("[PWA] Checking for updates...");
+              r.update();
+            }, 5 * 60 * 1000);
+
+            // Also check immediately if there's a waiting worker
+            if (r.waiting) {
+              console.log("[PWA] Update already waiting, reloading...");
+              r.waiting.postMessage({ type: "SKIP_WAITING" });
+              window.location.reload();
+            }
+          }
         },
         onRegisterError(error) {
           console.error("[PWA] Service Worker registration failed:", error);
@@ -110,6 +125,21 @@ export default function App() {
           window.location.reload();
         },
       });
+
+      // Listen for messages from SW about updates
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "SW_UPDATED") {
+            console.log("[PWA] SW reports new version, reloading...");
+            window.location.reload();
+          }
+        });
+
+        // Listen for controllerchange (new SW activated)
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          console.log("[PWA] New Service Worker activated");
+        });
+      }
 
       return () => {
         updateSW && updateSW();

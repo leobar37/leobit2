@@ -53,34 +53,39 @@ export default defineConfig({
         type: "module",
       },
       // Exclude engine files that use browser-only APIs (causes SSR build errors)
+      // Exclude index.html from precaching - always fetch fresh to avoid stale chunk references
       exclude: [
         /app\/engine\/.*/,
         /node_modules\/.*/,
+        /index\.html$/, // Never precache index.html - always get fresh from network
       ],
       workbox: {
         // Cache static assets but NOT index.html (prevents stale HTML with old chunk references)
         globPatterns: ["**/*.{js,css,ico,png,svg,woff2,wasm,data}"],
         // Increase limit for PGlite WASM files (~9MB wasm + ~5MB data)
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
-        // SPA fallback - all routes return index.html for React Router
-        navigateFallback: "index.html",
-        navigateFallbackAllowlist: [/^\/.*$/],
+        // Disable navigateFallback - we handle navigation via runtimeCaching NetworkFirst
+        // navigateFallback can use stale precached index.html, which causes chunk loading errors
+        // Instead, runtimeCaching with request.mode === "navigate" handles all navigation
+        navigateFallback: undefined,
+        navigateFallbackAllowlist: undefined,
         // Clean old caches when SW updates
         cleanupOutdatedCaches: true,
         // Skip waiting so new SW activates immediately
         skipWaiting: true,
         clientsClaim: true,
+        // runtimeCaching must be ordered with navigation LAST for highest priority
+        // Workbox checks routes in reverse registration order
         runtimeCaching: [
-          // HTML files - NetworkFirst to always get fresh index.html
-          // but fallback to cache if offline
+          // PGlite WASM files - cache for offline database initialization
           {
-            urlPattern: /\.html$/,
-            handler: "NetworkFirst",
+            urlPattern: /\.(wasm|data)$/i,
+            handler: "CacheFirst",
             options: {
-              cacheName: "html-cache",
+              cacheName: "pglite-cache",
               expiration: {
-                maxEntries: 5,
-                maxAgeSeconds: 60 * 60 * 24, // 1 day
+                maxEntries: 4,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -116,19 +121,37 @@ export default defineConfig({
               },
             },
           },
-          // PGlite WASM files - cache for offline database initialization
+          // .html files - NetworkFirst
           {
-            urlPattern: /\.(wasm|data)$/,
-            handler: "CacheFirst",
+            urlPattern: /\.html$/i,
+            handler: "NetworkFirst",
             options: {
-              cacheName: "pglite-cache",
+              cacheName: "html-cache",
               expiration: {
-                maxEntries: 4,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60, // 1 hour
               },
               cacheableResponse: {
                 statuses: [0, 200],
               },
+            },
+          },
+          // Navigation requests - NetworkFirst to always get fresh index.html
+          // This MUST be LAST in runtimeCaching to have highest priority
+          // Workbox matches routes in reverse order, so this will be checked first
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "navigate-cache",
+              expiration: {
+                maxEntries: 3,
+                maxAgeSeconds: 60 * 5, // 5 minutes only - very short
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 3, // If network takes >3s, use cache
             },
           },
         ],
