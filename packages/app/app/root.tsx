@@ -68,6 +68,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
 // This invalidates cache when switching businesses
 const queryPersister = createQueryPersister(undefined, getStoredBusinessId() ?? undefined);
 
+// Check if we need to force clear Service Worker cache (stale build detected)
+// This runs synchronously before React hydration to prevent stale chunk errors
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  const buildId = import.meta.env.VITE_BUILD_ID || "dev";
+  const lastBuildId = localStorage.getItem("avileo_build_id");
+
+  if (lastBuildId && lastBuildId !== buildId) {
+    console.log(`[SW] Build changed from ${lastBuildId} to ${buildId}, clearing caches...`);
+    // Force clear all caches before registration
+    navigator.serviceWorker.getRegistrations().then(async (regs) => {
+      await Promise.all(regs.map((r) => r.unregister()));
+      const caches = await window.caches.keys();
+      await Promise.all(caches.map((name) => window.caches.delete(name)));
+      localStorage.setItem("avileo_build_id", buildId);
+      console.log("[SW] All caches cleared, reloading...");
+      window.location.reload();
+    });
+  } else {
+    localStorage.setItem("avileo_build_id", buildId);
+  }
+}
+
 export default function App() {
   useEffect(() => {
     if (typeof registerSW === "function") {
