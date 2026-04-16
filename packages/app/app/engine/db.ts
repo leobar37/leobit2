@@ -42,6 +42,7 @@ async function createPrimaryPGliteInstance(dataDir: string): Promise<import("@el
         {
           dataDir,
           relaxedDurability: true,
+          locateFile: locatePgliteFile,
         }
       );
 
