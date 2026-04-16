@@ -94,8 +94,11 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:sha-${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/avileo-app:latest
+          cache-from: type=gha,mode=max
           cache-to: type=gha,mode=max
           pull: true
+          # FORZAR REBUILD para incluir el nuevo worker de PGlite
+          no-cache: true
 
       - name: Verify Required Environment Variables
         run: |

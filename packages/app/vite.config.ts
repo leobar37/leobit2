@@ -33,7 +33,7 @@ function crossOriginIsolation(): Plugin {
   };
 }
 
-// Force ES module format for workers (needed for inline workers with code-splitting)
+// Force ES module format for workers (required for PGlite worker with module resolution)
 function workerEsFormat(): Plugin {
   return {
     name: "worker-es-format",

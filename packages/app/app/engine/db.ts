@@ -2,8 +2,9 @@ import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "./schema";
 import { getLocalDatabaseName } from "~/lib/session-storage";
 import { FULL_SCHEMA } from "~/lib/sync/schema";
-// Import PGlite worker as inline base64 (most reliable for production)
-import PgliteWorkerConstructor from "./pglite.worker.ts?worker&inline";
+// Import PGlite worker as separate file (recommended for production by PGlite docs)
+// Using ?worker imports as a separate file, which resolves WASM paths correctly
+import PGWorkerConstructor from "./pglite.worker.ts?worker";
 
 // SSR safety check - ensure we're in a browser environment
 const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
@@ -37,12 +38,19 @@ async function createPrimaryPGliteInstance(dataDir: string): Promise<import("@el
         import("@electric-sql/pglite/worker"),
       ]);
 
+      // Create worker using new URL() pattern - recommended by PGlite for Vite
+      const worker = new Worker(
+        new URL("./pglite.worker.ts", import.meta.url),
+        { type: "module" }
+      );
+
       const workerInstance = await PGliteWorker.create(
-        new PgliteWorkerConstructor(),
+        worker,
         {
           dataDir,
           relaxedDurability: true,
-          locateFile: locatePgliteFile,
+          // Note: locateFile is defined internally in pglite.worker.ts
+          // Passing functions via postMessage causes DataCloneError
         }
       );
 
