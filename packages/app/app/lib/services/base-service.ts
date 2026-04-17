@@ -11,6 +11,7 @@ import { SyncService, type EnqueueParams } from "../sync/sync-service";
 import { VALID_TABLES } from "../sync/schema-mapper";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
+import { formatCurrency, formatWeight } from "~/lib/utils";
 
 /**
  * Entity types referenced by frontend base services.
@@ -122,8 +123,8 @@ export abstract class BaseService {
   }
 
   /**
-   * Returns current timestamp as ISO string in local timezone
-   * Uses toLocalISOString() to ensure dates are stored in the user's local timezone (Peru UTC-5)
+   * Returns current timestamp as ISO string in UTC
+   * Uses toLocalISOString() to ensure consistent UTC date handling across frontend and backend
    */
   protected now(): string {
     return toLocalISOString();
@@ -229,5 +230,41 @@ export abstract class BaseService {
    */
   protected getBusinessId(): string {
     return this.businessId;
+  }
+
+  /**
+   * Normalizes monetary values to string with 2 decimal places.
+   * PGlite DECIMAL columns can return as number (via Drizzle ORM) or string (via raw SQL).
+   * Always converts to string for consistency across the service layer.
+   */
+  protected normalizeCurrency(value: string | number | null | undefined): string {
+    return formatCurrency(value);
+  }
+
+  /**
+   * Normalizes weight values to string with 3 decimal places.
+   * Returns null if the input is null/undefined (nullable weight columns).
+   */
+  protected normalizeWeight(value: string | number | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    return formatWeight(value);
+  }
+
+  /**
+   * Normalizes weight values to string with 3 decimal places.
+   * Returns "0.000" if the input is null/undefined (for required weight columns).
+   */
+  protected normalizeWeightRequired(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return "0.000";
+    return formatWeight(value);
+  }
+
+  /**
+   * Normalizes a nullable monetary value.
+   * Returns null if the input is null/undefined, otherwise a formatted string.
+   */
+  protected normalizeNullableCurrency(value: string | number | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    return formatCurrency(value);
   }
 }

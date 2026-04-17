@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { User, X, ChevronDown, TrendingUp } from "lucide-react";
+import { User, X, ChevronDown, TrendingUp, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { useCustomers } from "~/hooks/use-customers";
+import {
+  QuickCustomerModal,
+  useQuickCustomerModal,
+} from "~/components/customers/quick-customer-modal";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { getDebtLevel } from "~/lib/debt";
 import { formatCurrency, cn } from "~/lib/utils";
@@ -36,6 +40,7 @@ export function CustomerSelect({
     searchQuery ? { search: searchQuery } : undefined,
   );
   const { data: balanceData } = useCustomerBalance(value);
+  const quickCustomerModal = useQuickCustomerModal();
 
   // Find selected customer - first check props, then search in loaded customers
   const selectedCustomer =
@@ -147,14 +152,49 @@ export function CustomerSelect({
             className="rounded-xl"
           />
 
+          {/* Create button - always visible at top */}
+          <button
+            type="button"
+            onClick={() =>
+              quickCustomerModal.open({
+                initialName: searchQuery,
+                onSuccess: (customer) => {
+                  handleSelectCustomer(customer);
+                },
+              })
+            }
+            className={cn(
+              "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+              searchQuery && customers.length === 0
+                ? "border-orange-300 bg-orange-50/70 hover:bg-orange-50"
+                : "border-dashed border-orange-300/60 hover:bg-orange-50/30",
+            )}
+          >
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/50">
+              <Plus className="h-5 w-5 text-orange-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-orange-700">
+                {searchQuery && customers.length === 0
+                  ? `Crear "${searchQuery}"`
+                  : "Crear nuevo cliente"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery && customers.length === 0
+                  ? "No se encontraron resultados"
+                  : "Agregar cliente rápido"}
+              </p>
+            </div>
+          </button>
+
           <div className="space-y-2">
             {isLoading ? (
               <p className="text-sm text-muted-foreground text-center py-6">
                 Cargando clientes...
               </p>
-            ) : customers.length === 0 ? (
+            ) : customers.length === 0 && !searchQuery ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                No se encontraron clientes
+                No hay clientes registrados
               </p>
             ) : (
               customers.map((customer) => (
@@ -186,6 +226,8 @@ export function CustomerSelect({
           </div>
         </AppDrawer.Body>
       </AppDrawer>
+
+      <QuickCustomerModal />
     </>
   );
 }

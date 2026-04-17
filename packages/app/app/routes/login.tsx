@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/drawer";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
+import { getStoredAuthToken } from "@/lib/session-storage";
 import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 
 export default function LoginPage() {
@@ -32,13 +33,10 @@ export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const health = useLoginHealth();
 
-  // Fallback timeout - if isLoading persists for more than 10s, assume stuck and show login
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
-    console.log("[DEBUG LoginPage] Loading timeout effect - isLoading:", isLoading);
     if (isLoading) {
       const timeout = setTimeout(() => {
-        console.log("[DEBUG LoginPage] Loading timeout triggered!");
         setLoadingTimeout(true);
       }, 10000);
       return () => clearTimeout(timeout);
@@ -46,8 +44,6 @@ export default function LoginPage() {
       setLoadingTimeout(false);
     }
   }, [isLoading]);
-
-  console.log("[DEBUG LoginPage] Render - isLoading:", isLoading, "user:", user, "healthStatus:", health.status, "loadingTimeout:", loadingTimeout);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -58,7 +54,6 @@ export default function LoginPage() {
     },
   });
 
-  // Show loading only if: isLoading AND not timed out yet
   if (isLoading && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -67,8 +62,9 @@ export default function LoginPage() {
     );
   }
 
-  // If timed out or not loading, proceed to render login form (even if isLoading is true after timeout)
-  if (user) {
+  const hasToken = !!getStoredAuthToken();
+
+  if (user && hasToken) {
     return <Navigate to="/sync" replace />;
   }
 

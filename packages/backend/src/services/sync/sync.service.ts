@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, gte, inArray, isNull, or } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
-import { db, syncOperations } from "../../lib/db";
+import { db, sales, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
 import type { SyncEntity, SyncOperationInput, SyncBatchResult } from "./types";
 import type { SyncEngineDeps } from "./framework/SyncEngine";
@@ -174,6 +174,33 @@ export class SyncService {
     const nextSince = last?.processedAt && last.operationId
       ? `${last.processedAt.toISOString()}_${last.operationId}`
       : serverTimestamp;
+
+    const saleOps = results.filter((op) => op.entity === "sales" && op.action !== "delete");
+
+    if (saleOps.length > 0) {
+      const saleIds = saleOps.map((op) => op.entityId);
+      const currentSales = await db
+        .select({
+          id: sales.id,
+          totalAmount: sales.totalAmount,
+          amountPaid: sales.amountPaid,
+          balanceDue: sales.balanceDue,
+        })
+        .from(sales)
+        .where(and(eq(sales.businessId, ctx.businessId), inArray(sales.id, saleIds)));
+
+      const saleMap = new Map(currentSales.map((s) => [s.id, s]));
+
+      for (const op of saleOps) {
+        const current = saleMap.get(op.entityId);
+        if (current && op.payload && typeof op.payload === "object") {
+          const payload = op.payload as Record<string, unknown>;
+          payload.totalAmount = current.totalAmount;
+          payload.amountPaid = current.amountPaid;
+          payload.balanceDue = current.balanceDue;
+        }
+      }
+    }
 
     return {
       changes: results.map((item) => ({

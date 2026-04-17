@@ -168,7 +168,11 @@ export class ProductService extends BaseService {
       return null;
     }
 
-    return result[0];
+    const product = result[0];
+    return {
+      ...product,
+      basePrice: this.normalizeCurrency(product.basePrice),
+    } as Product;
   }
 
   /**
@@ -193,7 +197,10 @@ export class ProductService extends BaseService {
       .where(eq(products.businessId, this.businessId))
       .orderBy(products.name);
 
-    return result;
+    return result.map((product) => ({
+      ...product,
+      basePrice: this.normalizeCurrency(product.basePrice),
+    }));
   }
 
   /**
@@ -219,7 +226,10 @@ export class ProductService extends BaseService {
       .where(and(eq(products.businessId, this.businessId), eq(products.type, type)))
       .orderBy(products.name);
 
-    return result;
+    return result.map((product) => ({
+      ...product,
+      basePrice: this.normalizeCurrency(product.basePrice),
+    }));
   }
 
   /**
@@ -244,7 +254,10 @@ export class ProductService extends BaseService {
       .where(and(eq(products.businessId, this.businessId), eq(products.isActive, true)))
       .orderBy(products.name);
 
-    return result;
+    return result.map((product) => ({
+      ...product,
+      basePrice: this.normalizeCurrency(product.basePrice),
+    }));
   }
 
   /**
@@ -272,7 +285,11 @@ export class ProductService extends BaseService {
       .where(and(eq(productVariants.productId, productId), eq(productVariants.isActive, true)))
       .orderBy(productVariants.sortOrder, productVariants.name);
 
-    return result;
+    return result.map((variant) => ({
+      ...variant,
+      unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
+      price: this.normalizeCurrency(variant.price),
+    })) as ProductVariant[];
   }
 
   async findVariantById(variantId: string): Promise<ProductVariant | null> {
@@ -297,7 +314,12 @@ export class ProductService extends BaseService {
 
     if (result.length === 0) return null;
 
-    return result[0];
+    const variant = result[0];
+    return {
+      ...variant,
+      unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
+      price: this.normalizeCurrency(variant.price),
+    } as ProductVariant;
   }
 
   // ==================== ADMIN METHODS (Write with Sync) ====================
@@ -323,7 +345,7 @@ export class ProductService extends BaseService {
       name: input.name,
       type: input.type,
       unit: input.unit,
-      basePrice: input.basePrice,
+      basePrice: this.normalizeCurrency(input.basePrice),
       isActive: input.isActive ?? true,
       imageId: input.imageId ?? null,
       createdAt: now,
@@ -349,7 +371,7 @@ export class ProductService extends BaseService {
         productId: id,
         name: input.name,
         unitQuantity: "1",
-        price: input.basePrice,
+        price: this.normalizeCurrency(input.basePrice),
         isActive: true,
         sortOrder: 0,
       }, syncGroupId);
@@ -378,7 +400,7 @@ export class ProductService extends BaseService {
       updateData.unit = input.unit;
     }
     if (input.basePrice !== undefined) {
-      updateData.basePrice = input.basePrice;
+      updateData.basePrice = this.normalizeCurrency(input.basePrice);
     }
     if (input.isActive !== undefined) {
       updateData.isActive = input.isActive;
@@ -424,10 +446,10 @@ export class ProductService extends BaseService {
       updateData.sku = input.sku ?? null;
     }
     if (input.unitQuantity !== undefined) {
-      updateData.unitQuantity = input.unitQuantity;
+      updateData.unitQuantity = this.normalizeWeightRequired(input.unitQuantity);
     }
     if (input.price !== undefined) {
-      updateData.price = input.price;
+      updateData.price = this.normalizeCurrency(input.price);
     }
     if (input.sortOrder !== undefined) {
       updateData.sortOrder = input.sortOrder;
@@ -463,8 +485,8 @@ export class ProductService extends BaseService {
       productId: input.productId,
       name: input.name,
       sku: input.sku ?? null,
-      unitQuantity: input.unitQuantity,
-      price: input.price,
+      unitQuantity: this.normalizeWeightRequired(input.unitQuantity),
+      price: this.normalizeCurrency(input.price),
       sortOrder: input.sortOrder ?? 0,
       isActive: input.isActive ?? true,
       syncStatus: SyncStatus.PENDING,

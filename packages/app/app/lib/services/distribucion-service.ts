@@ -179,7 +179,7 @@ export class DistribucionService extends BaseService {
             businessId: this.businessId,
             distribucionId: id,
             variantId: item.variantId,
-            cantidadAsignada: item.cantidadAsignada.toString(),
+            cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
             unidad: item.unidad,
           });
         }
@@ -247,8 +247,8 @@ export class DistribucionService extends BaseService {
         id: mapped.id as string,
         distribucionId: mapped.distribucionId as string,
         variantId: mapped.variantId as string,
-        cantidadAsignada: mapped.cantidadAsignada as string,
-        cantidadVendida: mapped.cantidadVendida as string | null,
+        cantidadAsignada: this.normalizeWeightRequired(mapped.cantidadAsignada as string | number),
+        cantidadVendida: this.normalizeWeight(mapped.cantidadVendida as string | number | null),
         unidad: mapped.unidad as string,
         productName: mapped.productName as string | undefined,
         variantName: mapped.variantName as string | undefined,
@@ -287,7 +287,7 @@ export class DistribucionService extends BaseService {
       businessId: this.businessId,
       distribucionId,
       variantId: item.variantId,
-      cantidadAsignada: item.cantidadAsignada.toString(),
+      cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
       unidad: item.unidad,
     }).returning({ id: distribucionItems.id });
 
@@ -313,7 +313,12 @@ export class DistribucionService extends BaseService {
       [itemId]
     );
 
-    return mapToCamelCase(itemResult.rows[0]) as unknown as DistribucionItem;
+    const mappedItem = mapToCamelCase(itemResult.rows[0]) as unknown as DistribucionItem;
+    return {
+      ...mappedItem,
+      cantidadAsignada: this.normalizeWeightRequired(mappedItem.cantidadAsignada),
+      cantidadVendida: this.normalizeWeight(mappedItem.cantidadVendida),
+    };
   }
 
   /**
@@ -356,13 +361,13 @@ export class DistribucionService extends BaseService {
 
     if (data.cantidadAsignada !== undefined) {
       updates.push(`cantidad_asignada = $${paramIndex}`);
-      params.push(data.cantidadAsignada.toString());
+      params.push(this.normalizeWeightRequired(data.cantidadAsignada));
       paramIndex++;
     }
 
     if (data.cantidadVendida !== undefined) {
       updates.push(`cantidad_vendida = $${paramIndex}`);
-      params.push(data.cantidadVendida.toString());
+      params.push(this.normalizeWeight(data.cantidadVendida));
       paramIndex++;
     }
 
@@ -396,7 +401,12 @@ export class DistribucionService extends BaseService {
       [itemId]
     );
 
-    return mapToCamelCase(updatedResult.rows[0]) as unknown as DistribucionItem;
+    const mappedItem = mapToCamelCase(updatedResult.rows[0]) as unknown as DistribucionItem;
+    return {
+      ...mappedItem,
+      cantidadAsignada: this.normalizeWeightRequired(mappedItem.cantidadAsignada),
+      cantidadVendida: this.normalizeWeight(mappedItem.cantidadVendida),
+    };
   }
 
   /**

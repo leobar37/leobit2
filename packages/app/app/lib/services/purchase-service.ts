@@ -9,7 +9,6 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { purchases, purchaseItems } from "@avileo/shared";
-import { formatCurrency } from "~/lib/utils";
 
 /** Purchase status type */
 export type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";
@@ -146,10 +145,21 @@ export class PurchaseService extends BaseService {
       Math.abs(storedTotal - calculatedTotal) > 0.009
     ) {
       await this.recalculateTotal(id);
-      purchase.total_amount = formatCurrency(calculatedTotal);
+      purchase.total_amount = this.normalizeCurrency(calculatedTotal);
     }
 
-    return { ...purchase, items: itemsResult.rows };
+    const normalizedItems = itemsResult.rows.map((item) => ({
+      ...item,
+      quantity: this.normalizeWeight(item.quantity) ?? "0",
+      unitCost: this.normalizeCurrency(item.unitCost),
+      totalCost: this.normalizeCurrency(item.totalCost),
+    }));
+
+    return {
+      ...purchase,
+      total_amount: this.normalizeCurrency(purchase.total_amount),
+      items: normalizedItems,
+    };
   }
 
   /**
@@ -174,11 +184,14 @@ export class PurchaseService extends BaseService {
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
         await this.recalculateTotal(purchase.id);
-        purchase.total_amount = formatCurrency(calculatedTotal);
+        purchase.total_amount = this.normalizeCurrency(calculatedTotal);
       }
     }
 
-    return result.rows;
+    return result.rows.map((purchase) => ({
+      ...purchase,
+      total_amount: this.normalizeCurrency(purchase.total_amount),
+    }));
   }
 
   /**
@@ -216,11 +229,14 @@ export class PurchaseService extends BaseService {
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
         await this.recalculateTotal(purchase.id);
-        purchase.total_amount = formatCurrency(calculatedTotal);
+        purchase.total_amount = this.normalizeCurrency(calculatedTotal);
       }
     }
 
-    return result.rows;
+    return result.rows.map((purchase) => ({
+      ...purchase,
+      total_amount: this.normalizeCurrency(purchase.total_amount),
+    }));
   }
 
   /**
@@ -249,7 +265,7 @@ export class PurchaseService extends BaseService {
         this.businessId,
         input.supplierId ?? null,
         input.purchaseDate ?? null,
-        formatCurrency(totalAmount),
+        this.normalizeCurrency(totalAmount),
         "draft",
         input.invoiceNumber ?? null,
         input.receiptImageId ?? null,
@@ -278,26 +294,26 @@ export class PurchaseService extends BaseService {
             this.businessId,
             id,
             item.productId,
-            item.variantId ?? null,
-            item.unitId ?? null,
-            String(item.quantity),
-            formatCurrency(item.unitCost),
-            formatCurrency(item.quantity * item.unitCost),
-            "pending",
-            0,
-            now.toISOString(),
-            now.toISOString(),
-          ]
-        );
-        itemIds.push({ id: itemId, item });
-      }
-    }
+        item.variantId ?? null,
+        item.unitId ?? null,
+        String(item.quantity),
+        this.normalizeCurrency(item.unitCost),
+        this.normalizeCurrency(item.quantity * item.unitCost),
+        "pending",
+        0,
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
+    itemIds.push({ id: itemId, item });
+  }
+}
 
     // Sync the purchase after items are in DB (so hook can validate)
     await this.queueSync("create", id, {
       supplierId: input.supplierId,
       purchaseDate: input.purchaseDate,
-      totalAmount: formatCurrency(totalAmount),
+      totalAmount: this.normalizeCurrency(totalAmount),
       status: "draft",
       invoiceNumber: input.invoiceNumber,
       notes: input.notes,
@@ -313,8 +329,8 @@ export class PurchaseService extends BaseService {
         variantId: item.variantId,
         unitId: item.unitId,
         quantity: String(item.quantity),
-        unitCost: formatCurrency(item.unitCost),
-        totalCost: formatCurrency(item.quantity * item.unitCost),
+        unitCost: this.normalizeCurrency(item.unitCost),
+        totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
       }, syncGroupId, "purchase_items");
     }
 
@@ -332,7 +348,7 @@ export class PurchaseService extends BaseService {
 
     if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
     if (input.purchaseDate !== undefined) updateData.purchaseDate = input.purchaseDate;
-    if (input.totalAmount !== undefined) updateData.totalAmount = formatCurrency(input.totalAmount);
+    if (input.totalAmount !== undefined) updateData.totalAmount = this.normalizeCurrency(input.totalAmount);
     if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
     if (input.receiptImageId !== undefined) updateData.receiptImageId = input.receiptImageId;
     if (input.notes !== undefined) updateData.notes = input.notes;
@@ -438,8 +454,8 @@ export class PurchaseService extends BaseService {
         item.variantId ?? null,
         item.unitId ?? null,
         String(item.quantity),
-        formatCurrency(item.unitCost),
-        formatCurrency(item.quantity * item.unitCost),
+        this.normalizeCurrency(item.unitCost),
+        this.normalizeCurrency(item.quantity * item.unitCost),
         "pending",
         0,
         now.toISOString(),
@@ -458,8 +474,8 @@ export class PurchaseService extends BaseService {
       variantId: item.variantId,
       unitId: item.unitId,
       quantity: String(item.quantity),
-      unitCost: formatCurrency(item.unitCost),
-      totalCost: formatCurrency(item.quantity * item.unitCost),
+      unitCost: this.normalizeCurrency(item.unitCost),
+      totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
     }, purchaseSyncGroupId, "purchase_items");
   }
 
@@ -493,12 +509,12 @@ export class PurchaseService extends BaseService {
       updateData.quantity = String(data.quantity);
     }
     if (data.unitCost !== undefined) {
-      updateData.unitCost = formatCurrency(data.unitCost);
+      updateData.unitCost = this.normalizeCurrency(data.unitCost);
     }
 
     // Calculate new total cost if both values are provided
     if (data.quantity !== undefined && data.unitCost !== undefined) {
-      updateData.totalCost = formatCurrency(data.quantity * data.unitCost);
+      updateData.totalCost = this.normalizeCurrency(data.quantity * data.unitCost);
     }
 
     await this.db
@@ -517,7 +533,7 @@ export class PurchaseService extends BaseService {
     await this.queueSync("update", itemId, {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
-      unitCost: data.unitCost !== undefined ? formatCurrency(data.unitCost) : undefined,
+      unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
     }, purchaseSyncGroupId, "purchase_items");
   }
 
@@ -571,17 +587,17 @@ export class PurchaseService extends BaseService {
           this.businessId,
           purchaseId,
           item.productId,
-          item.variantId ?? null,
-          item.unitId ?? null,
-          String(item.quantity),
-          formatCurrency(item.unitCost),
-          formatCurrency(item.quantity * item.unitCost),
-          "pending",
-          0,
-          now.toISOString(),
-          now.toISOString(),
-        ]
-      );
+        item.variantId ?? null,
+        item.unitId ?? null,
+        String(item.quantity),
+        this.normalizeCurrency(item.unitCost),
+        this.normalizeCurrency(item.quantity * item.unitCost),
+        "pending",
+        0,
+        now.toISOString(),
+        now.toISOString(),
+      ]
+    );
 
       await this.recalculateTotal(purchaseId);
       await this.pg.exec("COMMIT");
@@ -597,8 +613,8 @@ export class PurchaseService extends BaseService {
       variantId: item.variantId,
       unitId: item.unitId,
       quantity: String(item.quantity),
-      unitCost: formatCurrency(item.unitCost),
-      totalCost: formatCurrency(item.quantity * item.unitCost),
+      unitCost: this.normalizeCurrency(item.unitCost),
+      totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
     }, purchaseSyncGroupId, "purchase_items");
   }
 
@@ -629,9 +645,9 @@ export class PurchaseService extends BaseService {
           sync_status = $5
         WHERE id = $6 AND purchase_id = $7`,
         [
-          data.quantity !== undefined ? String(data.quantity) : null,
-          data.unitCost !== undefined ? formatCurrency(data.unitCost) : null,
-          totalCost !== undefined ? formatCurrency(totalCost) : null,
+        data.quantity !== undefined ? String(data.quantity) : null,
+        data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : null,
+        totalCost !== undefined ? this.normalizeCurrency(totalCost) : null,
           now.toISOString(),
           "pending",
           itemId,
@@ -650,8 +666,8 @@ export class PurchaseService extends BaseService {
     await this.queueSync("update", itemId, {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
-      unitCost: data.unitCost !== undefined ? formatCurrency(data.unitCost) : undefined,
-      totalCost: totalCost !== undefined ? formatCurrency(totalCost) : undefined,
+      unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
+      totalCost: totalCost !== undefined ? this.normalizeCurrency(totalCost) : undefined,
     }, purchaseSyncGroupId, "purchase_items");
   }
 

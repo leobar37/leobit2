@@ -76,9 +76,11 @@ export function getCanSubmit(
   itemsLength: number,
   requiresCustomer: boolean,
   selectedCustomer: { id: string } | null,
-  hasValidPartialAmount: boolean
+  hasValidPartialAmount: boolean,
+  paymentMode: string | undefined
 ): boolean {
   if (itemsLength === 0) return false;
+  if (!paymentMode) return false;
   if (requiresCustomer && !selectedCustomer) return false;
   if (!hasValidPartialAmount) return false;
   return true;
@@ -111,7 +113,8 @@ export function useSaleCalculations(
       items.length,
       requiresCustomer,
       sale?.customerId ? { id: sale.customerId } : null,
-      hasValidPartial
+      hasValidPartial,
+      sale?.paymentMode
     );
 
     return {

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ShoppingCart, Search, Plus, MapPin, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,10 @@ import { SaleFilterSection } from "~/components/sales/sale-filter-section";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 import { formatDisplayDate } from "~/lib/date-utils";
+import {
+  getSaleDetailPathWithReturn,
+  getSaleEditorPathWithReturn,
+} from "~/lib/sales/navigation";
 import type { Sale as SaleCardData } from "~/lib/db/schemas/sale";
 
 export default function SalesPage() {
@@ -20,6 +24,7 @@ export default function SalesPage() {
 
   const { data: miDistribucion } = useMiDistribucion();
   const navigate = useNavigate();
+  const location = useLocation();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -257,15 +262,13 @@ export default function SalesPage() {
               key={sale.id}
               sale={sale as unknown as SaleCardData}
               onClick={() => {
-                // Draft sales and confirmed pre_orders go to editor
-                // Others go to detail view
                 const isDraft = sale.status === "draft";
                 const isConfirmedPreOrder =
                   sale.type === "pre_order" && sale.status === "confirmed";
                 if (isDraft || isConfirmedPreOrder) {
-                  navigate(`/ventas/${sale.id}/editar`);
+                  navigate(getSaleEditorPathWithReturn(sale.id, location));
                 } else {
-                  navigate(`/ventas/${sale.id}`);
+                  navigate(getSaleDetailPathWithReturn(sale.id, location));
                 }
               }}
             />

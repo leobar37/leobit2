@@ -208,6 +208,36 @@ export class SaleService extends BaseService {
     return "sale";
   }
 
+  /**
+   * Normalizes sale monetary and weight fields after reading from DB
+   */
+  private normalizeSale<T extends { totalAmount: string | number; amountPaid: string | number; balanceDue: string | number; tara: string | number | null; netWeight: string | number | null }>(sale: T): T {
+    return {
+      ...sale,
+      totalAmount: this.normalizeCurrency(sale.totalAmount),
+      amountPaid: this.normalizeCurrency(sale.amountPaid),
+      balanceDue: this.normalizeCurrency(sale.balanceDue),
+      tara: this.normalizeWeight(sale.tara),
+      netWeight: this.normalizeWeight(sale.netWeight),
+    };
+  }
+
+  /**
+   * Normalizes sale item monetary and weight fields after reading from DB
+   */
+  private normalizeSaleItem<T extends { subtotal: string | number; quantity: string | number | null; orderedQuantity: string | number | null; deliveredQuantity: string | number | null; unitPrice: string | number | null; unitPriceQuoted: string | number | null; unitPriceFinal: string | number | null }>(item: T): T {
+    return {
+      ...item,
+      subtotal: this.normalizeCurrency(item.subtotal),
+      quantity: this.normalizeWeight(item.quantity),
+      orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+      deliveredQuantity: this.normalizeWeight(item.deliveredQuantity),
+      unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+      unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+      unitPriceFinal: this.normalizeNullableCurrency(item.unitPriceFinal),
+    };
+  }
+
   private buildPagedSalesWhere(query: SalePageQuery) {
     const conditions = [eq(salesTable.businessId, this.businessId)];
 
@@ -279,7 +309,7 @@ export class SaleService extends BaseService {
       return null;
     }
 
-    const sale = mapToCamelCaseWithDates(saleResult.rows[0]) as unknown as Sale;
+    const sale = this.normalizeSale(mapToCamelCaseWithDates(saleResult.rows[0]) as unknown as Sale);
 
     // Fetch customer data if customerId exists
     let customer: SaleCustomer | null = null;
@@ -298,7 +328,7 @@ export class SaleService extends BaseService {
       [id, this.businessId]
     );
 
-    const items = itemsResult.rows.map((row) => mapToCamelCase(row) as unknown as SaleItem);
+    const items = itemsResult.rows.map((row) => this.normalizeSaleItem(mapToCamelCase(row) as unknown as SaleItem));
 
     return {
       ...sale,
@@ -338,7 +368,7 @@ export class SaleService extends BaseService {
         [saleIds, this.businessId]
       );
       for (const row of itemsResult.rows) {
-        const item = mapToCamelCase(row) as unknown as SaleItem;
+        const item = this.normalizeSaleItem(mapToCamelCase(row) as unknown as SaleItem);
         const list = itemsMap.get(item.saleId) || [];
         list.push(item);
         itemsMap.set(item.saleId, list);
@@ -360,9 +390,9 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(eq(salesTable.businessId, this.businessId))
-      .orderBy(sql`${salesTable.saleDate} DESC`);
+      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
 
-    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
+    const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
     return this.enrichSalesBatch(sales);
   }
@@ -386,7 +416,7 @@ export class SaleService extends BaseService {
         .select()
         .from(salesTable)
         .where(where)
-        .orderBy(sql`${salesTable.saleDate} DESC`)
+        .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`)
         .limit(query.limit)
         .offset(query.offset),
       this.db
@@ -395,7 +425,7 @@ export class SaleService extends BaseService {
         .where(where),
     ]);
 
-    const sales = rows.map((row) => mapToCamelCaseWithDates(row) as unknown as SaleListItem);
+    const sales = rows.map((row) => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as SaleListItem));
     const customerIds = Array.from(
       new Set(
         sales
@@ -444,9 +474,9 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(and(eq(salesTable.customerId, customerId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`);
+      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
 
-    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
+    const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
     return this.enrichSalesBatch(sales);
   }
@@ -459,9 +489,9 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(and(eq(salesTable.status, status), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`);
+      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
 
-    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
+    const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
     return this.enrichSalesBatch(sales);
   }
@@ -474,9 +504,9 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(and(eq(salesTable.distribucionId, distribucionId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`);
+      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
 
-    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
+    const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
     return this.enrichSalesBatch(sales);
   }
@@ -489,9 +519,9 @@ export class SaleService extends BaseService {
       .select()
       .from(salesTable)
       .where(and(isNull(salesTable.distribucionId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`);
+      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
 
-    const sales = salesResult.map(row => mapToCamelCaseWithDates(row) as unknown as Sale);
+    const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
     return this.enrichSalesBatch(sales);
   }
@@ -533,11 +563,11 @@ export class SaleService extends BaseService {
           type,
           saleType,
           saleInput.paymentMode || null,
-          totalAmount,
-          0,
-          totalAmount,
-          saleInput.tara || null,
-          saleInput.netWeight || null,
+          this.normalizeCurrency(totalAmount),
+          this.normalizeCurrency(0),
+          this.normalizeCurrency(totalAmount),
+          this.normalizeWeight(saleInput.tara),
+          this.normalizeWeight(saleInput.netWeight),
           now,
           saleInput.deliveryDate || null,
           saleInput.orderDate || null,
@@ -566,11 +596,11 @@ export class SaleService extends BaseService {
           type,
           saleType,
           paymentMode: saleInput.paymentMode,
-          totalAmount,
-          amountPaid: 0,
-          balanceDue: totalAmount,
-          tara: saleInput.tara,
-          netWeight: saleInput.netWeight,
+          totalAmount: this.normalizeCurrency(totalAmount),
+          amountPaid: this.normalizeCurrency(0),
+          balanceDue: this.normalizeCurrency(totalAmount),
+          tara: this.normalizeWeight(saleInput.tara),
+          netWeight: this.normalizeWeight(saleInput.netWeight),
           deliveryDate: saleInput.deliveryDate,
           orderDate: saleInput.orderDate,
           items: [],
@@ -606,11 +636,11 @@ export class SaleService extends BaseService {
         type,
         saleType,
         paymentMode: saleInput.paymentMode || null,
-        totalAmount: totalAmount.toString(),
-        amountPaid: "0",
-        balanceDue: totalAmount.toString(),
-        tara: saleInput.tara?.toString() ?? null,
-        netWeight: saleInput.netWeight?.toString() ?? null,
+        totalAmount: this.normalizeCurrency(totalAmount),
+        amountPaid: this.normalizeCurrency(0),
+        balanceDue: this.normalizeCurrency(totalAmount),
+        tara: this.normalizeWeight(saleInput.tara),
+        netWeight: this.normalizeWeight(saleInput.netWeight),
         saleDate: now,
         deliveryDate: saleInput.deliveryDate || null,
         orderDate: saleInput.orderDate || null,
@@ -695,11 +725,11 @@ export class SaleService extends BaseService {
           saleInput.type || "instant_sale",
           saleInput.saleType || "contado",
           saleInput.paymentMode || null,
-          totalAmount,
-          amountPaid,
-          balanceDue,
-          saleInput.tara || null,
-          saleInput.netWeight || null,
+          this.normalizeCurrency(totalAmount),
+          this.normalizeCurrency(amountPaid),
+          this.normalizeCurrency(balanceDue),
+          this.normalizeWeight(saleInput.tara),
+          this.normalizeWeight(saleInput.netWeight),
           now,
           saleInput.deliveryDate || null,
           saleInput.orderDate || null,
@@ -726,11 +756,11 @@ export class SaleService extends BaseService {
           variantId: item.variantId,
           productName: item.productName,
           variantName: item.variantName,
-          quantity: item.quantity?.toString() ?? null,
-          orderedQuantity: item.orderedQuantity?.toString() ?? null,
-          unitPrice: item.unitPrice?.toString() ?? null,
-          unitPriceQuoted: item.unitPriceQuoted?.toString() ?? null,
-          subtotal: item.subtotal.toString(),
+          quantity: this.normalizeWeight(item.quantity),
+          orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+          unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+          unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+          subtotal: this.normalizeCurrency(item.subtotal),
           isModified: false,
         });
       }
@@ -750,11 +780,11 @@ export class SaleService extends BaseService {
           type: saleInput.type || "instant_sale",
           saleType: saleInput.saleType || "contado",
           paymentMode: saleInput.paymentMode,
-          totalAmount,
-          amountPaid,
-          balanceDue,
-          tara: saleInput.tara,
-          netWeight: saleInput.netWeight,
+          totalAmount: this.normalizeCurrency(totalAmount),
+          amountPaid: this.normalizeCurrency(amountPaid),
+          balanceDue: this.normalizeCurrency(balanceDue),
+          tara: this.normalizeWeight(saleInput.tara),
+          netWeight: this.normalizeWeight(saleInput.netWeight),
           deliveryDate: saleInput.deliveryDate,
           orderDate: saleInput.orderDate,
           items: items.map((item) => ({
@@ -762,11 +792,11 @@ export class SaleService extends BaseService {
             variantId: item.variantId,
             productName: item.productName,
             variantName: item.variantName,
-            quantity: item.quantity,
-            orderedQuantity: item.orderedQuantity,
-            unitPrice: item.unitPrice,
-            unitPriceQuoted: item.unitPriceQuoted,
-            subtotal: item.subtotal,
+            quantity: this.normalizeWeight(item.quantity),
+            orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+            unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+            unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+            subtotal: this.normalizeCurrency(item.subtotal),
           })),
         },
         syncGroupId
@@ -848,9 +878,9 @@ export class SaleService extends BaseService {
         sync_status = $7
       WHERE id = $8`,
       [
-        totalAmount,
-        amountPaid,
-        balanceDue,
+        this.normalizeCurrency(totalAmount),
+        this.normalizeCurrency(amountPaid),
+        this.normalizeCurrency(balanceDue),
         paymentMode,
         paymentMode === "pago_total" ? "contado" : "credito",
         now,
@@ -867,9 +897,9 @@ export class SaleService extends BaseService {
       {
         status: "active",
         saleType: paymentMode === "pago_total" ? "contado" : "credito",
-        totalAmount,
-        amountPaid,
-        balanceDue,
+        totalAmount: this.normalizeCurrency(totalAmount),
+        amountPaid: this.normalizeCurrency(amountPaid),
+        balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
       syncGroupId,
@@ -933,9 +963,9 @@ export class SaleService extends BaseService {
         sync_status = $7
       WHERE id = $8 AND version = $9`,
       [
-        totalAmount,
-        amountPaid,
-        balanceDue,
+        this.normalizeCurrency(totalAmount),
+        this.normalizeCurrency(amountPaid),
+        this.normalizeCurrency(balanceDue),
         paymentMode,
         paymentMode === "pago_total" ? "contado" : "credito",
         now,
@@ -953,9 +983,9 @@ export class SaleService extends BaseService {
       {
         status: "confirmed",
         saleType: paymentMode === "pago_total" ? "contado" : "credito",
-        totalAmount,
-        amountPaid,
-        balanceDue,
+        totalAmount: this.normalizeCurrency(totalAmount),
+        amountPaid: this.normalizeCurrency(amountPaid),
+        balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
       syncGroupId,
@@ -1062,7 +1092,7 @@ export class SaleService extends BaseService {
             subtotal = $3,
             is_modified = true
           WHERE id = $4 AND sale_id = $5`,
-          [deliveredQty, finalPrice, subtotal, itemUpdate.itemId, id]
+          [this.normalizeWeight(deliveredQty), this.normalizeNullableCurrency(finalPrice), this.normalizeCurrency(subtotal), itemUpdate.itemId, id]
         );
 
         // Queue sync for item update
@@ -1070,9 +1100,9 @@ export class SaleService extends BaseService {
           "update",
           itemUpdate.itemId,
           {
-            deliveredQuantity: deliveredQty,
-            unitPriceFinal: finalPrice,
-            subtotal,
+            deliveredQuantity: this.normalizeWeight(deliveredQty),
+            unitPriceFinal: this.normalizeNullableCurrency(finalPrice),
+            subtotal: this.normalizeCurrency(subtotal),
             isModified: true,
           },
           syncGroupId,
@@ -1095,7 +1125,7 @@ export class SaleService extends BaseService {
           updated_at = $5,
           sync_status = $6
         WHERE id = $7`,
-        [totalAmount, amountPaid, balanceDue, options.paymentMode ?? sale.paymentMode, now, SyncStatus.PENDING, id]
+        [this.normalizeCurrency(totalAmount), this.normalizeCurrency(amountPaid), this.normalizeCurrency(balanceDue), options.paymentMode ?? sale.paymentMode, now, SyncStatus.PENDING, id]
       );
 
       // Commit transaction
@@ -1108,9 +1138,9 @@ export class SaleService extends BaseService {
         {
           status: "delivered",
           saleType: sale.saleType,
-          totalAmount,
-          amountPaid,
-          balanceDue,
+          totalAmount: this.normalizeCurrency(totalAmount),
+          amountPaid: this.normalizeCurrency(amountPaid),
+          balanceDue: this.normalizeCurrency(balanceDue),
           paymentMode: options.paymentMode ?? sale.paymentMode,
         },
         syncGroupId,
@@ -1161,6 +1191,7 @@ export class SaleService extends BaseService {
         cancelReason: reason,
         cancelledAt: now,
         cancelledBy: this.businessUserId,
+        refundAmount: sale.refundAmount ? this.normalizeCurrency(sale.refundAmount) : null,
       },
       syncGroupId,
       undefined,
@@ -1207,31 +1238,31 @@ export class SaleService extends BaseService {
 
     if (input.totalAmount !== undefined) {
       updates.push(`total_amount = $${paramIndex}`);
-      params.push(input.totalAmount);
+      params.push(this.normalizeCurrency(input.totalAmount));
       paramIndex++;
     }
 
     if (input.amountPaid !== undefined) {
       updates.push(`amount_paid = $${paramIndex}`);
-      params.push(input.amountPaid);
+      params.push(this.normalizeCurrency(input.amountPaid));
       paramIndex++;
     }
 
     if (input.balanceDue !== undefined) {
       updates.push(`balance_due = $${paramIndex}`);
-      params.push(input.balanceDue);
+      params.push(this.normalizeCurrency(input.balanceDue));
       paramIndex++;
     }
 
     if (input.tara !== undefined) {
       updates.push(`tara = $${paramIndex}`);
-      params.push(input.tara);
+      params.push(this.normalizeWeight(input.tara));
       paramIndex++;
     }
 
     if (input.netWeight !== undefined) {
       updates.push(`net_weight = $${paramIndex}`);
-      params.push(input.netWeight);
+      params.push(this.normalizeWeight(input.netWeight));
       paramIndex++;
     }
 
@@ -1274,10 +1305,17 @@ export class SaleService extends BaseService {
 
     const syncGroupId = await this.getSaleSyncGroupId(id);
 
+    const syncPayload: Record<string, unknown> = { ...input };
+    if (input.totalAmount !== undefined) syncPayload.totalAmount = this.normalizeCurrency(input.totalAmount);
+    if (input.amountPaid !== undefined) syncPayload.amountPaid = this.normalizeCurrency(input.amountPaid);
+    if (input.balanceDue !== undefined) syncPayload.balanceDue = this.normalizeCurrency(input.balanceDue);
+    if (input.tara !== undefined) syncPayload.tara = this.normalizeWeight(input.tara);
+    if (input.netWeight !== undefined) syncPayload.netWeight = this.normalizeWeight(input.netWeight);
+
     await this.queueSync(
       "update",
       id,
-      input as Record<string, unknown>,
+      syncPayload,
       syncGroupId,
       undefined,
       sale.version,
@@ -1377,11 +1415,11 @@ export class SaleService extends BaseService {
       variantId: item.variantId,
       productName: item.productName,
       variantName: item.variantName,
-      quantity: item.quantity?.toString() ?? null,
-      orderedQuantity: item.orderedQuantity?.toString() ?? null,
-      unitPrice: item.unitPrice?.toString() ?? null,
-      unitPriceQuoted: item.unitPriceQuoted?.toString() ?? null,
-      subtotal: item.subtotal.toString(),
+      quantity: this.normalizeWeight(item.quantity),
+      orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+      unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+      unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+      subtotal: this.normalizeCurrency(item.subtotal),
       isModified: false,
       syncGroupId: saleSyncGroupId,
     });
@@ -1394,7 +1432,7 @@ export class SaleService extends BaseService {
         updated_at = $2,
         sync_status = $3
       WHERE id = $4`,
-      [item.subtotal, now, SyncStatus.PENDING, saleId]
+      [this.normalizeCurrency(item.subtotal), now, SyncStatus.PENDING, saleId]
     );
 
     // Queue sync for the new item (use same syncGroupId as the sale insert to ensure correct order)
@@ -1408,11 +1446,11 @@ export class SaleService extends BaseService {
         variantId: item.variantId,
         productName: item.productName,
         variantName: item.variantName,
-        quantity: item.quantity,
-        orderedQuantity: item.orderedQuantity,
-        unitPrice: item.unitPrice,
-        unitPriceQuoted: item.unitPriceQuoted,
-        subtotal: item.subtotal,
+        quantity: this.normalizeWeight(item.quantity),
+        orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+        unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+        unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+        subtotal: this.normalizeCurrency(item.subtotal),
       },
       saleSyncGroupId,
       "sale_items",
@@ -1434,7 +1472,7 @@ export class SaleService extends BaseService {
       totalMs: Number((performance.now() - perfStart).toFixed(2)),
     });
 
-    return mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem;
+    return this.normalizeSaleItem(mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem);
   }
 
   /**
@@ -1490,9 +1528,9 @@ export class SaleService extends BaseService {
     // Update the item using Drizzle
     await this.db.update(saleItemsTable)
       .set({
-        quantity: data.quantity?.toString() ?? existingItem.quantity,
-        unitPrice: data.unitPrice?.toString() ?? existingItem.unitPrice,
-        subtotal: data.subtotal?.toString() ?? existingItem.subtotal,
+        quantity: data.quantity !== undefined ? this.normalizeWeight(data.quantity) : existingItem.quantity,
+        unitPrice: data.unitPrice !== undefined ? this.normalizeNullableCurrency(data.unitPrice) : existingItem.unitPrice,
+        subtotal: data.subtotal !== undefined ? this.normalizeCurrency(data.subtotal) : existingItem.subtotal,
         isModified: true,
       })
       .where(eq(saleItemsTable.id, itemId));
@@ -1506,21 +1544,20 @@ export class SaleService extends BaseService {
           updated_at = $2,
           sync_status = $3
         WHERE id = $4`,
-        [subtotalDiff, now, SyncStatus.PENDING, saleId]
+        [this.normalizeCurrency(subtotalDiff), now, SyncStatus.PENDING, saleId]
       );
     }
 
     // Queue sync for the updated item with same syncGroupId as the sale insert
     const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
+    const syncPayload: Record<string, unknown> = { saleId };
+    if (data.quantity !== undefined) syncPayload.quantity = this.normalizeWeight(data.quantity);
+    if (data.unitPrice !== undefined) syncPayload.unitPrice = this.normalizeNullableCurrency(data.unitPrice);
+    if (data.subtotal !== undefined) syncPayload.subtotal = this.normalizeCurrency(data.subtotal);
     await this.queueSync(
       "update",
       itemId,
-      {
-        saleId,
-        quantity: data.quantity,
-        unitPrice: data.unitPrice,
-        subtotal: data.subtotal,
-      },
+      syncPayload,
       saleSyncGroupId,
       "sale_items",
       undefined,
@@ -1541,7 +1578,7 @@ export class SaleService extends BaseService {
       totalMs: Number((performance.now() - perfStart).toFixed(2)),
     });
 
-    return mapToCamelCase(updatedResult.rows[0]) as unknown as SaleItem;
+    return this.normalizeSaleItem(mapToCamelCase(updatedResult.rows[0]) as unknown as SaleItem);
   }
 
   /**
@@ -1594,7 +1631,7 @@ export class SaleService extends BaseService {
         updated_at = $2,
         sync_status = $3
       WHERE id = $4`,
-      [subtotal, now, SyncStatus.PENDING, saleId]
+      [this.normalizeCurrency(subtotal), now, SyncStatus.PENDING, saleId]
     );
 
     // Queue sync for the deleted item with same syncGroupId as the sale insert
@@ -1644,7 +1681,7 @@ export class SaleService extends BaseService {
         updated_at = $2,
         sync_status = $3
       WHERE id = $4`,
-      [amount, now, SyncStatus.PENDING, saleId]
+      [this.normalizeCurrency(amount), now, SyncStatus.PENDING, saleId]
     );
 
     // Fetch updated values for sync
@@ -1660,8 +1697,8 @@ export class SaleService extends BaseService {
       "update",
       saleId,
       {
-        amountPaid: parseFloat(updatedSale.amountPaid),
-        balanceDue: parseFloat(updatedSale.balanceDue),
+        amountPaid: this.normalizeCurrency(updatedSale.amountPaid),
+        balanceDue: this.normalizeCurrency(updatedSale.balanceDue),
       },
       syncGroupId,
       undefined,

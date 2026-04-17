@@ -18,7 +18,7 @@ import { useCustomer, useDeleteCustomer } from "~/hooks/use-customers";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { useCustomerPayments } from "~/hooks/use-payments";
-import { useSales } from "~/hooks/use-sales";
+import { useSalesByCustomer } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
@@ -50,7 +50,7 @@ export default function CustomerDetailPage() {
 
   const { data: customer, isLoading: customerLoading } = useCustomer(id ?? null);
   const { data: balance, isLoading: balanceLoading } = useCustomerBalance(id ?? null);
-  const { data: sales = [], isLoading: salesLoading } = useSales();
+  const { data: sales = [], isLoading: salesLoading } = useSalesByCustomer(id ?? "");
   const { data: payments = [], isLoading: paymentsLoading } = useCustomerPayments(id ?? null);
   const deleteCustomer = useDeleteCustomer();
   const { confirm, ConfirmDialog } = useConfirmDialog();
@@ -80,11 +80,10 @@ export default function CustomerDetailPage() {
     () =>
       sales.filter(
         (sale) =>
-          sale.customerId === id &&
           sale.status !== "draft" &&
           sale.status !== "cancelled"
       ),
-    [id, sales]
+    [sales]
   );
 
   if (customerLoading) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import { AlertCircle, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSale } from "~/hooks/use-sales";
@@ -7,6 +7,7 @@ import { useSaleAnalysis } from "~/hooks/use-sale-analysis";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { useBusiness } from "~/hooks/use-business";
 import { BusinessUserRole } from "@avileo/shared";
+import { useReturnUrl } from "~/hooks/use-return-url";
 import { CancelSaleDialog } from "~/components/sales/cancel-sale-dialog";
 import { CancelSaleProvider } from "~/components/sales/cancel-sale-provider";
 import { SaleCancelledCard } from "~/components/sales/sale-cancelled-card";
@@ -28,7 +29,7 @@ type TabType = "details" | "analysis";
 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { goBack } = useReturnUrl();
   const [activeTab, setActiveTab] = useState<TabType>("details");
   const { data: sale, isLoading } = useSale(id || null);
   const { data: analysis, isLoading: analysisLoading } = useSaleAnalysis(id || null);
@@ -56,7 +57,7 @@ export default function SaleDetailPage() {
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Venta no encontrada</h2>
           <p className="text-muted-foreground mb-4">La venta que buscas no existe</p>
-          <Button onClick={() => navigate("/ventas")}>Volver a ventas</Button>
+          <Button onClick={() => goBack("/ventas")}>Volver a ventas</Button>
         </div>
       </div>
     );
@@ -71,7 +72,7 @@ export default function SaleDetailPage() {
       <div className="min-h-screen app-shell">
         <SaleDetailHeader
           canCancel={canCancel}
-          onBack={() => navigate("/ventas")}
+          onBack={() => goBack("/ventas")}
           sale={sale}
         />
 

@@ -10,7 +10,6 @@ import { SyncService } from "../sync/sync-service";
 import { abonos } from "@avileo/shared";
 import { eq } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
-import { formatCurrency } from "~/lib/utils";
 
 /** Payment (Abono) entity type */
 export interface Abono {
@@ -271,7 +270,12 @@ export class PaymentService extends BaseService {
         "SELECT * FROM abonos WHERE id = $1",
         [id]
       );
-      return result.rows[0] || null;
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        ...row,
+        amount: this.normalizeCurrency(row.amount),
+      };
     } catch (error) {
       console.error("[PaymentService.findById] Error:", error);
       throw new Error(`Failed to find payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -288,7 +292,10 @@ export class PaymentService extends BaseService {
        ORDER BY created_at DESC`,
       [customerId, this.businessId]
     );
-    return result.rows;
+    return result.rows.map((row) => ({
+      ...row,
+      amount: this.normalizeCurrency(row.amount),
+    }));
   }
 
   /**
@@ -301,7 +308,10 @@ export class PaymentService extends BaseService {
        ORDER BY created_at DESC`,
       [this.businessId]
     );
-    return result.rows;
+    return result.rows.map((row) => ({
+      ...row,
+      amount: this.normalizeCurrency(row.amount),
+    }));
   }
 
   /**
@@ -341,7 +351,7 @@ export class PaymentService extends BaseService {
 
     if (amount > debt + OVERPAYMENT_TOLERANCE) {
       throw new Error(
-        `El monto del abono (S/ ${formatCurrency(amount)}) excede la deuda pendiente (S/ ${formatCurrency(debt)})`
+        `El monto del abono (S/ ${this.normalizeCurrency(amount)}) excede la deuda pendiente (S/ ${this.normalizeCurrency(debt)})`
       );
     }
   }
@@ -369,7 +379,7 @@ export class PaymentService extends BaseService {
       const now = this.now();
 
       // Format amount as decimal string using project utility
-      const amount = formatCurrency(input.amount);
+      const amount = this.normalizeCurrency(input.amount);
 
       // Validate customer belongs to this business
       await this.validateCustomerBusiness(input.customerId);

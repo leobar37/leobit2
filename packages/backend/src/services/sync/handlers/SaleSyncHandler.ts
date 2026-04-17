@@ -156,12 +156,12 @@ export class SaleSyncHandler extends BaseSyncHandler {
 
       if (tx) {
         await this.saleRepo.create(ctx, saleWithId, tx);
-      } else {
-        const { db: dbInstance } = await import("../../../lib/db");
-        await dbInstance.transaction(async (innerTx) => {
-          await this.saleRepo.create(ctx, saleWithId, innerTx);
-        });
+        return;
       }
+      const { db: dbInstance } = await import("../../../lib/db");
+      await dbInstance.transaction(async (innerTx) => {
+        await this.saleRepo.create(ctx, saleWithId, innerTx);
+      });
       return;
     }
 

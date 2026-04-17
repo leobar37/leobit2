@@ -300,7 +300,7 @@ async function applyUpdate(
 
   if (existingResult.rows.length === 0) {
     // Record doesn't exist - convert to insert (upsert behavior)
-    syncLogger.warn(
+    syncLogger.info(
       "[ChangeApplier]",
       `Record ${tableName}:${id} not found for update, converting to insert`
     );

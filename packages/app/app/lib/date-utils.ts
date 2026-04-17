@@ -81,18 +81,15 @@ export function now(): Date {
 }
 
 /**
- * Returns current timestamp as ISO string in local timezone
- * Used for database storage to ensure dates are stored in user's local timezone
- * (Peru UTC-5) instead of UTC
+ * Returns current timestamp as ISO string in UTC
+ * Used for database storage to ensure consistent date handling across
+ * frontend and backend. All dates are stored in UTC.
  *
  * @example
- * // In Peru (UTC-5), returns "2026-03-14T10:00:00" instead of "2026-03-14T15:00:00.000Z"
+ * // Returns "2026-03-14T15:00:00.000Z" (UTC)
  */
 export function toLocalISOString(): string {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60 * 1000;
-  const localTime = new Date(now.getTime() - offset);
-  return localTime.toISOString().replace('Z', '');
+  return new Date().toISOString();
 }
 
 /**

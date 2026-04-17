@@ -83,7 +83,7 @@ export class InventoryService extends BaseService {
     return {
       id: row.id,
       variantId: row.variant_id,
-      quantity: row.quantity,
+      quantity: this.normalizeWeightRequired(row.quantity),
       updatedAt: row.updated_at,
     };
   }
@@ -110,7 +110,7 @@ export class InventoryService extends BaseService {
     return result.rows.map((row) => ({
       id: row.id,
       variantId: row.variant_id,
-      quantity: row.quantity,
+      quantity: this.normalizeWeightRequired(row.quantity),
       updatedAt: row.updated_at,
     }));
   }

@@ -46,7 +46,7 @@ export class PgSyncQueue implements ISyncQueue {
     const id = generateId();
     const idempotencyKey = params.idempotencyKey || generateId();
 
-    syncLogger.warn(`[PgSyncQueue]`, `Enqueuing operation`, {
+    syncLogger.info(`[PgSyncQueue]`, `Enqueuing operation`, {
       entityType: params.entity_type,
       operation: params.operation,
       entityId: params.entityId,
@@ -69,8 +69,8 @@ export class PgSyncQueue implements ISyncQueue {
         version: (params.data?._localVersion as number) ?? 1,
       });
 
-      syncLogger.warn(`[PgSyncQueue]`, `Enqueued operation (fastPath) ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
-      syncLogger.warn(`[Perf][SyncQueue]`, `enqueue fastPath timing`, {
+      syncLogger.info(`[PgSyncQueue]`, `Enqueued operation (fastPath) ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
+      syncLogger.info(`[Perf][SyncQueue]`, `enqueue fastPath timing`, {
         entityType: params.entity_type,
         operation: params.operation,
         entityId: params.entityId,
@@ -85,8 +85,8 @@ export class PgSyncQueue implements ISyncQueue {
     const existingByKey = await this.getByIdempotencyKey(idempotencyKey);
     const idempotencyMs = performance.now() - idempotencyStart;
     if (existingByKey && existingByKey.status !== OPERATION_STATUS.COMPLETED) {
-      syncLogger.warn(`[PgSyncQueue]`, `Idempotency hit for ${params.entity_type}:${params.entityId} -> ${existingByKey.id}`);
-      syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+      syncLogger.info(`[PgSyncQueue]`, `Idempotency hit for ${params.entity_type}:${params.entityId} -> ${existingByKey.id}`);
+      syncLogger.info(`[Perf][SyncQueue]`, `enqueue timing`, {
         entityType: params.entity_type,
         operation: params.operation,
         entityId: params.entityId,
@@ -113,8 +113,8 @@ export class PgSyncQueue implements ISyncQueue {
       if (plan.type === "cancel") {
         // create + delete = cancel (entity never reached server)
         await this.deleteOperation(existingOp.id);
-        syncLogger.warn(`[PgSyncQueue]`, `Coalesced (cancelled) operation for ${params.entity_type}:${params.entityId}`);
-        syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+        syncLogger.info(`[PgSyncQueue]`, `Coalesced (cancelled) operation for ${params.entity_type}:${params.entityId}`);
+        syncLogger.info(`[Perf][SyncQueue]`, `enqueue timing`, {
           entityType: params.entity_type,
           operation: params.operation,
           entityId: params.entityId,
@@ -134,8 +134,8 @@ export class PgSyncQueue implements ISyncQueue {
           payload: plan.payload,
           idempotencyKey,
         });
-        syncLogger.warn(`[PgSyncQueue]`, `Coalesced (${plan.type}) operation for ${params.entity_type}:${params.entityId} -> ${existingOp.id}`);
-        syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+        syncLogger.info(`[PgSyncQueue]`, `Coalesced (${plan.type}) operation for ${params.entity_type}:${params.entityId} -> ${existingOp.id}`);
+        syncLogger.info(`[Perf][SyncQueue]`, `enqueue timing`, {
           entityType: params.entity_type,
           operation: params.operation,
           entityId: params.entityId,
@@ -166,8 +166,8 @@ export class PgSyncQueue implements ISyncQueue {
     });
     const insertMs = performance.now() - insertStart;
 
-    syncLogger.warn(`[PgSyncQueue]`, `Enqueued operation ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
-    syncLogger.warn(`[Perf][SyncQueue]`, `enqueue timing`, {
+    syncLogger.info(`[PgSyncQueue]`, `Enqueued operation ${params.operation} for ${params.entity_type}:${params.entityId} -> ${id}`);
+    syncLogger.info(`[Perf][SyncQueue]`, `enqueue timing`, {
       entityType: params.entity_type,
       operation: params.operation,
       entityId: params.entityId,

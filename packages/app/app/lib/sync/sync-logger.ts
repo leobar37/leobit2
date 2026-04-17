@@ -1,20 +1,23 @@
 /**
  * Sync Logger
  *
- * In-memory ring-buffer that captures warn and error log entries from the sync subsystem.
- * Entries are also forwarded to console.warn / console.error so devtools are not affected.
+ * In-memory ring-buffer that captures info, warn and error log entries from the sync subsystem.
+ * Entries are also forwarded to console.info / console.warn / console.error so devtools are not affected.
  *
  * Usage:
  *   import { syncLogger } from "~/lib/sync/sync-logger";
+ *   syncLogger.info("[PgSyncQueue]", "Enqueued operation", { id: "123" });
  *   syncLogger.warn("[PULL]", "Empty pull detected", { count: 3 });
  *   syncLogger.error("[SYNC]", "Operation failed", { id: "123" });
  *   const entries = syncLogger.getEntries();
  */
 
+export type SyncLogLevel = "info" | "warn" | "error";
+
 export interface SyncLogEntry {
   id: string;
   timestamp: Date;
-  level: "warn" | "error";
+  level: SyncLogLevel;
   prefix: string;
   message: string;
   data?: unknown;
@@ -34,6 +37,23 @@ export class SyncLogger {
 
   private makeId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  info(prefix: string, message: string, data?: unknown): void {
+    const entry: SyncLogEntry = {
+      id: this.makeId(),
+      timestamp: new Date(),
+      level: "info",
+      prefix,
+      message,
+      data,
+    };
+    this.push(entry);
+    if (data !== undefined) {
+      console.info(`[${prefix}] ${message}`, data);
+    } else {
+      console.info(`[${prefix}] ${message}`);
+    }
   }
 
   warn(prefix: string, message: string, data?: unknown): void {
@@ -80,7 +100,7 @@ export class SyncLogger {
   /**
    * Returns entries optionally filtered by level and limited in count.
    */
-  getRecent(level?: "warn" | "error", limit?: number): SyncLogEntry[] {
+  getRecent(level?: SyncLogLevel, limit?: number): SyncLogEntry[] {
     let result = level ? this.entries.filter((e) => e.level === level) : this.entries;
     if (limit) {
       result = result.slice(-limit);

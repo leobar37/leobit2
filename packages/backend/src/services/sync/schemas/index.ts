@@ -25,14 +25,16 @@ const numericStringTransform = z.union([z.string(), z.number()]).transform((val)
 });
 
 /**
- * Transforms an optional number or numeric string to a string or undefined.
+ * Transforms an optional number, numeric string, or null to a string or undefined.
+ * Accepts null to match frontend behavior where normalizeNullableCurrency/normalizeWeight return null.
  * Preserves precision by avoiding Number() conversion for string inputs.
  */
 const optionalNumericStringTransform = z
   .union([z.string(), z.number()])
+  .nullable()
   .optional()
   .transform((val) => {
-    if (val === undefined) {
+    if (val === null || val === undefined) {
       return undefined;
     }
     if (typeof val === "number") {

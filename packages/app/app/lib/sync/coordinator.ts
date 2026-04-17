@@ -58,7 +58,7 @@ export class SyncCoordinator {
     // Listen for page visibility changes to resume sync on tab/reactivate
     this.handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && navigator.onLine) {
-        syncLogger.warn("[SyncCoordinator]", "Page became visible - resuming sync");
+        syncLogger.info("[SyncCoordinator]", "Page became visible - resuming sync");
         this.pushBackoff.reset();
         this.pullBackoff.reset();
         this.syncService.resetBackoff();
@@ -98,7 +98,7 @@ export class SyncCoordinator {
   }
 
   private handleOnline = async (): Promise<void> => {
-    syncLogger.warn("[SyncCoordinator]", "Online - resuming sync");
+    syncLogger.info("[SyncCoordinator]", "Online - resuming sync");
     syncEvents.emit("sync:online", undefined);
 
     // Reset backoffs IMMEDIATELY (not debounced)
@@ -120,17 +120,17 @@ export class SyncCoordinator {
   private handleNormalReconnect = async (): Promise<void> => {
     // Restart services if they were stopped (e.g., due to stale pulls)
     if (!this.syncService.isRunning()) {
-      syncLogger.warn("[SyncCoordinator]", "Restarting sync service");
+      syncLogger.info("[SyncCoordinator]", "Restarting sync service");
       this.syncService.startAutoSync();
     }
     if (!this.pullService.isRunning()) {
-      syncLogger.warn("[SyncCoordinator]", "Restarting pull service");
+      syncLogger.info("[SyncCoordinator]", "Restarting pull service");
       this.pullService.startAutoPull();
     }
 
     const retried = await this.syncService.retryAllDeadLetterOperations();
     if (retried > 0) {
-      syncLogger.warn("[SyncCoordinator]", `Re-enqueued ${retried} DLQ operations`);
+      syncLogger.info("[SyncCoordinator]", `Re-enqueued ${retried} DLQ operations`);
     }
 
     // Debounce forceSync to handle rapid online/offline events

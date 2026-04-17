@@ -196,6 +196,7 @@ export function useCreateSale() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
+      queryClient.invalidateQueries({ queryKey: ["sales-new", "page"], exact: false });
     },
   });
 }
