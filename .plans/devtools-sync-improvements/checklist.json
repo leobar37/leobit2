@@ -1,0 +1,111 @@
+{
+  "planSlug": "devtools-sync-improvements",
+  "tasks": [
+    {
+      "id": "T-001",
+      "name": "Operations Tab Filters and Sorting",
+      "file": "tasks/T-001-operations-tab-filters.md",
+      "status": "completed",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-010"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "name": "Health Score Visualization",
+      "file": "tasks/T-002-health-score.md",
+      "status": "completed",
+      "requirements": [
+        "FR-003",
+        "FR-004"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-003",
+      "name": "Enhanced Console Helpers",
+      "file": "tasks/T-003-console-helpers.md",
+      "status": "completed",
+      "requirements": [
+        "FR-008"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-004",
+      "name": "Timeline Tab",
+      "file": "tasks/T-004-timeline-tab.md",
+      "status": "completed",
+      "requirements": [
+        "FR-005"
+      ],
+      "dependencies": [
+        "T-003"
+      ]
+    },
+    {
+      "id": "T-005",
+      "name": "Metrics Dashboard Tab",
+      "file": "tasks/T-005-metrics-tab.md",
+      "status": "completed",
+      "requirements": [
+        "FR-006"
+      ],
+      "dependencies": [
+        "T-002"
+      ]
+    },
+    {
+      "id": "T-006",
+      "name": "Data Export Functionality",
+      "file": "tasks/T-006-data-export.md",
+      "status": "completed",
+      "requirements": [
+        "FR-007"
+      ],
+      "dependencies": [
+        "T-005"
+      ]
+    },
+    {
+      "id": "T-007",
+      "name": "Performance Monitoring Tab",
+      "file": "tasks/T-007-performance-tab.md",
+      "status": "completed",
+      "requirements": [
+        "FR-009"
+      ],
+      "dependencies": []
+    }
+  ],
+  "phases": [
+    {
+      "name": "Phase 1: Quick Wins",
+      "tasks": [
+        "T-001",
+        "T-002",
+        "T-003"
+      ],
+      "canParallelize": true
+    },
+    {
+      "name": "Phase 2: New Tabs",
+      "tasks": [
+        "T-004",
+        "T-005",
+        "T-007"
+      ],
+      "canParallelize": true
+    },
+    {
+      "name": "Phase 3: Integration",
+      "tasks": [
+        "T-006"
+      ],
+      "canParallelize": false
+    }
+  ]
+}

@@ -32,6 +32,9 @@ import { TablesTab } from "./tabs/tables-tab";
 import { OperationsTab } from "./tabs/operations-tab";
 import { DLQTab } from "./tabs/dlq-tab";
 import { DatabaseTab } from "./tabs/database-tab";
+import { TimelineTab } from "./tabs/timeline-tab";
+import { MetricsTab } from "./tabs/metrics-tab";
+import { PerformanceTab } from "./tabs/performance-tab";
 
 interface SyncDevToolsDrawerProps {
   triggerClassName?: string;
@@ -394,6 +397,9 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
               )}
               {activeTab === "tables" && <TablesTab entitySummaries={entitySummaries} />}
               {activeTab === "database" && <DatabaseTab dbInfo={dbInfo} />}
+              {activeTab === "timeline" && <TimelineTab />}
+              {activeTab === "metrics" && <MetricsTab />}
+              {activeTab === "performance" && <PerformanceTab />}
             </div>
           </ScrollArea>
         )}

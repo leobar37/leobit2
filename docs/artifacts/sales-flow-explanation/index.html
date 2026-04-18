@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flujo de Ventas - Avileo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .flow-line { stroke: #f97316; stroke-width: 2; fill: none; }
+    .flow-arrow { fill: #f97316; }
+    .entity-box { fill: #1e293b; stroke: #f97316; stroke-width: 2; }
+    .status-box { fill: #0f172a; stroke: #64748b; stroke-width: 1; }
+    .status-active { fill: #f97316; }
+    .phase-header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <header class="mb-12 text-center">
+      <div class="inline-flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+        </div>
+        <h1 class="text-4xl font-bold text-white">Flujo de Ventas</h1>
+      </div>
+      <p class="text-slate-400 text-lg">Arquitectura offline-first con sincronización REST</p>
+    </header>
+
+    <!-- Entity Overview -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        Entidades Principales
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-white">Sale</h3>
+          </div>
+          <p class="text-sm text-slate-400">Transacción principal. Contiene totales, tipo de pago, fecha y estado.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-white">SaleItem</h3>
+          </div>
+          <p class="text-sm text-slate-400">Líneas de producto. Cantidad, precio unitario, subtotal.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-white">Customer</h3>
+          </div>
+          <p class="text-sm text-slate-400">Cliente asociado. Opcional en ventas de contado.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-white">Abono</h3>
+          </div>
+          <p class="text-sm text-slate-400">Pagos o abonos del cliente sobre una venta a crédito.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sale Types -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        </svg>
+        Tipos de Venta
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-800/50 rounded-xl p-6 border border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm font-medium">Transacción</span>
+            <h3 class="text-xl font-bold text-white">Venta Instantánea</h3>
+          </div>
+          <ul class="space-y-2 text-slate-300 text-sm">
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Venta realizada y cerrada en el momento
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Flujo: draft → active → delivered/cancelled
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Puede ser contado o crédito
+            </li>
+          </ul>
+        </div>
+        <div class="bg-gradient-to-br from-slate-800 to-slate-800/50 rounded-xl p-6 border border-slate-700">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">Transacción</span>
+            <h3 class="text-xl font-bold text-white">Pre-orden</h3>
+          </div>
+          <ul class="space-y-2 text-slate-300 text-sm">
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Pedido para entrega futura
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Flujo: draft → confirmed → delivered → cancelled
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Permite ajustes en precio y cantidad al entregar
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status State Machine -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+        Máquina de Estados
+      </h2>
+      <div class="bg-slate-800 rounded-xl p-8 border border-slate-700">
+        <svg viewBox="0 0 800 280" class="w-full h-auto">
+          <!-- Instant Sale Path -->
+          <g>
+            <rect x="20" y="40" width="120" height="60" rx="8" class="status-box"/>
+            <text x="80" y="75" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="500">DRAFT</text>
+
+            <path d="M140 70 L180 70" class="flow-line"/>
+            <polygon points="180,70 172,64 172,76" class="flow-arrow"/>
+
+            <rect x="200" y="40" width="120" height="60" rx="8" class="status-active"/>
+            <text x="260" y="75" text-anchor="middle" fill="white" font-size="14" font-weight="600">ACTIVE</text>
+
+            <path d="M320 70 L360 70" class="flow-line"/>
+            <polygon points="360,70 352,64 352,76" class="flow-arrow"/>
+
+            <rect x="380" y="40" width="120" height="60" rx="8" class="status-box"/>
+            <text x="440" y="75" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="500">DELIVERED</text>
+          </g>
+
+          <!-- Pre-order Path -->
+          <g>
+            <rect x="200" y="160" width="120" height="60" rx="8" class="status-box"/>
+            <text x="260" y="195" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="500">DRAFT</text>
+
+            <path d="M320 190 L360 190" class="flow-line"/>
+            <polygon points="360,190 352,184 352,196" class="flow-arrow"/>
+
+            <rect x="380" y="160" width="120" height="60" rx="8" class="status-box" style="stroke: #3b82f6"/>
+            <text x="440" y="195" text-anchor="middle" fill="#60a5fa" font-size="14" font-weight="600">CONFIRMED</text>
+
+            <path d="M500 190 L540 190" class="flow-line"/>
+            <polygon points="540,190 532,184 532,196" class="flow-arrow"/>
+
+            <rect x="560" y="160" width="120" height="60" rx="8" class="status-box"/>
+            <text x="620" y="195" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="500">DELIVERED</text>
+          </g>
+
+          <!-- Cancel Path (any state) -->
+          <g>
+            <path d="M130 100 Q130 130 80 130 L80 230" class="flow-line" stroke="#ef4444" stroke-dasharray="5,5"/>
+            <polygon points="80,230 74,222 86,222" fill="#ef4444"/>
+            <text x="105" y="180" fill="#ef4444" font-size="12">cancel()</text>
+          </g>
+
+          <!-- Legend -->
+          <g transform="translate(620, 40)">
+            <text x="0" y="0" fill="#f97316" font-size="12" font-weight="600">LEYENDA</text>
+            <line x1="0" y1="15" x2="30" y2="15" stroke="#f97316" stroke-width="2"/>
+            <text x="40" y="19" fill="#94a3b8" font-size="11">Flujo instant_sale</text>
+            <line x1="0" y1="35" x2="30" y2="35" stroke="#f97316" stroke-width="2"/>
+            <text x="40" y="39" fill="#94a3b8" font-size="11">Flujo pre_order</text>
+            <line x1="0" y1="55" x2="30" y2="55" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+            <text x="40" y="59" fill="#ef4444" font-size="11">cancel() (cualquier estado)</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Complete Flow Diagram -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Flujo Completo de Creación
+      </h2>
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="flex flex-col gap-6">
+
+          <!-- Frontend Phase -->
+          <div class="phase-header rounded-lg p-4">
+            <h3 class="text-white font-bold text-lg flex items-center gap-2">
+              <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">1</span>
+              FRONTEND - App Móvil (PGlite Local)
+            </h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <div class="text-orange-500 font-semibold mb-2">1. Crear Borrador</div>
+              <code class="text-xs text-slate-400 block">createDraft(saleInput)</code>
+              <ul class="text-sm text-slate-400 mt-2 space-y-1">
+                <li>• Genera syncGroupId</li>
+                <li>• Inserta en PGlite</li>
+                <li>• status: "draft"</li>
+                <li>• syncStatus: "pending"</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <div class="text-orange-500 font-semibold mb-2">2. Agregar Items</div>
+              <code class="text-xs text-slate-400 block">addItem(saleId, item)</code>
+              <ul class="text-sm text-slate-400 mt-2 space-y-1">
+                <li>• Inserta sale_items</li>
+                <li>• Actualiza totales</li>
+                <li>• Mismo syncGroupId</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <div class="text-orange-500 font-semibold mb-2">3. Confirmar</div>
+              <code class="text-xs text-slate-400 block">confirm() / confirmPreOrder()</code>
+              <ul class="text-sm text-slate-400 mt-2 space-y-1">
+                <li>• Actualiza status</li>
+                <li>• Incrementa version</li>
+                <li>• Activa sync</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Sync Phase -->
+          <div class="phase-header rounded-lg p-4">
+            <h3 class="text-white font-bold text-lg flex items-center gap-2">
+              <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">2</span>
+              SINCRONIZACIÓN - Cola Offline
+            </h3>
+          </div>
+
+          <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-white font-semibold">SyncService.processPending()</div>
+                  <div class="text-slate-400 text-sm">Agrupa por syncGroupId → POST /api/sync</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs">sync_operations</span>
+                <span class="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs">idempotencyKey</span>
+                <span class="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs">savepoints</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backend Phase -->
+          <div class="phase-header rounded-lg p-4">
+            <h3 class="text-white font-bold text-lg flex items-center gap-2">
+              <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">3</span>
+              BACKEND - Servidor (PostgreSQL Neon)
+            </h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <div class="text-blue-400 font-semibold mb-2">4. SyncEngine.processBatch()</div>
+              <ul class="text-sm text-slate-400 space-y-1">
+                <li>• Recibe operaciones en batch</li>
+                <li>• Ordena por dependencia (creations primero)</li>
+                <li>• Procesa en savepoints</li>
+                <li>• Dispatch a SaleSyncHandler</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+              <div class="text-green-400 font-semibold mb-2">5. SaleRepository.update()</div>
+              <ul class="text-sm text-slate-400 space-y-1">
+                <li>• Valida con Zod schemas</li>
+                <li>• Verifica version (optimistic locking)</li>
+                <li>• Transacción atómica</li>
+                <li>• Respuesta: { success, serverTimestamp }</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Payment Types -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+        Tipos de Pago
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-800 rounded-xl p-5 border border-green-500/30">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <h3 class="font-bold text-white">Pago Total</h3>
+          </div>
+          <code class="text-xs text-slate-400">paymentMode: "pago_total"</code>
+          <p class="text-sm text-slate-400 mt-2">Cliente paga el monto completo al momento.</p>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl p-5 border border-yellow-500/30">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-yellow-500 flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3 class="font-bold text-white">A Cuenta</h3>
+          </div>
+          <code class="text-xs text-slate-400">paymentMode: "a_cuenta"</code>
+          <p class="text-sm text-slate-400 mt-2">Cliente paga una parte. Genera abonos pendientes.</p>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl p-5 border border-red-500/30">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3 class="font-bold text-white">Debe Todo</h3>
+          </div>
+          <code class="text-xs text-slate-400">paymentMode: "debe_todo"</code>
+          <p class="text-sm text-slate-400 mt-2">Venta a crédito sin pago inicial.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Design Patterns -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+        Patrones de Diseño Clave
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <h3 class="font-semibold text-orange-500 mb-3">Local-First</h3>
+          <p class="text-sm text-slate-400">Todas las operaciones funcionan offline contra PGlite local. La sincronización ocurre en segundo plano automáticamente.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <h3 class="font-semibold text-orange-500 mb-3">Optimistic Locking</h3>
+          <p class="text-sm text-slate-400">El campo <code class="text-orange-400">version</code> previene conflictos de modificación concurrente entre dispositivos.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <h3 class="font-semibold text-orange-500 mb-3">Grupos Atómicos</h3>
+          <p class="text-sm text-slate-400"><code class="text-orange-400">syncGroupId</code> agrupa operaciones relacionadas (venta + items) para procesamiento atómico.</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <h3 class="font-semibold text-orange-500 mb-3">Idempotencia</h3>
+          <p class="text-sm text-slate-400">Las operaciones pueden reintentarse de forma segura mediante <code class="text-orange-400">idempotencyKey</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Files Reference -->
+    <section>
+      <h2 class="text-2xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Archivos Clave
+      </h2>
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-900/50">
+            <tr>
+              <th class="text-left p-4 text-slate-400 font-medium">Archivo</th>
+              <th class="text-left p-4 text-slate-400 font-medium">Propósito</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700">
+            <tr>
+              <td class="p-4 text-orange-400 font-mono text-xs">packages/shared/src/schema.ts</td>
+              <td class="p-4 text-slate-300">Definiciones de entidades (Sale, SaleItem, Customer, Abono)</td>
+            </tr>
+            <tr>
+              <td class="p-4 text-orange-400 font-mono text-xs">packages/app/app/lib/services/sale-service.ts</td>
+              <td class="p-4 text-slate-300">Operaciones de venta en frontend (createDraft, addItem, confirm)</td>
+            </tr>
+            <tr>
+              <td class="p-4 text-orange-400 font-mono text-xs">packages/app/app/lib/sync/sync-service.ts</td>
+              <td class="p-4 text-slate-300">Orquestación de sincronización en frontend</td>
+            </tr>
+            <tr>
+              <td class="p-4 text-orange-400 font-mono text-xs">packages/backend/src/services/repository/sale.repository.ts</td>
+              <td class="p-4 text-slate-300">Operaciones de base de datos en backend</td>
+            </tr>
+            <tr>
+              <td class="p-4 text-orange-400 font-mono text-xs">packages/backend/src/services/sync/handlers/SaleSyncHandler.ts</td>
+              <td class="p-4 text-slate-300">Lógica de sincronización para ventas</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

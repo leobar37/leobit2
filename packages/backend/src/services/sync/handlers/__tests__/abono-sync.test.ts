@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { AbonoSyncHandler } from "../AbonoSyncHandler";
+import { createAbonoSyncHandlerForTest } from "../registry";
 import { abonoCreateSchema, abonoUpdateSchema } from "../../schemas";
 import type { RequestContext } from "../../../../context/request-context";
 import type { PaymentRepository } from "../../../repository/payment.repository";
@@ -128,7 +128,7 @@ describe("abonoUpdateSchema", () => {
 describe("AbonoSyncHandler - sellerId auto-injection", () => {
   let mockPaymentRepo: PaymentRepository;
   let mockCustomerRepo: CustomerRepository;
-  let handler: AbonoSyncHandler;
+  let handler: ReturnType<typeof createAbonoSyncHandlerForTest>;
   let mockCtx: RequestContext;
 
   beforeEach(() => {
@@ -143,7 +143,7 @@ describe("AbonoSyncHandler - sellerId auto-injection", () => {
       findById: vi.fn().mockResolvedValue({ id: "cust-123" }),
     } as unknown as CustomerRepository;
 
-    handler = new AbonoSyncHandler(mockPaymentRepo, mockCustomerRepo);
+    handler = createAbonoSyncHandlerForTest(mockPaymentRepo, mockCustomerRepo);
 
     mockCtx = {
       businessId: "biz-123",

@@ -25,10 +25,10 @@ export function AssetPicker({
 }: AssetPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | undefined>();
-  
+
   // Cargar asset desde el backend cuando tenemos value pero no selectedAsset
   const { data: fetchedAsset } = useAsset(value || "");
-  
+
   // Actualizar selectedAsset cuando se carga el asset desde el backend
   useEffect(() => {
     if (fetchedAsset && !selectedAsset) {

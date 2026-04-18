@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { CustomerSyncHandler } from "../CustomerSyncHandler";
+import { createCustomerSyncHandlerForTest } from "../registry";
 import { customerCreateSchema } from "../../schemas";
 import type { RequestContext } from "../../../../context/request-context";
 import type { CustomerRepository } from "../../../repository/customer.repository";
@@ -34,7 +34,7 @@ describe("customerCreateSchema", () => {
 
 describe("CustomerSyncHandler", () => {
   let mockCustomerRepo: CustomerRepository;
-  let handler: CustomerSyncHandler;
+  let handler: ReturnType<typeof createCustomerSyncHandlerForTest>;
   let mockCtx: RequestContext;
 
   const createOperation = (overrides: Partial<SyncOperationInput> = {}): SyncOperationInput => ({
@@ -56,7 +56,7 @@ describe("CustomerSyncHandler", () => {
       delete: vi.fn().mockResolvedValue(undefined),
     } as unknown as CustomerRepository;
 
-    handler = new CustomerSyncHandler(mockCustomerRepo);
+    handler = createCustomerSyncHandlerForTest(mockCustomerRepo);
 
     mockCtx = {
       businessId: "biz-123",
@@ -194,7 +194,7 @@ describe("CustomerSyncHandler", () => {
       const result = await handler.execute(mockCtx, operation);
 
       expect(result.success).toBe(true);
-      expect(mockCustomerRepo.delete).toHaveBeenCalledWith(mockCtx, "cust-123", undefined);
+      expect(mockCustomerRepo.delete).toHaveBeenCalledWith(mockCtx, "cust-123");
     });
 
     it("should succeed silently when deleting non-existent customer", async () => {

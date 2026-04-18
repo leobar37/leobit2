@@ -21,6 +21,7 @@ import type { ConflictStrategy } from "../sync/config";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { syncEvents } from "./sync-events";
 import { getQueryKeysForEntity } from "./query-keys";
+import { initializeEventBuffer } from "./sync-event-buffer";
 
 export interface ServicesContextValue {
   pg: PGlite;
@@ -151,6 +152,8 @@ export function ServicesProvider({
 
     if (!syncService || !pullService || !coordinator) return;
 
+    let eventBufferCleanup: (() => void) | null = null;
+
     // Initialize services before starting
     const initAndStart = async () => {
       const perfStart = performance.now();
@@ -166,6 +169,8 @@ export function ServicesProvider({
         const coordinatorStart = performance.now();
         coordinator.start();
         const coordinatorMs = performance.now() - coordinatorStart;
+
+        eventBufferCleanup = initializeEventBuffer();
 
         console.log("[Perf][ServicesProvider] startup", {
           pushInitMs: Number(pushInitMs.toFixed(2)),
@@ -222,6 +227,7 @@ export function ServicesProvider({
 
     return () => {
       coordinator.stop();
+      eventBufferCleanup?.();
       console.log("[ServicesProvider] SyncCoordinator stopped");
     };
   }, [services]);

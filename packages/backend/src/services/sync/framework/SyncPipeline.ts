@@ -27,13 +27,19 @@ function validateStructure(
   return null;
 }
 
-function validateBusinessRules(
+async function validateBusinessRules(
   context: SyncContext,
   operation: SyncOperationInput,
-  handler: ISyncHandler
-): SyncHandlerResult | null {
+  handler: ISyncHandler,
+  tx?: DbTransaction
+): Promise<SyncHandlerResult | null> {
   try {
-    handler.validateBusinessRules(context.ctx, operation.payload, operation.operation);
+    await handler.validateBusinessRules(
+      context.ctx,
+      operation.payload,
+      operation.operation,
+      tx
+    );
     return null;
   } catch (error) {
     return {
@@ -64,7 +70,7 @@ export class SyncPipeline {
     let result = validateStructure(context, operation);
     if (result) return result;
 
-    result = validateBusinessRules(context, operation, handler);
+    result = await validateBusinessRules(context, operation, handler, tx);
     if (result) return result;
 
     return executeHandler(context, operation, handler, tx);

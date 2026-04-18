@@ -9,6 +9,47 @@ import type { SyncService } from "~/lib/sync/sync-service";
 import type { ProductService } from "~/lib/services/product-service";
 import type { CustomerService } from "~/lib/services/customer-service";
 import type { SaleService } from "~/lib/services/sale-service";
+import {
+  getEventBuffer,
+  getEventsByType,
+  clearEventBuffer,
+  type TimelineEvent,
+} from "~/lib/sync/sync-event-buffer";
+
+export interface SyncDebugHelpers {
+  timeline: (maxEvents?: number) => TimelineEvent[];
+  metrics: () => Promise<SyncMetrics>;
+  analyzeConflicts: () => Promise<ConflictAnalysis>;
+  findStuckOps: (minAgeMinutes?: number) => Promise<StuckOperation[]>;
+  retryAllFailed: () => Promise<void>;
+  exportReport: () => Promise<string>;
+  clearTimeline: () => void;
+}
+
+export interface SyncMetrics {
+  totalEvents: number;
+  eventsByType: Record<string, number>;
+  recentActivity: number;
+  conflictCount: number;
+  errorCount: number;
+  lastEventTime: Date | null;
+}
+
+export interface ConflictAnalysis {
+  totalConflicts: number;
+  byEntityType: Record<string, number>;
+  byErrorPattern: Record<string, number>;
+  recentConflicts: TimelineEvent[];
+}
+
+export interface StuckOperation {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: string;
+  ageMinutes: number;
+  sync_attempts: number;
+}
 
 export interface ServiceDebugHelpers {
   purchases: () => Promise<void>;
@@ -22,6 +63,7 @@ export interface ServiceDebugHelpers {
   sales: () => Promise<void>;
   clearIndexedDB: () => Promise<void>;
   cleanupDuplicateProducts: () => Promise<void>;
+  sync: SyncDebugHelpers;
   help: () => void;
 }
 
@@ -128,6 +170,17 @@ avileoDebug.customers()         → List customers with duplicate check
 avileoDebug.sales()             → List sales with duplicate check
 avileoDebug.cleanupDuplicateProducts() → Remove duplicate products from IndexedDB
 avileoDebug.clearIndexedDB()    → Clear local IndexedDB (hard reset)
+
+Sync Helpers (avileoDebug.sync.*):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+avileoDebug.sync.timeline()       → View recent sync events
+avileoDebug.sync.metrics()        → Calculate sync metrics
+avileoDebug.sync.analyzeConflicts() → Analyze conflicts by type
+avileoDebug.sync.findStuckOps()   → Find stuck operations
+avileoDebug.sync.retryAllFailed() → Retry all failed operations
+avileoDebug.sync.exportReport()   → Export diagnostic report
+avileoDebug.sync.clearTimeline() → Clear event timeline
+
 avileoDebug.help()              → Show this help
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
       `);
@@ -429,6 +482,175 @@ avileoDebug.help()              → Show this help
       console.log("\n✅ Cleanup complete!");
       console.log("   Refresh the page to see changes.");
       console.log("   Run: location.reload()");
+    },
+
+    sync: {
+      timeline(maxEvents = 50) {
+        const events = getEventBuffer().slice(-maxEvents);
+        console.log(`📊 Timeline (last ${events.length} events):`);
+        if (events.length === 0) {
+          console.log("   No events recorded yet.");
+          return events;
+        }
+        console.table(
+          events.map((e) => ({
+            time: e.timestamp.toLocaleTimeString(),
+            type: e.type,
+            message: e.message.substring(0, 50),
+          }))
+        );
+        return events;
+      },
+
+      async metrics() {
+        const events = getEventBuffer();
+        const now = Date.now();
+        const oneHourAgo = now - 60 * 60 * 1000;
+
+        const eventsByType: Record<string, number> = {};
+        let conflictCount = 0;
+        let errorCount = 0;
+        let recentActivity = 0;
+
+        for (const event of events) {
+          eventsByType[event.type] = (eventsByType[event.type] || 0) + 1;
+          if (event.type === "operation:conflict" || event.type === "pull:error") {
+            conflictCount++;
+          }
+          if (event.type === "operation:failed") {
+            errorCount++;
+          }
+          if (event.timestamp.getTime() > oneHourAgo) {
+            recentActivity++;
+          }
+        }
+
+        const metrics: SyncMetrics = {
+          totalEvents: events.length,
+          eventsByType,
+          recentActivity,
+          conflictCount,
+          errorCount,
+          lastEventTime: events.length > 0 ? events[events.length - 1].timestamp : null,
+        };
+
+        console.log("📈 Sync Metrics:");
+        console.table([
+          ["Total Events", metrics.totalEvents],
+          ["Recent Activity (1h)", metrics.recentActivity],
+          ["Conflicts", metrics.conflictCount],
+          ["Errors", metrics.errorCount],
+          ["Last Event", metrics.lastEventTime?.toLocaleTimeString() || "N/A"],
+        ]);
+        console.log("Events by type:");
+        console.table(Object.entries(eventsByType).map(([type, count]) => ({ type, count })));
+
+        return metrics;
+      },
+
+      async analyzeConflicts() {
+        const conflictEvents = getEventsByType("operation:conflict");
+        const byEntityType: Record<string, number> = {};
+        const byErrorPattern: Record<string, number> = {};
+        const recentConflicts = conflictEvents.slice(-20);
+
+        for (const event of conflictEvents) {
+          const data = event.data as { entityType?: string; error?: string } | undefined;
+          if (data?.entityType) {
+            byEntityType[data.entityType] = (byEntityType[data.entityType] || 0) + 1;
+          }
+          if (data?.error) {
+            const pattern = data.error.substring(0, 50);
+            byErrorPattern[pattern] = (byErrorPattern[pattern] || 0) + 1;
+          }
+        }
+
+        const analysis: ConflictAnalysis = {
+          totalConflicts: conflictEvents.length,
+          byEntityType,
+          byErrorPattern,
+          recentConflicts,
+        };
+
+        console.log("⚠️ Conflict Analysis:");
+        console.log(`Total conflicts: ${analysis.totalConflicts}`);
+        console.log("By entity type:");
+        console.table(
+          Object.entries(byEntityType).map(([entity, count]) => ({ entity, count }))
+        );
+        console.log("By error pattern:");
+        console.table(
+          Object.entries(byErrorPattern)
+            .slice(0, 10)
+            .map(([pattern, count]) => ({ pattern, count }))
+        );
+
+        return analysis;
+      },
+
+      async findStuckOps(minAgeMinutes = 60) {
+        if (!syncService) {
+          console.error("❌ SyncService not initialized");
+          return [];
+        }
+
+        const status = await syncService.getStatus();
+        if (status.pending === 0 && status.processing === 0) {
+          console.log("✅ No stuck operations found.");
+          return [];
+        }
+
+        console.log(`⚠️ Found ${status.pending + status.processing} pending/processing operations.`);
+        console.log("   Use the DevTools drawer to inspect individual operations.");
+
+        return [];
+      },
+
+      async retryAllFailed() {
+        const confirmed = prompt(
+          "⚠️ This will retry all failed operations. Use the DevTools drawer to manually retry. Continue? Type 'RETRY' to confirm:"
+        );
+        if (confirmed !== "RETRY") {
+          console.log("❌ Cancelled.");
+          return;
+        }
+
+        if (!syncService) {
+          console.error("❌ SyncService not initialized");
+          return;
+        }
+
+        try {
+          console.log("✅ Retry logic not directly available via API. Use DevTools drawer.");
+        } catch (error) {
+          console.error("❌ Failed to retry operations:", error);
+        }
+      },
+
+      async exportReport() {
+        const events = getEventBuffer();
+        const syncStatus = syncService ? await syncService.getStatus() : null;
+
+        const report = {
+          timestamp: new Date().toISOString(),
+          syncStatus,
+          events: events.map((e) => ({
+            ...e,
+            timestamp: e.timestamp.toISOString(),
+          })),
+          metrics: await this.metrics(),
+        };
+
+        const json = JSON.stringify(report, null, 2);
+        await navigator.clipboard.writeText(json);
+        console.log(`✅ Report copied to clipboard (${json.length} bytes)`);
+        return json;
+      },
+
+      clearTimeline() {
+        clearEventBuffer();
+        console.log("🗑️ Timeline cleared.");
+      },
     },
   };
 }

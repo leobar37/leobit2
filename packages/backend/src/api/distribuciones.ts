@@ -109,7 +109,10 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         notaCreacion: body.notaCreacion,
         fecha: body.fecha,
         groupId: body.groupId,
-        items: body.items,
+        items: body.items?.map(item => ({
+          ...item,
+          cantidadAsignada: item.cantidadAsignada.toString(),
+        })),
       });
       return {
         success: true,
@@ -217,7 +220,10 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       const distribucion = await distribucionService.replaceDistribucionItems(
         ctx,
         params.id,
-        body.items
+        body.items.map(item => ({
+          ...item,
+          cantidadAsignada: item.cantidadAsignada.toString(),
+        }))
       );
       return {
         success: true,
@@ -249,7 +255,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
     async ({ ctx, params, body, distribucionService }) => {
       const item = await distribucionService.addItem(ctx, params.id, {
         variantId: body.variantId,
-        cantidadAsignada: body.cantidadAsignada,
+        cantidadAsignada: body.cantidadAsignada.toString(),
         unidad: body.unidad,
       });
       return {
@@ -277,8 +283,8 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
     "/:id/items/:itemId",
     async ({ ctx, params, body, distribucionService }) => {
       const item = await distribucionService.updateItem(ctx, params.id, params.itemId, {
-        cantidadAsignada: body.cantidadAsignada,
-        cantidadVendida: body.cantidadVendida,
+        cantidadAsignada: body.cantidadAsignada?.toString(),
+        cantidadVendida: body.cantidadVendida?.toString(),
       });
       return {
         success: true,

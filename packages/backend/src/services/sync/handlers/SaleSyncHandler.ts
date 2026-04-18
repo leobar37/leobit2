@@ -4,11 +4,14 @@ import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
 import type { SaleRepository } from "../../repository/sale.repository";
 import type { PaymentRepository } from "../../repository/payment.repository";
-import { BaseSyncHandler } from "./BaseSyncHandler";
+import type { Sale } from "../../../db/schema";
+import { StatefulSyncHandler } from "./core/StatefulSyncHandler";
 import { saleCreateSchema, saleUpdateSchema } from "../schemas";
 import { now } from "../../../lib/date-utils";
+import { mergeDefined, pickDefinedFields } from "./core/patch-utils";
+import { subtract, isPositive } from "../../../lib/decimal";
 
-export class SaleSyncHandler extends BaseSyncHandler {
+export class SaleSyncHandler extends StatefulSyncHandler<Sale> {
   readonly entityType = "sales" as const;
 
   constructor(
@@ -32,34 +35,21 @@ export class SaleSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<SyncHandlerResult> {
-    this.logStart(ctx, operation, { payloadKeys: Object.keys(operation.payload) });
-
-    try {
-      if (operation.operation === "create") {
-        await this.handleCreate(ctx, operation, tx);
-      } else if (operation.operation === "update") {
-        await this.handleUpdate(ctx, operation, tx);
-      } else if (operation.operation === "delete") {
-        await this.handleDelete(ctx, operation, tx);
-      } else {
-        throw new Error(`Acción no soportada: ${operation.operation}`);
-      }
-
-      this.logSuccess(ctx, operation);
-      return this.createSuccessResult(operation);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      this.logError(ctx, operation, err);
-      return this.createErrorResult(operation, err.message);
-    }
+    return this.executeStateful(ctx, operation, tx, {
+      payloadKeys: Object.keys(operation.payload),
+    });
   }
 
-  private async handleCreate(
+  protected async handleCreate(
     ctx: RequestContext,
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<void> {
-    const parsed = saleCreateSchema.parse(operation.payload);
+    const payload = {
+      type: "instant_sale",
+      ...operation.payload,
+    };
+    const parsed = saleCreateSchema.parse(payload);
 
     const saleWithId = {
       ...parsed,
@@ -69,7 +59,7 @@ export class SaleSyncHandler extends BaseSyncHandler {
       totalAmount: parsed.totalAmount,
       amountPaid: parsed.amountPaid ?? (parsed.saleType === "contado" ? parsed.totalAmount : "0"),
       balanceDue: parsed.saleType === "credito"
-        ? String(Math.max(Number(parsed.totalAmount) - Number(parsed.amountPaid || 0), 0))
+        ? subtract(parsed.totalAmount, parsed.amountPaid ?? "0")
         : "0",
       tara: parsed.tara,
       netWeight: parsed.netWeight,
@@ -83,51 +73,29 @@ export class SaleSyncHandler extends BaseSyncHandler {
       })),
     } as Parameters<typeof this.saleRepo.create>[1];
 
-    if (tx) {
-      const createdSale = await this.saleRepo.create(ctx, saleWithId, tx);
-      if (parsed.saleType === "credito" && parsed.customerId && Number(parsed.amountPaid || 0) > 0) {
-        const initialPaymentReference = `init-sale:${createdSale.id}`;
-        await this.paymentRepo.createInitialPayment(
-          ctx,
-          {
-            customerId: parsed.customerId,
-            amount: Number(parsed.amountPaid || 0).toFixed(2),
-            referenceNumber: initialPaymentReference,
-          },
-          tx
-        );
-      }
-    } else {
-      const { db: dbInstance } = await import("../../../lib/db");
-      await dbInstance.transaction(async (innerTx) => {
-        const createdSale = await this.saleRepo.create(ctx, saleWithId, innerTx);
-        if (parsed.saleType === "credito" && parsed.customerId && Number(parsed.amountPaid || 0) > 0) {
-          const initialPaymentReference = `init-sale:${createdSale.id}`;
-          await this.paymentRepo.createInitialPayment(
-            ctx,
-            {
-              customerId: parsed.customerId,
-              amount: Number(parsed.amountPaid || 0).toFixed(2),
-              referenceNumber: initialPaymentReference,
-            },
-            innerTx
-          );
-        }
-      });
+    const createdSale = await this.saleRepo.create(ctx, saleWithId, tx);
+    if (parsed.saleType === "credito" && parsed.customerId && isPositive(parsed.amountPaid ?? "0")) {
+      const initialPaymentReference = `init-sale:${createdSale.id}`;
+      await this.paymentRepo.createInitialPayment(
+        ctx,
+        {
+          customerId: parsed.customerId,
+          amount: parsed.amountPaid ?? "0",
+          referenceNumber: initialPaymentReference,
+        },
+        tx
+      );
     }
   }
 
-  private async handleUpdate(
+  protected async handleUpdate(
     ctx: RequestContext,
     operation: SyncOperationInput,
+    existing: Sale | undefined,
     tx?: DbTransaction
   ): Promise<void> {
     const parsed = saleUpdateSchema.parse(operation.payload);
-
-    // Get the client's expected version from the operation
-    const clientExpectedVersion = operation.localVersion ?? parsed.version ?? 1;
-
-    const existing = await this.saleRepo.findById(ctx, operation.entityId, tx);
+    const clientExpectedVersion = operation.localVersion ?? parsed.version;
 
     if (!existing) {
       const hasItems = Array.isArray(parsed.items) && parsed.items.length > 0;
@@ -144,64 +112,59 @@ export class SaleSyncHandler extends BaseSyncHandler {
         totalAmount: parsed.totalAmount ?? "0",
         amountPaid: "0",
         balanceDue: "0",
-        items: (parsed.items || []).map((item: Record<string, unknown>) => ({
+        items: (parsed.items || []).map((item) => ({
           ...item,
-          quantity: (item.quantity as string) ?? "",
-          orderedQuantity: (item.orderedQuantity as string) ?? "",
-          unitPrice: (item.unitPrice as string) ?? "",
-          unitPriceQuoted: (item.unitPriceQuoted as string) ?? "",
-          subtotal: (item.subtotal as string) ?? "",
+          quantity: item.quantity ?? "",
+          orderedQuantity: item.orderedQuantity ?? "",
+          unitPrice: item.unitPrice ?? "",
+          unitPriceQuoted: item.unitPriceQuoted ?? "",
+          subtotal: item.subtotal ?? "",
         })),
       } as Parameters<typeof this.saleRepo.create>[1];
 
-      if (tx) {
-        await this.saleRepo.create(ctx, saleWithId, tx);
-        return;
-      }
-      const { db: dbInstance } = await import("../../../lib/db");
-      await dbInstance.transaction(async (innerTx) => {
-        await this.saleRepo.create(ctx, saleWithId, innerTx);
-      });
+      await this.saleRepo.create(ctx, saleWithId, tx);
       return;
     }
 
-    // Note: Version conflict detection is handled atomically by the repository's UPDATE WHERE clause.
-    // The repository's update method will fail if the version doesn't match, preventing TOCTOU race conditions.
+    if (
+      clientExpectedVersion !== undefined &&
+      existing.version > clientExpectedVersion
+    ) {
+      throw new Error(
+        `Version conflict: expected version ${clientExpectedVersion} but server has version ${existing.version}. ` +
+        "The record was modified by another device. Please refresh and try again."
+      );
+    }
+
+    const expectedVersion = clientExpectedVersion ?? existing.version;
 
     if (parsed.status === "active" && existing.status === "draft" && existing.type === "instant_sale") {
-      await this.saleRepo.update(ctx, operation.entityId, {
-        status: "active",
-        version: existing.version + 1,
-        ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
-        ...(parsed.amountPaid !== undefined && { amountPaid: parsed.amountPaid }),
-        ...(parsed.balanceDue !== undefined && { balanceDue: parsed.balanceDue }),
-        ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
-        ...(parsed.paymentMode !== undefined && { paymentMode: parsed.paymentMode }),
-      }, tx, existing.version);
+      const updateData = mergeDefined(
+        { status: "active", version: expectedVersion + 1 },
+        pickDefinedFields(parsed, ["totalAmount", "amountPaid", "balanceDue", "saleType", "paymentMode"] as const)
+      ) as Parameters<typeof this.saleRepo.update>[2];
+
+      await this.saleRepo.update(ctx, operation.entityId, updateData, tx, expectedVersion);
       return;
     }
 
     if (parsed.status === "confirmed" && existing.status === "draft" && existing.type === "pre_order") {
       const hasMonetaryUpdates = parsed.totalAmount !== undefined || parsed.amountPaid !== undefined;
       if (hasMonetaryUpdates) {
-        // Update monetary fields together with confirmation to avoid version conflict
-        await this.saleRepo.update(ctx, operation.entityId, {
-          status: "confirmed",
-          version: existing.version + 1,
-          ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
-          ...(parsed.amountPaid !== undefined && { amountPaid: parsed.amountPaid }),
-          ...(parsed.balanceDue !== undefined && { balanceDue: parsed.balanceDue }),
-          ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
-          ...(parsed.paymentMode !== undefined && { paymentMode: parsed.paymentMode }),
-        }, tx, existing.version);
+        const updateData = mergeDefined(
+          { status: "confirmed", version: expectedVersion + 1 },
+          pickDefinedFields(parsed, ["totalAmount", "amountPaid", "balanceDue", "saleType", "paymentMode"] as const)
+        ) as Parameters<typeof this.saleRepo.update>[2];
+
+        await this.saleRepo.update(ctx, operation.entityId, updateData, tx, expectedVersion);
       } else {
-        await this.saleRepo.confirmPreOrder(ctx, operation.entityId, existing.version, tx);
+        await this.saleRepo.confirmPreOrder(ctx, operation.entityId, expectedVersion, tx);
       }
       return;
     }
 
     if (parsed.status === "delivered" && existing.status === "confirmed" && existing.type === "pre_order") {
-      await this.saleRepo.deliverPreOrder(ctx, operation.entityId, existing.version, tx);
+      await this.saleRepo.deliverPreOrder(ctx, operation.entityId, expectedVersion, tx);
       return;
     }
 
@@ -212,18 +175,15 @@ export class SaleSyncHandler extends BaseSyncHandler {
         cancelReason: parsed.cancelReason || "Cancelación",
         refundAmount: parsed.refundAmount,
         refundMethod: parsed.refundMethod as "efectivo" | "yape" | "plin" | "transferencia" | undefined,
-        version: existing.version + 1,
-      }, tx, existing.version);
+        version: expectedVersion + 1,
+      }, tx, expectedVersion);
       return;
     }
 
-    const updateData = {
-      version: existing.version + 1,
-      ...(parsed.customerId !== undefined && { customerId: parsed.customerId }),
-      ...(parsed.deliveryDate !== undefined && { deliveryDate: parsed.deliveryDate }),
-      ...(parsed.saleType !== undefined && { saleType: parsed.saleType }),
-      ...(parsed.totalAmount !== undefined && { totalAmount: parsed.totalAmount }),
-    };
+    const updateData = mergeDefined(
+      { version: expectedVersion + 1 },
+      pickDefinedFields(parsed, ["customerId", "deliveryDate", "saleType", "totalAmount"] as const)
+    );
 
     if (Array.isArray(parsed.items)) {
       const items = parsed.items.map((item) => ({
@@ -242,22 +202,38 @@ export class SaleSyncHandler extends BaseSyncHandler {
       await this.saleRepo.updateWithItems(ctx, operation.entityId, {
         ...updateData,
         items,
-      } as Parameters<typeof this.saleRepo.updateWithItems>[2], tx, existing.version);
+      } as Parameters<typeof this.saleRepo.updateWithItems>[2], tx, expectedVersion);
     } else {
-      await this.saleRepo.update(ctx, operation.entityId, updateData as Parameters<typeof this.saleRepo.update>[2], tx, existing.version);
+      await this.saleRepo.update(ctx, operation.entityId, updateData as Parameters<typeof this.saleRepo.update>[2], tx, expectedVersion);
     }
   }
 
-  private async handleDelete(
+  protected async handleDelete(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    existing: Sale | undefined,
+    tx?: DbTransaction
   ): Promise<void> {
-    const existing = await this.saleRepo.findById(ctx, operation.entityId);
     if (!existing) {
       return;
     }
 
-    await this.saleRepo.delete(ctx, operation.entityId);
+    await this.saleRepo.delete(ctx, operation.entityId, tx);
+  }
+
+  protected async loadExistingForUpdate(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<Sale | undefined> {
+    return this.saleRepo.findById(ctx, operation.entityId, tx);
+  }
+
+  protected async loadExistingForDelete(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<Sale | undefined> {
+    return this.saleRepo.findById(ctx, operation.entityId, tx);
   }
 }

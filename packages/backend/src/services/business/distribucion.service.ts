@@ -15,6 +15,8 @@ import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem, NewDistribucionItem } from "../../db/schema";
 import { db, syncOperations } from "../../lib/db";
 import { sales, visitas, distribucionItems } from "../../db/schema";
+import type { DbTransaction } from "../../lib/txid";
+import { isPositive, isGreaterThanOrEqual, add, subtract as decimalSubtract } from "../../lib/decimal";
 
 // Types for item management
 export interface DistribucionItemEnriched extends DistribucionItem {
@@ -24,7 +26,7 @@ export interface DistribucionItemEnriched extends DistribucionItem {
 
 export interface CreateDistribucionItemInput {
   variantId: string;
-  cantidadAsignada: number;
+  cantidadAsignada: string;
   unidad: string;
 }
 
@@ -98,13 +100,12 @@ export class DistribucionService {
       notaCreacion?: string;
       fecha?: string;
       groupId?: string;
-      items?: Array<{
-        variantId: string;
-        cantidadAsignada: number;
-        unidad: string;
-      }>;
-    }
+      items?: CreateDistribucionItemInput[];
+    },
+    tx?: DbTransaction
   ): Promise<DistribucionWithItems> {
+    const dbOrTx = tx || db;
+
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para crear distribuciones");
     }
@@ -131,7 +132,7 @@ export class DistribucionService {
       );
     }
 
-    const totalKilos = data.items.reduce((sum, item) => sum + item.cantidadAsignada, 0);
+    const totalKilos = (data.items ?? []).reduce((sum, item) => add(sum, item.cantidadAsignada), "0");
 
     const distribucion = await this.repository.create(ctx, {
       vendedorId: data.vendedorId,
@@ -143,9 +144,9 @@ export class DistribucionService {
       estado: "activo",
       syncStatus: "synced",
       syncAttempts: 0,
-    });
+    }, tx);
 
-    await db.insert(syncOperations).values({
+    await dbOrTx.insert(syncOperations).values({
       businessId: ctx.businessId,
       operationId: `api-create-distribucion-${distribucion.id}`,
       entity: "distribuciones",
@@ -170,14 +171,14 @@ export class DistribucionService {
         const createdItem = await this.itemRepository.create(ctx, {
           distribucionId: distribucion.id,
           variantId: item.variantId,
-          cantidadAsignada: item.cantidadAsignada.toString(),
+          cantidadAsignada: item.cantidadAsignada,
           cantidadVendida: "0",
           unidad: item.unidad,
           syncStatus: "synced",
           syncAttempts: 0,
-        });
+        }, tx);
 
-        await db.insert(syncOperations).values({
+        await dbOrTx.insert(syncOperations).values({
           businessId: ctx.businessId,
           operationId: `api-create-distribucion-item-${createdItem.id}`,
           entity: "distribucion_items",
@@ -199,17 +200,17 @@ export class DistribucionService {
     }
 
     if (data.groupId) {
-      const group = await this.customerGroupRepository.findByIdWithMembers(ctx, data.groupId);
+      const group = await this.customerGroupRepository.findByIdWithMembers(ctx, data.groupId, tx);
       if (group && group.members.length > 0) {
         const customerIds = group.members.map(m => m.customerId);
         const createdVisitas = await this.visitaRepository.bulkCreate(ctx, {
           distribucionId: distribucion.id,
           customerIds,
-        });
+        }, tx);
 
         // Register sync operations for each created visita
         for (const visita of createdVisitas) {
-          await db.insert(syncOperations).values({
+          await dbOrTx.insert(syncOperations).values({
             businessId: ctx.businessId,
             operationId: `api-create-visita-${visita.id}`,
             entity: "visitas",
@@ -431,14 +432,14 @@ export class DistribucionService {
 
     const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucionId);
     
-    const asignado = distribucionWithItems?.items?.reduce((sum, item) => sum + parseFloat(item.cantidadAsignada), 0) || 0;
-    const vendido = distribucionWithItems?.items?.reduce((sum, item) => sum + parseFloat(item.cantidadVendida), 0) || 0;
-    const disponible = asignado - vendido;
+    const asignadoStr = distribucionWithItems?.items?.reduce((sum, item) => add(sum, item.cantidadAsignada), "0") ?? "0";
+    const vendidoStr = distribucionWithItems?.items?.reduce((sum, item) => add(sum, item.cantidadVendida), "0") ?? "0";
+    const disponibleStr = decimalSubtract(asignadoStr, vendidoStr);
 
     return {
-      disponible: Math.max(0, disponible),
-      asignado,
-      vendido,
+      disponible: Number(disponibleStr),
+      asignado: Number(asignadoStr),
+      vendido: Number(vendidoStr),
     };
   }
 
@@ -521,11 +522,7 @@ export class DistribucionService {
   async replaceDistribucionItems(
     ctx: RequestContext,
     distribucionId: string,
-    items: Array<{
-      variantId: string;
-      cantidadAsignada: number;
-      unidad: string;
-    }>
+    items: CreateDistribucionItemInput[]
   ): Promise<DistribucionWithItems> {
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar distribuciones");
@@ -541,7 +538,7 @@ export class DistribucionService {
     }
 
     for (const item of items) {
-      if (item.cantidadAsignada <= 0) {
+      if (!isPositive(item.cantidadAsignada)) {
         throw new ValidationError("La cantidad asignada debe ser mayor a 0");
       }
 
@@ -557,7 +554,7 @@ export class DistribucionService {
       await this.itemRepository.create(ctx, {
         distribucionId,
         variantId: item.variantId,
-        cantidadAsignada: item.cantidadAsignada.toString(),
+        cantidadAsignada: item.cantidadAsignada,
         cantidadVendida: "0",
         unidad: item.unidad,
         syncStatus: "synced",
@@ -580,9 +577,9 @@ export class DistribucionService {
       notaCierre?: string;
       items: Array<{
         variantId: string;
-        cantidadLlevada: number;
-        cantidadVendida: number;
-        cantidadDevuelta?: number;
+        cantidadLlevada: string;
+        cantidadVendida: string;
+        cantidadDevuelta?: string;
       }>;
     }
   ): Promise<Distribucion> {
@@ -603,13 +600,15 @@ export class DistribucionService {
       throw new ValidationError("Debe registrar al menos un producto al cerrar");
     }
 
-    // Validate items and calculate devuelta
     for (const item of data.items) {
-      if (item.cantidadLlevada < 0 || item.cantidadVendida < 0) {
+      if (isPositive(item.cantidadLlevada) === false && item.cantidadLlevada !== "0") {
+        throw new ValidationError("Las cantidades no pueden ser negativas");
+      }
+      if (isPositive(item.cantidadVendida) === false && item.cantidadVendida !== "0") {
         throw new ValidationError("Las cantidades no pueden ser negativas");
       }
 
-      if (item.cantidadVendida > item.cantidadLlevada) {
+      if (isGreaterThanOrEqual(item.cantidadLlevada, item.cantidadVendida) === false) {
         throw new ValidationError("La cantidad vendida no puede ser mayor a la llevada");
       }
 
@@ -693,7 +692,7 @@ export class DistribucionService {
     const createdItem = await this.itemRepository.create(ctx, {
       distribucionId,
       variantId: item.variantId,
-      cantidadAsignada: item.cantidadAsignada.toString(),
+      cantidadAsignada: item.cantidadAsignada,
       cantidadVendida: "0",
       unidad: item.unidad,
       syncStatus: "synced",
@@ -731,8 +730,8 @@ export class DistribucionService {
     distribucionId: string,
     itemId: string,
     data: {
-      cantidadAsignada?: number;
-      cantidadVendida?: number;
+      cantidadAsignada?: string;
+      cantidadVendida?: string;
     }
   ): Promise<DistribucionItem> {
     if (!ctx.hasPermission("inventory.write")) {
@@ -756,10 +755,10 @@ export class DistribucionService {
     // Build update data
     const updateData: Partial<NewDistribucionItem> = {};
     if (data.cantidadAsignada !== undefined) {
-      updateData.cantidadAsignada = data.cantidadAsignada.toString();
+      updateData.cantidadAsignada = data.cantidadAsignada;
     }
     if (data.cantidadVendida !== undefined) {
-      updateData.cantidadVendida = data.cantidadVendida.toString();
+      updateData.cantidadVendida = data.cantidadVendida;
     }
 
     // Use repository's general update via db directly

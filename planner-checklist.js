@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs'
-import path from 'node:path'
+const fs = require('fs')
+const path = require('path')
 
 const VALID_STATUSES = new Set(['pending', 'in_progress', 'blocked', 'completed'])
 const PROJECT_ROOT = process.cwd()

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "plan": "standardize-numeric-handling",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create decimal arithmetic helpers",
+      "file": "tasks/01-decimal-helpers.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Fix SaleSyncHandler numeric casts",
+      "file": "tasks/02-fix-sale-handler.md",
+      "status": "completed",
+      "phase": "handlers",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-002",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Standardize DistribucionService types to string",
+      "file": "tasks/03-fix-distribucion-types.md",
+      "status": "completed",
+      "phase": "services",
+      "dependencies": [],
+      "requirements": [
+        "FR-003",
+        "FR-004"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Add precision regression tests",
+      "file": "tasks/04-precision-tests.md",
+      "status": "completed",
+      "phase": "validation",
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003"
+      ],
+      "requirements": [
+        "FR-005",
+        "NFR-001",
+        "NFR-002"
+      ]
+    }
+  ]
+}

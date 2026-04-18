@@ -29,6 +29,38 @@ export abstract class BaseSyncHandler implements ISyncHandler {
     tx?: DbTransaction
   ): Promise<SyncHandlerResult>;
 
+  protected async executeOperation(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    handlers: {
+      create: () => Promise<void>;
+      update: () => Promise<void>;
+      delete: () => Promise<void>;
+    },
+    details?: Record<string, unknown>
+  ): Promise<SyncHandlerResult> {
+    this.logStart(ctx, operation, details);
+
+    try {
+      if (operation.operation === "create") {
+        await handlers.create();
+      } else if (operation.operation === "update") {
+        await handlers.update();
+      } else if (operation.operation === "delete") {
+        await handlers.delete();
+      } else {
+        throw new Error(`Acción no soportada: ${operation.operation}`);
+      }
+
+      this.logSuccess(ctx, operation);
+      return this.createSuccessResult(operation);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.logError(ctx, operation, err);
+      return this.createErrorResult(operation, err.message);
+    }
+  }
+
   protected logStart(
     ctx: RequestContext,
     operation: SyncOperationInput,
@@ -83,58 +115,6 @@ export abstract class BaseSyncHandler implements ISyncHandler {
       stack: error.stack,
       ...details,
     });
-  }
-
-  protected requiredString(value: unknown, field: string): string {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
-    throw new Error(`${field} es requerido`);
-  }
-
-  protected optionalString(value: unknown): string | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : undefined;
-    }
-    return undefined;
-  }
-
-  protected requiredNumericString(value: unknown, field: string): string {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value.toString();
-    }
-    if (typeof value === "string") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        return parsed.toString();
-      }
-    }
-    throw new Error(`${field} inválido`);
-  }
-
-  protected optionalNumericString(value: unknown): string | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value.toString();
-    }
-    if (typeof value === "string") {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed.toString() : undefined;
-    }
-    return undefined;
-  }
-
-  protected normalizedAmount(value: number, field: string): number {
-    if (!Number.isFinite(value)) {
-      throw new Error(`${field} inválido`);
-    }
-    return Math.max(0, Number(value.toFixed(2)));
   }
 
   protected createSuccessResult(operation: SyncOperationInput): SyncHandlerResult {

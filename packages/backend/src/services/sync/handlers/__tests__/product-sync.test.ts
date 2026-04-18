@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { ProductSyncHandler } from "../ProductSyncHandler";
+import { createProductSyncHandlerForTest } from "../registry";
 import { productCreateSchema } from "../../schemas";
 import type { RequestContext } from "../../../../context/request-context";
 import type { ProductRepository } from "../../../repository/product.repository";
@@ -73,7 +73,7 @@ describe("productCreateSchema", () => {
 
 describe("ProductSyncHandler", () => {
   let mockProductRepo: ProductRepository;
-  let handler: ProductSyncHandler;
+  let handler: ReturnType<typeof createProductSyncHandlerForTest>;
   let mockCtx: RequestContext;
 
   const createOperation = (overrides: Partial<SyncOperationInput> = {}): SyncOperationInput => ({
@@ -93,9 +93,9 @@ describe("ProductSyncHandler", () => {
       findById: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue({ id: "prod-123" }),
       delete: vi.fn().mockResolvedValue(undefined),
-    } as unknown as ProductRepository;
+    } as unknown as ProductRepository & { update: ReturnType<typeof vi.fn> };
 
-    handler = new ProductSyncHandler(mockProductRepo);
+    handler = createProductSyncHandlerForTest(mockProductRepo);
 
     mockCtx = {
       businessId: "biz-123",
@@ -278,7 +278,7 @@ describe("ProductSyncHandler", () => {
       const result = await handler.execute(mockCtx, operation);
 
       expect(result.success).toBe(true);
-      const updateCall = mockProductRepo.update.mock.calls[0];
+      const updateCall = (mockProductRepo.update as ReturnType<typeof vi.fn>).mock.calls[0];
       const updateData = updateCall[2] as Record<string, unknown>;
       // Schema defaults mean basePrice may be present even when not provided
       expect(updateData).toHaveProperty("name", "Solo Nombre");

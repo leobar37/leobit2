@@ -99,9 +99,10 @@ export class PurchaseRepository {
   async create(
     ctx: RequestContext,
     data: CreatePurchaseInput,
-    items: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt" | "businessId" | "updatedAt">[]
+    items: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt" | "businessId" | "updatedAt">[],
+    tx?: DbTransaction
   ): Promise<PurchaseWithItems> {
-    return await db.transaction(async (tx) => {
+    const executeCreate = async (dbOrTx: DbTransaction) => {
       const insertValues = {
         ...(data.id ? { id: data.id } : {}),
         supplierId: data.supplierId ?? null,
@@ -115,13 +116,13 @@ export class PurchaseRepository {
         syncGroupId: data.syncGroupId ?? null,
       };
       try {
-        const [purchase] = await tx
+        const [purchase] = await dbOrTx
           .insert(purchases)
           .values(insertValues)
           .returning();
         const insertedItems: PurchaseItem[] = [];
         for (const item of items) {
-          const [insertedItem] = await tx
+          const [insertedItem] = await dbOrTx
             .insert(purchaseItems)
             .values({
               ...item,
@@ -147,7 +148,13 @@ export class PurchaseRepository {
         });
         throw err;
       }
-    });
+    };
+
+    if (tx) {
+      return executeCreate(tx);
+    }
+
+    return db.transaction(async (innerTx) => executeCreate(innerTx));
   }
 
   async updateStatus(
@@ -171,8 +178,10 @@ export class PurchaseRepository {
     return purchase;
   }
 
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db
+  async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
+    const dbOrTx = tx || db;
+
+    await dbOrTx
       .delete(purchases)
       .where(
         and(eq(purchases.id, id), eq(purchases.businessId, ctx.businessId))

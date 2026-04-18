@@ -8,6 +8,7 @@ import {
   type DistribucionItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export class DistribucionRepository {
   async findMany(
@@ -133,9 +134,12 @@ export class DistribucionRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewDistribucion, "id" | "createdAt" | "businessId">
+    data: Omit<NewDistribucion, "id" | "createdAt" | "businessId">,
+    tx?: DbTransaction
   ): Promise<Distribucion> {
-    const [distribucion] = await db
+    const dbOrTx = tx || db;
+
+    const [distribucion] = await dbOrTx
       .insert(distribuciones)
       .values({
         ...data,
@@ -151,9 +155,12 @@ export class DistribucionRepository {
     id: string,
     data: Partial<
       Omit<NewDistribucion, "id" | "createdAt" | "businessId" | "vendedorId">
-    >
+    >,
+    tx?: DbTransaction
   ): Promise<Distribucion | undefined> {
-    const [distribucion] = await db
+    const dbOrTx = tx || db;
+
+    const [distribucion] = await dbOrTx
       .update(distribuciones)
       .set({
         ...(data.puntoVenta !== undefined && {
@@ -199,8 +206,10 @@ export class DistribucionRepository {
     return distribucion;
   }
 
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db
+  async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
+    const dbOrTx = tx || db;
+
+    await dbOrTx
       .delete(distribuciones)
       .where(
         and(eq(distribuciones.id, id), eq(distribuciones.businessId, ctx.businessId))

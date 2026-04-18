@@ -9,6 +9,22 @@ export interface SyncStatus {
   total: number;
 }
 
+export type HealthStatusLevel = "healthy" | "warning" | "critical" | "stuck";
+
+export interface HealthScoreFactor {
+  name: string;
+  deduction: number;
+  value: number;
+}
+
+export interface HealthScore {
+  score: number;
+  status: HealthStatusLevel;
+  factors: HealthScoreFactor[];
+  previousScore: number | null;
+  trend: "improving" | "stable" | "degrading" | null;
+}
+
 export interface SyncOperation {
   id: string;
   entity_type: string;
@@ -123,6 +139,9 @@ export const OPERATION_TABS = [
   { value: "dead-letter", label: "DLQ" },
   { value: "tables", label: "Tablas" },
   { value: "database", label: "BD" },
+  { value: "timeline", label: "Timeline" },
+  { value: "metrics", label: "Métricas" },
+  { value: "performance", label: "Perf" },
 ] as const;
 
 export type ActiveTab = (typeof OPERATION_TABS)[number]["value"];

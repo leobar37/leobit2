@@ -1,5 +1,5 @@
 export { SyncDevToolsDrawer } from "./drawer";
-export type { SyncStatus, SyncOperation, DeadLetterOperation, EntitySyncSummary, ActiveTab } from "./types";
+export type { SyncStatus, SyncOperation, DeadLetterOperation, EntitySyncSummary, ActiveTab, HealthScore, HealthStatusLevel } from "./types";
 export { OPERATION_TABS, ENTITY_LABELS, SYNCED_TABLES, getEntityTone } from "./types";
 export { useDevToolsData } from "./hooks/use-devtools-data";
 export { StatCard } from "./components/stat-card";
@@ -9,3 +9,11 @@ export { DeadLetterRow } from "./components/dead-letter-row";
 export { TablesTab } from "./tabs/tables-tab";
 export { OperationsTab } from "./tabs/operations-tab";
 export { DLQTab } from "./tabs/dlq-tab";
+export { TimelineTab } from "./tabs/timeline-tab";
+export { MetricsTab } from "./tabs/metrics-tab";
+export { PerformanceTab } from "./tabs/performance-tab";
+export { useOperationFilters } from "./hooks/use-operation-filters";
+export { useHealthScore, getHealthScoreColor, getHealthScoreBgColor } from "./hooks/use-health-score";
+export { useSyncTimeline } from "./hooks/use-sync-timeline";
+export { useSyncMetrics, MetricCard } from "./hooks/use-sync-metrics";
+export { usePerformanceMetrics } from "./hooks/use-performance-metrics";

@@ -9,9 +9,13 @@ import {
   Clock,
   Database,
   ArrowUpDown,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import type { SyncStatus } from "../types";
 import { StatCard } from "../components/stat-card";
+import { useHealthScore, getHealthScoreColor, getHealthScoreBgColor } from "../hooks/use-health-score";
 
 interface StatusTabProps {
   status: SyncStatus;
@@ -30,45 +34,39 @@ export function StatusTab({
   lastSyncTime,
   consecutiveFailures,
 }: StatusTabProps) {
-  const healthStatus = isStuck
-    ? "stuck"
-    : status.failed > 0 || status.deadLetter > 0
-      ? "error"
-      : status.pending > 0
-        ? "pending"
-        : "healthy";
+  const { healthScore } = useHealthScore();
 
   return (
     <div className="space-y-4">
       <div
         className={`rounded-xl border p-4 ${
-          healthStatus === "healthy"
+          healthScore.status === "healthy"
             ? "border-green-200 bg-green-50/80"
-            : healthStatus === "pending"
+            : healthScore.status === "warning"
               ? "border-orange-200 bg-orange-50/80"
-              : healthStatus === "error"
+              : healthScore.status === "critical"
                 ? "border-red-200 bg-red-50/80"
                 : "border-amber-200 bg-amber-50/80"
         }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {healthStatus === "healthy" ? (
+            {healthScore.status === "healthy" ? (
               <CheckCircle className="h-8 w-8 text-green-500" />
-            ) : healthStatus === "pending" ? (
+            ) : healthScore.status === "warning" ? (
               <Clock className="h-8 w-8 text-orange-500" />
-            ) : healthStatus === "error" ? (
+            ) : healthScore.status === "critical" ? (
               <XCircle className="h-8 w-8 text-red-500" />
             ) : (
               <AlertTriangle className="h-8 w-8 text-amber-500" />
             )}
             <div>
               <p className="font-semibold">
-                {healthStatus === "healthy"
+                {healthScore.status === "healthy"
                   ? "Sincronización al día"
-                  : healthStatus === "pending"
+                  : healthScore.status === "warning"
                     ? `${status.pending} cambios pendientes`
-                    : healthStatus === "error"
+                    : healthScore.status === "critical"
                       ? "Operaciones con error"
                       : "Sync atascado"}
               </p>
@@ -103,6 +101,52 @@ export function StatusTab({
         </div>
       </div>
 
+      <div className={`rounded-xl border p-4 ${getHealthScoreBgColor(healthScore.score)}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`text-3xl font-bold ${getHealthScoreColor(healthScore.score)}`}>
+              {healthScore.score}
+              <span className="text-lg text-muted-foreground">/100</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium capitalize">
+                  {healthScore.status === "healthy"
+                    ? "Saludable"
+                    : healthScore.status === "warning"
+                      ? "Advertencia"
+                      : healthScore.status === "critical"
+                        ? "Crítico"
+                        : "Atascado"}
+                </span>
+                {healthScore.trend && (
+                  <TrendIndicator trend={healthScore.trend} />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Health Score</p>
+            </div>
+          </div>
+        </div>
+
+        {healthScore.factors.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Desglose de deducciones:</p>
+            <div className="flex flex-wrap gap-2">
+              {healthScore.factors.map((factor, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 text-xs bg-background/60 px-2 py-1 rounded-lg"
+                >
+                  <span className="text-muted-foreground">{factor.name}:</span>
+                  <span className="font-medium text-red-600">-{factor.deduction}</span>
+                  <span className="text-muted-foreground">({factor.value})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Pendientes" value={status.pending} icon={Clock} color="bg-yellow-500" />
         <StatCard label="Fallidos" value={status.failed} icon={XCircle} color="bg-red-500" />
@@ -124,6 +168,17 @@ export function StatusTab({
       )}
     </div>
   );
+}
+
+function TrendIndicator({ trend }: { trend: "improving" | "stable" | "degrading" }) {
+  switch (trend) {
+    case "improving":
+      return <TrendingUp className="h-4 w-4 text-green-500" />;
+    case "degrading":
+      return <TrendingDown className="h-4 w-4 text-red-500" />;
+    case "stable":
+      return <Minus className="h-4 w-4 text-muted-foreground" />;
+  }
 }
 
 function formatTime(date: Date): string {

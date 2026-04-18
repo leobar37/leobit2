@@ -6,7 +6,7 @@ import {
   type NewDistribucionItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { DbTransaction } from "../../lib/txid";
 
 export class DistribucionItemRepository {
   async findByDistribucionId(
@@ -41,9 +41,12 @@ export class DistribucionItemRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewDistribucionItem, "id" | "createdAt" | "businessId">
+    data: Omit<NewDistribucionItem, "id" | "createdAt" | "businessId">,
+    tx?: DbTransaction
   ): Promise<DistribucionItem> {
-    const [item] = await db
+    const executor = tx ?? db;
+
+    const [item] = await executor
       .insert(distribucionItems)
       .values({
         ...data,
@@ -63,6 +66,42 @@ export class DistribucionItemRepository {
     const [item] = await executor
       .update(distribucionItems)
       .set({ cantidadVendida: cantidad })
+      .where(and(
+        eq(distribucionItems.id, id),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ))
+      .returning();
+    return item;
+  }
+
+  async updateAsignada(
+    ctx: RequestContext,
+    id: string,
+    cantidadAsignada: string,
+    tx?: DbTransaction
+  ): Promise<DistribucionItem | undefined> {
+    const executor = tx ?? db;
+    const [item] = await executor
+      .update(distribucionItems)
+      .set({ cantidadAsignada })
+      .where(and(
+        eq(distribucionItems.id, id),
+        eq(distribucionItems.businessId, ctx.businessId)
+      ))
+      .returning();
+    return item;
+  }
+
+  async updateUnidad(
+    ctx: RequestContext,
+    id: string,
+    unidad: string,
+    tx?: DbTransaction
+  ): Promise<DistribucionItem | undefined> {
+    const executor = tx ?? db;
+    const [item] = await executor
+      .update(distribucionItems)
+      .set({ unidad })
       .where(and(
         eq(distribucionItems.id, id),
         eq(distribucionItems.businessId, ctx.businessId)

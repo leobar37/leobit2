@@ -181,6 +181,22 @@ export const distribucionItemSchema = z.object({
   unidad: z.string(),
 });
 
+// Sync schemas for distribucion_items entity (child of distribuciones)
+export const distribucionItemSyncCreateSchema = z.object({
+  distribucionId: z.string().min(1, "distribucionId es requerido"),
+  variantId: z.string().min(1, "variantId es requerido"),
+  cantidadAsignada: numericStringTransform,
+  cantidadVendida: optionalNumericStringTransform,
+  unidad: z.string().optional(),
+});
+
+export const distribucionItemSyncUpdateSchema = z.object({
+  distribucionId: z.string().min(1, "distribucionId es requerido"),
+  cantidadAsignada: optionalNumericStringTransform,
+  cantidadVendida: optionalNumericStringTransform,
+  unidad: z.string().optional(),
+});
+
 export const distribucionCreateSchema = z.object({
   vendedorId: z.string().min(1, "vendedorId es requerido"),
   puntoVenta: z.string().min(1, "puntoVenta es requerido"),
@@ -344,7 +360,7 @@ export const purchaseItemUpdateSchema = z.object({
 
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "products", "product_variants", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
+  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "distribucion_items", "products", "product_variants", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

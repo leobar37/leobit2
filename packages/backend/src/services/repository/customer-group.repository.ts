@@ -79,13 +79,17 @@ export class CustomerGroupRepository {
   /**
    * Find a group with its members
    */
-  async findByIdWithMembers(ctx: RequestContext, groupId: string): Promise<CustomerGroupWithMembers | null> {
-    const group = await this.findById(ctx, groupId);
+  async findByIdWithMembers(
+    ctx: RequestContext,
+    groupId: string,
+    tx?: DbTransaction
+  ): Promise<CustomerGroupWithMembers | null> {
+    const group = await this.findById(ctx, groupId, tx);
     if (!group) {
       return null;
     }
 
-    const members = await this.getMembers(ctx, groupId);
+    const members = await this.getMembers(ctx, groupId, tx);
 
     return {
       ...group,
@@ -96,12 +100,18 @@ export class CustomerGroupRepository {
   /**
    * Get all members of a group
    */
-  async getMembers(ctx: RequestContext, groupId: string): Promise<Array<{
+  async getMembers(
+    ctx: RequestContext,
+    groupId: string,
+    tx?: DbTransaction
+  ): Promise<Array<{
     customerId: string;
     customerName: string;
     addedAt: Date;
   }>> {
-    const results = await db
+    const executor = tx ?? db;
+
+    const results = await executor
       .select({
         customerId: customerGroupMembers.customerId,
         customerName: customers.name,

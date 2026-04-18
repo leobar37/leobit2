@@ -6,6 +6,7 @@ import { eq, and, inArray, desc, asc } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { visitas, customers, type Visita, type NewVisita } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 
 export interface VisitaWithCustomer extends Visita {
   customerName: string;
@@ -118,7 +119,11 @@ export class VisitaRepository {
   /**
    * Create multiple visits (bulk)
    */
-  async bulkCreate(ctx: RequestContext, data: BulkCreateVisitasData): Promise<Visita[]> {
+  async bulkCreate(
+    ctx: RequestContext,
+    data: BulkCreateVisitasData,
+    tx?: DbTransaction
+  ): Promise<Visita[]> {
     const visits: Omit<NewVisita, "id">[] = data.customerIds.map((customerId) => ({
       distribucionId: data.distribucionId,
       customerId,
@@ -129,7 +134,9 @@ export class VisitaRepository {
       syncAttempts: 0,
     }));
 
-    const result = await db
+    const dbOrTx = tx || db;
+
+    const result = await dbOrTx
       .insert(visitas)
       .values(visits)
       .returning();

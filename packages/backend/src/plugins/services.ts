@@ -99,6 +99,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       saleRepo,
       paymentRepo,
       distribucionRepo,
+      distribucionItemRepo,
       distribucionService,
       productRepo,
       tagRepo,

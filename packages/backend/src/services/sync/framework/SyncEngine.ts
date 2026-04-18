@@ -10,6 +10,7 @@ import type { CustomerRepository } from "../../repository/customer.repository";
 import type { SaleRepository } from "../../repository/sale.repository";
 import type { PaymentRepository } from "../../repository/payment.repository";
 import type { DistribucionRepository } from "../../repository/distribucion.repository";
+import type { DistribucionItemRepository } from "../../repository/distribucion-item.repository";
 import type { DistribucionService } from "../../business/distribucion.service";
 import type { ProductRepository } from "../../repository/product.repository";
 import type { TagRepository } from "../../repository/tag.repository";
@@ -33,6 +34,7 @@ export interface SyncEngineDeps {
   saleRepo: SaleRepository;
   paymentRepo: PaymentRepository;
   distribucionRepo: DistribucionRepository;
+  distribucionItemRepo: DistribucionItemRepository;
   distribucionService: DistribucionService;
   productRepo: ProductRepository;
   tagRepo: TagRepository;

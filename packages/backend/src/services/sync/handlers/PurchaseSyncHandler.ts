@@ -4,13 +4,14 @@ import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
 import type { SyncEngineDeps } from "../framework/SyncEngine";
 import type { CreatePurchaseInput } from "../../repository/purchase.repository";
-import { BaseSyncHandler } from "./BaseSyncHandler";
+import type { PurchaseWithItems } from "../../repository/purchase.repository";
+import { StatefulSyncHandler } from "./core/StatefulSyncHandler";
 import { purchaseCreateSchema, purchaseUpdateSchema } from "../schemas";
 import { toISODateString, now } from "../../../lib/date-utils";
 import { StateMachineRegistry } from "../../../lib/state-machine";
-import type { PurchaseWithItems, PurchaseState } from "../../transitions";
+import type { PurchaseState } from "../../transitions";
 
-export class PurchaseSyncHandler extends BaseSyncHandler {
+export class PurchaseSyncHandler extends StatefulSyncHandler<PurchaseWithItems> {
   readonly entityType = "purchases" as const;
 
   private purchaseRepo: SyncEngineDeps["purchaseRepo"];
@@ -27,10 +28,10 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
   async validateBusinessRules(
     _ctx: RequestContext,
     payload: Record<string, unknown>,
-    _operation?: string,
+    operation?: string,
     _tx?: DbTransaction
   ): Promise<void> {
-    this.validatePayload(payload, purchaseCreateSchema, purchaseUpdateSchema);
+    this.validatePayload(payload, purchaseCreateSchema, purchaseUpdateSchema, operation);
   }
 
   async execute(
@@ -38,32 +39,13 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
     operation: SyncOperationInput,
     tx?: DbTransaction
   ): Promise<SyncHandlerResult> {
-    this.logStart(ctx, operation);
-
-    try {
-      if (operation.operation === "create") {
-        await this.handleCreate(ctx, operation, tx);
-      } else if (operation.operation === "update") {
-        await this.handleUpdate(ctx, operation, tx);
-      } else if (operation.operation === "delete") {
-        await this.handleDelete(ctx, operation, tx);
-      } else {
-        throw new Error(`Acción no soportada: ${operation.operation}`);
-      }
-
-      this.logSuccess(ctx, operation);
-      return this.createSuccessResult(operation);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      this.logError(ctx, operation, err);
-      return this.createErrorResult(operation, err.message);
-    }
+    return this.executeStateful(ctx, operation, tx);
   }
 
-  private async handleCreate(
+  protected async handleCreate(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    tx?: DbTransaction
   ): Promise<void> {
     const parsed = purchaseCreateSchema.parse(operation.payload);
 
@@ -93,19 +75,18 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
       invoiceNumber: parsed.invoiceNumber ?? null,
       syncGroupId: parsed.syncGroupId ?? null,
     };
-    const purchase = await this.purchaseRepo.create(ctx, purchaseData, []); // Empty items - will be created via PurchaseItemSyncHandler
+    await this.purchaseRepo.create(ctx, purchaseData, [], tx); // Empty items - will be created via PurchaseItemSyncHandler
   }
 
-  private async handleUpdate(
+  protected async handleUpdate(
     ctx: RequestContext,
     operation: SyncOperationInput,
+    existingPurchase: PurchaseWithItems | undefined,
     tx?: DbTransaction
   ): Promise<void> {
     const parsed = purchaseUpdateSchema.parse(operation.payload);
 
     if (parsed.status) {
-      // Get existing purchase to determine the previous status
-      const existingPurchase = await this.purchaseRepo.findById(ctx, operation.entityId, tx);
       if (!existingPurchase) {
         throw new Error("Compra no encontrada");
       }
@@ -143,16 +124,32 @@ export class PurchaseSyncHandler extends BaseSyncHandler {
     }
   }
 
-  private async handleDelete(
+  protected async handleDelete(
     ctx: RequestContext,
     operation: SyncOperationInput,
-    _tx?: DbTransaction
+    existing: PurchaseWithItems | undefined,
+    tx?: DbTransaction
   ): Promise<void> {
-    const existing = await this.purchaseRepo.findById(ctx, operation.entityId);
     if (!existing) {
       return;
     }
 
-    await this.purchaseRepo.delete(ctx, operation.entityId);
+    await this.purchaseRepo.delete(ctx, operation.entityId, tx);
+  }
+
+  protected async loadExistingForUpdate(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<PurchaseWithItems | undefined> {
+    return this.purchaseRepo.findById(ctx, operation.entityId, tx);
+  }
+
+  protected async loadExistingForDelete(
+    ctx: RequestContext,
+    operation: SyncOperationInput,
+    tx?: DbTransaction
+  ): Promise<PurchaseWithItems | undefined> {
+    return this.purchaseRepo.findById(ctx, operation.entityId, tx);
   }
 }

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, XCircle, AlertTriangle, CheckCircle, Database, Trash2 } from "lucide-react";
+import { Clock, XCircle, AlertTriangle, CheckCircle, Database, Trash2, AlertOctagon } from "lucide-react";
 import type { SyncOperation } from "../types";
 
 interface OperationRowProps {
@@ -9,10 +9,14 @@ interface OperationRowProps {
   canDelete: boolean;
 }
 
+const APPROACHING_DLQ_THRESHOLD = 3;
+
 export function getStatusIcon(status: string) {
   switch (status) {
     case "pending":
       return <Clock className="h-4 w-4 text-yellow-500" />;
+    case "processing":
+      return <Clock className="h-4 w-4 text-blue-500 animate-pulse" />;
     case "failed":
       return <XCircle className="h-4 w-4 text-red-500" />;
     case "conflict":
@@ -25,6 +29,8 @@ export function getStatusIcon(status: string) {
 }
 
 export function OperationRow({ operation, onDelete, canDelete }: OperationRowProps) {
+  const isApproachingDLQ = operation.sync_attempts >= APPROACHING_DLQ_THRESHOLD;
+
   return (
     <div className="p-3 hover:bg-muted/50 sm:p-3">
       <div className="flex items-center justify-between">
@@ -34,6 +40,15 @@ export function OperationRow({ operation, onDelete, canDelete }: OperationRowPro
           <Badge variant="outline" className="text-xs">
             {operation.operation}
           </Badge>
+          {isApproachingDLQ && (
+            <Badge
+              variant="outline"
+              className="text-xs bg-orange-50 border-orange-200 text-orange-700 gap-1"
+            >
+              <AlertOctagon className="h-3 w-3" />
+              {operation.sync_attempts} intentos
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
@@ -53,7 +68,7 @@ export function OperationRow({ operation, onDelete, canDelete }: OperationRowPro
       </div>
       <div className="mt-1 text-xs text-muted-foreground">
         <span className="font-mono">{operation.entity_id}</span>
-        {operation.sync_attempts > 0 && (
+        {!isApproachingDLQ && operation.sync_attempts > 0 && (
           <span className="ml-2">Intentos: {operation.sync_attempts}</span>
         )}
       </div>

@@ -6,21 +6,24 @@ import type { SyncEntity, SyncOperationInput, SyncBatchResult } from "./types";
 import type { SyncEngineDeps } from "./framework/SyncEngine";
 import { SyncEngine } from "./framework/SyncEngine";
 import { HandlerRegistry } from "./framework/HandlerRegistry";
-import { CustomerSyncHandler } from "./handlers/CustomerSyncHandler";
+import {
+  createTagHandler,
+  createCustomerHandler,
+  createProductHandler,
+  createSupplierHandler,
+  createCustomerGroupHandler,
+  createProductVariantHandler,
+  createCustomerGroupMemberHandler,
+  createCustomerTagHandler,
+  createVisitaHandler,
+  createSaleItemHandler,
+  createPurchaseItemHandler,
+  createAbonoHandler,
+  createDistribucionItemHandler,
+} from "./handlers/registry";
 import { SaleSyncHandler } from "./handlers/SaleSyncHandler";
-import { AbonoSyncHandler } from "./handlers/AbonoSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
-import { SaleItemSyncHandler } from "./handlers/SaleItemSyncHandler";
-import { ProductSyncHandler } from "./handlers/ProductSyncHandler";
-import { ProductVariantSyncHandler } from "./handlers/ProductVariantSyncHandler";
-import { TagSyncHandler } from "./handlers/TagSyncHandler";
-import { CustomerTagSyncHandler } from "./handlers/CustomerTagSyncHandler";
 import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
-import { PurchaseItemSyncHandler } from "./handlers/PurchaseItemSyncHandler";
-import { CustomerGroupSyncHandler } from "./handlers/CustomerGroupSyncHandler";
-import { CustomerGroupMemberSyncHandler } from "./handlers/CustomerGroupMemberSyncHandler";
-import { VisitaSyncHandler } from "./handlers/VisitaSyncHandler";
-import { SupplierSyncHandler } from "./handlers/SupplierSyncHandler";
 
 export type {
   SyncEntity,
@@ -40,65 +43,27 @@ export class SyncService {
   }
 
   private registerHandlers(deps: SyncServiceDeps): void {
-    HandlerRegistry.register("customers", () => {
-      return new CustomerSyncHandler(deps.customerRepo);
-    });
+    // ─── Builder-generated handlers (simple CRUD) ───────────────────────────
+    HandlerRegistry.register("tags", () => createTagHandler(deps));
+    HandlerRegistry.register("customers", () => createCustomerHandler(deps));
+    HandlerRegistry.register("products", () => createProductHandler(deps));
+    HandlerRegistry.register("suppliers", () => createSupplierHandler(deps));
+    HandlerRegistry.register("customer_groups", () => createCustomerGroupHandler(deps));
+    HandlerRegistry.register("product_variants", () => createProductVariantHandler(deps));
 
-    HandlerRegistry.register("sales", () => {
-      return new SaleSyncHandler(deps.saleRepo, deps.paymentRepo);
-    });
+    // ─── Builder-generated handlers (custom operations) ──────────────────────
+    HandlerRegistry.register("customer_group_members", () => createCustomerGroupMemberHandler(deps));
+    HandlerRegistry.register("customer_tags", () => createCustomerTagHandler(deps));
+    HandlerRegistry.register("visitas", () => createVisitaHandler(deps));
+    HandlerRegistry.register("sale_items", () => createSaleItemHandler(deps));
+    HandlerRegistry.register("purchase_items", () => createPurchaseItemHandler(deps));
+    HandlerRegistry.register("abonos", () => createAbonoHandler(deps));
+    HandlerRegistry.register("distribucion_items", () => createDistribucionItemHandler(deps));
 
-    HandlerRegistry.register("abonos", () => {
-      return new AbonoSyncHandler(deps.paymentRepo, deps.customerRepo);
-    });
-
-    HandlerRegistry.register("distribuciones", () => {
-      return new DistribucionSyncHandler(deps.distribucionRepo, deps.distribucionService);
-    });
-
-    HandlerRegistry.register("sale_items", () => {
-      return new SaleItemSyncHandler(deps.saleRepo);
-    });
-
-    HandlerRegistry.register("products", () => {
-      return new ProductSyncHandler(deps.productRepo);
-    });
-
-    HandlerRegistry.register("product_variants", () => {
-      return new ProductVariantSyncHandler(deps.variantRepo, deps.productRepo);
-    });
-
-    HandlerRegistry.register("tags", () => {
-      return new TagSyncHandler(deps.tagRepo);
-    });
-
-    HandlerRegistry.register("customer_tags", () => {
-      return new CustomerTagSyncHandler(deps.customerTagRepo, deps.customerRepo, deps.tagRepo);
-    });
-
-    HandlerRegistry.register("purchases", (deps) => {
-      return new PurchaseSyncHandler(deps);
-    });
-
-    HandlerRegistry.register("purchase_items", () => {
-      return new PurchaseItemSyncHandler(deps.purchaseRepo);
-    });
-
-    HandlerRegistry.register("customer_groups", () => {
-      return new CustomerGroupSyncHandler(deps.customerGroupRepo);
-    });
-
-    HandlerRegistry.register("customer_group_members", () => {
-      return new CustomerGroupMemberSyncHandler(deps.customerGroupRepo);
-    });
-
-    HandlerRegistry.register("visitas", () => {
-      return new VisitaSyncHandler(deps.visitaRepo);
-    });
-
-    HandlerRegistry.register("suppliers", () => {
-      return new SupplierSyncHandler(deps.supplierRepo);
-    });
+    // ─── Explicit handlers (complex state machines, non-migratable) ───────────
+    HandlerRegistry.register("sales", () => new SaleSyncHandler(deps.saleRepo, deps.paymentRepo));
+    HandlerRegistry.register("distribuciones", () => new DistribucionSyncHandler(deps.distribucionRepo, deps.distribucionService));
+    HandlerRegistry.register("purchases", () => new PurchaseSyncHandler(deps));
   }
 
   async processBatch(
@@ -109,9 +74,9 @@ export class SyncService {
   }
 
   async getChanges(
-    ctx: RequestContext, 
-    since?: Date, 
-    limit = 100, 
+    ctx: RequestContext,
+    since?: Date,
+    limit = 100,
     syncGroupId?: string,
     entityTypes?: string[],
     cursorOperationId?: string
@@ -167,7 +132,9 @@ export class SyncService {
     });
 
     const hasMore = operations.length > effectiveLimit;
+
     const results = hasMore ? operations.slice(0, effectiveLimit) : operations;
+
     const last = results[results.length - 1];
     const serverTimestamp = toISODate(now());
 

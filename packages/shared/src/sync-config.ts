@@ -11,6 +11,7 @@ export const SYNC_ENTITIES = [
   "sale_items",
   "abonos",
   "distribuciones",
+  "distribucion_items",
   "products",
   "product_variants",
   "tags",
@@ -49,6 +50,7 @@ export const ENTITY_PRIORITIES: Partial<Record<SyncEntity, number>> = {
   product_variants: 2,
   customer_group_members: 2,
   customer_tags: 2,
+  distribucion_items: 2,
 };
 
 /** Entities that track sync_status column */
@@ -61,6 +63,7 @@ export const SYNC_STATUS_TRACKED = [
   "visitas",
   "abonos",
   "purchases",
+  "distribucion_items",
 ] as const;
 
 /** Entities that support self-heal (convert update to insert if not found) */

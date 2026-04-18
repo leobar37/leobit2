@@ -164,8 +164,10 @@ export class SaleRepository {
     return sale;
   }
 
-  async delete(ctx: RequestContext, id: string): Promise<void> {
-    await db
+  async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
+    const executor = tx ?? db;
+
+    await executor
       .delete(sales)
       .where(and(
         eq(sales.id, id),
