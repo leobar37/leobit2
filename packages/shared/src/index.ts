@@ -405,3 +405,15 @@ export {
   type StateMachineConfig,
   type StateConfig,
 } from "./state-machine";
+
+// Sync utilities for frontend
+import { createId } from "@paralleldrive/cuid2";
+export { createId };
+
+export function generateSyncGroupId(): string {
+  return createId();
+}
+
+export function generateIdempotencyKey(): string {
+  return createId();
+}

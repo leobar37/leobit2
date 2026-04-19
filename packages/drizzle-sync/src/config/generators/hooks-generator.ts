@@ -228,7 +228,7 @@ import {
 import type { 
   ${entityNames.map((e) => `Create${pascalCase(e)}Input`).join(", ")}
 } from "./types";
-import { generateSyncGroupId, generateIdempotencyKey } from "~/lib/sync/utils";
+import { generateSyncGroupId, generateIdempotencyKey } from "@avileo/shared";
 `;
 
   const content = Array.from(hooks.entries())
