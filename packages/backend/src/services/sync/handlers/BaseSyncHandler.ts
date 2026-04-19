@@ -2,7 +2,7 @@ import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput, SyncEntity } from "../types";
 import type { ISyncHandler, SyncHandlerResult } from "../framework/types";
-import type { EntityRegistry } from "../framework/EntityRegistry";
+import type { EntityRegistry } from "@avileo/drizzle-sync/server";
 import { logger } from "../../../lib/logger";
 import { syncLogger } from "../sync-logger";
 import { toISODate, now } from "../../../lib/date-utils";

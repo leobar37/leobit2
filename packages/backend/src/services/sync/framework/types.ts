@@ -1,7 +1,7 @@
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncEntity, SyncOperationInput } from "../types";
-import type { EntityRegistry } from "./EntityRegistry";
+import type { EntityRegistry } from "@avileo/drizzle-sync/server";
 
 export type {
   SyncEntity,

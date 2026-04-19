@@ -2,7 +2,7 @@ import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import type { SyncOperationInput } from "../types";
 import type { SyncHandlerResult } from "../framework/types";
-import type { SyncEngineDeps } from "../framework/SyncEngine";
+import type { SyncEngineDeps } from "../types";
 import type { CreatePurchaseInput } from "../../repository/purchase.repository";
 import type { PurchaseWithItems } from "../../repository/purchase.repository";
 import { StatefulSyncHandler } from "./core/StatefulSyncHandler";

@@ -1,4 +1,4 @@
-import type { SyncEngineDeps } from "../framework/SyncEngine";
+import type { SyncEngineDeps } from "../types";
 import type { ISyncHandler } from "../framework/types";
 import { SyncHandlerBuilder, GenericSyncHandler } from "@avileo/drizzle-sync/server";
 import type { IGenericHandlerConfig } from "@avileo/drizzle-sync/server";

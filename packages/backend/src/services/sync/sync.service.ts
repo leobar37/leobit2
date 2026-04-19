@@ -5,7 +5,7 @@ import { db, sales, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
 import { sql } from "drizzle-orm";
 import type { SyncEntity, SyncOperationInput, SyncBatchResult } from "./types";
-import type { SyncEngineDeps } from "./framework/SyncEngine";
+import type { SyncEngineDeps } from "./types";
 import {
   SyncEngine,
   type SyncEngineMiddleware,
