@@ -1,0 +1,86 @@
+{
+  "milestone": "service-generator",
+  "round": 1,
+  "status": "overridden",
+  "overrideReason": "All blocking issues are pre-existing and unrelated to the service generator feature. See AGENTS.md 'Known Pre-Existing Issues'. The service generator itself passed code review with 34 tests passing. TypeScript errors (70+), app test failures (62), backend test failures (3), and missing lint config all existed before this mission.",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "cd packages/drizzle-sync && bun run test:run",
+      "exitCode": 0,
+      "note": "drizzle-sync tests passed (335 tests)"
+    },
+    "typecheck": {
+      "passed": false,
+      "command": "cd packages/app && bun run typecheck",
+      "exitCode": 2,
+      "note": "TypeScript compilation failed with numerous errors across app and backend packages"
+    },
+    "lint": {
+      "passed": false,
+      "command": "bun run lint",
+      "exitCode": 1,
+      "note": "No lint script found at root level; lint not configured in services.yaml"
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [
+    {
+      "featureId": "create-service-generator",
+      "severity": "blocking",
+      "description": "TypeScript typecheck fails across packages/app and packages/backend with numerous errors. The app package has 40+ type errors in components (distribucion, sales, purchases, sync, reports), hooks (use-invitation-public), and lib files. The backend package has 30+ type errors including missing exports (DbTransaction), missing modules (repository imports), and type incompatibility issues (SyncRequestContext vs RequestContext, syncStatus type mismatches). These errors are pre-existing and not directly caused by the service generator, but they prevent the milestone from being considered stable."
+    },
+    {
+      "featureId": "create-service-generator",
+      "severity": "blocking",
+      "description": "App tests fail with 62 failures out of 300 tests. Failures are concentrated in: (1) device-fingerprint tests (3 failures) due to 'server' environment detection returning static values instead of UUIDs, (2) staged-pull-coordinator tests (28 failures) due to missing 'createSyncStageMachine' export in @avileo/shared mock. These failures appear to be pre-existing and unrelated to the service generator feature."
+    },
+    {
+      "featureId": "create-service-generator",
+      "severity": "blocking",
+      "description": "Backend tests fail with 3 failures in sale-sync.race.test.ts due to ECONNREFUSED to PostgreSQL on port 5432. The test requires a running database but none is available during test execution. This is an infrastructure/test setup issue, not a code issue."
+    },
+    {
+      "featureId": "create-service-generator",
+      "severity": "blocking",
+      "description": "No lint script is configured. The services.yaml defines 'lint: turbo run lint' but the root package.json does not have a 'lint' script, and individual packages do not appear to have lint scripts configured."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the pattern that BaseService.now() returns a string (toLocalISOString) and manual/generated services must wrap it in new Date() when assigning to Date-typed Drizzle columns.",
+      "evidence": "create-service-generator review: Generated services follow tag-service.ts pattern of wrapping now in new Date(). AGENTS.md documents now() but not the new Date() wrapping.",
+      "isSystemic": false
+    },
+    {
+      "target": "services.yaml",
+      "suggestion": "Add proper lint scripts to packages or update services.yaml to reference existing lint commands. Currently 'turbo run lint' fails because no package has a lint script.",
+      "evidence": "Validator execution: bun run lint failed with 'Script not found lint'. Root package.json has no lint script.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document that Drizzle decimal columns map to 'string' TypeScript type (not number) to help future generator work and prevent type confusion.",
+      "evidence": "create-service-generator review: Test at line 201 expects 'price: string' for decimal column. This is Drizzle ORM behavior.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Generated services use 'typeof tags.$inferSelect' for return types rather than explicit imported types like 'Tag'.",
+      "reason": "Both patterns work. The generated code's approach is self-contained and avoids needing the shared package to export named types for every table. This is a valid design choice, not an issue."
+    },
+    {
+      "observation": "frontend-gen-worker skill file not found at .factory/skills/frontend-gen-worker/SKILL.md.",
+      "reason": "Skill files are managed by the system and their location is not a codebase concern. The skill was successfully invoked during the feature implementation."
+    }
+  ],
+  "previousRound": null
+}

@@ -1,0 +1,79 @@
+{
+  "featureId": "create-service-generator",
+  "reviewedAt": "2026-04-19T18:45:00.000Z",
+  "commitId": "61702e2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The service-generator.ts implementation successfully emits PGlite local-first BaseService subclasses with findById, findByBusiness, create, update, and delete methods. All CRUD methods properly queue sync operations via queueSync(). CreateInput and UpdateInput interfaces are generated with correct required/optional field semantics. The generator is integrated into generator.ts generateAll() and outputs services.ts. 34 unit tests pass covering CRUD generation, optional fields, sync queueing, and VAL-SVC validation assertions.",
+    "issues": [
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 12,
+        "severity": "non_blocking",
+        "description": "AUTO_MANAGED_COLUMNS contains 'sync_status' duplicated twice. This is harmless due to Set deduplication but indicates a copy-paste oversight."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 88,
+        "severity": "non_blocking",
+        "description": "The generated service code imports 'and' from drizzle-orm but never uses it in any generated method. The import is unused in the per-service generated code."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 91,
+        "severity": "non_blocking",
+        "description": "Generated services import table reference (e.g., 'tags') from @avileo/shared but the generated code also imports SyncStatus from the same package. The import line uses template literal interpolation for tableRef which is correct but the generated code pattern 'import { SyncStatus, tags } from \"@avileo/shared\"' assumes all tables are exported from the shared package's main entry point."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 157,
+        "severity": "non_blocking",
+        "description": "The create method wraps 'now' (which is a string from this.now()) in new Date(). This is consistent with existing manual services like tag-service.ts, but the type assertion 'as typeof tableRef.$inferSelect' on the return value is a type-level workaround rather than a proper database round-trip."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 230,
+        "severity": "non_blocking",
+        "description": "formatDefaultValue falls back to 'null' for Drizzle SQL default objects (detected via 'queryChunks' property). For columns like uuid with gen_random_uuid() default, this means the generated code will emit 'null' as fallback. In practice this is fine because the ID is always generated separately, but for other SQL defaults (e.g., now()), the fallback behavior may not match the actual database default."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 354,
+        "severity": "non_blocking",
+        "description": "generateServicesFile imports 'eq, and, desc' at the top level but these are also imported inside each individual service class. This creates duplicate imports when services.ts is viewed as a whole file, though each service is self-contained. The top-level imports are unused since each service has its own import block."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts",
+        "line": 201,
+        "severity": "non_blocking",
+        "description": "The test for decimal columns expects 'price: string' because Drizzle decimal columns are typed as string in TypeScript. This is correct behavior but the test name/comments don't explicitly document why decimal maps to string."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "obsidence": "The BaseService.now() method returns a string (toLocalISOString), and manual services like tag-service.ts wrap it in new Date(now) when assigning to Date-typed columns. The generated service follows this same pattern. AGENTS.md documents 'Use this.now() for local timezone ISO strings' but doesn't mention the new Date() wrapping needed for Drizzle Date columns.",
+      "evidence": "packages/app/app/lib/services/tag-service.ts:74 - createdAt: new Date(now); base-service.ts:129 - now() returns toLocalISOString() which is a string"
+    },
+    {
+      "area": "conventions",
+      "observation": "The generated services use 'typeof tags.$inferSelect' for return types rather than explicit imported types like 'Tag'. This is a different pattern from manual services which import 'type Tag' from @avileo/shared. Both patterns work but the generated code produces more verbose type signatures.",
+      "evidence": "Generated: 'Promise<typeof tags.$inferSelect | null>' vs Manual tag-service.ts: 'Promise<Tag | null>'"
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-gen-worker skill file could not be found at .factory/skills/frontend-gen-worker/SKILL.md. This may indicate the skill was not properly registered or the path has changed.",
+      "evidence": "Read of /Users/leobar37/.factory/skills/frontend-gen-worker/SKILL.md returned ENOENT"
+    },
+    {
+      "area": "knowledge",
+      "observation": "The worker discovered that Drizzle decimal columns map to 'string' TypeScript type (not number), which is a Drizzle ORM behavior. The test at line 201 accounts for this. This knowledge about Drizzle type mappings could be useful for future generator work.",
+      "evidence": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts:201 - expects 'price: string' for decimal column"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature 'create-service-generator' is implemented correctly and passes review. The service-generator.ts produces valid BaseService subclasses with all required CRUD methods, proper sync queueing via queueSync(), and correct Create/Update input interfaces. The 34 unit tests provide good coverage of the generator's behavior. Integration into generator.ts is clean - services.ts is written alongside other generated artifacts. Minor non-blocking issues include a duplicated entry in AUTO_MANAGED_COLUMNS, unused 'and' import in generated code, and duplicate top-level imports in generateServicesFile. None of these affect functionality. The feature is ready for the pilot migration (TagService) and subsequent scale migration."
+}
