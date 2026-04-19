@@ -1,11 +1,22 @@
 import { and, asc, eq, gt, gte, inArray, isNull, or } from "drizzle-orm";
 import type { RequestContext } from "../../context/request-context";
+import type { DbTransaction } from "../../lib/txid";
 import { db, sales, syncOperations } from "../../lib/db";
 import { toISODate, now } from "../../lib/date-utils";
+import { sql } from "drizzle-orm";
 import type { SyncEntity, SyncOperationInput, SyncBatchResult } from "./types";
 import type { SyncEngineDeps } from "./framework/SyncEngine";
-import { SyncEngine } from "./framework/SyncEngine";
-import { HandlerRegistry } from "./framework/HandlerRegistry";
+import {
+  SyncEngine,
+  type SyncEngineMiddleware,
+  type SyncHandlerResult,
+  HandlerRegistry as LibHandlerRegistry,
+} from "@avileo/drizzle-sync/server";
+import { SyncOperationRepository } from "./framework/SyncOperationRepository";
+import { SyncConflictRepository } from "./framework/SyncConflictRepository";
+import { syncPipeline } from "./framework/SyncPipeline";
+import { createConflictResolvers } from "./framework/ConflictResolver";
+import type { SyncContext } from "./framework/types";
 import {
   createTagHandler,
   createCustomerHandler,
@@ -24,6 +35,7 @@ import {
 import { SaleSyncHandler } from "./handlers/SaleSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
 import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
+import { logger } from "../../lib/logger";
 
 export type {
   SyncEntity,
@@ -34,36 +46,117 @@ export type {
 
 interface SyncServiceDeps extends SyncEngineDeps {}
 
+/**
+ * WeakMap to track pipeline execution state per handler instance.
+ * This enables idempotent handler execution when library calls execute() after beforeExecute().
+ */
+const pipelineStateMap = new WeakMap<unknown, { result: SyncHandlerResult | null; executed: boolean }>();
+
+/**
+ * Creates a SyncEngine middleware that wraps the backend's SyncPipeline.
+ * The middleware runs the pipeline in beforeExecute, and the handler wrapper
+ * ensures idempotent execution when the library's engine calls execute() afterward.
+ */
+function createSyncPipelineMiddleware(): SyncEngineMiddleware<RequestContext, DbTransaction> {
+  return {
+    beforeExecute: async (ctx, operation, handler, tx) => {
+      let state = pipelineStateMap.get(handler);
+      if (!state) {
+        state = { result: null, executed: false };
+        pipelineStateMap.set(handler, state);
+      }
+
+      if (state.executed) {
+        return state.result;
+      }
+
+      state.executed = true;
+
+      const context: SyncContext = {
+        ctx,
+        correlationId: operation.correlationId || `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        batchCorrelationId: "",
+      };
+
+      state.result = await syncPipeline.execute(context, operation, handler, tx);
+
+      return null; // Let library call execute() - idempotent handler returns cached result
+    },
+
+    afterExecute: async (_ctx, _operation, result) => {
+      // Pipeline already executed in beforeExecute; this hook receives the cached result.
+      // Return as-is to preserve the pipeline's result through the engine.
+      return result;
+    },
+
+    onError: async (_ctx, _operation, error, handler) => {
+      // If pipeline already executed and cached a result, return it instead of error
+      const state = pipelineStateMap.get(handler);
+      if (state?.executed && state.result) {
+        return state.result;
+      }
+
+      // Pipeline didn't execute; convert error to failure result
+      return {
+        success: false,
+        idempotencyKey: "",
+        error: error.message,
+        serverTimestamp: new Date().toISOString(),
+      };
+    },
+  };
+}
+
 export class SyncService {
-  private engine: SyncEngine;
+  private engine: SyncEngine<RequestContext, DbTransaction, SyncServiceDeps>;
 
   constructor(deps: SyncServiceDeps) {
-    this.engine = new SyncEngine(deps);
+    const syncOpRepo = new SyncOperationRepository();
+    const syncConflictRepo = deps.syncConflictRepo ?? new SyncConflictRepository();
+
+    this.engine = new SyncEngine<RequestContext, DbTransaction, SyncServiceDeps>(deps, {
+      db: {
+        transaction: <T>(fn: (tx: DbTransaction) => Promise<T>) => db.transaction(fn as any),
+        execute: (sql) => db.execute(sql as any),
+      } as any,
+      syncOpRepo,
+      syncConflictRepo,
+      conflictResolverRegistry: undefined, // Use default resolvers from library
+      middleware: createSyncPipelineMiddleware(),
+      now: () => toISODate(now()),
+      savepointSql: (name: string) => sql.raw(`SAVEPOINT ${name}`),
+      releaseSavepointSql: (name: string) => sql.raw(`RELEASE SAVEPOINT ${name}`),
+      rollbackSavepointSql: (name: string) => sql.raw(`ROLLBACK TO SAVEPOINT ${name}`),
+    });
+
     this.registerHandlers(deps);
   }
 
   private registerHandlers(deps: SyncServiceDeps): void {
+    // Clear any existing registrations from previous instances
+    LibHandlerRegistry.clear();
+
     // ─── Builder-generated handlers (simple CRUD) ───────────────────────────
-    HandlerRegistry.register("tags", () => createTagHandler(deps));
-    HandlerRegistry.register("customers", () => createCustomerHandler(deps));
-    HandlerRegistry.register("products", () => createProductHandler(deps));
-    HandlerRegistry.register("suppliers", () => createSupplierHandler(deps));
-    HandlerRegistry.register("customer_groups", () => createCustomerGroupHandler(deps));
-    HandlerRegistry.register("product_variants", () => createProductVariantHandler(deps));
+    LibHandlerRegistry.register("tags", () => createTagHandler(deps));
+    LibHandlerRegistry.register("customers", () => createCustomerHandler(deps));
+    LibHandlerRegistry.register("products", () => createProductHandler(deps));
+    LibHandlerRegistry.register("suppliers", () => createSupplierHandler(deps));
+    LibHandlerRegistry.register("customer_groups", () => createCustomerGroupHandler(deps));
+    LibHandlerRegistry.register("product_variants", () => createProductVariantHandler(deps));
 
     // ─── Builder-generated handlers (custom operations) ──────────────────────
-    HandlerRegistry.register("customer_group_members", () => createCustomerGroupMemberHandler(deps));
-    HandlerRegistry.register("customer_tags", () => createCustomerTagHandler(deps));
-    HandlerRegistry.register("visitas", () => createVisitaHandler(deps));
-    HandlerRegistry.register("sale_items", () => createSaleItemHandler(deps));
-    HandlerRegistry.register("purchase_items", () => createPurchaseItemHandler(deps));
-    HandlerRegistry.register("abonos", () => createAbonoHandler(deps));
-    HandlerRegistry.register("distribucion_items", () => createDistribucionItemHandler(deps));
+    LibHandlerRegistry.register("customer_group_members", () => createCustomerGroupMemberHandler(deps));
+    LibHandlerRegistry.register("customer_tags", () => createCustomerTagHandler(deps));
+    LibHandlerRegistry.register("visitas", () => createVisitaHandler(deps));
+    LibHandlerRegistry.register("sale_items", () => createSaleItemHandler(deps));
+    LibHandlerRegistry.register("purchase_items", () => createPurchaseItemHandler(deps));
+    LibHandlerRegistry.register("abonos", () => createAbonoHandler(deps));
+    LibHandlerRegistry.register("distribucion_items", () => createDistribucionItemHandler(deps));
 
     // ─── Explicit handlers (complex state machines, non-migratable) ───────────
-    HandlerRegistry.register("sales", () => new SaleSyncHandler(deps.saleRepo, deps.paymentRepo));
-    HandlerRegistry.register("distribuciones", () => new DistribucionSyncHandler(deps.distribucionRepo, deps.distribucionService));
-    HandlerRegistry.register("purchases", () => new PurchaseSyncHandler(deps));
+    LibHandlerRegistry.register("sales", () => new SaleSyncHandler(deps.saleRepo, deps.paymentRepo));
+    LibHandlerRegistry.register("distribuciones", () => new DistribucionSyncHandler(deps.distribucionRepo, deps.distribucionService));
+    LibHandlerRegistry.register("purchases", () => new PurchaseSyncHandler(deps));
   }
 
   async processBatch(
