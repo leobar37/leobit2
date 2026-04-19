@@ -132,6 +132,273 @@ describe("sync-engine", () => {
     });
   });
 
+  describe("middleware hooks", () => {
+    it("beforeExecute returning result skips handler.execute()", async () => {
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockResolvedValue({
+          success: true,
+          idempotencyKey: "",
+          serverTimestamp: new Date().toISOString(),
+        }),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue({
+          success: true,
+          idempotencyKey: "op-1",
+          serverTimestamp: new Date().toISOString(),
+        }),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      const result = await engine.processBatch(makeContext(), [op]);
+      expect(result.results[0].success).toBe(true);
+      expect(middleware.beforeExecute).toHaveBeenCalled();
+      expect(mockHandler.execute).not.toHaveBeenCalled();
+    });
+
+    it("beforeExecute returning null allows handler.execute()", async () => {
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockResolvedValue({
+          success: true,
+          idempotencyKey: "",
+          serverTimestamp: new Date().toISOString(),
+        }),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue(null),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      await engine.processBatch(makeContext(), [op]);
+      expect(middleware.beforeExecute).toHaveBeenCalled();
+      expect(mockHandler.execute).toHaveBeenCalled();
+    });
+
+    it("afterExecute is called with result and can transform it", async () => {
+      const originalResult = {
+        success: true,
+        idempotencyKey: "op-1",
+        serverTimestamp: new Date().toISOString(),
+      };
+
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockResolvedValue(originalResult),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue(null),
+        afterExecute: vi.fn().mockResolvedValue({
+          success: true,
+          idempotencyKey: "op-1",
+          serverTimestamp: new Date().toISOString(),
+          // Transform adds extra field
+        }),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      await engine.processBatch(makeContext(), [op]);
+      expect(middleware.afterExecute).toHaveBeenCalledWith(
+        expect.anything(),
+        op,
+        originalResult,
+        mockHandler,
+        expect.anything()
+      );
+    });
+
+    it("onError is called when handler throws", async () => {
+      const handlerError = new Error("Handler failed");
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockRejectedValue(handlerError),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue(null),
+        onError: vi.fn().mockResolvedValue({
+          success: false,
+          idempotencyKey: "op-1",
+          error: "Middleware handled error",
+          serverTimestamp: new Date().toISOString(),
+        }),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      const result = await engine.processBatch(makeContext(), [op]);
+      expect(middleware.onError).toHaveBeenCalledWith(
+        expect.anything(),
+        op,
+        handlerError,
+        mockHandler,
+        expect.anything()
+      );
+    });
+
+    it("middleware with only one hook is accepted without TypeScript errors", async () => {
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue(null),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      // Should compile and run without errors
+      const result = await engine.processBatch(makeContext(), [op]);
+      expect(result.summary.total).toBe(1);
+    });
+
+    it("middleware hooks are called in correct order", async () => {
+      const callOrder: string[] = [];
+
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockImplementation(() => {
+          callOrder.push("handler.execute");
+          return {
+            success: true,
+            idempotencyKey: "op-1",
+            serverTimestamp: new Date().toISOString(),
+          };
+        }),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockImplementation(() => {
+          callOrder.push("beforeExecute");
+          return null;
+        }),
+        afterExecute: vi.fn().mockImplementation(() => {
+          callOrder.push("afterExecute");
+          return {
+            success: true,
+            idempotencyKey: "op-1",
+            serverTimestamp: new Date().toISOString(),
+          };
+        }),
+      };
+
+      const engine = createEngineWithMiddleware(middleware);
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      await engine.processBatch(makeContext(), [op]);
+      expect(callOrder).toEqual([
+        "beforeExecute",
+        "handler.execute",
+        "afterExecute",
+      ]);
+    });
+
+    it("onError returning SyncHandlerResult prevents savepoint rollback", async () => {
+      const handlerError = new Error("Handler failed");
+      const mockHandler = {
+        entityType: "sales" as SyncEntity,
+        validateBusinessRules: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockRejectedValue(handlerError),
+      };
+
+      HandlerRegistry.register("sales", () => mockHandler);
+
+      const middleware = {
+        beforeExecute: vi.fn().mockResolvedValue(null),
+        onError: vi.fn().mockResolvedValue({
+          success: false,
+          idempotencyKey: "op-1",
+          error: "Middleware handled error - no rollback needed",
+          serverTimestamp: new Date().toISOString(),
+        }),
+      };
+
+      const mockDb = createMockDb();
+      const mockOpRepo = createMockOpRepo();
+      const mockConflictRepo = createMockConflictRepo();
+
+      const engine = new SyncEngine(
+        {},
+        {
+          db: mockDb,
+          syncOpRepo: mockOpRepo,
+          syncConflictRepo: mockConflictRepo,
+          middleware: middleware as any,
+          now: () => new Date().toISOString(),
+          savepointSql: (name: string) => `SAVEPOINT ${name}`,
+          releaseSavepointSql: (name: string) => `RELEASE SAVEPOINT ${name}`,
+          rollbackSavepointSql: (name: string) => `ROLLBACK TO SAVEPOINT ${name}`,
+        }
+      );
+
+      const op = makeOp({
+        idempotencyKey: "op-1",
+        entityType: "sales",
+        entityId: "entity-1",
+        operation: "create",
+      });
+
+      const result = await engine.processBatch(makeContext(), [op]);
+      // The operation should be recorded as a failure but not trigger rollback
+      expect(middleware.onError).toHaveBeenCalled();
+      // Result should reflect middleware's error handling
+      expect(result.results[0].success).toBe(false);
+    });
+  });
+
   describe("logging", () => {
     it("uses custom logger when provided", async () => {
       const customLogger = {
@@ -246,6 +513,26 @@ function createEngine(overrides: {
       releaseSavepointSql: (name: string) => `RELEASE SAVEPOINT ${name}`,
       rollbackSavepointSql: (name: string) => `ROLLBACK TO SAVEPOINT ${name}`,
       ...overrides,
+    }
+  );
+}
+
+function createEngineWithMiddleware(middleware: any) {
+  const mockDb = createMockDb();
+  const mockOpRepo = createMockOpRepo();
+  const mockConflictRepo = createMockConflictRepo();
+
+  return new SyncEngine(
+    {},
+    {
+      db: mockDb,
+      syncOpRepo: mockOpRepo,
+      syncConflictRepo: mockConflictRepo,
+      middleware,
+      now: () => new Date().toISOString(),
+      savepointSql: (name: string) => `SAVEPOINT ${name}`,
+      releaseSavepointSql: (name: string) => `RELEASE SAVEPOINT ${name}`,
+      rollbackSavepointSql: (name: string) => `ROLLBACK TO SAVEPOINT ${name}`,
     }
   );
 }

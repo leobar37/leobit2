@@ -444,7 +444,46 @@ export class SyncEngine<
       entityId: operation.entityId,
     });
 
-    const result = await handler.execute(ctx, operation, tx);
+    let result: SyncHandlerResult | undefined;
+    const middleware = this.config.middleware;
+
+    // Call middleware beforeExecute hook
+    if (middleware?.beforeExecute) {
+      const beforeResult = await middleware.beforeExecute(ctx, operation, handler, tx);
+      if (beforeResult != null) {
+        // Middleware returned a result - short-circuit handler execution
+        result = beforeResult;
+      }
+    }
+
+    // If beforeExecute didn't return a result, execute handler normally
+    if (result === undefined) {
+      try {
+        result = await handler.execute(ctx, operation, tx);
+
+        // Call middleware afterExecute hook on success
+        if (middleware?.afterExecute) {
+          result = await middleware.afterExecute(ctx, operation, result, handler, tx);
+        }
+      } catch (error) {
+        // Call middleware onError hook when handler throws
+        if (middleware?.onError) {
+          result = await middleware.onError(
+            ctx,
+            operation,
+            error instanceof Error ? error : new Error(String(error)),
+            handler,
+            tx
+          );
+        } else {
+          // Re-throw if no onError middleware to handle it
+          throw error;
+        }
+      }
+    }
+
+    // At this point result must be defined
+    const handlerResult = result!;
 
     // Inject syncStatus: 'synced' into payload before saving
     const enrichedPayload = {
@@ -456,16 +495,16 @@ export class SyncEngine<
     await this.syncOpRepo.updateStatus(
       ctx,
       operation.idempotencyKey,
-      result.success ? "processed" : "failed",
-      result.error ?? null,
+      handlerResult.success ? "processed" : "failed",
+      handlerResult.error ?? null,
       tx,
       enrichedPayload
     );
 
     return {
       idempotencyKey: operation.idempotencyKey,
-      success: result.success,
-      error: result.error,
+      success: handlerResult.success,
+      error: handlerResult.error,
       serverTimestamp: nowIso,
     };
   }
