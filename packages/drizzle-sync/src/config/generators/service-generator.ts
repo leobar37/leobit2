@@ -343,13 +343,17 @@ function getIdPrefix(entityName: string): string {
  * when aggregating multiple services into a single file
  */
 function stripImports(code: string): string {
-  // Match import statements (type imports, value imports, and side-effect imports)
-  // This handles multi-line imports properly
-  return code
-    .replace(/^import\s+type\s+\{[^}]+\}\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
-    .replace(/^import\s+\{[^}]+\}\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
-    .replace(/^import\s+\*\s+as\s+\w+\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
-    .replace(/^import\s+['"][^'"]+['"]\s*;?\s*/gm, "");
+  // Split into lines and filter out import statements
+  const lines = code.split('\n');
+  const filteredLines = lines.filter(line => {
+    const trimmed = line.trim();
+    // Skip empty lines
+    if (!trimmed) return true;
+    // Skip import statements
+    if (trimmed.startsWith('import ')) return false;
+    return true;
+  });
+  return filteredLines.join('\n');
 }
 
 /**
