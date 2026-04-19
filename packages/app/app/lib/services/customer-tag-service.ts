@@ -1,24 +1,33 @@
 /**
  * Customer Tag Service
- * Local-first customer-tag assignment service with automatic sync integration
+ * 
+ * This file extends the generated CustomerTagsService from drizzle-sync
+ * to preserve the custom tag assignment methods while leveraging
+ * the generated CRUD operations.
+ * 
+ * Generated at: 2026-04-19
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and } from "drizzle-orm";
-import { BaseService, type EntityType } from "./base-service";
-import { SyncService } from "../sync/sync-service";
-import { SyncStatus, customerTags, type CustomerTag } from "@avileo/shared";
+import { SyncService } from "~/lib/sync/sync-service";
+import { customerTags, type CustomerTag } from "@avileo/shared";
+
+// Import the generated CustomerTagsService and its input types
+import { 
+  CustomerTagsService, 
+  type CreateCustomerTagsInput 
+} from "~/lib/sync/generated/services";
+
+// Re-export input types for backward compatibility
+export type CreateCustomerTagInput = CreateCustomerTagsInput;
 
 /**
  * Customer Tag Service
- * Provides operations for assigning tags to customers with local-first approach
- * and automatic sync to server
+ * Extends the generated CustomerTagsService with custom tag assignment methods.
  */
-export class CustomerTagService extends BaseService {
-  private static readonly TABLE_NAME = "customer_tags";
-  private static readonly ENTITY_TYPE: EntityType = "customer_tags";
-
+export class CustomerTagService extends CustomerTagsService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -27,14 +36,6 @@ export class CustomerTagService extends BaseService {
     businessUserId: string
   ) {
     super(pg, db, syncService, businessId, businessUserId);
-  }
-
-  getEntityType(): EntityType {
-    return CustomerTagService.ENTITY_TYPE;
-  }
-
-  getEntityPrefix(): string {
-    return "ct";
   }
 
   /**
@@ -70,7 +71,7 @@ export class CustomerTagService extends BaseService {
 
     // Then, insert new assignments if any
     if (tagIds.length > 0) {
-      const now = new Date().toISOString();
+      const now = this.now();
 
       for (const tagId of tagIds) {
         const id = this.generateId();
@@ -78,16 +79,12 @@ export class CustomerTagService extends BaseService {
         await this.db.insert(customerTags).values({
           customerId,
           tagId,
-          assignedAt: new Date(now),
-          assignedBy: null,
-          syncStatus: SyncStatus.PENDING,
-          syncAttempts: 0,
         });
 
         await this.queueSync("create", id, {
           customerId,
           tagId,
-        });
+        } as Record<string, unknown>);
       }
     }
   }
@@ -113,21 +110,16 @@ export class CustomerTagService extends BaseService {
     }
 
     const id = this.generateId();
-    const now = new Date().toISOString();
 
     await this.db.insert(customerTags).values({
       customerId,
       tagId,
-      assignedAt: new Date(now),
-      assignedBy: null,
-      syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,
     });
 
     await this.queueSync("create", id, {
       customerId,
       tagId,
-    });
+    } as Record<string, unknown>);
   }
 
   /**
@@ -146,7 +138,7 @@ export class CustomerTagService extends BaseService {
     await this.queueSync("delete", `${customerId}_${tagId}`, {
       customerId,
       tagId,
-    });
+    } as Record<string, unknown>);
   }
 
   /**
@@ -155,7 +147,6 @@ export class CustomerTagService extends BaseService {
   async bulkAssignTags(customerIds: string[], tagIds: string[]): Promise<void> {
     if (customerIds.length === 0) return;
 
-    const now = new Date().toISOString();
     const syncGroupId = this.generateSyncGroup();
 
     for (const customerId of customerIds) {
@@ -171,10 +162,6 @@ export class CustomerTagService extends BaseService {
         await this.db.insert(customerTags).values({
           customerId,
           tagId,
-          assignedAt: new Date(now),
-          assignedBy: null,
-          syncStatus: SyncStatus.PENDING,
-          syncAttempts: 0,
         });
 
         await this.queueSync(
@@ -183,7 +170,7 @@ export class CustomerTagService extends BaseService {
           {
             customerId,
             tagId,
-          },
+          } as Record<string, unknown>,
           syncGroupId
         );
       }
