@@ -12,6 +12,13 @@ import { files } from "../../../db/schema/files";
 import type { SyncOperationInput, SyncEntity } from "../types";
 import type { IConflictResolver } from "./types";
 import { logger } from "../../../lib/logger";
+import {
+  GenericConflictResolverRegistry,
+  NoOpConflictResolver,
+  type IGenericConflictResolver,
+  type GenericSyncOperationInput,
+  type ConflictCheckResult as LibConflictCheckResult,
+} from "@avileo/drizzle-sync/server";
 
 export interface ConflictCheckResult {
   hasConflict: boolean;
@@ -551,6 +558,51 @@ export function createConflictResolvers(): Record<string, IConflictResolver> {
     files: new FileConflictResolver(),
     sale_items: new SaleItemConflictResolver(),
   };
+}
+
+/**
+ * Adapter that wraps a backend IConflictResolver to implement the library's IGenericConflictResolver.
+ * This allows the backend's conflict resolvers to be registered in the library's GenericConflictResolverRegistry.
+ */
+class ConflictResolverAdapter {
+  constructor(
+    private resolver: IConflictResolver,
+    private _entityType: string
+  ) {}
+
+  /**
+   * Implements IGenericConflictResolver.checkConflict().
+   * Accepts GenericSyncOperationInput<string> from the library, casts to SyncOperationInput,
+   * and delegates to the backend's IConflictResolver.
+   */
+  async checkConflict(
+    ctx: RequestContext,
+    operation: GenericSyncOperationInput<string>,
+    tx: DbTransaction
+  ): Promise<LibConflictCheckResult> {
+    // Cast GenericSyncOperationInput to SyncOperationInput (they have identical structure)
+    return this.resolver.checkConflict(ctx, operation as SyncOperationInput, tx);
+  }
+}
+
+/**
+ * Creates a GenericConflictResolverRegistry with all backend conflict resolvers registered.
+ * This enables the library's SyncEngine to use the backend's custom conflict resolvers
+ * via the registry interface.
+ */
+export function createConflictResolverRegistry(): GenericConflictResolverRegistry<string, RequestContext, DbTransaction> {
+  const registry = new GenericConflictResolverRegistry<string, RequestContext, DbTransaction>();
+  const resolvers = createConflictResolvers();
+
+  for (const [entityType, resolver] of Object.entries(resolvers)) {
+    const adapter = new ConflictResolverAdapter(resolver, entityType);
+    registry.register(entityType, adapter as unknown as IGenericConflictResolver<RequestContext, DbTransaction, string>);
+  }
+
+  // Set NoOpConflictResolver as the default fallback
+  registry.setDefaultResolver(new NoOpConflictResolver<RequestContext, DbTransaction>());
+
+  return registry;
 }
 
 export { VersionConflictResolver, NoOpConflictResolver };

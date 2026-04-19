@@ -15,7 +15,7 @@ import {
 import { SyncOperationRepository } from "./framework/SyncOperationRepository";
 import { SyncConflictRepository } from "./framework/SyncConflictRepository";
 import { syncPipeline } from "./framework/SyncPipeline";
-import { createConflictResolvers } from "./framework/ConflictResolver";
+import { createConflictResolvers, createConflictResolverRegistry } from "./framework/ConflictResolver";
 import type { SyncContext } from "./framework/types";
 import {
   createTagHandler,
@@ -121,7 +121,7 @@ export class SyncService {
       } as any,
       syncOpRepo,
       syncConflictRepo,
-      conflictResolverRegistry: undefined, // Use default resolvers from library
+      conflictResolverRegistry: createConflictResolverRegistry(),
       middleware: createSyncPipelineMiddleware(),
       now: () => toISODate(now()),
       savepointSql: (name: string) => sql.raw(`SAVEPOINT ${name}`),
