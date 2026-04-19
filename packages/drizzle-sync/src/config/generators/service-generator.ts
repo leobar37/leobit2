@@ -35,6 +35,24 @@ const SYSTEM_COLUMNS = new Set([
 ]);
 
 /**
+ * Check if a table has an 'id' column (as opposed to composite primary key)
+ * Junction tables like customer_tags have composite primary keys (customerId, tagId)
+ * and don't have an 'id' column.
+ */
+function hasIdColumn(columns: ColumnMetadata[]): boolean {
+  return columns.some((col) => col.name.toLowerCase() === "id");
+}
+
+/**
+ * Detect if a table is a junction table (has no 'id' column, uses composite keys instead)
+ */
+function isJunctionTable(columns: ColumnMetadata[]): boolean {
+  // Junction tables don't have an 'id' column
+  // They have composite primary keys made of foreign key columns
+  return !hasIdColumn(columns);
+}
+
+/**
  * Generate a PGlite local-first BaseService subclass for an entity
  */
 export function generateService(
@@ -43,6 +61,9 @@ export function generateService(
 ): ServiceOutput {
   const columns = introspectTable(config.table);
   const columnsToInclude = resolveColumns(columns, config);
+
+  // Check if this is a junction table (no 'id' column, composite primary key)
+  const junctionTable = isJunctionTable(columns);
 
   // Filter out auto-managed columns for input interfaces
   const userColumns = columnsToInclude.filter(
@@ -81,6 +102,28 @@ export function generateService(
   });
   const updateInputInterface = `export interface Update${pascalCase(entityName)}Input {\n${updateInputFields.join("\n")}\n}`;
 
+  // Generate findById method - only for non-junction tables
+  const findByIdMethod = junctionTable
+    ? ""
+    : `
+  /**
+   * Find a ${entityName} by ID
+   */
+  async findById(id: string): Promise<typeof ${tableRef}.$inferSelect | null> {
+    const result = await this.db
+      .select()
+      .from(${tableRef})
+      .where(eq(${tableRef}.id, id))
+      .limit(1);
+
+    return result[0] || null;
+  }`;
+
+  // Determine if we need to order by a timestamp column (junction tables may not have createdAt)
+  const hasCreatedAt = columns.some(
+    (col) => col.name.toLowerCase() === "createdat" || col.name.toLowerCase() === "created_at"
+  );
+
   // Generate the service class
   const serviceCode = `
 import type { PGlite } from "@electric-sql/pglite";
@@ -114,20 +157,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
 
   getEntityPrefix(): string {
     return ${pascalCase(entityName)}Service.ID_PREFIX;
-  }
-
-  /**
-   * Find a ${entityName} by ID
-   */
-  async findById(id: string): Promise<typeof ${tableRef}.$inferSelect | null> {
-    const result = await this.db
-      .select()
-      .from(${tableRef})
-      .where(eq(${tableRef}.id, id))
-      .limit(1);
-
-    return result[0] || null;
-  }
+  }${findByIdMethod}
 
   /**
    * Find all ${entityName} for the current business
@@ -136,8 +166,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     return this.db
       .select()
       .from(${tableRef})
-      .where(eq(${tableRef}.businessId, this.businessId))
-      .orderBy(desc(${tableRef}.createdAt));
+      .where(eq(${tableRef}.businessId, this.businessId))${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
   }
 
   /**
@@ -149,8 +178,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     const now = this.now();
 
     const entity: typeof ${tableRef}.$inferInsert = {
-      id,
-${generateInsertFields(userColumns, tableRef)}
+${junctionTable ? generateInsertFieldsJunction(userColumns, tableRef) : `      id,\n${generateInsertFields(userColumns, tableRef)}`}
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,
       businessId: this.businessId,
@@ -166,6 +194,7 @@ ${generatePayloadFields(userColumns, tableRef)}
 
     return { ...entity } as typeof ${tableRef}.$inferSelect;
   }
+${junctionTable ? "" : `
 
   /**
    * Update an existing ${entityName}
@@ -207,7 +236,7 @@ ${generateUpdateFields(userColumns, tableRef)}
       .where(eq(${tableRef}.id, id));
 
     await this.queueSync("delete", id, {});
-  }
+  }`}
 }
 `;
 
@@ -215,6 +244,29 @@ ${generateUpdateFields(userColumns, tableRef)}
     name: entityName,
     serviceCode: serviceCode.trim(),
   };
+}
+
+/**
+ * Generate the field assignments for the insert operation (for junction tables without 'id')
+ */
+function generateInsertFieldsJunction(columns: ColumnMetadata[], _tableRef: string): string {
+  const lines: string[] = [];
+
+  for (const col of columns) {
+    const fieldName = camelCase(col.name);
+    if (col.default !== undefined) {
+      // Has default - use input value or default
+      lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
+    } else if (!col.notNull) {
+      // Nullable - use input value (which is optional)
+      lines.push(`      ${fieldName}: input.${fieldName},`);
+    } else {
+      // Required - use input value directly
+      lines.push(`      ${fieldName}: input.${fieldName},`);
+    }
+  }
+
+  return lines.join("\n");
 }
 
 /**
@@ -273,6 +325,8 @@ function generateUpdateFields(columns: ColumnMetadata[], _tableRef: string): str
 
 /**
  * Get TypeScript type for a column
+ * Note: Date columns return 'string' because PGlite stores dates as ISO strings
+ * and the frontend Zod schemas (e.g., distribuciones.fecha) expect strings.
  */
 function getTypeScriptType(col: ColumnMetadata): string {
   switch (col.dataType) {
@@ -283,7 +337,7 @@ function getTypeScriptType(col: ColumnMetadata): string {
     case "boolean":
       return "boolean";
     case "date":
-      return "Date";
+      return "string";
     case "enum":
       return col.enumValues?.map((v) => `"${v}"`).join(" | ") || "string";
     case "json":

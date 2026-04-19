@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   timestamp,
+  date,
   jsonb,
   decimal,
 } from "drizzle-orm/pg-core";
@@ -73,6 +74,45 @@ const productConfig: EntitySyncConfig = {
   syncable: true,
   autoFields: true,
   priority: 2,
+};
+
+// Junction table without 'id' column (like customer_tags with composite PK on customerId+tagId)
+const testJunctionTable = pgTable("customer_tags", {
+  customerId: uuid("customer_id").notNull(),
+  tagId: uuid("tag_id").notNull(),
+  assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+  assignedBy: uuid("assigned_by"),
+  syncStatus: text("sync_status").notNull().default("pending"),
+  syncAttempts: integer("sync_attempts").notNull().default(0),
+  businessId: uuid("business_id").notNull(),
+}, (table) => ({
+  // Composite primary key on customerId + tagId (not using 'id' column)
+}));
+
+const junctionConfig: EntitySyncConfig = {
+  table: testJunctionTable,
+  syncable: true,
+  autoFields: true,
+  priority: 2,
+};
+
+// Table with a date column (similar to distribuciones.fecha which uses date type)
+const testDistribucionTable = pgTable("distribuciones", {
+  id: uuid("id").primaryKey(),
+  fecha: date("fecha").notNull(),
+  estado: text("estado").notNull().default("activo"),
+  syncStatus: text("sync_status").notNull().default("pending"),
+  syncAttempts: integer("sync_attempts").notNull().default(0),
+  businessId: uuid("business_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+const distribucionConfig: EntitySyncConfig = {
+  table: testDistribucionTable,
+  syncable: true,
+  autoFields: true,
+  priority: 3,
 };
 
 describe("Service Generator", () => {
@@ -490,6 +530,112 @@ describe("Service Generator", () => {
       expect(result.serviceCode).toContain("this.db.insert(tags)");
       expect(result.serviceCode).toContain("this.db\n      .update(tags)");
       expect(result.serviceCode).toContain("this.db\n      .delete(tags)");
+    });
+  });
+
+  describe("date column type handling", () => {
+    it("uses string type for date columns (not Date)", () => {
+      const result = generateService("distribuciones", distribucionConfig);
+
+      // fecha is a date column - it should use string type, not Date
+      // This matches the frontend Zod schema which uses z.string() for fecha
+      expect(result.serviceCode).toContain("fecha: string");
+      expect(result.serviceCode).not.toContain("fecha: Date");
+    });
+
+    it("generates CreateInput with string type for date columns", () => {
+      const result = generateService("distribuciones", distribucionConfig);
+
+      // The CreateInput interface should have fecha as string
+      expect(result.serviceCode).toContain("export interface CreateDistribucionesInput");
+      expect(result.serviceCode).toMatch(/fecha:\s*string/);
+    });
+
+    it("generates UpdateInput with optional string type for date columns", () => {
+      const result = generateService("distribuciones", distribucionConfig);
+
+      // The UpdateInput interface should have fecha as optional string
+      expect(result.serviceCode).toContain("export interface UpdateDistribucionesInput");
+      expect(result.serviceCode).toMatch(/fecha\?:\s*string/);
+    });
+  });
+
+  describe("junction table handling", () => {
+    it("does not generate findById for junction tables without 'id' column", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      // Junction tables don't have 'id' column, so no findById should be generated
+      expect(result.serviceCode).not.toContain("findById(");
+      expect(result.serviceCode).not.toContain("where(eq(customerTags.id");
+    });
+
+    it("generates findByBusiness for junction tables", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      expect(result.serviceCode).toContain("findByBusiness()");
+      expect(result.serviceCode).toContain("eq(customerTags.businessId, this.businessId)");
+    });
+
+    it("does not generate update method for junction tables", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      // Junction tables should not have standard update method
+      expect(result.serviceCode).not.toContain("async update(");
+    });
+
+    it("does not generate delete method for junction tables", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      // Junction tables should not have standard delete method
+      expect(result.serviceCode).not.toContain("async delete(");
+    });
+
+    it("generates create method without 'id' field for junction tables", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      expect(result.serviceCode).toContain("async create(");
+      // Should not have 'id' field in create (use more specific patterns)
+      expect(result.serviceCode).not.toContain("id: this.generateId()");
+      // Make sure it's not the primary key id field being set (not customerId/tagId)
+      // The id is generated but not assigned to the entity
+      expect(result.serviceCode).not.toMatch(/\n\s+id,\n/);
+      // But should have customerId and tagId
+      expect(result.serviceCode).toContain("customerId: input.customerId");
+      expect(result.serviceCode).toContain("tagId: input.tagId");
+    });
+
+    it("generates CreateInput interface for junction table", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      expect(result.serviceCode).toContain("export interface CreateCustomerTagsInput");
+      // Both customerId and tagId should be required (notNull without default)
+      expect(result.serviceCode).toContain("customerId: string");
+      expect(result.serviceCode).toContain("tagId: string");
+    });
+
+    it("creates service code that uses proper junction table structure", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      // The entity should be built without id field
+      expect(result.serviceCode).toContain("const entity: typeof customerTags.$inferInsert = {");
+      // Should have syncStatus, syncAttempts, businessId, etc.
+      expect(result.serviceCode).toContain("syncStatus: SyncStatus.PENDING");
+      expect(result.serviceCode).toContain("syncAttempts: 0");
+      expect(result.serviceCode).toContain("businessId: this.businessId");
+    });
+
+    it("junction table has no update or delete methods but still has findByBusiness and create", () => {
+      const result = generateService("customer_tags", junctionConfig);
+
+      // Should have these
+      expect(result.serviceCode).toContain("findByBusiness()");
+      expect(result.serviceCode).toContain("create(");
+      expect(result.serviceCode).toContain("queueSync(\"create\"");
+
+      // Should NOT have these (no standard CRUD for junction tables)
+      expect(result.serviceCode).not.toContain("update(");
+      expect(result.serviceCode).not.toContain("delete(");
+      expect(result.serviceCode).not.toContain("findById(");
     });
   });
 });
