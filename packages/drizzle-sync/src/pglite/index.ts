@@ -109,6 +109,7 @@ export {
 
   // Types
   type TableMap,
+  type ChangeApplierConfig,
 
   // Dynamic schema mapper (NEW)
   createSchemaMapper,

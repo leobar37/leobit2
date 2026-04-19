@@ -263,6 +263,23 @@ export function getInvalidColumns(tableName: string): Set<string> {
  */
 export type TableMap = Record<string, PgTable>;
 
+/**
+ * Configuration for the change applier (server → client sync).
+ * This type is used by the generated applier config.
+ */
+export interface ChangeApplierConfig {
+  /** Set of valid table names that can be synced */
+  validTables: Set<string>;
+  /** Map of table names to their column sets */
+  tableColumns: Record<string, Set<string>>;
+  /** Default values for required columns without server defaults */
+  requiredDefaults?: Record<string, Record<string, unknown>>;
+  /** Fields that represent relations, not actual columns */
+  relationFields?: Set<string>;
+  /** Order in which tables should be applied (for FK constraints) */
+  applyOrder?: string[];
+}
+
 // ============================================================================
 // Dynamic Schema Mapper (config-based)
 // ============================================================================

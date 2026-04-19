@@ -1,238 +1,282 @@
-import { defineEntity } from '../config';
-import type { SyncEngineConfig } from '../config/types';
+/**
+ * Avileo Sync Preset Configuration
+ * 
+ * Uses defineSyncConfig with Drizzle table references for proper introspection
+ * and code generation support.
+ */
 
-export const avileoEntities = {
-  customers: defineEntity('customers', {
-    tableName: 'customers',
-    fields: [
-      'id', 'business_id', 'name', 'dni', 'phone', 'address', 'notes',
-      'sync_status', 'sync_attempts', 'created_by', 'created_at', 'updated_at'
-    ],
+import { defineSyncConfig } from '../config';
+import type { EntitySyncConfig } from '../config/types';
+
+// Import Drizzle tables from @avileo/shared
+import {
+  customers,
+  sales,
+  saleItems,
+  abonos,
+  products,
+  productVariants,
+  purchases,
+  purchaseItems,
+  suppliers,
+  distribuciones,
+  distribucionItems,
+  visitas,
+  tags,
+  customerTags,
+  customerGroups,
+  customerGroupMembers,
+} from '@avileo/shared';
+
+// Entity sync configurations
+const entityConfigs: Record<string, EntitySyncConfig> = {
+  // ============================================
+  // PARENT ENTITIES (Priority 1)
+  // ============================================
+  
+  customers: {
+    table: customers,
+    syncable: true,
+    autoFields: true,
     priority: 1,
-    parentFields: ['business_id'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
     conflictResolver: 'last-write-wins',
-  }),
+    relations: {
+      children: [
+        { entity: 'sales', foreignKey: 'customer_id' },
+        { entity: 'abonos', foreignKey: 'customer_id' },
+        { entity: 'visitas', foreignKey: 'customer_id' },
+        { entity: 'customer_tags', foreignKey: 'customer_id' },
+        { entity: 'customer_group_members', foreignKey: 'customer_id' },
+      ],
+    },
+  },
 
-  sales: defineEntity('sales', {
-    tableName: 'sales',
-    fields: [
-      'id', 'business_id', 'customer_id', 'seller_id', 'distribucion_id', 'visita_id',
-      'type', 'sale_type', 'payment_mode', 'total_amount', 'amount_paid', 'balance_due',
-      'tara', 'net_weight', 'sale_date', 'delivery_date', 'order_date', 'status',
-      'version', 'confirmed_snapshot', 'delivered_snapshot', 'allow_customer_edit',
-      'sync_status', 'sync_attempts', 'cancelled_at', 'cancelled_by', 'cancel_reason',
-      'refund_amount', 'refund_date', 'refund_method', 'refund_reference', 'refund_notes',
-      'advance_payment_method', 'advance_reference_number', 'advance_proof_image_id',
-      'created_at', 'updated_at'
-    ],
+  products: {
+    table: products,
+    syncable: true,
+    autoFields: true,
     priority: 1,
-    parentFields: ['business_id', 'customer_id'],
-    childEntities: ['sale_items', 'abonos'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-    versionField: 'version',
+    conflictResolver: 'last-write-wins',
+    relations: {
+      children: [
+        { entity: 'product_variants', foreignKey: 'product_id' },
+      ],
+    },
+  },
+
+  suppliers: {
+    table: suppliers,
+    syncable: true,
+    autoFields: true,
+    priority: 1,
+    conflictResolver: 'last-write-wins',
+    relations: {
+      children: [
+        { entity: 'purchases', foreignKey: 'supplier_id' },
+      ],
+    },
+  },
+
+  tags: {
+    table: tags,
+    syncable: true,
+    autoFields: true,
+    priority: 1,
+    conflictResolver: 'last-write-wins',
+    relations: {
+      children: [
+        { entity: 'customer_tags', foreignKey: 'tag_id' },
+      ],
+    },
+  },
+
+  customer_groups: {
+    table: customerGroups,
+    syncable: true,
+    autoFields: true,
+    priority: 1,
+    conflictResolver: 'last-write-wins',
+    relations: {
+      children: [
+        { entity: 'customer_group_members', foreignKey: 'group_id' },
+      ],
+    },
+  },
+
+  purchases: {
+    table: purchases,
+    syncable: true,
+    autoFields: true,
+    priority: 1,
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'suppliers', foreignKey: 'supplier_id', required: false },
+      ],
+      children: [
+        { entity: 'purchase_items', foreignKey: 'purchase_id' },
+      ],
+    },
+  },
+
+  distribuciones: {
+    table: distribuciones,
+    syncable: true,
+    autoFields: true,
+    priority: 1,
+    conflictResolver: 'last-write-wins',
+    relations: {
+      children: [
+        { entity: 'distribucion_items', foreignKey: 'distribucion_id' },
+        { entity: 'visitas', foreignKey: 'distribucion_id' },
+      ],
+    },
+  },
+
+  // ============================================
+  // CHILD ENTITIES (Priority 2)
+  // ============================================
+
+  sales: {
+    table: sales,
+    syncable: true,
+    autoFields: true,
+    priority: 2,
     conflictResolver: 'version-based',
-  }),
+    relations: {
+      parents: [
+        { entity: 'customers', foreignKey: 'customer_id', required: false },
+      ],
+      children: [
+        { entity: 'sale_items', foreignKey: 'sale_id' },
+      ],
+    },
+  },
 
-  sale_items: defineEntity('sale_items', {
-    tableName: 'sale_items',
-    fields: [
-      'id', 'business_id', 'sale_id', 'product_id', 'variant_id', 'product_name',
-      'variant_name', 'quantity', 'ordered_quantity', 'delivered_quantity', 'unit_price',
-      'unit_price_quoted', 'unit_price_final', 'cost_price_snapshot', 'subtotal',
-      'is_modified', 'original_quantity', 'sync_status', 'sync_attempts',
-      'sync_group_id', 'created_at', 'updated_at'
-    ],
+  sale_items: {
+    table: saleItems,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['sale_id', 'business_id'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'sales', foreignKey: 'sale_id', required: true },
+        { entity: 'products', foreignKey: 'product_id', required: true },
+        { entity: 'product_variants', foreignKey: 'variant_id', required: true },
+      ],
+    },
+  },
 
-  abonos: defineEntity('abonos', {
-    tableName: 'abonos',
-    fields: [
-      'id', 'business_id', 'customer_id', 'seller_id', 'related_sale_id',
-      'amount', 'payment_method', 'reference_number', 'notes', 'proof_image_id',
-      'sync_status', 'sync_attempts', 'created_at', 'updated_at'
-    ],
+  abonos: {
+    table: abonos,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['business_id', 'customer_id', 'related_sale_id'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'customers', foreignKey: 'customer_id', required: true },
+        { entity: 'sales', foreignKey: 'related_sale_id', required: false },
+      ],
+    },
+  },
 
-  products: defineEntity('products', {
-    tableName: 'products',
-    fields: [
-      'id', 'business_id', 'name', 'type', 'unit', 'base_price', 'cost_price',
-      'is_active', 'has_variants', 'image_id', 'sync_status', 'sync_attempts',
-      'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id'],
-    childEntities: ['product_variants'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
-
-  product_variants: defineEntity('product_variants', {
-    tableName: 'product_variants',
-    fields: [
-      'id', 'business_id', 'product_id', 'name', 'sku', 'unit_quantity',
-      'price', 'cost_price', 'sort_order', 'is_active', 'sync_status',
-      'sync_attempts', 'created_at', 'updated_at'
-    ],
+  product_variants: {
+    table: productVariants,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['product_id', 'business_id'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'products', foreignKey: 'product_id', required: true },
+      ],
+    },
+  },
 
-  purchases: defineEntity('purchases', {
-    tableName: 'purchases',
-    fields: [
-      'id', 'business_id', 'supplier_id', 'purchase_date', 'status', 'total_amount',
-      'invoice_number', 'receipt_image_id', 'notes', 'sync_status', 'sync_attempts',
-      'sync_group_id', 'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id', 'supplier_id'],
-    childEntities: ['purchase_items'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
-
-  purchase_items: defineEntity('purchase_items', {
-    tableName: 'purchase_items',
-    fields: [
-      'id', 'business_id', 'purchase_id', 'product_id', 'variant_id', 'unit_id',
-      'quantity', 'unit_cost', 'total_cost', 'sync_status', 'sync_attempts',
-      'sync_group_id', 'created_at', 'updated_at'
-    ],
+  purchase_items: {
+    table: purchaseItems,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['purchase_id', 'business_id'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'purchases', foreignKey: 'purchase_id', required: true },
+        { entity: 'products', foreignKey: 'product_id', required: true },
+      ],
+    },
+  },
 
-  suppliers: defineEntity('suppliers', {
-    tableName: 'suppliers',
-    fields: [
-      'id', 'business_id', 'name', 'type', 'ruc', 'phone', 'email', 'address',
-      'notes', 'is_active', 'sync_status', 'sync_attempts', 'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
-
-  distribuciones: defineEntity('distribuciones', {
-    tableName: 'distribuciones',
-    fields: [
-      'id', 'business_id', 'vendedor_id', 'punto_venta', 'punto_venta_id',
-      'fecha', 'estado', 'modo', 'monto_recaudado', 'nota_creacion', 'nota_cierre',
-      'sync_status', 'sync_attempts', 'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id'],
-    childEntities: ['distribucion_items', 'visitas'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
-
-  distribucion_items: defineEntity('distribucion_items', {
-    tableName: 'distribucion_items',
-    fields: [
-      'id', 'business_id', 'distribucion_id', 'variant_id', 'cantidad_asignada',
-      'cantidad_vendida', 'unidad', 'sync_status', 'sync_attempts',
-      'created_at', 'updated_at'
-    ],
+  distribucion_items: {
+    table: distribucionItems,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['distribucion_id', 'business_id'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'distribuciones', foreignKey: 'distribucion_id', required: true },
+      ],
+    },
+  },
 
-  visitas: defineEntity('visitas', {
-    tableName: 'visitas',
-    fields: [
-      'id', 'business_id', 'distribucion_id', 'customer_id', 'vendedor_id',
-      'status', 'motivo_no_compra', 'sale_id', 'sync_status', 'sync_attempts',
-      'created_at', 'updated_at'
-    ],
+  visitas: {
+    table: visitas,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['distribucion_id', 'customer_id', 'business_id'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'distribuciones', foreignKey: 'distribucion_id', required: true },
+        { entity: 'customers', foreignKey: 'customer_id', required: true },
+      ],
+    },
+  },
 
-  tags: defineEntity('tags', {
-    tableName: 'tags',
-    fields: [
-      'id', 'business_id', 'name', 'color', 'sync_status', 'sync_attempts',
-      'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id'],
-    childEntities: ['customer_tags'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
-
-  customer_tags: defineEntity('customer_tags', {
-    tableName: 'customer_tags',
-    fields: [
-      'customer_id', 'tag_id', 'assigned_at', 'assigned_by',
-      'sync_status', 'sync_attempts'
-    ],
+  customer_tags: {
+    table: customerTags,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['customer_id', 'tag_id'],
-    selfHeal: false,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'customers', foreignKey: 'customer_id', required: true },
+        { entity: 'tags', foreignKey: 'tag_id', required: true },
+      ],
+    },
+  },
 
-  customer_groups: defineEntity('customer_groups', {
-    tableName: 'customer_groups',
-    fields: [
-      'id', 'business_id', 'name', 'color', 'sync_status', 'sync_attempts',
-      'created_at', 'updated_at'
-    ],
-    priority: 1,
-    parentFields: ['business_id'],
-    childEntities: ['customer_group_members'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
-
-  customer_group_members: defineEntity('customer_group_members', {
-    tableName: 'customer_group_members',
-    fields: [
-      'id', 'business_id', 'group_id', 'customer_id', 'sync_status',
-      'sync_attempts', 'added_at', 'added_by'
-    ],
+  customer_group_members: {
+    table: customerGroupMembers,
+    syncable: true,
+    autoFields: true,
     priority: 2,
-    parentFields: ['group_id', 'customer_id', 'business_id'],
-    selfHeal: true,
-    syncStatusField: 'sync_status',
-  }),
+    conflictResolver: 'last-write-wins',
+    relations: {
+      parents: [
+        { entity: 'customer_groups', foreignKey: 'group_id', required: true },
+        { entity: 'customers', foreignKey: 'customer_id', required: true },
+      ],
+    },
+  },
 };
 
-export type AvileoEntity = keyof typeof avileoEntities;
-
-export const avileoConfig: SyncEngineConfig<AvileoEntity> = {
-  entities: avileoEntities,
+export const avileoConfig = defineSyncConfig({
+  entities: entityConfigs,
   options: {
     batchSize: 100,
     maxRetries: 5,
     syncInterval: 5000,
-    pullInterval: 10000,
-    backoffMultiplier: 2,
-    logLevel: 'info',
   },
-};
+});
+
+// Export entity configs for direct access
+export const avileoEntities = entityConfigs;
+
+export type AvileoEntity = keyof typeof avileoEntities;
 
 export default avileoConfig;
