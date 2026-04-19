@@ -1,86 +1,71 @@
 ---
 name: frontend-migrate-worker
-description: Migrate manual frontend code to generated PGlite-first services and hooks
+description: Migrate manual frontend code to generated versions
 ---
 
 # Frontend Migrate Worker
 
 ## When to Use This Skill
 
-For features that replace manual frontend code with generated equivalents:
-- Replace manual services with generated BaseService subclasses
-- Replace manual hooks with generated TanStack Query hooks
-- Replace manual SQL schemas with generated PostgreSQL DDL
-- Replace manual Zod schemas with generated schemas
-- Update service-provider.tsx to use generated services
-- Validate generated code works in the actual app
+Features that replace manual frontend services/hooks with generated versions from drizzle-sync. This worker handles the migration of existing code to use generated equivalents.
 
 ## Required Skills
 
-- `frontend` — For React Router v7, TanStack Query, and component patterns
-- `avileo` — For Avileo-specific patterns and offline-first architecture
+- `avileo` - For project-specific context about service patterns
 
 ## Work Procedure
 
-### 1. Generate Code for Target Entity
-- Run the appropriate generator (service, hook, DDL, schema)
-- Review generated output against manual implementation
-- Identify discrepancies
+1. **Generate the code** - Run the generator to produce the new service/hook files:
+   ```bash
+   cd packages/drizzle-sync && bun run generate
+   ```
+   Or use the generator programmatically if a script exists.
 
-### 2. Compare Generated vs Manual
-- Line-by-line comparison of generated service vs manual service
-- Check: method signatures, query patterns, sync queue calls, error handling
-- Check hooks: query keys, invalidation patterns, service method calls
-- Document any intentional differences
+2. **Compare manual vs generated** - Read the manual file (e.g., `tag-service.ts`) and the generated file side by side. Identify:
+   - Methods that match exactly (can be replaced)
+   - Methods that differ (need custom extension)
+   - Methods in manual that don't exist in generated (custom business logic)
 
-### 3. Replace Manual Code
-- Delete manual service/hook/schema file
-- Import generated code instead
-- Update any consumers (components, other hooks, routes)
-- Ensure no broken imports
+3. **Decide migration strategy**:
+   - **Full replace**: If generated matches manual exactly, replace the file
+   - **Re-export**: If generated is in `lib/sync/generated/`, make manual file re-export
+   - **Extend**: If manual has custom methods, create a class that extends the generated one
 
-### 4. Run Tests
-- `cd packages/app && bun test` — unit tests pass
-- `cd packages/app && bun run typecheck` — zero errors
-- If tests fail, fix before proceeding
+4. **Implement migration**:
+   - For full replace: delete manual, update imports
+   - For re-export: `export { GeneratedService as ManualService } from "../sync/generated/services"`
+   - For extend: `class CustomService extends GeneratedService { customMethods() }`
 
-### 5. Manual Verification
-- Start dev server (`bun run dev` from root)
-- Navigate to the relevant screen in browser
-- Test CRUD operations for the entity
-- Verify offline behavior (create while offline, sync when online)
-- Check that query invalidation works correctly
+5. **Verify compilation**:
+   ```bash
+   cd packages/app && bun run typecheck
+   ```
 
-### 6. Document
-- Note which entity was migrated
-- List any manual code that could not be replaced
-- Update AGENTS.md if patterns change
+6. **Run tests**:
+   ```bash
+   cd packages/app && bun test
+   ```
+
+7. **Check for import regressions**:
+   - Search for imports of the old manual service
+   - Ensure they still resolve
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Migrated tags entity from manual to generated code. Replaced tag-service.ts and use-tags.ts with generated equivalents. Verified CRUD works in browser and offline sync queues correctly.",
-  "whatWasImplemented": "1) Generated TagService and useTags hook using drizzle-sync generator. 2) Deleted manual tag-service.ts and use-tags.ts. 3) Updated service-provider.tsx to import generated TagService. 4) Verified all tag CRUD operations work in browser. 5) Tested offline create → online sync flow.",
+  "salientSummary": "Migrated TagService from manual to generated version. Generated service matches manual API. Preserved getCustomerCount as extension. TypeScript compiles, no test regressions.",
+  "whatWasImplemented": "Generated TagService using service generator. Created packages/app/app/lib/services/tag-service.ts as a thin wrapper that extends the generated service and adds getCustomerCount(). Updated all imports. Verified compilation and tests.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "Zero type errors" },
-      { "command": "cd packages/app && bun test", "exitCode": 0, "observation": "All tests pass" }
+      { "command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "0 errors" },
+      { "command": "cd packages/app && bun test", "exitCode": 0, "observation": "All tests pass, no new failures" }
     ],
-    "interactiveChecks": [
-      { "action": "Navigate to Tags screen, create new tag 'TestTag'", "observed": "Tag appears in list immediately" },
-      { "action": "Go offline, create tag 'OfflineTag'", "observed": "Tag appears in list, sync badge shows pending" },
-      { "action": "Go online, trigger sync", "observed": "Sync completes, tag persists" },
-      { "action": "Delete tag 'TestTag'", "observed": "Tag removed from list, sync queued" }
-    ]
+    "interactiveChecks": []
   },
   "tests": {
-    "added": [],
-    "modified": [
-      { "file": "packages/app/app/lib/services/tag-service.ts", "note": "Replaced manual with generated" },
-      { "file": "packages/app/app/hooks/use-tags.ts", "note": "Replaced manual with generated" }
-    ]
+    "added": []
   },
   "discoveredIssues": []
 }
@@ -88,8 +73,7 @@ For features that replace manual frontend code with generated equivalents:
 
 ## When to Return to Orchestrator
 
-- Generated code does not match required behavior and cannot be fixed by generator changes
-- Migration breaks existing tests in ways that suggest behavior changes
-- Need to modify BaseService or service-provider architecture
-- Entity has complex patterns (sub-entities, workflows) that generator cannot handle
-- Need to migrate multiple entities and want sequencing guidance
+- Generated service doesn't match manual API surface
+- Custom methods are too complex to extend
+- Import paths would break across many files
+- Type compilation fails with errors in unrelated code

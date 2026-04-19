@@ -1,87 +1,60 @@
 ---
 name: frontend-gen-worker
-description: Create code generators for PGlite-first frontend services and hooks
+description: Generate frontend code (services, hooks, schemas) in the drizzle-sync package
 ---
 
-# Frontend Generator Worker
+# Frontend Gen Worker
 
 ## When to Use This Skill
 
-For features that create or extend code generators in `@avileo/drizzle-sync`:
-- Service generator (BaseService subclasses)
-- Hook generator (PGlite-first TanStack Query hooks)
-- PostgreSQL DDL generator (for PGlite)
-- Query key factory generator
-- Type generator (Create/Update input interfaces)
-- Applier config generator updates
+Features that create or modify code generators in `packages/drizzle-sync/src/config/generators/`. This worker builds generators that emit frontend-facing code (PGlite services, hooks, schemas, DDL).
 
 ## Required Skills
 
-- `frontend` — For React patterns, TanStack Query, and hook conventions
-- `avileo` — For Avileo-specific patterns (BaseService, service-provider, sync queue)
+- `avileo` - For project-specific context about sync patterns
 
 ## Work Procedure
 
-### 1. Study the Target Pattern
-- Read 2-3 manual services to extract the common pattern (e.g., tag-service.ts, supplier-service.ts)
-- Read 2-3 manual hooks to extract the common pattern (e.g., use-tags.ts, use-suppliers.ts)
-- Read the existing generator code (hooks-generator.ts, ddl-generator.ts)
-- Document the template with placeholders
+1. **Study existing generators** - Read at least 2 existing generators (zod-generator.ts, postgres-ddl-generator.ts) to understand the pattern: `generateX(entityName, config) -> XOutput` + `generateXFile(outputs[]) -> string`.
 
-### 2. Design the Generator
-- Decide what inputs the generator needs (entity config, table schema, field metadata)
-- Decide the output format (file content, multiple files, single barrel file)
-- Handle edge cases: optional fields, relations, search filters, pagination
-- Ensure generated code matches manual patterns exactly
+2. **Study the target pattern** - Read the manual implementation that the generator should emulate. For services: read `packages/app/app/lib/services/tag-service.ts` and `base-service.ts`.
 
-### 3. Write Tests First (TDD)
-- Write tests for the generator in `packages/drizzle-sync/src/config/generators/__tests__/`
-- Test with real Drizzle table introspection data
-- Verify output matches expected template
-- Tests must fail (red) before implementation
+3. **Write tests first** - Create `__tests__/X-generator.test.ts` with tests that define expected output. Tests must fail before implementation.
 
-### 4. Implement the Generator
-- Add generator function to `packages/drizzle-sync/src/config/generators/`
-- Integrate into `generateAll()` orchestrator in `generator.ts`
-- Handle errors gracefully (missing fields, unsupported types)
-- Add CLI flag if needed
+4. **Implement the generator** - Create `src/config/generators/X-generator.ts` following the established pattern:
+   - Import `introspectTable`, `resolveColumns` from `../introspect`
+   - Use `pascalCase`, `camelCase` from `../../utils/string-utils`
+   - Return structured output object
+   - Provide file aggregator function
 
-### 5. Validate with Pilot Entity
-- Choose simplest entity (tags or suppliers)
-- Run generator against that entity
-- Compare generated output with manual code
-- Fix discrepancies
+5. **Integrate into generator.ts** - Add import and call in `generateAll()` function.
 
-### 6. Run Tests
-- `cd packages/drizzle-sync && bun run test:run` — all tests pass
-- `cd packages/drizzle-sync && bun run build` — builds successfully
-- `cd packages/drizzle-sync && bun run typecheck` — zero errors
+6. **Run tests** - `cd packages/drizzle-sync && bun test -- --grep 'X generator'` - all must pass.
 
-### 7. Document
-- Add generator usage to README or AGENTS.md
-- Provide example output in comments
+7. **Verify generated output** - Run a quick generation test to see actual output and verify it looks correct.
+
+8. **Type check** - `cd packages/drizzle-sync && bun run build` or typecheck if available.
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Created service-generator.ts that emits BaseService subclasses with CRUD + sync queue integration. Validated with tags entity — generated TagService matches manual implementation. Added 6 generator tests.",
-  "whatWasImplemented": "1) Created packages/drizzle-sync/src/config/generators/service-generator.ts with generateService() function. 2) Emits class extending BaseService with getEntityType(), getEntityPrefix(), findById, findByBusiness, create, update, delete. 3) Integrated into generateAll() orchestrator. 4) Added tests in service-generator.test.ts with 6 cases covering basic CRUD, optional fields, and sync queue calls. 5) Validated output against manual tag-service.ts.",
+  "salientSummary": "Implemented service-generator.ts that emits BaseService subclasses with CRUD + sync queueing. Added 12 unit tests all passing. Integrated into generator.ts generateAll().",
+  "whatWasImplemented": "Created packages/drizzle-sync/src/config/generators/service-generator.ts with generateService() and generateServicesFile(). Generates classes extending BaseService with findById, findByBusiness, create, update, delete methods. Create/update/delete all call queueSync(). Handles optional fields, default values, and timestamps. Added __tests__/service-generator.test.ts with 12 test cases covering CRUD generation, optional fields, defaults, and file aggregation. Updated generator.ts to include service generation in generateAll().",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "cd packages/drizzle-sync && bun run test:run", "exitCode": 0, "observation": "210 tests passed (6 new generator tests)" },
-      { "command": "cd packages/drizzle-sync && bun run build", "exitCode": 0, "observation": "All entry points built" },
-      { "command": "cd packages/drizzle-sync && bunx drizzle-sync generate -c ./src/presets/avileo.ts -o /tmp/generated --dry-run", "exitCode": 0, "observation": "Generated tag service matches manual implementation" }
+      { "command": "cd packages/drizzle-sync && bun test -- --grep 'service generator'", "exitCode": 0, "observation": "12 tests passed" },
+      { "command": "cd packages/drizzle-sync && bun run build", "exitCode": 0, "observation": "Build succeeded" }
     ],
     "interactiveChecks": []
   },
   "tests": {
     "added": [
       { "file": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts", "cases": [
-        { "name": "generates basic CRUD service", "verifies": "emits class with findById, findByBusiness, create, update, delete" },
-        { "name": "handles optional fields correctly", "verifies": "UpdateInput has optional fields, CreateInput has required" },
-        { "name": "calls queueSync on create", "verifies": "generated create method queues sync operation" }
+        { "name": "generates CRUD methods", "verifies": "VAL-SVC-003" },
+        { "name": "create queues sync", "verifies": "VAL-SVC-004" },
+        { "name": "handles optional fields", "verifies": "VAL-SVC-007" }
       ]}
     ]
   },
@@ -91,8 +64,7 @@ For features that create or extend code generators in `@avileo/drizzle-sync`:
 
 ## When to Return to Orchestrator
 
-- Generator output does not match manual patterns and cannot be reconciled
-- Need to add new Drizzle introspection capabilities
-- Entity config format needs redesign
-- Generated code would require breaking changes to BaseService or service-provider
-- Need to support complex patterns (sub-entities, workflows) beyond simple CRUD
+- The generator pattern doesn't fit the established architecture
+- Need to modify BaseService or other core frontend classes
+- Test infrastructure is missing or broken
+- Generated code has systematic issues that require architectural changes
