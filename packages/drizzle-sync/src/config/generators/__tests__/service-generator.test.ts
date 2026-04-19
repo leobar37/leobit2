@@ -305,14 +305,16 @@ describe("Service Generator", () => {
       expect(fileContent).toContain('import { eq, and, desc } from "drizzle-orm"');
     });
 
-    it("imports table schemas from @avileo/shared", () => {
-      const outputs: ServiceOutput[] = [
-        { name: "tags", serviceCode: "// Tags service" },
-      ];
+    it("imports table schemas from @avileo/shared when using real service code", () => {
+      const tagService = generateService("tags", tagConfig);
 
+      const outputs: ServiceOutput[] = [tagService];
       const fileContent = generateServicesFile(outputs);
 
-      expect(fileContent).toContain('import { tags');
+      // Should contain the @avileo/shared import with table name
+      expect(fileContent).toContain('from "@avileo/shared"');
+      // The table name should be in the import
+      expect(fileContent).toContain("tags");
     });
 
     it("handles empty outputs", () => {
@@ -333,6 +335,107 @@ describe("Service Generator", () => {
 
       expect(fileContent).toContain("// Tags service");
       expect(fileContent).toContain("export class TagsService");
+    });
+
+    it("does not have duplicate imports when aggregating multiple services", () => {
+      // Generate real service code for multiple entities
+      const tagService = generateService("tags", tagConfig);
+      const customerService = generateService("customers", customerConfig);
+
+      const outputs: ServiceOutput[] = [tagService, customerService];
+      const fileContent = generateServicesFile(outputs);
+
+      // Count lines that start with "import " - should be minimal and deduplicated
+      const importLines = fileContent.split("\n").filter((line) => line.trim().startsWith("import "));
+
+      // Each unique module should only appear once in imports
+      const seenModules = new Set<string>();
+      for (const line of importLines) {
+        // Extract module path from import statement
+        const match = line.match(/from\s+['"]([^'"]+)['"]/);
+        if (match) {
+          const module = match[1];
+          expect(seenModules).not.toContain(module);
+          seenModules.add(module);
+        }
+      }
+
+      // Should have imports for: @electric-sql/pglite, drizzle-orm, base-service, sync-service, @avileo/shared
+      expect(seenModules.size).toBeGreaterThanOrEqual(4);
+    });
+
+    it("deduplicates table imports when multiple services are aggregated", () => {
+      // Generate real service code for multiple entities
+      const tagService = generateService("tags", tagConfig);
+      const customerService = generateService("customers", customerConfig);
+
+      const outputs: ServiceOutput[] = [tagService, customerService];
+      const fileContent = generateServicesFile(outputs);
+
+      // The @avileo/shared import should include all table names from all services
+      // Count how many times @avileo/shared appears - should be minimal (ideally 1)
+      const avileoSharedLines = fileContent.split("\n").filter((line) => line.includes('@avileo/shared'));
+      
+      // There should be only ONE line that imports from @avileo/shared (deduplicated)
+      expect(avileoSharedLines.length).toBe(1);
+    });
+
+    it("does not duplicate 'and' imports from drizzle-orm", () => {
+      const outputs: ServiceOutput[] = [
+        { name: "tags", serviceCode: generateService("tags", tagConfig).serviceCode },
+        { name: "customers", serviceCode: generateService("customers", customerConfig).serviceCode },
+        { name: "products", serviceCode: generateService("products", productConfig).serviceCode },
+      ];
+
+      const fileContent = generateServicesFile(outputs);
+
+      // Should only have one line importing from drizzle-orm
+      const drizzleLines = fileContent.split("\n").filter((line) => line.includes("from \"drizzle-orm\""));
+      expect(drizzleLines.length).toBe(1);
+
+      // And it should contain eq, and, desc all in one import
+      expect(drizzleLines[0]).toContain("eq");
+      expect(drizzleLines[0]).toContain("and");
+      expect(drizzleLines[0]).toContain("desc");
+    });
+
+    it("removes duplicate import statements from individual service codes when aggregating", () => {
+      // Create service codes that have imports (as real generateService does)
+      const tagService = generateService("tags", tagConfig);
+      const customerService = generateService("customers", customerConfig);
+
+      // Verify each service code has its own imports
+      expect(tagService.serviceCode).toContain("from \"@electric-sql/pglite\"");
+      expect(customerService.serviceCode).toContain("from \"@electric-sql/pglite\"");
+
+      const outputs: ServiceOutput[] = [tagService, customerService];
+      const fileContent = generateServicesFile(outputs);
+
+      // After aggregation, there should be no duplicate import statements
+      // Check that each import line is unique
+      const importLines = fileContent.split("\n").filter((line) => line.trim().startsWith("import "));
+
+      // Create a set of exact import lines - duplicates should be filtered out
+      const uniqueImportLines = new Set(importLines);
+
+      // The number of unique lines should equal the total (no duplicates)
+      expect(uniqueImportLines.size).toBe(importLines.length);
+    });
+
+    it("includes table names in @avileo/shared import when services are aggregated", () => {
+      // Generate real service code for tags and customers
+      const tagService = generateService("tags", tagConfig);
+      const customerService = generateService("customers", customerConfig);
+
+      const outputs: ServiceOutput[] = [tagService, customerService];
+      const fileContent = generateServicesFile(outputs);
+
+      // The @avileo/shared import should include tags and customers table names
+      const avileoSharedLine = fileContent.split("\n").find((line) => line.includes('@avileo/shared'));
+      expect(avileoSharedLine).toBeDefined();
+      // Should include both table names
+      expect(avileoSharedLine).toContain("tags");
+      expect(avileoSharedLine).toContain("customers");
     });
   });
 

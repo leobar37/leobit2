@@ -339,6 +339,20 @@ function getIdPrefix(entityName: string): string {
 }
 
 /**
+ * Strip import statements from generated service code to avoid duplicates
+ * when aggregating multiple services into a single file
+ */
+function stripImports(code: string): string {
+  // Match import statements (type imports, value imports, and side-effect imports)
+  // This handles multi-line imports properly
+  return code
+    .replace(/^import\s+type\s+\{[^}]+\}\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
+    .replace(/^import\s+\{[^}]+\}\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
+    .replace(/^import\s+\*\s+as\s+\w+\s+from\s+['"][^'"]+['"]\s*;?\s*/gm, "")
+    .replace(/^import\s+['"][^'"]+['"]\s*;?\s*/gm, "");
+}
+
+/**
  * Generate a services file that aggregates all service classes
  */
 export function generateServicesFile(outputs: ServiceOutput[]): string {
@@ -349,17 +363,40 @@ export function generateServicesFile(outputs: ServiceOutput[]): string {
 
 `;
 
+  // Collect unique table imports from all outputs
+  const tableImports = new Set<string>();
+  for (const output of outputs) {
+    // Extract table name from service code (e.g., "tags" from 'import { SyncStatus, tags }')
+    // Use ['\"] to match both single and double quotes
+    const match = output.serviceCode.match(/import\s+\{[^}]+\}\s+from\s+['"]@avileo\/shared['"]/);
+    if (match) {
+      // Extract all named imports from @avileo/shared
+      const importsMatch = match[0].match(/\{([^}]+)\}/);
+      if (importsMatch) {
+        const names = importsMatch[1].split(",").map((n) => n.trim());
+        for (const name of names) {
+          if (name !== "SyncStatus") {
+            tableImports.add(name);
+          }
+        }
+      }
+    }
+  }
+
   const imports = `import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
 import { SyncService } from "~/lib/sync/sync-service";
-import { SyncStatus } from "@avileo/shared";
-${outputs.map((o) => `import { ${camelCase(o.name)} } from "@avileo/shared";`).join("\n")}
-
+import { SyncStatus${tableImports.size > 0 ? `, ${[...tableImports].join(", ")}` : ""} } from "@avileo/shared";
 `;
 
-  const services = outputs.map((o) => o.serviceCode).join("\n\n");
+  // Strip imports from each service code to avoid duplication
+  // since we have them at the top level now
+  const services = outputs
+    .map((o) => stripImports(o.serviceCode))
+    .filter((code) => code.trim().length > 0)
+    .join("\n\n");
 
-  return warning + imports + services;
+  return warning + imports + "\n" + services;
 }
