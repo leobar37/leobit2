@@ -14,7 +14,7 @@
  */
 
 // Core engine
-export { SyncEngine, type SyncEngineConfig, type SyncRequestContext, type DbClient } from "./sync-engine";
+export { SyncEngine, type SyncEngineConfig, type SyncRequestContext, type DbClient, type SyncEngineMiddleware } from "./sync-engine";
 
 // Conflict resolution
 export {

@@ -530,12 +530,6 @@ class SaleItemConflictResolver implements IConflictResolver {
   }
 }
 
-class NoOpConflictResolver implements IConflictResolver {
-  async checkConflict(): Promise<ConflictCheckResult> {
-    return { hasConflict: false };
-  }
-}
-
 export function createConflictResolvers(): Record<string, IConflictResolver> {
   return {
     customers: new CustomerConflictResolver(),
@@ -564,7 +558,7 @@ export function createConflictResolvers(): Record<string, IConflictResolver> {
  * Adapter that wraps a backend IConflictResolver to implement the library's IGenericConflictResolver.
  * This allows the backend's conflict resolvers to be registered in the library's GenericConflictResolverRegistry.
  */
-class ConflictResolverAdapter {
+class ConflictResolverAdapter implements IGenericConflictResolver<RequestContext, DbTransaction, string> {
   constructor(
     private resolver: IConflictResolver,
     private _entityType: string
@@ -605,4 +599,4 @@ export function createConflictResolverRegistry(): GenericConflictResolverRegistr
   return registry;
 }
 
-export { VersionConflictResolver, NoOpConflictResolver };
+export { VersionConflictResolver };

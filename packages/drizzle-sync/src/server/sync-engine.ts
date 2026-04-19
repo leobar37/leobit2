@@ -431,12 +431,6 @@ export class SyncEngine<
       handler.setRegistry(registry);
     }
 
-    const context: SyncContext<TRequestContext> = {
-      ctx,
-      correlationId,
-      batchCorrelationId,
-    };
-
     this.log("debug", {
       msg: "⚡ Executing handler",
       entityType: operation.entityType,

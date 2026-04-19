@@ -10,6 +10,7 @@ import {
   SyncEngine,
   type SyncEngineMiddleware,
   type SyncHandlerResult,
+  type DbClient,
   HandlerRegistry as LibHandlerRegistry,
 } from "@avileo/drizzle-sync/server";
 import { SyncOperationRepository } from "./framework/SyncOperationRepository";
@@ -117,8 +118,8 @@ export class SyncService {
     this.engine = new SyncEngine<RequestContext, DbTransaction, SyncServiceDeps>(deps, {
       db: {
         transaction: <T>(fn: (tx: DbTransaction) => Promise<T>) => db.transaction(fn as any),
-        execute: (sql) => db.execute(sql as any),
-      } as any,
+        execute: (sql: unknown) => db.execute(sql as any),
+      } as DbClient<DbTransaction>,
       syncOpRepo,
       syncConflictRepo,
       conflictResolverRegistry: createConflictResolverRegistry(),
