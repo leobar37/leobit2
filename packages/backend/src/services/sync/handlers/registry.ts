@@ -1,8 +1,7 @@
 import type { SyncEngineDeps } from "../framework/SyncEngine";
 import type { ISyncHandler } from "../framework/types";
-import { SyncHandlerBuilder } from "./core/SyncHandlerBuilder";
-import { GenericSyncHandler } from "./core/GenericSyncHandler";
-import type { IBuilderConfig } from "./core/types";
+import { SyncHandlerBuilder, GenericSyncHandler } from "@avileo/drizzle-sync/server";
+import type { IGenericHandlerConfig } from "@avileo/drizzle-sync/server";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import {
@@ -37,14 +36,14 @@ import type { PaymentRepository } from "../../repository/payment.repository";
 
 // ─── Shared handler configs ─────────────────────────────────────────────────────
 
-const customerConfig: IBuilderConfig = {
+const customerConfig: IGenericHandlerConfig = {
   entityType: "customers",
   schemas: { create: customerCreateSchema, update: customerUpdateSchema },
   createFieldMapping: { name: "name", dni: "dni", phone: "phone", address: "address", notes: "notes" },
   updateFieldMapping: { name: "name", dni: "dni", phone: "phone", address: "address", notes: "notes" },
 };
 
-const productConfig: IBuilderConfig = {
+const productConfig: IGenericHandlerConfig = {
   entityType: "products",
   schemas: { create: productCreateSchema, update: productUpdateSchema },
   createFieldMapping: {
@@ -55,14 +54,14 @@ const productConfig: IBuilderConfig = {
   createDefaults: { unit: "kg", basePrice: "0", costPrice: "0", isActive: true, hasVariants: false },
 };
 
-const tagConfig: IBuilderConfig = {
+const tagConfig: IGenericHandlerConfig = {
   entityType: "tags",
   schemas: { create: tagCreateSchema, update: tagUpdateSchema },
   createFieldMapping: { name: "name", color: "color" },
   updateFieldMapping: { name: "name", color: "color" },
 };
 
-const supplierConfig: IBuilderConfig = {
+const supplierConfig: IGenericHandlerConfig = {
   entityType: "suppliers",
   schemas: { create: supplierCreateSchema, update: supplierUpdateSchema },
   createFieldMapping: {
@@ -75,14 +74,14 @@ const supplierConfig: IBuilderConfig = {
   },
 };
 
-const customerGroupConfig: IBuilderConfig = {
+const customerGroupConfig: IGenericHandlerConfig = {
   entityType: "customer_groups",
   schemas: { create: customerGroupCreateSchema, update: customerGroupUpdateSchema },
   createFieldMapping: { name: "name" },
   updateFieldMapping: { name: "name" },
 };
 
-const productVariantConfig: IBuilderConfig = {
+const productVariantConfig: IGenericHandlerConfig = {
   entityType: "product_variants",
   schemas: { create: productVariantCreateSchema, update: productVariantUpdateSchema },
   createFieldMapping: {
@@ -585,14 +584,14 @@ function productRepoAdapter(repo: ProductRepository) {
 
 export function createCustomerSyncHandlerForTest(repo: CustomerRepository): ISyncHandler {
   return GenericSyncHandler.createWithRepo(
-    customerConfig as IBuilderConfig<Record<string, unknown>, Record<string, unknown>>,
+    customerConfig as IGenericHandlerConfig<Record<string, unknown>, Record<string, unknown>>,
     customerRepoAdapter(repo)
   );
 }
 
 export function createProductSyncHandlerForTest(repo: ProductRepository): ISyncHandler {
   return GenericSyncHandler.createWithRepo(
-    productConfig as IBuilderConfig<Record<string, unknown>, Record<string, unknown>>,
+    productConfig as IGenericHandlerConfig<Record<string, unknown>, Record<string, unknown>>,
     productRepoAdapter(repo)
   );
 }

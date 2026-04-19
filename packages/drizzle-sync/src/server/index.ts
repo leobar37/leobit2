@@ -26,6 +26,26 @@ export {
 // Base handler
 export { BaseSyncHandler } from "./base-handler";
 
+// Generic handler and builder
+export { GenericSyncHandler } from "./generic-handler";
+export { SyncHandlerBuilder } from "./sync-handler-builder";
+export type {
+  GenericRepo,
+  GenericPostCreateHook,
+  GenericPostUpdateHook,
+  GenericParentCheck,
+  GenericAdditionalParentCheck,
+  GenericCustomCreateOp,
+  GenericCustomUpdateOp,
+  GenericCustomDeleteOp,
+  GenericPreValidationOp,
+  GenericPayloadEnricherOp,
+  GenericPostOperationOp,
+  GenericEntitySchemas,
+  GenericFieldMapping,
+  IGenericHandlerConfig,
+} from "./generic-handler";
+
 // Registry components
 export { HandlerRegistry, type HandlerFactory, GenericHandlerRegistry, type GenericHandlerFactory, createHandlerRegistry } from "./handler-registry";
 export { OperationSorter, type SortResult } from "./operation-sorter";
