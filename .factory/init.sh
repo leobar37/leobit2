@@ -1,13 +1,27 @@
 #!/bin/bash
-set -euo pipefail
+# Init script for drizzle-sync full integration mission
+# Idempotent — safe to run multiple times
 
-cd "/Users/leobar37/code/avileo"
+set -e
 
-bun install --frozen-lockfile 2>/dev/null || bun install
-mkdir -p data-avileo/extractions/JUAVIK/canonical data-avileo/extractions/JUAVIK/reports data-avileo/consolidated
+echo "=== Avileo Mission Init ==="
 
-if [ ! -f packages/backend/.env ]; then
-  echo "Warning: packages/backend/.env is missing; backend/seed validation may be blocked."
+# Install dependencies if node_modules is missing or outdated
+if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules/.package-lock" ]; then
+  echo "Installing dependencies..."
+  bun install
 fi
 
-echo "Mission init complete."
+# Ensure drizzle-sync is built (needed for cross-package imports)
+if [ ! -d "packages/drizzle-sync/dist" ]; then
+  echo "Building drizzle-sync package..."
+  cd packages/drizzle-sync && bun run build && cd ../..
+fi
+
+# Ensure shared is built
+if [ ! -d "packages/shared/dist" ]; then
+  echo "Building shared package..."
+  cd packages/shared && bun run build && cd ../..
+fi
+
+echo "=== Init complete ==="

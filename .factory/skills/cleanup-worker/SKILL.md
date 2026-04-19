@@ -1,71 +1,78 @@
 ---
 name: cleanup-worker
-description: Removes TanStack DB dependencies and code after migration
+description: Remove duplicate framework files and validate no regressions
 ---
 
 # Cleanup Worker
 
 ## When to Use This Skill
 
-Use this worker for:
-- Removing TanStack DB dependencies from package.json
-- Deleting TanStack collections and utilities
-- Cleaning up unused imports
-- Final validation of migration
+For features that remove deprecated/duplicate code after migration validation:
+- Delete backend framework files that are now in the library
+- Delete manual frontend files replaced by generated code
+- Verify no remaining imports point to deleted files
+- Run full test suite to confirm no regressions
+- Update imports and barrel exports
+
+## Required Skills
+
+- `avileo` — For understanding project structure and dependencies
+- `avileo-sync` — For sync-specific code patterns
 
 ## Work Procedure
 
-### 1. Remove Dependencies
-- Remove `@tanstack/db`
-- Remove `@tanstack/react-db`
-- Remove `@tanstack/electric-db-collection`
-- Remove `tanstack-db-pglite`
-- Run npm install to update lockfile
+### 1. Identify Files to Delete
+- List all files marked for deletion based on migration plan
+- Verify each file has a library equivalent or generated replacement
+- Check for any remaining imports of these files across the codebase
 
-### 2. Delete Collections
-- Remove `~/lib/db/collections/*.collection.ts`
-- Delete collection utilities
-- Remove sync-manager.ts if not needed
+### 2. Update Imports
+- Find all files that import from files being deleted
+- Update imports to point to library or generated equivalents
+- Handle re-exports in barrel files (index.ts)
 
-### 3. Clean Imports
-- Search for TanStack imports
-- Remove unused imports
-- Update any remaining references
+### 3. Delete Files
+- Delete identified files
+- Commit with clear message
 
-### 4. Verify Build
-- Run typecheck
-- Run build
-- Verify no errors
+### 4. Run Full Validation
+- `cd packages/backend && bun run typecheck` — zero errors
+- `cd packages/backend && bun test` — all tests pass
+- `cd packages/app && bun run typecheck` — zero errors
+- `cd packages/app && bun test` — all tests pass
+- `cd packages/drizzle-sync && bun run test:run` — all tests pass
+- `bun run build` from root — all packages build
 
-### 5. Measure Bundle
-- Compare bundle size before/after
-- Document size reduction
+### 5. Verify No Orphaned Imports
+- Search for imports pointing to deleted paths
+- Search for references to deleted class names
+- Ensure no runtime errors from missing modules
+
+### 6. Document
+- List deleted files in handoff
+- Note any files kept intentionally
+- Update AGENTS.md if directory structure changes
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Removed all TanStack DB dependencies and code. Deleted 6 collection files. Build passes. Bundle size reduced by 45KB.",
-  "whatWasImplemented": "Complete cleanup of TanStack DB: removed 4 npm dependencies, deleted 6 collection files and utilities, cleaned all imports, verified build passes, measured bundle size reduction.",
+  "salientSummary": "Deleted 7 duplicate backend framework files after confirming all imports migrated to @avileo/drizzle-sync. Full test suite passes, zero type errors, all packages build successfully.",
+  "whatWasImplemented": "1) Deleted packages/backend/src/services/sync/framework/SyncEngine.ts. 2) Deleted SyncPipeline.ts, HandlerRegistry.ts, OperationSorter.ts, EntityRegistry.ts, BaseSyncHandler.ts. 3) Updated all imports in backend to use library equivalents. 4) Verified no orphaned imports remain. 5) Full validation passed.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      {
-        "command": "grep -r '@tanstack/db' packages/app/src || echo 'No matches'",
-        "exitCode": 0,
-        "observation": "No TanStack imports found"
-      },
-      {
-        "command": "cd packages/app && npm run typecheck",
-        "exitCode": 0,
-        "observation": "No type errors"
-      },
-      {
-        "command": "cd packages/app && npm run build",
-        "exitCode": 0,
-        "observation": "Build successful"
-      }
-    ]
+      { "command": "cd packages/backend && bun run typecheck", "exitCode": 0, "observation": "Zero errors" },
+      { "command": "cd packages/backend && bun test", "exitCode": 0, "observation": "All tests pass" },
+      { "command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "Zero errors" },
+      { "command": "cd packages/drizzle-sync && bun run test:run", "exitCode": 0, "observation": "All tests pass" },
+      { "command": "bun run build", "exitCode": 0, "observation": "All 4 packages build" }
+    ],
+    "interactiveChecks": []
+  },
+  "tests": {
+    "added": [],
+    "modified": []
   },
   "discoveredIssues": []
 }
@@ -73,7 +80,7 @@ Use this worker for:
 
 ## When to Return to Orchestrator
 
-- Build fails after cleanup
-- Dependencies have peer dependencies
-- Other code depends on TanStack utilities
-- Uncertain about removing specific files
+- Deleting files would break imports that cannot be easily fixed
+- Full test suite fails after deletion
+- Need to preserve some files partially (extract remaining logic first)
+- Uncertainty about whether a file is truly safe to delete

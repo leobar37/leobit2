@@ -11,6 +11,8 @@ import type {
   SyncBatchResult,
   SyncEngineDeps,
   SyncContext,
+  ISyncHandler,
+  SyncHandlerResult,
 } from "./types";
 import type {
   ISyncEventEmitter,
@@ -48,6 +50,52 @@ export interface DbClient<TTransaction = DbTransaction> {
 }
 
 /**
+ * Middleware hook for intercepting handler execution
+ * Allows pre/post processing around the handler's execute() call
+ */
+export interface SyncEngineMiddleware<
+  TRequestContext extends SyncRequestContext = SyncRequestContext,
+  TTransaction = DbTransaction
+> {
+  /**
+   * Called before handler.execute().
+   * Return a SyncHandlerResult to short-circuit (skip handler execution),
+   * or null/undefined to proceed.
+   */
+  beforeExecute?(
+    ctx: TRequestContext,
+    operation: SyncOperationInput,
+    handler: ISyncHandler<TRequestContext, TTransaction>,
+    tx?: TTransaction
+  ): Promise<SyncHandlerResult | null | undefined> | SyncHandlerResult | null | undefined;
+
+  /**
+   * Called after handler.execute() succeeds.
+   * Can transform the result.
+   */
+  afterExecute?(
+    ctx: TRequestContext,
+    operation: SyncOperationInput,
+    result: SyncHandlerResult,
+    handler: ISyncHandler<TRequestContext, TTransaction>,
+    tx?: TTransaction
+  ): Promise<SyncHandlerResult> | SyncHandlerResult;
+
+  /**
+   * Called when handler.execute() throws an error.
+   * Return a SyncHandlerResult to convert error to handled failure,
+   * or re-throw to propagate.
+   */
+  onError?(
+    ctx: TRequestContext,
+    operation: SyncOperationInput,
+    error: Error,
+    handler: ISyncHandler<TRequestContext, TTransaction>,
+    tx?: TTransaction
+  ): Promise<SyncHandlerResult> | SyncHandlerResult;
+}
+
+/**
  * Sync engine configuration
  */
 export interface SyncEngineConfig<
@@ -70,6 +118,8 @@ export interface SyncEngineConfig<
   };
   /** Optional event emitter for typed events */
   eventEmitter?: ISyncEventEmitter;
+  /** Optional middleware for intercepting handler execution */
+  middleware?: SyncEngineMiddleware<TRequestContext, TTransaction>;
   /** Function to get current ISO timestamp */
   now: () => string;
   /** Function to generate savepoint SQL */
