@@ -1,0 +1,72 @@
+{
+  "featureId": "migrate-backend-syncengine",
+  "reviewedAt": "2026-04-19T20:30:00.000Z",
+  "commitId": "24cc9da",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The backend SyncService was successfully migrated to use the library SyncEngine from @avileo/drizzle-sync/server with the backend's SyncPipeline wired as middleware. The implementation correctly replaces local framework imports (SyncEngine, HandlerRegistry) with library equivalents, preserves all 14 entity handler registrations, maintains RequestContext flow, preserves multi-tenancy, and keeps backward compatibility of SyncBatchResult shape. The idempotent handler execution via WeakMap is a clever solution to prevent double-execution when the library engine calls execute() after beforeExecute().",
+    "issues": [
+      {
+        "file": "packages/backend/src/services/sync/sync.service.ts",
+        "line": 60,
+        "severity": "non_blocking",
+        "description": "The WeakMap-based idempotency tracking in createSyncPipelineMiddleware() uses `handler` as the key, but handler instances are recreated per operation via HandlerRegistry.getHandler(). This means the WeakMap lookup in onError (line 93) may not find the state because a fresh handler instance is passed. However, in practice this works because beforeExecute and onError receive the same handler reference within a single operation's processOperation() call. The afterExecute hook is a pass-through, so this is not a functional issue."
+      },
+      {
+        "file": "packages/backend/src/services/sync/sync.service.ts",
+        "line": 78,
+        "severity": "suggestion",
+        "description": "The `beforeExecute` hook returns `null` to let the library call `execute()`, relying on the handler's internal state (via WeakMap) to return the cached result. This is functional but slightly indirect. A cleaner approach would be to return the pipeline result directly from `beforeExecute` and skip `execute()` entirely, but the current approach preserves the library's middleware contract."
+      },
+      {
+        "file": "packages/backend/src/services/sync/sync.service.ts",
+        "line": 125,
+        "severity": "suggestion",
+        "description": "The `db` client is cast `as any` when passing to SyncEngineConfig. The library's DbClient interface expects `transaction<T>(fn: (tx: TTransaction) => Promise<T>): Promise<T>` and `execute(sql: unknown): Promise<unknown>`. The backend's `db.transaction` and `db.execute` should be compatible without casting. Consider removing the `as any` cast and fixing any type mismatches properly."
+      },
+      {
+        "file": "packages/backend/src/services/sync/sync.service.ts",
+        "line": 145,
+        "severity": "non_blocking",
+        "description": "`LibHandlerRegistry.clear()` is called in the constructor before registering handlers. This is a static method on the library's HandlerRegistry class. If multiple SyncService instances are created (e.g., in tests), this could clear registrations from other instances. However, in production there's typically a single SyncService instance, so this is not a blocking issue. Consider using an instance-based GenericHandlerRegistry in the future."
+      },
+      {
+        "file": "packages/backend/src/services/sync/sync.service.ts",
+        "line": 29,
+        "severity": "suggestion",
+        "description": "The `SyncEngineDeps` type is re-exported from `../types` and used as a generic parameter, but the library's SyncEngine already has a default `SyncEngineDeps` generic. The explicit generic parameter `<RequestContext, DbTransaction, SyncServiceDeps>` is correct but slightly redundant since `SyncServiceDeps` extends `SyncEngineDeps` without adding fields."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The backend's BaseSyncHandler (local) and the library's BaseSyncHandler have diverged. The local version has additional methods (logStart, logSuccess, logError, executeOperation, validatePayload, ensureParentExists) that the library version doesn't have. Complex handlers (SaleSyncHandler, DistribucionSyncHandler, PurchaseSyncHandler) extend the local BaseSyncHandler via StatefulSyncHandler, while simple handlers use the library's GenericSyncHandler via SyncHandlerBuilder. This dual inheritance chain is functional but could be confusing. The mission AGENTS.md correctly notes that complex handlers should be preserved as-is.",
+      "evidence": "packages/backend/src/services/sync/handlers/BaseSyncHandler.ts (local, 170 lines) vs packages/drizzle-sync/src/server/base-handler.ts (library, 393 lines). SaleSyncHandler extends StatefulSyncHandler which extends local BaseSyncHandler."
+    },
+    {
+      "area": "conventions",
+      "observation": "The backend's IConflictResolver interface and the library's IGenericConflictResolver have slightly different signatures. The backend uses SyncOperationInput while the library uses GenericSyncOperationInput<string>. The ConflictResolverAdapter in ConflictResolver.ts bridges this gap with a cast. This is functional but indicates the types could be unified in a future cleanup.",
+      "evidence": "packages/backend/src/services/sync/framework/ConflictResolver.ts lines 338-365 — ConflictResolverAdapter casts GenericSyncOperationInput to SyncOperationInput."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker followed the expected procedure: read mission.md, read features.json, examined library and backend code, implemented the migration, ran build and tests, and committed. The handoff reports 200 backend tests pass and 211 library tests pass. The 3 pre-existing test failures in sale-sync.race.test.ts were correctly identified as unrelated.",
+      "evidence": "Handoff file shows: '200 tests pass, 3 fail (pre-existing failures in sale-sync.race.test.ts)'. Build succeeded. No new tests were added, which is appropriate for a structural migration."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The idempotency pattern using WeakMap to prevent double-execution is a novel solution discovered during this migration. It should be documented in the sync architecture docs because future middleware implementations may face the same issue: when beforeExecute runs the pipeline and returns null, the library still calls handler.execute(). The WeakMap caches the pipeline result and the handler wrapper returns it on the second call.",
+      "evidence": "packages/backend/src/services/sync/sync.service.ts lines 38-100 — createSyncPipelineMiddleware() with pipelineStateMap WeakMap."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The library's HandlerRegistry is a static class (legacy pattern), while GenericHandlerRegistry is instance-based. The backend uses the static HandlerRegistry.clear() before registering handlers, which works for a singleton SyncService but could cause issues in tests with multiple instances. The mission AGENTS.md does not document this pattern.",
+      "evidence": "packages/drizzle-sync/src/server/handler-registry.ts — HandlerRegistry is static with static handlers Map. SyncService calls LibHandlerRegistry.clear() in constructor."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The migration of backend SyncService to use the library SyncEngine with SyncPipeline wired as middleware is complete and correct. The implementation successfully: (1) imports SyncEngine and HandlerRegistry from @avileo/drizzle-sync/server, (2) wires SyncPipeline as middleware via createSyncPipelineMiddleware(), (3) replaces local framework imports, (4) preserves all 14 entity handlers, (5) maintains RequestContext and multi-tenancy, (6) keeps SyncBatchResult backward compatibility, and (7) passes all relevant tests (200 backend, 211 library). The idempotent execution pattern via WeakMap is a clever and correct solution to the double-execution problem. Minor suggestions: remove `as any` casts, consider documenting the WeakMap pattern, and evaluate using instance-based GenericHandlerRegistry in future work. No blocking issues found."
+}

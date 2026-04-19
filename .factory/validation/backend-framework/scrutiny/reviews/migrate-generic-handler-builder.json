@@ -1,0 +1,56 @@
+{
+  "featureId": "migrate-generic-handler-builder",
+  "reviewedAt": "2026-04-19T15:45:00.000Z",
+  "commitId": "6f3ae60",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The migration of GenericSyncHandler and SyncHandlerBuilder from backend to @avileo/drizzle-sync library is complete and correct. Both classes exist in the library server/ submodule, all builder methods return `this` for chaining, build() produces valid GenericSyncHandler instances, backend registry.ts imports from the library correctly, and all handler factories work with the library versions. Comprehensive tests cover CRUD operations, field mapping, parent checks, version conflicts, custom operations, transaction requirements, and the fluent API. All existing behavior is preserved including enrichers, preValidation, schema parse, field mapping, parent checks, and post hooks. The old backend files remain in place (not deleted in this commit) but are no longer imported by registry.ts.",
+    "issues": [
+      {
+        "file": "packages/drizzle-sync/src/server/generic-handler.ts",
+        "line": 196,
+        "severity": "non_blocking",
+        "description": "The library version uses `mergeDefined(withDefaults, data, parsed)` for customCreate args while the original backend used `{ ...withDefaults, ...data, ...parsed }`. The `mergeDefined` function has identical semantics for defined fields, but this is a subtle implementation difference. Behavior is equivalent."
+      },
+      {
+        "file": "packages/drizzle-sync/src/server/generic-handler.ts",
+        "line": 228,
+        "severity": "non_blocking",
+        "description": "The library version uses `mergeDefined(data, parsed)` for customUpdate args while the original backend used `{ ...data, ...parsed }`. Same as above — behavior is equivalent via mergeDefined."
+      },
+      {
+        "file": "packages/drizzle-sync/src/server/generic-handler.ts",
+        "line": 282,
+        "severity": "suggestion",
+        "description": "The `mapFields` method in the library has a passthrough branch (`if (!mapping || Object.keys(mapping).length === 0)`) that the original backend did not have. The original always called `mapDefinedFields` which would return an empty object for empty mapping. This is actually an improvement — it fixes a potential bug where empty mapping would strip all fields — but it changes behavior slightly. All existing backend handlers specify non-empty mappings, so this is safe."
+      },
+      {
+        "file": "packages/backend/src/services/sync/handlers/core/GenericSyncHandler.ts",
+        "line": 1,
+        "severity": "suggestion",
+        "description": "Old backend files (GenericSyncHandler.ts, SyncHandlerBuilder.ts, types.ts, patch-utils.ts) still exist in the codebase but are no longer imported by registry.ts. They should be deleted in a future cleanup commit to avoid confusion and stale code. The subsequent commit c313b86 does perform this cleanup."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The library uses `SyncRequestContext` and `DbTransaction` types from the library's own sync-engine module, while backend handlers use `RequestContext` and `DbTransaction` from backend paths. The library types are compatible (both are `Record<string, unknown>`-ish), but this dual-type system could be a source of confusion. The backend registry.ts casts repo adapters with `as Promise<unknown | undefined>` and `as Parameters<typeof deps.xxx.create>[1]` extensively to bridge the gap.",
+      "evidence": "packages/backend/src/services/sync/handlers/registry.ts lines 45-55 show extensive casting. packages/drizzle-sync/src/server/generic-handler.ts defines GenericRepo with SyncRequestContext while backend uses RequestContext."
+    },
+    {
+      "area": "conventions",
+      "observation": "The `mapFields` passthrough behavior change (empty mapping passes all fields through instead of filtering to empty) is not documented in AGENTS.md or the skill. This is a behavioral difference between old and new implementations that could matter for future handlers.",
+      "evidence": "packages/drizzle-sync/src/server/generic-handler.ts:282-288 has the passthrough branch. Original backend at packages/backend/src/services/sync/handlers/core/GenericSyncHandler.ts:257 always called mapDefinedFields which for empty mapping returns {}."
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-sync-worker skill file was not found at .factory/skills/backend-sync-worker/SKILL.md, suggesting the skill may not be persisted or the path differs. The worker transcript shows it used 'backend-sync-worker' skill successfully, so this is likely a path issue rather than a skill gap.",
+      "evidence": "Read of /Users/leobar37/.factory/skills/backend-sync-worker/SKILL.md returned ENOENT."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature 'migrate-generic-handler-builder' passes review. GenericSyncHandler and SyncHandlerBuilder were successfully migrated to @avileo/drizzle-sync library with all expected behavior preserved. The library tests (57 new tests) and backend tests (197 passing) validate correctness. Backend registry.ts imports from the library and all handler factories function correctly. Minor non-blocking differences exist in internal utility function usage (mergeDefined vs spread) and the old backend files remain until cleanup commit c313b86. No blocking issues found."
+}

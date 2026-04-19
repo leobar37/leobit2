@@ -1,0 +1,50 @@
+{
+  "featureId": "migrate-conflict-resolvers",
+  "reviewedAt": "2026-04-19T16:30:00.000Z",
+  "commitId": "efdb91d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The backend conflict resolvers were successfully migrated to use the library's GenericConflictResolverRegistry. A ConflictResolverAdapter bridges the backend's IConflictResolver to the library's IGenericConflictResolver. All 19 entity conflict resolvers are registered, NoOpConflictResolver is set as the default fallback, and the SyncService passes the registry to SyncEngineConfig. The 3-tier strategy-based resolution (strategy -> entity -> default) is supported by the library's getResolver() implementation. Backend builds and 195 of 198 tests pass (3 pre-existing failures unrelated to this change).",
+    "issues": [
+      {
+        "file": "packages/backend/src/services/sync/framework/ConflictResolver.ts",
+        "line": 598,
+        "severity": "non_blocking",
+        "description": "The ConflictResolverAdapter casts the backend IConflictResolver to the library IGenericConflictResolver via 'as unknown as' rather than a proper structural implementation. While functionally correct because the signatures are structurally compatible (both have checkConflict(ctx, operation, tx)), this loses compile-time type safety. Consider making ConflictResolverAdapter explicitly implement IGenericConflictResolver."
+      },
+      {
+        "file": "packages/backend/src/services/sync/framework/ConflictResolver.ts",
+        "line": 533,
+        "severity": "non_blocking",
+        "description": "The backend defines its own NoOpConflictResolver class that implements IConflictResolver (backend interface). It then passes a generic-typed version to setDefaultResolver(). This is redundant since the library already exports NoOpConflictResolver. However, since the backend's NoOpConflictResolver also implements the backend IConflictResolver for use in createConflictResolvers(), this duplication is justified for backward compatibility during transition."
+      },
+      {
+        "file": "packages/backend/src/services/sync/framework/ConflictResolver.ts",
+        "line": 533,
+        "severity": "suggestion",
+        "description": "The backend's NoOpConflictResolver class (line 533) is identical in behavior to the library's NoOpConflictResolver. In a future cleanup, the backend could import the library's version directly and avoid maintaining two copies."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The backend uses a WeakMap-based pipeline state tracking pattern (in sync.service.ts) to achieve idempotent execution when the library's SyncEngine calls both beforeExecute middleware and handler.execute(). This pattern is not documented in AGENTS.md but is critical for understanding how the backend SyncPipeline integrates with the library SyncEngine.",
+      "evidence": "packages/backend/src/services/sync/sync.service.ts:37-45 — pipelineStateMap WeakMap declaration; lines 52-95 — createSyncPipelineMiddleware() uses the WeakMap to cache pipeline results and return them when the library calls execute() after beforeExecute."
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-sync-worker skill procedure was followed correctly. The worker read the library types, created an adapter pattern, registered all resolvers, and verified via build + tests. No deviations were noted.",
+      "evidence": "Handoff skillFeedback.followedProcedure: true, deviations: []"
+    },
+    {
+      "area": "knowledge",
+      "observation": "The library's GenericConflictResolverRegistry.getResolver() already implements the 3-tier fallback (strategy -> entity -> default) that the feature requires. The backend worker correctly leveraged this existing behavior without needing to reimplement it. The strategy parameter is passed through from SyncEngine.processOperation() at packages/drizzle-sync/src/server/sync-engine.ts:350.",
+      "evidence": "packages/drizzle-sync/src/server/conflict-resolver.ts:136-148 — getResolver(entityType, strategy?) checks strategy first, then entityType, then defaultResolver."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature 'migrate-conflict-resolvers' passes review. The backend successfully creates a GenericConflictResolverRegistry instance, registers all 19 entity conflict resolvers (customers, sales, abonos, distribuciones, products, product_variants, tags, customer_tags, customer_groups, customer_group_members, visitas, purchases, purchase_items, suppliers, puntos_venta, product_units, variant_inventory, files, sale_items), passes the registry to SyncEngineConfig via the conflictResolverRegistry option, and uses NoOpConflictResolver as the default fallback. The library's getResolver() correctly implements 3-tier strategy-based resolution (strategy -> entity -> default). Backend builds successfully and 195/198 tests pass (3 pre-existing failures in sale-sync.race.test.ts unrelated to this change). Type safety is maintained through the ConflictResolverAdapter, though it uses an 'as unknown as' cast that could be tightened in future cleanup."
+}

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { describe, test, expect, beforeEach } from "vitest";
 import { SaleSyncHandler } from "../SaleSyncHandler";
 import { SaleRepository } from "../../../repository/sale.repository";
 import { PaymentRepository } from "../../../repository/payment.repository";
