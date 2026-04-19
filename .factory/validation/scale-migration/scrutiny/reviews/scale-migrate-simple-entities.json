@@ -1,0 +1,92 @@
+{
+  "featureId": "scale-migrate-simple-entities",
+  "reviewedAt": "2026-04-19T20:55:00.000Z",
+  "commitId": "47802e2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature generated services for all 16 entities in packages/app/app/lib/sync/generated/services.ts, and three manual services (tag-service.ts, customer-tag-service.ts, supplier-service.ts) were successfully migrated to extend their generated counterparts. However, the migration scope fell significantly short of the feature requirements. Out of 13 targeted simple entities, only 1 (suppliers) was migrated in this worker session — the other two (tags, customer_tags) were migrated in prior pilot-migration sessions. The remaining 10 simple entities (customers, products, purchases, distribuciones, customer_groups, visitas, sale_items, purchase_items, distribucion_items, product_variants, abonos) were left as fully manual implementations extending BaseService directly, with no re-export or extension pattern applied. The worker correctly identified that visita-service.ts and customer-group-service.ts have API incompatibilities (enriched return types), but did not attempt to resolve them or apply the re-export pattern. For the other manual services (customer-service.ts, product-service.ts, purchase-service.ts, payment-service.ts), no migration attempt was made at all. The feature description explicitly states 'For each: generate service, ensure it compiles, update any manual service files to re-export or extend generated versions' — this was not achieved for the majority of entities.",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/services/customer-service.ts",
+        "line": 63,
+        "severity": "non_blocking",
+        "description": "CustomerService still extends BaseService directly instead of extending generated CustomersService. No re-export or extension pattern applied."
+      },
+      {
+        "file": "packages/app/app/lib/services/product-service.ts",
+        "line": 117,
+        "severity": "non_blocking",
+        "description": "ProductService still extends BaseService directly instead of extending generated ProductsService. No re-export or extension pattern applied."
+      },
+      {
+        "file": "packages/app/app/lib/services/purchase-service.ts",
+        "line": 84,
+        "severity": "non_blocking",
+        "description": "PurchaseService still extends BaseService directly instead of extending generated PurchasesService. No re-export or extension pattern applied."
+      },
+      {
+        "file": "packages/app/app/lib/services/payment-service.ts",
+        "line": 77,
+        "severity": "non_blocking",
+        "description": "PaymentService (abonos) still extends BaseService directly instead of extending generated AbonosService. No re-export or extension pattern applied."
+      },
+      {
+        "file": "packages/app/app/lib/services/visita-service.ts",
+        "line": 36,
+        "severity": "non_blocking",
+        "description": "VisitaService still extends BaseService directly. Worker attempted migration but reverted due to API incompatibility (update() returns VisitaWithCustomer vs generated void). No re-export pattern was applied as fallback."
+      },
+      {
+        "file": "packages/app/app/lib/services/customer-group-service.ts",
+        "line": 45,
+        "severity": "non_blocking",
+        "description": "CustomerGroupService still extends BaseService directly. Worker attempted migration but reverted due to API incompatibility (enriched return types). No re-export pattern was applied as fallback."
+      },
+      {
+        "file": "packages/app/app/lib/services/distribucion-service.ts",
+        "line": 68,
+        "severity": "non_blocking",
+        "description": "DistribucionService is a complex entity with state machine logic and remains manual (as intended per feature description). OK."
+      },
+      {
+        "file": "packages/app/app/lib/services/sale-service.ts",
+        "line": 186,
+        "severity": "non_blocking",
+        "description": "SaleService is a complex entity with state machine logic and remains manual (as intended per feature description). OK."
+      },
+      {
+        "file": "packages/app/app/lib/services/inventory-service.ts",
+        "line": 33,
+        "severity": "non_blocking",
+        "description": "InventoryService is a local-only entity (not in the 13 simple entities list). OK to remain manual."
+      },
+      {
+        "file": "packages/app/app/lib/sync/generated/services.ts",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "Generated services.ts contains 16 service classes. All 13 requested simple entities are present plus 3 additional (tags, customerGroupMembers, sales). Sales and Distribuciones are generated but should remain manual per feature requirements — having generated versions for complex entities is not harmful but could confuse future developers."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The mission AGENTS.md documents that manual services with incompatible APIs should be kept as manual overrides, but it does not document a fallback 're-export' pattern for cases where extension is impossible. The worker only knew to extend or keep manual — a re-export pattern (exporting the generated service as-is with a renamed alias) would have satisfied the feature requirement for API-incompatible services.",
+      "evidence": "packages/app/app/lib/services/visita-service.ts:36 and customer-group-service.ts:45 remain fully manual instead of re-exporting generated services."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-migrate-worker skill file could not be found at .factory/skills/frontend-migrate-worker/SKILL.md. The worker transcript shows it invoked 'frontend-migrate-worker' skill successfully, but the skill file appears to have been removed or renamed. This may indicate a gap in skill documentation persistence.",
+      "evidence": "Glob search for .factory/skills/frontend-migrate-worker/SKILL.md returned ENOENT."
+    },
+    {
+      "area": "conventions",
+      "observation": "The generated services use camelCase field names (Drizzle ORM convention) while several manual services still use snake_case in their local type definitions (e.g., payment-service.ts defines Abono with business_id, customer_id). This naming mismatch was a blocker the worker encountered when attempting to extend generated services. The AGENTS.md does not document this schema naming convention difference.",
+      "evidence": "packages/app/app/lib/services/payment-service.ts:24-35 shows snake_case fields (business_id, customer_id, seller_id) while the generated AbonosService would use camelCase (businessId, customerId, sellerId)."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The feature partially meets requirements. All 16 services are generated in packages/app/app/lib/sync/generated/services.ts (covering all 13 requested simple entities plus tags, customerGroupMembers, and sales). Three manual services were successfully migrated to extend generated versions: TagService (prior session), CustomerTagService (prior session), and SupplierService (this session). However, 10 out of 13 simple entities still have fully manual service implementations with no re-export or extension pattern applied: customers, products, purchases, payment-service (abonos), visitas, customer_groups, and the item entities (sale_items, purchase_items, distribucion_items, product_variants). The worker correctly kept complex entities (sales, distribuciones) as manual. No regressions were introduced — typecheck and tests show only pre-existing failures. The primary gap is that the feature description promised migration for ALL simple entities, but only 1 was migrated in this session (plus 2 from prior sessions)."
+}

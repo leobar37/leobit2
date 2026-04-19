@@ -1,0 +1,26 @@
+{
+  "featureId": "fix-hooks-import-path",
+  "reviewedAt": "2026-04-19T20:20:00.000Z",
+  "commitId": "0ae6afb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly changes hooks-generator.ts to import generateSyncGroupId and generateIdempotencyKey from @avileo/shared instead of the non-existent '~/lib/sync/utils'. The implementation is minimal, correct, and complete. It adds @paralleldrive/cuid2 as a dependency to @avileo/shared, exports createId plus the two utility functions from packages/shared/src/index.ts, updates the single import line in hooks-generator.ts, and regenerates hooks.ts with the corrected imports. All 351 drizzle-sync tests pass. The build of @avileo/shared succeeds. The generated hooks.ts compiles with valid imports.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The drizzle-sync package already exports generateSyncGroupId and generateIdempotencyKey from its own config/define-config.ts and re-exports them via config/index.ts. After this fix, there are now two sources of truth for these utilities: drizzle-sync/src/config/define-config.ts and @avileo/shared/src/index.ts. The hooks-generator.ts now imports from @avileo/shared, but the drizzle-sync package still maintains its own copies. This is a minor duplication that could be cleaned up by having drizzle-sync re-export from @avileo/shared, but it is not a bug.",
+      "evidence": "packages/drizzle-sync/src/config/define-config.ts:23-30 defines generateSyncGroupId and generateIdempotencyKey. packages/drizzle-sync/src/config/index.ts:47 re-exports them. packages/shared/src/index.ts:413-418 also defines identical functions."
+    },
+    {
+      "area": "tests",
+      "observation": "No new tests were added for this fix. The handoff states 'No new tests added - the fix corrects the import path for existing functionality that already had test coverage.' While the existing test suite passing (351 tests) gives confidence, there is no explicit test that verifies the generated import path in hooks.ts. A generator test asserting the exact import string would prevent regression.",
+      "evidence": "Handoff: tests.added is empty. No test in packages/drizzle-sync/__tests__/ verifies the import line in generated hooks.ts."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The fix-hooks-import-path feature passes review. The import path was corrected from '~/lib/sync/utils' (non-existent) to '@avileo/shared' (existing, with newly exported utilities). The generated hooks.ts compiles correctly. All tests pass. No regressions. Two minor observations: (1) duplicate utility definitions across drizzle-sync and shared packages, and (2) no explicit test for the generated import path."
+}

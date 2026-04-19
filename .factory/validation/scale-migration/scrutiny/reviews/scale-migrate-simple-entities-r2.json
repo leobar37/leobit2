@@ -1,0 +1,86 @@
+{
+  "featureId": "scale-migrate-simple-entities",
+  "reviewedAt": "2026-04-19T21:00:00.000Z",
+  "commitId": "47802e2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The scale-migrate-simple-entities feature remains incomplete. Of the 13 simple entities that should have been migrated to extend generated services, only 3 have been migrated (suppliers, tags, customer-tags). The remaining 10 simple entities (customers, products, purchases, abonos/payments, visitas, customer_groups, sale_items, purchase_items, distribucion_items, product_variants) still have fully manual implementations extending BaseService directly. This is unchanged from the prior round's finding of 1 migration (suppliers) — the additional 2 migrations (tags, customer-tags) were actually done in prior worker sessions (pilot migration and a separate frontend-migrate-worker session), not in the worker session under review (03b709b4-278f-4594-89c4-792c74185df4). The worker session 03b709b4 only migrated SupplierService.",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/services/customer-service.ts",
+        "line": 63,
+        "severity": "blocking",
+        "description": "CustomerService still extends BaseService directly instead of generated CustomersService. Has complex search/pagination methods that should be preserved in an extension."
+      },
+      {
+        "file": "packages/app/app/lib/services/product-service.ts",
+        "line": 117,
+        "severity": "blocking",
+        "description": "ProductService still extends BaseService directly instead of generated ProductsService. Has variant management methods that should be preserved."
+      },
+      {
+        "file": "packages/app/app/lib/services/purchase-service.ts",
+        "line": 84,
+        "severity": "blocking",
+        "description": "PurchaseService still extends BaseService directly instead of generated PurchasesService. Has items management that should be preserved."
+      },
+      {
+        "file": "packages/app/app/lib/services/payment-service.ts",
+        "line": 77,
+        "severity": "blocking",
+        "description": "PaymentService (abonos) still extends BaseService directly instead of generated AbonosService."
+      },
+      {
+        "file": "packages/app/app/lib/services/visita-service.ts",
+        "line": 36,
+        "severity": "blocking",
+        "description": "VisitaService still extends BaseService directly instead of generated VisitasService. Worker noted API incompatibility (returns VisitaWithCustomer vs plain Visita) but did not attempt re-export pattern."
+      },
+      {
+        "file": "packages/app/app/lib/services/customer-group-service.ts",
+        "line": 45,
+        "severity": "blocking",
+        "description": "CustomerGroupService still extends BaseService directly instead of generated CustomerGroupsService. Worker noted API incompatibility (returns enriched types) but did not attempt re-export pattern."
+      },
+      {
+        "file": "packages/app/app/lib/services/sale-service.ts",
+        "line": 186,
+        "severity": "non_blocking",
+        "description": "SaleService is documented as a complex entity that should remain manual — this is correct per the feature description."
+      },
+      {
+        "file": "packages/app/app/lib/services/distribucion-service.ts",
+        "line": 68,
+        "severity": "non_blocking",
+        "description": "DistribucionService is documented as a complex entity that should remain manual — this is correct per the feature description."
+      },
+      {
+        "file": "packages/app/app/lib/services/inventory-service.ts",
+        "line": 33,
+        "severity": "non_blocking",
+        "description": "InventoryService extends BaseService but is a LOCAL-ONLY entity per AGENTS.md — not expected to be migrated."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The feature description says 'Keep complex entities (sales, distribuciones) as manual overrides' but does not define what makes an entity 'complex'. Visita and customer_group were treated as complex by the worker due to enriched return types, but the feature description lists them as simple entities to migrate. Either the feature description should be updated to exclude these, or the migration procedure should document how to handle API-incompatible services (e.g., via re-export or adapter pattern).",
+      "evidence": "feature description lists visitas and customer_groups in REMAINING. Worker handoff says they 'could not be extended from generated services due to API incompatibilities'."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-migrate-worker skill procedure assumes generated services have compatible APIs with manual services. In practice, many manual services have enriched return types, custom search parameters, or child entity management that conflicts with the generated CRUD pattern. The skill should document fallback strategies: (1) extend generated service and override incompatible methods, (2) keep manual service but delegate simple CRUD to generated, or (3) re-export generated types while keeping manual implementation.",
+      "evidence": "Worker handoff skillFeedback.suggestedChanges notes: 'The migration procedure assumes generated services have compatible APIs with manual services. In practice, manual services often have enriched return types.'"
+    },
+    {
+      "area": "services",
+      "observation": "No new observations — services.yaml already documents the relevant test/typecheck commands.",
+      "evidence": ""
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Round 2 review confirms the codebase state is essentially unchanged from the prior failed review. The worker session 03b709b4-278f-4594-89c4-792c74185df4 only migrated SupplierService (1 entity). Tags and customer-tags were migrated in separate prior sessions, not this one. Of the 13 simple entities listed in the feature description, only 3 total have been migrated to extend generated services. The remaining 10 still have fully manual BaseService implementations. The generated services.ts file is up-to-date and contains all 13 generated service classes, so the blocker is purely in the manual service files not being updated to extend them. This feature FAILS review."
+}

@@ -1,0 +1,62 @@
+{
+  "featureId": "fix-duplicate-imports-service-generator",
+  "reviewedAt": "2026-04-19T19:10:00.000Z",
+  "commitId": "78d96ac",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The worker added stripImports() and deduplicated top-level imports in generateServicesFile(), but the actual generated services.ts file in packages/app/app/lib/sync/generated/services.ts still contains massive duplicate imports. Every individual service class still has its own full block of duplicate imports (PGlite, drizzle, drizzle-orm, base-service, sync-service, @avileo/shared) because stripImports() only removes imports that match its regex patterns exactly, and the generated per-service code contains imports that differ slightly (e.g., 'SyncStatus, tags' vs 'SyncStatus, customers') so they are not stripped. The tests pass because they test the aggregator with mocked serviceCode strings, not with real generated service code. The core bug remains un-fixed in practice.",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/sync/generated/services.ts",
+        "line": 1,
+        "severity": "blocking",
+        "description": "The generated services.ts has duplicate import blocks for every service. Each service repeats: import type { PGlite }, import type { drizzle }, import { eq, and, desc }, import { BaseService }, import { SyncService }, and import { SyncStatus, <table> } from @avileo/shared. The stripImports() regex does not catch these because each service's @avileo/shared import has a different table name, so the regex fails to match."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 360,
+        "severity": "blocking",
+        "description": "stripImports() uses regex patterns that require exact matches. The pattern /^import\\s+\\{[^}]+\\}\\s+from\\s+['\"][^'\"]+['\"]\\s*;?\\s*/gm will not match imports with different named exports (e.g., 'SyncStatus, tags' vs 'SyncStatus, customers'), so each service's unique @avileo/shared import survives stripping."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts",
+        "line": 330,
+        "severity": "non_blocking",
+        "description": "The test 'removes duplicate import statements from individual service codes when aggregating' passes with real generateService outputs, but it only checks that exact duplicate lines are removed. It does not catch the case where imports have the same module but different named exports, which is the actual bug."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts",
+        "line": 300,
+        "severity": "non_blocking",
+        "description": "The test 'does not duplicate and imports from drizzle-orm' verifies there is only one drizzle-orm import line, but the actual generated file has one per service because each service's drizzle-orm import is identical and SHOULD be stripped — yet in the real generated file they are not stripped. This suggests the test environment differs from actual generation."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 390,
+        "severity": "blocking",
+        "description": "The generateServicesFile() builds a consolidated @avileo/shared import with all table names, but then the per-service codes still contain their own @avileo/shared imports with individual table names. These should be stripped but are not."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The generated services.ts file is checked into git (packages/app/app/lib/sync/generated/services.ts) and was generated BEFORE the fix commit. The worker's fix may work in theory but the checked-in generated file was not regenerated after the fix, so the bug appears to still exist in the repo.",
+      "evidence": "packages/app/app/lib/sync/generated/services.ts contains 15+ duplicate import blocks, one per service class. The file's timestamp (2026-04-19T18:44:52.468Z) is before the fix commit (2026-04-19T13:54:51 -0500, which is 18:54:51 UTC). Wait — the generated file timestamp is 18:44:52 UTC and the commit is 18:54:59 UTC. So the generated file was created ~10 minutes BEFORE the fix commit. The fix commit message says 'deduplicate imports' but the generated file was not regenerated after the fix."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker followed the skill procedure and added tests, but the tests test the aggregator with real generateService outputs and pass. However, the actual generated file in the repo still shows duplicates because it was generated before the fix. The skill does not mention regenerating the output file after fixing the generator.",
+      "evidence": "Handoff says 'All 340 tests passed' and 'Build succeeded'. The tests verify deduplication at the unit level but do not verify the actual generated file in the app package."
+    },
+    {
+      "area": "services",
+      "observation": "No new services or commands were needed. The existing test and build commands in services.yaml cover this work.",
+      "evidence": "services.yaml already has test, build, and typecheck commands."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL: The fix for duplicate imports in generateServicesFile() is incomplete. While stripImports() was added and unit tests pass, the actual generated services.ts file (packages/app/app/lib/sync/generated/services.ts) still contains duplicate import blocks for every service. The root cause is that stripImports() uses exact-match regexes that fail to catch imports with different named exports from the same module (e.g., 'SyncStatus, tags' vs 'SyncStatus, customers' from @avileo/shared). Additionally, the checked-in generated file was created before the fix commit and was never regenerated. To fully fix this: (1) make stripImports() match imports by module path (not exact line), so any import from @avileo/shared, drizzle-orm, etc. is removed regardless of named exports; (2) regenerate packages/app/app/lib/sync/generated/services.ts after the fix; (3) add a test that verifies no import from @avileo/shared appears more than once in the aggregated output."
+}

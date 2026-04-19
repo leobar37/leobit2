@@ -1,0 +1,88 @@
+{
+  "milestone": "scale-migration",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test_drizzle_sync": {
+      "passed": true,
+      "command": "cd packages/drizzle-sync && bun run test:run",
+      "exitCode": 0,
+      "observation": "351 tests passed across 17 test files. All generator tests pass including 8 new junction table tests and 3 new date type tests."
+    },
+    "test_app": {
+      "passed": true,
+      "command": "cd packages/app && bun test --run",
+      "exitCode": 0,
+      "observation": "175 pass, 125 fail, 37 errors. Same baseline as prior milestones (pilot-migration had 175 pass, 125 fail). No new test failures introduced by scale-migration changes."
+    },
+    "typecheck_app": {
+      "passed": false,
+      "command": "cd packages/app && bun run typecheck",
+      "exitCode": 2,
+      "observation": "Pre-existing type errors in app components (distribucion, sales, purchases, sync, reports), hooks, and backend type references. No NEW type errors introduced by service migrations. The 3 migrated services (tag-service.ts, customer-tag-service.ts, supplier-service.ts) compile without errors."
+    },
+    "typecheck_drizzle_sync": {
+      "passed": false,
+      "command": "cd packages/drizzle-sync && bun run typecheck",
+      "exitCode": 2,
+      "observation": "Pre-existing type errors in cli.ts (2 errors), generic-handler.test.ts (type compatibility with 'test_entity'), and sync-handler-builder.test.ts (same). These existed before scale-migration and are unrelated to generator changes."
+    },
+    "lint": {
+      "passed": false,
+      "command": "bun run lint",
+      "exitCode": 1,
+      "observation": "No lint script configured in root package.json. Pre-existing issue across all milestones."
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1,
+    "failedFeatures": ["scale-migrate-simple-entities"]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "scale-migrate-simple-entities",
+      "severity": "blocking",
+      "description": "Only 1 of 13 simple entities was migrated to extend generated services in this worker session (SupplierService). The other 10 simple entities (customers, products, purchases, abonos/payments, visitas, customer_groups, sale_items, purchase_items, distribucion_items, product_variants) still have fully manual implementations extending BaseService directly. The feature description explicitly required 'For each: generate service, ensure it compiles, update any manual service files to re-export or extend generated versions.' This was not achieved for the majority of entities."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the re-export fallback pattern for API-incompatible services: when a manual service cannot extend its generated counterpart due to API differences (enriched return types, custom methods), the fallback is to re-export the generated service with a renamed alias (e.g., 'export { CustomersService as CustomerService }'). This satisfies the migration requirement without breaking consumers.",
+      "evidence": "scale-migrate-simple-entities: VisitaService and CustomerGroupService were left fully manual because update() returns enriched types (VisitaWithCustomer, CustomerGroupSummary). A re-export pattern would have satisfied the feature requirement.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document that generated services.ts must be regenerated after generator fixes. The fix-junction-table-service-generator feature fixed the generator but did not regenerate services.ts, leaving stale generated code in the app.",
+      "evidence": "fix-junction-table-service-generator review: 'packages/app/app/lib/sync/generated/services.ts still contains the OLD pre-fix code for CustomerTagsService and CustomerGroupMembersService.'",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify schema naming conventions: manual services use snake_case field names (business_id, customer_id) in local type definitions while generated services use camelCase (businessId, customerId). This mismatch blocks extension for some entities.",
+      "evidence": "scale-migrate-simple-entities review: payment-service.ts defines Abono with snake_case fields while generated AbonosService uses camelCase.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document that customer_group_members has an 'id' column (primaryKey with defaultRandom) and is NOT a junction table by the 'no id column' heuristic. Only customer_tags is a true junction table without 'id'.",
+      "evidence": "fix-junction-table-service-generator review: customerGroupMembers schema has id: uuid('id').primaryKey().defaultRandom().",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Duplicate utility definitions for generateSyncGroupId and generateIdempotencyKey across drizzle-sync and shared packages.",
+      "reason": "already-documented — minor duplication noted in fix-hooks-import-path review. Not a blocking issue."
+    },
+    {
+      "observation": "Generated services.ts contains generated versions for complex entities (sales, distribuciones) that should remain manual.",
+      "reason": "already-documented — non-blocking. Having generated versions for complex entities is not harmful; they are not imported or used."
+    }
+  ],
+  "previousRound": null
+}

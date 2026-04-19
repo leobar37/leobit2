@@ -1,0 +1,50 @@
+{
+  "featureId": "fix-junction-table-service-generator",
+  "reviewedAt": "2026-04-19T20:30:00.000Z",
+  "commitId": "95bf318",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses the junction table handling in service-generator.ts. The generator now detects tables without an 'id' column (junction tables) and: (1) skips findById generation, (2) skips update/delete methods, (3) generates create without an 'id' field. The tests verify all three requirements. However, the checked-in generated services.ts file at packages/app/app/lib/sync/generated/services.ts was NOT regenerated after the fix, so it still contains the old incorrect code for CustomerTagsService (with findById/update/delete/id field) and CustomerGroupMembersService (which actually HAS an 'id' column in the shared schema, so it correctly gets standard CRUD).",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/sync/generated/services.ts",
+        "line": 1931,
+        "severity": "non_blocking",
+        "description": "The checked-in generated services.ts file was NOT regenerated after the fix. CustomerTagsService still has findById, update, delete methods and uses 'id' field in create - all incorrect for a junction table without 'id' column. The generator fix is correct (tests prove it), but the stale generated file needs regeneration."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 95,
+        "severity": "non_blocking",
+        "description": "The junction table detection relies solely on the absence of an 'id' column. This is a heuristic that works for the known junction tables (customer_tags) but could miss junction tables that happen to have an 'id' column (like customer_group_members in the shared schema, which DOES have an 'id' column). The feature description mentions both customer_tags and customer_group_members as junction tables, but customer_group_members has an 'id' column in the shared schema, so the generator treats it as a regular table. This is actually correct behavior given the schema, but the feature description is slightly misleading."
+      },
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.ts",
+        "line": 140,
+        "severity": "non_blocking",
+        "description": "For junction tables, the create method still calls this.generateId() and passes it to queueSync('create', id, ...), but the 'id' is not stored in the entity (no id column). The sync queue expects an entity ID for tracking. This could cause issues if the sync system expects the id to match a database column. However, this is consistent with how the sync queue works - it uses the id as an operation identifier, not necessarily a database column."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The shared schema (packages/shared/src/schema.ts) and backend schema (packages/backend/src/db/schema/) are inconsistent for junction tables. customer_tags has NO 'id' column in both schemas (true junction table), but customer_group_members HAS an 'id' column in the shared schema (line 711) while the backend schema also has an 'id' column. The feature description claims both are junction tables without 'id' columns, but only customer_tags actually lacks an 'id' column. This inconsistency should be documented.",
+      "evidence": "packages/shared/src/schema.ts lines 642-656 (customerTags has no 'id') vs lines 708-725 (customerGroupMembers has 'id' at line 711). Backend schema customer-tags.ts has composite PK (customerId, tagId) with no 'id', but customer-group-members.ts has 'id: uuid(\"id\").primaryKey().defaultRandom()' at line 23."
+    },
+    {
+      "area": "conventions",
+      "observation": "The generated services.ts file at packages/app/app/lib/sync/generated/services.ts is stale and was generated before multiple fixes (duplicate imports, junction tables, date types, hooks imports). The file shows incorrect code for CustomerTagsService (has findById/update/delete with id column) and duplicate import issues were also present before fixes. Workers need to regenerate this file after generator fixes, but there's no documented process for when/how to regenerate.",
+      "evidence": "packages/app/app/lib/sync/generated/services.ts timestamp shows 2026-04-19T19:54:31.141Z, but the junction table fix commit is 95bf318 which came later. CustomerTagsService at line 1931 still has findById(id) referencing customerTags.id which doesn't exist in the shared schema."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-gen-worker skill doesn't mention the need to regenerate the checked-in generated files (packages/app/app/lib/sync/generated/services.ts, hooks.ts) after fixing the generator. Multiple fix features (duplicate imports, junction tables, date types, hooks imports) all modified the generator but didn't regenerate the output files, leaving stale generated code in the repo.",
+      "evidence": "The fix-junction-table-service-generator worker fixed the generator and added tests, but the handoff shows no regeneration of services.ts. The scale-migrate-simple-entities worker later regenerated services.ts but that was before the junction table fix."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The fix-junction-table-service-generator feature correctly implements junction table detection in the service generator. The generator now detects tables without an 'id' column and skips findById, update, and delete methods, while generating create without an 'id' field. All 8 new junction table tests pass (348 total tests pass). However, the checked-in generated services.ts file was NOT regenerated after the fix, so it still contains stale incorrect code for CustomerTagsService. Additionally, there's a schema inconsistency: customer_group_members actually HAS an 'id' column in both shared and backend schemas, so the generator correctly treats it as a regular table - only customer_tags is a true junction table without 'id'. The fix is sound but the stale generated file and schema inconsistency should be addressed."
+}

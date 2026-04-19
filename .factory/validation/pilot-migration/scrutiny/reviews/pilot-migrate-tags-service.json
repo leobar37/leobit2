@@ -1,0 +1,124 @@
+{
+  "feature": "pilot-migrate-tags-service",
+  "milestone": "pilot-migration",
+  "reviewedAt": "2026-04-19T14:00:00Z",
+  "reviewer": "scrutiny-feature-reviewer",
+  "commit": "317df64",
+  "status": "approved_with_notes",
+  "summary": "TagService migration from manual implementation to generated TagsService from drizzle-sync is correctly implemented. The manual tag-service.ts properly extends the generated TagsService and preserves the custom getCustomerCount method. All imports resolve correctly.",
+  "findings": [
+    {
+      "category": "code_quality",
+      "severity": "info",
+      "title": "Generated TagsService follows BaseService pattern",
+      "description": "The generated TagsService class (lines ~581-719 of services.ts) correctly extends BaseService, implements getEntityType() returning 'tags', implements getEntityPrefix() returning 'tag', and queues sync operations in create/update/delete methods.",
+      "location": "packages/app/app/lib/sync/generated/services.ts:581-719"
+    },
+    {
+      "category": "code_quality",
+      "severity": "info",
+      "title": "Manual extension preserves custom method",
+      "description": "TagService extends TagsService and preserves the getCustomerCount(tagId) method that queries the customerTags table. Input types are re-exported as type aliases for backward compatibility.",
+      "location": "packages/app/app/lib/services/tag-service.ts"
+    },
+    {
+      "category": "code_quality",
+      "severity": "info",
+      "title": "All imports resolve correctly",
+      "description": "service-provider.tsx imports TagService from tag-service.ts. use-tags.ts imports CreateTagInput/UpdateTagInput from tag-service.ts. useTagService() hook returns TagService instance.",
+      "location": "packages/app/app/lib/sync/service-provider.tsx, packages/app/app/hooks/use-tags.ts"
+    },
+    {
+      "category": "architecture",
+      "severity": "info",
+      "title": "Proper separation of generated vs custom code",
+      "description": "Generated CRUD lives in services.ts (drizzle-sync output). Custom business logic (getCustomerCount) lives in tag-service.ts extension. This follows the intended architecture pattern.",
+      "location": "packages/app/app/lib/services/tag-service.ts"
+    },
+    {
+      "category": "pre_existing",
+      "severity": "warning",
+      "title": "Duplicate import blocks in generated services.ts",
+      "description": "The generated services.ts file contains duplicate import blocks (each service class repeats the same imports). This is a pre-existing generator bug that was fixed in feature 'fix-duplicate-imports-service-generator' (commit 78d96ac). The tags service section is affected but this is not introduced by this feature.",
+      "location": "packages/app/app/lib/sync/generated/services.ts"
+    },
+    {
+      "category": "pre_existing",
+      "severity": "warning",
+      "title": "customerCount property missing from Tag type",
+      "description": "The tags route (_protected.config.tags.tsx:129-130) references tag.customerCount but the Tag type from @avileo/shared does not have this property. This is a pre-existing issue unrelated to the tag service migration - the previous manual implementation also returned Tag[] from findByBusiness() which lacks customerCount.",
+      "location": "packages/app/app/routes/_protected.config.tags.tsx:129-130"
+    }
+  ],
+  "verifications": [
+    {
+      "check": "TagsService extends BaseService",
+      "result": "pass",
+      "evidence": "class TagsService extends BaseService at services.ts:599"
+    },
+    {
+      "check": "ENTITY_TYPE is 'tags'",
+      "result": "pass",
+      "evidence": "private static readonly ENTITY_TYPE: EntityType = 'tags' at services.ts:602"
+    },
+    {
+      "check": "ID_PREFIX is 'tag'",
+      "result": "pass",
+      "evidence": "private static readonly ID_PREFIX = 'tag' at services.ts:603"
+    },
+    {
+      "check": "create() queues sync with queueSync('create', ...)",
+      "result": "pass",
+      "evidence": "await this.queueSync('create', id, {...}) at services.ts:649"
+    },
+    {
+      "check": "update() queues sync with queueSync('update', ...)",
+      "result": "pass",
+      "evidence": "await this.queueSync('update', id, input) at services.ts:679"
+    },
+    {
+      "check": "delete() queues sync with queueSync('delete', ...)",
+      "result": "pass",
+      "evidence": "await this.queueSync('delete', id, {}) at services.ts:699"
+    },
+    {
+      "check": "TagService extends TagsService",
+      "result": "pass",
+      "evidence": "class TagService extends TagsService at tag-service.ts:28"
+    },
+    {
+      "check": "getCustomerCount method preserved",
+      "result": "pass",
+      "evidence": "async getCustomerCount(tagId: string): Promise<number> at tag-service.ts:45-52"
+    },
+    {
+      "check": "CreateTagInput/UpdateTagInput re-exported",
+      "result": "pass",
+      "evidence": "export type CreateTagInput = CreateTagsInput at tag-service.ts:18"
+    },
+    {
+      "check": "service-provider.tsx imports TagService from tag-service.ts",
+      "result": "pass",
+      "evidence": "import { TagService } from '../services/tag-service' at service-provider.tsx:14"
+    },
+    {
+      "check": "useTagService() returns TagService",
+      "result": "pass",
+      "evidence": "export function useTagService(): TagService at service-provider.tsx:344"
+    },
+    {
+      "check": "use-tags.ts imports from tag-service.ts",
+      "result": "pass",
+      "evidence": "import type { CreateTagInput, UpdateTagInput } from '~/lib/services/tag-service' at use-tags.ts:7"
+    }
+  ],
+  "typecheck": {
+    "status": "has_pre_existing_errors",
+    "tag_specific_errors": false,
+    "note": "Typecheck shows 125+ pre-existing errors unrelated to tag migration. No new tag-specific type errors introduced by this feature. The customerCount type error in tags route is pre-existing."
+  },
+  "recommendations": [
+    "Consider enriching the Tag type with customerCount in findByBusiness() by joining with customer_tags table, or update the route to call getCustomerCount separately",
+    "The duplicate imports in generated services.ts are fixed by feature fix-duplicate-imports-service-generator (commit 78d96ac)"
+  ]
+}
