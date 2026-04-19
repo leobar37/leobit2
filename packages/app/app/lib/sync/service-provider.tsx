@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
@@ -19,9 +19,9 @@ import { DistribucionService } from "../services/distribucion-service";
 import { SupplierService } from "../services/supplier-service";
 import type { ConflictStrategy } from "../sync/config";
 import { addServiceDebugHelpers } from "~/lib/debug";
-import { syncEvents } from "./sync-events";
-import { getQueryKeysForEntity } from "./query-keys";
 import { initializeEventBuffer } from "./sync-event-buffer";
+import { SyncProvider, useSyncState as useLibrarySyncState } from "@avileo/drizzle-sync/react";
+import { createAvileoSyncRuntime } from "./react-runtime";
 
 export interface ServicesContextValue {
   pg: PGlite;
@@ -234,170 +234,94 @@ export function ServicesProvider({
 
   return (
     <ServicesContext.Provider value={services}>
-      <SyncStateProvider>
+      <LibrarySyncStateProvider>
         {children}
-      </SyncStateProvider>
+      </LibrarySyncStateProvider>
     </ServicesContext.Provider>
   );
 }
 
 /**
- * Provider that exposes sync state to consumers
+ * Provider that wraps the library's SyncProvider and adapts to app's sync state
  */
-function SyncStateProvider({ children }: { children: ReactNode }) {
-  const [pullStatus, setPullStatus] = useState<PullStatus>({
-    isPulling: false,
-    lastPullTime: null,
-    lastError: null,
-    consecutiveFailures: 0,
-    cursor: null,
-    isStuck: false,
-    consecutiveStalePulls: 0,
-  });
-
+function LibrarySyncStateProvider({ children }: { children: ReactNode }) {
+  const services = useContext(ServicesContext);
   const queryClient = useQueryClient();
 
-  const [pushStatus, setPushStatus] = useState<SyncStatus>({
-    pending: 0,
-    processing: 0,
-    syncing: 0,
-    completed: 0,
-    failed: 0,
-    conflict: 0,
-    deadLetter: 0,
-    total: 0,
-  });
-  
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  // Create runtime factory that memoizes the runtime
+  const runtimeFactory = useMemo(() => {
+    if (!services) return null;
+    return () => createAvileoSyncRuntime(
+      services.syncService,
+      services.pullService,
+      queryClient
+    );
+  }, [services, queryClient]);
 
-  // Get services from context
+  if (!runtimeFactory) {
+    return <>{children}</>;
+  }
+
+  return (
+    <SyncProvider runtime={runtimeFactory}>
+      <SyncStateAdapter>
+        {children}
+      </SyncStateAdapter>
+    </SyncProvider>
+  );
+}
+
+/**
+ * Adapter that bridges library state to app's SyncState interface
+ */
+function SyncStateAdapter({ children }: { children: ReactNode }) {
+  const libraryState = useLibrarySyncState();
   const services = useContext(ServicesContext);
 
-  // Update sync status using events (replacing 5s polling)
-  useEffect(() => {
-    if (!services) return;
-
-    // Initial status load
-    const loadInitialStatus = async () => {
-      try {
-        const pull = services.pullService.getStatus();
-        setPullStatus(pull);
-        const push = await services.syncService.getStatus();
-        setPushStatus(push);
-      } catch (error) {
-        // Silently ignore "not initialized" errors during startup - this is normal
-        if (error instanceof Error && error.message.includes("not initialized")) {
-          // Service will initialize shortly, status will update via events or fallback
-          return;
-        }
-        console.error("[SyncStateProvider] Failed to get initial sync status:", error);
-      }
-    };
-    loadInitialStatus();
-
-    // Subscribe to sync events
-    const unsubStatus = syncEvents.on("status:changed", (status) => {
-      setPushStatus((prev) => ({ ...prev, ...status }));
-    });
-
-    const unsubPullCompleted = syncEvents.on("pull:completed", ({ changesApplied, entityTypes }) => {
-      setPullStatus((prev) => ({
-        ...prev,
-        lastPullTime: new Date(),
-      }));
-      // Invalidate TanStack Query caches for affected entity types (FR-002)
-      if (entityTypes && entityTypes.length > 0) {
-        for (const entityType of entityTypes) {
-          const keys = getQueryKeysForEntity(entityType);
-          for (const key of keys) {
-            queryClient.invalidateQueries({ queryKey: key });
-          }
-        }
-      }
-    });
-
-    const unsubPullError = syncEvents.on("pull:error", ({ error }) => {
-      setPullStatus((prev) => ({
-        ...prev,
-        lastError: error,
-      }));
-    });
-
-    const unsubOnline = syncEvents.on("sync:online", () => {
-      setIsOnline(true);
-    });
-
-    const unsubOffline = syncEvents.on("sync:offline", () => {
-      setIsOnline(false);
-    });
-
-    const unsubPullStale = syncEvents.on("pull:stale", ({ consecutiveStalePulls, reason }) => {
-      console.error(`[SyncStateProvider] Sync stuck: ${reason} after ${consecutiveStalePulls} pulls`);
-      setPullStatus((prev) => ({
-        ...prev,
-        isStuck: true,
-        consecutiveStalePulls,
-        lastError: `Sync stuck: ${reason}. Please refresh page.`,
-      }));
-    });
-
-    // Fallback: periodic refresh every 30s (not 5s) for resilience
-    const fallbackInterval = setInterval(async () => {
-      try {
-        const push = await services.syncService.getStatus();
-        setPushStatus(push);
-      } catch (error) {
-        // Silently ignore "not initialized" errors - service may still be starting
-        if (error instanceof Error && error.message.includes("not initialized")) {
-          return;
-        }
-        console.error("[SyncStateProvider] Fallback status refresh failed:", error);
-      }
-    }, 30000);
-
-    return () => {
-      unsubStatus();
-      unsubPullCompleted();
-      unsubPullError();
-      unsubOnline();
-      unsubOffline();
-      unsubPullStale();
-      clearInterval(fallbackInterval);
-    };
-  }, [services]);
-
-  // Track online status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  // Compute derived state
+  // Convert library state to app's SyncState format
+  // Uses rich push/pull state when available from the runtime
   const syncState = useMemo<SyncState>(() => {
-    const isSyncing = pullStatus.isPulling || pushStatus.processing > 0 || pushStatus.syncing > 0;
-    
-    // Use the most recent sync time
-    const lastSyncTime = pullStatus.lastPullTime;
+    // Use rich pull state from library if available, otherwise fall back to service
+    const pullStatus: PullStatus = libraryState.pull ?? services?.pullService?.getStatus() ?? {
+      isPulling: libraryState.isSyncing,
+      lastPullTime: libraryState.lastSyncTime,
+      lastError: null,
+      consecutiveFailures: 0,
+      cursor: null,
+      isStuck: libraryState.isStuck,
+      consecutiveStalePulls: 0,
+    };
+
+    // Use rich push state from library if available, otherwise approximate from counts
+    const pushStatus: SyncStatus = libraryState.push ? {
+      pending: libraryState.push.pendingCount,
+      processing: libraryState.push.processingCount,
+      syncing: libraryState.push.syncingCount,
+      completed: libraryState.push.completedCount,
+      failed: libraryState.push.failedCount,
+      conflict: libraryState.push.conflictCount,
+      deadLetter: libraryState.push.deadLetterCount,
+      total: libraryState.push.totalCount,
+    } : {
+      pending: libraryState.pendingCount,
+      processing: 0,
+      syncing: libraryState.isSyncing ? 1 : 0,
+      completed: 0,
+      failed: libraryState.failedCount,
+      conflict: libraryState.conflictCount,
+      deadLetter: libraryState.deadLetterCount,
+      total: libraryState.pendingCount + libraryState.failedCount + libraryState.conflictCount + libraryState.deadLetterCount,
+    };
 
     return {
       pull: pullStatus,
       push: pushStatus,
-      isSyncing,
-      isOnline,
-      lastSyncTime,
-      isStuck: pullStatus.isStuck,
+      isSyncing: libraryState.isSyncing,
+      isOnline: libraryState.isOnline,
+      lastSyncTime: libraryState.lastSyncTime,
+      isStuck: libraryState.isStuck,
     };
-  }, [pullStatus, pushStatus, isOnline]);
+  }, [libraryState, services]);
 
   return (
     <SyncStateContext.Provider value={syncState}>
@@ -474,6 +398,33 @@ export function useSyncState(): SyncState {
     };
   }
   return context;
+}
+
+/**
+ * Hook to get sync status flags derived from app's rich SyncState
+ */
+export function useSyncStatus(): {
+  isSyncing: boolean;
+  isOnline: boolean;
+  isStuck: boolean;
+  hasPending: boolean;
+  hasFailed: boolean;
+  hasConflicts: boolean;
+  hasDeadLetter: boolean;
+} {
+  const state = useSyncState();
+  return useMemo(
+    () => ({
+      isSyncing: state.isSyncing,
+      isOnline: state.isOnline,
+      isStuck: state.isStuck,
+      hasPending: state.push.pending > 0 || state.push.processing > 0,
+      hasFailed: state.push.failed > 0 || state.push.deadLetter > 0,
+      hasConflicts: state.push.conflict > 0,
+      hasDeadLetter: state.push.deadLetter > 0,
+    }),
+    [state]
+  );
 }
 
 /**

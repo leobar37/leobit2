@@ -27,6 +27,7 @@
     "db:rollback:test": "bun scripts/rollback-migration.ts --file-based"
   },
   "dependencies": {
+    "@avileo/drizzle-sync": "workspace:*",
     "@avileo/shared": "workspace:*",
     "@date-fns/tz": "^1.4.1",
     "@electric-sql/pglite": "^0.3.15",

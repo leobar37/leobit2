@@ -9,7 +9,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
-import { useSync } from "./sync-status";
+import { useSyncStatus } from "~/lib/sync/service-provider";
 import { cn } from "~/lib/utils";
 
 /**
@@ -17,7 +17,7 @@ import { cn } from "~/lib/utils";
  * Works with REST-based custom sync (no Electric sync).
  */
 export function SyncErrorMonitor() {
-  const { isOnline } = useSync();
+  const { isOnline } = useSyncStatus();
   const clearSync = useClearSyncStorage();
 
   // Don't show anything if online

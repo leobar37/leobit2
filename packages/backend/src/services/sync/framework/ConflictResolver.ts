@@ -529,37 +529,28 @@ class NoOpConflictResolver implements IConflictResolver {
   }
 }
 
-// Registry with entity-specific resolvers
-const resolvers: Record<string, IConflictResolver> = {
-  customers: new CustomerConflictResolver(),
-  sales: new VersionConflictResolver(),
-  abonos: new AbonoConflictResolver(),
-  distribuciones: new DistribucionConflictResolver(),
-  products: new ProductConflictResolver(),
-  product_variants: new ProductVariantConflictResolver(),
-  tags: new TagConflictResolver(),
-  customer_tags: new CustomerTagConflictResolver(),
-  customer_groups: new CustomerGroupConflictResolver(),
-  customer_group_members: new CustomerGroupMemberConflictResolver(),
-  visitas: new VisitaConflictResolver(),
-  purchases: new PurchaseConflictResolver(),
-  purchase_items: new PurchaseItemConflictResolver(),
-  suppliers: new SupplierConflictResolver(),
-  puntos_venta: new PuntoVentaConflictResolver(),
-  product_units: new ProductUnitConflictResolver(),
-  variant_inventory: new VariantInventoryConflictResolver(),
-  files: new FileConflictResolver(),
-  sale_items: new SaleItemConflictResolver(),
-};
-
-export class ConflictResolverRegistry {
-  static getResolver(entityType: SyncEntity): IConflictResolver {
-    return resolvers[entityType] ?? new NoOpConflictResolver();
-  }
-
-  static registerResolver(entityType: SyncEntity, resolver: IConflictResolver): void {
-    resolvers[entityType] = resolver;
-  }
+export function createConflictResolvers(): Record<string, IConflictResolver> {
+  return {
+    customers: new CustomerConflictResolver(),
+    sales: new VersionConflictResolver(),
+    abonos: new AbonoConflictResolver(),
+    distribuciones: new DistribucionConflictResolver(),
+    products: new ProductConflictResolver(),
+    product_variants: new ProductVariantConflictResolver(),
+    tags: new TagConflictResolver(),
+    customer_tags: new CustomerTagConflictResolver(),
+    customer_groups: new CustomerGroupConflictResolver(),
+    customer_group_members: new CustomerGroupMemberConflictResolver(),
+    visitas: new VisitaConflictResolver(),
+    purchases: new PurchaseConflictResolver(),
+    purchase_items: new PurchaseItemConflictResolver(),
+    suppliers: new SupplierConflictResolver(),
+    puntos_venta: new PuntoVentaConflictResolver(),
+    product_units: new ProductUnitConflictResolver(),
+    variant_inventory: new VariantInventoryConflictResolver(),
+    files: new FileConflictResolver(),
+    sale_items: new SaleItemConflictResolver(),
+  };
 }
 
 export { VersionConflictResolver, NoOpConflictResolver };

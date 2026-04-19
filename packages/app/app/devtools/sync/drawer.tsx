@@ -19,8 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { useSync } from "~/components/sync/sync-status";
-import { useSyncState, useSyncService } from "~/lib/sync/service-provider";
+import { useSyncState, useSyncService, useSyncStatus } from "~/lib/sync/service-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { runManualSync } from "~/lib/sync/manual-sync";
 import { useToast } from "~/hooks/use-toast";
@@ -42,7 +41,7 @@ interface SyncDevToolsDrawerProps {
 
 export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps = {}) {
   const { isSyncing, isInitialized } = useEngine();
-  const { isOnline, actualIsOnline } = useSync();
+  const { isOnline } = useSyncStatus();
   const syncState = useSyncState();
   const syncService = useSyncService();
   const { confirm, ConfirmDialog: DeleteConfirmDialog } = useConfirmDialog();
@@ -65,7 +64,8 @@ export function SyncDevToolsDrawer({ triggerClassName }: SyncDevToolsDrawerProps
     if (!isInitialized) return;
     setIsForceSyncing(true);
     try {
-      await runManualSync({ actualOnline: actualIsOnline });
+      // runManualSync uses navigator.onLine as fallback when actualOnline is not provided
+      await runManualSync();
     } catch (error) {
       console.error("Sync failed:", error);
     } finally {

@@ -1,0 +1,98 @@
+{
+  "planName": "drizzle-sync-codegen",
+  "version": "1.0.0",
+  "createdAt": "2026-04-18",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Define Config API",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "CLI Tool Infrastructure",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-003",
+      "title": "Drizzle Introspection Module",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-004",
+      "title": "Zod Schema Generator",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-003"]
+    },
+    {
+      "id": "T-005",
+      "title": "PGlite DDL Generator",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-003"]
+    },
+    {
+      "id": "T-006",
+      "title": "Change Applier Config Generator",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-003"]
+    },
+    {
+      "id": "T-013",
+      "title": "Relation Detection & Cascade Config",
+      "status": "pending",
+      "priority": "critical",
+      "dependencies": ["T-001", "T-003"]
+    },
+    {
+      "id": "T-007",
+      "title": "React Hooks Generator",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-004", "T-013"]
+    },
+    {
+      "id": "T-008",
+      "title": "Backend Integration",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-002", "T-004", "T-005", "T-006", "T-013"]
+    },
+    {
+      "id": "T-009",
+      "title": "Frontend Integration",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-008"]
+    },
+    {
+      "id": "T-010",
+      "title": "Documentation & Testing",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-009"]
+    },
+    {
+      "id": "T-011",
+      "title": "CLI Validation Command",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-002", "T-013"]
+    },
+    {
+      "id": "T-012",
+      "title": "CLI Diff Command",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["T-002"]
+    }
+  ]
+}

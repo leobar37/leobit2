@@ -2,16 +2,14 @@ import { eq, and, desc, asc } from "drizzle-orm";
 import { db, syncConflicts } from "../../../lib/db";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
-import type { SyncConflict } from "../../../db/schema";
+import type { ConflictResolutionData, ISyncConflictRepository, SyncConflict as LibSyncConflict } from "@avileo/drizzle-sync/server";
+import type { SyncConflict as DrizzleSyncConflict } from "../../../db/schema";
 
-export type { SyncConflict };
+// Re-export library types for backward compatibility with backend code
+export type { ConflictResolutionData };
+export type SyncConflict = LibSyncConflict;
 
-export interface ConflictResolutionData {
-  resolution: "server" | "local" | "merge";
-  mergedData?: Record<string, unknown>;
-}
-
-export class SyncConflictRepository {
+export class SyncConflictRepository implements ISyncConflictRepository<RequestContext, DbTransaction> {
   async create(
     ctx: RequestContext,
     data: {
@@ -26,7 +24,7 @@ export class SyncConflictRepository {
       sourceFingerprint?: string;
     },
     tx?: DbTransaction
-  ): Promise<SyncConflict> {
+  ): Promise<LibSyncConflict> {
     const executor = tx || db;
 
     const [conflict] = await executor
@@ -46,33 +44,33 @@ export class SyncConflictRepository {
       })
       .returning();
 
-    return conflict;
+    return conflict as LibSyncConflict;
   }
 
   async findById(
     ctx: RequestContext,
     id: string
-  ): Promise<SyncConflict | undefined> {
+  ): Promise<LibSyncConflict | undefined> {
     const conflict = await db.query.syncConflicts.findFirst({
       where: and(
         eq(syncConflicts.id, id),
         eq(syncConflicts.businessId, ctx.businessId)
       ),
     });
-    return conflict;
+    return conflict as LibSyncConflict | undefined;
   }
 
   async findByOperationId(
     ctx: RequestContext,
     operationId: string
-  ): Promise<SyncConflict | undefined> {
+  ): Promise<LibSyncConflict | undefined> {
     const conflict = await db.query.syncConflicts.findFirst({
       where: and(
         eq(syncConflicts.operationId, operationId),
         eq(syncConflicts.businessId, ctx.businessId)
       ),
     });
-    return conflict;
+    return conflict as LibSyncConflict | undefined;
   }
 
   async findPendingByBusiness(
@@ -81,7 +79,7 @@ export class SyncConflictRepository {
       limit?: number;
       offset?: number;
     }
-  ): Promise<SyncConflict[]> {
+  ): Promise<LibSyncConflict[]> {
     const conflicts = await db.query.syncConflicts.findMany({
       where: and(
         eq(syncConflicts.businessId, ctx.businessId),
@@ -91,7 +89,7 @@ export class SyncConflictRepository {
       limit: options?.limit,
       offset: options?.offset,
     });
-    return conflicts;
+    return conflicts as LibSyncConflict[];
   }
 
   async findByBusiness(
@@ -102,7 +100,7 @@ export class SyncConflictRepository {
       limit?: number;
       offset?: number;
     }
-  ): Promise<SyncConflict[]> {
+  ): Promise<LibSyncConflict[]> {
     const conditions = [eq(syncConflicts.businessId, ctx.businessId)];
 
     if (options?.status) {
@@ -119,7 +117,7 @@ export class SyncConflictRepository {
       limit: options?.limit,
       offset: options?.offset,
     });
-    return conflicts;
+    return conflicts as LibSyncConflict[];
   }
 
   async countPending(ctx: RequestContext): Promise<number> {
@@ -141,7 +139,7 @@ export class SyncConflictRepository {
     id: string,
     resolution: ConflictResolutionData,
     tx?: DbTransaction
-  ): Promise<SyncConflict | undefined> {
+  ): Promise<LibSyncConflict | undefined> {
     const executor = tx || db;
 
     const [conflict] = await executor
@@ -160,7 +158,7 @@ export class SyncConflictRepository {
       )
       .returning();
 
-    return conflict;
+    return conflict as LibSyncConflict | undefined;
   }
 
   async delete(ctx: RequestContext, id: string): Promise<boolean> {

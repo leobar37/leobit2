@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "plan": "migrate-backend-sync-to-drizzle-sync-library",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Audit library server/ submodule vs. backend framework",
+      "file": "tasks/01-audit-library-server-submodule.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Reconcile BaseSyncHandler: PostgreSQL error extraction and logger integration",
+      "file": "tasks/02-reconcile-base-handler.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-007"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Reconcile SyncEngine architecture: pipeline, DbTransaction, repository interfaces",
+      "file": "tasks/03-reconcile-sync-engine-architecture.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-004",
+        "FR-005"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Migrate backend repositories to library interfaces",
+      "file": "tasks/04-migrate-repositories-to-library-interfaces.md",
+      "status": "pending",
+      "phase": "migration",
+      "dependencies": [
+        "T-003"
+      ],
+      "requirements": [
+        "FR-005"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Migrate SyncService, HandlerRegistry, and handlers to library",
+      "file": "tasks/05-migrate-sync-service-and-handlers.md",
+      "status": "pending",
+      "phase": "migration",
+      "dependencies": [
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-006"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Add unit tests to drizzle-sync library",
+      "file": "tasks/06-add-library-unit-tests.md",
+      "status": "in_progress",
+      "phase": "testing",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Validate full integration: test suite, E2E, performance",
+      "file": "tasks/07-validate-full-integration.md",
+      "status": "pending",
+      "phase": "validation",
+      "dependencies": [
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "NFR-001",
+        "NFR-004",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Documentation: README, CHANGELOG, AGENTS.md updates",
+      "file": "tasks/08-documentation-and-agents.md",
+      "status": "pending",
+      "phase": "documentation",
+      "dependencies": [
+        "T-005",
+        "T-007"
+      ],
+      "requirements": [
+        "FR-008"
+      ]
+    },
+    {
+      "id": "T-009",
+      "title": "Remove duplicate framework files from backend",
+      "file": "tasks/09-remove-duplicate-framework-files.md",
+      "status": "pending",
+      "phase": "cleanup",
+      "dependencies": [
+        "T-007"
+      ],
+      "requirements": [
+        "FR-008"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@avileo/drizzle-sync — Arquitectura de Sincronización</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+    .tab-active { border-bottom: 2px solid #f97316; color: #f97316; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+          <i data-lucide="refresh-cw" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg">@avileo/drizzle-sync</h1>
+          <p class="text-xs text-gray-500">Offline-first sync library</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-sm">
+        <span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">v0.0.1</span>
+        <a href="https://github.com/anthropics/claude-code" class="text-gray-500 hover:text-gray-300 transition">
+          <i data-lucide="github" class="w-5 h-5"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- Hero -->
+    <section class="text-center py-12">
+      <h2 class="text-4xl font-extrabold mb-4 bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">
+        Arquitectura de Sincronización
+      </h2>
+      <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+        Biblioteca extraída para sincronización bidireccional entre PGlite (PostgreSQL WASM) y PostgreSQL server.
+        Offline-first con resolution de conflictos y coalescing de operaciones.
+      </p>
+      <div class="flex justify-center gap-6 mt-8 text-sm">
+        <div class="flex items-center gap-2 text-emerald-400">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Push/Pull Sync</span>
+        </div>
+        <div class="flex items-center gap-2 text-emerald-400">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Offline-first</span>
+        </div>
+        <div class="flex items-center gap-2 text-emerald-400">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Conflict Resolution</span>
+        </div>
+        <div class="flex items-center gap-2 text-emerald-400">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Operation Coalescing</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Diagram -->
+    <section class="py-8">
+      <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <i data-lucide="git-branch" class="w-6 h-6 text-orange-500"></i>
+        Visión General de la Arquitectura
+      </h3>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <svg viewBox="0 0 900 400" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background grid -->
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1f2937" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="900" height="400" fill="url(#grid)"/>
+
+          <!-- FRONTEND Zone -->
+          <rect x="20" y="40" width="260" height="320" rx="8" fill="#1e3a5f" fill-opacity="0.3" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5,5"/>
+          <text x="150" y="28" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="600">FRONTEND (Browser)</text>
+
+          <!-- PGlite Box -->
+          <rect x="40" y="60" width="220" height="90" rx="6" fill="#1e40af" stroke="#3b82f6" stroke-width="2"/>
+          <text x="150" y="82" text-anchor="middle" fill="white" font-size="11" font-weight="600">PGlite (WASM PostgreSQL)</text>
+          <text x="150" y="100" text-anchor="middle" fill="#93c5fd" font-size="9">Local Database</text>
+          <text x="150" y="116" text-anchor="middle" fill="#93c5fd" font-size="9">• Sales, Customers, Products...</text>
+          <text x="150" y="132" text-anchor="middle" fill="#93c5fd" font-size="9">• Sync Operations Queue</text>
+
+          <!-- React Hooks Box -->
+          <rect x="40" y="170" width="220" height="70" rx="6" fill="#4c1d95" stroke="#a855f7" stroke-width="2"/>
+          <text x="150" y="192" text-anchor="middle" fill="white" font-size="11" font-weight="600">React Integration</text>
+          <text x="150" y="210" text-anchor="middle" fill="#d8b4fe" font-size="9">SyncProvider + useSyncState()</text>
+          <text x="150" y="226" text-anchor="middle" fill="#d8b4fe" font-size="9">useSyncStatus, useSyncLogs</text>
+
+          <!-- Sync Service Box -->
+          <rect x="40" y="260" width="220" height="80" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+          <text x="150" y="282" text-anchor="middle" fill="white" font-size="11" font-weight="600">SyncService (App)</text>
+          <text x="150" y="300" text-anchor="middle" fill="#6ee7b7" font-size="9">Push: Enqueue → Batch POST</text>
+          <text x="150" y="316" text-anchor="middle" fill="#6ee7b7" font-size="9">Pull: Fetch → ApplyChanges</text>
+          <text x="150" y="332" text-anchor="middle" fill="#6ee7b7" font-size="9">Auto-runner + Mutex</text>
+
+          <!-- Center Arrow / Sync Channel -->
+          <rect x="290" y="170" width="120" height="60" rx="6" fill="#78350f" stroke="#f97316" stroke-width="2"/>
+          <text x="350" y="192" text-anchor="middle" fill="white" font-size="10" font-weight="600">REST API</text>
+          <text x="350" y="208" text-anchor="middle" fill="#fed7aa" font-size="9">POST /sync/batch</text>
+          <text x="350" y="222" text-anchor="middle" fill="#fed7aa" font-size="9">GET /sync/changes</text>
+
+          <!-- Arrows -->
+          <path d="M 260 200 L 285 200" stroke="#f97316" stroke-width="3" marker-end="url(#arrowhead)"/>
+          <path d="M 415 200 L 440 200" stroke="#f97316" stroke-width="3" marker-end="url(#arrowhead)"/>
+
+          <!-- BACKEND Zone -->
+          <rect x="440" y="40" width="440" height="320" rx="8" fill="#3b1f1f" fill-opacity="0.3" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+          <text x="660" y="28" text-anchor="middle" fill="#f87171" font-size="12" font-weight="600">BACKEND (ElysiaJS + Drizzle)</text>
+
+          <!-- Sync Engine Box -->
+          <rect x="460" y="60" width="200" height="120" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/>
+          <text x="560" y="82" text-anchor="middle" fill="white" font-size="11" font-weight="600">SyncEngine</text>
+          <text x="560" y="100" text-anchor="middle" fill="#fca5a5" font-size="9">• Batch Processing</text>
+          <text x="560" y="116" text-anchor="middle" fill="#fca5a5" font-size="9">• Savepoint Rollback</text>
+          <text x="560" y="132" text-anchor="middle" fill="#fca5a5" font-size="9">• Conflict Detection</text>
+          <text x="560" y="148" text-anchor="middle" fill="#fca5a5" font-size="9">• Entity Registry</text>
+          <text x="560" y="164" text-anchor="middle" fill="#fca5a5" font-size="9">• Priority Sorting</text>
+
+          <!-- Handler Registry -->
+          <rect x="680" y="60" width="180" height="100" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/>
+          <text x="770" y="82" text-anchor="middle" fill="white" font-size="11" font-weight="600">HandlerRegistry</text>
+          <text x="770" y="100" text-anchor="middle" fill="#fca5a5" font-size="9">14 Entity Handlers</text>
+          <text x="770" y="116" text-anchor="middle" fill="#fca5a5" font-size="9">SalesHandler</text>
+          <text x="770" y="132" text-anchor="middle" fill="#fca5a5" font-size="9">CustomerHandler</text>
+
+          <!-- Conflict Resolver -->
+          <rect x="460" y="200" width="180" height="70" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/>
+          <text x="550" y="222" text-anchor="middle" fill="white" font-size="11" font-weight="600">ConflictResolver</text>
+          <text x="550" y="240" text-anchor="middle" fill="#fca5a5" font-size="9">Version-based detection</text>
+          <text x="550" y="256" text-anchor="middle" fill="#fca5a5" font-size="9">Server vs Client version</text>
+
+          <!-- Repositories -->
+          <rect x="680" y="180" width="180" height="110" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/>
+          <text x="770" y="202" text-anchor="middle" fill="white" font-size="11" font-weight="600">Repositories</text>
+          <text x="770" y="220" text-anchor="middle" fill="#fca5a5" font-size="9">OperationRepository</text>
+          <text x="770" y="236" text-anchor="middle" fill="#fca5a5" font-size="9">ConflictRepository</text>
+          <text x="770" y="252" text-anchor="middle" fill="#fca5a5" font-size="9">DeadLetterRepository</text>
+          <text x="770" y="268" text-anchor="middle" fill="#fca5a5" font-size="9">Drizzle ORM + PostgreSQL</text>
+
+          <!-- PostgreSQL -->
+          <rect x="460" y="290" width="400" height="60" rx="6" fill="#1c1917" stroke="#a8a29e" stroke-width="2"/>
+          <text x="660" y="312" text-anchor="middle" fill="white" font-size="11" font-weight="600">PostgreSQL (Neon)</text>
+          <text x="660" y="332" text-anchor="middle" fill="#a8a29e" font-size="9">Business Data + Sync Operations + Conflicts</text>
+
+          <!-- Arrow Definitions -->
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+            </marker>
+          </defs>
+
+          <!-- Labels -->
+          <text x="320" y="185" text-anchor="middle" fill="#fb923c" font-size="8" font-weight="500">PUSH</text>
+          <text x="320" y="220" text-anchor="middle" fill="#fb923c" font-size="8" font-weight="500">PULL</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-800 mb-8">
+      <button class="tab-btn px-4 py-3 text-sm font-medium text-gray-400 hover:text-white transition tab-active" data-tab="frontend">
+        Frontend
+      </button>
+      <button class="tab-btn px-4 py-3 text-sm font-medium text-gray-400 hover:text-white transition" data-tab="backend">
+        Backend
+      </button>
+      <button class="tab-btn px-4 py-3 text-sm font-medium text-gray-400 hover:text-white transition" data-tab="sync-flow">
+        Flujo Sync
+      </button>
+      <button class="tab-btn px-4 py-3 text-sm font-medium text-gray-400 hover:text-white transition" data-tab="library-structure">
+        Estructura
+      </button>
+      <button class="tab-btn px-4 py-3 text-sm font-medium text-gray-400 hover:text-white transition" data-tab="tutorial">
+        Tutorial
+      </button>
+    </div>
+
+    <!-- Frontend Tab -->
+    <section id="tab-frontend" class="tab-content space-y-8">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- PGlite Queue -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="database" class="w-5 h-5 text-blue-400"></i>
+            PgSyncQueue — Cola Local
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Implementa <code class="bg-gray-800 px-1 py-0.5 rounded">ISyncQueue</code> usando PGlite para almacenamiento local.
+            Gestiona operaciones pending, failed y dead letter.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs space-y-2">
+            <div class="text-gray-500">// Enqueue con coalescing</div>
+            <div><span class="text-purple-400">await</span> queue.<span class="text-blue-400">enqueue</span>({</div>
+            <div class="pl-4">entity_type: <span class="text-green-400">'sales'</span>,</div>
+            <div class="pl-4">entityId: <span class="text-green-400">'sale_123'</span>,</div>
+            <div class="pl-4">operation: <span class="text-green-400">'create'</span>,</div>
+            <div class="pl-4">data: { amount: <span class="text-amber-400">150</span> }</div>
+            <div>});</div>
+          </div>
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Idempotency key para evitar duplicados</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Coalescing: create+delete=cancel, update+update=merge</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Dead letter queue para operaciones fallidas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pull Service -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="download" class="w-5 h-5 text-amber-400"></i>
+            PullService — Fetch Cambios
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Cursor-based pagination para obtener cambios del servidor.
+            Detecta condiciones de stuck (cursor sin avanzar).
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs space-y-2">
+            <div class="text-gray-500">// Fetch cambios desde servidor</div>
+            <div><span class="text-purple-400">const</span> result = <span class="text-purple-400">await</span> pullService.<span class="text-blue-400">pull</span>();</div>
+            <div class="text-gray-500 mt-2">// Cursor-based, auto-retry</div>
+            <div class="text-gray-500">// Stale detection: MAX_STALE_PULLS=5</div>
+          </div>
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Exponential backoff en errores</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Staged pull: CRITICAL → RECENT_SALES → HISTORICAL</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">forceReset() para recovery</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- React Integration -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="layout" class="w-5 h-5 text-purple-400"></i>
+          React Integration — Hooks y Provider
+        </h4>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="font-mono text-sm text-purple-400 mb-2">SyncProvider</div>
+            <p class="text-gray-400 text-xs">Envuelve la app y provee el runtime via context.</p>
+            <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono">
+              <span class="text-gray-500">&lt;</span><span class="text-purple-400">SyncProvider</span><br/>
+              <span class="text-gray-500 pl-2">runtime</span>={<span class="text-amber-400">runtime</span>}<br/>
+              <span class="text-gray-500">&gt;</span>
+            </div>
+          </div>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="font-mono text-sm text-purple-400 mb-2">useSyncState</div>
+            <p class="text-gray-400 text-xs">Estado actual: isSyncing, pendingCount, isStuck, etc.</p>
+            <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono">
+              <span class="text-purple-400">const</span> state = <span class="text-blue-400">useSyncState</span>();<br/>
+              state.<span class="text-amber-400">pendingCount</span>
+            </div>
+          </div>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="font-mono text-sm text-purple-400 mb-2">useSyncStatus</div>
+            <p class="text-gray-400 text-xs">Flags derivados: hasPending, hasFailed, hasConflicts.</p>
+            <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono">
+              <span class="text-purple-400">const</span> {'{ hasFailed }'} = <span class="text-blue-400">useSyncStatus</span>();<br/>
+              hasFailed && <span class="text-red-400">&lt;Alert /&gt;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Backend Tab -->
+    <section id="tab-backend" class="tab-content space-y-8 hidden">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- SyncEngine -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="cpu" class="w-5 h-5 text-red-400"></i>
+            SyncEngine — Motor de Procesamiento
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Procesa batches de operaciones sync con savepoints PostgreSQL.
+            Cada operación tiene su propio savepoint para rollback parcial.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs space-y-2">
+            <div class="text-gray-500">// Procesar batch de operaciones</div>
+            <div><span class="text-purple-400">const</span> result = <span class="text-purple-400">await</span> engine.<span class="text-blue-400">processBatch</span>(ctx, ops);</div>
+            <div class="mt-2 text-gray-500">// Result:</div>
+            <div>{ succeeded: <span class="text-amber-400">5</span>, failed: <span class="text-amber-400">1</span>, conflicts: <span class="text-amber-400">0</span> }</div>
+          </div>
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Per-operation savepoints (atomic batch)</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Idempotency via idempotency_key</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+              <span class="text-gray-300">Event emission (push:complete, conflict:detected...)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entity Registry -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-emerald-400"></i>
+            EntityRegistry — Batch Tracking
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Tracking in-memory de entidades creadas/modificadas dentro del batch.
+            Evita queries redundantes a la DB cuando el padre ya fue creado en el mismo batch.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs space-y-2">
+            <div class="text-gray-500">// Registry tracking during batch</div>
+            <div>registry.<span class="text-blue-400">register</span>(<span class="text-green-400">'create'</span>, <span class="text-green-400">'sale_123'</span>);</div>
+            <div class="mt-2 text-gray-500">// Handler checks registry before DB query</div>
+            <div><span class="text-purple-400">if</span> (registry.<span class="text-blue-400">wasCreated</span>(parentId)) return;</div>
+          </div>
+        </div>
+
+        <!-- Conflict Resolver -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>
+            ConflictResolver — Detección de Conflictos
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Version-based conflict detection comparando client version vs server version.
+            Conflictos persistidos para resolución manual por admins.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs space-y-2">
+            <div class="text-gray-500">// Conflict detected</div>
+            <div>{</div>
+            <div class="pl-4">clientVersion: <span class="text-amber-400">3</span>,</div>
+            <div class="pl-4">serverVersion: <span class="text-amber-400">5</span>,</div>
+            <div class="pl-4">serverData: {'{...}'}</div>
+            <div>}</div>
+          </div>
+        </div>
+
+        <!-- Handler Registry -->
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="box" class="w-5 h-5 text-orange-400"></i>
+            HandlerRegistry — 14 Entity Handlers
+          </h4>
+          <p class="text-gray-400 text-sm mb-4">
+            Registro dinámico de handlers por entity type.
+            Cada handler implementa execute() para create/update/delete.
+          </p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-gray-950 rounded p-2">SalesHandler</div>
+            <div class="bg-gray-950 rounded p-2">CustomerHandler</div>
+            <div class="bg-gray-950 rounded p-2">ProductHandler</div>
+            <div class="bg-gray-950 rounded p-2">SupplierHandler</div>
+            <div class="bg-gray-950 rounded p-2">PurchaseHandler</div>
+            <div class="bg-gray-950 rounded p-2">... + 8 más</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sync Flow Tab -->
+    <section id="tab-sync-flow" class="tab-content space-y-8 hidden">
+      <!-- Push Flow -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-6 flex items-center gap-2">
+          <i data-lucide="upload" class="w-5 h-5 text-orange-500"></i>
+          PUSH — Cliente → Servidor
+        </h4>
+
+        <div class="relative">
+          <!-- Timeline -->
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-700"></div>
+
+          <div class="space-y-6 pl-12">
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold">1</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-orange-400">App write operation</div>
+                <p class="text-gray-400 text-sm mt-1">App writes to PGlite locally, operation enqueued to sync queue.</p>
+                <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono text-gray-300">
+                  syncService.enqueue({ entity_type: 'sales', operation: 'create', data: {...} })
+                </div>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold">2</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-orange-400">Coalescing</div>
+                <p class="text-gray-400 text-sm mt-1">Multiple operations on same entity merged/cancelled. E.g., create+update → single create with merged payload.</p>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold">3</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-orange-400">Batch push</div>
+                <p class="text-gray-400 text-sm mt-1">Auto-runner batches pending operations and POSTs to /sync/batch.</p>
+                <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono text-gray-300">
+                  POST /sync/batch → [{ idempotencyKey, entityType, operation, payload, localVersion }]
+                </div>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold">4</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-orange-400">Server processing</div>
+                <p class="text-gray-400 text-sm mt-1">SyncEngine sorts by priority, uses savepoints for per-op rollback, detects conflicts.</p>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold">5</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-orange-400">Response</div>
+                <p class="text-gray-400 text-sm mt-1">Array of results: [{ success: true, idempotencyKey: '...' }, { success: false, conflict: {...} }]</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pull Flow -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-6 flex items-center gap-2">
+          <i data-lucide="download" class="w-5 h-5 text-emerald-500"></i>
+          PULL — Servidor → Cliente
+        </h4>
+
+        <div class="relative">
+          <!-- Timeline -->
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-700"></div>
+
+          <div class="space-y-6 pl-12">
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-sm font-bold text-black">1</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-emerald-400">Fetch changes</div>
+                <p class="text-gray-400 text-sm mt-1">PullService GET /sync/changes?since={cursor}&limit=100</p>
+                <div class="mt-2 bg-gray-900 rounded p-2 text-xs font-mono text-gray-300">
+                  GET /sync/changes?since=cursor_abc123&limit=100
+                </div>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-sm font-bold text-black">2</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-emerald-400">Cursor-based pagination</div>
+                <p class="text-gray-400 text-sm mt-1">Server returns changes with next cursor. Client persists cursor before applying changes (crash safety).</p>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-sm font-bold text-black">3</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-emerald-400">Apply changes</div>
+                <p class="text-gray-400 text-sm mt-1">Changes applied to PGlite via UPSERT operations. Conflicts detected against local pending ops.</p>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-sm font-bold text-black">4</div>
+              <div class="bg-gray-950 rounded-lg p-4">
+                <div class="font-semibold text-emerald-400">Query invalidation</div>
+                <p class="text-gray-400 text-sm mt-1">TanStack Query caches invalidated for affected entity types.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conflict Resolution -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="git-merge" class="w-5 h-5 text-amber-500"></i>
+          Conflict Resolution Flow
+        </h4>
+        <div class="bg-gray-950 rounded-lg p-4 text-sm">
+          <div class="grid md:grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+              <div class="text-amber-400 font-semibold mb-2">1. Detect</div>
+              <p class="text-gray-400 text-xs">Server compares clientVersion vs serverVersion</p>
+            </div>
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+              <div class="text-amber-400 font-semibold mb-2">2. Persist</div>
+              <p class="text-gray-400 text-xs">Conflict stored in sync_conflicts table for admin resolution</p>
+            </div>
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+              <div class="text-amber-400 font-semibold mb-2">3. UI Resolution</div>
+              <p class="text-gray-400 text-xs">Admin picks: server wins / local wins / manual merge</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Library Structure Tab -->
+    <section id="tab-library-structure" class="tab-content space-y-8 hidden">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-6 flex items-center gap-2">
+          <i data-lucide="folder-tree" class="w-5 h-5 text-gray-400"></i>
+          Package Structure
+        </h4>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs">
+            <div class="text-orange-400 mb-3">packages/drizzle-sync/</div>
+            <div class="pl-4 space-y-1">
+              <div><span class="text-gray-500">src/</span></div>
+              <div class="pl-4"><span class="text-blue-400">core/</span> <span class="text-gray-500"># Tipos e interfaces runtime-agnósticos</span></div>
+              <div class="pl-8 text-gray-400">types.ts, interfaces.ts, coalesce.ts</div>
+              <div class="pl-8 text-gray-400">backoff.ts, priority.ts, sync-events.ts</div>
+              <div class="pl-4"><span class="text-blue-400">pglite/</span> <span class="text-gray-500"># Cliente (browser)</span></div>
+              <div class="pl-8 text-gray-400">pg-sync-queue.ts, pull-service.ts</div>
+              <div class="pl-8 text-gray-400">change-applier.ts, schema-mapper.ts</div>
+              <div class="pl-4"><span class="text-blue-400">server/</span> <span class="text-gray-500"># Backend</span></div>
+              <div class="pl-8 text-gray-400">sync-engine.ts, handler-registry.ts</div>
+              <div class="pl-8 text-gray-400">conflict-resolver.ts, entity-registry.ts</div>
+              <div class="pl-4"><span class="text-blue-400">react/</span> <span class="text-gray-500"># React hooks</span></div>
+              <div class="pl-8 text-gray-400">provider.tsx, hooks.ts, context.ts</div>
+            </div>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs">
+            <div class="text-emerald-400 mb-3">package.json exports</div>
+            <div class="pl-4 space-y-1">
+              <div><span class="text-green-400">"."</span> <span class="text-gray-500">→ dist/index.js</span></div>
+              <div><span class="text-green-400">"./core"</span> <span class="text-gray-500">→ Tipos, interfaces</span></div>
+              <div><span class="text-green-400">"./shared"</span> <span class="text-gray-500">→ Constantes compartidas</span></div>
+              <div><span class="text-green-400">"./pglite"</span> <span class="text-gray-500">→ PgSyncQueue, PullService</span></div>
+              <div><span class="text-green-400">"./server"</span> <span class="text-gray-500">→ SyncEngine, handlers</span></div>
+              <div><span class="text-green-400">"./react"</span> <span class="text-gray-500">→ Provider, hooks</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4">Entry Points y Dependencias</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-400 border-b border-gray-800">
+                <th class="pb-3">Entry Point</th>
+                <th class="pb-3">Peer Dependencies</th>
+                <th class="pb-3">Runtime</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-300">
+              <tr class="border-b border-gray-800/50">
+                <td class="py-3 font-mono text-orange-400">@avileo/drizzle-sync/core</td>
+                <td class="py-3">Ninguna (zero deps)</td>
+                <td class="py-3">Browser, Bun, Node</td>
+              </tr>
+              <tr class="border-b border-gray-800/50">
+                <td class="py-3 font-mono text-blue-400">@avileo/drizzle-sync/pglite</td>
+                <td class="py-3">@electric-sql/pglite, zod</td>
+                <td class="py-3">Browser (WASM)</td>
+              </tr>
+              <tr class="border-b border-gray-800/50">
+                <td class="py-3 font-mono text-red-400">@avileo/drizzle-sync/server</td>
+                <td class="py-3">drizzle-orm, postgres</td>
+                <td class="py-3">Bun, Node</td>
+              </tr>
+              <tr class="border-b border-gray-800/50">
+                <td class="py-3 font-mono text-purple-400">@avileo/drizzle-sync/react</td>
+                <td class="py-3">react</td>
+                <td class="py-3">Browser</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tutorial Tab -->
+    <section id="tab-tutorial" class="tab-content space-y-8 hidden">
+      <!-- Installation -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="download" class="w-5 h-5 text-orange-400"></i>
+          1. Instalación
+        </h4>
+
+        <div class="space-y-4">
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Frontend (Browser)</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <span class="text-gray-500"># Install core + pglite + react</span><br/>
+              bun add @avileo/drizzle-sync @avileo/drizzle-sync/pglite @avileo/drizzle-sync/react
+            </div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Backend (Bun/Node)</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <span class="text-gray-500"># Install core + server</span><br/>
+              bun add @avileo/drizzle-sync @avileo/drizzle-sync/server
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frontend Setup -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="monitor" class="w-5 h-5 text-blue-400"></i>
+          2. Setup Frontend — React Provider
+        </h4>
+
+        <div class="space-y-4">
+          <div>
+            <div class="text-sm text-gray-400 mb-2">app/root.tsx — Wrap app with SyncProvider</div>
+            <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+              <div><span class="text-purple-400">import</span> { SyncProvider } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/react"</span>;</div>
+              <div><span class="text-purple-400">import</span> { createSyncRuntime } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/pglite"</span>;</div>
+              <div><span class="text-purple-400">import</span> { pg } <span class="text-purple-400">from</span> <span class="text-green-400">"./lib/db"</span>;</div>
+              <div><span class="text-purple-400">import</span> { apiClient } <span class="text-purple-400">from</span> <span class="text-green-400">"./lib/api-client"</span>;</div>
+              <div class="mt-2"><span class="text-gray-500">// Create runtime singleton</span></div>
+              <div><span class="text-purple-400">const</span> runtime = <span class="text-blue-400">createSyncRuntime</span>({</div>
+              <div class="pl-4">db: pg,</div>
+              <div class="pl-4">apiClient: {</div>
+              <div class="pl-8">pushBatch: <span class="text-purple-400">async</span> (ops) => <span class="text-purple-400">await</span> apiClient.<span class="text-blue-400">post</span>(<span class="text-green-400">"/sync/batch"</span>, ops),</div>
+              <div class="pl-8">fetchChanges: <span class="text-purple-400">async</span> (cursor) => <span class="text-purple-400">await</span> apiClient.<span class="text-blue-400">get</span>(<span class="text-green-400">"/sync/changes"</span>, { since: cursor }),</div>
+              <div class="pl-4">},</div>
+              <div>});</div>
+              <div class="mt-2"><span class="text-purple-400">export</span> <span class="text-purple-400">default</span> <span class="text-purple-400">function</span> <span class="text-yellow-400">App</span>() {</div>
+              <div class="pl-4"><span class="text-purple-400">return</span> (</div>
+              <div class="pl-8"><span class="text-gray-500">&lt;</span><span class="text-blue-400">SyncProvider</span> runtime=<span class="text-amber-400">{runtime}</span><span class="text-gray-500">&gt;</span></div>
+              <div class="pl-12"><span class="text-gray-500">&lt;</span><span class="text-blue-400">Outlet</span> <span class="text-gray-500">/&gt;</span></div>
+              <div class="pl-8"><span class="text-gray-500">&lt;/</span><span class="text-blue-400">SyncProvider</span><span class="text-gray-500">&gt;</span></div>
+              <div class="pl-4">);</div>
+              <div>}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backend Setup -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="server" class="w-5 h-5 text-red-400"></i>
+          3. Setup Backend — ElysiaJS Route
+        </h4>
+
+        <div class="space-y-4">
+          <div>
+            <div class="text-sm text-gray-400 mb-2">backend/src/api/sync.ts — Sync endpoint</div>
+            <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+              <div><span class="text-purple-400">import</span> { SyncEngine } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/server"</span>;</div>
+              <div><span class="text-purple-400">import</span> { db } <span class="text-purple-400">from</span> <span class="text-green-400">"../lib/db"</span>;</div>
+              <div><span class="text-purple-400">import</span> * <span class="text-purple-400">as</span> schema <span class="text-purple-400">from</span> <span class="text-green-400">"../db/schema"</span>;</div>
+              <div class="mt-2"><span class="text-gray-500">// Create engine with handlers</span></div>
+              <div><span class="text-purple-400">const</span> engine = <span class="text-purple-400">new</span> <span class="text-blue-400">SyncEngine</span>(db, {</div>
+              <div class="pl-4">handlers: [</div>
+              <div class="pl-8"><span class="text-purple-400">new</span> <span class="text-blue-400">SalesHandler</span>(),</div>
+              <div class="pl-8"><span class="text-purple-400">new</span> <span class="text-blue-400">CustomerHandler</span>(),</div>
+              <div class="pl-8"><span class="text-gray-500">// ... more handlers</span></div>
+              <div class="pl-4">],</div>
+              <div>});</div>
+              <div class="mt-2"><span class="text-gray-500">// Elysia route</span></div>
+              <div><span class="text-purple-400">const</span> syncRouter = <span class="text-purple-400">new</span> <span class="text-blue-400">Elysia</span>()</div>
+              <div class="pl-4">.<span class="text-blue-400">post</span>(<span class="text-green-400">"/sync/batch"</span>, <span class="text-purple-400">async</span> ({ body, user }) => {</div>
+              <div class="pl-8"><span class="text-purple-400">const</span> ctx = { businessId: user.businessId, userId: user.id };</div>
+              <div class="pl-8"><span class="text-purple-400">return</span> <span class="text-purple-400">await</span> engine.<span class="text-blue-400">processBatch</span>(ctx, body);</div>
+              <div class="pl-4">})</div>
+              <div class="pl-4">.<span class="text-blue-400">get</span>(<span class="text-green-400">"/sync/changes"</span>, <span class="text-purple-400">async</span> ({ query, user }) => {</div>
+              <div class="pl-8"><span class="text-gray-500">// Fetch changes since cursor</span></div>
+              <div class="pl-8"><span class="text-purple-400">return</span> <span class="text-purple-400">await</span> <span class="text-blue-400">fetchChanges</span>(db, user.businessId, query.since);</div>
+              <div class="pl-4">});</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Usage Examples -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="code" class="w-5 h-5 text-emerald-400"></i>
+          4. Ejemplos de Uso
+        </h4>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Enqueue Operations -->
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Enqueue sync operation</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <div><span class="text-purple-400">import</span> { runtime } <span class="text-purple-400">from</span> <span class="text-green-400">"~/lib/sync"</span>;</div>
+              <div class="mt-2"><span class="text-gray-500">// After local DB write</span></div>
+              <div><span class="text-purple-400">await</span> runtime.queue.<span class="text-blue-400">enqueue</span>({</div>
+              <div class="pl-4">entityType: <span class="text-green-400">"sales"</span>,</div>
+              <div class="pl-4">operation: <span class="text-green-400">"create"</span>,</div>
+              <div class="pl-4">entityId: saleId,</div>
+              <div class="pl-4">data: { amount, customerId, ... },</div>
+              <div>});</div>
+            </div>
+          </div>
+
+          <!-- React Hook -->
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Display sync status</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <div><span class="text-purple-400">import</span> { useSyncState } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/react"</span>;</div>
+              <div class="mt-2"><span class="text-purple-400">function</span> <span class="text-yellow-400">SyncIndicator</span>() {</div>
+              <div class="pl-4"><span class="text-purple-400">const</span> { pendingCount, isSyncing } = <span class="text-blue-400">useSyncState</span>();</div>
+              <div class="pl-4"><span class="text-purple-400">return</span> (</div>
+              <div class="pl-8"><span class="text-gray-500">&lt;</span>div&gt;</div>
+              <div class="pl-12">{isSyncing ? <span class="text-green-400">"Syncing..."</span> : <span class="text-green-400">`Pending: <span class="text-amber-400">${pendingCount}</span>`</span>}</div>
+              <div class="pl-8"><span class="text-gray-500">&lt;/</span>div&gt;</div>
+              <div class="pl-4">);</div>
+              <div>}</div>
+            </div>
+          </div>
+
+          <!-- Manual Sync Trigger -->
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Manual sync trigger</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <div><span class="text-purple-400">import</span> { runtime } <span class="text-purple-400">from</span> <span class="text-green-400">"~/lib/sync"</span>;</div>
+              <div class="mt-2"><span class="text-gray-500">// Force immediate sync</span></div>
+              <div><span class="text-purple-400">await</span> runtime.<span class="text-blue-400">push</span>();</div>
+              <div><span class="text-purple-400">await</span> runtime.<span class="text-blue-400">pull</span>();</div>
+            </div>
+          </div>
+
+          <!-- Error Handling -->
+          <div>
+            <div class="text-sm text-gray-400 mb-2">Handle failed operations</div>
+            <div class="bg-gray-950 rounded-lg p-3 font-mono text-xs">
+              <div><span class="text-purple-400">import</span> { useSyncStatus } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/react"</span>;</div>
+              <div class="mt-2"><span class="text-purple-400">function</span> <span class="text-yellow-400">SyncErrors</span>() {</div>
+              <div class="pl-4"><span class="text-purple-400">const</span> { hasFailed, failedCount } = <span class="text-blue-400">useSyncStatus</span>();</div>
+              <div class="pl-4"><span class="text-purple-400">if</span> (hasFailed) {</div>
+              <div class="pl-8"><span class="text-purple-400">return</span> <span class="text-gray-500">&lt;</span>Alert <span class="text-amber-400">variant</span>=<span class="text-green-400">"destructive"</span><span class="text-gray-500">&gt;</span></div>
+              <div class="pl-12"><span class="text-green-400">{failedCount}</span> operations failed</div>
+              <div class="pl-8"><span class="text-gray-500">&lt;/</span>Alert&gt;;</div>
+              <div class="pl-4">}</div>
+              <div class="pl-4"><span class="text-purple-400">return null</span>;</div>
+              <div>}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Handler -->
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h4 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="wrench" class="w-5 h-5 text-amber-400"></i>
+          5. Custom Entity Handler (Backend)
+        </h4>
+
+        <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+          <div><span class="text-purple-400">import</span> { BaseSyncHandler } <span class="text-purple-400">from</span> <span class="text-green-400">"@avileo/drizzle-sync/server"</span>;</div>
+          <div class="mt-2"><span class="text-purple-400">class</span> <span class="text-yellow-400">ProductHandler</span> <span class="text-purple-400">extends</span> <span class="text-blue-400">BaseSyncHandler</span> {</div>
+          <div class="pl-4">entityType = <span class="text-green-400">"products"</span>;</div>
+          <div class="pl-4"></div>
+          <div class="pl-4"><span class="text-purple-400">async</span> <span class="text-yellow-400">execute</span>(ctx, op) {</div>
+          <div class="pl-8"><span class="text-purple-400">switch</span> (op.operation) {</div>
+          <div class="pl-12"><span class="text-purple-400">case</span> <span class="text-green-400">"create"</span>:</div>
+          <div class="pl-16"><span class="text-purple-400">return</span> <span class="text-purple-400">this</span>.<span class="text-blue-400">create</span>(ctx, op);</div>
+          <div class="pl-12"><span class="text-purple-400">case</span> <span class="text-green-400">"update"</span>:</div>
+          <div class="pl-16"><span class="text-purple-400">return</span> <span class="text-purple-400">this</span>.<span class="text-blue-400">update</span>(ctx, op);</div>
+          <div class="pl-12"><span class="text-purple-400">case</span> <span class="text-green-400">"delete"</span>:</div>
+          <div class="pl-16"><span class="text-purple-400">return</span> <span class="text-purple-400">this</span>.<span class="text-blue-400">delete</span>(ctx, op);</div>
+          <div class="pl-8">}</div>
+          <div class="pl-4">}</div>
+          <div>}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integration Points -->
+    <section class="py-8">
+      <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <i data-lucide="plug" class="w-6 h-6 text-orange-500"></i>
+        Puntos de Integración
+      </h3>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="grid md:grid-cols-2 gap-6 text-sm">
+          <div>
+            <h4 class="font-semibold text-emerald-400 mb-3">App Frontend → Library</h4>
+            <ul class="space-y-2 text-gray-300">
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">packages/app/app/lib/sync/queue/pg-sync-queue.ts</code> re-exporta PgSyncQueue
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">schema-mapper.ts</code> usa isValidTableName desde library
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">coalesce.ts</code> usa getCoalescePlan desde library
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">sync-logger.ts</code> re-exporta SyncLogger
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-amber-400 mb-3">App Backend → Library</h4>
+            <ul class="space-y-2 text-gray-300">
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-amber-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">SyncService</code> en app consume library types
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-amber-400 mt-0.5 shrink-0"></i>
+                <code class="text-xs bg-gray-800 px-1 rounded">SyncBatchProcessor</code> podría migrar a SyncEngine
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4 text-amber-400 mt-0.5 shrink-0"></i>
+                <span class="text-gray-500">Handlers concretos siguen en app (BaseSyncHandler en library)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 mt-16 py-8 text-center text-gray-500 text-sm">
+    <p>@avileo/drizzle-sync — Offline-first sync library for PostgreSQL and PGlite</p>
+    <p class="mt-1">Extracted from Avileo app • Built with Bun + ElysiaJS + Drizzle</p>
+  </footer>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Tab functionality
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Remove active class from all
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+        // Add active to clicked
+        btn.classList.add('tab-active');
+
+        // Hide all content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        // Show selected
+        const tabId = `tab-${btn.dataset.tab}`;
+        document.getElementById(tabId).classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+</html>

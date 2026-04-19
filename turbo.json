@@ -23,6 +23,9 @@
     "@avileo/shared#build": {
       "outputs": ["dist/**"]
     },
+    "@avileo/drizzle-sync#build": {
+      "outputs": ["dist/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

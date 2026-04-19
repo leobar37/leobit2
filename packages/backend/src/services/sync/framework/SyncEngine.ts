@@ -21,7 +21,8 @@ import type { CustomerGroupRepository } from "../../repository/customer-group.re
 import type { VisitaRepository } from "../../repository/visita.repository";
 import type { SupplierRepository } from "../../repository/supplier.repository";
 import { HandlerRegistry } from "./HandlerRegistry";
-import { ConflictResolverRegistry } from "./ConflictResolver";
+import { createConflictResolvers, NoOpConflictResolver } from "./ConflictResolver";
+import type { IConflictResolver } from "./types";
 import { syncPipeline } from "./SyncPipeline";
 import { syncLogger } from "../sync-logger";
 import { SyncOperationRepository } from "./SyncOperationRepository";
@@ -45,6 +46,12 @@ export interface SyncEngineDeps {
   visitaRepo: VisitaRepository;
   supplierRepo: SupplierRepository;
   syncConflictRepo?: SyncConflictRepository;
+  /**
+   * Conflict resolvers map (instance-based).
+   * Replaces the deprecated static ConflictResolverRegistry.
+   * If not provided, defaults to all standard entity resolvers via createConflictResolvers().
+   */
+  conflictResolvers?: Record<string, IConflictResolver>;
 }
 
 export class SyncEngine {
@@ -52,12 +59,14 @@ export class SyncEngine {
   private syncOpRepo: SyncOperationRepository;
   private syncConflictRepo: SyncConflictRepository;
   private operationSorter: OperationSorter;
+  private conflictResolvers: Record<string, IConflictResolver>;
 
   constructor(deps: SyncEngineDeps) {
     this.deps = deps;
     this.syncOpRepo = new SyncOperationRepository();
     this.syncConflictRepo = deps.syncConflictRepo ?? new SyncConflictRepository();
     this.operationSorter = new OperationSorter();
+    this.conflictResolvers = deps.conflictResolvers ?? createConflictResolvers();
   }
 
   async processBatch(
@@ -229,7 +238,7 @@ export class SyncEngine {
       });
     }
 
-    const conflictResolver = ConflictResolverRegistry.getResolver(operation.entityType);
+    const conflictResolver = this.conflictResolvers[operation.entityType] ?? new NoOpConflictResolver();
     const conflict = await conflictResolver.checkConflict(ctx, operation, tx);
 
     if (conflict.hasConflict) {

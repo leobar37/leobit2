@@ -13,6 +13,9 @@
   "scripts": {
     "dev": "bun run --watch --no-clear-screen src/index.ts",
     "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "sync:generate": "cd ../drizzle-sync && bun run build && bun ./dist/cli.js generate --config ../backend/src/sync.config.ts --output ../app/app/lib/db/generated",
+    "sync:validate": "cd ../drizzle-sync && bun run build && bun ./dist/cli.js validate --config ../backend/src/sync.config.ts",
+    "sync:clean": "cd ../drizzle-sync && bun ./dist/cli.js clean --output ../app/app/lib/db/generated",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -35,6 +38,7 @@
   },
   "dependencies": {
     "@ai-sdk/moonshotai": "^2.0.10",
+    "@avileo/drizzle-sync": "workspace:*",
     "@avileo/shared": "workspace:*",
     "@aws-sdk/client-s3": "^3.988.0",
     "@aws-sdk/s3-request-presigner": "^3.988.0",

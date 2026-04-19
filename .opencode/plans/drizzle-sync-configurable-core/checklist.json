@@ -1,0 +1,34 @@
+{
+  "plan": "drizzle-sync-configurable-core",
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Crear módulo config/ con tipos y defineEntity",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "Refactorizar tipos genéricos en core/",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-003",
+      "title": "Genericizar HandlerRegistry en server/",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-004",
+      "title": "Crear factory createSyncEngine",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001", "T-002", "T-003"]
+    }
+  ]
+}

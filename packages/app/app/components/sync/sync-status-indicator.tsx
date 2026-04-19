@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useSync } from "./sync-status";
+import { useSyncState, useSyncStatus } from "~/lib/sync/service-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -20,22 +20,23 @@ export function SyncStatusIndicator({
   compact = false,
   onManualSync,
 }: SyncStatusIndicatorProps) {
-  const { isOnline, lastSync } = useSync();
+  const { isOnline } = useSyncStatus();
+  const { lastSyncTime } = useSyncState();
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   // Determine sync state based on context
   const getSyncState = useCallback((): SyncState => {
     if (!isOnline) return "offline";
     if (isManualSyncing) return "syncing";
-    if (lastSync) {
-      const timeSinceSync = Date.now() - lastSync.getTime();
+    if (lastSyncTime) {
+      const timeSinceSync = Date.now() - lastSyncTime.getTime();
       // If last sync was recent (< 30 seconds), consider synced
       if (timeSinceSync < 30_000) return "synced";
       // Otherwise pending (stale)
       return "pending";
     }
     return "pending";
-  }, [isOnline, isManualSyncing, lastSync]);
+  }, [isOnline, isManualSyncing, lastSyncTime]);
 
   const syncState = getSyncState();
 
@@ -61,8 +62,8 @@ export function SyncStatusIndicator({
       className: "bg-green-100 text-green-700 hover:bg-green-200 border-green-200",
       iconClassName: "text-green-600",
       iconContainerClassName: "bg-green-50",
-      description: lastSync
-        ? `Última sincronización: ${lastSync.toLocaleTimeString("es-PE")}`
+      description: lastSyncTime
+        ? `Última sincronización: ${lastSyncTime.toLocaleTimeString("es-PE")}`
         : "Datos sincronizados",
     },
     syncing: {
@@ -170,19 +171,20 @@ export function SyncStatusButton({
   onManualSync?: () => Promise<void>;
   className?: string;
 }) {
-  const { isOnline, lastSync } = useSync();
+  const { isOnline } = useSyncStatus();
+  const { lastSyncTime } = useSyncState();
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   const getSyncState = useCallback((): SyncState => {
     if (!isOnline) return "offline";
     if (isManualSyncing) return "syncing";
-    if (lastSync) {
-      const timeSinceSync = Date.now() - lastSync.getTime();
+    if (lastSyncTime) {
+      const timeSinceSync = Date.now() - lastSyncTime.getTime();
       if (timeSinceSync < 30_000) return "synced";
       return "pending";
     }
     return "pending";
-  }, [isOnline, isManualSyncing, lastSync]);
+  }, [isOnline, isManualSyncing, lastSyncTime]);
 
   const syncState = getSyncState();
 

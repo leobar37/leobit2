@@ -1,8 +1,10 @@
 import { eq, and, desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
 import { db, syncDeadLetter } from "../../../lib/db";
 import type { SyncOperationInput } from "../types";
+import type { ISyncDeadLetterRepository } from "@avileo/drizzle-sync/server";
 
 export interface DeadLetterRecord {
   id: string;
@@ -20,7 +22,7 @@ export interface DeadLetterRecord {
   createdAt: Date;
 }
 
-export class SyncDeadLetterRepository {
+export class SyncDeadLetterRepository implements ISyncDeadLetterRepository<RequestContext, DbTransaction> {
   async create(
     ctx: RequestContext,
     operation: SyncOperationInput,
@@ -73,7 +75,7 @@ export class SyncDeadLetterRepository {
 
   async countByBusiness(ctx: RequestContext): Promise<number> {
     const result = await db
-      .select({ count: db.fn.count() })
+      .select({ count: sql<number>`count(*)` })
       .from(syncDeadLetter)
       .where(eq(syncDeadLetter.businessId, ctx.businessId));
 
@@ -85,7 +87,7 @@ export class SyncDeadLetterRepository {
     entity: string
   ): Promise<number> {
     const result = await db
-      .select({ count: db.fn.count() })
+      .select({ count: sql<number>`count(*)` })
       .from(syncDeadLetter)
       .where(
         and(
@@ -125,7 +127,7 @@ export class SyncDeadLetterRepository {
 
     const result = await db
       .delete(syncDeadLetter)
-      .where(eq(syncDeadLetter.createdAt, cutoff.toISOString()))
+      .where(sql`${syncDeadLetter.createdAt} < ${cutoff}`)
       .returning({ id: syncDeadLetter.id });
 
     return result.length;

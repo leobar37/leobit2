@@ -1,0 +1,23 @@
+# Generated sync files
+app/lib/db/generated/
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

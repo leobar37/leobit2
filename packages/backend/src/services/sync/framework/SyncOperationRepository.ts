@@ -4,6 +4,7 @@ import type { DbTransaction } from "../../../lib/txid";
 import { db, syncOperations } from "../../../lib/db";
 import type { SyncOperationInput } from "../types";
 import { now } from "../../../lib/date-utils";
+import type { ISyncOperationRepository } from "@avileo/drizzle-sync/server";
 
 export interface SyncOperationRecord {
   id: string;
@@ -13,7 +14,7 @@ export interface SyncOperationRecord {
   payload: Record<string, unknown>;
 }
 
-export class SyncOperationRepository {
+export class SyncOperationRepository implements ISyncOperationRepository<RequestContext, DbTransaction> {
   async findByIdempotencyKey(
     ctx: RequestContext,
     idempotencyKey: string,

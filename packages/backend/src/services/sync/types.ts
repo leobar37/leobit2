@@ -16,6 +16,7 @@ export interface SyncOperationInput {
   correlationId?: string;
   deviceId?: string;
   sourceFingerprint?: string;
+  error?: string;
 }
 
 export interface SyncOperationResult {

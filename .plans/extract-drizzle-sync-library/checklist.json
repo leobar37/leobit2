@@ -1,0 +1,60 @@
+{
+  "planName": "extract-drizzle-sync-library",
+  "createdAt": "2025-01-08T00:00:00.000Z",
+  "updatedAt": "2025-01-08T00:00:00.000Z",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Establish Library Boundaries and Contracts",
+      "status": "completed",
+      "dependencies": [],
+      "description": "Create the library package structure and define core types/interfaces that both frontend and backend will depend on."
+    },
+    {
+      "id": "T-002",
+      "title": "Extract Frontend PGlite Adapters",
+      "status": "completed",
+      "dependencies": [
+        "T-001"
+      ],
+      "description": "Extract PGlite-specific sync components into library entrypoint, preserving raw SQL patterns for change application."
+    },
+    {
+      "id": "T-003",
+      "title": "Extract Backend Server Engine Adapters",
+      "status": "completed",
+      "dependencies": [
+        "T-001"
+      ],
+      "description": "Extract PostgreSQL backend sync components into library entrypoint, preserving Drizzle-based patterns."
+    },
+    {
+      "id": "T-004",
+      "title": "Unify Observability and Sync Lifecycle",
+      "status": "completed",
+      "dependencies": [
+        "T-002",
+        "T-003"
+      ],
+      "description": "Establish unified logging interface and event emission patterns across library components."
+    },
+    {
+      "id": "T-005",
+      "title": "Compose Avileo Apps on Top of the Library",
+      "status": "in_progress",
+      "dependencies": [
+        "T-004"
+      ],
+      "description": "Migrate Avileo frontend and backend to import from library, removing duplicate code."
+    },
+    {
+      "id": "T-006",
+      "title": "Validate, Migrate, and Rollout",
+      "status": "pending",
+      "dependencies": [
+        "T-005"
+      ],
+      "description": "Final validation, documentation, and rollout of library for production use."
+    }
+  ]
+}
