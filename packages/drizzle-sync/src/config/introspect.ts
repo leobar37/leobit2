@@ -10,17 +10,38 @@ export function introspectTable(table: PgTable): ColumnMetadata[] {
 
   return columns.map((col) => {
     const drizzleType = getDrizzleTypeName(col);
+    const sqlType = col.getSQLType?.() || "";
 
-    return {
+    const metadata: ColumnMetadata = {
       name: col.name,
       dataType: mapDrizzleToDataType(col),
       drizzleType,
       notNull: col.notNull,
       hasDefault: col.default !== undefined,
+      default: col.default,
       primary: col.primary,
       isEnum: isEnumColumn(col),
       enumValues: getEnumValues(col),
     };
+
+    // Extract precision and scale for decimal/numeric columns
+    if (drizzleType === "PgNumeric" || sqlType.includes("numeric") || sqlType.includes("decimal")) {
+      const match = sqlType.match(/(\d+),\s*(\d+)/);
+      if (match) {
+        metadata.precision = parseInt(match[1], 10);
+        metadata.scale = parseInt(match[2], 10);
+      }
+    }
+
+    // Extract length for varchar columns
+    if (drizzleType === "PgVarchar" || sqlType.includes("varchar")) {
+      const match = sqlType.match(/varchar\((\d+)\)/);
+      if (match) {
+        metadata.length = parseInt(match[1], 10);
+      }
+    }
+
+    return metadata;
   });
 }
 

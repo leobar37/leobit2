@@ -2,7 +2,7 @@ import { writeFileSync, mkdirSync, existsSync } from "fs";
 import type { SyncConfig } from "./types";
 import { introspectTable, buildRelationGraph } from "./introspect";
 import { generateZodSchema, generateZodSchemasFile } from "./generators/zod-generator";
-import { generateDDL, generateDDLFile } from "./generators/ddl-generator";
+import { generatePostgreSQLDDL, generatePostgreSQLDDLFile } from "./generators/postgres-ddl-generator";
 import { generateApplierConfig, mergeApplierConfigs, generateApplierFile } from "./generators/applier-generator";
 import { generateHooks, generateHooksFile } from "./generators/hooks-generator";
 
@@ -45,9 +45,9 @@ export async function generateAll(
   writeFileSync(`${outputDir}/schemas.ts`, zodFile);
   files.push(`${outputDir}/schemas.ts`);
 
-  // 2. Generate DDL
-  const ddlOutputs = entityNames.map((name) => generateDDL(name, config.entities[name]));
-  const ddlFile = generateDDLFile(ddlOutputs);
+  // 2. Generate DDL (PostgreSQL for PGlite)
+  const ddlOutputs = entityNames.map((name) => generatePostgreSQLDDL(name, config.entities[name]));
+  const ddlFile = generatePostgreSQLDDLFile(ddlOutputs);
   writeFileSync(`${outputDir}/init.sql`, ddlFile);
   files.push(`${outputDir}/init.sql`);
 

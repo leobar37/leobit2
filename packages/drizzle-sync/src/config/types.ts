@@ -105,9 +105,16 @@ export interface ColumnMetadata {
   drizzleType: string;
   notNull: boolean;
   hasDefault: boolean;
+  default?: unknown;
   primary: boolean;
   isEnum: boolean;
   enumValues?: string[];
+  /** For decimal/numeric columns: precision (total digits) */
+  precision?: number;
+  /** For decimal/numeric columns: scale (digits after decimal) */
+  scale?: number;
+  /** For varchar columns: length limit */
+  length?: number;
 }
 
 /**
