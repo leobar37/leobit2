@@ -5,6 +5,7 @@ import { generateZodSchema, generateZodSchemasFile } from "./generators/zod-gene
 import { generatePostgreSQLDDL, generatePostgreSQLDDLFile } from "./generators/postgres-ddl-generator";
 import { generateApplierConfig, mergeApplierConfigs, generateApplierFile } from "./generators/applier-generator";
 import { generateHooks, generateHooksFile } from "./generators/hooks-generator";
+import { generateService, generateServicesFile } from "./generators/service-generator";
 
 export interface GenerationResult {
   files: string[];
@@ -73,7 +74,15 @@ export async function generateAll(
   writeFileSync(`${outputDir}/hooks.ts`, hooksFile);
   files.push(`${outputDir}/hooks.ts`);
 
-  // 5. Generate types (exports from schemas)
+  // 5. Generate services (BaseService subclasses for PGlite)
+  const serviceOutputs = entityNames.map((name) =>
+    generateService(name, config.entities[name])
+  );
+  const servicesFile = generateServicesFile(serviceOutputs);
+  writeFileSync(`${outputDir}/services.ts`, servicesFile);
+  files.push(`${outputDir}/services.ts`);
+
+  // 6. Generate types (exports from schemas)
   const typesFile = generateTypesFile(entityNames);
   writeFileSync(`${outputDir}/types.ts`, typesFile);
   files.push(`${outputDir}/types.ts`);
