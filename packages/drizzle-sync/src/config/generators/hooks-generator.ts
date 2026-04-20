@@ -15,6 +15,17 @@ export function generateHooks(
   config: EntitySyncConfig,
   allEntities: Record<string, EntitySyncConfig>
 ): HookOutput {
+  // Skip junction tables - they're managed through parent entities, not standalone endpoints
+  if (config.metadata?.isJunctionTable === true) {
+    return {
+      listHook: "",
+      singleHook: "",
+      createHook: "",
+      updateHook: "",
+      deleteHook: "",
+    };
+  }
+
   const graph = buildRelationGraph(allEntities);
   const hasChildren = graph[entityName]?.children.length > 0;
   // Use apiPath if provided, otherwise fall back to entity name
@@ -102,7 +113,16 @@ function generateCreateWithChildren(
   apiPath: string
 ): string {
   const pascalName = pascalCase(entityName);
-  const children = graph[entityName]?.children || [];
+  // Filter out junction tables and child entities without standalone endpoints
+  // Junction tables are managed through the sync batch, not standalone endpoints
+  const children = (graph[entityName]?.children || []).filter((child) => {
+    const childConfig = allEntities[child];
+    // Skip junction tables - they're managed differently
+    if (childConfig.metadata?.isJunctionTable === true) {
+      return false;
+    }
+    return true;
+  });
 
   const childrenOps = children
     .map((child) => {
@@ -215,11 +235,42 @@ export function useDelete${pascalName}() {
 `;
 }
 
+/**
+ * Check if an entity should have standalone hooks generated.
+ * Entities that are junction tables or children in relations
+ * should NOT have standalone hooks - they're managed through parent entities.
+ */
+function shouldGenerateHooks(
+  entityName: string,
+  allEntities: Record<string, EntitySyncConfig>
+): boolean {
+  const config = allEntities[entityName];
+
+  // Skip junction tables - they're managed through parent entities
+  if (config.metadata?.isJunctionTable === true) {
+    return false;
+  }
+
+  // Skip child entities (defined in any parent's relations.children)
+  for (const [parentName, parentConfig] of Object.entries(allEntities)) {
+    if (parentName === entityName) continue;
+    const children = parentConfig.relations?.children || [];
+    if (children.some((c) => c.entity === entityName)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function generateHooksFile(
   hooks: Map<string, HookOutput>,
   allEntities: Record<string, EntitySyncConfig>
 ): string {
-  const entityNames = Array.from(hooks.keys());
+  // Filter out entities that shouldn't have standalone hooks
+  const entityNames = Array.from(hooks.keys()).filter((name) =>
+    shouldGenerateHooks(name, allEntities)
+  );
 
   const imports = `
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -235,6 +286,7 @@ import { generateIdempotencyKey } from "@avileo/shared";
 `;
 
   const content = Array.from(hooks.entries())
+    .filter(([name]) => shouldGenerateHooks(name, allEntities))
     .map(([name, hook]) => {
       return `
 // ${pascalCase(name)} hooks

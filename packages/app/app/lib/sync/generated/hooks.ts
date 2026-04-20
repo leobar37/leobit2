@@ -6,10 +6,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { createId } from "@paralleldrive/cuid2";
 import { 
-  customersSchema, productsSchema, suppliersSchema, tagsSchema, customerGroupsSchema, distribucionesSchema, distribucionItemsSchema, productVariantsSchema, customerTagsSchema, customerGroupMembersSchema, salesSchema, purchasesSchema, abonosSchema, visitasSchema, saleItemsSchema, purchaseItemsSchema
+  customersSchema, productsSchema, suppliersSchema, tagsSchema, customerGroupsSchema, distribucionesSchema, productVariantsSchema, salesSchema, purchasesSchema, abonosSchema, visitasSchema
 } from "./schemas";
 import type { 
-  CustomersInput, ProductsInput, SuppliersInput, TagsInput, CustomerGroupsInput, DistribucionesInput, DistribucionItemsInput, ProductVariantsInput, CustomerTagsInput, CustomerGroupMembersInput, SalesInput, PurchasesInput, AbonosInput, VisitasInput, SaleItemsInput, PurchaseItemsInput
+  CustomersInput, ProductsInput, SuppliersInput, TagsInput, CustomerGroupsInput, DistribucionesInput, ProductVariantsInput, SalesInput, PurchasesInput, AbonosInput, VisitasInput
 } from "./types";
 import { generateIdempotencyKey } from "@avileo/shared";
 
@@ -45,7 +45,7 @@ export function useCreateCustomers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CustomersInput & { customerTags?: CustomerTagsInput[]; customerGroupMembers?: CustomerGroupMembersInput[]; visitas?: VisitasInput[]; sales?: SalesInput[]; abonos?: AbonosInput[] }) => {
+    mutationFn: async (input: CustomersInput & { visitas?: VisitasInput[]; sales?: SalesInput[]; abonos?: AbonosInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -62,34 +62,6 @@ export function useCreateCustomers() {
       
       // 3. Build children with REAL parent ID via FK reference
       
-      const customerTagsOps = (input.customerTags?.map((item) => ({
-        idempotencyKey: generateIdempotencyKey(),
-        entityType: "customerTags",
-        operation: "create" as const,
-        entityId: createId(),
-        payload: {
-          ...item,
-          customer_id: parentId,
-        },
-        localVersion: 1,
-        localTimestamp: new Date().toISOString(),
-      })) || []);
-      
-
-      const customerGroupMembersOps = (input.customerGroupMembers?.map((item) => ({
-        idempotencyKey: generateIdempotencyKey(),
-        entityType: "customerGroupMembers",
-        operation: "create" as const,
-        entityId: createId(),
-        payload: {
-          ...item,
-          customer_id: parentId,
-        },
-        localVersion: 1,
-        localTimestamp: new Date().toISOString(),
-      })) || []);
-      
-
       const visitasOps = (input.visitas?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
         entityType: "visitas",
@@ -134,7 +106,7 @@ export function useCreateCustomers() {
       
       // 4. Send atomic batch
       const result = await api.sync.batch.post({
-        operations: [parentOp, ...customerTagsOps, ...customerGroupMembersOps, ...visitasOps, ...salesOps, ...abonosOps],
+        operations: [parentOp, ...visitasOps, ...salesOps, ...abonosOps],
       });
       
       if (result.error) throw new Error(String(result.error.value));
@@ -144,8 +116,6 @@ export function useCreateCustomers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
-      queryClient.invalidateQueries({ queryKey: ["customerTags"] });
-      queryClient.invalidateQueries({ queryKey: ["customerGroupMembers"] });
       queryClient.invalidateQueries({ queryKey: ["visitas"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["abonos"] });
@@ -477,7 +447,7 @@ export function useCreateTags() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: TagsInput & { customerTags?: CustomerTagsInput[] }) => {
+    mutationFn: async (input: TagsInput & {  }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -494,23 +464,10 @@ export function useCreateTags() {
       
       // 3. Build children with REAL parent ID via FK reference
       
-      const customerTagsOps = (input.customerTags?.map((item) => ({
-        idempotencyKey: generateIdempotencyKey(),
-        entityType: "customerTags",
-        operation: "create" as const,
-        entityId: createId(),
-        payload: {
-          ...item,
-          tag_id: parentId,
-        },
-        localVersion: 1,
-        localTimestamp: new Date().toISOString(),
-      })) || []);
-      
       
       // 4. Send atomic batch
       const result = await api.sync.batch.post({
-        operations: [parentOp, ...customerTagsOps],
+        operations: [parentOp, ],
       });
       
       if (result.error) throw new Error(String(result.error.value));
@@ -520,7 +477,7 @@ export function useCreateTags() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
-      queryClient.invalidateQueries({ queryKey: ["customerTags"] });
+      
     },
   });
 }
@@ -728,97 +685,13 @@ export function useDeleteDistribuciones() {
 
     
 
-// DistribucionItems hooks
-
-export function useDistribucionItemsList() {
-  return useQuery({
-    queryKey: ["distribucionItems"],
-    queryFn: async () => {
-      const { data, error } = await api.distribucionItems.get();
-      if (error) throw new Error(String(error.value));
-      return distribucionItemsSchema.array().parse(data);
-    },
-  });
-}
-
-
-export function useDistribucionItems(id: string) {
-  return useQuery({
-    queryKey: ["distribucionItems", id],
-    queryFn: async () => {
-      const { data, error } = await api.distribucionItems({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return distribucionItemsSchema.parse(data);
-    },
-    enabled: !!id,
-  });
-}
-
-
-export function useCreateDistribucionItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (input: DistribucionItemsInput) => {
-      // Generate CUID2 - this IS the real ID
-      const id = createId();
-      
-      const response = await api.distribucionItems.post({
-        ...input,
-        id,
-      });
-      
-      if (response.error) throw new Error(String(response.error.value));
-      return distribucionItemsSchema.parse(response.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["distribucionItems"] });
-    },
-  });
-}
-
-
-export function useUpdateDistribucionItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<DistribucionItemsInput> }) => {
-      const response = await api.distribucionItems({ id }).put(data);
-      if (response.error) throw new Error(String(response.error.value));
-      return distribucionItemsSchema.parse(response.data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["distribucionItems"] });
-      queryClient.invalidateQueries({ queryKey: ["distribucionItems", variables.id] });
-    },
-  });
-}
-
-
-export function useDeleteDistribucionItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.distribucionItems({ id }).delete();
-      if (response.error) throw new Error(String(response.error.value));
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["distribucionItems"] });
-    },
-  });
-}
-
-    
-
 // ProductVariants hooks
 
 export function useProductVariantsList() {
   return useQuery({
     queryKey: ["productVariants"],
     queryFn: async () => {
-      const { data, error } = await api.productVariants.get();
+      const { data, error } = await api.variants.get();
       if (error) throw new Error(String(error.value));
       return productVariantsSchema.array().parse(data);
     },
@@ -830,7 +703,7 @@ export function useProductVariants(id: string) {
   return useQuery({
     queryKey: ["productVariants", id],
     queryFn: async () => {
-      const { data, error } = await api.productVariants({ id }).get();
+      const { data, error } = await api.variants({ id }).get();
       if (error) throw new Error(String(error.value));
       return productVariantsSchema.parse(data);
     },
@@ -847,7 +720,7 @@ export function useCreateProductVariants() {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
-      const response = await api.productVariants.post({
+      const response = await api.variants.post({
         ...input,
         id,
       });
@@ -867,7 +740,7 @@ export function useUpdateProductVariants() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ProductVariantsInput> }) => {
-      const response = await api.productVariants({ id }).put(data);
+      const response = await api.variants({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return productVariantsSchema.parse(response.data);
     },
@@ -884,180 +757,12 @@ export function useDeleteProductVariants() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.productVariants({ id }).delete();
+      const response = await api.variants({ id }).delete();
       if (response.error) throw new Error(String(response.error.value));
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productVariants"] });
-    },
-  });
-}
-
-    
-
-// CustomerTags hooks
-
-export function useCustomerTagsList() {
-  return useQuery({
-    queryKey: ["customerTags"],
-    queryFn: async () => {
-      const { data, error } = await api.customerTags.get();
-      if (error) throw new Error(String(error.value));
-      return customerTagsSchema.array().parse(data);
-    },
-  });
-}
-
-
-export function useCustomerTags(id: string) {
-  return useQuery({
-    queryKey: ["customerTags", id],
-    queryFn: async () => {
-      const { data, error } = await api.customerTags({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return customerTagsSchema.parse(data);
-    },
-    enabled: !!id,
-  });
-}
-
-
-export function useCreateCustomerTags() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (input: CustomerTagsInput) => {
-      // Generate CUID2 - this IS the real ID
-      const id = createId();
-      
-      const response = await api.customerTags.post({
-        ...input,
-        id,
-      });
-      
-      if (response.error) throw new Error(String(response.error.value));
-      return customerTagsSchema.parse(response.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerTags"] });
-    },
-  });
-}
-
-
-export function useUpdateCustomerTags() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerTagsInput> }) => {
-      const response = await api.customerTags({ id }).put(data);
-      if (response.error) throw new Error(String(response.error.value));
-      return customerTagsSchema.parse(response.data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["customerTags"] });
-      queryClient.invalidateQueries({ queryKey: ["customerTags", variables.id] });
-    },
-  });
-}
-
-
-export function useDeleteCustomerTags() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.customerTags({ id }).delete();
-      if (response.error) throw new Error(String(response.error.value));
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerTags"] });
-    },
-  });
-}
-
-    
-
-// CustomerGroupMembers hooks
-
-export function useCustomerGroupMembersList() {
-  return useQuery({
-    queryKey: ["customerGroupMembers"],
-    queryFn: async () => {
-      const { data, error } = await api.customerGroupMembers.get();
-      if (error) throw new Error(String(error.value));
-      return customerGroupMembersSchema.array().parse(data);
-    },
-  });
-}
-
-
-export function useCustomerGroupMembers(id: string) {
-  return useQuery({
-    queryKey: ["customerGroupMembers", id],
-    queryFn: async () => {
-      const { data, error } = await api.customerGroupMembers({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return customerGroupMembersSchema.parse(data);
-    },
-    enabled: !!id,
-  });
-}
-
-
-export function useCreateCustomerGroupMembers() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (input: CustomerGroupMembersInput) => {
-      // Generate CUID2 - this IS the real ID
-      const id = createId();
-      
-      const response = await api.customerGroupMembers.post({
-        ...input,
-        id,
-      });
-      
-      if (response.error) throw new Error(String(response.error.value));
-      return customerGroupMembersSchema.parse(response.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerGroupMembers"] });
-    },
-  });
-}
-
-
-export function useUpdateCustomerGroupMembers() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerGroupMembersInput> }) => {
-      const response = await api.customerGroupMembers({ id }).put(data);
-      if (response.error) throw new Error(String(response.error.value));
-      return customerGroupMembersSchema.parse(response.data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["customerGroupMembers"] });
-      queryClient.invalidateQueries({ queryKey: ["customerGroupMembers", variables.id] });
-    },
-  });
-}
-
-
-export function useDeleteCustomerGroupMembers() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.customerGroupMembers({ id }).delete();
-      if (response.error) throw new Error(String(response.error.value));
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customerGroupMembers"] });
     },
   });
 }
@@ -1313,7 +1018,7 @@ export function useAbonosList() {
   return useQuery({
     queryKey: ["abonos"],
     queryFn: async () => {
-      const { data, error } = await api.abonos.get();
+      const { data, error } = await api.payments.get();
       if (error) throw new Error(String(error.value));
       return abonosSchema.array().parse(data);
     },
@@ -1325,7 +1030,7 @@ export function useAbonos(id: string) {
   return useQuery({
     queryKey: ["abonos", id],
     queryFn: async () => {
-      const { data, error } = await api.abonos({ id }).get();
+      const { data, error } = await api.payments({ id }).get();
       if (error) throw new Error(String(error.value));
       return abonosSchema.parse(data);
     },
@@ -1342,7 +1047,7 @@ export function useCreateAbonos() {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
-      const response = await api.abonos.post({
+      const response = await api.payments.post({
         ...input,
         id,
       });
@@ -1362,7 +1067,7 @@ export function useUpdateAbonos() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<AbonosInput> }) => {
-      const response = await api.abonos({ id }).put(data);
+      const response = await api.payments({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return abonosSchema.parse(response.data);
     },
@@ -1379,7 +1084,7 @@ export function useDeleteAbonos() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.abonos({ id }).delete();
+      const response = await api.payments({ id }).delete();
       if (response.error) throw new Error(String(response.error.value));
       return response.data;
     },
@@ -1499,174 +1204,6 @@ export function useDeleteVisitas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visitas"] });
-    },
-  });
-}
-
-    
-
-// SaleItems hooks
-
-export function useSaleItemsList() {
-  return useQuery({
-    queryKey: ["saleItems"],
-    queryFn: async () => {
-      const { data, error } = await api.saleItems.get();
-      if (error) throw new Error(String(error.value));
-      return saleItemsSchema.array().parse(data);
-    },
-  });
-}
-
-
-export function useSaleItems(id: string) {
-  return useQuery({
-    queryKey: ["saleItems", id],
-    queryFn: async () => {
-      const { data, error } = await api.saleItems({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return saleItemsSchema.parse(data);
-    },
-    enabled: !!id,
-  });
-}
-
-
-export function useCreateSaleItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (input: SaleItemsInput) => {
-      // Generate CUID2 - this IS the real ID
-      const id = createId();
-      
-      const response = await api.saleItems.post({
-        ...input,
-        id,
-      });
-      
-      if (response.error) throw new Error(String(response.error.value));
-      return saleItemsSchema.parse(response.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["saleItems"] });
-    },
-  });
-}
-
-
-export function useUpdateSaleItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<SaleItemsInput> }) => {
-      const response = await api.saleItems({ id }).put(data);
-      if (response.error) throw new Error(String(response.error.value));
-      return saleItemsSchema.parse(response.data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["saleItems"] });
-      queryClient.invalidateQueries({ queryKey: ["saleItems", variables.id] });
-    },
-  });
-}
-
-
-export function useDeleteSaleItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.saleItems({ id }).delete();
-      if (response.error) throw new Error(String(response.error.value));
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["saleItems"] });
-    },
-  });
-}
-
-    
-
-// PurchaseItems hooks
-
-export function usePurchaseItemsList() {
-  return useQuery({
-    queryKey: ["purchaseItems"],
-    queryFn: async () => {
-      const { data, error } = await api.purchaseItems.get();
-      if (error) throw new Error(String(error.value));
-      return purchaseItemsSchema.array().parse(data);
-    },
-  });
-}
-
-
-export function usePurchaseItems(id: string) {
-  return useQuery({
-    queryKey: ["purchaseItems", id],
-    queryFn: async () => {
-      const { data, error } = await api.purchaseItems({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return purchaseItemsSchema.parse(data);
-    },
-    enabled: !!id,
-  });
-}
-
-
-export function useCreatePurchaseItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (input: PurchaseItemsInput) => {
-      // Generate CUID2 - this IS the real ID
-      const id = createId();
-      
-      const response = await api.purchaseItems.post({
-        ...input,
-        id,
-      });
-      
-      if (response.error) throw new Error(String(response.error.value));
-      return purchaseItemsSchema.parse(response.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchaseItems"] });
-    },
-  });
-}
-
-
-export function useUpdatePurchaseItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<PurchaseItemsInput> }) => {
-      const response = await api.purchaseItems({ id }).put(data);
-      if (response.error) throw new Error(String(response.error.value));
-      return purchaseItemsSchema.parse(response.data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["purchaseItems"] });
-      queryClient.invalidateQueries({ queryKey: ["purchaseItems", variables.id] });
-    },
-  });
-}
-
-
-export function useDeletePurchaseItems() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.purchaseItems({ id }).delete();
-      if (response.error) throw new Error(String(response.error.value));
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchaseItems"] });
     },
   });
 }

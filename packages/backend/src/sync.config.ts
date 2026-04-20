@@ -39,6 +39,8 @@ export const syncConfig = defineSyncConfig({
       table: productVariants,
       syncable: true,
       conflictResolver: "version-based",
+      // API uses /variants prefix
+      apiPath: "variants",
     },
 
     suppliers: {
@@ -57,6 +59,8 @@ export const syncConfig = defineSyncConfig({
       table: customerTags,
       syncable: true,
       conflictResolver: "version-based",
+      // Mark as junction table - no businessId, managed through parent entities
+      metadata: { isJunctionTable: true },
     },
 
     customerGroups: {
@@ -145,11 +149,12 @@ export const syncConfig = defineSyncConfig({
       conflictResolver: "version-based",
     },
 
-    // Payments (abonos)
+    // Payments (abonos) - API uses /payments prefix
     abonos: {
       table: abonos,
       syncable: true,
       conflictResolver: "version-based",
+      apiPath: "payments",
     },
   },
 
