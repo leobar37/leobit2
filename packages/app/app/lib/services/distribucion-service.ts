@@ -1,15 +1,23 @@
 /**
  * Distribucion Service
- * Local-first distribucion entity service with automatic sync integration
+ * Local-first service for distribucion entity with automatic sync integration
+ * Extends generated DistribucionesService to preserve atomic items operations
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { BaseService, type EntityType } from "./base-service";
-import { SyncService } from "../sync/sync-service";
-import { distribuciones, distribucionItems, type Distribucion } from "~/engine/schema";
 import { eq, and, desc } from "drizzle-orm";
+import {
+  DistribucionesService,
+  type CreateDistribucionesInput,
+  type UpdateDistribucionesInput,
+} from "~/lib/sync/generated/services";
+import { SyncService } from "../sync/sync-service";
+import { distribuciones, distribucionItems, type Distribucion } from "@avileo/shared";
 import { mapToCamelCase } from "../mappers/entity-mapper";
+
+// Re-export Distribucion for backward compatibility
+export { type Distribucion } from "@avileo/shared";
 
 /**
  * Distribucion item from database
@@ -45,14 +53,15 @@ export interface CreateDistribucionItemInput {
   unidad: string;
 }
 
-/** Input for creating a new distribucion */
+/**
+ * Input for creating a new distribucion (extends generated input with items)
+ */
 export interface CreateDistribucionInput {
   vendedorId: string;
   puntoVenta: string;
   puntoVentaId?: string;
   notaCreacion?: string;
   fecha?: string;
-  groupId?: string;
   items?: Array<{
     variantId: string;
     cantidadAsignada: number;
@@ -61,14 +70,20 @@ export interface CreateDistribucionInput {
 }
 
 /**
- * Distribucion Service
- * Provides CRUD operations for distribuciones with local-first approach
- * and automatic sync to server
+ * Filters for finding distribuciones
  */
-export class DistribucionService extends BaseService {
-  private static readonly ENTITY_TYPE: EntityType = "distribuciones";
-  private static readonly ID_PREFIX = "dist";
+export interface FindDistribucionesFilters {
+  fecha?: string;
+  vendedorId?: string;
+  estado?: "activo" | "cerrado" | "en_ruta";
+}
 
+/**
+ * Distribucion Service
+ * Extends generated DistribucionesService for local-first operations with atomic items support
+ * Uses FK references (distribucionId in payload) instead of syncGroupId
+ */
+export class DistribucionService extends DistribucionesService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -79,39 +94,11 @@ export class DistribucionService extends BaseService {
     super(pg, db, syncService, businessId, businessUserId);
   }
 
-  getEntityType(): EntityType {
-    return DistribucionService.ENTITY_TYPE;
-  }
-
-  getEntityPrefix(): string {
-    return DistribucionService.ID_PREFIX;
-  }
-
   /**
-   * Find a distribucion by ID
+   * Find all distribuciones for the current business with optional filters
+   * Overrides parent to add filtering support
    */
-  async findById(id: string): Promise<Distribucion | null> {
-    const result = await this.db
-      .select()
-      .from(distribuciones)
-      .where(eq(distribuciones.id, id))
-      .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    return result[0] as Distribucion;
-  }
-
-  /**
-   * Find all distribuciones for the current business
-   */
-  async findByBusiness(filters?: {
-    fecha?: string;
-    vendedorId?: string;
-    estado?: "activo" | "cerrado" | "en_ruta";
-  }): Promise<Distribucion[]> {
+  async findByBusiness(filters?: FindDistribucionesFilters): Promise<Distribucion[]> {
     const conditions = [eq(distribuciones.businessId, this.businessId)];
 
     if (filters?.fecha) {
@@ -136,73 +123,143 @@ export class DistribucionService extends BaseService {
   }
 
   /**
-   * Create a new distribucion
-   * Inserts into local PGlite and queues for sync
+   * Create a new distribucion with items atomically
+   * Uses FK reference (distribucionId) in item payload instead of syncGroupId
    */
-  async create(input: CreateDistribucionInput): Promise<Distribucion> {
-    const id = await this.generateId();
+  async createWithItems(input: CreateDistribucionInput): Promise<Distribucion> {
+    const id = this.generateId();
+    const now = this.now();
     const fecha = input.fecha || new Date().toISOString().split("T")[0];
 
-    const distribucion: Distribucion = {
-      id,
-      businessId: this.businessId,
+    // Insert distribucion using raw query for atomic operation
+    await this.pg.query(
+      `INSERT INTO distribuciones (
+        id, business_id, vendedor_id, punto_venta, punto_venta_id,
+        monto_recaudado, nota_creacion, nota_cierre, fecha, estado, modo,
+        sync_status, sync_attempts, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [
+        id,
+        this.businessId,
+        input.vendedorId,
+        input.puntoVenta,
+        input.puntoVentaId ?? null,
+        "0.00",
+        input.notaCreacion ?? null,
+        null,
+        fecha,
+        "activo",
+        "libre",
+        "pending",
+        0,
+        now,
+        now,
+      ]
+    );
+
+    // Queue sync for the distribucion (parent before children)
+    await this.queueSync("create", id, {
       vendedorId: input.vendedorId,
       puntoVenta: input.puntoVenta,
-      puntoVentaId: input.puntoVentaId || null,
-      montoRecaudado: "0.00",
-      notaCreacion: input.notaCreacion || null,
-      notaCierre: null,
+      puntoVentaId: input.puntoVentaId,
+      notaCreacion: input.notaCreacion,
       fecha,
       estado: "activo",
-      modo: "libre",
+    });
+
+    // Insert and queue items with FK reference (distribucionId in payload, NOT syncGroupId)
+    if (input.items && input.items.length > 0) {
+      for (const item of input.items) {
+        const itemId = this.generateId();
+
+        await this.pg.query(
+          `INSERT INTO distribucion_items (
+            id, business_id, distribucion_id, variant_id,
+            cantidad_asignada, cantidad_vendida, unidad,
+            sync_status, sync_attempts, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            itemId,
+            this.businessId,
+            id,
+            item.variantId,
+            this.normalizeWeightRequired(item.cantidadAsignada),
+            "0",
+            item.unidad,
+            "pending",
+            0,
+            now,
+            now,
+          ]
+        );
+
+        // Queue item sync with FK reference (distribucionId in payload)
+        await this.queueSync("create", itemId, {
+          distribucionId: id,
+          variantId: item.variantId,
+          cantidadAsignada: item.cantidadAsignada,
+          cantidadVendida: 0,
+          unidad: item.unidad,
+        }, undefined, "distribucion_items");
+      }
+    }
+
+    // Return the created distribucion
+    const result = await this.pg.query<Distribucion>(
+      "SELECT * FROM distribuciones WHERE id = $1",
+      [id]
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Override create to call createWithItems internally for atomic operations
+   */
+  async create(input: CreateDistribucionesInput): Promise<Distribucion> {
+    // Delegate to createWithItems for atomic operations with items
+    return this.createWithItems({
+      vendedorId: input.vendedorId,
+      puntoVenta: input.puntoVenta,
+      puntoVentaId: input.puntoVentaId,
+      notaCreacion: input.notaCreacion,
+      fecha: input.fecha,
+    });
+  }
+
+  /**
+   * Update a distribucion
+   * Overrides parent to use custom sync queue
+   */
+  async update(id: string, input: UpdateDistribucionesInput): Promise<void> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error(`Distribucion not found: ${id}`);
+    }
+
+    const now = this.now();
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(now),
       syncStatus: "pending",
-      syncAttempts: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
 
-    // Start transaction for atomic operation
-    await this.pg.exec("BEGIN");
+    if (input.vendedorId !== undefined) updateData.vendedorId = input.vendedorId;
+    if (input.puntoVenta !== undefined) updateData.puntoVenta = input.puntoVenta;
+    if (input.puntoVentaId !== undefined) updateData.puntoVentaId = input.puntoVentaId;
+    if (input.montoRecaudado !== undefined) updateData.montoRecaudado = input.montoRecaudado;
+    if (input.notaCreacion !== undefined) updateData.notaCreacion = input.notaCreacion;
+    if (input.notaCierre !== undefined) updateData.notaCierre = input.notaCierre;
+    if (input.fecha !== undefined) updateData.fecha = input.fecha;
+    if (input.estado !== undefined) updateData.estado = input.estado;
+    if (input.closedAt !== undefined) updateData.closedAt = input.closedAt;
+    if (input.closedBy !== undefined) updateData.closedBy = input.closedBy;
 
-    try {
-      // Insert distribucion
-      await this.db.insert(distribuciones).values(distribucion);
+    await this.db
+      .update(distribuciones)
+      .set(updateData)
+      .where(and(eq(distribuciones.id, id), eq(distribuciones.businessId, this.businessId)));
 
-      // Insert items if provided
-      const itemIds: string[] = [];
-      if (input.items && input.items.length > 0) {
-        for (const item of input.items) {
-          const itemId = await this.generateId();
-          itemIds.push(itemId);
-
-          await this.db.insert(distribucionItems).values({
-            businessId: this.businessId,
-            distribucionId: id,
-            variantId: item.variantId,
-            cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
-            unidad: item.unidad,
-          });
-        }
-      }
-
-      await this.pg.exec("COMMIT");
-
-      // Queue for sync to server
-      await this.queueSync("create", id, {
-        vendedorId: input.vendedorId,
-        puntoVenta: input.puntoVenta,
-        puntoVentaId: input.puntoVentaId,
-        notaCreacion: input.notaCreacion,
-        fecha,
-        groupId: input.groupId,
-        items: input.items || [],
-      });
-
-      return distribucion;
-    } catch (error) {
-      await this.pg.exec("ROLLBACK");
-      throw error;
-    }
+    // Queue sync
+    await this.queueSync("update", id, input as Record<string, unknown>);
   }
 
   /**
@@ -258,6 +315,7 @@ export class DistribucionService extends BaseService {
 
   /**
    * Add an item to an existing distribucion
+   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async addItem(
     distribucionId: string,
@@ -283,24 +341,39 @@ export class DistribucionService extends BaseService {
       throw new Error("El producto ya está en la distribución");
     }
 
-    const result = await this.db.insert(distribucionItems).values({
-      businessId: this.businessId,
-      distribucionId,
-      variantId: item.variantId,
-      cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
-      unidad: item.unidad,
-    }).returning({ id: distribucionItems.id });
+    const now = this.now();
+    const itemId = this.generateId();
 
-    const itemId = result[0]?.id;
+    await this.pg.query(
+      `INSERT INTO distribucion_items (
+        id, business_id, distribucion_id, variant_id,
+        cantidad_asignada, cantidad_vendida, unidad,
+        sync_status, sync_attempts, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        itemId,
+        this.businessId,
+        distribucionId,
+        item.variantId,
+        this.normalizeWeightRequired(item.cantidadAsignada),
+        "0",
+        item.unidad,
+        "pending",
+        0,
+        now,
+        now,
+      ]
+    );
 
-    // Queue sync for the new item
+    // Queue sync for the new item with FK reference (distribucionId in payload)
     await this.queueSync(
       "create",
-      itemId!,
+      itemId,
       {
         distribucionId,
         variantId: item.variantId,
         cantidadAsignada: item.cantidadAsignada,
+        cantidadVendida: 0,
         unidad: item.unidad,
       },
       undefined,
@@ -323,6 +396,7 @@ export class DistribucionService extends BaseService {
 
   /**
    * Update an item in a distribucion
+   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async updateItem(
     distribucionId: string,
@@ -382,7 +456,7 @@ export class DistribucionService extends BaseService {
       params
     );
 
-    // Queue sync for the updated item
+    // Queue sync for the updated item with FK reference
     await this.queueSync(
       "update",
       itemId,
@@ -411,6 +485,7 @@ export class DistribucionService extends BaseService {
 
   /**
    * Remove an item from a distribucion
+   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async removeItem(distribucionId: string, itemId: string): Promise<void> {
     const distribucion = await this.findById(distribucionId);
@@ -436,7 +511,7 @@ export class DistribucionService extends BaseService {
     // Delete the item
     await this.db.delete(distribucionItems).where(eq(distribucionItems.id, itemId));
 
-    // Queue sync for the deleted item
+    // Queue sync for the deleted item with FK reference
     await this.queueSync(
       "delete",
       itemId,
@@ -446,5 +521,3 @@ export class DistribucionService extends BaseService {
     );
   }
 }
-
-export type { Distribucion };
