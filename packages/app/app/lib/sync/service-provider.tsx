@@ -194,7 +194,7 @@ export function ServicesProvider({
         const maxAgeDays = 30;
 
         const oldDrafts = drafts.filter(draft => {
-          const updatedAt = new Date(draft.updated_at);
+          const updatedAt = new Date(draft.updatedAt);
           const daysDiff = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
           return daysDiff > maxAgeDays;
         });

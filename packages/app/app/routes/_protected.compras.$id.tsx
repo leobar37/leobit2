@@ -61,8 +61,8 @@ export default function PurchaseDetailPage() {
   const { data: business } = useBusiness();
   const businessId = business?.id || "";
   const { data: suppliers } = useSuppliers(businessId);
-  const supplier = purchase?.supplier_id && suppliers
-    ? suppliers.find((s: { id: string }) => s.id === purchase.supplier_id)
+  const supplier = purchase?.supplierId && suppliers
+    ? suppliers.find((s: { id: string }) => s.id === purchase.supplierId)
     : null;
   const updateStatus = useUpdatePurchaseStatus();
   const deletePurchase = useDeletePurchase();
@@ -144,7 +144,7 @@ export default function PurchaseDetailPage() {
   const calculatedTotal = purchase.items?.reduce((sum, item) => {
     return sum + (parseFloat(item.totalCost) || 0);
   }, 0) ?? 0;
-  const storedTotal = parseFloat(purchase.total_amount) || 0;
+  const storedTotal = parseFloat(purchase.totalAmount) || 0;
   const displayTotal = purchase.items?.length
     ? Math.abs(storedTotal - calculatedTotal) > 0.009
       ? calculatedTotal
@@ -181,8 +181,8 @@ export default function PurchaseDetailPage() {
                   <span>Fecha</span>
                 </div>
                 <p className="font-medium">
-                  {purchase.purchase_date
-                    ? new Date(purchase.purchase_date).toLocaleDateString("es-PE")
+                  {purchase.purchaseDate
+                    ? new Date(purchase.purchaseDate).toLocaleDateString("es-PE")
                     : "Sin fecha"}
                 </p>
               </div>
@@ -193,7 +193,7 @@ export default function PurchaseDetailPage() {
                   <span>Factura</span>
                 </div>
                 <p className="font-medium">
-                  {purchase.invoice_number || "—"}
+                  {purchase.invoiceNumber || "—"}
                 </p>
               </div>
             </div>
@@ -216,14 +216,14 @@ export default function PurchaseDetailPage() {
             )}
 
             {/* Receipt Image - requires image URL lookup, showing ID for now */}
-            {purchase.receipt_image_id && (
+            {purchase.receiptImageId && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ImageIcon className="h-4 w-4" />
                   <span>Comprobante</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  ID: {purchase.receipt_image_id}
+                  ID: {purchase.receiptImageId}
                 </p>
               </div>
             )}

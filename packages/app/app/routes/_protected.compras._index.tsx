@@ -12,7 +12,7 @@ import { useSetLayout } from "~/components/layout/app-layout";
 import type { Purchase } from "~/lib/services/purchase-service";
 
 function getPurchaseDisplayTotal(purchase: Purchase) {
-  return parseFloat(purchase.total_amount) || 0;
+  return parseFloat(purchase.totalAmount) || 0;
 }
 
 function PurchaseCard({ purchase }: { purchase: Purchase }) {
@@ -30,8 +30,8 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
     cancelled: "bg-red-100 text-red-700",
   };
 
-  const displayDate = purchase.purchase_date
-    ? new Date(purchase.purchase_date).toLocaleDateString("es-PE")
+  const displayDate = purchase.purchaseDate
+    ? new Date(purchase.purchaseDate).toLocaleDateString("es-PE")
     : "Sin fecha";
 
   return (
@@ -46,7 +46,7 @@ function PurchaseCard({ purchase }: { purchase: Purchase }) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="font-semibold">
-                  {purchase.supplier_id ? "Proveedor seleccionado" : "Sin proveedor"}
+                  {purchase.supplierId ? "Proveedor seleccionado" : "Sin proveedor"}
                 </h3>
                 <p className="text-sm text-muted-foreground">{displayDate}</p>
               </div>
@@ -89,7 +89,7 @@ export default function ComprasPage() {
     items: purchases,
     searchFields: [
       (purchase) => purchase.id,
-      (purchase) => purchase.invoice_number ?? undefined,
+      (purchase) => purchase.invoiceNumber ?? undefined,
       (purchase) => purchase.status,
     ],
   });

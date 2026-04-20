@@ -94,10 +94,10 @@ export function createServiceDebugHelpers(deps: ServiceDebugDeps): ServiceDebugH
       console.table(data.map(p => ({
         id: p.id.substring(0, 8) + "...",
         status: p.status,
-        supplier_id: p.supplier_id?.substring(0, 8) + "..." || null,
-        total_amount: p.total_amount,
-        sync_status: p.sync_status,
-        created: new Date(p.created_at).toLocaleString(),
+        supplierId: p.supplierId?.substring(0, 8) + "..." || null,
+        totalAmount: p.totalAmount,
+        syncStatus: p.syncStatus,
+        created: new Date(p.createdAt).toLocaleString(),
       })));
     },
 
@@ -111,10 +111,10 @@ export function createServiceDebugHelpers(deps: ServiceDebugDeps): ServiceDebugH
       console.table(data.map(p => ({
         id: p.id.substring(0, 8) + "...",
         status: p.status,
-        supplier_id: p.supplier_id?.substring(0, 8) + "..." || null,
-        total_amount: p.total_amount,
-        sync_status: p.sync_status,
-        created: new Date(p.created_at).toLocaleString(),
+        supplierId: p.supplierId?.substring(0, 8) + "..." || null,
+        totalAmount: p.totalAmount,
+        syncStatus: p.syncStatus,
+        created: new Date(p.createdAt).toLocaleString(),
       })));
     },
 

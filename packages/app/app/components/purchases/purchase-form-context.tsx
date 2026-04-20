@@ -111,13 +111,13 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   const form = useForm<PurchaseFormValues>({
     defaultValues: {
-      purchaseDate: purchase?.purchase_date || new Date().toISOString().split("T")[0],
-      invoiceNumber: purchase?.invoice_number || "",
+      purchaseDate: purchase?.purchaseDate || new Date().toISOString().split("T")[0],
+      invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
     },
     values: {
-      purchaseDate: purchase?.purchase_date || new Date().toISOString().split("T")[0],
-      invoiceNumber: purchase?.invoice_number || "",
+      purchaseDate: purchase?.purchaseDate || new Date().toISOString().split("T")[0],
+      invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
     },
   });
@@ -139,9 +139,9 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   }, [purchase?.items]);
 
   const supplier = useMemo(() => {
-    if (!purchase?.supplier_id || !suppliers) return null;
-    return suppliers.find(s => s.id === purchase.supplier_id) || null;
-  }, [purchase?.supplier_id, suppliers]);
+    if (!purchase?.supplierId || !suppliers) return null;
+    return suppliers.find(s => s.id === purchase.supplierId) || null;
+  }, [purchase?.supplierId, suppliers]);
 
   const setSupplier = useCallback(async (newSupplier: Supplier | null) => {
     if (!purchase) return;
