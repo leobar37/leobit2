@@ -100,7 +100,7 @@ function generateTypesFile(entityNames: string[]): string {
   const reExports = entityNames
     .map((name) => {
       const pascal = name.charAt(0).toUpperCase() + name.slice(1);
-      return `export type { ${pascal}, Create${pascal}Input } from "./schemas";`;
+      return `export type { ${pascal}, ${pascal}Input } from "./schemas";`;
     })
     .join("\n");
 

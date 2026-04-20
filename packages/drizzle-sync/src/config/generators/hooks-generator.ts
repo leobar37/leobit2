@@ -72,7 +72,7 @@ export function useCreate${pascalName}() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: Create${pascalName}Input) => {
+    mutationFn: async (input: ${pascalName}Input) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -131,7 +131,7 @@ export function useCreate${pascalName}() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: Create${pascalName}Input & { ${children.map((c) => `${c}?: Create${pascalCase(c)}Input[]`).join("; ")} }) => {
+    mutationFn: async (input: ${pascalName}Input & { ${children.map((c) => `${c}?: ${pascalCase(c)}Input[]`).join("; ")} }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -175,7 +175,7 @@ export function useUpdate${pascalName}() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Create${pascalName}Input> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<${pascalName}Input> }) => {
       const response = await api.${entityName}({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return ${entityName}Schema.parse(response.data);
@@ -224,7 +224,7 @@ import {
   ${entityNames.map((e) => `${e}Schema`).join(", ")}
 } from "./schemas";
 import type { 
-  ${entityNames.map((e) => `Create${pascalCase(e)}Input`).join(", ")}
+  ${entityNames.map((e) => `${pascalCase(e)}Input`).join(", ")}
 } from "./types";
 import { generateIdempotencyKey } from "@avileo/shared";
 `;

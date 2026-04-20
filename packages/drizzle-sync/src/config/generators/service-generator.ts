@@ -1,4 +1,4 @@
-import { camelCase, pascalCase } from "../../utils/string-utils";
+import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
 import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
 import { introspectTable, resolveColumns } from "../../config/introspect";
 
@@ -87,8 +87,8 @@ export function generateService(
   // Get table reference name (camelCase of entityName, handling underscores)
   const tableRef = camelCase(entityName);
 
-  // Get entity type (use entityName as-is for the sync entity type)
-  const entityType = entityName;
+  // Get entity type (convert camelCase entityName to snake_case for EntityType)
+  const entityType = snakeCase(entityName);
 
   // Get ID prefix (first letters of each word, max 3 chars)
   const idPrefix = getIdPrefix(entityName);

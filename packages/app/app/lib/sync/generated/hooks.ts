@@ -9,7 +9,7 @@ import {
   customersSchema, productsSchema, suppliersSchema, tagsSchema, customerGroupsSchema, distribucionesSchema, distribucionItemsSchema, productVariantsSchema, customerTagsSchema, customerGroupMembersSchema, salesSchema, purchasesSchema, abonosSchema, visitasSchema, saleItemsSchema, purchaseItemsSchema
 } from "./schemas";
 import type { 
-  CreateCustomersInput, CreateProductsInput, CreateSuppliersInput, CreateTagsInput, CreateCustomerGroupsInput, CreateDistribucionesInput, CreateDistribucionItemsInput, CreateProductVariantsInput, CreateCustomerTagsInput, CreateCustomerGroupMembersInput, CreateSalesInput, CreatePurchasesInput, CreateAbonosInput, CreateVisitasInput, CreateSaleItemsInput, CreatePurchaseItemsInput
+  CustomersInput, ProductsInput, SuppliersInput, TagsInput, CustomerGroupsInput, DistribucionesInput, DistribucionItemsInput, ProductVariantsInput, CustomerTagsInput, CustomerGroupMembersInput, SalesInput, PurchasesInput, AbonosInput, VisitasInput, SaleItemsInput, PurchaseItemsInput
 } from "./types";
 import { generateIdempotencyKey } from "@avileo/shared";
 
@@ -45,7 +45,7 @@ export function useCreateCustomers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateCustomersInput & { customerTags?: CreateCustomerTagsInput[]; customerGroupMembers?: CreateCustomerGroupMembersInput[]; visitas?: CreateVisitasInput[]; sales?: CreateSalesInput[]; abonos?: CreateAbonosInput[] }) => {
+    mutationFn: async (input: CustomersInput & { customerTags?: CustomerTagsInput[]; customerGroupMembers?: CustomerGroupMembersInput[]; visitas?: VisitasInput[]; sales?: SalesInput[]; abonos?: AbonosInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -152,7 +152,7 @@ export function useUpdateCustomers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateCustomersInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomersInput> }) => {
       const response = await api.customers({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return customersSchema.parse(response.data);
@@ -213,7 +213,7 @@ export function useCreateProducts() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateProductsInput & { productVariants?: CreateProductVariantsInput[]; saleItems?: CreateSaleItemsInput[]; purchaseItems?: CreatePurchaseItemsInput[] }) => {
+    mutationFn: async (input: ProductsInput & { productVariants?: ProductVariantsInput[]; saleItems?: SaleItemsInput[]; purchaseItems?: PurchaseItemsInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -292,7 +292,7 @@ export function useUpdateProducts() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateProductsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<ProductsInput> }) => {
       const response = await api.products({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return productsSchema.parse(response.data);
@@ -353,7 +353,7 @@ export function useCreateSuppliers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateSuppliersInput & { purchases?: CreatePurchasesInput[] }) => {
+    mutationFn: async (input: SuppliersInput & { purchases?: PurchasesInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -404,7 +404,7 @@ export function useUpdateSuppliers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateSuppliersInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<SuppliersInput> }) => {
       const response = await api.suppliers({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return suppliersSchema.parse(response.data);
@@ -465,7 +465,7 @@ export function useCreateTags() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateTagsInput & { customerTags?: CreateCustomerTagsInput[] }) => {
+    mutationFn: async (input: TagsInput & { customerTags?: CustomerTagsInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -516,7 +516,7 @@ export function useUpdateTags() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateTagsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TagsInput> }) => {
       const response = await api.tags({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return tagsSchema.parse(response.data);
@@ -577,7 +577,7 @@ export function useCreateCustomerGroups() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateCustomerGroupsInput) => {
+    mutationFn: async (input: CustomerGroupsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -600,7 +600,7 @@ export function useUpdateCustomerGroups() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateCustomerGroupsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerGroupsInput> }) => {
       const response = await api.customerGroups({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return customerGroupsSchema.parse(response.data);
@@ -661,7 +661,7 @@ export function useCreateDistribuciones() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateDistribucionesInput) => {
+    mutationFn: async (input: DistribucionesInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -684,7 +684,7 @@ export function useUpdateDistribuciones() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateDistribucionesInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<DistribucionesInput> }) => {
       const response = await api.distribuciones({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return distribucionesSchema.parse(response.data);
@@ -745,7 +745,7 @@ export function useCreateDistribucionItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateDistribucionItemsInput) => {
+    mutationFn: async (input: DistribucionItemsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -768,7 +768,7 @@ export function useUpdateDistribucionItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateDistribucionItemsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<DistribucionItemsInput> }) => {
       const response = await api.distribucionItems({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return distribucionItemsSchema.parse(response.data);
@@ -829,7 +829,7 @@ export function useCreateProductVariants() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateProductVariantsInput) => {
+    mutationFn: async (input: ProductVariantsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -852,7 +852,7 @@ export function useUpdateProductVariants() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateProductVariantsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<ProductVariantsInput> }) => {
       const response = await api.productVariants({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return productVariantsSchema.parse(response.data);
@@ -913,7 +913,7 @@ export function useCreateCustomerTags() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateCustomerTagsInput) => {
+    mutationFn: async (input: CustomerTagsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -936,7 +936,7 @@ export function useUpdateCustomerTags() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateCustomerTagsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerTagsInput> }) => {
       const response = await api.customerTags({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return customerTagsSchema.parse(response.data);
@@ -997,7 +997,7 @@ export function useCreateCustomerGroupMembers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateCustomerGroupMembersInput) => {
+    mutationFn: async (input: CustomerGroupMembersInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -1020,7 +1020,7 @@ export function useUpdateCustomerGroupMembers() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateCustomerGroupMembersInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerGroupMembersInput> }) => {
       const response = await api.customerGroupMembers({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return customerGroupMembersSchema.parse(response.data);
@@ -1081,7 +1081,7 @@ export function useCreateSales() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateSalesInput & { visitas?: CreateVisitasInput[]; saleItems?: CreateSaleItemsInput[] }) => {
+    mutationFn: async (input: SalesInput & { visitas?: VisitasInput[]; saleItems?: SaleItemsInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -1146,7 +1146,7 @@ export function useUpdateSales() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateSalesInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<SalesInput> }) => {
       const response = await api.sales({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return salesSchema.parse(response.data);
@@ -1207,7 +1207,7 @@ export function useCreatePurchases() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreatePurchasesInput & { purchaseItems?: CreatePurchaseItemsInput[] }) => {
+    mutationFn: async (input: PurchasesInput & { purchaseItems?: PurchaseItemsInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -1258,7 +1258,7 @@ export function useUpdatePurchases() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreatePurchasesInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<PurchasesInput> }) => {
       const response = await api.purchases({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return purchasesSchema.parse(response.data);
@@ -1319,7 +1319,7 @@ export function useCreateAbonos() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateAbonosInput) => {
+    mutationFn: async (input: AbonosInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -1342,7 +1342,7 @@ export function useUpdateAbonos() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateAbonosInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<AbonosInput> }) => {
       const response = await api.abonos({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return abonosSchema.parse(response.data);
@@ -1403,7 +1403,7 @@ export function useCreateVisitas() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateVisitasInput & { sales?: CreateSalesInput[] }) => {
+    mutationFn: async (input: VisitasInput & { sales?: SalesInput[] }) => {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
@@ -1454,7 +1454,7 @@ export function useUpdateVisitas() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateVisitasInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<VisitasInput> }) => {
       const response = await api.visitas({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return visitasSchema.parse(response.data);
@@ -1515,7 +1515,7 @@ export function useCreateSaleItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreateSaleItemsInput) => {
+    mutationFn: async (input: SaleItemsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -1538,7 +1538,7 @@ export function useUpdateSaleItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateSaleItemsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<SaleItemsInput> }) => {
       const response = await api.saleItems({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return saleItemsSchema.parse(response.data);
@@ -1599,7 +1599,7 @@ export function useCreatePurchaseItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (input: CreatePurchaseItemsInput) => {
+    mutationFn: async (input: PurchaseItemsInput) => {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
@@ -1622,7 +1622,7 @@ export function useUpdatePurchaseItems() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreatePurchaseItemsInput> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<PurchaseItemsInput> }) => {
       const response = await api.purchaseItems({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return purchaseItemsSchema.parse(response.data);
