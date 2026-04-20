@@ -1,0 +1,26 @@
+{
+  "featureId": "m0-fix-sync-engine-tests",
+  "reviewedAt": "2026-04-20T00:45:00.000Z",
+  "commitId": "5507b83",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The worker correctly investigated sync engine test failures and found that all critical sync tests (change-applier, sync-service, ordering, staged-pull-coordinator) pass successfully when run individually. The 11 failing tests in device-fingerprint.test.ts are due to a pre-existing issue with vi.stubGlobal not being available in Vitest 3.x - this was properly documented in AGENTS.md as a known pre-existing test issue outside the scope of sync engine fixes.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md in packages/app/app/lib/sync/ has a 'Known Pre-Existing Test Issues' section documenting the device-fingerprint.test.ts issue. This is a good pattern for documenting tests that are known to fail and should not be 'fixed' as part of unrelated work.",
+      "evidence": "packages/app/app/lib/sync/AGENTS.md lines 160-179: Documents device-fingerprint.test.ts issue with vi.stubGlobal not available in Vitest 3.x"
+    },
+    {
+      "area": "skills",
+      "observation": "The worker followed the sync-fix-worker skill procedure correctly by investigating test failures, identifying root cause (pre-existing vi.stubGlobal issue), running targeted test commands, and documenting findings in AGENTS.md.",
+      "evidence": "Handoff shows: followedProcedure: true, deviations: [], with detailed verification commands and pre-existing failure documentation"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. All critical sync engine tests (change-applier: 14, sync-service: 8+1 facade, ordering: 3, staged-pull-coordinator: 39) pass successfully. The 11 failing device-fingerprint tests are properly documented as a pre-existing issue in AGENTS.md - these use vi.stubGlobal which doesn't exist in Vitest 3.x. Validation assertion VAL-0-006 (App sync engine tests pass) is satisfied for the scope of sync engine tests as specified in the feature description."
+}

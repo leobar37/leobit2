@@ -1,0 +1,43 @@
+{
+  "featureId": "m0-unify-generator-output-path",
+  "reviewedAt": "2026-04-20T00:50:00.000Z",
+  "commitId": "91bb3b6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature successfully unifies generator output paths to a single canonical location at `packages/app/app/lib/sync/generated/`. The backend `sync:generate` script was updated to output to the correct path, the `sync:clean` script was updated accordingly, the schema index.ts import was fixed, and the `.gitignore` was updated to reference the correct path. The duplicate `lib/db/generated/` directory no longer exists. All 4 packages build successfully.",
+    "issues": []
+  },
+  "validationAssertions": {
+    "VAL-0-001": {
+      "assertion": "Generator output path unified",
+      "status": "pass",
+      "evidence": "backend/package.json sync:generate script outputs to ../app/app/lib/sync/generated. Generator successfully outputs 6 files (applier.ts, hooks.ts, init.sql, schemas.ts, services.ts, types.ts) to the unified location."
+    },
+    "VAL-0-007": {
+      "assertion": "No duplicate generated directories",
+      "status": "pass",
+      "evidence": "Only `packages/app/app/lib/sync/generated/` exists. `packages/app/app/lib/db/generated/` does not exist (ls returns 'No such file or directory')."
+    }
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The sync-fix-worker skill file (SKILL.md) was not found at `.factory/skills/sync-fix-worker/SKILL.md`. The worker still completed the task successfully by using the AGENTS.md documentation and validation contract.",
+      "evidence": "ENOENT error when attempting to read /Users/leobar37/.factory/skills/sync-fix-worker/SKILL.md. Worker transcript shows successful completion using mission.md and AGENTS.md instead."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The drizzle-sync generator CLI still outputs a stale message 'Import from ~/lib/db/generated/' at the end of generation, even though it now outputs to the correct `lib/sync/generated/` path. This is confusing for developers.",
+      "evidence": "Generator output shows: '✨ Done! Import from ~/lib/db/generated/' despite files actually being created at `lib/sync/generated/`. See transcript from sync:generate command run."
+    },
+    {
+      "area": "services",
+      "observation": "The .factory/services.yaml already includes sync:generate and sync:validate commands, which correctly run the generator. No new services needed to be added.",
+      "evidence": "services.yaml contains: `sync:generate: cd packages/backend && bun run sync:generate` and `sync:validate: cd packages/backend && bun run sync:validate`"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature m0-unify-generator-output-path is COMPLETE and VERIFIED. The generator output path has been successfully unified to `packages/app/app/lib/sync/generated/`. The backend package.json sync:generate script was updated (commit e9f7d08), the schema index.ts import path was corrected, the .gitignore was updated (commit 91bb3b6), and the duplicate lib/db/generated directory no longer exists. All 4 packages build successfully with `bun run build`. Validation assertions VAL-0-001 (Generator output path unified) and VAL-0-007 (No duplicate generated directories) both pass."
+}

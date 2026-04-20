@@ -1,0 +1,27 @@
+{
+  "featureId": "m0-fix-backend-tests",
+  "reviewedAt": "2026-04-20T10:45:00Z",
+  "commitId": "255fed8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The worker successfully refactored sale-sync.race.test.ts to use mock repositories instead of real database connections. The fix addresses the 'db.delete is not a function' error that was occurring because the test was attempting to connect to a real Neon PostgreSQL database. The refactored test now uses vitest mocks (mockSaleRepo, mockPaymentRepo) following the same pattern as multi-device.race.test.ts. All 3 test cases (version conflict detection, sequential updates with correct version, and version check in updateWithItems) are preserved and pass correctly.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The test follows the established backend pattern of using mock repositories for unit tests rather than real database connections. This is consistent with multi-device.race.test.ts and should be documented as the preferred pattern for sync handler tests.",
+      "evidence": "packages/backend/src/services/sync/handlers/__tests__/sale-sync.race.test.ts:7-28 - Uses vi.fn() mocks for repositories, consistent with existing test patterns"
+    },
+    {
+      "area": "knowledge",
+      "observation": "The mission AGENTS.md correctly documented that sale-sync.race.test.ts had pre-existing failures ('db.delete is not a function'). The worker identified this was due to attempting real DB connections and fixed it appropriately.",
+      "evidence": "mission.md AGENTS.md section 'Known Pre-Existing Issues' lists 'Backend sale-sync.race.test.ts — 3 pre-existing failures (db.delete is not a function)'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature m0-fix-backend-tests completed successfully. The sale-sync.race.test.ts was refactored from 221 lines using real database connections to 99 lines using mock repositories. All 201 backend tests now pass (including the 3 tests in sale-sync.race.test.ts). The fix properly validates: (1) version conflict detection when client has stale version, (2) sequential updates work when versions match, and (3) updateWithItems respects version checks. The implementation follows existing patterns in the codebase (multi-device.race.test.ts) and aligns with the mission's documented pre-existing failure."
+}
+</invoke>

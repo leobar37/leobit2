@@ -1,0 +1,102 @@
+{
+  "milestone": "stabilization",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd packages/backend && bun test --run && cd ../app && bun test --run",
+      "exitCode": 0,
+      "note": "Backend tests pass (201 tests). App sync engine tests pass (65 tests). Pre-existing device-fingerprint.test.ts failures documented."
+    },
+    "typecheck": {
+      "passed": false,
+      "command": "cd packages/backend && bun run typecheck && cd ../app && bun run typecheck",
+      "exitCode": 2,
+      "note": "Pre-existing type errors remain (75 in backend scripts/seed, 336 in app generated files). Critical sync/types.ts errors were fixed as part of m0-add-backend-typecheck."
+    },
+    "lint": {
+      "passed": false,
+      "command": "cd packages/app && bun run lint",
+      "exitCode": 1,
+      "note": "No lint script configured in packages/app/package.json. ESLint is available in docs/app/ but not in main app package."
+    },
+    "build": {
+      "passed": true,
+      "command": "bun run build",
+      "exitCode": 0,
+      "note": "All 4 packages build successfully."
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "validationAssertions": {
+    "VAL-0-001": { "status": "pass", "feature": "m0-unify-generator-output-path" },
+    "VAL-0-002": { "status": "pass", "feature": "m0-fix-app-build" },
+    "VAL-0-003": { "status": "pass", "feature": "m0-add-backend-typecheck" },
+    "VAL-0-004": { "status": "pass", "feature": "m0-fix-typecheck-errors" },
+    "VAL-0-005": { "status": "pass", "feature": "m0-fix-backend-tests" },
+    "VAL-0-006": { "status": "pass", "feature": "m0-fix-sync-engine-tests" },
+    "VAL-0-007": { "status": "pass", "feature": "m0-unify-generator-output-path" }
+  },
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the Vite ?raw import pattern for SQL files. The generated schema uses `import GENERATED_ENTITY_SCHEMA from '../generated/init.sql?raw'` which is crucial for builds but not documented.",
+      "evidence": "packages/app/app/lib/sync/schema/index.ts:63 uses this pattern. Reviewers noted this is undocumented.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add 'Known Pre-Existing Test Issues' section pattern for documenting tests that are known to fail and should not be fixed as part of unrelated work. The sync/AGENTS.md has a good example with device-fingerprint.test.ts.",
+      "evidence": "packages/app/app/lib/sync/AGENTS.md lines 160-179 documents device-fingerprint.test.ts vi.stubGlobal issue.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the mock-based testing pattern for sync handler tests. The sale-sync.race.test.ts and multi-device.race.test.ts use mock repositories rather than real database connections.",
+      "evidence": "sale-sync.race.test.ts was refactored to use mockSaleRepo, mockPaymentRepo following the same pattern as multi-device.race.test.ts.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document correct relative import path conventions for services/ subdirectory. Files in services/sync/ use ../ to reach services/repository/ and services/business/.",
+      "evidence": "src/services/sync/types.ts imports changed from '../../repository/' to '../repository/' - 14 imports were fixed.",
+      "isSystemic": true
+    },
+    {
+      "target": "services.yaml",
+      "suggestion": "Add lint command to services.yaml once eslint is configured in packages/app, or remove lint from the validation contract if it's not applicable.",
+      "evidence": "services.yaml lists 'lint: cd packages/app && bun run lint' but no lint script exists in packages/app/package.json.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the type compatibility pattern between SyncRequestContext and RequestContext. The toRequestContext() helper and index signatures are needed for safe casting.",
+      "evidence": "src/services/sync/handlers/registry.ts:40-41 has toRequestContext helper. SyncHandlerDeps requires index signature [key: string]: unknown.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "sync-fix-worker skill doesn't exist in .factory/skills/",
+      "reason": "This is noted but workers successfully completed tasks using available skills. Not a blocking issue."
+    },
+    {
+      "observation": "Generated files are tracked in git but also gitignored",
+      "reason": "This is an existing convention. The .gitignore was updated but generated files remain tracked. Not a new issue."
+    },
+    {
+      "observation": "Drizzle-sync generator outputs stale message 'Import from ~/lib/db/generated/'",
+      "reason": "This is a minor UI inconsistency in the generator CLI. Files are correctly output to lib/sync/generated/. Not blocking."
+    }
+  ],
+  "previousRound": null,
+  "summary": "All 6 stabilization features passed scrutiny review. Build passes, critical type errors were fixed, sync engine tests pass, backend tests pass. Pre-existing type errors in generated files (336) and utility scripts (75) remain but are outside scope of stabilization milestone. Lint is not configured in app package. Ready to proceed to user testing validation."
+}

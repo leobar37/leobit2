@@ -1,0 +1,31 @@
+{
+  "featureId": "m0-fix-app-build",
+  "reviewedAt": "2026-04-20T11:30:00.000Z",
+  "commitId": "91bb3b6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature m0-fix-app-build was primarily a verification task. The actual build fix was implemented by the previous feature m0-unify-generator-output-path (commit bb608e71). This feature verified that the build passes and updated the .gitignore to reference the correct generated path. The build now completes successfully with exit code 0, and all generated files are correctly importable from the canonical location.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The sync-fix-worker skill referenced in features.json does not exist in .factory/skills/. This appears to be a generated/derived skill or a skill that was expected to be created but wasn't. The worker instead appears to have used mission-worker-base skill.",
+      "evidence": "features.json lists 'sync-fix-worker' as skillName, but no /Users/leobar37/.factory/skills/sync-fix-worker/SKILL.md file exists. Glob search shows no sync-fix-worker skill."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The import pattern for generated files uses Vite's ?raw suffix to import SQL as a string: `import GENERATED_ENTITY_SCHEMA from '../generated/init.sql?raw'`. This pattern is crucial for the build to work but is not documented in AGENTS.md files.",
+      "evidence": "packages/app/app/lib/sync/schema/index.ts:63 - uses `import GENERATED_ENTITY_SCHEMA from '../generated/init.sql?raw'`"
+    },
+    {
+      "area": "conventions",
+      "observation": "Generated files in lib/sync/generated/ are NOT gitignored, while the .gitignore was updated to ignore them. This creates a potential confusion - the files are tracked in git but also gitignored. The worker only updated .gitignore but didn't address why generated files are committed.",
+      "evidence": "git status shows generated files are tracked. .gitignore was updated to reference app/lib/sync/generated/ but files are still in git."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature m0-fix-app-build passes review. The app build now succeeds (VAL-0-002 verified). The actual code fix was minimal (.gitignore update), but the verification work confirmed that the previous feature (m0-unify-generator-output-path) correctly resolved all import path issues. All 6 generated files exist at packages/app/app/lib/sync/generated/ and the schema/index.ts correctly imports from ../generated/init.sql?raw. No 'Could not resolve' errors occur during build."
+}
