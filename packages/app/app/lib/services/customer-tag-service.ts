@@ -147,8 +147,6 @@ export class CustomerTagService extends CustomerTagsService {
   async bulkAssignTags(customerIds: string[], tagIds: string[]): Promise<void> {
     if (customerIds.length === 0) return;
 
-    const syncGroupId = this.generateSyncGroup();
-
     for (const customerId of customerIds) {
       // Remove existing tags
       await this.db
@@ -164,15 +162,12 @@ export class CustomerTagService extends CustomerTagsService {
           tagId,
         });
 
-        await this.queueSync(
-          "create",
-          id,
-          {
-            customerId,
-            tagId,
-          } as Record<string, unknown>,
-          syncGroupId
-        );
+        // FK references (customerId/tagId) in payload establish the relationship
+        // No syncGroupId needed - operations are independent per customer-tag pair
+        await this.queueSync("create", id, {
+          customerId,
+          tagId,
+        } as Record<string, unknown>);
       }
     }
   }
