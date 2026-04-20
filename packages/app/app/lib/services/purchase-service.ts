@@ -1,34 +1,30 @@
 /**
  * Purchase Service
  * Local-first service for managing supplier purchase orders with draft support
+ * Extends generated PurchasesService to preserve atomic items operations
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { BaseService, type EntityType } from "./base-service";
+import {
+  PurchasesService,
+  type CreatePurchasesInput,
+  type UpdatePurchasesInput,
+} from "~/lib/sync/generated/services";
 import { SyncService } from "../sync/sync-service";
-import { purchases, purchaseItems } from "@avileo/shared";
+import {
+  SyncStatus,
+  purchases,
+  purchaseItems,
+  type Purchase,
+} from "@avileo/shared";
+
+// Re-export Purchase for backward compatibility
+export { type Purchase } from "@avileo/shared";
 
 /** Purchase status type */
 export type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";
-
-/** Purchase entity type */
-export interface Purchase {
-  id: string;
-  business_id: string;
-  supplier_id: string | null;
-  purchase_date: string | null;
-  total_amount: string;
-  status: PurchaseStatus;
-  invoice_number: string | null;
-  receipt_image_id: string | null;
-  notes: string | null;
-  sync_status: "pending" | "synced" | "error";
-  sync_attempts: number;
-  created_at: string;
-  updated_at: string;
-}
 
 /** Purchase item enriched with product/variant names (returned by findById) */
 export interface PurchaseItemEnriched {
@@ -56,22 +52,22 @@ export interface CreatePurchaseItemInput {
   unitCost: number;
 }
 
-/** Input for creating a new purchase */
+/** Input for creating a new purchase (uses string for monetary values to match generated types) */
 export interface CreatePurchaseInput {
   supplierId?: string;
   purchaseDate?: string;
-  totalAmount?: number;
+  totalAmount?: string;
   invoiceNumber?: string;
   notes?: string;
   receiptImageId?: string;
   items?: CreatePurchaseItemInput[];
 }
 
-/** Input for updating a purchase */
+/** Input for updating a purchase (uses string for monetary values to match generated types) */
 export interface UpdatePurchaseInput {
   supplierId?: string;
   purchaseDate?: string;
-  totalAmount?: number;
+  totalAmount?: string;
   invoiceNumber?: string;
   notes?: string;
   receiptImageId?: string;
@@ -79,9 +75,9 @@ export interface UpdatePurchaseInput {
 
 /**
  * Purchase Service for managing supplier purchase orders
- * Extends BaseService for local-first operations with sync integration
+ * Extends generated PurchasesService for local-first operations with sync integration
  */
-export class PurchaseService extends BaseService {
+export class PurchaseService extends PurchasesService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -93,21 +89,8 @@ export class PurchaseService extends BaseService {
   }
 
   /**
-   * Returns the entity type for this service
-   */
-  getEntityType(): EntityType {
-    return "purchases";
-  }
-
-  /**
-   * Returns the ID prefix for this entity
-   */
-  getEntityPrefix(): string {
-    return "pur";
-  }
-
-  /**
    * Find a purchase by ID with its items
+   * Overrides parent to enrich with items joined from purchase_items table
    */
   async findById(id: string): Promise<PurchaseWithItems | null> {
     const result = await this.pg.query<Purchase>(
@@ -138,14 +121,14 @@ export class PurchaseService extends BaseService {
     const calculatedTotal = itemsResult.rows.reduce((sum, item) => {
       return sum + (parseFloat(item.totalCost) || 0);
     }, 0);
-    const storedTotal = parseFloat(purchase.total_amount) || 0;
+    const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
     if (
       itemsResult.rows.length > 0 &&
       Math.abs(storedTotal - calculatedTotal) > 0.009
     ) {
       await this.recalculateTotal(id);
-      purchase.total_amount = this.normalizeCurrency(calculatedTotal);
+      purchase.totalAmount = this.normalizeCurrency(calculatedTotal);
     }
 
     const normalizedItems = itemsResult.rows.map((item) => ({
@@ -157,13 +140,14 @@ export class PurchaseService extends BaseService {
 
     return {
       ...purchase,
-      total_amount: this.normalizeCurrency(purchase.total_amount),
+      totalAmount: this.normalizeCurrency(purchase.totalAmount),
       items: normalizedItems,
     };
   }
 
   /**
    * Find all purchases for the current business (excluding drafts)
+   * Overrides parent to recalculate totals from items
    */
   async findByBusiness(): Promise<Purchase[]> {
     const result = await this.pg.query<Purchase>(
@@ -180,17 +164,17 @@ export class PurchaseService extends BaseService {
         [purchase.id, this.businessId]
       );
       const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
-      const storedTotal = parseFloat(purchase.total_amount) || 0;
+      const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
         await this.recalculateTotal(purchase.id);
-        purchase.total_amount = this.normalizeCurrency(calculatedTotal);
+        purchase.totalAmount = this.normalizeCurrency(calculatedTotal);
       }
     }
 
     return result.rows.map((purchase) => ({
       ...purchase,
-      total_amount: this.normalizeCurrency(purchase.total_amount),
+      totalAmount: this.normalizeCurrency(purchase.totalAmount),
     }));
   }
 
@@ -225,27 +209,27 @@ export class PurchaseService extends BaseService {
         [purchase.id, this.businessId]
       );
       const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
-      const storedTotal = parseFloat(purchase.total_amount) || 0;
+      const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
         await this.recalculateTotal(purchase.id);
-        purchase.total_amount = this.normalizeCurrency(calculatedTotal);
+        purchase.totalAmount = this.normalizeCurrency(calculatedTotal);
       }
     }
 
     return result.rows.map((purchase) => ({
       ...purchase,
-      total_amount: this.normalizeCurrency(purchase.total_amount),
+      totalAmount: this.normalizeCurrency(purchase.totalAmount),
     }));
   }
 
   /**
-   * Create a new purchase (starts as draft by default)
+   * Create a new purchase with items atomically
+   * Uses FK reference (purchase_id) in item payload instead of syncGroupId
    */
-  async create(input: CreatePurchaseInput = {}): Promise<Purchase> {
+  async createWithItems(input: CreatePurchaseInput = {}): Promise<PurchaseWithItems> {
     const id = this.generateId();
-    const now = new Date();
-    const syncGroupId = this.generateSyncGroup();
+    const now = this.now();
 
     // Calculate total from items if provided
     const totalAmount = input.items?.reduce(
@@ -253,13 +237,13 @@ export class PurchaseService extends BaseService {
       0
     ) ?? 0;
 
-    // Insert purchase using raw query (Drizzle doesn't allow specifying id with defaultRandom)
+    // Use raw query for atomic insert (parent's create uses Drizzle which may not allow specifying id)
     await this.pg.query(
       `INSERT INTO purchases (
         id, business_id, supplier_id, purchase_date, total_amount,
         status, invoice_number, receipt_image_id, notes,
-        sync_status, sync_attempts, sync_group_id, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        sync_status, sync_attempts, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         id,
         this.businessId,
@@ -272,13 +256,23 @@ export class PurchaseService extends BaseService {
         input.notes ?? null,
         "pending",
         0,
-        syncGroupId,
-        now.toISOString(),
-        now.toISOString(),
+        now,
+        now,
       ]
     );
 
-    // Insert all items first (before sync hooks run)
+    // Queue sync for the purchase first (parent will be created before items)
+    await this.queueSync("create", id, {
+      supplierId: input.supplierId,
+      purchaseDate: input.purchaseDate,
+      totalAmount: this.normalizeCurrency(totalAmount),
+      status: "draft",
+      invoiceNumber: input.invoiceNumber,
+      notes: input.notes,
+      receiptImageId: input.receiptImageId,
+    });
+
+    // Insert and sync all items with FK reference (purchase_id in payload, NOT syncGroupId)
     const itemIds: { id: string; item: CreatePurchaseItemInput }[] = [];
     if (input.items?.length) {
       for (const item of input.items) {
@@ -294,56 +288,65 @@ export class PurchaseService extends BaseService {
             this.businessId,
             id,
             item.productId,
-        item.variantId ?? null,
-        item.unitId ?? null,
-        String(item.quantity),
-        this.normalizeCurrency(item.unitCost),
-        this.normalizeCurrency(item.quantity * item.unitCost),
-        "pending",
-        0,
-        now.toISOString(),
-        now.toISOString(),
-      ]
-    );
-    itemIds.push({ id: itemId, item });
-  }
-}
+            item.variantId ?? null,
+            item.unitId ?? null,
+            String(item.quantity),
+            this.normalizeCurrency(item.unitCost),
+            this.normalizeCurrency(item.quantity * item.unitCost),
+            "pending",
+            0,
+            now,
+            now,
+          ]
+        );
+        itemIds.push({ id: itemId, item });
 
-    // Sync the purchase after items are in DB (so hook can validate)
-    await this.queueSync("create", id, {
-      supplierId: input.supplierId,
-      purchaseDate: input.purchaseDate,
-      totalAmount: this.normalizeCurrency(totalAmount),
-      status: "draft",
-      invoiceNumber: input.invoiceNumber,
-      notes: input.notes,
-      receiptImageId: input.receiptImageId,
-      syncGroupId,
-    }, syncGroupId);
-
-    // Sync items after purchase (same sync group)
-    for (const { id: itemId, item } of itemIds) {
-      await this.queueSync("create", itemId, {
-        purchaseId: id,
-        productId: item.productId,
-        variantId: item.variantId,
-        unitId: item.unitId,
-        quantity: String(item.quantity),
-        unitCost: this.normalizeCurrency(item.unitCost),
-        totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-      }, syncGroupId, "purchase_items");
+        // Queue item sync with FK reference (purchase_id in payload)
+        await this.queueSync("create", itemId, {
+          purchaseId: id, // FK reference instead of syncGroupId
+          productId: item.productId,
+          variantId: item.variantId,
+          unitId: item.unitId,
+          quantity: String(item.quantity),
+          unitCost: this.normalizeCurrency(item.unitCost),
+          totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
+        }, undefined, "purchase_items");
+      }
     }
 
     return (await this.findById(id)) as PurchaseWithItems;
   }
 
   /**
+   * Override create to call createWithItems internally for atomic operations
+   */
+  async create(input: CreatePurchasesInput = {}): Promise<Purchase> {
+    // Delegate to createWithItems for atomic operations
+    const purchase = await this.createWithItems({
+      supplierId: input.supplierId,
+      purchaseDate: input.purchaseDate,
+      totalAmount: input.totalAmount,
+      invoiceNumber: input.invoiceNumber,
+      notes: input.notes,
+      receiptImageId: input.receiptImageId,
+    });
+    return purchase;
+  }
+
+  /**
    * Update a purchase (works for any status including drafts)
+   * Overrides parent to use custom sync queue
    */
   async update(id: string, input: UpdatePurchaseInput): Promise<void> {
-    const updateData: { [key: string]: unknown } = {
-      updatedAt: new Date(),
-      syncStatus: "pending",
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error(`Purchase not found: ${id}`);
+    }
+
+    const now = this.now();
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(now),
+      syncStatus: SyncStatus.PENDING,
     };
 
     if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
@@ -358,8 +361,8 @@ export class PurchaseService extends BaseService {
       .set(updateData)
       .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
 
-    const existingSyncGroupId = await this.getPurchaseSyncGroupId(id);
-    await this.queueSync("update", id, input as Record<string, unknown>, existingSyncGroupId);
+    // Queue sync with version for conflict detection
+    await this.queueSync("update", id, input as Record<string, unknown>);
   }
 
   /**
@@ -374,10 +377,10 @@ export class PurchaseService extends BaseService {
 
     // Validate when confirming a draft
     if (purchase.status === "draft" && status === "pending") {
-      if (!purchase.supplier_id) {
+      if (!purchase.supplierId) {
         throw new Error("Se requiere un proveedor para confirmar la compra");
       }
-      if (!purchase.purchase_date) {
+      if (!purchase.purchaseDate) {
         throw new Error("Se requiere una fecha para confirmar la compra");
       }
       if (purchase.items.length === 0) {
@@ -390,7 +393,7 @@ export class PurchaseService extends BaseService {
       .set({
         status,
         updatedAt: new Date(),
-        syncStatus: "pending",
+        syncStatus: SyncStatus.PENDING,
       })
       .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
 
@@ -411,11 +414,12 @@ export class PurchaseService extends BaseService {
       throw new Error("Solo los borradores pueden ser eliminados");
     }
 
-    // Delete items first (cascade will handle this, but we need to sync)
+    // Delete items first
     for (const item of purchase.items) {
       await this.queueSync("delete", item.id, { purchaseId: id }, undefined, "purchase_items");
     }
 
+    // Delete the purchase
     await this.db
       .delete(purchases)
       .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
@@ -437,7 +441,7 @@ export class PurchaseService extends BaseService {
       throw new Error("Solo los borradores pueden ser editados");
     }
 
-    const now = new Date();
+    const now = this.now();
     const itemId = this.generateId();
 
     await this.pg.query(
@@ -458,16 +462,15 @@ export class PurchaseService extends BaseService {
         this.normalizeCurrency(item.quantity * item.unitCost),
         "pending",
         0,
-        now.toISOString(),
-        now.toISOString(),
+        now,
+        now,
       ]
     );
 
     // Recalculate total
     await this.recalculateTotal(purchaseId);
 
-    // Sync with parent's syncGroupId
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    // Sync item with FK reference (purchase_id in payload)
     await this.queueSync("create", itemId, {
       purchaseId,
       productId: item.productId,
@@ -476,7 +479,7 @@ export class PurchaseService extends BaseService {
       quantity: String(item.quantity),
       unitCost: this.normalizeCurrency(item.unitCost),
       totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-    }, purchaseSyncGroupId, "purchase_items");
+    }, undefined, "purchase_items");
   }
 
   /**
@@ -502,7 +505,7 @@ export class PurchaseService extends BaseService {
 
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
-      syncStatus: "pending",
+      syncStatus: SyncStatus.PENDING,
     };
 
     if (data.quantity !== undefined) {
@@ -528,13 +531,12 @@ export class PurchaseService extends BaseService {
     // Recalculate total
     await this.recalculateTotal(purchaseId);
 
-    // Sync with parent's syncGroupId
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    // Sync with FK reference
     await this.queueSync("update", itemId, {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
       unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
-    }, purchaseSyncGroupId, "purchase_items");
+    }, undefined, "purchase_items");
   }
 
   /**
@@ -561,9 +563,8 @@ export class PurchaseService extends BaseService {
     // Recalculate total
     await this.recalculateTotal(purchaseId);
 
-    // Sync with parent's syncGroupId
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
-    await this.queueSync("delete", itemId, { purchaseId }, purchaseSyncGroupId, "purchase_items");
+    // Sync with FK reference
+    await this.queueSync("delete", itemId, { purchaseId }, undefined, "purchase_items");
   }
 
   /**
@@ -571,7 +572,7 @@ export class PurchaseService extends BaseService {
    * Does NOT check for draft status - use with caution
    */
   async addItemToPurchase(purchaseId: string, item: CreatePurchaseItemInput): Promise<void> {
-    const now = new Date();
+    const now = this.now();
     const itemId = this.generateId();
 
     await this.pg.exec("BEGIN");
@@ -587,17 +588,17 @@ export class PurchaseService extends BaseService {
           this.businessId,
           purchaseId,
           item.productId,
-        item.variantId ?? null,
-        item.unitId ?? null,
-        String(item.quantity),
-        this.normalizeCurrency(item.unitCost),
-        this.normalizeCurrency(item.quantity * item.unitCost),
-        "pending",
-        0,
-        now.toISOString(),
-        now.toISOString(),
-      ]
-    );
+          item.variantId ?? null,
+          item.unitId ?? null,
+          String(item.quantity),
+          this.normalizeCurrency(item.unitCost),
+          this.normalizeCurrency(item.quantity * item.unitCost),
+          "pending",
+          0,
+          now,
+          now,
+        ]
+      );
 
       await this.recalculateTotal(purchaseId);
       await this.pg.exec("COMMIT");
@@ -606,7 +607,7 @@ export class PurchaseService extends BaseService {
       throw err;
     }
 
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    // Sync with FK reference
     await this.queueSync("create", itemId, {
       purchaseId,
       productId: item.productId,
@@ -615,7 +616,7 @@ export class PurchaseService extends BaseService {
       quantity: String(item.quantity),
       unitCost: this.normalizeCurrency(item.unitCost),
       totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-    }, purchaseSyncGroupId, "purchase_items");
+    }, undefined, "purchase_items");
   }
 
   /**
@@ -631,7 +632,7 @@ export class PurchaseService extends BaseService {
       totalCost?: number;
     }
   ): Promise<void> {
-    const now = new Date();
+    const now = this.now();
     const totalCost = data.totalCost ?? (data.quantity && data.unitCost ? data.quantity * data.unitCost : undefined);
 
     await this.pg.exec("BEGIN");
@@ -645,10 +646,10 @@ export class PurchaseService extends BaseService {
           sync_status = $5
         WHERE id = $6 AND purchase_id = $7`,
         [
-        data.quantity !== undefined ? String(data.quantity) : null,
-        data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : null,
-        totalCost !== undefined ? this.normalizeCurrency(totalCost) : null,
-          now.toISOString(),
+          data.quantity !== undefined ? String(data.quantity) : null,
+          data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : null,
+          totalCost !== undefined ? this.normalizeCurrency(totalCost) : null,
+          now,
           "pending",
           itemId,
           purchaseId,
@@ -662,13 +663,13 @@ export class PurchaseService extends BaseService {
       throw err;
     }
 
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
+    // Sync with FK reference
     await this.queueSync("update", itemId, {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
       unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
       totalCost: totalCost !== undefined ? this.normalizeCurrency(totalCost) : undefined,
-    }, purchaseSyncGroupId, "purchase_items");
+    }, undefined, "purchase_items");
   }
 
   /**
@@ -676,7 +677,7 @@ export class PurchaseService extends BaseService {
    * Does NOT check for draft status - use with caution
    */
   async deleteItemFromPurchase(purchaseId: string, itemId: string): Promise<void> {
-    const now = new Date();
+    const now = this.now();
 
     await this.pg.exec("BEGIN");
     try {
@@ -692,19 +693,8 @@ export class PurchaseService extends BaseService {
       throw err;
     }
 
-    const purchaseSyncGroupId = await this.getPurchaseSyncGroupId(purchaseId);
-    await this.queueSync("delete", itemId, { purchaseId }, purchaseSyncGroupId, "purchase_items");
-  }
-
-  /**
-   * Get the sync group ID for a purchase (used to group related sync operations)
-   */
-  private async getPurchaseSyncGroupId(purchaseId: string): Promise<string | undefined> {
-    const result = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM purchases WHERE id = $1 AND business_id = $2`,
-      [purchaseId, this.businessId]
-    );
-    return result.rows[0]?.sync_group_id ?? undefined;
+    // Sync with FK reference
+    await this.queueSync("delete", itemId, { purchaseId }, undefined, "purchase_items");
   }
 
   /**
@@ -728,7 +718,7 @@ export class PurchaseService extends BaseService {
       .set({
         totalAmount: result[0]?.total ?? "0",
         updatedAt: new Date(),
-        syncStatus: "pending",
+        syncStatus: SyncStatus.PENDING,
       })
       .where(
         and(eq(purchases.id, purchaseId), eq(purchases.businessId, this.businessId))

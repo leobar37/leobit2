@@ -398,7 +398,7 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     business_id: "",
     vendedor_id: "",
     punto_venta: "",
-    fecha: "2026-04-20T08:54:11.726Z",
+    fecha: "2026-04-20T09:51:26.556Z",
     sync_status: "synced",
     sync_attempts: 0,
   },
