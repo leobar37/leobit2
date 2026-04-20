@@ -45,20 +45,20 @@ export type { EntityRegistry } from "@avileo/drizzle-sync/server";
 
 // SyncEngineDeps - dependencies for SyncEngine
 // This must be kept in sync with the library's SyncEngineDeps interface
-import type { CustomerRepository } from "../../repository/customer.repository";
-import type { SaleRepository } from "../../repository/sale.repository";
-import type { PaymentRepository } from "../../repository/payment.repository";
-import type { DistribucionRepository } from "../../repository/distribucion.repository";
-import type { DistribucionItemRepository } from "../../repository/distribucion-item.repository";
-import type { DistribucionService } from "../../business/distribucion.service";
-import type { ProductRepository } from "../../repository/product.repository";
-import type { TagRepository } from "../../repository/tag.repository";
-import type { CustomerTagRepository } from "../../repository/customer-tag.repository";
-import type { PurchaseRepository } from "../../repository/purchase.repository";
-import type { ProductVariantRepository } from "../../repository/product-variant.repository";
-import type { CustomerGroupRepository } from "../../repository/customer-group.repository";
-import type { VisitaRepository } from "../../repository/visita.repository";
-import type { SupplierRepository } from "../../repository/supplier.repository";
+import type { CustomerRepository } from "../repository/customer.repository";
+import type { SaleRepository } from "../repository/sale.repository";
+import type { PaymentRepository } from "../repository/payment.repository";
+import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
+import type { DistribucionService } from "../business/distribucion.service";
+import type { ProductRepository } from "../repository/product.repository";
+import type { TagRepository } from "../repository/tag.repository";
+import type { CustomerTagRepository } from "../repository/customer-tag.repository";
+import type { PurchaseRepository } from "../repository/purchase.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
+import type { CustomerGroupRepository } from "../repository/customer-group.repository";
+import type { VisitaRepository } from "../repository/visita.repository";
+import type { SupplierRepository } from "../repository/supplier.repository";
 import type { SyncConflictRepository } from "./framework/SyncConflictRepository";
 import type { IConflictResolver } from "./framework/types";
 
