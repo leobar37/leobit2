@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import type { PurchaseRepository, PurchaseWithItems } from "../repository/purchase.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";

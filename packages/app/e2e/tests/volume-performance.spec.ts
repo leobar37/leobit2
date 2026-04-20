@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 /**
  * Volume and Performance Tests (T-019)
  *

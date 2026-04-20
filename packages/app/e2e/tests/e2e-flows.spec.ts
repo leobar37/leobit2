@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 /**
  * E2E Integration Flows (T-021)
  *

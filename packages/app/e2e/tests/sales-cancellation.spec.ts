@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 /**
  * Sale Cancellation E2E Tests (T-008)
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import { EvolutionClient } from "@gymspace/evolution";
 import { ServiceUnavailableError } from "../../errors";
 

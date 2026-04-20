@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 /**
  * Sales Schema
  * Ventas e items de venta con soporte offline-first

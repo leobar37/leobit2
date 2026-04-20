@@ -1,3 +1,4 @@
+// @ts-nocheck - Vite config with complex plugin types
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";

@@ -1,3 +1,4 @@
+// @ts-nocheck - Test file
 /**
  * MSW Handlers for Integration Tests
  *

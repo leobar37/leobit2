@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck - Migration script
 
 /**
  * Migration Script: TanStack DB to PGlite

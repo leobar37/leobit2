@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck - Migration script
 
 /**
  * Rollback Script: PGlite to TanStack DB

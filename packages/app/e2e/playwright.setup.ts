@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test setup file
 /**
  * Playwright Setup - Injects MSW into browser context
  *

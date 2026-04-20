@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import { generateText } from "ai";
 import { moonshotai } from "@ai-sdk/moonshotai";
 

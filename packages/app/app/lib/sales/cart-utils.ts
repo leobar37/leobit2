@@ -60,7 +60,7 @@ function createUnidadCartItem(
   packsInput: string,
   unitsInput: string,
 ): CartItem | null {
-  const unitQuantity = parseVariantUnitQuantity(selectedProduct);
+  const unitQuantity = parseVariantUnitQuantity(selectedVariant);
   const variantPrice = parseNumber(selectedVariant.price || "0");
 
   const packs = parseNumber(packsInput);

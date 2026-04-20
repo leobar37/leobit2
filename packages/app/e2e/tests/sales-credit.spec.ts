@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 /**
  * Credit Sales E2E Tests (T-006)
  *

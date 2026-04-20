@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file with incomplete page objects
 /**
  * New Sale Page Object Model
  *

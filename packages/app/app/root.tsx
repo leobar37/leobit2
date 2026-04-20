@@ -95,7 +95,7 @@ export default function App() {
     if (typeof registerSW === "function") {
       const updateSW = registerSW({
         immediate: true,
-        onRegistered(r) {
+        onRegistered(r: ServiceWorkerRegistration | undefined) {
           console.log("[PWA] Service Worker registered:", r);
           // Check for updates immediately and periodically
           if (r) {
@@ -113,7 +113,7 @@ export default function App() {
             }
           }
         },
-        onRegisterError(error) {
+        onRegisterError(error: Error | undefined) {
           console.error("[PWA] Service Worker registration failed:", error);
         },
         onOfflineReady() {

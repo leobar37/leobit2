@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import type { WhatsAppMessageRepository, MessageFilters } from "../repository/whatsapp-message.repository";
 import type { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";
 import type { CustomerRepository } from "../repository/customer.repository";

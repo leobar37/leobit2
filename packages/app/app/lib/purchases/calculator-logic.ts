@@ -1,5 +1,18 @@
-import type { PurchaseCartItem } from "~/stores/purchase.store";
 import { formatNumber } from "~/lib/utils";
+
+// Local type definition (purchase.store was removed in refactoring)
+export interface PurchaseCartItem {
+  productId: string;
+  variantId: string | undefined;
+  unitId: string | undefined;
+  productName: string;
+  variantName: string | undefined;
+  unitName: string | undefined;
+  packs: number | undefined;
+  quantity: number;
+  unitCost: number;
+  subtotal: number;
+}
 
 export interface PurchaseCalculationInput {
   packs?: number;

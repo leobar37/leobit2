@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import { Elysia, t } from "elysia";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";

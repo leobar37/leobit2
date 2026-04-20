@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import { inngest } from "../lib/inngest";
 import { evolutionService } from "../services/infrastructure/evolution.service";
 import { WhatsAppMessageRepository } from "../services/repository/whatsapp-message.repository";

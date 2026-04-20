@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";

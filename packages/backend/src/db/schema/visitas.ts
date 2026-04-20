@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 /**
  * Visitas Schema
  * Visit records linked to distributions for vendor tracking

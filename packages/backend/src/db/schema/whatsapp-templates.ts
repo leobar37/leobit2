@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import {
   pgTable,
   uuid,

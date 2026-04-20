@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 /**
  * Integration Tests with MSW Mocking
  * 

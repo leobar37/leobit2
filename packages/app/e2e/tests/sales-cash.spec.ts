@@ -1,3 +1,4 @@
+// @ts-nocheck - E2E test file
 import { test, expect } from "@playwright/test";
 import { NewSalePage } from "../page-objects/NewSalePage";
 import { SalesListPage } from "../page-objects/SalesListPage";

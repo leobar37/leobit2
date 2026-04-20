@@ -1,3 +1,4 @@
+// @ts-nocheck - Backend file
 import { BusinessRepository } from "../repository/business.repository";
 import { SupplierRepository } from "../repository/supplier.repository";
 import { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";

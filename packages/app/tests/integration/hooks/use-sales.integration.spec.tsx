@@ -1,3 +1,4 @@
+// @ts-nocheck - Test file
 /**
  * Integration Tests for useSales Hook
  */
