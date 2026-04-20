@@ -1,0 +1,26 @@
+{
+  "featureId": "m4-fix-distribucion-consuming-code",
+  "reviewedAt": "2026-04-20T10:45:00.000Z",
+  "commitId": "be0a143",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly removes the `groupId` property from the onSubmit payload in create-distribucion-form.tsx. After the DistribucionService migration to extend DistribucionesService, the `CreateDistribucionInput` type no longer includes the `groupId` field. The form still maintains the group selection UI (for displaying member count and creating visits), but no longer passes the groupId in the submission payload.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "The generated hooks.ts (line 641) has a pre-existing type error where it tries to pass `id` in the POST body, but `CreateDistribucionesInput` doesn't include `id` as an allowed property. This is separate from the groupId fix and unrelated to this feature.",
+      "evidence": "hooks.ts(641,9): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'CreateDistribucionesInput'"
+    },
+    {
+      "area": "conventions",
+      "observation": "The form component still maintains `selectedGroup` state for UI purposes (showing member count) even though groupId is no longer submitted. This is a valid pattern - UI state can differ from submission payload.",
+      "evidence": "create-distribucion-form.tsx lines 23, 44-48, 83-88 - GroupSelect is still rendered and selectedGroup state is maintained for displaying 'Se crearán {N} visitas automáticamente'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review PASSED. The worker correctly removed the `groupId` field from the onSubmit payload in create-distribucion-form.tsx (line 47). The CreateDistribucionInput type (from distribucion-service.ts) and CreateDistribucionesInput (from generated/services.ts) both correctly exclude groupId after the service migration. Build passes successfully with no type errors related to this file. The form maintains its UI functionality while submitting a valid payload."
+}

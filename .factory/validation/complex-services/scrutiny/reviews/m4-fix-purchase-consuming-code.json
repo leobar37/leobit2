@@ -1,0 +1,21 @@
+{
+  "featureId": "m4-fix-purchase-consuming-code",
+  "reviewedAt": "2026-04-20T10:15:00.000Z",
+  "commitId": "ba25042",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The worker successfully converted all snake_case property names to camelCase in code consuming PurchaseService. All 5 files were updated consistently: purchase-form-context.tsx, service-helpers.ts, _protected.compras.$id.tsx, _protected.compras._index.tsx, and service-provider.tsx. The changes match the @avileo/shared schema types.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md documents the naming convention for property names (camelCase for code, snake_case for database), but this specific migration pattern for converting consuming code after service migration could be more explicitly documented.",
+      "evidence": "Worker had to grep for snake_case patterns and manually verify all consuming files. A checklist of common property names to migrate (supplier_id, purchase_date, total_amount, etc.) could streamline future similar migrations."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "All snake_case property names were correctly converted to camelCase in 5 files consuming PurchaseService. The changes are consistent with @avileo/shared schema types. Typecheck verifies no purchase-related type errors remain. The fix is complete and correct."
+}

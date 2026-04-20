@@ -1,0 +1,31 @@
+{
+  "featureId": "m4-migrate-purchase-service",
+  "reviewedAt": "2026-04-20T05:45:00.000Z",
+  "commitId": "18477de62340ed6d0f477f7d8e509719df1c27e4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The PurchaseService migration successfully implements all requirements: it extends PurchasesService from generated code, preserves atomic items operations via createWithItems, and uses FK references (purchase_id in payload) instead of syncGroupId for item synchronization. The service compiles without type errors.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The PurchaseService.createWithItems pattern demonstrates how to handle atomic parent-child operations: queue parent sync first (without explicit ordering dependency), then queue children with FK reference in payload. The server's OperationSorter handles topological ordering based on FK references in payload.",
+      "evidence": "purchase-service.ts:228-261 - Parent queued first, then items queued with purchaseId FK reference"
+    },
+    {
+      "area": "conventions",
+      "observation": "The migration correctly uses camelCase property names (supplierId, purchaseDate, totalAmount) matching @avileo/shared schema types, though consuming code still uses legacy snake_case. This is a pre-existing codebase issue, not a migration issue.",
+      "evidence": "Handoff notes 68 type errors in consuming code using snake_case - resolved in follow-up feature m4-fix-purchase-consuming-code"
+    },
+    {
+      "area": "skills",
+      "observation": "Worker correctly followed the frontend-migrate-worker procedure: extended generated base class, preserved custom methods (createWithItems, item management), and ensured proper type compatibility.",
+      "evidence": "Transcript shows implementation followed AGENTS.md Service Migration Pattern exactly"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The PurchaseService migration is complete and correct. The service extends PurchasesService from generated code, maintains atomic createWithItems operations with FK-based item synchronization, and compiles without errors. All requirements from VAL-4-001 and VAL-4-003 are satisfied."
+}
