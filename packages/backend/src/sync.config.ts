@@ -69,6 +69,8 @@ export const syncConfig = defineSyncConfig({
       table: customerGroupMembers,
       syncable: true,
       conflictResolver: "version-based",
+      // Mark as junction table - no businessId in insert/findByBusiness
+      metadata: { isJunctionTable: true },
     },
 
     visitas: {

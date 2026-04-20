@@ -45,8 +45,13 @@ function hasIdColumn(columns: ColumnMetadata[]): boolean {
 
 /**
  * Detect if a table is a junction table (has no 'id' column, uses composite keys instead)
+ * Or explicitly marked as junction table via metadata.isJunctionTable
  */
-function isJunctionTable(columns: ColumnMetadata[]): boolean {
+function isJunctionTable(columns: ColumnMetadata[], metadata?: Record<string, unknown>): boolean {
+  // Explicit override via metadata
+  if (metadata?.isJunctionTable === true) {
+    return true;
+  }
   // Junction tables don't have an 'id' column
   // They have composite primary keys made of foreign key columns
   return !hasIdColumn(columns);
@@ -63,7 +68,8 @@ export function generateService(
   const columnsToInclude = resolveColumns(columns, config);
 
   // Check if this is a junction table (no 'id' column, composite primary key)
-  const junctionTable = isJunctionTable(columns);
+  // Or explicitly marked via metadata.isJunctionTable
+  const junctionTable = isJunctionTable(columns, config.metadata);
 
   // Filter out auto-managed columns for input interfaces
   const userColumns = columnsToInclude.filter(

@@ -77,6 +77,7 @@ const productConfig: EntitySyncConfig = {
 };
 
 // Junction table without 'id' column (like customer_tags with composite PK on customerId+tagId)
+// Note: Junction tables should NOT have businessId column - that's the bug we're fixing
 const testJunctionTable = pgTable("customer_tags", {
   customerId: uuid("customer_id").notNull(),
   tagId: uuid("tag_id").notNull(),
@@ -84,7 +85,7 @@ const testJunctionTable = pgTable("customer_tags", {
   assignedBy: uuid("assigned_by"),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  businessId: uuid("business_id").notNull(),
+  // NO businessId column - junction tables don't have businessId
 }, (table) => ({
   // Composite primary key on customerId + tagId (not using 'id' column)
 }));
@@ -569,11 +570,12 @@ describe("Service Generator", () => {
       expect(result.serviceCode).not.toContain("where(eq(customerTags.id");
     });
 
-    it("generates findByBusiness for junction tables", () => {
+    it("generates findByBusiness for junction tables (no businessId filter)", () => {
       const result = generateService("customer_tags", junctionConfig);
 
       expect(result.serviceCode).toContain("findByBusiness()");
-      expect(result.serviceCode).toContain("eq(customerTags.businessId, this.businessId)");
+      // Junction tables don't have businessId, so no filter by businessId
+      expect(result.serviceCode).not.toContain("eq(customerTags.businessId");
     });
 
     it("does not generate update method for junction tables", () => {
@@ -618,10 +620,10 @@ describe("Service Generator", () => {
 
       // The entity should be built without id field
       expect(result.serviceCode).toContain("const entity: typeof customerTags.$inferInsert = {");
-      // Should have syncStatus, syncAttempts, businessId, etc.
+      // Should have syncStatus, syncAttempts, but NO businessId (junction tables don't have it)
       expect(result.serviceCode).toContain("syncStatus: SyncStatus.PENDING");
       expect(result.serviceCode).toContain("syncAttempts: 0");
-      expect(result.serviceCode).toContain("businessId: this.businessId");
+      expect(result.serviceCode).not.toContain("businessId: this.businessId");
     });
 
     it("junction table has no update or delete methods but still has findByBusiness and create", () => {

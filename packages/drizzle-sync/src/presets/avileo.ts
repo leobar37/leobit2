@@ -262,6 +262,9 @@ const entityConfigs: Record<string, EntitySyncConfig> = {
         { entity: 'customers', foreignKey: 'customer_id', required: true },
       ],
     },
+    // Explicitly mark as junction table since it has an 'id' column
+    // but should not include businessId in insert/findByBusiness
+    metadata: { isJunctionTable: true },
   },
 };
 
