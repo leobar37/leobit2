@@ -44,7 +44,6 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         vendedorId: selectedVendedor.id,
         puntoVenta: selectedPuntoVenta.name,
         puntoVentaId: selectedPuntoVenta.id,
-        groupId: selectedGroup?.id,
         notaCreacion: notaCreacion.trim() || undefined,
         items: assignItems ? items : undefined,
       });
