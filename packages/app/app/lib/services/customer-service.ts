@@ -1,33 +1,18 @@
 /**
  * Customer Service
  * Local-first customer entity service with automatic sync integration
+ * Extends generated CustomersService to preserve custom search/filter logic
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { BaseService, type EntityType } from "./base-service";
+import { CustomersService, type CreateCustomersInput, type UpdateCustomersInput } from "~/lib/sync/generated/services";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, customers, customerTags, customerGroupMembers, tags } from "@avileo/shared";
-import type { Customer } from "@avileo/shared";
+import { SyncStatus, customers, customerTags, customerGroupMembers, tags, type Customer } from "@avileo/shared";
 import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
 
-/** Input for creating a new customer */
-export interface CreateCustomerInput {
-  name: string;
-  dni?: string;
-  phone?: string;
-  address?: string;
-  notes?: string;
-}
-
-/** Input for updating an existing customer */
-export interface UpdateCustomerInput {
-  name?: string;
-  dni?: string;
-  phone?: string;
-  address?: string;
-  notes?: string;
-}
+// Re-export types for backward compatibility
+export type { CreateCustomersInput as CreateCustomerInput, UpdateCustomersInput as UpdateCustomerInput } from "~/lib/sync/generated/services";
 
 /** Search filters for finding customers */
 export interface CustomerSearchFilters {
@@ -57,13 +42,10 @@ export interface CustomerTagSummary {
 
 /**
  * Customer Service
- * Provides CRUD operations for customers with local-first approach
- * and automatic sync to server
+ * Extends generated CustomersService to preserve custom search/filter logic
+ * including tag filtering, group filtering, and pagination
  */
-export class CustomerService extends BaseService {
-  private static readonly ENTITY_TYPE: EntityType = "customers";
-  private static readonly ID_PREFIX = "cust";
-
+export class CustomerService extends CustomersService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -72,14 +54,6 @@ export class CustomerService extends BaseService {
     businessUserId: string
   ) {
     super(pg, db, syncService, businessId, businessUserId);
-  }
-
-  getEntityType(): EntityType {
-    return CustomerService.ENTITY_TYPE;
-  }
-
-  getEntityPrefix(): string {
-    return CustomerService.ID_PREFIX;
   }
 
   private buildFilterConditions(filters?: CustomerSearchFilters) {
@@ -176,6 +150,7 @@ export class CustomerService extends BaseService {
 
   /**
    * Find a customer by ID
+   * Inherited from CustomersService
    */
   async findById(id: string): Promise<Customer | null> {
     const result = await this.db
@@ -192,8 +167,8 @@ export class CustomerService extends BaseService {
   }
 
   /**
-   * Find all customers for the current business
-   * Optionally filtered by search query
+   * Find all customers for the current business with optional filters
+   * Overrides parent to add tag/group filtering and search
    */
   async findByBusiness(filters?: CustomerSearchFilters): Promise<Customer[]> {
     const filteredIds = await this.resolveFilteredCustomerIds(filters);
@@ -289,28 +264,28 @@ export class CustomerService extends BaseService {
 
   /**
    * Create a new customer
-   * Stores locally and queues for server sync
+   * Overrides parent to set createdBy to businessUserId and include proper timestamps
    */
-  async create(input: CreateCustomerInput): Promise<Customer> {
+  async create(input: CreateCustomersInput): Promise<Customer> {
     const id = this.generateId();
-    const now = new Date(this.now());
+    const now = this.now();
 
-    const customer: Customer = {
+    const entity: typeof customers.$inferInsert = {
       id,
       name: input.name,
-      dni: input.dni || null,
-      phone: input.phone || null,
-      address: input.address || null,
-      notes: input.notes || null,
+      dni: input.dni ?? null,
+      phone: input.phone ?? null,
+      address: input.address ?? null,
+      notes: input.notes ?? null,
+      createdBy: this.businessUserId,
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,
       businessId: this.businessId,
-      createdBy: this.businessUserId,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
     };
 
-    await this.db.insert(customers).values(customer);
+    await this.db.insert(customers).values(entity);
 
     await this.queueSync("create", id, {
       name: input.name,
@@ -321,60 +296,6 @@ export class CustomerService extends BaseService {
       createdBy: this.businessUserId,
     });
 
-    return customer;
-  }
-
-  /**
-   * Update an existing customer
-   * Updates locally and queues for server sync
-   */
-  async update(id: string, input: UpdateCustomerInput): Promise<void> {
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new Error(`Customer not found: ${id}`);
-    }
-
-    const updateData: Partial<Customer> = {};
-
-    if (input.name !== undefined) {
-      updateData.name = input.name;
-    }
-    if (input.dni !== undefined) {
-      updateData.dni = input.dni ?? null;
-    }
-    if (input.phone !== undefined) {
-      updateData.phone = input.phone ?? null;
-    }
-    if (input.address !== undefined) {
-      updateData.address = input.address ?? null;
-    }
-    if (input.notes !== undefined) {
-      updateData.notes = input.notes ?? null;
-    }
-
-    updateData.syncStatus = SyncStatus.PENDING;
-    updateData.updatedAt = new Date(this.now());
-
-    await this.db
-      .update(customers)
-      .set(updateData)
-      .where(eq(customers.id, id));
-
-    await this.queueSync("update", id, input as Record<string, unknown>);
-  }
-
-  /**
-   * Delete a customer
-   * Removes locally and queues deletion for server sync
-   */
-  async delete(id: string): Promise<void> {
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new Error(`Customer not found: ${id}`);
-    }
-
-    await this.db.delete(customers).where(eq(customers.id, id));
-
-    await this.queueSync("delete", id, {});
+    return entity as Customer;
   }
 }
