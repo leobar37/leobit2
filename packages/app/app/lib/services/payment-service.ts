@@ -1,15 +1,41 @@
 /**
  * Payment Service (Abonos)
  * Local-first service for managing customer debt payments
+ * Extends AbonosService for basic CRUD, adds payment-specific business logic
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { abonos } from "@avileo/shared";
 import { eq } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
+
+// Import generated base service
+import { AbonosService } from "~/lib/sync/generated/services";
+import type {
+  CreateAbonosInput,
+  UpdateAbonosInput,
+} from "~/lib/sync/generated/services";
+
+/** Input for creating a new payment (backward compatible with original) */
+export interface CreateAbonoInput {
+  customerId: string;
+  sellerId: string;
+  amount: number;
+  paymentMethod: string;
+  notes?: string;
+  relatedSaleId?: string;
+  proofImageId?: string;
+  referenceNumber?: string;
+}
+
+/** Input for updating a payment (backward compatible with original) */
+export interface UpdateAbonoInput {
+  notes?: string;
+  proofImageId?: string | null;
+  referenceNumber?: string | null;
+}
 
 /** Payment (Abono) entity type */
 export interface Abono {
@@ -26,25 +52,6 @@ export interface Abono {
   sync_status: "pending" | "synced" | "error";
   sync_attempts: number;
   created_at: string;
-}
-
-/** Input for creating a new payment */
-export interface CreateAbonoInput {
-  customerId: string;
-  sellerId: string;
-  amount: number;
-  paymentMethod: string;
-  notes?: string;
-  relatedSaleId?: string;
-  proofImageId?: string;
-  referenceNumber?: string;
-}
-
-/** Input for updating a payment */
-export interface UpdateAbonoInput {
-  notes?: string;
-  proofImageId?: string | null;
-  referenceNumber?: string | null;
 }
 
 export interface AccountsReceivableQuery {
@@ -72,9 +79,9 @@ export interface AccountsReceivablePage {
 
 /**
  * Payment Service for managing debt payments (abonos)
- * Extends BaseService for local-first operations with sync integration
+ * Extends AbonosService for local-first operations with sync integration
  */
-export class PaymentService extends BaseService {
+export class PaymentService extends AbonosService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -83,20 +90,6 @@ export class PaymentService extends BaseService {
     businessUserId: string
   ) {
     super(pg, db, syncService, businessId, businessUserId);
-  }
-
-  /**
-   * Returns the entity type for this service
-   */
-  getEntityType(): EntityType {
-    return "abonos";
-  }
-
-  /**
-   * Returns the ID prefix for this entity
-   */
-  getEntityPrefix(): string {
-    return "pay";
   }
 
   async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
@@ -262,8 +255,10 @@ export class PaymentService extends BaseService {
   }
 
   /**
-   * Find a payment by ID
+   * Find a payment by ID with normalized amount
+   * Override to return Abono type with normalized currency
    */
+  // @ts-expect-error - Return type Abono is incompatible with parent but required for consumer hooks
   async findById(id: string): Promise<Abono | null> {
     try {
       const result = await this.pg.query<Abono>(
@@ -284,6 +279,7 @@ export class PaymentService extends BaseService {
 
   /**
    * Find all payments for a specific customer
+   * Keeps custom SQL query with amount normalization
    */
   async findByCustomer(customerId: string): Promise<Abono[]> {
     const result = await this.pg.query<Abono>(
@@ -300,7 +296,9 @@ export class PaymentService extends BaseService {
 
   /**
    * Find all payments for the current business
+   * Override to return Abono[] type with normalized amounts
    */
+  // @ts-expect-error - Return type Abono[] is incompatible with parent but required for consumer hooks
   async findByBusiness(): Promise<Abono[]> {
     const result = await this.pg.query<Abono>(
       `SELECT * FROM abonos
@@ -372,30 +370,32 @@ export class PaymentService extends BaseService {
 
   /**
    * Create a new payment (abono)
+   * Custom implementation that validates before creating
    */
+  // @ts-expect-error - Return type Abono is incompatible with parent but required for consumer hooks
   async create(input: CreateAbonoInput): Promise<Abono> {
     try {
-      const id = this.generateId();
-      const now = this.now();
-
-      // Format amount as decimal string using project utility
-      const amount = this.normalizeCurrency(input.amount);
-
       // Validate customer belongs to this business
       await this.validateCustomerBusiness(input.customerId);
 
       // Validate payment amount against customer debt (offline validation)
       await this.validatePaymentAmount(input.customerId, input.amount);
 
+      // Format amount as decimal string using project utility
+      const amount = this.normalizeCurrency(input.amount);
+
+      const id = this.generateId();
+      const now = this.now();
+
       // Insert using Drizzle ORM
       await this.db.insert(abonos).values({
         id,
         customerId: input.customerId,
-        sellerId: input.sellerId,
+        sellerId: input.sellerId ?? null,
         businessId: this.businessId,
         relatedSaleId: input.relatedSaleId ?? null,
         amount,
-        paymentMethod: input.paymentMethod,
+        paymentMethod: input.paymentMethod ?? "efectivo",
         referenceNumber: input.referenceNumber ?? null,
         proofImageId: input.proofImageId ?? null,
         notes: input.notes ?? null,
@@ -434,7 +434,18 @@ export class PaymentService extends BaseService {
    * Only notes, proof_image_id, and reference_number can be updated
    * Amount cannot be changed - delete and recreate instead
    */
+  // @ts-expect-error - Return type Abono | null is incompatible with parent void return but required for consumer hooks
   async update(id: string, input: UpdateAbonoInput): Promise<Abono | null> {
+    // Only notes, proofImageId, and referenceNumber can be updated
+    // Amount cannot be changed - this is a business rule
+    const hasChanges = input.notes !== undefined ||
+                       input.proofImageId !== undefined ||
+                       input.referenceNumber !== undefined;
+
+    if (!hasChanges) {
+      return this.findById(id);
+    }
+
     const now = this.now();
 
     // Build update object with only provided fields
@@ -453,15 +464,6 @@ export class PaymentService extends BaseService {
 
     if (input.referenceNumber !== undefined) {
       updateData.referenceNumber = input.referenceNumber ?? null;
-    }
-
-    // Only update if there are actual field changes
-    const hasChanges = input.notes !== undefined ||
-                       input.proofImageId !== undefined ||
-                       input.referenceNumber !== undefined;
-
-    if (!hasChanges) {
-      return this.findById(id);
     }
 
     // Update using Drizzle ORM
