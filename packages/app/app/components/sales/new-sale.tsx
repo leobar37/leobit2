@@ -43,7 +43,7 @@ export function CustomerSection() {
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const calculations = useSaleCalculations(sale, items);
+  const calculations = useSaleCalculations(sale as any, items);
 
   const isFromVisita = !!visitaId;
 
@@ -56,7 +56,7 @@ export function CustomerSection() {
       await updateSale.mutateAsync({
         id: saleId,
         input: {
-          customerId: customer?.id ?? null,
+          customerId: customer?.id ?? undefined,
         },
       });
     } catch (error) {
@@ -131,7 +131,7 @@ export function PaymentModeSection() {
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const calculations = useSaleCalculations(sale, items);
+  const calculations = useSaleCalculations(sale as any, items);
 
   // Define callback before guard clause to ensure hooks are always called in same order
   const handleUpdateAmountPaid = useCallback(
@@ -139,7 +139,7 @@ export function PaymentModeSection() {
       if (!saleId) return;
       await updateSale.mutateAsync({
         id: saleId,
-        input: { amountPaid: amount, balanceDue },
+        input: { amountPaid: parseFloat(amount), balanceDue: parseFloat(balanceDue) },
       });
     },
     [saleId, updateSale]
@@ -154,13 +154,13 @@ export function PaymentModeSection() {
   const handleSetPaymentMode = async (mode: PaymentMode) => {
     if (!saleId) return;
 
-    const totalAmount = formatNumber(calculations.totalAmount);
-    const amountPaid =
+    const totalAmountNum = calculations.totalAmount;
+    const amountPaidNum =
       mode === "pago_total"
-        ? totalAmount
+        ? totalAmountNum
         : mode === "debe_todo"
-          ? "0.00"
-          : sale?.amountPaid || "0.00";
+          ? 0
+          : parseFloat(sale?.amountPaid || "0");
 
     try {
       await updateSale.mutateAsync({
@@ -168,9 +168,9 @@ export function PaymentModeSection() {
         input: {
           paymentMode: mode,
           saleType: mode === "pago_total" ? "contado" : "credito",
-          totalAmount,
-          amountPaid,
-          balanceDue: formatNumber(calculations.balanceDue),
+          totalAmount: totalAmountNum,
+          amountPaid: amountPaidNum,
+          balanceDue: calculations.balanceDue,
         },
       });
     } catch {
@@ -337,7 +337,7 @@ export function CartSection() {
 export function SaleSummaryCard() {
   const { sale, items } = useNewSaleContext();
 
-  const calculations = useSaleCalculations(sale, items);
+  const calculations = useSaleCalculations(sale as any, items);
 
   if (items.length === 0) {
     return null;
@@ -408,7 +408,7 @@ export function SaleSubmitBar() {
   const { toast } = useToast();
   const finalizeSale = useFinalizeSale();
 
-  const calculations = useSaleCalculations(sale, items);
+  const calculations = useSaleCalculations(sale as any, items);
 
   // Check if we're in delivery mode (confirmed pre_order)
   const isDeliveryMode = sale?.type === "pre_order" && sale?.status === "confirmed";
@@ -563,8 +563,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     calculation,
     handleClear,
   } = useSmartCalculator({
-    product: selectedProduct,
-    variant: selectedVariant,
+    product: selectedProduct as any,
+    variant: selectedVariant as any,
     autoFillPrice,
     hideTara,
     initialValues: editingInitialValues,
