@@ -1,22 +1,23 @@
 /**
  * Customer Group Service
- * Local-first customer groups entity service with automatic sync integration
+ * 
+ * This file extends the generated CustomerGroupsService from drizzle-sync
+ * to preserve custom member management and enriched return types.
+ * 
+ * Generated at: 2026-04-20
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { BaseService, type EntityType } from "./base-service";
-import { SyncService } from "../sync/sync-service";
-import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup, type CustomerGroupMember } from "@avileo/shared";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { SyncService } from "~/lib/sync/sync-service";
+import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup } from "@avileo/shared";
 
-export interface CreateCustomerGroupInput {
-  name: string;
-}
+import { CustomerGroupsService, type CreateCustomerGroupsInput, type UpdateCustomerGroupsInput } from "~/lib/sync/generated/services";
 
-export interface UpdateCustomerGroupInput {
-  name: string;
-}
+// Re-export input types with original names for backward compatibility
+export type CreateCustomerGroupInput = CreateCustomerGroupsInput;
+export type UpdateCustomerGroupInput = UpdateCustomerGroupsInput;
 
 export interface GroupMemberWithCustomer {
   customerId: string;
@@ -38,14 +39,27 @@ export interface CustomerGroupWithMemberCount extends Omit<CustomerGroup, "busin
   memberCount?: number;
 }
 
-export interface CustomerGroupWithMembers extends Omit<CustomerGroup, "businessId"> {
+export interface CustomerGroupWithMembers extends CustomerGroup {
   members?: GroupMemberWithCustomer[];
 }
 
-export class CustomerGroupService extends BaseService {
-  private static readonly ENTITY_TYPE: EntityType = "customer_groups";
-  private static readonly ID_PREFIX = "grp";
-
+/**
+ * Customer Group Service
+ * Extends the generated CustomerGroupsService with custom member management.
+ * 
+ * Preserved custom methods:
+ * - findAll(): Promise<CustomerGroupWithMemberCount[]> - Groups with member count
+ * - findById(id): Promise<CustomerGroupWithMembers | null> - Group with members
+ * - getMemberCount(groupId): Promise<number> - Member count helper
+ * - getMembers(groupId): Promise<GroupMemberWithCustomer[]> - Get members with customer info
+ * - getCustomerGroups(customerId): Promise<CustomerGroupSummary[]> - Groups for a customer
+ * - getCustomerGroupsForCustomers(customerIds): Promise<CustomerGroupSummaryWithCustomerId[]> - Groups for multiple customers
+ * - createWithMembers(input, customerIds): Promise<{ group: CustomerGroup }> - Atomic group + members
+ * - addMembers(groupId, customerIds, syncGroupId?): Promise<void> - Add members
+ * - removeMember(groupId, customerId): Promise<void> - Remove a member
+ * - isMember(groupId, customerId): Promise<boolean> - Check membership
+ */
+export class CustomerGroupService extends CustomerGroupsService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -56,24 +70,16 @@ export class CustomerGroupService extends BaseService {
     super(pg, db, syncService, businessId, businessUserId);
   }
 
-  getEntityType(): EntityType {
-    return CustomerGroupService.ENTITY_TYPE;
-  }
-
-  getEntityPrefix(): string {
-    return CustomerGroupService.ID_PREFIX;
-  }
-
+  /**
+   * Find all groups with member counts
+   * Overrides to return enriched type with member count
+   */
   async findAll(): Promise<CustomerGroupWithMemberCount[]> {
-    console.log('[DEBUG CustomerGroupService.findAll] businessId:', this.businessId);
-    
     const groups = await this.db
       .select()
       .from(customerGroups)
       .where(eq(customerGroups.businessId, this.businessId))
       .orderBy(desc(customerGroups.createdAt));
-
-    console.log('[DEBUG CustomerGroupService.findAll] Raw groups from DB:', groups.length, groups.map(g => ({ id: g.id, name: g.name })));
 
     const groupsWithCounts = await Promise.all(
       groups.map(async (group) => {
@@ -90,10 +96,13 @@ export class CustomerGroupService extends BaseService {
       })
     );
 
-    console.log('[DEBUG CustomerGroupService.findAll] Returning groups with counts:', groupsWithCounts.length);
     return groupsWithCounts;
   }
 
+  /**
+   * Find a group by ID with members
+   * Overrides to return enriched type with members
+   */
   async findById(id: string): Promise<CustomerGroupWithMembers | null> {
     const group = await this.db
       .select()
@@ -117,10 +126,15 @@ export class CustomerGroupService extends BaseService {
       syncAttempts: group[0].syncAttempts,
       createdAt: group[0].createdAt,
       updatedAt: group[0].updatedAt,
+      businessId: group[0].businessId,
       members,
     };
   }
 
+  /**
+   * Get member count for a group
+   * Custom helper method for enrichment
+   */
   async getMemberCount(groupId: string): Promise<number> {
     const group = await this.db
       .select()
@@ -146,6 +160,10 @@ export class CustomerGroupService extends BaseService {
     return result[0]?.count ?? 0;
   }
 
+  /**
+   * Get members with customer information
+   * Custom method for enriched return type
+   */
   async getMembers(groupId: string): Promise<GroupMemberWithCustomer[]> {
     const group = await this.db
       .select()
@@ -180,6 +198,10 @@ export class CustomerGroupService extends BaseService {
     }));
   }
 
+  /**
+   * Get all groups for a specific customer
+   * Custom query method
+   */
   async getCustomerGroups(customerId: string): Promise<CustomerGroupSummary[]> {
     const results = await this.db
       .select({
@@ -200,6 +222,10 @@ export class CustomerGroupService extends BaseService {
     return results;
   }
 
+  /**
+   * Get all groups for multiple customers
+   * Custom query method for batch operations
+   */
   async getCustomerGroupsForCustomers(customerIds: string[]): Promise<CustomerGroupSummaryWithCustomerId[]> {
     if (customerIds.length === 0) {
       return [];
@@ -226,41 +252,6 @@ export class CustomerGroupService extends BaseService {
     return results;
   }
 
-  async create(input: CreateCustomerGroupInput, syncGroupId?: string): Promise<{ group: CustomerGroup; syncGroupId: string }> {
-    const id = this.generateId();
-    const now = new Date(this.now());
-    // Always generate a syncGroupId to ensure group and members are synced together
-    const groupSyncGroupId = syncGroupId || this.generateSyncGroup();
-
-    const group: Partial<CustomerGroup> = {
-      id,
-      name: input.name,
-      businessId: this.businessId,
-      syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await this.db.insert(customerGroups).values(group as CustomerGroup);
-
-    await this.queueSync("create", id, {
-      name: input.name,
-    }, groupSyncGroupId);
-
-    const created = await this.db
-      .select()
-      .from(customerGroups)
-      .where(eq(customerGroups.id, id))
-      .limit(1);
-
-    if (created.length === 0) {
-      throw new Error("Failed to create customer group");
-    }
-
-    return { group: created[0], syncGroupId: groupSyncGroupId };
-  }
-
   /**
    * Create a group with initial members atomically
    * Uses syncGroupId to ensure group and members are synced together
@@ -268,7 +259,7 @@ export class CustomerGroupService extends BaseService {
   async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<{ group: CustomerGroup }> {
     const syncGroupId = this.generateSyncGroup();
 
-    const { group } = await this.create(input, syncGroupId);
+    const group = await this.create(input);
 
     if (customerIds.length > 0) {
       await this.addMembers(group.id, customerIds, syncGroupId);
@@ -277,48 +268,10 @@ export class CustomerGroupService extends BaseService {
     return { group };
   }
 
-  async update(id: string, input: UpdateCustomerGroupInput): Promise<CustomerGroup> {
-    const existing = await this.db
-      .select()
-      .from(customerGroups)
-      .where(and(
-        eq(customerGroups.id, id),
-        eq(customerGroups.businessId, this.businessId)
-      ))
-      .limit(1);
-
-    if (existing.length === 0) {
-      throw new Error(`Customer group not found: ${id}`);
-    }
-
-    const updateData: Partial<CustomerGroup> = {
-      name: input.name,
-      syncStatus: SyncStatus.PENDING,
-      updatedAt: new Date(this.now()),
-    };
-
-    await this.db
-      .update(customerGroups)
-      .set(updateData)
-      .where(eq(customerGroups.id, id));
-
-    await this.queueSync("update", id, {
-      name: input.name,
-    });
-
-    const updated = await this.db
-      .select()
-      .from(customerGroups)
-      .where(eq(customerGroups.id, id))
-      .limit(1);
-
-    if (updated.length === 0) {
-      throw new Error(`Failed to update customer group: ${id}`);
-    }
-
-    return updated[0];
-  }
-
+  /**
+   * Delete a group and all its members
+   * Overrides to cascade member deletion
+   */
   async delete(id: string): Promise<void> {
     const existing = await this.db
       .select()
@@ -355,6 +308,10 @@ export class CustomerGroupService extends BaseService {
     await this.queueSync("delete", id, {});
   }
 
+  /**
+   * Add members to a group
+   * Custom method for member management
+   */
   async addMembers(groupId: string, customerIds: string[], syncGroupId?: string): Promise<void> {
     const group = await this.db
       .select()
@@ -412,6 +369,10 @@ export class CustomerGroupService extends BaseService {
     }
   }
 
+  /**
+   * Remove a member from a group
+   * Custom method for member management
+   */
   async removeMember(groupId: string, customerId: string): Promise<void> {
     const group = await this.db
       .select()
@@ -455,6 +416,10 @@ export class CustomerGroupService extends BaseService {
     });
   }
 
+  /**
+   * Check if a customer is a member of a group
+   * Custom method for member management
+   */
   async isMember(groupId: string, customerId: string): Promise<boolean> {
     const group = await this.db
       .select()
