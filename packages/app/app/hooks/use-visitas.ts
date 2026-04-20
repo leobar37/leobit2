@@ -7,6 +7,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVisitaService, useCustomerGroupService } from "~/lib/sync/service-provider";
 import { toast } from "sonner";
+import type { CreateVisitaInput, UpdateVisitaInput } from "~/lib/services/visita-service";
 
 export interface Visita {
   id: string;
@@ -26,17 +27,6 @@ export interface Visita {
     address: string | null;
     phone: string | null;
   };
-}
-
-export interface CreateVisitaInput {
-  distribucionId: string;
-  customerId: string;
-}
-
-export interface UpdateVisitaInput {
-  status: "pendiente" | "compro" | "no_compra";
-  motivoNoCompra?: string;
-  saleId?: string;
 }
 
 const QUERY_KEYS = {
@@ -78,7 +68,17 @@ export function useUpdateVisita() {
 
   return useMutation<Visita, Error, UpdateVisitaInput & { id: string }>({
     mutationFn: async ({ id, ...input }) => {
-      const result = await visitaService.update(id, input);
+      // Call parent's update (returns void)
+      await visitaService.update(id, {
+        status: input.status,
+        motivoNoCompra: input.motivoNoCompra,
+        saleId: input.saleId,
+      });
+      // Fetch enriched result using findById
+      const result = await visitaService.findById(id);
+      if (!result) {
+        throw new Error("Visita no encontrada después de actualizar");
+      }
       return {
         ...result,
         createdAt: toIsoString(result.createdAt),
@@ -102,7 +102,22 @@ export function useCreateVisita() {
 
   return useMutation<Visita, Error, CreateVisitaInput>({
     mutationFn: async (input) => {
-      const result = await visitaService.create(input);
+      // Create using parent's method with vendedorId from context
+      // The service sets vendedorId internally from businessUserId
+      // We need to call create with proper input format
+      const created = await (visitaService as any).create({
+        distribucionId: input.distribucionId,
+        customerId: input.customerId,
+        vendedorId: "", // Will be set by the service
+        status: input.status ?? "pendiente",
+        motivoNoCompra: input.motivoNoCompra,
+        saleId: input.saleId,
+      });
+      // Fetch enriched result using findById
+      const result = await visitaService.findById(created.id);
+      if (!result) {
+        throw new Error("Visita no encontrada después de crear");
+      }
       return {
         ...result,
         createdAt: toIsoString(result.createdAt),
