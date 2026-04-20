@@ -132,7 +132,7 @@ export interface SyncOperationRecord {
   /** Unique key for idempotency - snake_case for DB */
   idempotency_key: string | null;
   /** Optional group ID for parent-child relationships - snake_case for DB */
-  sync_group_id: string | null;
+  sync_group_id?: string | null;
   /** Creation timestamp (ISO string) - snake_case for DB */
   created_at: string;
   /** Last update timestamp (ISO string) - snake_case for DB */
