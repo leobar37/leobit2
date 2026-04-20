@@ -161,12 +161,12 @@ export class ${pascalCase(entityName)}Service extends BaseService {
 
   /**
    * Find all ${entityName} for the current business
+   * Junction tables don't have businessId, so return all records
    */
   async findByBusiness(): Promise<typeof ${tableRef}.$inferSelect[]> {
     return this.db
       .select()
-      .from(${tableRef})
-      .where(eq(${tableRef}.businessId, this.businessId))${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
+      .from(${tableRef})${junctionTable ? "" : `.where(eq(${tableRef}.businessId, this.businessId))`}${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
   }
 
   /**
@@ -180,10 +180,8 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     const entity: typeof ${tableRef}.$inferInsert = {
 ${junctionTable ? generateInsertFieldsJunction(userColumns, tableRef) : `      id,\n${generateInsertFields(userColumns, tableRef)}`}
       syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,
-      businessId: this.businessId,
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
+      syncAttempts: 0,${junctionTable ? "" : `\n      businessId: this.businessId,`}
+${hasCreatedAt && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
     };
 
     await this.db.insert(${tableRef}).values(entity);
