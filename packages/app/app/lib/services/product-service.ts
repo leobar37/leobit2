@@ -2,94 +2,48 @@
  * Product Service
  * Read-only product access for vendors with admin write operations
  * Products are managed by admin, vendors only read them
+ * 
+ * Migrated to extend ProductsService from generated code.
+ * Variant management methods preserved for admin operations.
  */
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { eq, and, desc, sql } from "drizzle-orm";
-import { BaseService, type EntityType, type BaseCreateInput, type BaseUpdateInput } from "./base-service";
+import { eq, and, desc } from "drizzle-orm";
+import { ProductsService, ProductVariantsService } from "~/lib/sync/generated/services";
 import { SyncService } from "../sync/sync-service";
-import { SyncStatus, products, productVariants } from "@avileo/shared";
+import { SyncStatus, products, productVariants, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
 
-/** Sync status type */
-export type SyncStatusValue = (typeof SyncStatus)[keyof typeof SyncStatus];
-
-/** Product type values */
-export type ProductType = "pollo" | "huevo" | "otro";
-
-/** Product unit values */
-export type ProductUnit = "kg" | "unidad";
-
-/**
- * Product entity type
- * Products are synced from server (read-only for vendors)
- */
-export interface Product {
-  id: string;
-  businessId: string;
-  name: string;
-  type: ProductType;
-  unit: ProductUnit;
-  basePrice: string;
-  isActive: boolean;
-  imageId: string | null;
-  createdAt: string;
-  /** Derived field - true if product has variants */
-  hasVariants?: boolean;
-  /** Sync fields - may be present when data comes from certain sources */
-  syncStatus?: SyncStatusValue;
-  syncAttempts?: number;
-  updatedAt?: string;
-}
-
-/**
- * Product variant entity type
- */
-export interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  sku: string | null;
-  unitQuantity: string;
-  price: string;
-  sortOrder: number;
-  isActive: boolean;
-  syncStatus: SyncStatusValue;
-  syncAttempts: number;
-  createdAt: string;
-  updatedAt: string;
-  /** Optional inventory info - populated when joined with variant_inventory */
-  inventory?: {
-    id: string;
-    variantId: string;
-    quantity: string;
-    updatedAt: string;
-  };
-}
+// Re-export types from @avileo/shared for backward compatibility
+export type Product = SharedProduct;
+export type ProductVariant = SharedProductVariant;
 
 /** Input for creating a product (admin only) */
-export interface CreateProductInput extends BaseCreateInput {
+export interface CreateProductInput {
   name: string;
-  type: ProductType;
-  unit: ProductUnit;
+  type?: "pollo" | "huevo" | "otro";
+  unit?: "kg" | "unidad";
   basePrice: string;
+  costPrice?: string;
   isActive?: boolean;
   imageId?: string;
   hasVariants?: boolean;
 }
 
 /** Input for updating a product (admin only) */
-export interface UpdateProductInput extends BaseUpdateInput {
+export interface UpdateProductInput {
   name?: string;
-  type?: ProductType;
-  unit?: ProductUnit;
+  type?: "pollo" | "huevo" | "otro";
+  unit?: "kg" | "unidad";
   basePrice?: string;
+  costPrice?: string;
   isActive?: boolean;
   imageId?: string;
+  hasVariants?: boolean;
 }
 
 /** Input for creating a product variant (admin only) */
-export interface CreateVariantInput extends BaseCreateInput {
+export interface CreateVariantInput {
   productId: string;
   name: string;
   sku?: string;
@@ -97,24 +51,33 @@ export interface CreateVariantInput extends BaseCreateInput {
   price: string;
   sortOrder?: number;
   isActive?: boolean;
+  lowStockThreshold?: string;
+  criticalStockThreshold?: string;
 }
 
 /** Input for updating a product variant (admin only) */
-export interface UpdateVariantInput extends BaseUpdateInput {
+export interface UpdateVariantInput {
   name?: string;
   sku?: string;
   unitQuantity?: string;
   price?: string;
   sortOrder?: number;
   isActive?: boolean;
+  lowStockThreshold?: string;
+  criticalStockThreshold?: string;
 }
 
 /**
  * Product Service
  * Provides read-only access to products for vendors
  * Admin operations queue sync to server
+ * 
+ * Extends ProductsService (generated) for CRUD operations.
+ * Adds variant management and custom query methods.
  */
-export class ProductService extends BaseService {
+export class ProductService extends ProductsService {
+  private variantsService: ProductVariantsService;
+
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
@@ -123,122 +86,24 @@ export class ProductService extends BaseService {
     businessUserId: string
   ) {
     super(pg, db, syncService, businessId, businessUserId);
+    this.variantsService = new ProductVariantsService(pg, db, syncService, businessId, businessUserId);
   }
 
-  /**
-   * Returns the entity type for this service
-   */
-  getEntityType(): EntityType {
-    return "products";
-  }
-
-  /**
-   * Returns the ID prefix for this entity
-   */
-  getEntityPrefix(): string {
-    return "prod";
-  }
-
-  // ==================== READ-ONLY METHODS (For Vendors) ====================
-
-  /**
-   * Find a product by ID
-   * @param id - Product UUID
-   * @returns Product or null if not found
-   */
-  async findById(id: string): Promise<Product | null> {
-    const result = await this.db
-      .select({
-        id: products.id,
-        businessId: products.businessId,
-        name: products.name,
-        type: products.type,
-        unit: products.unit,
-        basePrice: products.basePrice,
-        isActive: products.isActive,
-        imageId: products.imageId,
-        createdAt: products.createdAt,
-        hasVariants: products.hasVariants,
-      })
-      .from(products)
-      .where(and(eq(products.id, id), eq(products.businessId, this.businessId)))
-      .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    const product = result[0];
-    return {
-      ...product,
-      type: product.type as ProductType,
-      unit: product.unit as ProductUnit,
-      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
-      basePrice: this.normalizeCurrency(product.basePrice),
-    } as Product;
-  }
-
-  /**
-   * Get all products for the business
-   * @returns Array of products
-   */
-  async findByBusiness(): Promise<Product[]> {
-    const result = await this.db
-      .select({
-        id: products.id,
-        businessId: products.businessId,
-        name: products.name,
-        type: products.type,
-        unit: products.unit,
-        basePrice: products.basePrice,
-        isActive: products.isActive,
-        imageId: products.imageId,
-        createdAt: products.createdAt,
-        hasVariants: products.hasVariants,
-      })
-      .from(products)
-      .where(eq(products.businessId, this.businessId))
-      .orderBy(products.name);
-
-    return result.map((product) => ({
-      ...product,
-      type: product.type as ProductType,
-      unit: product.unit as ProductUnit,
-      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
-      basePrice: this.normalizeCurrency(product.basePrice),
-    }));
-  }
+  // ==================== ADDITIONAL READ METHODS ====================
 
   /**
    * Get products filtered by type
    * @param type - Product type filter
    * @returns Array of products matching the type
    */
-  async findByType(type: ProductType): Promise<Product[]> {
+  async findByType(type: "pollo" | "huevo" | "otro"): Promise<Product[]> {
     const result = await this.db
-      .select({
-        id: products.id,
-        businessId: products.businessId,
-        name: products.name,
-        type: products.type,
-        unit: products.unit,
-        basePrice: products.basePrice,
-        isActive: products.isActive,
-        imageId: products.imageId,
-        createdAt: products.createdAt,
-        hasVariants: products.hasVariants,
-      })
+      .select()
       .from(products)
       .where(and(eq(products.businessId, this.businessId), eq(products.type, type)))
       .orderBy(products.name);
 
-    return result.map((product) => ({
-      ...product,
-      type: product.type as ProductType,
-      unit: product.unit as ProductUnit,
-      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
-      basePrice: this.normalizeCurrency(product.basePrice),
-    }));
+    return result as Product[];
   }
 
   /**
@@ -247,30 +112,15 @@ export class ProductService extends BaseService {
    */
   async findActive(): Promise<Product[]> {
     const result = await this.db
-      .select({
-        id: products.id,
-        businessId: products.businessId,
-        name: products.name,
-        type: products.type,
-        unit: products.unit,
-        basePrice: products.basePrice,
-        isActive: products.isActive,
-        imageId: products.imageId,
-        createdAt: products.createdAt,
-        hasVariants: products.hasVariants,
-      })
+      .select()
       .from(products)
       .where(and(eq(products.businessId, this.businessId), eq(products.isActive, true)))
       .orderBy(products.name);
 
-    return result.map((product) => ({
-      ...product,
-      type: product.type as ProductType,
-      unit: product.unit as ProductUnit,
-      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
-      basePrice: this.normalizeCurrency(product.basePrice),
-    }));
+    return result as Product[];
   }
+
+  // ==================== VARIANT MANAGEMENT ====================
 
   /**
    * Get variants for a specific product
@@ -279,170 +129,46 @@ export class ProductService extends BaseService {
    */
   async getVariants(productId: string): Promise<ProductVariant[]> {
     const result = await this.db
-      .select({
-        id: productVariants.id,
-        productId: productVariants.productId,
-        name: productVariants.name,
-        sku: productVariants.sku,
-        unitQuantity: productVariants.unitQuantity,
-        price: productVariants.price,
-        sortOrder: productVariants.sortOrder,
-        isActive: productVariants.isActive,
-        syncStatus: productVariants.syncStatus,
-        syncAttempts: productVariants.syncAttempts,
-        createdAt: productVariants.createdAt,
-        updatedAt: productVariants.updatedAt,
-      })
+      .select()
       .from(productVariants)
       .where(and(eq(productVariants.productId, productId), eq(productVariants.isActive, true)))
       .orderBy(productVariants.sortOrder, productVariants.name);
 
-    return result.map((variant) => ({
-      ...variant,
-      createdAt: variant.createdAt instanceof Date ? variant.createdAt.toISOString() : variant.createdAt,
-      updatedAt: variant.updatedAt instanceof Date ? variant.updatedAt.toISOString() : variant.updatedAt,
-      unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
-      price: this.normalizeCurrency(variant.price),
-    })) as ProductVariant[];
+    return result as ProductVariant[];
   }
 
+  /**
+   * Find a variant by ID
+   * @param variantId - Variant UUID
+   * @returns ProductVariant or null
+   */
   async findVariantById(variantId: string): Promise<ProductVariant | null> {
     const result = await this.db
-      .select({
-        id: productVariants.id,
-        productId: productVariants.productId,
-        name: productVariants.name,
-        sku: productVariants.sku,
-        unitQuantity: productVariants.unitQuantity,
-        price: productVariants.price,
-        sortOrder: productVariants.sortOrder,
-        isActive: productVariants.isActive,
-        syncStatus: productVariants.syncStatus,
-        syncAttempts: productVariants.syncAttempts,
-        createdAt: productVariants.createdAt,
-        updatedAt: productVariants.updatedAt,
-      })
+      .select()
       .from(productVariants)
       .where(eq(productVariants.id, variantId))
       .limit(1);
 
-    if (result.length === 0) return null;
-
-    const variant = result[0];
-    return {
-      ...variant,
-      createdAt: variant.createdAt instanceof Date ? variant.createdAt.toISOString() : variant.createdAt,
-      updatedAt: variant.updatedAt instanceof Date ? variant.updatedAt.toISOString() : variant.updatedAt,
-      unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
-      price: this.normalizeCurrency(variant.price),
-    } as ProductVariant;
+    return (result[0] as ProductVariant) || null;
   }
 
-  // ==================== ADMIN METHODS (Write with Sync) ====================
-
   /**
-   * Create a new product (admin only)
+   * Create a product variant (admin only)
    * Queues sync operation to server
-   * If hasVariants is false, auto-creates a default variant with the product name
-   * @param input - Product creation data
-   * @returns Created product
+   * Uses FK reference (productId in payload) for ordering
+   * @param input - Variant creation data
+   * @returns Created variant
    */
-  async create(input: CreateProductInput): Promise<Product> {
-    const id = this.generateId();
-    const now = new Date(this.now());
-
-    // Shared syncGroupId so product + variant are sent in the same batch
-    const syncGroupId = `prod-${id}`;
-
-    // Insert into local PGlite using Drizzle
-    await this.db.insert(products).values({
-      id,
-      businessId: this.businessId,
+  async createVariant(input: CreateVariantInput): Promise<ProductVariant> {
+    return await this.variantsService.create({
+      productId: input.productId,
       name: input.name,
-      type: input.type,
-      unit: input.unit,
-      basePrice: this.normalizeCurrency(input.basePrice),
+      sku: input.sku,
+      unitQuantity: input.unitQuantity,
+      price: input.price,
       isActive: input.isActive ?? true,
-      imageId: input.imageId ?? null,
-      createdAt: now,
-      updatedAt: now,
+      sortOrder: input.sortOrder ?? 0,
     });
-
-    // Update sync status
-    await this.updateSyncStatus("products", id, SyncStatus.PENDING);
-
-    // Queue for server sync
-    await this.queueSync("create", id, {
-      name: input.name,
-      unit: input.unit,
-      basePrice: input.basePrice,
-      isActive: input.isActive ?? true,
-      imageId: input.imageId,
-      hasVariants: input.hasVariants ?? false,
-    }, syncGroupId);
-
-    // If product does NOT have variants, auto-create a default variant so it can be sold
-    if (input.hasVariants === false) {
-      await this.createVariant({
-        productId: id,
-        name: input.name,
-        unitQuantity: "1",
-        price: this.normalizeCurrency(input.basePrice),
-        isActive: true,
-        sortOrder: 0,
-      }, syncGroupId);
-    }
-
-    return (await this.findById(id))!;
-  }
-
-  /**
-   * Update an existing product (admin only)
-   * Queues sync operation to server
-   * @param id - Product UUID
-   * @param input - Product update data
-   */
-  async update(id: string, input: UpdateProductInput): Promise<void> {
-    // Build update object with only defined fields
-    const updateData: Record<string, unknown> = {};
-
-    if (input.name !== undefined) {
-      updateData.name = input.name;
-    }
-    if (input.type !== undefined) {
-      updateData.type = input.type;
-    }
-    if (input.unit !== undefined) {
-      updateData.unit = input.unit;
-    }
-    if (input.basePrice !== undefined) {
-      updateData.basePrice = this.normalizeCurrency(input.basePrice);
-    }
-    if (input.isActive !== undefined) {
-      updateData.isActive = input.isActive;
-    }
-    if (input.imageId !== undefined) {
-      updateData.imageId = input.imageId ?? null;
-    }
-
-    // Always update updatedAt
-    updateData.updatedAt = new Date(this.now());
-
-    if (Object.keys(updateData).length === 1) {
-      return;
-    }
-
-    // Execute update with Drizzle
-    await this.db
-      .update(products)
-      .set(updateData)
-      .where(and(eq(products.id, id), eq(products.businessId, this.businessId)));
-
-    // Update sync status
-    await this.updateSyncStatus("products", id, SyncStatus.PENDING);
-
-    // Queue for server sync
-    await this.queueSync("update", id, input);
   }
 
   /**
@@ -452,85 +178,88 @@ export class ProductService extends BaseService {
    * @param input - Variant update data
    */
   async updateVariant(variantId: string, input: UpdateVariantInput): Promise<void> {
-    // Build update object with only defined fields
-    const updateData: Record<string, unknown> = {};
-
-    if (input.name !== undefined) {
-      updateData.name = input.name;
-    }
-    if (input.sku !== undefined) {
-      updateData.sku = input.sku ?? null;
-    }
-    if (input.unitQuantity !== undefined) {
-      updateData.unitQuantity = this.normalizeWeightRequired(input.unitQuantity);
-    }
-    if (input.price !== undefined) {
-      updateData.price = this.normalizeCurrency(input.price);
-    }
-    if (input.sortOrder !== undefined) {
-      updateData.sortOrder = input.sortOrder;
-    }
-    if (input.isActive !== undefined) {
-      updateData.isActive = input.isActive;
-    }
-
-    // Always update updatedAt
-    updateData.updatedAt = new Date(this.now());
-
-    if (Object.keys(updateData).length === 1) {
-      return;
-    }
-
-    // Execute update with Drizzle
-    await this.db.update(productVariants).set(updateData).where(eq(productVariants.id, variantId));
-
-    // Update sync status
-    await this.updateSyncStatus("product_variants", variantId, SyncStatus.PENDING);
-
-    // Queue for server sync
-    await this.queueSync("update", variantId, input, undefined, "product_variants");
-  }
-
-  async createVariant(input: CreateVariantInput, syncGroupId?: string): Promise<ProductVariant> {
-    const id = this.generateId();
-    const now = new Date(this.now());
-
-    // Insert into local PGlite using Drizzle
-    const newVariant = {
-      id,
-      productId: input.productId,
-      name: input.name,
-      sku: input.sku ?? null,
-      unitQuantity: this.normalizeWeightRequired(input.unitQuantity),
-      price: this.normalizeCurrency(input.price),
-      sortOrder: input.sortOrder ?? 0,
-      isActive: input.isActive ?? true,
-      syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,
-      createdAt: now,
-      updatedAt: now,
-      businessId: this.businessId,
-    };
-
-    await this.db.insert(productVariants).values(newVariant);
-
-    // Queue for server sync
-    await this.queueSync("create", id, {
-      productId: input.productId,
+    await this.variantsService.update(variantId, {
       name: input.name,
       sku: input.sku,
       unitQuantity: input.unitQuantity,
       price: input.price,
-      sortOrder: input.sortOrder ?? 0,
-      isActive: input.isActive ?? true,
-    }, syncGroupId, "product_variants");
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+    });
+  }
 
-    // Return created variant
-    const result = await this.findVariantById(id);
-    if (!result) {
-      throw new Error("Failed to create variant");
+  /**
+   * Delete a variant (admin only)
+   * Queues sync operation to server
+   * @param variantId - Variant UUID
+   */
+  async deleteVariant(variantId: string): Promise<void> {
+    await this.variantsService.delete(variantId);
+  }
+
+  // ==================== ADMIN CREATE (with auto-variant) ====================
+
+  /**
+   * Create a new product (admin only)
+   * Queues sync operation to server
+   * If hasVariants is false, auto-creates a default variant with the product name
+   * 
+   * Note: We implement create ourselves because the generated CreateProductsInput
+   * doesn't include costPrice field which exists in the database schema.
+   * 
+   * @param input - Product creation data
+   * @returns Created product
+   */
+  async create(input: CreateProductInput): Promise<Product> {
+    const id = this.generateId();
+    const now = new Date(this.now());
+
+    // Insert into local PGlite using Drizzle
+    const entity = {
+      id,
+      businessId: this.businessId,
+      name: input.name,
+      type: input.type ?? "pollo",
+      unit: input.unit ?? "kg",
+      basePrice: input.basePrice,
+      costPrice: input.costPrice ?? "0",
+      isActive: input.isActive ?? true,
+      imageId: input.imageId ?? null,
+      hasVariants: input.hasVariants ?? false,
+      syncStatus: SyncStatus.PENDING,
+      syncAttempts: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await this.db.insert(products).values(entity);
+
+    // Queue for server sync
+    await this.queueSync("create", id, {
+      name: input.name,
+      type: input.type,
+      unit: input.unit,
+      basePrice: input.basePrice,
+      costPrice: input.costPrice,
+      isActive: input.isActive,
+      imageId: input.imageId,
+      hasVariants: input.hasVariants,
+    });
+
+    // If product does NOT have variants, auto-create a default variant so it can be sold
+    if (input.hasVariants === false || input.hasVariants === undefined) {
+      await this.createVariant({
+        productId: id,
+        name: input.name,
+        unitQuantity: "1",
+        price: input.basePrice,
+        isActive: true,
+        sortOrder: 0,
+      });
     }
-    return result;
+
+    // Return the product
+    return (await this.findById(id))!;
   }
 
   // ==================== HELPER METHODS ====================
@@ -541,11 +270,7 @@ export class ProductService extends BaseService {
    * @returns true if product has variants
    */
   private async checkHasVariants(productId: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: sql<number>`COUNT(*)::int` })
-      .from(productVariants)
-      .where(and(eq(productVariants.productId, productId), eq(productVariants.isActive, true)));
-
-    return (result[0]?.count ?? 0) > 0;
+    const variants = await this.getVariants(productId);
+    return variants.length > 0;
   }
 }
