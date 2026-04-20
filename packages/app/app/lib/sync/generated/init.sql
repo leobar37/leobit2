@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS "customers" (
   "notes" TEXT,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "business_id" UUID NOT NULL,
   "created_by" UUID,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
@@ -28,14 +29,14 @@ CREATE TABLE IF NOT EXISTS "products" (
   "type" TEXT NOT NULL DEFAULT 'pollo',
   "unit" TEXT NOT NULL DEFAULT 'kg',
   "base_price" DECIMAL(10, 2) NOT NULL,
-  "cost_price" DECIMAL(10, 2) NOT NULL DEFAULT '0',
   "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
-  "has_variants" BOOLEAN NOT NULL DEFAULT FALSE,
   "image_id" UUID,
-  "sync_status" TEXT NOT NULL DEFAULT 'synced',
-  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "has_variants" BOOLEAN NOT NULL DEFAULT FALSE,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "sync_status" TEXT NOT NULL DEFAULT 'synced',
+  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY ("id")
 );
 
@@ -43,19 +44,45 @@ CREATE INDEX IF NOT EXISTS "idx_products_sync_status" ON "products"(sync_status)
 CREATE INDEX IF NOT EXISTS "idx_products_business_id" ON "products"(business_id);
 CREATE INDEX IF NOT EXISTS "idx_products_image_id" ON "products"("image_id");
 
+CREATE TABLE IF NOT EXISTS "productVariants" (
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "product_id" UUID NOT NULL,
+  "business_id" UUID NOT NULL,
+  "name" VARCHAR(50) NOT NULL,
+  "sku" VARCHAR(50),
+  "unit_quantity" DECIMAL(10, 3) NOT NULL,
+  "price" DECIMAL(10, 2) NOT NULL,
+  "cost_price" DECIMAL(10, 2) NOT NULL DEFAULT '0',
+  "sort_order" INTEGER NOT NULL DEFAULT 0,
+  "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+  "low_stock_threshold" DECIMAL(10, 3) NOT NULL DEFAULT '10',
+  "critical_stock_threshold" DECIMAL(10, 3) NOT NULL DEFAULT '5',
+  "sync_status" TEXT NOT NULL DEFAULT 'synced',
+  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+  PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "idx_productVariants_sync_status" ON "productVariants"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_productVariants_business_id" ON "productVariants"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_productVariants_product_id" ON "productVariants"("product_id");
+
 CREATE TABLE IF NOT EXISTS "suppliers" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
   "name" VARCHAR(255) NOT NULL,
-  "type" TEXT NOT NULL DEFAULT 'generic',
+  "type" TEXT NOT NULL DEFAULT 'regular',
   "ruc" VARCHAR(20),
   "address" TEXT,
-  "phone" VARCHAR(50),
+  "phone" VARCHAR(20),
   "email" VARCHAR(255),
   "notes" TEXT,
   "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
@@ -71,6 +98,7 @@ CREATE TABLE IF NOT EXISTS "tags" (
   "business_id" UUID NOT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
@@ -79,67 +107,80 @@ CREATE TABLE IF NOT EXISTS "tags" (
 CREATE INDEX IF NOT EXISTS "idx_tags_sync_status" ON "tags"(sync_status);
 CREATE INDEX IF NOT EXISTS "idx_tags_business_id" ON "tags"(business_id);
 
-CREATE TABLE IF NOT EXISTS "customer_groups" (
+CREATE TABLE IF NOT EXISTS "customerTags" (
+  "customer_id" UUID NOT NULL,
+  "tag_id" UUID NOT NULL,
+  "assigned_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "assigned_by" UUID,
+  "sync_status" TEXT NOT NULL DEFAULT 'synced',
+  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS "idx_customerTags_sync_status" ON "customerTags"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_customerTags_customer_id" ON "customerTags"("customer_id");
+CREATE INDEX IF NOT EXISTS "idx_customerTags_tag_id" ON "customerTags"("tag_id");
+
+CREATE TABLE IF NOT EXISTS "customerGroups" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "business_id" UUID NOT NULL,
   "name" VARCHAR(100) NOT NULL,
+  "business_id" UUID NOT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_customer_groups_sync_status" ON "customer_groups"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_customer_groups_business_id" ON "customer_groups"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_customerGroups_sync_status" ON "customerGroups"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_customerGroups_business_id" ON "customerGroups"(business_id);
 
-CREATE TABLE IF NOT EXISTS "purchases" (
+CREATE TABLE IF NOT EXISTS "customerGroupMembers" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
-  "supplier_id" UUID,
-  "purchase_date" TIMESTAMP,
-  "total_amount" DECIMAL(12, 2) NOT NULL,
-  "status" TEXT NOT NULL DEFAULT 'draft',
-  "invoice_number" VARCHAR(50),
-  "receipt_image_id" UUID,
-  "notes" TEXT,
+  "group_id" UUID NOT NULL,
+  "customer_id" UUID NOT NULL,
+  "added_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "added_by" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "sync_group_id" VARCHAR(100),
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_purchases_sync_status" ON "purchases"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_purchases_business_id" ON "purchases"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_purchases_supplier_id" ON "purchases"("supplier_id");
-CREATE INDEX IF NOT EXISTS "idx_purchases_receipt_image_id" ON "purchases"("receipt_image_id");
-CREATE INDEX IF NOT EXISTS "idx_purchases_sync_group_id" ON "purchases"("sync_group_id");
+CREATE INDEX IF NOT EXISTS "idx_customerGroupMembers_sync_status" ON "customerGroupMembers"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_customerGroupMembers_business_id" ON "customerGroupMembers"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_customerGroupMembers_group_id" ON "customerGroupMembers"("group_id");
+CREATE INDEX IF NOT EXISTS "idx_customerGroupMembers_customer_id" ON "customerGroupMembers"("customer_id");
 
-CREATE TABLE IF NOT EXISTS "distribuciones" (
+CREATE TABLE IF NOT EXISTS "visitas" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
+  "distribucion_id" UUID NOT NULL,
+  "customer_id" UUID NOT NULL,
   "vendedor_id" UUID NOT NULL,
-  "punto_venta" VARCHAR(100) NOT NULL,
-  "punto_venta_id" UUID,
-  "monto_recaudado" DECIMAL(12, 2) NOT NULL DEFAULT '0',
-  "nota_creacion" TEXT,
-  "nota_cierre" TEXT,
-  "fecha" TIMESTAMP NOT NULL,
-  "estado" TEXT NOT NULL DEFAULT 'activo',
-  "modo" TEXT NOT NULL DEFAULT 'estricto',
+  "status" TEXT NOT NULL DEFAULT 'pendiente',
+  "motivo_no_compra" VARCHAR(255),
+  "sale_id" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_distribuciones_sync_status" ON "distribuciones"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_distribuciones_business_id" ON "distribuciones"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_distribuciones_vendedor_id" ON "distribuciones"("vendedor_id");
-CREATE INDEX IF NOT EXISTS "idx_distribuciones_punto_venta_id" ON "distribuciones"("punto_venta_id");
+CREATE INDEX IF NOT EXISTS "idx_visitas_sync_status" ON "visitas"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_visitas_business_id" ON "visitas"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_visitas_distribucion_id" ON "visitas"("distribucion_id");
+CREATE INDEX IF NOT EXISTS "idx_visitas_customer_id" ON "visitas"("customer_id");
+CREATE INDEX IF NOT EXISTS "idx_visitas_vendedor_id" ON "visitas"("vendedor_id");
+CREATE INDEX IF NOT EXISTS "idx_visitas_sale_id" ON "visitas"("sale_id");
 
 CREATE TABLE IF NOT EXISTS "sales" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -147,6 +188,7 @@ CREATE TABLE IF NOT EXISTS "sales" (
   "customer_id" UUID,
   "seller_id" UUID,
   "distribucion_id" UUID,
+  "visita_id" UUID,
   "type" TEXT NOT NULL DEFAULT 'instant_sale',
   "sale_type" TEXT NOT NULL DEFAULT 'contado',
   "payment_mode" TEXT,
@@ -187,12 +229,13 @@ CREATE INDEX IF NOT EXISTS "idx_sales_business_id" ON "sales"(business_id);
 CREATE INDEX IF NOT EXISTS "idx_sales_customer_id" ON "sales"("customer_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_seller_id" ON "sales"("seller_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_distribucion_id" ON "sales"("distribucion_id");
+CREATE INDEX IF NOT EXISTS "idx_sales_visita_id" ON "sales"("visita_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_sync_group_id" ON "sales"("sync_group_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_advance_proof_image_id" ON "sales"("advance_proof_image_id");
 
-CREATE TABLE IF NOT EXISTS "sale_items" (
+CREATE TABLE IF NOT EXISTS "saleItems" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "business_id" UUID,
+  "business_id" UUID NOT NULL,
   "sale_id" UUID NOT NULL,
   "product_id" UUID NOT NULL,
   "variant_id" UUID NOT NULL,
@@ -205,6 +248,7 @@ CREATE TABLE IF NOT EXISTS "sale_items" (
   "unit_price_quoted" DECIMAL(10, 2),
   "unit_price_final" DECIMAL(10, 2),
   "subtotal" DECIMAL(12, 2) NOT NULL,
+  "cost_price_snapshot" DECIMAL(10, 2),
   "is_modified" BOOLEAN NOT NULL DEFAULT FALSE,
   "original_quantity" DECIMAL(10, 3),
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
@@ -215,61 +259,39 @@ CREATE TABLE IF NOT EXISTS "sale_items" (
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_sale_items_sync_status" ON "sale_items"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_sale_items_business_id" ON "sale_items"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_sale_items_sale_id" ON "sale_items"("sale_id");
-CREATE INDEX IF NOT EXISTS "idx_sale_items_product_id" ON "sale_items"("product_id");
-CREATE INDEX IF NOT EXISTS "idx_sale_items_variant_id" ON "sale_items"("variant_id");
-CREATE INDEX IF NOT EXISTS "idx_sale_items_sync_group_id" ON "sale_items"("sync_group_id");
+CREATE INDEX IF NOT EXISTS "idx_saleItems_sync_status" ON "saleItems"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_saleItems_business_id" ON "saleItems"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_saleItems_sale_id" ON "saleItems"("sale_id");
+CREATE INDEX IF NOT EXISTS "idx_saleItems_product_id" ON "saleItems"("product_id");
+CREATE INDEX IF NOT EXISTS "idx_saleItems_variant_id" ON "saleItems"("variant_id");
+CREATE INDEX IF NOT EXISTS "idx_saleItems_sync_group_id" ON "saleItems"("sync_group_id");
 
-CREATE TABLE IF NOT EXISTS "abonos" (
+CREATE TABLE IF NOT EXISTS "purchases" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "customer_id" UUID NOT NULL,
-  "seller_id" UUID,
   "business_id" UUID NOT NULL,
-  "related_sale_id" UUID,
-  "amount" DECIMAL(12, 2) NOT NULL,
-  "payment_method" TEXT NOT NULL DEFAULT 'efectivo',
-  "reference_number" VARCHAR(50),
-  "proof_image_id" UUID,
+  "supplier_id" UUID,
+  "purchase_date" TIMESTAMP,
+  "total_amount" DECIMAL(12, 2) NOT NULL DEFAULT '0',
+  "status" TEXT NOT NULL DEFAULT 'draft',
+  "invoice_number" VARCHAR(50),
+  "receipt_image_id" UUID,
   "notes" TEXT,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "sync_group_id" VARCHAR(100),
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_abonos_sync_status" ON "abonos"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_abonos_business_id" ON "abonos"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_abonos_customer_id" ON "abonos"("customer_id");
-CREATE INDEX IF NOT EXISTS "idx_abonos_seller_id" ON "abonos"("seller_id");
-CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");
-CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_id");
+CREATE INDEX IF NOT EXISTS "idx_purchases_sync_status" ON "purchases"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_purchases_business_id" ON "purchases"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_purchases_supplier_id" ON "purchases"("supplier_id");
+CREATE INDEX IF NOT EXISTS "idx_purchases_receipt_image_id" ON "purchases"("receipt_image_id");
+CREATE INDEX IF NOT EXISTS "idx_purchases_sync_group_id" ON "purchases"("sync_group_id");
 
-CREATE TABLE IF NOT EXISTS "product_variants" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "product_id" UUID NOT NULL,
-  "business_id" UUID NOT NULL,
-  "name" VARCHAR(50) NOT NULL,
-  "sku" VARCHAR(50),
-  "unit_quantity" DECIMAL(10, 3) NOT NULL,
-  "price" DECIMAL(10, 2) NOT NULL,
-  "cost_price" DECIMAL(10, 2) NOT NULL DEFAULT '0',
-  "sort_order" INTEGER NOT NULL DEFAULT 0,
-  "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
-  "sync_status" TEXT NOT NULL DEFAULT 'synced',
-  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
-  PRIMARY KEY ("id")
-);
-
-CREATE INDEX IF NOT EXISTS "idx_product_variants_sync_status" ON "product_variants"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_product_variants_business_id" ON "product_variants"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_product_variants_product_id" ON "product_variants"("product_id");
-
-CREATE TABLE IF NOT EXISTS "purchase_items" (
+CREATE TABLE IF NOT EXISTS "purchaseItems" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
   "purchase_id" UUID NOT NULL,
@@ -282,87 +304,89 @@ CREATE TABLE IF NOT EXISTS "purchase_items" (
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "sync_group_id" VARCHAR(100),
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_sync_status" ON "purchase_items"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_business_id" ON "purchase_items"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_purchase_id" ON "purchase_items"("purchase_id");
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_product_id" ON "purchase_items"("product_id");
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_variant_id" ON "purchase_items"("variant_id");
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_unit_id" ON "purchase_items"("unit_id");
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_sync_group_id" ON "purchase_items"("sync_group_id");
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_sync_status" ON "purchaseItems"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_business_id" ON "purchaseItems"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_purchase_id" ON "purchaseItems"("purchase_id");
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_product_id" ON "purchaseItems"("product_id");
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_variant_id" ON "purchaseItems"("variant_id");
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_unit_id" ON "purchaseItems"("unit_id");
+CREATE INDEX IF NOT EXISTS "idx_purchaseItems_sync_group_id" ON "purchaseItems"("sync_group_id");
 
-CREATE TABLE IF NOT EXISTS "distribucion_items" (
+CREATE TABLE IF NOT EXISTS "distribuciones" (
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "vendedor_id" UUID NOT NULL,
+  "punto_venta" VARCHAR(100) NOT NULL,
+  "punto_venta_id" UUID,
+  "monto_recaudado" DECIMAL(12, 2) NOT NULL DEFAULT '0',
+  "nota_creacion" TEXT,
+  "nota_cierre" TEXT,
+  "fecha" TIMESTAMP NOT NULL,
+  "estado" TEXT NOT NULL DEFAULT 'activo',
+  "closed_at" TIMESTAMP,
+  "closed_by" UUID,
+  "sync_status" TEXT NOT NULL DEFAULT 'synced',
+  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+  PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "idx_distribuciones_sync_status" ON "distribuciones"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_distribuciones_business_id" ON "distribuciones"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_distribuciones_vendedor_id" ON "distribuciones"("vendedor_id");
+CREATE INDEX IF NOT EXISTS "idx_distribuciones_punto_venta_id" ON "distribuciones"("punto_venta_id");
+
+CREATE TABLE IF NOT EXISTS "distribucionItems" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
   "distribucion_id" UUID NOT NULL,
   "variant_id" UUID NOT NULL,
   "cantidad_asignada" DECIMAL(10, 3) NOT NULL,
   "cantidad_vendida" DECIMAL(10, 3) NOT NULL DEFAULT '0',
-  "unidad" TEXT NOT NULL DEFAULT 'kg',
+  "unidad" VARCHAR(20) NOT NULL DEFAULT 'kg',
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_distribucion_items_sync_status" ON "distribucion_items"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_distribucion_items_business_id" ON "distribucion_items"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_distribucion_items_distribucion_id" ON "distribucion_items"("distribucion_id");
-CREATE INDEX IF NOT EXISTS "idx_distribucion_items_variant_id" ON "distribucion_items"("variant_id");
+CREATE INDEX IF NOT EXISTS "idx_distribucionItems_sync_status" ON "distribucionItems"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_distribucionItems_business_id" ON "distribucionItems"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_distribucionItems_distribucion_id" ON "distribucionItems"("distribucion_id");
+CREATE INDEX IF NOT EXISTS "idx_distribucionItems_variant_id" ON "distribucionItems"("variant_id");
 
-CREATE TABLE IF NOT EXISTS "visitas" (
+CREATE TABLE IF NOT EXISTS "abonos" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "business_id" UUID NOT NULL,
-  "distribucion_id" UUID NOT NULL,
   "customer_id" UUID NOT NULL,
-  "vendedor_id" UUID NOT NULL,
-  "status" TEXT NOT NULL DEFAULT 'pendiente',
-  "motivo_no_compra" VARCHAR(255),
-  "sale_id" UUID,
+  "seller_id" UUID,
+  "amount" DECIMAL(12, 2) NOT NULL,
+  "payment_method" TEXT NOT NULL DEFAULT 'efectivo',
+  "notes" TEXT,
+  "proof_image_id" UUID,
+  "reference_number" VARCHAR(50),
+  "related_sale_id" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY ("id")
 );
 
-CREATE INDEX IF NOT EXISTS "idx_visitas_sync_status" ON "visitas"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_visitas_business_id" ON "visitas"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_visitas_distribucion_id" ON "visitas"("distribucion_id");
-CREATE INDEX IF NOT EXISTS "idx_visitas_customer_id" ON "visitas"("customer_id");
-CREATE INDEX IF NOT EXISTS "idx_visitas_vendedor_id" ON "visitas"("vendedor_id");
-CREATE INDEX IF NOT EXISTS "idx_visitas_sale_id" ON "visitas"("sale_id");
-
-CREATE TABLE IF NOT EXISTS "customer_tags" (
-  "customer_id" UUID NOT NULL,
-  "tag_id" UUID NOT NULL,
-  "assigned_at" TIMESTAMP NOT NULL DEFAULT now(),
-  "assigned_by" UUID,
-  "sync_status" TEXT NOT NULL DEFAULT 'synced',
-  "sync_attempts" INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE INDEX IF NOT EXISTS "idx_customer_tags_sync_status" ON "customer_tags"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_customer_tags_customer_id" ON "customer_tags"("customer_id");
-CREATE INDEX IF NOT EXISTS "idx_customer_tags_tag_id" ON "customer_tags"("tag_id");
-
-CREATE TABLE IF NOT EXISTS "customer_group_members" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "business_id" UUID NOT NULL,
-  "group_id" UUID NOT NULL,
-  "customer_id" UUID NOT NULL,
-  "added_at" TIMESTAMP NOT NULL DEFAULT now(),
-  "added_by" UUID,
-  "sync_status" TEXT NOT NULL DEFAULT 'synced',
-  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY ("id")
-);
-
-CREATE INDEX IF NOT EXISTS "idx_customer_group_members_sync_status" ON "customer_group_members"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_customer_group_members_business_id" ON "customer_group_members"(business_id);
-CREATE INDEX IF NOT EXISTS "idx_customer_group_members_group_id" ON "customer_group_members"("group_id");
-CREATE INDEX IF NOT EXISTS "idx_customer_group_members_customer_id" ON "customer_group_members"("customer_id");
+CREATE INDEX IF NOT EXISTS "idx_abonos_sync_status" ON "abonos"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_abonos_business_id" ON "abonos"(business_id);
+CREATE INDEX IF NOT EXISTS "idx_abonos_customer_id" ON "abonos"("customer_id");
+CREATE INDEX IF NOT EXISTS "idx_abonos_seller_id" ON "abonos"("seller_id");
+CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_id");
+CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");

@@ -10,8 +10,9 @@ export const customersSchema = z.object({
   phone: z.string().nullable(),
   address: z.string().nullable(),
   notes: z.string().nullable(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   businessId: z.string(),
   createdBy: z.string().nullable(),
   createdAt: z.coerce.date(),
@@ -27,8 +28,9 @@ export interface CustomersInput {
   phone?: string;
   address?: string;
   notes?: string;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   businessId: string;
   createdBy?: string;
   createdAt: Date;
@@ -39,17 +41,17 @@ export const productsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   name: z.string(),
-  type: z.string(),
-  unit: z.string(),
+  type: z.enum(["pollo", "huevo", "otro"]),
+  unit: z.enum(["kg", "unidad"]),
   basePrice: z.unknown(),
-  costPrice: z.unknown(),
   isActive: z.boolean(),
-  hasVariants: z.boolean(),
   imageId: z.string().nullable(),
-  syncStatus: z.string(),
-  syncAttempts: z.number(),
+  hasVariants: z.boolean(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
+  syncAttempts: z.number(),
+  version: z.number(),
 });
 
 export type Products = z.infer<typeof productsSchema>;
@@ -58,15 +60,57 @@ export interface ProductsInput {
   id: string;
   businessId: string;
   name: string;
-  type: string;
-  unit: string;
+  type: "pollo" | "huevo" | "otro";
+  unit: "kg" | "unidad";
   basePrice: unknown;
-  costPrice: unknown;
   isActive: boolean;
-  hasVariants: boolean;
   imageId?: string;
-  syncStatus: string;
+  hasVariants: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
+}
+
+export const productVariantsSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  businessId: z.string(),
+  name: z.string(),
+  sku: z.string().nullable(),
+  unitQuantity: z.unknown(),
+  price: z.unknown(),
+  costPrice: z.unknown(),
+  sortOrder: z.number(),
+  isActive: z.boolean(),
+  lowStockThreshold: z.unknown(),
+  criticalStockThreshold: z.unknown(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
+  syncAttempts: z.number(),
+  version: z.number(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type ProductVariants = z.infer<typeof productVariantsSchema>;
+
+export interface ProductVariantsInput {
+  id: string;
+  productId: string;
+  businessId: string;
+  name: string;
+  sku?: string;
+  unitQuantity: unknown;
+  price: unknown;
+  costPrice: unknown;
+  sortOrder: number;
+  isActive: boolean;
+  lowStockThreshold: unknown;
+  criticalStockThreshold: unknown;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,15 +119,16 @@ export const suppliersSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   name: z.string(),
-  type: z.string(),
+  type: z.enum(["generic", "regular", "internal"]),
   ruc: z.string().nullable(),
   address: z.string().nullable(),
   phone: z.string().nullable(),
   email: z.string().nullable(),
   notes: z.string().nullable(),
   isActive: z.boolean(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -94,15 +139,16 @@ export interface SuppliersInput {
   id: string;
   businessId: string;
   name: string;
-  type: string;
+  type: "generic" | "regular" | "internal";
   ruc?: string;
   address?: string;
   phone?: string;
   email?: string;
   notes?: string;
   isActive: boolean;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,8 +158,9 @@ export const tagsSchema = z.object({
   name: z.string(),
   color: z.string(),
   businessId: z.string(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -125,104 +172,123 @@ export interface TagsInput {
   name: string;
   color: string;
   businessId: string;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const customer_groupsSchema = z.object({
-  id: z.string(),
-  businessId: z.string(),
-  name: z.string(),
-  syncStatus: z.string(),
+export const customerTagsSchema = z.object({
+  customerId: z.string(),
+  tagId: z.string(),
+  assignedAt: z.coerce.date(),
+  assignedBy: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type CustomerGroups = z.infer<typeof customer_groupsSchema>;
+export type CustomerTags = z.infer<typeof customerTagsSchema>;
+
+export interface CustomerTagsInput {
+  customerId: string;
+  tagId: string;
+  assignedAt: Date;
+  assignedBy?: string;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const customerGroupsSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  businessId: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
+  syncAttempts: z.number(),
+  version: z.number(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type CustomerGroups = z.infer<typeof customerGroupsSchema>;
 
 export interface CustomerGroupsInput {
   id: string;
-  businessId: string;
   name: string;
-  syncStatus: string;
+  businessId: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const purchasesSchema = z.object({
+export const customerGroupMembersSchema = z.object({
   id: z.string(),
   businessId: z.string(),
-  supplierId: z.string().nullable(),
-  purchaseDate: z.coerce.date().nullable(),
-  totalAmount: z.unknown(),
-  status: z.string(),
-  invoiceNumber: z.string().nullable(),
-  receiptImageId: z.string().nullable(),
-  notes: z.string().nullable(),
-  syncStatus: z.string(),
+  groupId: z.string(),
+  customerId: z.string(),
+  addedAt: z.coerce.date(),
+  addedBy: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
-  syncGroupId: z.string().nullable(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type Purchases = z.infer<typeof purchasesSchema>;
+export type CustomerGroupMembers = z.infer<typeof customerGroupMembersSchema>;
 
-export interface PurchasesInput {
+export interface CustomerGroupMembersInput {
   id: string;
   businessId: string;
-  supplierId?: string;
-  purchaseDate?: Date;
-  totalAmount: unknown;
-  status: string;
-  invoiceNumber?: string;
-  receiptImageId?: string;
-  notes?: string;
-  syncStatus: string;
+  groupId: string;
+  customerId: string;
+  addedAt: Date;
+  addedBy?: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId?: string;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const distribucionesSchema = z.object({
+export const visitasSchema = z.object({
   id: z.string(),
   businessId: z.string(),
+  distribucionId: z.string(),
+  customerId: z.string(),
   vendedorId: z.string(),
-  puntoVenta: z.string(),
-  puntoVentaId: z.string().nullable(),
-  montoRecaudado: z.unknown(),
-  notaCreacion: z.string().nullable(),
-  notaCierre: z.string().nullable(),
-  fecha: z.coerce.date(),
-  estado: z.string(),
-  modo: z.string(),
-  syncStatus: z.string(),
+  status: z.enum(["pendiente", "compro", "no_compra"]),
+  motivoNoCompra: z.string().nullable(),
+  saleId: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type Distribuciones = z.infer<typeof distribucionesSchema>;
+export type Visitas = z.infer<typeof visitasSchema>;
 
-export interface DistribucionesInput {
+export interface VisitasInput {
   id: string;
   businessId: string;
+  distribucionId: string;
+  customerId: string;
   vendedorId: string;
-  puntoVenta: string;
-  puntoVentaId?: string;
-  montoRecaudado: unknown;
-  notaCreacion?: string;
-  notaCierre?: string;
-  fecha: Date;
-  estado: string;
-  modo: string;
-  syncStatus: string;
+  status: "pendiente" | "compro" | "no_compra";
+  motivoNoCompra?: string;
+  saleId?: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -233,9 +299,10 @@ export const salesSchema = z.object({
   customerId: z.string().nullable(),
   sellerId: z.string().nullable(),
   distribucionId: z.string().nullable(),
-  type: z.string(),
-  saleType: z.string(),
-  paymentMode: z.string().nullable(),
+  visitaId: z.string().nullable(),
+  type: z.enum(["instant_sale", "pre_order"]),
+  saleType: z.enum(["contado", "credito"]),
+  paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).nullable(),
   totalAmount: z.unknown(),
   amountPaid: z.unknown(),
   balanceDue: z.unknown(),
@@ -244,12 +311,12 @@ export const salesSchema = z.object({
   saleDate: z.coerce.date(),
   deliveryDate: z.coerce.date().nullable(),
   orderDate: z.coerce.date().nullable(),
-  status: z.string(),
+  status: z.enum(["draft", "confirmed", "active", "delivered", "cancelled"]),
   version: z.number(),
   confirmedSnapshot: z.record(z.unknown()).nullable(),
   deliveredSnapshot: z.record(z.unknown()).nullable(),
   allowCustomerEdit: z.boolean(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
   cancelledAt: z.coerce.date().nullable(),
@@ -257,7 +324,7 @@ export const salesSchema = z.object({
   cancelReason: z.string().nullable(),
   refundAmount: z.unknown().nullable(),
   refundDate: z.coerce.date().nullable(),
-  refundMethod: z.string().nullable(),
+  refundMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]).nullable(),
   refundReference: z.string().nullable(),
   refundNotes: z.string().nullable(),
   advancePaymentMethod: z.string().nullable(),
@@ -275,9 +342,10 @@ export interface SalesInput {
   customerId?: string;
   sellerId?: string;
   distribucionId?: string;
-  type: string;
-  saleType: string;
-  paymentMode?: string;
+  visitaId?: string;
+  type: "instant_sale" | "pre_order";
+  saleType: "contado" | "credito";
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
   totalAmount: unknown;
   amountPaid: unknown;
   balanceDue: unknown;
@@ -286,12 +354,12 @@ export interface SalesInput {
   saleDate: Date;
   deliveryDate?: Date;
   orderDate?: Date;
-  status: string;
+  status: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
   version: number;
   confirmedSnapshot?: Record<string, unknown>;
   deliveredSnapshot?: Record<string, unknown>;
   allowCustomerEdit: boolean;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
   cancelledAt?: Date;
@@ -299,7 +367,7 @@ export interface SalesInput {
   cancelReason?: string;
   refundAmount?: unknown;
   refundDate?: Date;
-  refundMethod?: string;
+  refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
   refundReference?: string;
   refundNotes?: string;
   advancePaymentMethod?: string;
@@ -309,9 +377,9 @@ export interface SalesInput {
   updatedAt: Date;
 }
 
-export const sale_itemsSchema = z.object({
+export const saleItemsSchema = z.object({
   id: z.string(),
-  businessId: z.string().nullable(),
+  businessId: z.string(),
   saleId: z.string(),
   productId: z.string(),
   variantId: z.string(),
@@ -324,20 +392,21 @@ export const sale_itemsSchema = z.object({
   unitPriceQuoted: z.unknown().nullable(),
   unitPriceFinal: z.unknown().nullable(),
   subtotal: z.unknown(),
+  costPriceSnapshot: z.unknown().nullable(),
   isModified: z.boolean(),
   originalQuantity: z.unknown().nullable(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type SaleItems = z.infer<typeof sale_itemsSchema>;
+export type SaleItems = z.infer<typeof saleItemsSchema>;
 
 export interface SaleItemsInput {
   id: string;
-  businessId?: string;
+  businessId: string;
   saleId: string;
   productId: string;
   variantId: string;
@@ -350,88 +419,55 @@ export interface SaleItemsInput {
   unitPriceQuoted?: unknown;
   unitPriceFinal?: unknown;
   subtotal: unknown;
+  costPriceSnapshot?: unknown;
   isModified: boolean;
   originalQuantity?: unknown;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const abonosSchema = z.object({
+export const purchasesSchema = z.object({
   id: z.string(),
-  customerId: z.string(),
-  sellerId: z.string().nullable(),
   businessId: z.string(),
-  relatedSaleId: z.string().nullable(),
-  amount: z.unknown(),
-  paymentMethod: z.string(),
-  referenceNumber: z.string().nullable(),
-  proofImageId: z.string().nullable(),
+  supplierId: z.string().nullable(),
+  purchaseDate: z.coerce.date().nullable(),
+  totalAmount: z.unknown(),
+  status: z.enum(["draft", "pending", "received", "cancelled"]),
+  invoiceNumber: z.string().nullable(),
+  receiptImageId: z.string().nullable(),
   notes: z.string().nullable(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  syncGroupId: z.string().nullable(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type Abonos = z.infer<typeof abonosSchema>;
+export type Purchases = z.infer<typeof purchasesSchema>;
 
-export interface AbonosInput {
+export interface PurchasesInput {
   id: string;
-  customerId: string;
-  sellerId?: string;
   businessId: string;
-  relatedSaleId?: string;
-  amount: unknown;
-  paymentMethod: string;
-  referenceNumber?: string;
-  proofImageId?: string;
+  supplierId?: string;
+  purchaseDate?: Date;
+  totalAmount: unknown;
+  status: "draft" | "pending" | "received" | "cancelled";
+  invoiceNumber?: string;
+  receiptImageId?: string;
   notes?: string;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  syncGroupId?: string;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const product_variantsSchema = z.object({
-  id: z.string(),
-  productId: z.string(),
-  businessId: z.string(),
-  name: z.string(),
-  sku: z.string().nullable(),
-  unitQuantity: z.unknown(),
-  price: z.unknown(),
-  costPrice: z.unknown(),
-  sortOrder: z.number(),
-  isActive: z.boolean(),
-  syncStatus: z.string(),
-  syncAttempts: z.number(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-
-export type ProductVariants = z.infer<typeof product_variantsSchema>;
-
-export interface ProductVariantsInput {
-  id: string;
-  productId: string;
-  businessId: string;
-  name: string;
-  sku?: string;
-  unitQuantity: unknown;
-  price: unknown;
-  costPrice: unknown;
-  sortOrder: number;
-  isActive: boolean;
-  syncStatus: string;
-  syncAttempts: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export const purchase_itemsSchema = z.object({
+export const purchaseItemsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   purchaseId: z.string(),
@@ -441,13 +477,15 @@ export const purchase_itemsSchema = z.object({
   quantity: z.unknown(),
   unitCost: z.unknown(),
   totalCost: z.unknown(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
+  version: z.number(),
   createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
-export type PurchaseItems = z.infer<typeof purchase_itemsSchema>;
+export type PurchaseItems = z.infer<typeof purchaseItemsSchema>;
 
 export interface PurchaseItemsInput {
   id: string;
@@ -459,13 +497,57 @@ export interface PurchaseItemsInput {
   quantity: unknown;
   unitCost: unknown;
   totalCost: unknown;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
+  version: number;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export const distribucion_itemsSchema = z.object({
+export const distribucionesSchema = z.object({
+  id: z.string(),
+  businessId: z.string(),
+  vendedorId: z.string(),
+  puntoVenta: z.string(),
+  puntoVentaId: z.string().nullable(),
+  montoRecaudado: z.unknown(),
+  notaCreacion: z.string().nullable(),
+  notaCierre: z.string().nullable(),
+  fecha: z.coerce.date(),
+  estado: z.enum(["activo", "cerrado", "en_ruta"]),
+  closedAt: z.coerce.date().nullable(),
+  closedBy: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
+  syncAttempts: z.number(),
+  version: z.number(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type Distribuciones = z.infer<typeof distribucionesSchema>;
+
+export interface DistribucionesInput {
+  id: string;
+  businessId: string;
+  vendedorId: string;
+  puntoVenta: string;
+  puntoVentaId?: string;
+  montoRecaudado: unknown;
+  notaCreacion?: string;
+  notaCierre?: string;
+  fecha: Date;
+  estado: "activo" | "cerrado" | "en_ruta";
+  closedAt?: Date;
+  closedBy?: string;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const distribucionItemsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   distribucionId: z.string(),
@@ -473,13 +555,14 @@ export const distribucion_itemsSchema = z.object({
   cantidadAsignada: z.unknown(),
   cantidadVendida: z.unknown(),
   unidad: z.string(),
-  syncStatus: z.string(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type DistribucionItems = z.infer<typeof distribucion_itemsSchema>;
+export type DistribucionItems = z.infer<typeof distribucionItemsSchema>;
 
 export interface DistribucionItemsInput {
   id: string;
@@ -489,84 +572,47 @@ export interface DistribucionItemsInput {
   cantidadAsignada: unknown;
   cantidadVendida: unknown;
   unidad: string;
-  syncStatus: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const visitasSchema = z.object({
+export const abonosSchema = z.object({
   id: z.string(),
   businessId: z.string(),
-  distribucionId: z.string(),
   customerId: z.string(),
-  vendedorId: z.string(),
-  status: z.string(),
-  motivoNoCompra: z.string().nullable(),
-  saleId: z.string().nullable(),
-  syncStatus: z.string(),
+  sellerId: z.string().nullable(),
+  amount: z.unknown(),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta", "saldo"]),
+  notes: z.string().nullable(),
+  proofImageId: z.string().nullable(),
+  referenceNumber: z.string().nullable(),
+  relatedSaleId: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
+  version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export type Visitas = z.infer<typeof visitasSchema>;
+export type Abonos = z.infer<typeof abonosSchema>;
 
-export interface VisitasInput {
+export interface AbonosInput {
   id: string;
   businessId: string;
-  distribucionId: string;
   customerId: string;
-  vendedorId: string;
-  status: string;
-  motivoNoCompra?: string;
-  saleId?: string;
-  syncStatus: string;
+  sellerId?: string;
+  amount: unknown;
+  paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
+  notes?: string;
+  proofImageId?: string;
+  referenceNumber?: string;
+  relatedSaleId?: string;
+  syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export const customer_tagsSchema = z.object({
-  customerId: z.string(),
-  tagId: z.string(),
-  assignedAt: z.coerce.date(),
-  assignedBy: z.string().nullable(),
-  syncStatus: z.string(),
-  syncAttempts: z.number(),
-});
-
-export type CustomerTags = z.infer<typeof customer_tagsSchema>;
-
-export interface CustomerTagsInput {
-  customerId: string;
-  tagId: string;
-  assignedAt: Date;
-  assignedBy?: string;
-  syncStatus: string;
-  syncAttempts: number;
-}
-
-export const customer_group_membersSchema = z.object({
-  id: z.string(),
-  businessId: z.string(),
-  groupId: z.string(),
-  customerId: z.string(),
-  addedAt: z.coerce.date(),
-  addedBy: z.string().nullable(),
-  syncStatus: z.string(),
-  syncAttempts: z.number(),
-});
-
-export type CustomerGroupMembers = z.infer<typeof customer_group_membersSchema>;
-
-export interface CustomerGroupMembersInput {
-  id: string;
-  businessId: string;
-  groupId: string;
-  customerId: string;
-  addedAt: Date;
-  addedBy?: string;
-  syncStatus: string;
-  syncAttempts: number;
 }

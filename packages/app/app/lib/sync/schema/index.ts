@@ -60,7 +60,7 @@ import {
 
 // Import generated entity DDL
 // The init.sql file contains all entity CREATE TABLE and CREATE INDEX statements
-import GENERATED_ENTITY_SCHEMA from "../db/generated/init.sql?raw";
+import GENERATED_ENTITY_SCHEMA from "../generated/init.sql?raw";
 
 /**
  * Combined full schema SQL (all CREATE TABLE + ALTER + INDEX)

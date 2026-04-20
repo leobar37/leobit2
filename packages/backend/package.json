@@ -13,9 +13,10 @@
   "scripts": {
     "dev": "bun run --watch --no-clear-screen src/index.ts",
     "build": "bun build src/index.ts --outdir ./dist --target bun",
-    "sync:generate": "cd ../drizzle-sync && bun run build && bun ./dist/cli.js generate --config ../backend/src/sync.config.ts --output ../app/app/lib/db/generated",
+    "typecheck": "tsc --noEmit",
+    "sync:generate": "cd ../drizzle-sync && bun run build && bun ./dist/cli.js generate --config ../backend/src/sync.config.ts --output ../app/app/lib/sync/generated",
     "sync:validate": "cd ../drizzle-sync && bun run build && bun ./dist/cli.js validate --config ../backend/src/sync.config.ts",
-    "sync:clean": "cd ../drizzle-sync && bun ./dist/cli.js clean --output ../app/app/lib/db/generated",
+    "sync:clean": "cd ../drizzle-sync && bun ./dist/cli.js clean --output ../app/app/lib/sync/generated",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
