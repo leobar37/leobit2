@@ -1,32 +1,45 @@
 # Environment
 
+**What belongs here:** Required env vars, external dependencies, setup notes.
+**What does NOT belong here:** Service ports/commands (use `.factory/services.yaml`).
+
+---
+
 ## Environment Variables
 
 ### Backend (`packages/backend/.env`)
-- `DATABASE_URL` — PostgreSQL connection string
-- `BETTER_AUTH_SECRET` — JWT secret for auth
-- `PORT` — API server port (default: 3100)
+```bash
+DATABASE_URL=postgresql://... (Neon DB)
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:3000
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=...
+S3_BUCKET_NAME=...
+```
 
-### Frontend (`packages/app/.env`)
-- `VITE_API_URL` — Backend API URL
-- No additional env vars needed for sync
-
-### Test
-- `DATABASE_URL` must contain "test" for backend E2E tests
-- `.env.test` loaded by `packages/backend/tests/e2e/setup.ts`
+### App (`packages/app/.env`)
+```bash
+VITE_API_URL=http://localhost:3000
+```
 
 ## External Dependencies
-- PostgreSQL (Neon or local) — required for backend
-- Bun 1.1.38+ — runtime
-- Node.js — not required (Bun is primary)
 
-## Dependency Quirks
-- `drizzle-sync` must be built before backend/app can import it
-- `shared` must be built before other packages
-- PGlite is a peer dependency (optional) — only needed for frontend
-- React is a peer dependency (optional) — only needed for frontend hooks
+| Service | Purpose | Notes |
+|---------|---------|-------|
+| Neon PostgreSQL | Production database | URL in env, NOT used for E2E tests |
+| AWS S3 | File storage | For image uploads |
+| Redis | Cache/queue | Port 6379, belongs to another project — DO NOT TOUCH |
+
+## Local Development Notes
+
+- **No Docker available:** Cannot run PostgreSQL locally. Use unit tests with mocks.
+- **No E2E against Neon:** Too heavy. Validation via unit tests + typecheck only.
+- **Bun runtime:** All commands use `bun`, not `npm` or `yarn`.
+- **Workspace packages:** `@avileo/shared`, `@avileo/drizzle-sync`, `@avileo/backend`, `@avileo/app`
 
 ## Platform Notes
-- macOS development environment
-- Docker available but not required (PostgreSQL can be local)
-- No Redis needed for this mission
+
+- macOS 25.2.0 (Darwin)
+- 12 CPU cores, 24 GB RAM
+- Memory pressure observed (compressor active) — monitor during heavy operations

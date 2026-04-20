@@ -1,71 +1,98 @@
 ---
 name: frontend-migrate-worker
-description: Migrate manual frontend code to generated versions
+description: Migrate frontend PGlite services from manual implementation to extend generated BaseService subclasses.
 ---
 
 # Frontend Migrate Worker
 
 ## When to Use This Skill
 
-Features that replace manual frontend services/hooks with generated versions from drizzle-sync. This worker handles the migration of existing code to use generated equivalents.
+Use this skill for features in Milestones 3-5 (Service Migration) that involve:
+- Migrating manual services to extend generated services
+- Preserving custom business logic as overrides
+- Maintaining backward compatible type exports
+- Replacing syncGroupId with FK references
 
 ## Required Skills
 
-- `avileo` - For project-specific context about service patterns
+- `avileo` — For project-specific context
+- `avileo-sync` — For sync architecture and offline-first patterns
+- `frontend` — For React/TypeScript patterns
 
 ## Work Procedure
 
-1. **Generate the code** - Run the generator to produce the new service/hook files:
-   ```bash
-   cd packages/drizzle-sync && bun run generate
-   ```
-   Or use the generator programmatically if a script exists.
+1. **Read the current manual service**
+   - Read the full service file
+   - Identify: entity type, prefix, CRUD methods, custom methods, sync patterns
+   - Note all methods that use generateSyncGroup() — these need FK replacement
 
-2. **Compare manual vs generated** - Read the manual file (e.g., `tag-service.ts`) and the generated file side by side. Identify:
-   - Methods that match exactly (can be replaced)
-   - Methods that differ (need custom extension)
-   - Methods in manual that don't exist in generated (custom business logic)
+2. **Read the generated base service**
+   - Read the corresponding generated service from lib/sync/generated/services.ts
+   - Understand what CRUD is already provided
+   - Check type signatures for compatibility
 
-3. **Decide migration strategy**:
-   - **Full replace**: If generated matches manual exactly, replace the file
-   - **Re-export**: If generated is in `lib/sync/generated/`, make manual file re-export
-   - **Extend**: If manual has custom methods, create a class that extends the generated one
+3. **Plan the migration**
+   - Determine which methods can be inherited (no override needed)
+   - Determine which methods need override (custom search, enriched types)
+   - Determine which methods are entirely custom (state machine, atomic ops)
+   - Plan FK reference replacements for all syncGroupId usage
 
-4. **Implement migration**:
-   - For full replace: delete manual, update imports
-   - For re-export: `export { GeneratedService as ManualService } from "../sync/generated/services"`
-   - For extend: `class CustomService extends GeneratedService { customMethods() }`
+4. **Implement the migration**
+   - Change class declaration to extend generated service
+   - Re-export types for backward compatibility
+   - Remove methods that are now inherited
+   - Override methods that need custom behavior
+   - Replace generateSyncGroup() with createId() + FK references
+   - Ensure queueSync calls use correct entity types
 
-5. **Verify compilation**:
-   ```bash
-   cd packages/app && bun run typecheck
-   ```
+5. **Verify compilation**
+   - Run `bun run typecheck` in packages/app
+   - Fix type conflicts (especially with enriched return types)
+   - Ensure all imports resolve
 
-6. **Run tests**:
-   ```bash
-   cd packages/app && bun test
-   ```
+6. **Write tests**
+   - Test custom methods (search, state machine, atomic ops)
+   - Test that inherited CRUD still works
+   - Test sync queue behavior (operations queued correctly)
 
-7. **Check for import regressions**:
-   - Search for imports of the old manual service
-   - Ensure they still resolve
+7. **Run tests**
+   - Run `bun test --run` for the service
+   - Fix any failures
+   - Document pre-existing failures
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Migrated TagService from manual to generated version. Generated service matches manual API. Preserved getCustomerCount as extension. TypeScript compiles, no test regressions.",
-  "whatWasImplemented": "Generated TagService using service generator. Created packages/app/app/lib/services/tag-service.ts as a thin wrapper that extends the generated service and adds getCustomerCount(). Updated all imports. Verified compilation and tests.",
+  "salientSummary": "Migrated CustomerService to extend CustomersService generated class. Preserved custom search with tag/group filtering and pagination. Replaced syncGroupId with FK references. All tests pass.",
+  "whatWasImplemented": "Changed CustomerService to extend CustomersService from ~/lib/sync/generated/services. Removed inherited CRUD methods (findById, create, update, delete). Overrode findByBusiness() to add search parameter with tag/group filtering. Added pagination methods. Re-exported CreateCustomerInput for backward compatibility. Replaced 3 syncGroupId usages with FK references.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "0 errors" },
-      { "command": "cd packages/app && bun test", "exitCode": 0, "observation": "All tests pass, no new failures" }
+      {
+        "command": "cd packages/app && bun run typecheck",
+        "exitCode": 0,
+        "observation": "No type errors in customer-service.ts"
+      },
+      {
+        "command": "cd packages/app && bun test --run customer-service",
+        "exitCode": 0,
+        "observation": "All 5 tests pass"
+      }
     ],
     "interactiveChecks": []
   },
   "tests": {
-    "added": []
+    "added": [
+      {
+        "file": "packages/app/app/lib/services/customer-service.test.ts",
+        "cases": [
+          {"name": "search filters by tag", "verifies": "VAL-3-002"},
+          {"name": "pagination returns correct page", "verifies": "VAL-3-002"},
+          {"name": "create queues sync operation", "verifies": "VAL-3-001"}
+        ]
+      }
+    ]
   },
   "discoveredIssues": []
 }
@@ -73,7 +100,8 @@ Features that replace manual frontend services/hooks with generated versions fro
 
 ## When to Return to Orchestrator
 
-- Generated service doesn't match manual API surface
-- Custom methods are too complex to extend
-- Import paths would break across many files
-- Type compilation fails with errors in unrelated code
+- Generated base service has incompatible type signatures
+- Custom methods conflict with inherited methods
+- State machine logic cannot be cleanly separated from CRUD
+- FK reference pattern doesn't work for the service's use case
+- Need to modify BaseService or generated code to support the migration

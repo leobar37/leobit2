@@ -1,75 +1,73 @@
 ---
 name: sync-fix-worker
-description: Fixes offline/sync bugs in frontend services, backend handlers, and config files
+description: Fix sync infrastructure issues, build failures, type errors, and test failures in the Avileo project.
 ---
 
 # Sync Fix Worker
 
-NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the WORK PROCEDURE.
-
 ## When to Use This Skill
 
-Use this worker for features that fix bugs in:
-- Frontend entity services (packages/app/app/lib/services/)
-- Frontend sync configuration (packages/app/app/lib/sync/)
-- Frontend PGlite schema (packages/app/app/engine/)
-- Backend sync handlers (packages/backend/src/services/sync/handlers/)
-- Backend API routes (packages/backend/src/api/)
-- Backend services (packages/backend/src/services/)
+Use this skill for features in Milestone 0 (Stabilization) that involve:
+- Fixing generator output paths
+- Fixing build failures
+- Fixing TypeScript type errors
+- Fixing test failures
+- Adding missing scripts (typecheck)
+
+## Required Skills
+
+- `avileo` — For project-specific context and conventions
+- `avileo-sync` — For sync engine patterns and offline-first architecture
 
 ## Work Procedure
 
-1. **Read the feature description carefully.** Understand what assertion IDs this feature fulfills and what the expected behavior is.
+1. **Investigate the problem**
+   - Read the relevant files to understand the current state
+   - Identify the root cause (path mismatch, missing import, type conflict, etc.)
+   - Check AGENTS.md for conventions
 
-2. **Read the affected files.** Before making any changes, read all files mentioned in the feature description and preconditions. Understand the current code structure and patterns.
+2. **Plan the fix**
+   - Determine minimal changes needed
+   - Ensure backward compatibility
+   - Check for ripple effects (other files that import the changed code)
 
-3. **Write tests first (if applicable).** If there are existing test files for the module being changed, add test cases FIRST that verify the expected behavior. Run them to confirm they fail (red). If no test infrastructure exists for that specific module, skip to step 4.
+3. **Implement the fix**
+   - Make changes following existing code style
+   - Add comments in English only
+   - Do not modify off-limits areas (backend API routes, DB schema, auth)
 
-4. **Implement the fix.** Make the minimum changes needed to fix the bug. Follow existing code patterns:
-   - Frontend services: Follow BaseService patterns, use `this.businessId`, `this.pg`, `this.queueSync()`
-   - Backend handlers: Follow BaseSyncHandler patterns, use `operation.entityId`, `ctx`
-   - Config files: Follow existing array/object patterns
-   - ALWAYS use English comments only
-   - ALWAYS match existing code style (indentation, naming, imports)
+4. **Verify the fix**
+   - Run the relevant validation command (build, typecheck, test)
+   - If fixing a path: run `bun run sync:generate` then `bun run build`
+   - If fixing types: run `bun run typecheck`
+   - If fixing tests: run `bun test --run`
+   - Document any pre-existing failures that remain
 
-5. **Run tests (green).** Run the tests from step 3 to confirm they pass. Also run existing tests to check for regressions:
-   - `cd packages/app && bun run test --run` for frontend changes
-   - `cd packages/backend && bun run test --run` for backend changes
-
-6. **Run typecheck.** For frontend changes: `cd packages/app && bun run typecheck`. Fix any type errors introduced.
-
-7. **Run build.** `bun run build` at repo root. Fix any build errors.
-
-8. **Verify manually via code inspection.** Re-read the changed files and confirm:
-   - The fix addresses the exact issue described
-   - No unintended side effects
-   - The code follows project conventions (RequestContext first param, businessId filtering, etc.)
-
-## Key References
-
-- Sync service: `packages/app/app/lib/sync/sync-service.ts`
-- Shape config: `packages/app/app/lib/sync/shape-config.ts`
-- PGlite tables: `packages/app/app/engine/db.ts`
-- Base service: `packages/app/app/lib/services/base-service.ts`
-- Backend sync handlers: `packages/backend/src/services/sync/handlers/`
-- Backend sync schemas: `packages/backend/src/services/sync/schemas/index.ts`
+5. **Check for regressions**
+   - Run the full validation suite for the affected package
+   - Ensure no new failures introduced
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Fixed abono sync payload casing mismatch: changed PaymentService.create() to use camelCase keys (customerId, paymentMethod) matching backend abonoCreateSchema. Ran typecheck (pass) and existing tests (3 passing, 0 failing). Code inspection confirms payload matches schema.",
-  "whatWasImplemented": "Changed PaymentService.create() sync payload from snake_case (customer_id, payment_method, seller_id, proof_image_id, reference_number, related_sale_id) to camelCase (customerId, paymentMethod, sellerId, proofImageId, referenceNumber, relatedSaleId) to match backend abonoCreateSchema validation. Also updated the sync payload structure to be consistent with other entity services.",
+  "salientSummary": "Fixed generator output path by updating backend/package.json sync:generate script to output to lib/sync/generated/. Removed duplicate lib/db/generated/ directory. App now builds successfully.",
+  "whatWasImplemented": "Updated packages/backend/package.json sync:generate script output path from ../app/app/lib/db/generated to ../app/app/lib/sync/generated. Removed stale lib/db/generated/ directory. Updated app/lib/sync/schema/index.ts import path to match.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      {"command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "No type errors"},
-      {"command": "cd packages/app && bun run test --run", "exitCode": 0, "observation": "3 test suites, 12 tests passing, 0 failures"},
-      {"command": "bun run build", "exitCode": 0, "observation": "Build succeeded for all packages"}
+      {
+        "command": "cd packages/backend && bun run sync:generate",
+        "exitCode": 0,
+        "observation": "Generated 6 files in lib/sync/generated/"
+      },
+      {
+        "command": "bun run build",
+        "exitCode": 0,
+        "observation": "All 4 packages built successfully"
+      }
     ],
-    "interactiveChecks": [
-      {"action": "Code inspection of payment-service.ts queueSync call", "observed": "All keys are now camelCase: customerId, sellerId, amount, paymentMethod, notes, referenceNumber, relatedSaleId. Matches abonoCreateSchema field names exactly."}
-    ]
+    "interactiveChecks": []
   },
   "tests": {
     "added": []
@@ -80,8 +78,7 @@ Use this worker for features that fix bugs in:
 
 ## When to Return to Orchestrator
 
-- A fix requires changing the sync engine framework itself (SyncEngine.ts, SyncPipeline.ts) — these are off-limits
-- A fix requires database schema migration (Drizzle migration files)
-- The feature depends on another feature that hasn't been implemented yet
-- Existing tests fail for reasons unrelated to the current fix
-- The bug described in the feature doesn't match what you see in the code
+- Fix requires modifying off-limits areas (backend API, DB schema, auth)
+- Fix reveals deeper architectural issues
+- Fix introduces cascading changes across many files
+- Type errors are caused by missing generated code that needs generator fixes first

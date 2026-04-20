@@ -1,64 +1,125 @@
-# Architecture
+# Architecture - Avileo Sync Core Integration
 
-## How the System Works
+**What belongs here:** How the sync system works — components, relationships, data flows, invariants.
+**What does NOT belong here:** Service ports/commands (use `.factory/services.yaml`), env vars (use `environment.md`).
 
-### Monorepo Structure
+---
+
+## Sync Architecture Overview
+
 ```
-packages/
-├── app/              # React Router v7 frontend (SPA)
-├── backend/          # ElysiaJS API server
-├── shared/           # Shared types, enums, sync config
-└── drizzle-sync/     # Sync library (server + client + generators)
+Backend Schema (Drizzle)
+    ↓
+sync.config.ts (entity definitions)
+    ↓
+drizzle-sync generate (CLI)
+    ↓
+Generated Code (services.ts, hooks.ts, schemas.ts, init.sql, applier.ts, types.ts)
+    ↓
+Frontend Services (extend generated BaseService subclasses)
+    ↓
+PGlite (local DB) + Sync Queue
+    ↓
+REST API (/sync/batch, /sync/changes)
+    ↓
+Backend SyncEngine (OperationSorter → Handlers → DB)
 ```
 
-### Sync Architecture
-- **Local DB**: PGlite (PostgreSQL in WASM) on device
-- **Push**: Client enqueues operations → batch POST to `/sync/batch`
-- **Pull**: 3-stage strategy (CRITICAL → RECENT_SALES → HISTORICAL)
-- **Handlers**: Entity-specific handlers extend BaseSyncHandler
-- **Conflict Resolution**: Version-based with admin UI
+## Key Components
 
-### Backend Sync Flow
-1. `SyncService.processBatch(ctx, operations)` receives operations
-2. `SyncEngine` sorts by priority, manages transaction + savepoints
-3. `SyncPipeline` (as middleware) validates structure → business rules → executes
-4. `BaseSyncHandler` implementations perform CRUD via repositories
-5. Conflict resolver checks version conflicts before execution
-6. Results returned with success/failure/conflict status
+### 1. Drizzle-Sync Library (`packages/drizzle-sync/`)
 
-### Frontend Sync Flow
-1. User creates/updates/deletes entity via service method
-2. Service writes to PGlite and queues sync operation
-3. `SyncService` (frontend) batches pending operations
-4. `PushService` sends batch to backend when online
-5. Backend processes and returns results
-6. `PullService` fetches server changes and applies via `ChangeApplier`
-7. Query caches invalidated, UI updates reactively
+Reusable library with subpath exports:
+- `core/` — Shared types, interfaces, events
+- `shared/` — Constants, priority logic, backoff
+- `pglite/` — PGlite change applier, pull service, sync queue
+- `server/` — SyncEngine, BaseSyncHandler, OperationSorter, ConflictResolver
+- `react/` — React hooks and context
+- `config/` — Generator CLI, introspection, code generators
+- `presets/` — Pre-built configs (avileo.ts)
 
-### Code Generation
-- `drizzle-sync generate` introspects Drizzle schema
-- Produces: Zod schemas, PostgreSQL DDL, applier config, hooks, services, types
-- Frontend uses generated code instead of manual implementations
+### 2. Code Generation Pipeline
 
-## Data Flow
 ```
-Drizzle Schema (backend)
+Backend Drizzle Tables → introspectTable() → ColumnMetadata[]
     ↓
-Introspection (drizzle-sync)
+EntitySyncConfig (sync.config.ts) + RelationGraph
     ↓
-Generated: DDL → PGlite tables
-Generated: Zod → validation
-Generated: Services → CRUD + sync queue
-Generated: Hooks → TanStack Query
+Generators:
+  - service-generator.ts → BaseService subclasses
+  - hooks-generator.ts → TanStack Query hooks
+  - zod-generator.ts → Zod schemas
+  - postgres-ddl-generator.ts → PGlite DDL
+  - applier-generator.ts → Change applier config
+```
+
+### 3. Frontend Service Layer
+
+**Pattern:** Thin wrapper extending generated service
+
+```typescript
+// Generated (by drizzle-sync)
+class CustomersService extends BaseService {
+  async findById(id: string) → Customer | null
+  async findByBusiness() → Customer[]
+  async create(input: CreateCustomersInput) → Customer
+  async update(id: string, input: UpdateCustomersInput) → void
+  async delete(id: string) → void
+}
+
+// Manual (thin wrapper)
+class CustomerService extends CustomersService {
+  async findByBusiness(search?: string) → Customer[]  // override with search
+  async searchByTag(tagId: string) → Customer[]       // custom method
+}
+```
+
+### 4. Sync Data Flow (New Architecture - FK-based)
+
+```
+React Component → Service.createWithItems(data, items)
     ↓
-Frontend uses generated hooks/services
+Parent ID generated: const saleId = createId()
     ↓
-PGlite (local) ←→ Sync Queue ←→ Backend API
+queueSync("create", saleId, { ...saleData, id: saleId })
+queueSync("create", itemId, { ...itemData, sale_id: saleId })
+    ↓
+Sync Queue (PGlite sync_operations table)
+    ↓
+SyncBatchProcessor → POST /sync/batch
+    ↓
+Backend SyncEngine
+    ↓
+OperationSorter.topologicalSort() — uses payload FK references
+    ↓
+Handlers execute in dependency order (parents before children)
 ```
 
 ## Invariants
-- All sync-capable tables have `sync_status` and `sync_attempts` columns
-- All backend queries filter by `businessId`
-- All writes go through local PGlite first (offline-first)
-- Generated code must match manual patterns exactly
-- Complex entities (sales, distribuciones, purchases) remain manual
+
+1. **Parent-before-child ordering:** The server MUST process parent entities before child entities. In the new architecture, this is guaranteed by OperationSorter analyzing payload FK references.
+
+2. **Frontend-generated IDs:** All entity IDs are generated on the frontend using CUID2 (`createId()`). This ensures IDs are available for FK references before sync.
+
+3. **Atomic operations via FK:** Related operations are linked by FK references in payloads, not by syncGroupId. The queue and sorter handle ordering.
+
+4. **Backward compatibility:** syncGroupId is optional. Legacy code that passes syncGroupId continues to work.
+
+5. **Type safety:** Generated code must compile without errors. Migrated services must maintain backward-compatible type exports.
+
+## Migration Status Tracker
+
+| Service | Status | Generated Base | Custom Override |
+|---------|--------|---------------|-----------------|
+| SupplierService | ✅ Migrated | SuppliersService | search |
+| TagService | ✅ Migrated | TagsService | customer count |
+| CustomerTagService | ✅ Migrated | CustomerTagsService | junction methods |
+| CustomerService | ⏳ Pending | CustomersService | search/filter/pagination |
+| ProductService | ⏳ Pending | ProductsService | variants |
+| PaymentService | ⏳ Pending | AbonosService | payment logic |
+| PurchaseService | ⏳ Pending | PurchasesService | atomic items |
+| DistribucionService | ⏳ Pending | DistribucionesService | atomic items |
+| VisitaService | ⏳ Pending | VisitasService | enriched types |
+| CustomerGroupService | ⏳ Pending | CustomerGroupsService | members |
+| SaleService | ⏳ Pending | SalesService | state machine + items |
+| InventoryService | ⏳ Local-only | N/A | N/A |

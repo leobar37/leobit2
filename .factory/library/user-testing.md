@@ -1,47 +1,48 @@
 # User Testing
 
+**What belongs here:** Testing surface findings, required tools, resource cost classification.
+
+---
+
 ## Validation Surface
 
-### Browser (agent-browser)
-- Primary surface for frontend validation
-- Mobile viewport (Pixel 5, 393x851)
-- Tests CRUD operations, offline sync, conflict resolution
+This mission validates through **code-level surfaces** (not browser UI):
 
-### API (curl)
-- Backend sync endpoint validation
-- `POST /sync/batch` with operation batches
-- `GET /sync/changes` for pull validation
-
-### Terminal (tuistory)
-- Not used for this mission (no CLI features being built)
+| Surface | Tool | What It Tests |
+|---------|------|---------------|
+| Build | `bun run build` | All packages compile |
+| Typecheck | `bun run typecheck` | TypeScript type safety |
+| Unit Tests | `bun test --run` | Service behavior, sync ordering |
+| Generated Code | File inspection | Generator output correctness |
+| Integration | Custom tests | End-to-end sync flows |
 
 ## Required Testing Skills/Tools
-- `agent-browser` for frontend validation
-- `avileo-sync` for sync-specific test patterns
-- `frontend` for React component testing
+
+- **No browser automation** needed (backend/infrastructure mission)
+- **CLI commands** for validation
+- **File reading** for generated code inspection
+- **Unit test framework:** Vitest (both packages)
 
 ## Resource Cost Classification
 
-### agent-browser
-- Each instance: ~300 MB RAM
-- Dev server: ~200 MB RAM
-- Machine: 18 GB RAM, 12 CPU cores
-- Baseline usage: ~6 GB
-- Usable headroom: ~8.4 GB (70% of 12 GB)
-- Max concurrent validators: **5**
+| Surface | Cost | Max Concurrent | Rationale |
+|---------|------|---------------|-----------|
+| Build | Low | 5 | ~8s total, low memory |
+| Typecheck | Low | 5 | ~9s total, moderate memory |
+| Unit Tests | Low | 5 | Backend ~0.5s, App ~6s |
+| Generator | Low | 5 | ~3s, low memory |
 
-### Backend Tests
-- Each instance: ~500 MB RAM (includes DB connection)
-- Max concurrent: **3**
+**Overall:** LOW resource cost. Machine has 12 cores and 24 GB RAM. All validation commands complete in <10s. No heavy processes spawned.
 
 ## Isolation Strategy
-- Backend tests use test database (DATABASE_URL must contain "test")
-- Frontend tests use jsdom + MSW mocks
-- E2E tests require manually started dev servers
-- Playwright tests run sequentially (1 worker)
 
-## Setup Notes
-- Dev servers must be running for E2E: `bun run dev`
-- Demo user must be seeded: `cd packages/backend && bun run db:seed:demo`
-- PGlite initializes automatically in browser
-- Backend E2E requires `.env.test` with test DATABASE_URL
+- Tests are stateless (use mocks, not real DB)
+- No shared services between validators
+- Each validator runs commands independently
+- No port conflicts (no long-running services)
+
+## Known Limitations
+
+- **No E2E tests:** Cannot run against real DB (no Docker/Postgres locally, Neon too heavy)
+- **Pre-existing test failures:** Some app tests fail before mission starts (calculator, date formatting, device fingerprinting). Validators should not fix these.
+- **Backend race tests:** 3 pre-existing failures in `sale-sync.race.test.ts`

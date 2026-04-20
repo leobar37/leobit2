@@ -1,89 +1,94 @@
 ---
 name: backend-worker
-description: Backend API and database schema development
+description: Implement backend sync engine enhancements, OperationSorter improvements, and server-side sync framework changes.
 ---
 
 # Backend Worker
 
-NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the WORK PROCEDURE.
-
 ## When to Use This Skill
 
-Features that involve:
-- Database schema (Drizzle tables)
-- API endpoints (Elysia routes)
-- Repository and Service layer
-- Business logic
+Use this skill for features in Milestone 1 (Sync Engine Evolution) that involve:
+- Enhancing OperationSorter with FK-based topological sorting
+- Making syncGroupId optional in type definitions
+- Server-side sync framework changes
+- Changes to packages/drizzle-sync/src/server/
+
+## Required Skills
+
+- `avileo` — For project-specific context
+- `avileo-sync` — For sync engine architecture
+- `bun-elysia` — For backend patterns
 
 ## Work Procedure
 
-### 1. Schema Development (if feature includes schema)
+1. **Understand the current implementation**
+   - Read the file(s) to be modified
+   - Read related tests
+   - Understand the data flow (queue → sorter → engine → handlers)
 
-1. Create table in `packages/backend/src/db/schema/` following existing patterns:
-   - Use `pgTable` from drizzle-orm
-   - Add `businessId`, `syncStatus`, `syncAttempts` for offline-first
-   - Add proper indexes
-   - Export types: `Type`, `NewType`
-   - Add relations using `relations()`
+2. **Write tests first (TDD)**
+   - Create test file with failing tests for the new behavior
+   - Tests should cover: happy path, edge cases, backward compatibility
+   - Run tests to confirm they fail (red)
 
-2. Export in `packages/backend/src/db/schema/index.ts`
+3. **Implement the change**
+   - Follow existing code patterns
+   - Maintain backward compatibility
+   - Use TypeScript strict types
 
-3. Run migrations:
-   ```bash
-   bun run db:generate
-   bun run db:migrate
-   ```
+4. **Make tests pass (green)**
+   - Run tests until they pass
+   - Fix any regressions
 
-### 2. Repository Layer
+5. **Refactor if needed**
+   - Clean up code while keeping tests green
 
-1. Create repository class in `packages/backend/src/services/repository/`
-2. Follow naming: `{Entity}Repository`
-3. Methods MUST have `ctx: RequestContext` as FIRST parameter
-4. ALL queries MUST filter by `ctx.businessId`
-
-### 3. Service Layer
-
-1. Create service class in `packages/backend/src/services/business/`
-2. Use repository for data access
-3. Throw domain errors (NotFoundError, ValidationError), NOT HTTP responses
-
-### 4. API Routes
-
-1. Create route file in `packages/backend/src/api/`
-2. Use ElysiaJS patterns from existing routes
-3. Register in `packages/backend/src/app.ts`
-4. All endpoints require businessId from context
-
-### 5. Verification
-
-1. Run TypeScript check: `cd packages/backend && bun run build`
-2. Test endpoints with curl:
-   - GET/POST/PATCH/DELETE as appropriate
-   - Verify 200/201/204 status codes
-   - Verify error handling
+6. **Verify integration**
+   - Run typecheck on the drizzle-sync package
+   - Run all tests in the package
+   - Check that changes don't break backend tests
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Created customer_groups schema, repository, service, and CRUD API endpoints with 5 routes",
-  "whatWasImplemented": "customer_groups table with businessId/syncStatus, CustomerGroupRepository with findAll/findById/create/delete, CustomerGroupService, and REST API routes at /api/groups",
+  "salientSummary": "Enhanced OperationSorter with topological sort based on payload FK references. Added dependency graph builder that inspects operation payloads for foreign key fields defined in presets/avileo.ts. Maintained backward compatibility with syncGroupId sorting.",
+  "whatWasImplemented": "Added buildDependencyGraph() method to OperationSorter that maps entityId to operation and detects FK references in payloads using relation config. Modified sort() to perform topological sort: entity priority → FK dependency resolution → timestamp. Added 8 unit tests covering single parent, multi-parent, circular dependency, and backward compatibility scenarios.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "bun run db:generate", "exitCode": 0, "observation": "Migration file created" },
-      { "command": "bun run db:migrate", "exitCode": 0, "observation": "Migration applied" },
-      { "command": "cd packages/backend && bun run build", "exitCode": 0, "observation": "TypeScript compiled" },
-      { "command": "curl -s http://localhost:3000/api/groups -H 'Authorization: Bearer ...'", "exitCode": 200, "observation": "Returns group list" }
+      {
+        "command": "cd packages/drizzle-sync && bun test --run",
+        "exitCode": 0,
+        "observation": "All 12 tests pass, including 8 new FK-ordering tests"
+      },
+      {
+        "command": "cd packages/drizzle-sync && bun run typecheck",
+        "exitCode": 0,
+        "observation": "No type errors"
+      }
+    ],
+    "interactiveChecks": []
+  },
+  "tests": {
+    "added": [
+      {
+        "file": "packages/drizzle-sync/src/server/operation-sorter.test.ts",
+        "cases": [
+          {"name": "sorts sale before sale_items by FK reference", "verifies": "VAL-1-001"},
+          {"name": "handles multi-parent dependencies", "verifies": "VAL-1-002"},
+          {"name": "maintains backward compatibility with syncGroupId", "verifies": "VAL-1-004"}
+        ]
+      }
     ]
   },
-  "tests": { "added": [] },
   "discoveredIssues": []
 }
 ```
 
 ## When to Return to Orchestrator
 
-- Schema requires changes that affect existing tables
-- API design needs clarification
-- Missing dependencies or configuration
+- Change requires modifying database schema
+- Change affects the sync protocol between frontend and backend
+- Change requires coordination with frontend generator changes
+- Tests reveal unexpected behavior in existing sync handlers

@@ -1,61 +1,95 @@
 ---
 name: frontend-gen-worker
-description: Generate frontend code (services, hooks, schemas) in the drizzle-sync package
+description: Update and fix the drizzle-sync code generators (service-generator, hooks-generator, etc.) and regenerate frontend sync code.
 ---
 
-# Frontend Gen Worker
+# Frontend Generator Worker
 
 ## When to Use This Skill
 
-Features that create or modify code generators in `packages/drizzle-sync/src/config/generators/`. This worker builds generators that emit frontend-facing code (PGlite services, hooks, schemas, DDL).
+Use this skill for features in Milestone 2 (Generator Update) that involve:
+- Fixing service-generator.ts bugs (junction tables, businessId, timestamps)
+- Updating hooks-generator.ts to omit syncGroupId
+- Regenerating all frontend sync code
+- Verifying generated code compiles
 
 ## Required Skills
 
-- `avileo` - For project-specific context about sync patterns
+- `avileo` — For project-specific context
+- `avileo-sync` — For sync architecture and patterns
+- `frontend` — For React/TypeScript frontend patterns
 
 ## Work Procedure
 
-1. **Study existing generators** - Read at least 2 existing generators (zod-generator.ts, postgres-ddl-generator.ts) to understand the pattern: `generateX(entityName, config) -> XOutput` + `generateXFile(outputs[]) -> string`.
+1. **Read the generator code**
+   - Read the specific generator file(s) to modify
+   - Understand the current output format
+   - Check how generated code is consumed (read a migrated service like supplier-service.ts)
 
-2. **Study the target pattern** - Read the manual implementation that the generator should emulate. For services: read `packages/app/app/lib/services/tag-service.ts` and `base-service.ts`.
+2. **Identify the fix needed**
+   - For junction tables: check if table has 'id' column, omit businessId if junction
+   - For hooks: remove syncGroupId generation, add FK references in child payloads
+   - For services: remove generateSyncGroup(), fix date types
 
-3. **Write tests first** - Create `__tests__/X-generator.test.ts` with tests that define expected output. Tests must fail before implementation.
+3. **Write a test for the generator**
+   - Create a test that verifies the generator output for a specific entity
+   - Test should check the generated code contains expected patterns
+   - Run test to confirm it fails with current generator
 
-4. **Implement the generator** - Create `src/config/generators/X-generator.ts` following the established pattern:
-   - Import `introspectTable`, `resolveColumns` from `../introspect`
-   - Use `pascalCase`, `camelCase` from `../../utils/string-utils`
-   - Return structured output object
-   - Provide file aggregator function
+4. **Implement the generator fix**
+   - Modify the generator to produce correct output
+   - Ensure the fix is general (applies to all affected entities, not just one)
 
-5. **Integrate into generator.ts** - Add import and call in `generateAll()` function.
+5. **Run the generator**
+   - Execute `bun run sync:generate`
+   - Verify output files are created at the correct path
+   - Inspect generated code for correctness
 
-6. **Run tests** - `cd packages/drizzle-sync && bun test -- --grep 'X generator'` - all must pass.
+6. **Verify compilation**
+   - Run `bun run typecheck` in packages/app
+   - Fix any type errors in generated code
+   - Run `bun run build` to verify full build
 
-7. **Verify generated output** - Run a quick generation test to see actual output and verify it looks correct.
-
-8. **Type check** - `cd packages/drizzle-sync && bun run build` or typecheck if available.
+7. **Verify migrated services still work**
+   - Check that existing migrated services (SupplierService, etc.) still compile
+   - Fix any import issues
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Implemented service-generator.ts that emits BaseService subclasses with CRUD + sync queueing. Added 12 unit tests all passing. Integrated into generator.ts generateAll().",
-  "whatWasImplemented": "Created packages/drizzle-sync/src/config/generators/service-generator.ts with generateService() and generateServicesFile(). Generates classes extending BaseService with findById, findByBusiness, create, update, delete methods. Create/update/delete all call queueSync(). Handles optional fields, default values, and timestamps. Added __tests__/service-generator.test.ts with 12 test cases covering CRUD generation, optional fields, defaults, and file aggregation. Updated generator.ts to include service generation in generateAll().",
+  "salientSummary": "Fixed service-generator.ts to omit businessId in junction tables and use string timestamps. Updated hooks-generator.ts to use FK references instead of syncGroupId. Regenerated all code successfully.",
+  "whatWasImplemented": "Modified service-generator.ts: (1) junction table detection now excludes businessId from insert and findByBusiness, (2) timestamp fields use string type instead of Date. Modified hooks-generator.ts: removed syncGroupId generation, child operations now include parent FK in payload. Regenerated all 16 entities. All generated code compiles.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "cd packages/drizzle-sync && bun test -- --grep 'service generator'", "exitCode": 0, "observation": "12 tests passed" },
-      { "command": "cd packages/drizzle-sync && bun run build", "exitCode": 0, "observation": "Build succeeded" }
+      {
+        "command": "cd packages/backend && bun run sync:generate",
+        "exitCode": 0,
+        "observation": "Generated 6 files with 16 entities"
+      },
+      {
+        "command": "cd packages/app && bun run typecheck",
+        "exitCode": 0,
+        "observation": "Zero type errors"
+      },
+      {
+        "command": "bun run build",
+        "exitCode": 0,
+        "observation": "All packages build successfully"
+      }
     ],
     "interactiveChecks": []
   },
   "tests": {
     "added": [
-      { "file": "packages/drizzle-sync/src/config/generators/__tests__/service-generator.test.ts", "cases": [
-        { "name": "generates CRUD methods", "verifies": "VAL-SVC-003" },
-        { "name": "create queues sync", "verifies": "VAL-SVC-004" },
-        { "name": "handles optional fields", "verifies": "VAL-SVC-007" }
-      ]}
+      {
+        "file": "packages/drizzle-sync/src/config/generators/service-generator.test.ts",
+        "cases": [
+          {"name": "junction table omits businessId", "verifies": "VAL-2-001"},
+          {"name": "timestamps use string type", "verifies": "VAL-2-006"}
+        ]
+      }
     ]
   },
   "discoveredIssues": []
@@ -64,7 +98,7 @@ Features that create or modify code generators in `packages/drizzle-sync/src/con
 
 ## When to Return to Orchestrator
 
-- The generator pattern doesn't fit the established architecture
-- Need to modify BaseService or other core frontend classes
-- Test infrastructure is missing or broken
-- Generated code has systematic issues that require architectural changes
+- Generator fix requires changes to the sync config schema
+- Generated code has type errors that require BaseService changes
+- Fix affects the output format in a way that breaks existing migrated services
+- Need to coordinate with backend sync engine changes

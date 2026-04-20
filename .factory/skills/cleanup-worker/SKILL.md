@@ -1,66 +1,100 @@
 ---
 name: cleanup-worker
-description: Remove duplicate framework files and validate no regressions
+description: Remove legacy code, perform final validation, and ensure codebase consistency after sync migration.
 ---
 
 # Cleanup Worker
 
 ## When to Use This Skill
 
-Features that clean up duplicate or orphaned code after migration. This worker ensures no manual code remains after generated versions are in place.
+Use this skill for features in Milestone 6 (Cleanup & Final Validation) that involve:
+- Removing legacy sync_group_id from schemas and code
+- Removing generateSyncGroup() from BaseService
+- Final build/typecheck/test validation
+- Cross-milestone integration validation
+- Documentation updates
 
 ## Required Skills
 
-- `avileo` - For project-specific context
+- `avileo` — For project-specific context
+- `avileo-sync` — For sync architecture
 
 ## Work Procedure
 
-1. **Identify duplicates** - Find manual files that have generated equivalents:
-   ```bash
-   find packages/app/app/lib/services -name "*-service.ts" | sort
-   ```
+1. **Identify all legacy references**
+   - Grep codebase for sync_group_id, syncGroupId, generateSyncGroup
+   - Categorize: DDL/schema, TypeScript types, runtime code, tests
 
-2. **Verify generated equivalents exist** - Check that generated files exist and compile.
+2. **Remove legacy code safely**
+   - Remove sync_group_id column from sync_operations DDL
+   - Remove generateSyncGroup() from BaseService
+   - Remove syncGroupId from type definitions (where no longer needed)
+   - Keep in historical/deprecated types if needed for migration
 
-3. **Remove or deprecate manual files**:
-   - If fully replaced: delete manual file
-   - If partially replaced: keep as extension, remove duplicated methods
-   - Update barrel exports (index.ts files)
+3. **Update documentation**
+   - Update AGENTS.md files to reflect new patterns
+   - Update sync engine docs
+   - Document the migration from syncGroupId to FK references
 
-4. **Verify no broken imports**:
-   ```bash
-   cd packages/app && bun run typecheck
-   ```
+4. **Run full validation suite**
+   - `bun run build` (all packages)
+   - `bun run typecheck` (both packages)
+   - `bun test --run` (both packages)
+   - Document any pre-existing failures
 
-5. **Run full test suite**:
-   ```bash
-   cd packages/app && bun test
-   cd packages/drizzle-sync && bun test
-   cd packages/backend && bun test
-   ```
+5. **Write integration tests**
+   - Test FK ordering end-to-end
+   - Test service chain integrity
+   - Test queue without syncGroupId
 
-6. **Check for orphaned references**:
-   - Search for imports of deleted files
-   - Check for unused variables/functions
+6. **Final verification**
+   - Grep for any remaining syncGroupId references
+   - Verify all imports backward compatible
+   - Confirm no new test failures
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Cleaned up 4 duplicate service files. Verified no broken imports. All test suites pass.",
-  "whatWasImplemented": "Removed manual service files that were fully replaced by generated versions. Updated index exports. Verified compilation and tests across all packages.",
+  "salientSummary": "Removed all legacy sync_group_id references from codebase. Removed generateSyncGroup() from BaseService. Full build, typecheck, and tests pass. Added integration tests for FK ordering.",
+  "whatWasImplemented": "Removed sync_group_id column from sync_operations DDL in pglite schema. Removed generateSyncGroup() method from BaseService. Removed syncGroupId from EnqueueParams and SyncOperationInput types. Updated all AGENTS.md files. Added 3 integration tests for cross-milestone validation.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "cd packages/app && bun run typecheck", "exitCode": 0, "observation": "0 errors" },
-      { "command": "cd packages/app && bun test", "exitCode": 0, "observation": "All pass" },
-      { "command": "cd packages/drizzle-sync && bun test", "exitCode": 0, "observation": "All pass" },
-      { "command": "cd packages/backend && bun test", "exitCode": 0, "observation": "All pass" }
+      {
+        "command": "rg syncGroupId packages/app/app/lib/",
+        "exitCode": 1,
+        "observation": "No matches found — all references removed"
+      },
+      {
+        "command": "bun run build",
+        "exitCode": 0,
+        "observation": "All packages build successfully"
+      },
+      {
+        "command": "cd packages/app && bun run typecheck",
+        "exitCode": 0,
+        "observation": "Zero type errors"
+      },
+      {
+        "command": "cd packages/app && bun test --run",
+        "exitCode": 0,
+        "observation": "All tests pass (pre-existing failures documented)"
+      }
     ],
     "interactiveChecks": []
   },
   "tests": {
-    "added": []
+    "added": [
+      {
+        "file": "packages/app/app/lib/sync/__tests__/fk-ordering.integration.test.ts",
+        "cases": [
+          {"name": "sale processed before items by FK reference", "verifies": "VAL-CROSS-001"},
+          {"name": "service chain customer-sale-payment works", "verifies": "VAL-CROSS-002"},
+          {"name": "queue integrity without syncGroupId", "verifies": "VAL-CROSS-003"}
+        ]
+      }
+    ]
   },
   "discoveredIssues": []
 }
@@ -68,6 +102,7 @@ Features that clean up duplicate or orphaned code after migration. This worker e
 
 ## When to Return to Orchestrator
 
-- Deleting files would break imports in many places
-- Test failures indicate the generated code isn't a full replacement
-- Need user decision on which files to keep vs delete
+- Legacy code is still referenced by active code paths
+- Removing code causes unexpected test failures
+- Need to preserve backward compatibility for external consumers
+- Documentation changes are extensive and need review
