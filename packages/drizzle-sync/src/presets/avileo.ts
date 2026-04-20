@@ -96,6 +96,8 @@ const entityConfigs: Record<string, EntitySyncConfig> = {
     autoFields: true,
     priority: 1,
     conflictResolver: 'last-write-wins',
+    // API path is "groups" not "customerGroups" (prefix is /groups in customer-groups.ts)
+    apiPath: 'groups',
     relations: {
       children: [
         { entity: 'customer_group_members', foreignKey: 'group_id' },

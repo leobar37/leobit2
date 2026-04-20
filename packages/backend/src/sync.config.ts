@@ -63,6 +63,8 @@ export const syncConfig = defineSyncConfig({
       table: customerGroups,
       syncable: true,
       conflictResolver: "version-based",
+      // API path is "groups" not "customerGroups" (prefix is /groups in customer-groups.ts)
+      apiPath: "groups",
     },
 
     customerGroupMembers: {

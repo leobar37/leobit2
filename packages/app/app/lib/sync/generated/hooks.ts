@@ -56,6 +56,7 @@ export function useCreateCustomers() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -70,6 +71,7 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -83,6 +85,7 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -96,6 +99,7 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -109,6 +113,7 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -122,6 +127,7 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -224,6 +230,7 @@ export function useCreateProducts() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -238,6 +245,7 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -251,6 +259,7 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -264,6 +273,7 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -364,6 +374,7 @@ export function useCreateSuppliers() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -378,6 +389,7 @@ export function useCreateSuppliers() {
           ...item,
           supplier_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -476,6 +488,7 @@ export function useCreateTags() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -490,6 +503,7 @@ export function useCreateTags() {
           ...item,
           tag_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -552,7 +566,7 @@ export function useCustomerGroupsList() {
   return useQuery({
     queryKey: ["customerGroups"],
     queryFn: async () => {
-      const { data, error } = await api.customerGroups.get();
+      const { data, error } = await api.groups.get();
       if (error) throw new Error(String(error.value));
       return customerGroupsSchema.array().parse(data);
     },
@@ -564,7 +578,7 @@ export function useCustomerGroups(id: string) {
   return useQuery({
     queryKey: ["customerGroups", id],
     queryFn: async () => {
-      const { data, error } = await api.customerGroups({ id }).get();
+      const { data, error } = await api.groups({ id }).get();
       if (error) throw new Error(String(error.value));
       return customerGroupsSchema.parse(data);
     },
@@ -581,7 +595,7 @@ export function useCreateCustomerGroups() {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
-      const response = await api.customerGroups.post({
+      const response = await api.groups.post({
         ...input,
         id,
       });
@@ -601,7 +615,7 @@ export function useUpdateCustomerGroups() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CustomerGroupsInput> }) => {
-      const response = await api.customerGroups({ id }).put(data);
+      const response = await api.groups({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return customerGroupsSchema.parse(response.data);
     },
@@ -618,7 +632,7 @@ export function useDeleteCustomerGroups() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.customerGroups({ id }).delete();
+      const response = await api.groups({ id }).delete();
       if (response.error) throw new Error(String(response.error.value));
       return response.data;
     },
@@ -1092,6 +1106,7 @@ export function useCreateSales() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -1106,6 +1121,7 @@ export function useCreateSales() {
           ...item,
           sale_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1119,6 +1135,7 @@ export function useCreateSales() {
           ...item,
           sale_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1218,6 +1235,7 @@ export function useCreatePurchases() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -1232,6 +1250,7 @@ export function useCreatePurchases() {
           ...item,
           purchase_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1414,6 +1433,7 @@ export function useCreateVisitas() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -1428,6 +1448,7 @@ export function useCreateVisitas() {
           ...item,
           visita_id: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       

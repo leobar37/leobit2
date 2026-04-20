@@ -78,6 +78,10 @@ export interface EntitySyncConfig<TTable extends PgTable = PgTable> {
   // Hooks opcionales
   hooks?: EntityHooks;
 
+  // API path override - when the entity name differs from the API route path
+  // e.g., entity "customerGroups" has API path "groups"
+  apiPath?: string;
+
   // Metadata adicional
   metadata?: Record<string, unknown>;
 }

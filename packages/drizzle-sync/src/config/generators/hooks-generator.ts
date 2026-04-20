@@ -17,19 +17,21 @@ export function generateHooks(
 ): HookOutput {
   const graph = buildRelationGraph(allEntities);
   const hasChildren = graph[entityName]?.children.length > 0;
+  // Use apiPath if provided, otherwise fall back to entity name
+  const apiPath = config.apiPath || entityName;
 
   return {
-    listHook: generateListHook(entityName),
-    singleHook: generateSingleHook(entityName),
+    listHook: generateListHook(entityName, apiPath),
+    singleHook: generateSingleHook(entityName, apiPath),
     createHook: hasChildren
-      ? generateCreateWithChildren(entityName, config, graph, allEntities)
-      : generateSimpleCreate(entityName),
-    updateHook: generateUpdateHook(entityName),
-    deleteHook: generateDeleteHook(entityName),
+      ? generateCreateWithChildren(entityName, config, graph, allEntities, apiPath)
+      : generateSimpleCreate(entityName, apiPath),
+    updateHook: generateUpdateHook(entityName, apiPath),
+    deleteHook: generateDeleteHook(entityName, apiPath),
   };
 }
 
-function generateListHook(entityName: string): string {
+function generateListHook(entityName: string, apiPath: string): string {
   const pascalName = pascalCase(entityName);
 
   return `
@@ -37,7 +39,7 @@ export function use${pascalName}List() {
   return useQuery({
     queryKey: ["${entityName}"],
     queryFn: async () => {
-      const { data, error } = await api.${entityName}.get();
+      const { data, error } = await api.${apiPath}.get();
       if (error) throw new Error(String(error.value));
       return ${entityName}Schema.array().parse(data);
     },
@@ -46,7 +48,7 @@ export function use${pascalName}List() {
 `;
 }
 
-function generateSingleHook(entityName: string): string {
+function generateSingleHook(entityName: string, apiPath: string): string {
   const pascalName = pascalCase(entityName);
 
   return `
@@ -54,7 +56,7 @@ export function use${pascalName}(id: string) {
   return useQuery({
     queryKey: ["${entityName}", id],
     queryFn: async () => {
-      const { data, error } = await api.${entityName}({ id }).get();
+      const { data, error } = await api.${apiPath}({ id }).get();
       if (error) throw new Error(String(error.value));
       return ${entityName}Schema.parse(data);
     },
@@ -64,7 +66,7 @@ export function use${pascalName}(id: string) {
 `;
 }
 
-function generateSimpleCreate(entityName: string): string {
+function generateSimpleCreate(entityName: string, apiPath: string): string {
   const pascalName = pascalCase(entityName);
 
   return `
@@ -76,7 +78,7 @@ export function useCreate${pascalName}() {
       // Generate CUID2 - this IS the real ID
       const id = createId();
       
-      const response = await api.${entityName}.post({
+      const response = await api.${apiPath}.post({
         ...input,
         id,
       });
@@ -96,7 +98,8 @@ function generateCreateWithChildren(
   entityName: string,
   config: EntitySyncConfig,
   graph: RelationGraph,
-  allEntities: Record<string, EntitySyncConfig>
+  allEntities: Record<string, EntitySyncConfig>,
+  apiPath: string
 ): string {
   const pascalName = pascalCase(entityName);
   const children = graph[entityName]?.children || [];
@@ -118,6 +121,7 @@ function generateCreateWithChildren(
           ...item,
           ${fkColumn}: parentId,
         },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       })) || []);
       `;
@@ -142,6 +146,7 @@ export function useCreate${pascalName}() {
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
+        localVersion: 1,
         localTimestamp: new Date().toISOString(),
       };
       
@@ -167,7 +172,7 @@ export function useCreate${pascalName}() {
 `;
 }
 
-function generateUpdateHook(entityName: string): string {
+function generateUpdateHook(entityName: string, apiPath: string): string {
   const pascalName = pascalCase(entityName);
 
   return `
@@ -176,7 +181,7 @@ export function useUpdate${pascalName}() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<${pascalName}Input> }) => {
-      const response = await api.${entityName}({ id }).put(data);
+      const response = await api.${apiPath}({ id }).put(data);
       if (response.error) throw new Error(String(response.error.value));
       return ${entityName}Schema.parse(response.data);
     },
@@ -189,7 +194,7 @@ export function useUpdate${pascalName}() {
 `;
 }
 
-function generateDeleteHook(entityName: string): string {
+function generateDeleteHook(entityName: string, apiPath: string): string {
   const pascalName = pascalCase(entityName);
 
   return `
@@ -198,7 +203,7 @@ export function useDelete${pascalName}() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.${entityName}({ id }).delete();
+      const response = await api.${apiPath}({ id }).delete();
       if (response.error) throw new Error(String(response.error.value));
       return response.data;
     },
