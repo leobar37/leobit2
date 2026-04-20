@@ -126,7 +126,12 @@ export function generateService(
   }`;
 
   // Determine if we need to order by a timestamp column (junction tables may not have createdAt)
+  // Check both that the column exists AND that it's in userColumns (not filtered out)
   const hasCreatedAt = columns.some(
+    (col) => col.name.toLowerCase() === "createdat" || col.name.toLowerCase() === "created_at"
+  );
+  // Only include timestamps in entity if they're actually in userColumns (not filtered out for junction tables)
+  const includeTimestamps = hasCreatedAt && userColumns.some(
     (col) => col.name.toLowerCase() === "createdat" || col.name.toLowerCase() === "created_at"
   );
 
@@ -187,7 +192,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
 ${junctionTable ? generateInsertFieldsJunction(userColumns, tableRef) : `      id,\n${generateInsertFields(userColumns, tableRef)}`}
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,${junctionTable ? "" : `\n      businessId: this.businessId,`}
-${hasCreatedAt && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
+${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
     };
 
     await this.db.insert(${tableRef}).values(entity);
@@ -258,12 +263,14 @@ function generateInsertFieldsJunction(columns: ColumnMetadata[], _tableRef: stri
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
-    if (col.default !== undefined) {
+    // For nullable columns (not required), use ?? undefined to handle missing input
+    // This ensures we don't pass null to fields that expect Date or other types
+    if (!col.notNull) {
+      // Nullable column - use undefined as fallback for missing input
+      lines.push(`      ${fieldName}: input.${fieldName} ?? undefined,`);
+    } else if (col.default !== undefined) {
       // Has default - use input value or default
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
-    } else if (!col.notNull) {
-      // Nullable - use input value (which is optional)
-      lines.push(`      ${fieldName}: input.${fieldName},`);
     } else {
       // Required - use input value directly
       lines.push(`      ${fieldName}: input.${fieldName},`);
@@ -281,12 +288,14 @@ function generateInsertFields(columns: ColumnMetadata[], tableRef: string): stri
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
-    if (col.default !== undefined) {
+    // For nullable columns (not required), use ?? undefined to handle missing input
+    // This ensures we don't pass null to fields that expect Date or other types
+    if (!col.notNull) {
+      // Nullable column - use undefined as fallback for missing input
+      lines.push(`      ${fieldName}: input.${fieldName} ?? undefined,`);
+    } else if (col.default !== undefined) {
       // Has default - use input value or default
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
-    } else if (!col.notNull) {
-      // Nullable - use input value (which is optional)
-      lines.push(`      ${fieldName}: input.${fieldName},`);
     } else {
       // Required - use input value directly
       lines.push(`      ${fieldName}: input.${fieldName},`);
