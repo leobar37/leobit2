@@ -11,7 +11,7 @@ import {
 import type { 
   CreateCustomersInput, CreateProductsInput, CreateSuppliersInput, CreateTagsInput, CreateCustomerGroupsInput, CreateDistribucionesInput, CreateDistribucionItemsInput, CreateProductVariantsInput, CreateCustomerTagsInput, CreateCustomerGroupMembersInput, CreateSalesInput, CreatePurchasesInput, CreateAbonosInput, CreateVisitasInput, CreateSaleItemsInput, CreatePurchaseItemsInput
 } from "./types";
-import { generateSyncGroupId, generateIdempotencyKey } from "@avileo/shared";
+import { generateIdempotencyKey } from "@avileo/shared";
 
 
 // Customers hooks
@@ -49,18 +49,17 @@ export function useCreateCustomers() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "customers",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const customerTagsOps = (input.customerTags?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -71,7 +70,6 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -85,7 +83,6 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -99,7 +96,6 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -113,7 +109,6 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -127,7 +122,6 @@ export function useCreateCustomers() {
           ...item,
           customer_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -223,18 +217,17 @@ export function useCreateProducts() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "products",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const productVariantsOps = (input.productVariants?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -245,7 +238,6 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -259,7 +251,6 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -273,7 +264,6 @@ export function useCreateProducts() {
           ...item,
           product_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -367,18 +357,17 @@ export function useCreateSuppliers() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "suppliers",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const purchasesOps = (input.purchases?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -389,7 +378,6 @@ export function useCreateSuppliers() {
           ...item,
           supplier_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -481,18 +469,17 @@ export function useCreateTags() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "tags",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const customerTagsOps = (input.customerTags?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -503,7 +490,6 @@ export function useCreateTags() {
           ...item,
           tag_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1099,18 +1085,17 @@ export function useCreateSales() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "sales",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const visitasOps = (input.visitas?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -1121,7 +1106,6 @@ export function useCreateSales() {
           ...item,
           sale_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1135,7 +1119,6 @@ export function useCreateSales() {
           ...item,
           sale_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1228,18 +1211,17 @@ export function useCreatePurchases() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "purchases",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const purchaseItemsOps = (input.purchaseItems?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -1250,7 +1232,6 @@ export function useCreatePurchases() {
           ...item,
           purchase_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       
@@ -1426,18 +1407,17 @@ export function useCreateVisitas() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "visitas",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       
       const salesOps = (input.sales?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
@@ -1448,7 +1428,6 @@ export function useCreateVisitas() {
           ...item,
           visita_id: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       

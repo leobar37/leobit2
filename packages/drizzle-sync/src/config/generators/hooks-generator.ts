@@ -118,7 +118,6 @@ function generateCreateWithChildren(
           ...item,
           ${fkColumn}: parentId,
         },
-        syncGroupId: parentOp.syncGroupId,
         localTimestamp: new Date().toISOString(),
       })) || []);
       `;
@@ -136,18 +135,17 @@ export function useCreate${pascalName}() {
       // 1. Generate CUID2 for parent (this IS the real ID)
       const parentId = createId();
       
-      // 2. Build parent operation
+      // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
         entityType: "${entityName}",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },
-        syncGroupId: generateSyncGroupId(),
         localTimestamp: new Date().toISOString(),
       };
       
-      // 3. Build children with REAL parent ID
+      // 3. Build children with REAL parent ID via FK reference
       ${childrenOps}
       
       // 4. Send atomic batch
@@ -228,7 +226,7 @@ import {
 import type { 
   ${entityNames.map((e) => `Create${pascalCase(e)}Input`).join(", ")}
 } from "./types";
-import { generateSyncGroupId, generateIdempotencyKey } from "@avileo/shared";
+import { generateIdempotencyKey } from "@avileo/shared";
 `;
 
   const content = Array.from(hooks.entries())
