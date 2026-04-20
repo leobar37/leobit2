@@ -1,0 +1,45 @@
+{
+  "featureId": "m5-refactor-sale-service",
+  "reviewedAt": "2026-04-20T11:45:00.000Z",
+  "commitId": "4428e33",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "SaleService was successfully refactored to replace syncGroupId with FK references throughout. All business logic (state machine methods: confirm, deliver, finalizeDelivery, cancel; atomic item operations: addItem, updateItem, removeItem; payment recording) was preserved. The service extends BaseService and correctly passes undefined for syncGroupId parameter to queueSync calls, relying on FK references (saleId in payload) for operation ordering.",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/services/sale-service.ts",
+        "line": 93,
+        "severity": "non_blocking",
+        "description": "Sale interface still includes syncGroupId: string | null field which is always set to null. This is for backward compatibility with existing data but could be removed in a future cleanup phase."
+      },
+      {
+        "file": "packages/app/app/lib/services/sale-service.ts",
+        "line": 661,
+        "severity": "non_blocking",
+        "description": "createDraft returns syncGroupId: null which matches the interface but the field is no longer populated in the database. Consider removing this field entirely in future cleanup."
+      },
+      {
+        "file": "packages/app/app/lib/services/sale-service.ts",
+        "line": 1,
+        "severity": "non_blocking",
+        "description": "SaleService extends BaseService instead of the generated SalesService due to type incompatibility (string vs Date timestamps). This was documented and is acceptable for this critical service where business logic preservation takes priority."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Skill procedure was followed correctly. Worker read current service, identified CRUD vs business logic methods, replaced all generateSyncGroup() calls with FK references (undefined syncGroupId + saleId in payload), preserved state machine and atomic operations.",
+      "evidence": "Handoff shows: removed generateSyncGroup() from createDraft, createWithItems, confirm, confirmPreOrder, deliver, finalizeDelivery, cancel, update, recordPayment, addItem, updateItem, removeItem. All queueSync calls now pass undefined for syncGroupId."
+    },
+    {
+      "area": "conventions",
+      "observation": "The worker correctly documented why SaleService couldn't extend generated SalesService (Date vs string timestamp incompatibility). This pattern should be documented in AGENTS.md for future migrations of complex services.",
+      "evidence": "Handoff notes: 'SaleService extends BaseService (not SalesService) due to type incompatibility with string vs Date timestamps'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS: SaleService refactoring is complete and correct. All 5 tests pass (verifying no syncGroupId usage). Build passes. Typecheck shows 0 errors in sale-service.ts. Business logic fully preserved including state machine (confirm, deliver, cancel), atomic item operations, and payment recording. FK references used throughout via undefined syncGroupId and saleId in payload."
+}

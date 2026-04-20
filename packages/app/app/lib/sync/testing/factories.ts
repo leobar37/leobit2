@@ -23,7 +23,6 @@ export function createSyncOperation(overrides: Partial<SyncOperationRecord> = {}
     last_error: null,
     last_attempt_at: null,
     idempotency_key: crypto.randomUUID(),
-    sync_group_id: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides,

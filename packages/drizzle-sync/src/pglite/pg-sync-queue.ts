@@ -130,7 +130,6 @@ export class PgSyncQueue implements ISyncQueue {
       operation: params.operation,
       entityId: params.entityId,
       idempotencyKey,
-      syncGroupId: params.syncGroupId,
       fastPath: !!params.fastPath,
     });
 
@@ -144,7 +143,6 @@ export class PgSyncQueue implements ISyncQueue {
         entityId: params.entityId,
         payload: normalizeDatesToISO(params.data) as Record<string, unknown>,
         idempotencyKey,
-        syncGroupId: params.syncGroupId,
         version: (params.data?._localVersion as number) ?? 1,
       });
 
@@ -259,7 +257,6 @@ export class PgSyncQueue implements ISyncQueue {
       entityId: params.entityId,
       payload: normalizeDatesToISO(params.data) as Record<string, unknown>,
       idempotencyKey,
-      syncGroupId: params.syncGroupId,
       version: (params.data?._localVersion as number) ?? 1,
     });
     const insertMs = performance.now() - insertStart;
@@ -366,17 +363,16 @@ export class PgSyncQueue implements ISyncQueue {
     entityId: string;
     payload: Record<string, unknown>;
     idempotencyKey: string;
-    syncGroupId?: string;
     version: number;
   }): Promise<void> {
     await this.pg.query(
       `INSERT INTO sync_operations (
          id, business_id, entity_type, operation, entity_id,
          payload, status, version, sync_attempts, last_error,
-         last_attempt_at, idempotency_key, sync_group_id, created_at, updated_at
+         last_attempt_at, idempotency_key, created_at, updated_at
        ) VALUES (
          $1, $2, $3, $4, $5, $6::jsonb, $7, $8, 0, NULL,
-         NULL, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         NULL, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
        )`,
       [
         data.id,
@@ -388,7 +384,6 @@ export class PgSyncQueue implements ISyncQueue {
         OPERATION_STATUS.PENDING,
         data.version,
         data.idempotencyKey,
-        data.syncGroupId ?? null,
       ]
     );
   }

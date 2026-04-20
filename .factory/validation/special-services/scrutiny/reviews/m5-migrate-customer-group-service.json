@@ -1,0 +1,15 @@
+{
+  "featureId": "m5-migrate-customer-group-service",
+  "reviewedAt": "2026-04-20T11:10:00.000Z",
+  "commitId": "4582757",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "CustomerGroupService successfully migrated to extend generated CustomerGroupsService from drizzle-sync. All member management methods are preserved, enriched return types work correctly, and FK references are used instead of syncGroupId.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The migration of CustomerGroupService to extend the generated CustomerGroupsService is complete and correct. The implementation:\n\n1. **Extension Pattern**: CustomerGroupService correctly extends CustomerGroupsService from `~/lib/sync/generated/services`, inheriting CRUD methods (create, update, delete, findById, findByBusiness) while preserving custom member management methods.\n\n2. **Member Management Preserved**: All custom methods are preserved:\n   - `addMembers(groupId, customerIds)` - Adds members with FK reference (groupId in payload)\n   - `removeMember(groupId, customerId)` - Removes a member\n   - `isMember(groupId, customerId)` - Checks membership\n   - `getMembers(groupId)` - Gets members with customer info\n   - `getMemberCount(groupId)` - Gets member count\n   - `getCustomerGroups(customerId)` - Gets groups for a customer\n   - `getCustomerGroupsForCustomers(customerIds)` - Batch group lookup\n   - `createWithMembers(input, customerIds)` - Atomic group + members creation\n   - `delete(id)` - Override with cascade member deletion\n\n3. **Enriched Return Types**: Custom return types work correctly:\n   - `CustomerGroupWithMembers` - includes members array\n   - `CustomerGroupWithMemberCount` - includes memberCount\n   - `GroupMemberWithCustomer` - enriched member info\n   - `CustomerGroupSummary` / `CustomerGroupSummaryWithCustomerId` - summary views\n\n4. **FK References**: No `generateSyncGroup()` calls remain in the service. The `addMembers` method uses FK references (groupId in payload) for topological ordering instead of syncGroupId. The `queueSync` calls pass the entity type as the 5th parameter.\n\n5. **Type Safety**: Type aliases `CreateCustomerGroupInput` and `UpdateCustomerGroupInput` are re-exported from the generated types for backward compatibility.\n\n6. **Build/Typecheck**: The code compiles without errors (build passes, 0 type errors in customer-group-service.ts).\n\nAll requirements from VAL-5-002 are satisfied."
+}

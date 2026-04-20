@@ -1,0 +1,33 @@
+{
+  "featureId": "m5-fix-customer-group-syncgroupid",
+  "reviewedAt": "2026-04-20T17:00:00.000Z",
+  "commitId": "3bb902f",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature successfully removes generateSyncGroup() usage from CustomerGroupService.createWithMembers and addMembers methods. Member operations now use groupId FK reference in payload for topological ordering. Typecheck passes with no errors in customer-group-service.ts.",
+    "issues": [
+      {
+        "file": "packages/app/app/lib/services/customer-group-service.ts",
+        "line": 58,
+        "severity": "non_blocking",
+        "description": "Outdated JSDoc comment still references syncGroupId? parameter in addMembers method signature. The actual method signature on line 316 no longer has this parameter. Comment should be updated to: 'addMembers(groupId, customerIds): Promise<void> - Add members'"
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker followed the established pattern for removing syncGroupId: removed generateSyncGroup() calls, changed queueSync to pass undefined instead of syncGroupId, and relied on FK references (groupId in payload) for topological ordering via OperationSorter.",
+      "evidence": "customer-group-service.ts lines 256-267 (createWithMembers), lines 316-365 (addMembers) - uses undefined for syncGroupId parameter, groupId in payload"
+    },
+    {
+      "area": "skills",
+      "observation": "Worker followed the frontend-migrate-worker skill procedure correctly. Read current service, identified generateSyncGroup() usage, planned FK replacement, implemented changes, and verified compilation.",
+      "evidence": "Transcript shows skill invocation, Read of customer-group-service.ts, Grep for generateSyncGroup, Edit operations, and typecheck verification"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The feature implementation is complete and correct. All generateSyncGroup() calls have been removed from CustomerGroupService.createWithMembers and addMembers methods. Member operations now use FK references (groupId in payload) for queueSync calls. Typecheck passes for customer-group-service.ts with no errors. One minor non-blocking issue: the JSDoc comment on line 58 still references the removed syncGroupId parameter and should be updated for documentation accuracy."
+}

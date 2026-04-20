@@ -200,7 +200,7 @@ export class DistribucionService extends DistribucionesService {
           cantidadAsignada: item.cantidadAsignada,
           cantidadVendida: 0,
           unidad: item.unidad,
-        }, undefined, "distribucion_items");
+        }, "distribucion_items");
       }
     }
 
@@ -376,7 +376,6 @@ export class DistribucionService extends DistribucionesService {
         cantidadVendida: 0,
         unidad: item.unidad,
       },
-      undefined,
       "distribucion_items"
     );
 
@@ -465,7 +464,6 @@ export class DistribucionService extends DistribucionesService {
         cantidadAsignada: data.cantidadAsignada,
         cantidadVendida: data.cantidadVendida,
       },
-      undefined,
       "distribucion_items"
     );
 
@@ -516,7 +514,6 @@ export class DistribucionService extends DistribucionesService {
       "delete",
       itemId,
       { distribucionId },
-      undefined,
       "distribucion_items"
     );
   }

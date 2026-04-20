@@ -84,33 +84,16 @@ export class SyncBatchProcessor {
       return { processed: 0, failed: 0, conflicts: 0 };
     }
 
-    const groupedIds = new Set<string>();
-    const ungrouped: SyncOperationRecord[] = [];
-
-    for (const operation of pendingOperations) {
-      if (operation.sync_group_id) {
-        groupedIds.add(operation.sync_group_id);
-      } else {
-        ungrouped.push(operation);
-      }
-    }
+    // Sort operations by entity priority for proper FK-based ordering
+    const sortedOperations = sortOperations(pendingOperations);
 
     let processed = 0;
     let failed = 0;
     let conflicts = 0;
 
-    for (const groupId of groupedIds) {
-      const operations = sortOperations(await this.fetchGroupOperations(groupId));
-      for (const chunk of chunkOperations(operations, BATCH_SIZE)) {
-        const result = await this.processBatch(chunk, groupId);
-        processed += result.processed;
-        failed += result.failed;
-        conflicts += result.conflicts;
-      }
-    }
-
-    for (const operation of ungrouped) {
-      const result = await this.processBatch([operation]);
+    // Process in chunks based on priority ordering (FK-based, no sync_group_id grouping)
+    for (const chunk of chunkOperations(sortedOperations, BATCH_SIZE)) {
+      const result = await this.processBatch(chunk);
       processed += result.processed;
       failed += result.failed;
       conflicts += result.conflicts;
@@ -132,24 +115,11 @@ export class SyncBatchProcessor {
   }
 
   async processGroup(groupId: string): Promise<GroupProcessResult> {
-    const operations = sortOperations(await this.fetchGroupOperations(groupId));
-    if (operations.length === 0) {
-      return { success: true, errors: [] };
-    }
-
-    const errors: string[] = [];
-
-    for (const chunk of chunkOperations(operations, BATCH_SIZE)) {
-      const result = await this.processBatch(chunk, groupId);
-      if (result.failed > 0) {
-        errors.push(...result.errors);
-      }
-    }
-
-    return {
-      success: errors.length === 0,
-      errors,
-    };
+    // This method is deprecated - sync_group_id is no longer used
+    // Group processing is now handled by FK-based ordering in processPending
+    // Keeping for backward compatibility but it will not work as expected
+    console.warn("[SYNC] processGroup is deprecated - sync_group_id no longer exists");
+    return { success: true, errors: [] };
   }
 
   async syncOperation(operation: SyncOperationRecord): Promise<SyncOperationResult> {
@@ -219,30 +189,8 @@ export class SyncBatchProcessor {
     return result.rows;
   }
 
-  private async fetchGroupOperations(groupId: string): Promise<SyncOperationRecord[]> {
-    const result = await this.pg.query<SyncOperationRecord>(
-      `SELECT *
-       FROM sync_operations
-       WHERE business_id = $1
-         AND sync_group_id = $2
-         AND status IN ($3, $4)
-         AND sync_attempts < $5
-       ORDER BY created_at ASC`,
-      [
-        this.businessId,
-        groupId,
-        OPERATION_STATUS.PENDING,
-        OPERATION_STATUS.FAILED,
-        MAX_RETRIES,
-      ]
-    );
-
-    return result.rows;
-  }
-
   private async processBatch(
-    operations: SyncOperationRecord[],
-    groupId?: string
+    operations: SyncOperationRecord[]
   ): Promise<ProcessPendingResult & { errors: string[] }> {
     if (operations.length === 0) {
       return { processed: 0, failed: 0, conflicts: 0, errors: [] };
@@ -258,11 +206,9 @@ export class SyncBatchProcessor {
         await this.lifecycle.markProcessing(operation.id);
       }
 
-      if (groupId) {
-        console.log(
-          `[SYNC] Sending grouped batch (syncGroupId=${groupId}, count=${operations.length})`
-        );
-      }
+      console.log(
+        `[SYNC] Sending batch (count=${operations.length})`
+      );
 
       const response = await this.sendBatchToServer(operations);
 

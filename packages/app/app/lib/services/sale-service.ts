@@ -612,9 +612,8 @@ export class SaleService extends BaseService {
           orderDate: saleInput.orderDate,
           items: [],
         },
-        undefined, // No syncGroupId - use FK-based ordering
-        undefined,
-        undefined,
+        undefined, // entityTypeOverride
+        undefined, // entityVersion
         {
           fastPath: true,
           idempotencyKey: `sale:create:${saleId}`,
@@ -895,8 +894,7 @@ export class SaleService extends BaseService {
         balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version
     );
   }
@@ -980,8 +978,7 @@ export class SaleService extends BaseService {
         balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version
     );
   }
@@ -1019,8 +1016,7 @@ export class SaleService extends BaseService {
         status: "delivered",
         saleType: sale.saleType,
       },
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version
     );
   }
@@ -1096,7 +1092,6 @@ export class SaleService extends BaseService {
             subtotal: this.normalizeCurrency(subtotal),
             isModified: true,
           },
-          undefined, // No syncGroupId - use FK-based ordering
           "sale_items"
         );
       }
@@ -1134,8 +1129,7 @@ export class SaleService extends BaseService {
           balanceDue: this.normalizeCurrency(balanceDue),
           paymentMode: options.paymentMode ?? sale.paymentMode,
         },
-        undefined, // No syncGroupId - use FK-based ordering
-        undefined,
+        undefined, // entityTypeOverride
         sale.version
       );
     } catch (error) {
@@ -1183,8 +1177,7 @@ export class SaleService extends BaseService {
         cancelledBy: this.businessUserId,
         refundAmount: sale.refundAmount ? this.normalizeCurrency(sale.refundAmount) : null,
       },
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version
     );
   }
@@ -1305,8 +1298,7 @@ export class SaleService extends BaseService {
       "update",
       id,
       syncPayload,
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version,
       {
         fastPath: true,
@@ -1436,7 +1428,6 @@ export class SaleService extends BaseService {
         unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
         subtotal: this.normalizeCurrency(item.subtotal),
       },
-      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1540,7 +1531,6 @@ export class SaleService extends BaseService {
       "update",
       itemId,
       syncPayload,
-      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1622,7 +1612,6 @@ export class SaleService extends BaseService {
       {
         saleId,
       },
-      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1678,8 +1667,7 @@ export class SaleService extends BaseService {
         amountPaid: this.normalizeCurrency(updatedSale.amountPaid),
         balanceDue: this.normalizeCurrency(updatedSale.balanceDue),
       },
-      undefined, // No syncGroupId - use FK-based ordering
-      undefined,
+      undefined, // entityTypeOverride
       sale.version
     );
   }

@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS sync_operations (
   business_id UUID NOT NULL,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
-  sync_group_id TEXT,
   operation TEXT NOT NULL,
   payload JSONB,
   status TEXT NOT NULL DEFAULT 'pending',
@@ -35,7 +34,6 @@ CREATE TABLE IF NOT EXISTS sync_operations (
 export const ALTER_SYNC_OPERATIONS_TABLE = `
 ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS business_id UUID;
 ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS entity_id TEXT;
-ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS sync_group_id TEXT;
 ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS payload JSONB;
 ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS last_error TEXT;
@@ -52,7 +50,6 @@ export const CREATE_SYNC_OPERATIONS_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_sync_operations_business ON sync_operations(business_id);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(business_id, entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(business_id, status);
-CREATE INDEX IF NOT EXISTS idx_sync_operations_group ON sync_operations(business_id, sync_group_id);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
 `.trim();

@@ -131,19 +131,10 @@ export abstract class BaseService {
   }
 
   /**
-   * Generates a group ID for atomic operations
-   * Used to group multiple related operations together
-   */
-  protected generateSyncGroup(): string {
-    return crypto.randomUUID();
-  }
-
-  /**
    * Queues a sync operation for later processing
    * @param action - The type of sync action (insert, update, delete)
    * @param entityId - The ID of the entity being synced
    * @param payload - The data to sync
-   * @param syncGroupId - Optional group ID for atomic operations
    * @param entityTypeOverride - Optional override for entity type (e.g., sale_items for items)
    * @param entityVersion - Optional entity version for conflict detection (defaults to 1)
    */
@@ -151,7 +142,6 @@ export abstract class BaseService {
     action: SyncAction,
     entityId: string,
     payload: Record<string, unknown>,
-    syncGroupId?: string,
     entityTypeOverride?: EntityType,
     entityVersion?: number,
     options?: {
@@ -173,7 +163,6 @@ export abstract class BaseService {
         ...(entityVersion !== undefined && { _localVersion: entityVersion }),
       },
       idempotencyKey: options?.idempotencyKey ?? generateId(),
-      syncGroupId,
       fastPath: options?.fastPath,
     };
 

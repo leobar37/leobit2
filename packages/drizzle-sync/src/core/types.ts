@@ -93,8 +93,6 @@ export interface EnqueueParams {
   data: Record<string, unknown>;
   /** Optional unique key for idempotency (auto-generated if not provided) */
   idempotencyKey?: string;
-  /** Optional group ID for parent-child relationships */
-  syncGroupId?: string;
   /**
    * Fast-path flag for hot paths.
    * When true, skips precheck/coalescing lookup work for lower latency.
@@ -131,8 +129,6 @@ export interface SyncOperationRecord {
   last_attempt_at: string | null;
   /** Unique key for idempotency - snake_case for DB */
   idempotency_key: string | null;
-  /** Optional group ID for parent-child relationships - snake_case for DB */
-  sync_group_id?: string | null;
   /** Creation timestamp (ISO string) - snake_case for DB */
   created_at: string;
   /** Last update timestamp (ISO string) - snake_case for DB */

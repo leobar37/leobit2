@@ -145,7 +145,6 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
         correlationId: generateCorrelationId(),
         deviceId: getDeviceId(),
         sourceFingerprint: getDeviceFingerprint(),
-        ...(op.sync_group_id ? { syncGroupId: op.sync_group_id } : {}),
       }));
 
       // Use base client with retry and timeout handling

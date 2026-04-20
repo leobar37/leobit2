@@ -171,7 +171,7 @@ export class SyncService {
     ctx: RequestContext,
     since?: Date,
     limit = 100,
-    syncGroupId?: string,
+    _syncGroupId?: string,
     entityTypes?: string[],
     cursorOperationId?: string
   ) {
@@ -183,16 +183,8 @@ export class SyncService {
       eq(syncOperations.status, "processed"),
     ];
 
-    // Add syncGroupId filter if provided
-    // If syncGroupId is specified, only return changes for that group OR changes without a group
-    if (syncGroupId) {
-      baseConditions.push(
-        or(
-          eq(syncOperations.syncGroupId, syncGroupId),
-          isNull(syncOperations.syncGroupId)
-        )!
-      );
-    }
+    // Note: syncGroupId filter is deprecated - FK-based ordering is now used instead
+    // The _syncGroupId parameter is kept for backward compatibility but ignored
 
     // Add since filter if provided
     // Use strict greater-than to avoid returning the same record in next page

@@ -29,7 +29,6 @@ export interface EnqueueParams {
   entityId: string;
   data: Record<string, unknown>;
   idempotencyKey?: string;
-  syncGroupId?: string;
   fastPath?: boolean;
 }
 
@@ -49,7 +48,6 @@ export interface SyncOperationRecord {
   last_error: string | null;
   last_attempt_at: string | null;
   idempotency_key: string | null;
-  sync_group_id: string | null;
   created_at: string;
   updated_at: string;
 }

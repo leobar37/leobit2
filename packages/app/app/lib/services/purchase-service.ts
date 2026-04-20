@@ -416,7 +416,7 @@ export class PurchaseService extends PurchasesService {
 
     // Delete items first
     for (const item of purchase.items) {
-      await this.queueSync("delete", item.id, { purchaseId: id }, undefined, "purchase_items");
+      await this.queueSync("delete", item.id, { purchaseId: id }, "purchase_items");
     }
 
     // Delete the purchase
@@ -536,7 +536,7 @@ export class PurchaseService extends PurchasesService {
       purchaseId,
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
       unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
-    }, undefined, "purchase_items");
+    }, "purchase_items");
   }
 
   /**
@@ -564,7 +564,7 @@ export class PurchaseService extends PurchasesService {
     await this.recalculateTotal(purchaseId);
 
     // Sync with FK reference
-    await this.queueSync("delete", itemId, { purchaseId }, undefined, "purchase_items");
+    await this.queueSync("delete", itemId, { purchaseId }, "purchase_items");
   }
 
   /**
@@ -694,7 +694,7 @@ export class PurchaseService extends PurchasesService {
     }
 
     // Sync with FK reference
-    await this.queueSync("delete", itemId, { purchaseId }, undefined, "purchase_items");
+    await this.queueSync("delete", itemId, { purchaseId }, "purchase_items");
   }
 
   /**

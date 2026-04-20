@@ -292,7 +292,7 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     // Queue individual delete sync operations for each member
     for (const member of members) {
-      await this.queueSync("delete", member.id, {}, undefined, "customer_group_members");
+      await this.queueSync("delete", member.id, {}, "customer_group_members");
     }
 
     await this.db
@@ -361,7 +361,7 @@ export class CustomerGroupService extends CustomerGroupsService {
       await this.queueSync("create", memberIds[i], {
         groupId,
         customerId: newCustomerIds[i],
-      }, undefined, "customer_group_members");
+      }, "customer_group_members");
     }
   }
 

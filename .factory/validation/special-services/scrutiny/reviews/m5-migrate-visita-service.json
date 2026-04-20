@@ -1,0 +1,33 @@
+{
+  "featureId": "m5-migrate-visita-service",
+  "reviewedAt": "2026-04-20T11:02:29.546Z",
+  "commitId": "a116803",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "VisitaService has been successfully migrated to extend VisitasService from generated code. The implementation correctly preserves enriched return types (VisitaWithCustomer) by overriding findById, findByBusiness, and findByDistribucion methods. All methods properly join with customers table to return customer data. The service uses FK references instead of syncGroupId in queueSync calls.",
+    "issues": [
+      {
+        "file": "packages/app/app/hooks/use-visitas.ts",
+        "line": 95,
+        "severity": "non_blocking",
+        "description": "useCreateVisita hook uses (visitaService as any).create() due to TypeScript type incompatibility between hook's CreateVisitaInput and service's CreateVisitasInput. This is a documented workaround for the type mismatch between generated and custom input types."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The VisitaService migration demonstrates the proper pattern for extending generated services with enriched return types: extend the base class, override methods to add JOIN queries, and return enriched types. This pattern could be documented for future migrations.",
+      "evidence": "visita-service.ts:46 - class VisitaService extends VisitasService, with findById override returning VisitaWithCustomer instead of base's typeof visitas.$inferSelect"
+    },
+    {
+      "area": "knowledge",
+      "observation": "When overriding methods with different return types than the base class, TypeScript allows covariant return types (subtypes). VisitaWithCustomer extends the base Visita type with optional customer property, making this a valid override.",
+      "evidence": "visita-service.ts:27-39 - VisitaWithCustomer interface definition showing extension of base Visita type with customer data"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The VisitaService migration is complete and successful. The service correctly extends VisitasService, preserves enriched return types through method overrides, uses FK references instead of syncGroupId, and all typecheck and build validations pass. The only noted issue is a non-blocking type casting in the hook which is a documented workaround for input type differences."
+}

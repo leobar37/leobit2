@@ -98,7 +98,6 @@ export class SyncOperationRepository implements ISyncOperationRepository<Request
           clientTimestamp: new Date(operation.localTimestamp),
           error: null,
           processedAt: null,
-          syncGroupId: operation.syncGroupId ?? null,
           deviceId: operation.deviceId ?? null,
           sourceFingerprint: operation.sourceFingerprint ?? null,
         })
@@ -121,7 +120,6 @@ export class SyncOperationRepository implements ISyncOperationRepository<Request
         payload: operation.payload,
         status: "pending",
         clientTimestamp: new Date(operation.localTimestamp),
-        syncGroupId: operation.syncGroupId ?? null,
         deviceId: operation.deviceId ?? null,
         sourceFingerprint: operation.sourceFingerprint ?? null,
       });
@@ -149,7 +147,6 @@ export class SyncOperationRepository implements ISyncOperationRepository<Request
               clientTimestamp: new Date(operation.localTimestamp),
               error: null,
               processedAt: null,
-              syncGroupId: operation.syncGroupId ?? null,
               deviceId: operation.deviceId ?? null,
               sourceFingerprint: operation.sourceFingerprint ?? null,
             })

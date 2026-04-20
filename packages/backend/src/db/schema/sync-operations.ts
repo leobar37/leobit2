@@ -22,7 +22,6 @@ export const syncOperations = pgTable(
     entity: varchar("entity", { length: 64 }).notNull(),
     action: varchar("action", { length: 32 }).notNull(),
     entityId: varchar("entity_id", { length: 128 }).notNull(),
-    syncGroupId: varchar("sync_group_id", { length: 128 }),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
     status: varchar("status", { length: 32 }).notNull().default("pending"),
     error: text("error"),
@@ -39,7 +38,6 @@ export const syncOperations = pgTable(
     index("idx_sync_operations_business_id").on(table.businessId),
     index("idx_sync_operations_status").on(table.status),
     index("idx_sync_operations_processed_at").on(table.processedAt),
-    index("idx_sync_operations_sync_group_id").on(table.syncGroupId),
     uniqueIndex("uq_sync_operations_business_operation").on(
       table.businessId,
       table.operationId
