@@ -63,6 +63,8 @@ import type { SyncConflictRepository } from "./framework/SyncConflictRepository"
 import type { IConflictResolver } from "./framework/types";
 
 export interface SyncEngineDeps {
+  // Index signature required by library's SyncHandlerDeps interface
+  [key: string]: unknown;
   customerRepo: CustomerRepository;
   saleRepo: SaleRepository;
   paymentRepo: PaymentRepository;

@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { businessUsers, businessUserRoleEnum } from "../db/schema";
 import { ForbiddenError } from "../errors";
-import type { BusinessCalculatorSettings } from "../db/schema/businesses";
+import type { BusinessCalculatorSettings } from "@avileo/shared";
 import { defaultCalculatorSettings } from "../db/schema/businesses";
 
 type BusinessUserRole = typeof businessUserRoleEnum.enumValues[number];
@@ -68,6 +68,9 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
  * 3. Contiene businessId para filtrado multi-tenant
  */
 export class RequestContext {
+  // Index signature for compatibility with SyncRequestContext from drizzle-sync library
+  [key: string]: unknown;
+
   constructor(
     public readonly userId: string,
     public readonly email: string,

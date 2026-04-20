@@ -30,10 +30,12 @@ import type { ISyncConflictRepository } from "./conflict-repository";
 
 /**
  * Request context interface for sync engine
+ * Index signature allows compatibility with extended context types (e.g., RequestContext)
  */
 export interface SyncRequestContext {
   businessId: string;
   businessUserId: string;
+  [key: string]: unknown;
 }
 
 /**

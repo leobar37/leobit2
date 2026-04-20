@@ -51,7 +51,7 @@ interface SyncServiceDeps extends SyncEngineDeps {}
  * WeakMap to track pipeline execution state per handler instance.
  * This enables idempotent handler execution when library calls execute() after beforeExecute().
  */
-const pipelineStateMap = new WeakMap<unknown, { result: SyncHandlerResult | null; executed: boolean }>();
+const pipelineStateMap = new WeakMap<object, { result: SyncHandlerResult | null; executed: boolean }>();
 
 /**
  * Creates a SyncEngine middleware that wraps the backend's SyncPipeline.

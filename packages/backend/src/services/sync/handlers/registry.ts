@@ -1,6 +1,6 @@
 import type { SyncEngineDeps } from "../types";
 import type { ISyncHandler } from "../framework/types";
-import { SyncHandlerBuilder, GenericSyncHandler } from "@avileo/drizzle-sync/server";
+import { SyncHandlerBuilder, GenericSyncHandler, type SyncRequestContext } from "@avileo/drizzle-sync/server";
 import type { IGenericHandlerConfig } from "@avileo/drizzle-sync/server";
 import type { RequestContext } from "../../../context/request-context";
 import type { DbTransaction } from "../../../lib/txid";
@@ -33,6 +33,17 @@ import type { ProductRepository } from "../../repository/product.repository";
 import type { SaleRepository } from "../../repository/sale.repository";
 import type { PurchaseRepository } from "../../repository/purchase.repository";
 import type { PaymentRepository } from "../../repository/payment.repository";
+
+// ─── Context casting helper ─────────────────────────────────────────────────────
+
+/**
+ * Cast SyncRequestContext to RequestContext for repository calls.
+ * SyncRequestContext only has businessId/businessUserId, but repository methods
+ * expect the full RequestContext. This is safe because at runtime the actual
+ * RequestContext is passed, and we only use businessId/businessUserId in handlers.
+ */
+const toRequestContext = (ctx: SyncRequestContext): RequestContext =>
+  ctx as unknown as RequestContext;
 
 // ─── Shared handler configs ─────────────────────────────────────────────────────
 
@@ -102,10 +113,10 @@ export function createTagHandler(deps: SyncEngineDeps): ISyncHandler {
     .withCreateFields({ name: "name", color: "color" })
     .withUpdateFields({ name: "name", color: "color" })
     .withRepo({
-      create: (ctx, data, tx) => deps.tagRepo.create(ctx, data as Parameters<typeof deps.tagRepo.create>[1], tx),
-      findById: (ctx, id, tx) => deps.tagRepo.findById(ctx, id, tx) as Promise<unknown | undefined>,
-      update: (ctx, id, data, tx) => deps.tagRepo.update(ctx, id, data as Parameters<typeof deps.tagRepo.update>[2], tx).then(r => !!r),
-      delete: (ctx, id) => deps.tagRepo.delete(ctx, id),
+      create: (ctx, data, tx) => deps.tagRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.tagRepo.create>[1], tx as DbTransaction),
+      findById: (ctx, id, tx) => deps.tagRepo.findById(toRequestContext(ctx), id, tx as DbTransaction) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) => deps.tagRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.tagRepo.update>[2], tx as DbTransaction).then(r => !!r),
+      delete: (ctx, id) => deps.tagRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -116,10 +127,10 @@ export function createCustomerHandler(deps: SyncEngineDeps): ISyncHandler {
     .withCreateFields({ name: "name", dni: "dni", phone: "phone", address: "address", notes: "notes" })
     .withUpdateFields({ name: "name", dni: "dni", phone: "phone", address: "address", notes: "notes" })
     .withRepo({
-      create: (ctx, data, tx) => deps.customerRepo.create(ctx, data as Parameters<typeof deps.customerRepo.create>[1], tx),
-      findById: (ctx, id, tx) => deps.customerRepo.findById(ctx, id, tx) as Promise<unknown | undefined>,
-      update: (ctx, id, data, tx) => deps.customerRepo.update(ctx, id, data as Parameters<typeof deps.customerRepo.update>[2], tx).then(r => !!r),
-      delete: (ctx, id) => deps.customerRepo.delete(ctx, id),
+      create: (ctx, data, tx) => deps.customerRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.customerRepo.create>[1], tx as DbTransaction),
+      findById: (ctx, id, tx) => deps.customerRepo.findById(toRequestContext(ctx), id, tx) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) => deps.customerRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.customerRepo.update>[2], tx).then(r => !!r),
+      delete: (ctx, id) => deps.customerRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -134,10 +145,10 @@ export function createProductHandler(deps: SyncEngineDeps): ISyncHandler {
     .withUpdateFields({ name: "name", unit: "unit", basePrice: "basePrice", isActive: "isActive", imageId: "imageId" })
     .withCreateDefaults({ unit: "kg", basePrice: "0", costPrice: "0", isActive: true, hasVariants: false })
     .withRepo({
-      create: (ctx, data, tx) => deps.productRepo.create(ctx, data as Parameters<typeof deps.productRepo.create>[1], tx),
-      findById: (ctx, id) => deps.productRepo.findById(ctx, id) as Promise<unknown | undefined>,
-      update: (ctx, id, data, tx) => deps.productRepo.update(ctx, id, data as Parameters<typeof deps.productRepo.update>[2], tx).then(r => !!r),
-      delete: (ctx, id) => deps.productRepo.delete(ctx, id),
+      create: (ctx, data, tx) => deps.productRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.productRepo.create>[1], tx as DbTransaction),
+      findById: (ctx, id) => deps.productRepo.findById(toRequestContext(ctx), id) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) => deps.productRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.productRepo.update>[2], tx).then(r => !!r),
+      delete: (ctx, id) => deps.productRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -154,10 +165,10 @@ export function createSupplierHandler(deps: SyncEngineDeps): ISyncHandler {
       phone: "phone", email: "email", notes: "notes", isActive: "isActive",
     })
     .withRepo({
-      create: (ctx, data, tx) => deps.supplierRepo.create(ctx, data as Parameters<typeof deps.supplierRepo.create>[1], tx),
-      findById: (ctx, id) => deps.supplierRepo.findById(ctx, id) as Promise<unknown | undefined>,
-      update: (ctx, id, data, tx) => deps.supplierRepo.update(ctx, id, data as Parameters<typeof deps.supplierRepo.update>[2], tx).then(r => !!r),
-      delete: (ctx, id) => deps.supplierRepo.delete(ctx, id),
+      create: (ctx, data, tx) => deps.supplierRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.supplierRepo.create>[1], tx as DbTransaction),
+      findById: (ctx, id) => deps.supplierRepo.findById(toRequestContext(ctx), id) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) => deps.supplierRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.supplierRepo.update>[2], tx).then(r => !!r),
+      delete: (ctx, id) => deps.supplierRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -168,10 +179,10 @@ export function createCustomerGroupHandler(deps: SyncEngineDeps): ISyncHandler {
     .withCreateFields({ name: "name" })
     .withUpdateFields({ name: "name" })
     .withRepo({
-      create: (ctx, data) => deps.customerGroupRepo.create(ctx, data as Parameters<typeof deps.customerGroupRepo.create>[1]),
-      findById: (ctx, id, tx) => deps.customerGroupRepo.findById(ctx, id, tx) as Promise<unknown | undefined>,
-      update: (ctx, id, data) => deps.customerGroupRepo.update(ctx, id, data as Parameters<typeof deps.customerGroupRepo.update>[2]).then(r => !!r),
-      delete: (ctx, id) => deps.customerGroupRepo.delete(ctx, id),
+      create: (ctx, data) => deps.customerGroupRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.customerGroupRepo.create>[1]),
+      findById: (ctx, id, tx) => deps.customerGroupRepo.findById(toRequestContext(ctx), id, tx) as Promise<unknown | undefined>,
+      update: (ctx, id, data) => deps.customerGroupRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.customerGroupRepo.update>[2]).then(r => !!r),
+      delete: (ctx, id) => deps.customerGroupRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -191,13 +202,13 @@ export function createProductVariantHandler(deps: SyncEngineDeps): ISyncHandler 
       parentIdField: "productId",
       parentName: "Producto",
       findParent: (ctx, parentId) =>
-        deps.productRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.productRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withRepo({
-      create: (ctx, data, tx) => deps.variantRepo.create(ctx, data as Parameters<typeof deps.variantRepo.create>[1], tx),
-      findById: (ctx, id) => deps.variantRepo.findById(ctx, id) as Promise<unknown | undefined>,
-      update: (ctx, id, data, tx) => deps.variantRepo.update(ctx, id, data as Parameters<typeof deps.variantRepo.update>[2], tx).then(r => !!r),
-      delete: (ctx, id) => deps.variantRepo.delete(ctx, id),
+      create: (ctx, data, tx) => deps.variantRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.variantRepo.create>[1], tx as DbTransaction),
+      findById: (ctx, id) => deps.variantRepo.findById(toRequestContext(ctx), id) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) => deps.variantRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.variantRepo.update>[2], tx).then(r => !!r),
+      delete: (ctx, id) => deps.variantRepo.delete(toRequestContext(ctx), id),
     })
     .build();
 }
@@ -212,7 +223,7 @@ export function createCustomerGroupMemberHandler(deps: SyncEngineDeps): ISyncHan
       parentIdField: "groupId",
       parentName: "Grupo",
       findParent: (ctx, parentId) =>
-        deps.customerGroupRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.customerGroupRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withCustomCreate(async (ctx, entityId, data, tx) => {
       await deps.customerGroupRepo.addMembers(
@@ -248,7 +259,7 @@ export function createCustomerTagHandler(deps: SyncEngineDeps): ISyncHandler {
       parentIdField: "customerId",
       parentName: "Cliente",
       findParent: (ctx, parentId) =>
-        deps.customerRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.customerRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withAdditionalParentChecks([{
       field: "tagId",
@@ -281,9 +292,9 @@ export function createVisitaHandler(deps: SyncEngineDeps): ISyncHandler {
     .withCreateFields({ distribucionId: "distribucionId", customerId: "customerId" })
     .withRepo({
       create: (ctx, data, tx) =>
-        deps.visitaRepo.create(ctx, data as Parameters<typeof deps.visitaRepo.create>[1]),
+        deps.visitaRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.visitaRepo.create>[1]),
       findById: (ctx, id) =>
-        deps.visitaRepo.findById(ctx, id) as Promise<unknown | undefined>,
+        deps.visitaRepo.findById(toRequestContext(ctx), id) as Promise<unknown | undefined>,
       update: async (ctx, id, data) => {
         const payload = data as {
           status?: "pendiente" | "compro" | "no_compra";
@@ -295,7 +306,7 @@ export function createVisitaHandler(deps: SyncEngineDeps): ISyncHandler {
           return false;
         }
 
-        const updated = await deps.visitaRepo.updateStatus(ctx, id, {
+        const updated = await deps.visitaRepo.updateStatus(toRequestContext(ctx), id, {
           status: payload.status,
           motivoNoCompra: payload.motivoNoCompra,
           saleId: payload.saleId,
@@ -303,14 +314,14 @@ export function createVisitaHandler(deps: SyncEngineDeps): ISyncHandler {
 
         return !!updated;
       },
-      delete: (ctx, id) => deps.visitaRepo.delete(ctx, id),
+      delete: (ctx, id) => deps.visitaRepo.delete(toRequestContext(ctx), id),
     })
     .withCustomUpdate(async (ctx, entityId, data, tx) => {
       const updateData = data as { status?: "pendiente" | "compro" | "no_compra"; motivoNoCompra?: string; saleId?: string };
       if (!updateData.status) {
         throw new Error("El estado es requerido para actualizar");
       }
-      const result = await deps.visitaRepo.updateStatus(ctx, entityId, {
+      const result = await deps.visitaRepo.updateStatus(toRequestContext(ctx), entityId, {
         status: updateData.status,
         motivoNoCompra: updateData.motivoNoCompra,
         saleId: updateData.saleId,
@@ -332,10 +343,10 @@ export function createSaleItemHandler(deps: SyncEngineDeps): ISyncHandler {
       parentIdField: "saleId",
       parentName: "Venta",
       findParent: (ctx, parentId) =>
-        deps.saleRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.saleRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withCustomCreate(async (ctx, entityId, data, tx) => {
-      await deps.saleRepo.addItem(ctx, data.saleId as string, {
+      await deps.saleRepo.addItem(toRequestContext(ctx), data.saleId as string, {
         id: entityId,
         productId: data.productId as string,
         productName: data.productName as string,
@@ -349,7 +360,7 @@ export function createSaleItemHandler(deps: SyncEngineDeps): ISyncHandler {
       }, tx);
     })
     .withCustomUpdate(async (ctx, entityId, data, tx) => {
-      await deps.saleRepo.updateItem(ctx, data.saleId as string, entityId, {
+      await deps.saleRepo.updateItem(toRequestContext(ctx), data.saleId as string, entityId, {
         quantity: data.quantity as string | undefined,
         unitPrice: data.unitPrice as string | undefined,
         subtotal: data.subtotal as string | undefined,
@@ -357,12 +368,12 @@ export function createSaleItemHandler(deps: SyncEngineDeps): ISyncHandler {
       }, tx);
     })
     .withCustomDelete(async (ctx, entityId, data, tx) => {
-      const existing = await deps.saleRepo.findItemById(ctx, data.saleId as string, entityId, tx);
+      const existing = await deps.saleRepo.findItemById(toRequestContext(ctx), data.saleId as string, entityId, tx);
       if (!existing) return;
-      await deps.saleRepo.deleteItem(ctx, data.saleId as string, entityId, tx);
+      await deps.saleRepo.deleteItem(toRequestContext(ctx), data.saleId as string, entityId, tx);
     })
     .withPostOperation(async (ctx, parsed, operation, tx) => {
-      await deps.saleRepo.recalculateTotalsAtomically(ctx, parsed.saleId as string, tx);
+      await deps.saleRepo.recalculateTotalsAtomically(toRequestContext(ctx), parsed.saleId as string, tx);
     })
     .build();
 }
@@ -376,7 +387,7 @@ export function createPurchaseItemHandler(deps: SyncEngineDeps): ISyncHandler {
       parentIdField: "purchaseId",
       parentName: "Compra",
       findParent: (ctx, parentId) =>
-        deps.purchaseRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.purchaseRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withCustomCreate(async (ctx, entityId, data, tx) => {
       // Idempotency check
@@ -402,7 +413,7 @@ export function createPurchaseItemHandler(deps: SyncEngineDeps): ISyncHandler {
         },
         tx
       );
-      await deps.purchaseRepo.updateTotal(ctx, data.purchaseId as string, tx);
+      await deps.purchaseRepo.updateTotal(toRequestContext(ctx), data.purchaseId as string, tx);
     })
     .withCustomUpdate(async (ctx, entityId, data, tx) => {
       await deps.purchaseRepo.updateItem(
@@ -416,7 +427,7 @@ export function createPurchaseItemHandler(deps: SyncEngineDeps): ISyncHandler {
         },
         tx
       );
-      await deps.purchaseRepo.updateTotal(ctx, data.purchaseId as string, tx);
+      await deps.purchaseRepo.updateTotal(toRequestContext(ctx), data.purchaseId as string, tx);
     })
     .withCustomDelete(async (ctx, entityId, data, tx) => {
       const existing = await deps.purchaseRepo.findItemById(
@@ -426,8 +437,8 @@ export function createPurchaseItemHandler(deps: SyncEngineDeps): ISyncHandler {
         tx
       );
       if (!existing) return;
-      await deps.purchaseRepo.deleteItem(ctx, data.purchaseId as string, entityId, tx);
-      await deps.purchaseRepo.updateTotal(ctx, data.purchaseId as string, tx);
+      await deps.purchaseRepo.deleteItem(toRequestContext(ctx), data.purchaseId as string, entityId, tx);
+      await deps.purchaseRepo.updateTotal(toRequestContext(ctx), data.purchaseId as string, tx);
     })
     .build();
 }
@@ -441,13 +452,13 @@ export function createDistribucionItemHandler(deps: SyncEngineDeps): ISyncHandle
       parentIdField: "distribucionId",
       parentName: "Distribución",
       findParent: (ctx, parentId) =>
-        deps.distribucionRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.distribucionRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withCustomCreate(async (ctx, entityId, data, tx) => {
-      const existing = await deps.distribucionItemRepo.findById(ctx, entityId);
+      const existing = await deps.distribucionItemRepo.findById(toRequestContext(ctx), entityId);
       if (existing) return;
 
-      await deps.distribucionItemRepo.create(ctx, {
+      await deps.distribucionItemRepo.create(toRequestContext(ctx), {
         distribucionId: data.distribucionId as string,
         variantId: data.variantId as string,
         cantidadAsignada: data.cantidadAsignada as string,
@@ -457,19 +468,19 @@ export function createDistribucionItemHandler(deps: SyncEngineDeps): ISyncHandle
     })
     .withCustomUpdate(async (ctx, entityId, data, tx) => {
       if (data.cantidadAsignada !== undefined) {
-        await deps.distribucionItemRepo.updateAsignada(ctx, entityId, data.cantidadAsignada as string, tx);
+        await deps.distribucionItemRepo.updateAsignada(toRequestContext(ctx), entityId, data.cantidadAsignada as string, tx);
       }
       if (data.cantidadVendida !== undefined) {
-        await deps.distribucionItemRepo.updateVendido(ctx, entityId, data.cantidadVendida as string, tx);
+        await deps.distribucionItemRepo.updateVendido(toRequestContext(ctx), entityId, data.cantidadVendida as string, tx);
       }
       if (data.unidad !== undefined) {
-        await deps.distribucionItemRepo.updateUnidad(ctx, entityId, data.unidad as string, tx);
+        await deps.distribucionItemRepo.updateUnidad(toRequestContext(ctx), entityId, data.unidad as string, tx);
       }
     })
     .withCustomDelete(async (ctx, entityId, data, tx) => {
-      const existing = await deps.distribucionItemRepo.findById(ctx, entityId);
+      const existing = await deps.distribucionItemRepo.findById(toRequestContext(ctx), entityId);
       if (!existing) return;
-      await deps.distribucionItemRepo.delete(ctx, entityId);
+      await deps.distribucionItemRepo.delete(toRequestContext(ctx), entityId);
     })
     .build();
 }
@@ -486,22 +497,22 @@ export function createAbonoHandler(deps: SyncEngineDeps): ISyncHandler {
       parentIdField: "customerId",
       parentName: "Cliente",
       findParent: (ctx, parentId) =>
-        deps.customerRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        deps.customerRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withRepo({
       create: (ctx, data, tx) =>
-        deps.paymentRepo.create(ctx, data as Parameters<typeof deps.paymentRepo.create>[1], tx),
+        deps.paymentRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.paymentRepo.create>[1], tx as DbTransaction),
       findById: (ctx, id, tx) =>
-        deps.paymentRepo.findById(ctx, id, tx) as Promise<unknown | undefined>,
+        deps.paymentRepo.findById(toRequestContext(ctx), id, tx) as Promise<unknown | undefined>,
       update: (ctx, id, data, tx) =>
-        deps.paymentRepo.update(ctx, id, data as Parameters<typeof deps.paymentRepo.update>[2], tx, undefined).then(r => !!r),
-      delete: (ctx, id, tx) => deps.paymentRepo.delete(ctx, id, tx),
+        deps.paymentRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.paymentRepo.update>[2], tx, undefined).then(r => !!r),
+      delete: (ctx, id, tx) => deps.paymentRepo.delete(toRequestContext(ctx), id, tx as DbTransaction),
     })
     .withVersionConflictField("version")
     .withCustomUpdate(async (ctx, entityId, data, tx, operation) => {
       const updateData = data as { proofImageId?: string; referenceNumber?: string; notes?: string; version?: number };
       const clientExpectedVersion = operation?.localVersion ?? updateData.version ?? 0;
-      await deps.paymentRepo.update(ctx, entityId, {
+      await deps.paymentRepo.update(toRequestContext(ctx), entityId, {
         proofImageId: updateData.proofImageId,
         referenceNumber: updateData.referenceNumber,
         notes: updateData.notes,
@@ -515,7 +526,7 @@ export function createAbonoSyncHandlerForTest(
   paymentRepo: PaymentRepository,
   customerRepo: CustomerRepository
 ): ISyncHandler {
-  const enricher = (ctx: RequestContext, payload: Record<string, unknown>) => ({
+  const enricher = (ctx: SyncRequestContext, payload: Record<string, unknown>) => ({
     ...payload,
     sellerId: (payload.sellerId as string) || ctx.businessUserId,
   });
@@ -530,27 +541,27 @@ export function createAbonoSyncHandlerForTest(
       parentIdField: "customerId",
       parentName: "Cliente",
       findParent: (ctx, parentId) =>
-        customerRepo.findById(ctx, parentId) as Promise<unknown | undefined>,
+        customerRepo.findById(toRequestContext(ctx), parentId) as Promise<unknown | undefined>,
     })
     .withRepo({
       create: (ctx, data, tx) =>
-        paymentRepo.create(ctx, data as Parameters<typeof paymentRepo.create>[1], tx),
+        paymentRepo.create(toRequestContext(ctx), data as Parameters<typeof paymentRepo.create>[1], tx as DbTransaction),
       findById: (ctx, id, tx) =>
-        paymentRepo.findById(ctx, id, tx) as Promise<unknown | undefined>,
+        paymentRepo.findById(toRequestContext(ctx), id, tx as DbTransaction) as Promise<unknown | undefined>,
       update: (ctx, id, data, tx) =>
-        paymentRepo.update(ctx, id, data as Parameters<typeof paymentRepo.update>[2], tx, undefined).then(r => !!r),
-      delete: (ctx, id, tx) => paymentRepo.delete(ctx, id, tx),
+        paymentRepo.update(toRequestContext(ctx), id, data as Parameters<typeof paymentRepo.update>[2], tx as DbTransaction, undefined).then(r => !!r),
+      delete: (ctx, id, tx) => paymentRepo.delete(toRequestContext(ctx), id, tx as DbTransaction),
     })
     .withVersionConflictField("version")
     .withCustomUpdate(async (ctx, entityId, data, tx, operation) => {
       const updateData = data as { proofImageId?: string; referenceNumber?: string; notes?: string; version?: number };
       const clientExpectedVersion = operation?.localVersion ?? updateData.version ?? 0;
-      await paymentRepo.update(ctx, entityId, {
+      await paymentRepo.update(toRequestContext(ctx), entityId, {
         proofImageId: updateData.proofImageId,
         referenceNumber: updateData.referenceNumber,
         notes: updateData.notes,
         version: clientExpectedVersion + 1,
-      }, tx, clientExpectedVersion);
+      }, tx as DbTransaction, clientExpectedVersion);
     });
 
   return builder.build();
@@ -561,7 +572,7 @@ export function createAbonoSyncHandlerForTest(
 function customerRepoAdapter(repo: CustomerRepository) {
   return {
     create: (ctx: RequestContext, data: unknown, tx?: DbTransaction) =>
-      repo.create(ctx, data as Parameters<typeof repo.create>[1], tx),
+      repo.create(ctx, data as Parameters<typeof repo.create>[1], tx as DbTransaction),
     findById: (ctx: RequestContext, id: string, tx?: DbTransaction) =>
       repo.findById(ctx, id, tx) as Promise<unknown | undefined>,
     update: (ctx: RequestContext, id: string, data: unknown, tx?: DbTransaction) =>
@@ -573,7 +584,7 @@ function customerRepoAdapter(repo: CustomerRepository) {
 function productRepoAdapter(repo: ProductRepository) {
   return {
     create: (ctx: RequestContext, data: unknown, tx?: DbTransaction) =>
-      repo.create(ctx, data as Parameters<typeof repo.create>[1], tx),
+      repo.create(ctx, data as Parameters<typeof repo.create>[1], tx as DbTransaction),
     findById: (ctx: RequestContext, id: string) =>
       repo.findById(ctx, id) as Promise<unknown | undefined>,
     update: (ctx: RequestContext, id: string, data: unknown, tx?: DbTransaction) =>
