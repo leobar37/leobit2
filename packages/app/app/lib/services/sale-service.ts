@@ -2,6 +2,7 @@
  * SaleService
  * Provides atomic operations for sales with their items
  * Extends BaseService for common sync and ID generation functionality
+ * Note: Uses FK references (saleId in payload) instead of syncGroupId for ordering
  */
 
 import type { PGlite } from "@electric-sql/pglite";
@@ -10,7 +11,7 @@ import { BaseService, type EntityType } from "./base-service";
 import { SyncService } from "../sync/sync-service";
 import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
-import { mapToCamelCase, mapToCamelCaseWithDates, normalizeRow } from "../mappers/entity-mapper";
+import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
 
 /**
@@ -89,6 +90,7 @@ export interface Sale {
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
+  syncGroupId: string | null;
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancelReason: string | null;
@@ -183,6 +185,7 @@ export interface UpdateSaleInput {
 /**
  * SaleService
  * Provides atomic CRUD operations for sales with their items
+ * Extends BaseService for common sync and ID generation functionality
  */
 export class SaleService extends BaseService {
   constructor(
@@ -298,7 +301,8 @@ export class SaleService extends BaseService {
   }
 
   /**
-   * Find a sale by ID with its items
+   * Find a sale by ID with its items (enriched with customer and items)
+   * Overrides the generated SalesService.findById to include related data
    */
   async findById(id: string): Promise<SaleWithItems | null> {
     const saleResult = await this.pg.query<Record<string, unknown>>(
@@ -384,7 +388,8 @@ export class SaleService extends BaseService {
   }
 
   /**
-   * Find all sales for the business
+   * Find all sales for the business (enriched with items and customer)
+   * Overrides the generated SalesService.findByBusiness to include related data
    */
   async findByBusiness(): Promise<SaleWithItems[]> {
     const salesResult = await this.db
@@ -530,11 +535,11 @@ export class SaleService extends BaseService {
   /**
    * Create a draft sale without items
    * Used for creating a new sale that will be edited later
+   * Uses FK references (saleId) for ordering instead of syncGroupId
    */
   async createDraft(saleInput: Omit<CreateSaleInput, "totalAmount"> & { totalAmount?: number }): Promise<Sale> {
     const perfStart = performance.now();
 
-    const syncGroupId = this.generateSyncGroup();
     const now = this.now();
     const saleId = generateId();
     const sellerId = saleInput.sellerId;
@@ -552,8 +557,8 @@ export class SaleService extends BaseService {
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
-          sync_status, sync_attempts, sync_group_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)`,
+          sync_status, sync_attempts, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
         [
           saleId,
           this.businessId,
@@ -577,7 +582,7 @@ export class SaleService extends BaseService {
           true,
           SyncStatus.PENDING,
           0,
-          syncGroupId, // Store syncGroupId on the sale record
+          now,
           now,
         ]
       );
@@ -586,6 +591,7 @@ export class SaleService extends BaseService {
       const insertMs = performance.now() - insertStart;
 
       const enqueueStart = performance.now();
+      // Use FK reference (saleId) for ordering - no syncGroupId needed
       await this.queueSync(
         "create",
         saleId,
@@ -606,7 +612,7 @@ export class SaleService extends BaseService {
           orderDate: saleInput.orderDate,
           items: [],
         },
-        syncGroupId,
+        undefined, // No syncGroupId - use FK-based ordering
         undefined,
         undefined,
         {
@@ -652,6 +658,7 @@ export class SaleService extends BaseService {
         allowCustomerEdit: true,
         syncStatus: SyncStatus.PENDING,
         syncAttempts: 0,
+        syncGroupId: null,
         cancelledAt: null,
         cancelledBy: null,
         cancelReason: null,
@@ -676,7 +683,7 @@ export class SaleService extends BaseService {
   /**
    * Create a sale with items atomically
    * Uses PGlite transaction for atomicity
-   * All operations are grouped with the same syncGroupId
+   * Uses FK references (saleId) for ordering instead of syncGroupId
    */
   async createWithItems(
     saleInput: CreateSaleInput,
@@ -687,8 +694,6 @@ export class SaleService extends BaseService {
       throw new Error("A sale must have at least 1 item");
     }
 
-    // Generate sync group ID for atomic operation
-    const syncGroupId = this.generateSyncGroup();
     const now = this.now();
 
     // Generate IDs
@@ -707,15 +712,15 @@ export class SaleService extends BaseService {
     await this.pg.exec("BEGIN");
 
     try {
-      // Insert sale record
+      // Insert sale record (no syncGroupId - use FK-based ordering)
       await this.pg.query(
         `INSERT INTO sales (
           id, business_id, customer_id, seller_id, distribucion_id, visita_id,
           type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
           tara, net_weight, sale_date, delivery_date, order_date,
           status, version, allow_customer_edit,
-          sync_status, sync_attempts, sync_group_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)`,
+          sync_status, sync_attempts, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
         [
           saleId,
           this.businessId,
@@ -739,12 +744,11 @@ export class SaleService extends BaseService {
           true,
           SyncStatus.PENDING,
           0,
-          syncGroupId, // Store syncGroupId on the sale record
           now,
         ]
       );
 
-      // Insert all sale items with Drizzle
+      // Insert all sale items with Drizzle (items reference parent via saleId FK)
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemId = itemIds[i];
@@ -770,6 +774,7 @@ export class SaleService extends BaseService {
       await this.pg.exec("COMMIT");
 
       // Queue sync operation for sale with items included in payload
+      // Use FK reference (saleId in items) for ordering - no syncGroupId
       await this.queueSync(
         "create",
         saleId,
@@ -800,7 +805,7 @@ export class SaleService extends BaseService {
             subtotal: this.normalizeCurrency(item.subtotal),
           })),
         },
-        syncGroupId
+        undefined // No syncGroupId - use FK-based ordering
       );
 
       // Return the created sale
@@ -815,18 +820,6 @@ export class SaleService extends BaseService {
       await this.pg.exec("ROLLBACK");
       throw error;
     }
-  }
-
-  /**
-   * Get the syncGroupId from the sale record directly
-   * This is more reliable than querying sync_operations which may not be committed yet
-   */
-  private async getSaleSyncGroupId(saleId: string): Promise<string | undefined> {
-    const result = await this.pg.query<{ sync_group_id: string }>(
-      `SELECT sync_group_id FROM sales WHERE id = $1 AND business_id = $2`,
-      [saleId, this.businessId]
-    );
-    return result.rows[0]?.sync_group_id ?? undefined;
   }
 
   /**
@@ -890,8 +883,7 @@ export class SaleService extends BaseService {
       ]
     );
 
-    const syncGroupId = await this.getSaleSyncGroupId(id);
-
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       id,
@@ -903,7 +895,7 @@ export class SaleService extends BaseService {
         balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version
     );
@@ -976,8 +968,7 @@ export class SaleService extends BaseService {
       ]
     );
 
-    const syncGroupId = await this.getSaleSyncGroupId(id);
-
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       id,
@@ -989,7 +980,7 @@ export class SaleService extends BaseService {
         balanceDue: this.normalizeCurrency(balanceDue),
         paymentMode,
       },
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version
     );
@@ -1020,8 +1011,7 @@ export class SaleService extends BaseService {
       [now, SyncStatus.PENDING, id]
     );
 
-    const syncGroupId = await this.getSaleSyncGroupId(id);
-
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       id,
@@ -1029,7 +1019,7 @@ export class SaleService extends BaseService {
         status: "delivered",
         saleType: sale.saleType,
       },
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version
     );
@@ -1067,7 +1057,6 @@ export class SaleService extends BaseService {
     }
 
     const now = this.now();
-    const syncGroupId = await this.getSaleSyncGroupId(id);
 
     // Start transaction
     await this.pg.exec("BEGIN");
@@ -1096,17 +1085,18 @@ export class SaleService extends BaseService {
           [this.normalizeWeight(deliveredQty), this.normalizeNullableCurrency(finalPrice), this.normalizeCurrency(subtotal), itemUpdate.itemId, id]
         );
 
-        // Queue sync for item update
+        // Queue sync for item update - use FK reference (saleId in payload)
         await this.queueSync(
           "update",
           itemUpdate.itemId,
           {
+            saleId: id, // FK reference for ordering
             deliveredQuantity: this.normalizeWeight(deliveredQty),
             unitPriceFinal: this.normalizeNullableCurrency(finalPrice),
             subtotal: this.normalizeCurrency(subtotal),
             isModified: true,
           },
-          syncGroupId,
+          undefined, // No syncGroupId - use FK-based ordering
           "sale_items"
         );
       }
@@ -1132,7 +1122,7 @@ export class SaleService extends BaseService {
       // Commit transaction
       await this.pg.exec("COMMIT");
 
-      // Queue sync for sale update
+      // Queue sync for sale update - use FK-based ordering
       await this.queueSync(
         "update",
         id,
@@ -1144,7 +1134,7 @@ export class SaleService extends BaseService {
           balanceDue: this.normalizeCurrency(balanceDue),
           paymentMode: options.paymentMode ?? sale.paymentMode,
         },
-        syncGroupId,
+        undefined, // No syncGroupId - use FK-based ordering
         undefined,
         sale.version
       );
@@ -1182,8 +1172,7 @@ export class SaleService extends BaseService {
       [now, this.businessUserId, reason, SyncStatus.PENDING, id]
     );
 
-    const syncGroupId = await this.getSaleSyncGroupId(id);
-
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       id,
@@ -1194,7 +1183,7 @@ export class SaleService extends BaseService {
         cancelledBy: this.businessUserId,
         refundAmount: sale.refundAmount ? this.normalizeCurrency(sale.refundAmount) : null,
       },
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version
     );
@@ -1304,8 +1293,6 @@ export class SaleService extends BaseService {
       params
     );
 
-    const syncGroupId = await this.getSaleSyncGroupId(id);
-
     const syncPayload: Record<string, unknown> = { ...input };
     if (input.totalAmount !== undefined) syncPayload.totalAmount = this.normalizeCurrency(input.totalAmount);
     if (input.amountPaid !== undefined) syncPayload.amountPaid = this.normalizeCurrency(input.amountPaid);
@@ -1313,11 +1300,12 @@ export class SaleService extends BaseService {
     if (input.tara !== undefined) syncPayload.tara = this.normalizeWeight(input.tara);
     if (input.netWeight !== undefined) syncPayload.netWeight = this.normalizeWeight(input.netWeight);
 
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       id,
       syncPayload,
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version,
       {
@@ -1370,7 +1358,7 @@ export class SaleService extends BaseService {
   async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
     const perfStart = performance.now();
     const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
       [saleId, this.businessId]
     );
 
@@ -1382,7 +1370,6 @@ export class SaleService extends BaseService {
       id: string;
       type: SaleType;
       status: SaleStatus;
-      syncGroupId?: string | null;
     };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
@@ -1402,12 +1389,10 @@ export class SaleService extends BaseService {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
 
-    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
-
     const itemId = this.generateId();
     const now = this.now();
 
-    // Use Drizzle to insert the item with the sale's syncGroupId
+    // Use Drizzle to insert the item (FK reference is saleId in payload for ordering)
     await this.db.insert(saleItemsTable).values({
       id: itemId,
       businessId: this.businessId,
@@ -1422,7 +1407,6 @@ export class SaleService extends BaseService {
       unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
       subtotal: this.normalizeCurrency(item.subtotal),
       isModified: false,
-      syncGroupId: saleSyncGroupId,
     });
 
     // Update sale total atomically to prevent race conditions
@@ -1436,8 +1420,7 @@ export class SaleService extends BaseService {
       [this.normalizeCurrency(item.subtotal), now, SyncStatus.PENDING, saleId]
     );
 
-    // Queue sync for the new item (use same syncGroupId as the sale insert to ensure correct order)
-    console.log("[SaleService] addItem - saleSyncGroupId:", saleSyncGroupId, "saleId:", saleId);
+    // Queue sync for the new item - use FK reference (saleId) for ordering
     await this.queueSync(
       "create",
       itemId,
@@ -1453,7 +1436,7 @@ export class SaleService extends BaseService {
         unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
         subtotal: this.normalizeCurrency(item.subtotal),
       },
-      saleSyncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1490,7 +1473,7 @@ export class SaleService extends BaseService {
   ): Promise<SaleItem> {
     const perfStart = performance.now();
     const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
       [saleId, this.businessId]
     );
 
@@ -1502,7 +1485,6 @@ export class SaleService extends BaseService {
       id: string;
       type: SaleType;
       status: SaleStatus;
-      syncGroupId?: string | null;
     };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
@@ -1549,8 +1531,7 @@ export class SaleService extends BaseService {
       );
     }
 
-    // Queue sync for the updated item with same syncGroupId as the sale insert
-    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
+    // Queue sync for the updated item - use FK reference (saleId) for ordering
     const syncPayload: Record<string, unknown> = { saleId };
     if (data.quantity !== undefined) syncPayload.quantity = this.normalizeWeight(data.quantity);
     if (data.unitPrice !== undefined) syncPayload.unitPrice = this.normalizeNullableCurrency(data.unitPrice);
@@ -1559,7 +1540,7 @@ export class SaleService extends BaseService {
       "update",
       itemId,
       syncPayload,
-      saleSyncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1588,7 +1569,7 @@ export class SaleService extends BaseService {
   async removeItem(saleId: string, itemId: string): Promise<void> {
     const perfStart = performance.now();
     const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status, sync_group_id FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
+      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
       [saleId, this.businessId]
     );
 
@@ -1600,7 +1581,6 @@ export class SaleService extends BaseService {
       id: string;
       type: SaleType;
       status: SaleStatus;
-      syncGroupId?: string | null;
     };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
@@ -1635,15 +1615,14 @@ export class SaleService extends BaseService {
       [this.normalizeCurrency(subtotal), now, SyncStatus.PENDING, saleId]
     );
 
-    // Queue sync for the deleted item with same syncGroupId as the sale insert
-    const saleSyncGroupId = saleMeta.syncGroupId ?? undefined;
+    // Queue sync for the deleted item - use FK reference (saleId) for ordering
     await this.queueSync(
       "delete",
       itemId,
       {
         saleId,
       },
-      saleSyncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering via saleId in payload
       "sale_items",
       undefined,
       {
@@ -1691,9 +1670,7 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found after payment");
     }
 
-    // Get syncGroupId to ensure payment is grouped with the sale operations
-    const syncGroupId = await this.getSaleSyncGroupId(saleId);
-
+    // Use FK-based ordering - no syncGroupId needed
     await this.queueSync(
       "update",
       saleId,
@@ -1701,7 +1678,7 @@ export class SaleService extends BaseService {
         amountPaid: this.normalizeCurrency(updatedSale.amountPaid),
         balanceDue: this.normalizeCurrency(updatedSale.balanceDue),
       },
-      syncGroupId,
+      undefined, // No syncGroupId - use FK-based ordering
       undefined,
       sale.version
     );
