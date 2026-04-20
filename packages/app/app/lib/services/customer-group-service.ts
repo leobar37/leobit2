@@ -254,15 +254,13 @@ export class CustomerGroupService extends CustomerGroupsService {
 
   /**
    * Create a group with initial members atomically
-   * Uses syncGroupId to ensure group and members are synced together
+   * Members are synced with FK reference (groupId in payload) for ordering
    */
   async createWithMembers(input: CreateCustomerGroupInput, customerIds: string[]): Promise<{ group: CustomerGroup }> {
-    const syncGroupId = this.generateSyncGroup();
-
     const group = await this.create(input);
 
     if (customerIds.length > 0) {
-      await this.addMembers(group.id, customerIds, syncGroupId);
+      await this.addMembers(group.id, customerIds);
     }
 
     return { group };
@@ -311,8 +309,9 @@ export class CustomerGroupService extends CustomerGroupsService {
   /**
    * Add members to a group
    * Custom method for member management
+   * Uses FK reference (groupId in payload) for ordering, not syncGroupId
    */
-  async addMembers(groupId: string, customerIds: string[], syncGroupId?: string): Promise<void> {
+  async addMembers(groupId: string, customerIds: string[]): Promise<void> {
     const group = await this.db
       .select()
       .from(customerGroups)
@@ -325,10 +324,6 @@ export class CustomerGroupService extends CustomerGroupsService {
     if (group.length === 0) {
       throw new Error(`Customer group not found: ${groupId}`);
     }
-
-    // Always generate a new syncGroupId for member operations
-    // This ensures members sync properly even if the group creation has already completed
-    const memberSyncGroupId = syncGroupId || this.generateSyncGroup();
 
     const existingMembers = await this.db
       .select({ customerId: customerGroupMembers.customerId })
@@ -361,11 +356,12 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     await this.db.insert(customerGroupMembers).values(members as never[]);
 
+    // Queue sync operations with FK reference (groupId in payload) for topological ordering
     for (let i = 0; i < newCustomerIds.length; i++) {
       await this.queueSync("create", memberIds[i], {
         groupId,
         customerId: newCustomerIds[i],
-      }, memberSyncGroupId, "customer_group_members");
+      }, undefined, "customer_group_members");
     }
   }
 
