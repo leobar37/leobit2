@@ -20,6 +20,9 @@ import { businessUserRoleEnum } from "./enums";
 
 import type { BusinessCalculatorSettings } from "@avileo/shared";
 
+// Re-export BusinessCalculatorSettings for use in other modules
+export type { BusinessCalculatorSettings } from "@avileo/shared";
+
 /**
  * Default calculator settings
  */

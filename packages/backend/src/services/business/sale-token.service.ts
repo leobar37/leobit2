@@ -8,7 +8,7 @@ import type { SaleRepository } from "../repository/sale.repository";
 import type { RequestContext } from "../../context/request-context";
 import type { SaleToken } from "../../db/schema/sale-tokens";
 import { NotFoundError, ValidationError, ConflictError } from "../../errors";
-import type { DbTransaction } from "../repository/sale.repository";
+import type { DbTransaction } from "../../lib/txid";
 
 const ALLOWED_CHARS_REGEX = /^[a-zA-Z0-9_-]+$/;
 const TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";

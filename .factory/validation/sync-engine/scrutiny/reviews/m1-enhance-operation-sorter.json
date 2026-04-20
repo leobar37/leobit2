@@ -1,0 +1,64 @@
+{
+  "featureId": "m1-enhance-operation-sorter",
+  "reviewedAt": "2026-04-20T05:57:03.635Z",
+  "commitId": "544df1b246b0393328717644ad122b1d47b578f8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The OperationSorter enhancement successfully implements FK-based topological sorting using Kahn's algorithm. The implementation correctly reads parent-child relationships from the avileo.ts preset config and builds a dependency graph to ensure parent entities are processed before children. Backward compatibility with syncGroupId-based sorting is maintained as a fallback when no FK dependencies exist.",
+    "issues": []
+  },
+  "validationAssertions": {
+    "VAL-1-001": {
+      "status": "pass",
+      "evidence": "Test 'places sale before sale_items when sale_items references sale via FK' verifies that a sale with entityId 'sale_123' is sorted before sale_items with payload.sale_id: 'sale_123'. The test passes and confirms the FK-based topological sort works correctly.",
+      "testFile": "packages/drizzle-sync/src/server/operation-sorter.test.ts",
+      "testNames": [
+        "places sale before sale_items when sale_items references sale via FK",
+        "handles multiple items referencing the same parent sale",
+        "respects FK references even when timestamps suggest otherwise"
+      ]
+    },
+    "VAL-1-002": {
+      "status": "pass",
+      "evidence": "Multiple tests verify multi-parent dependency resolution: sale_items with 3 parents (sales, products, product_variants), abonos with 2 parents (customers, sales), visitas with 2 parents (distribuciones, customers), and customer_tags with 2 parents (customers, tags). All tests confirm children are placed after ALL parents.",
+      "testFile": "packages/drizzle-sync/src/server/operation-sorter.test.ts",
+      "testNames": [
+        "places sale_items after all three parents (sales, products, product_variants)",
+        "handles abonos with two parents (customers, sales)",
+        "handles visitas with two parents (distribuciones, customers)",
+        "handles customer_tags with two parents (customers, tags)"
+      ]
+    },
+    "VAL-1-004": {
+      "status": "pass",
+      "evidence": "Three tests verify backward compatibility: operations WITH syncGroupId still sort correctly, mixed batches (some with syncGroupId, some without) are handled properly, and fallback to syncGroupId sorting occurs when no FK dependencies exist.",
+      "testFile": "packages/drizzle-sync/src/server/operation-sorter.test.ts",
+      "testNames": [
+        "sorts operations WITH syncGroupId correctly (legacy support)",
+        "handles mixed batch with some having syncGroupId and some without",
+        "falls back to syncGroupId sorting when no FK dependencies exist"
+      ]
+    }
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill was followed correctly. The worker enhanced OperationSorter with FK-based topological sorting, maintained backward compatibility, and added comprehensive tests. All validation assertions (VAL-1-001, VAL-1-002, VAL-1-004) are fulfilled.",
+      "evidence": "Handoff shows 11 new tests added covering FK-based topological sort, multi-parent dependencies, backward compatibility, and circular dependency handling. All 22 tests in operation-sorter.test.ts pass."
+    },
+    {
+      "area": "conventions",
+      "observation": "The implementation correctly uses the relation config from presets/avileo.ts to determine FK relationships. The parentMap is built from config.relations.parents, and findParentRefs extracts FK values from operation payloads.",
+      "evidence": "packages/drizzle-sync/src/server/operation-sorter.ts lines 25-50 show buildParentMap() and findParentRefs() functions using avileoEntities config."
+    },
+    {
+      "area": "patterns",
+      "observation": "The topological sort implementation uses Kahn's algorithm with cycle detection. When cycles exist (shouldn't happen in practice), it gracefully falls back to timestamp-based tiebreaking for remaining nodes.",
+      "evidence": "packages/drizzle-sync/src/server/operation-sorter.ts lines 83-158 show the topologicalSort function with in-degree calculation, queue processing, and cycle handling."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The m1-enhance-operation-sorter feature is complete and passes all validation assertions. The OperationSorter now supports FK-based topological sorting that ensures parent entities (sales, customers, products) are processed before child entities (sale_items, abonos, visitas) based on FK references in payloads. The implementation correctly reads parent-child relationships from presets/avileo.ts, uses Kahn's algorithm for topological sorting, handles multi-parent dependencies (up to 3 parents), maintains backward compatibility with syncGroupId-based sorting as fallback, and gracefully handles circular dependencies with timestamp-based tiebreaking. All 22 tests pass including 11 new tests specifically for this feature."
+}

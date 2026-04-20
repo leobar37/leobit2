@@ -199,6 +199,26 @@ const handleCreateCustomer = async (data: CreateCustomerInput) => {
 - Don't ignore sync errors - show to user
 - Don't forget to add table to `VALID_TABLES` for pull sync
 
+## Known Pre-Existing Test Issues
+
+### device-fingerprint.test.ts (Pre-existing)
+**Issue**: Uses `vi.stubGlobal` which is not available in Vitest 3.x
+**Impact**: Causes cascading failures in other sync tests when running full test suite
+**Affected Tests**: 11 tests in `app/lib/sync/__tests__/device-fingerprint.test.ts`
+**Fix**: Replace `vi.stubGlobal` with direct global assignment:
+```typescript
+// Instead of:
+vi.stubGlobal("localStorage", {...})
+
+// Use:
+Object.defineProperty(global, "localStorage", {
+  get: () => localStorageMock,
+  set: (val) => { localStorageMock = val; },
+  configurable: true
+});
+```
+**Status**: Not fixed - outside scope of sync engine test fixes
+
 ---
 
 *See [App AGENTS.md](../../AGENTS.md) for frontend overview.*

@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "../../lib/db";
-import type { DbTransaction } from "../../lib/db";
+import type { DbTransaction } from "../../lib/txid";
 import {
   businessUserWhatsAppSettings,
   type BusinessUserWhatsAppSettings,

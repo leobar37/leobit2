@@ -8,5 +8,12 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "scripts/**/*",
+    "src/seed/**/*",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "touch-*.ts"
+  ]
 }

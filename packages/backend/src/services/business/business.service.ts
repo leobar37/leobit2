@@ -12,7 +12,7 @@ import {
 } from "../../errors";
 import { eq } from "drizzle-orm";
 import { db, businessUsers } from "../../lib/db";
-import { businesses } from "../../db/schema/businesses";
+import { businesses, defaultCalculatorSettings } from "../../db/schema/businesses";
 import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 
