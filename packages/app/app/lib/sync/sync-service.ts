@@ -51,7 +51,7 @@ export class SyncService {
       httpClient?: ISyncHttpClient;
     }
   ) {
-    this.queue = options?.queue ?? new PgSyncQueue(pg, businessId);
+    this.queue = (options?.queue ?? new PgSyncQueue(pg, businessId)) as ISyncQueue;
     this.httpClient =
       options?.httpClient ?? new FetchSyncHttpClient(authToken, businessId);
     this.initializationService = new SyncInitializationService(pg, businessId);

@@ -14,6 +14,7 @@ import {
   type SyncStage,
   type StageBehaviorConfig,
   type SyncStageState,
+  type SyncStageEvent,
   getEntitiesForStage,
   createSyncStageMachine,
   type StateMachine,
@@ -52,7 +53,7 @@ interface PaginatedLoadResult {
 export class StagedPullCoordinator {
   private pullService: PullService;
   private state: Map<SyncStage, StagedPullState> = new Map();
-  private machines: Map<SyncStage, StateMachine<SyncStageState, "start" | "pause" | "resume" | "success" | "fail" | "reset">> = new Map();
+  private machines: Map<SyncStage, StateMachine<SyncStageState, SyncStageEvent>> = new Map();
   private onProgress: StagedPullProgressCallback | null = null;
   private aborted = false;
 
@@ -74,7 +75,8 @@ export class StagedPullCoordinator {
       machine.subscribe((status) => {
         // Update our state when machine changes
         const currentState = this.state.get(stage)!;
-        currentState.status = status;
+        // Cast to StagedPullState status type (machine may produce 'paused' which we handle gracefully)
+        currentState.status = status as StagedPullState["status"];
         this.notifyProgress(currentState);
       });
       this.machines.set(stage, machine);

@@ -10,7 +10,7 @@
  * Token refresh is handled by Better Auth automatically.
  */
 
-import type { IHttpClient, HttpRequestConfig, HttpResponse, HttpHeaders, RequestContext } from "./types";
+import type { IHttpClient, HttpRequestConfig, HttpResponse, HttpHeaders, RequestContext, HttpInterceptor } from "./types";
 import { InterceptorChain } from "./interceptors";
 import { HttpError, AuthenticationError, createErrorFromResponse, isAbortError } from "./errors";
 import { withRetry, withTimeout, mergeHeaders } from "./utils";

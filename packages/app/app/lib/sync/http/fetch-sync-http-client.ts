@@ -15,7 +15,7 @@
 import type { ISyncHttpClient, ConflictQueryOptions } from "./sync-http-client";
 import type { SyncOperationRecord, BatchSyncResponse } from "../types";
 import { getDeviceId, getDeviceFingerprint } from "../device-fingerprint";
-import { BaseHttpClient, createHeaderInterceptor, createLoggingInterceptor } from "../../http/base-http-client";
+import { BaseHttpClient, createHeaderInterceptor, createLoggingInterceptor, type RequestContext } from "../../http/base-http-client";
 import { getStoredAuthToken } from "../../session-storage";
 
 /**
@@ -78,7 +78,7 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
     // Auth and business headers interceptor
     this.client.addInterceptor({
       id: "sync-auth",
-      onRequest: (context) => {
+      onRequest: (context: RequestContext) => {
         // Always get fresh token from storage (Better Auth handles refresh)
         const currentToken = getStoredAuthToken() || this.authToken;
 
@@ -97,7 +97,7 @@ export class FetchSyncHttpClient implements ISyncHttpClient {
     // Device fingerprint interceptor - adds device metadata to sync requests
     this.client.addInterceptor({
       id: "sync-device",
-      onRequest: (context) => {
+      onRequest: (context: RequestContext) => {
         // Only add device info to POST /sync/batch requests
         if (context.method === "POST" && context.url.includes("/sync/batch")) {
           const body = context.body as { operations?: unknown[]; deviceId?: string } | undefined;
