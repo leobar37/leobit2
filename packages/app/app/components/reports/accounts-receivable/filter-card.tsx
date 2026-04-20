@@ -1,11 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { useAtom } from "jotai";
-import { filtersAtom } from "~/atoms/accounts-receivable";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { filtersAtom, searchAtom } from "~/atoms/accounts-receivable";
 
 export function FilterCard() {
-  const [filters, setFilters] = useAtom(filtersAtom);
+  const filters = useAtomValue(filtersAtom);
+  const setSearch = useSetAtom(searchAtom);
 
   return (
     <Card className="border-0 shadow-md rounded-2xl">
@@ -16,7 +17,7 @@ export function FilterCard() {
             placeholder="Buscar cliente..."
             className="pl-10"
             value={filters.search ?? ""}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </CardContent>

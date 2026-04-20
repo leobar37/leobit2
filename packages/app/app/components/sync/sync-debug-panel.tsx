@@ -7,6 +7,12 @@ import { Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 export function SyncDebugPanel() {
   const syncService = useSyncService();
+  
+  // Early return if sync service is not available
+  if (!syncService) {
+    return null;
+  }
+  
   const [status, setStatus] = useState({
     pending: 0,
     processing: 0,

@@ -69,7 +69,14 @@ export function CustomerSection() {
 
   // Handle both camelCase and snake_case from DB
   const customerId = sale?.customerId ?? (sale as any)?.customer_id ?? null;
-  const customer = sale?.customer ?? (sale as any)?.customer ?? null;
+  // Transform SaleCustomer to the type expected by CustomerSelect
+  const customer = sale?.customer
+    ? {
+        id: sale.customer.id,
+        name: sale.customer.name,
+        phone: sale.customer.phone,
+      }
+    : null;
 
   return (
     <CustomerSelect

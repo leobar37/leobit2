@@ -113,7 +113,7 @@ export function useToggleSaleToken() {
       if (response.error) {
         throw new Error(extractErrorMessage(response.error.value));
       }
-      return response.data?.data as SaleToken;
+      return response.data?.data as unknown as SaleToken;
     },
     onSuccess: (data, { saleId }) => {
       queryClient.invalidateQueries({ queryKey: ["sale-token", saleId] });

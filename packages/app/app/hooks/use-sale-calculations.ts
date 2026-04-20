@@ -95,7 +95,7 @@ export function useSaleCalculations(
 ): SaleCalculations {
   return useMemo(() => {
     const totalAmount = calculateTotalAmount(items);
-    const paymentMode = sale?.paymentMode || "pago_total";
+    const paymentMode = sale?.paymentMode ?? "pago_total";
     const saleType = sale?.saleType || getSaleType(paymentMode);
     const amountPaidValue = getAmountPaidValue(
       paymentMode,
@@ -114,7 +114,7 @@ export function useSaleCalculations(
       requiresCustomer,
       sale?.customerId ? { id: sale.customerId } : null,
       hasValidPartial,
-      sale?.paymentMode
+      paymentMode
     );
 
     return {

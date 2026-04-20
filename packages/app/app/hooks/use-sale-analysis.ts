@@ -73,7 +73,9 @@ export function useSaleAnalysis(saleId: string | null) {
       // Only call API if sale is synced to backend
       if (isOnline && sale?.syncStatus === "synced") {
         try {
-          const { data, error } = await api.reports["sale/:id/analysis"].get({
+          // Cast to any to handle the dynamic route - the endpoint exists in backend
+          const reportsApi = api.reports as any;
+          const { data, error } = await reportsApi["sale/:id/analysis"].get({
             params: { id: saleId },
           });
           if (!error && data?.success && data?.data) {

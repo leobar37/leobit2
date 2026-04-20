@@ -24,7 +24,7 @@ export const productSchema = z.object({
   isActive: z.boolean().default(true),
   imageId: z.string().nullable(),
   hasVariants: z.boolean().optional(),
-  syncStatus: z.enum(["pending", "synced", "error"]).default("synced"),
+  syncStatus: z.enum(["pending", "synced", "error"]).optional(),
   syncAttempts: z.number().default(0),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

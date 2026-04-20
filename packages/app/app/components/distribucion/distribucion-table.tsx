@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, CheckCircle, Store, UserRound, Loader2 } from "lucide-react";
 import type { Distribucion } from "~/hooks/use-distribuciones";
+import type { DistribucionItem } from "~/lib/services/distribucion-service";
 import { cn, formatKilos as formatKilosUtil } from "~/lib/utils";
 
 interface DistribucionTableProps {
@@ -23,6 +24,7 @@ interface DistribucionTableProps {
 
 type DistribucionListItem = Distribucion & {
   vendedorName?: string | null;
+  items?: DistribucionItem[];
 };
 
 export function DistribucionTable({
@@ -122,13 +124,13 @@ export function DistribucionTable({
                   <div className="shell-block-muted rounded-[18px] p-3">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Asignado</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {formatKilosUtil(dist.items?.reduce((sum, item) => sum + Number(item.cantidadAsignada || 0), 0) || 0)} kg
+                      {formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadAsignada || 0), 0) || 0)} kg
                     </p>
                   </div>
                   <div className="shell-block-muted rounded-[18px] p-3">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Vendido</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {formatKilosUtil(dist.items?.reduce((sum, item) => sum + Number(item.cantidadVendida || 0), 0) || 0)} kg
+                      {formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadVendida || 0), 0) || 0)} kg
                     </p>
                   </div>
                 </div>
@@ -211,12 +213,12 @@ export function DistribucionTable({
                   <TableCell>{dist.puntoVenta}</TableCell>
                   <TableCell className="text-right">
                     {isModoConProductos(dist.modo)
-                      ? `${formatKilosUtil(dist.items?.reduce((sum, item) => sum + Number(item.cantidadAsignada || 0), 0) || 0)} kg`
+                      ? `${formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadAsignada || 0), 0) || 0)} kg`
                       : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     {isModoConProductos(dist.modo)
-                      ? `${formatKilosUtil(dist.items?.reduce((sum, item) => sum + Number(item.cantidadVendida || 0), 0) || 0)} kg`
+                      ? `${formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadVendida || 0), 0) || 0)} kg`
                       : "—"}
                   </TableCell>
                   <TableCell>{getStatusBadge(dist.estado)}</TableCell>

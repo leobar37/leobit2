@@ -76,8 +76,6 @@ export function DistribucionItemSelector({
         variantId: selectedVariant.id,
         cantidadAsignada: parseFloat(cantidad),
         unidad: "kg",
-        productName: selectedProduct?.name,
-        variantName: selectedVariant.name,
       });
       reset();
       onOpenChange(false);

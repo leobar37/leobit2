@@ -83,8 +83,8 @@ export const saleSchema = z.object({
 
   // Versioning & snapshots (from orders)
   version: z.number().int().positive().default(1),
-  confirmedSnapshot: z.record(z.unknown()).nullable().optional(),
-  deliveredSnapshot: z.record(z.unknown()).nullable().optional(),
+  confirmedSnapshot: z.record(z.string(), z.unknown()).nullable().optional(),
+  deliveredSnapshot: z.record(z.string(), z.unknown()).nullable().optional(),
 
   // Customer edit permissions (from orders)
   allowCustomerEdit: z.boolean().default(true),

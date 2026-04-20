@@ -18,14 +18,11 @@ async function validateInvitation(token: string): Promise<PublicInvitation> {
 
 async function acceptInvitation({
   token,
-  userId,
 }: {
   token: string;
-  userId: string;
 }): Promise<void> {
   const { data, error } = await api.public.invitations.accept.post({
     token,
-    userId,
   });
 
   if (error) {

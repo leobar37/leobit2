@@ -171,6 +171,9 @@ export class ProductService extends BaseService {
     const product = result[0];
     return {
       ...product,
+      type: product.type as ProductType,
+      unit: product.unit as ProductUnit,
+      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
       basePrice: this.normalizeCurrency(product.basePrice),
     } as Product;
   }
@@ -199,6 +202,9 @@ export class ProductService extends BaseService {
 
     return result.map((product) => ({
       ...product,
+      type: product.type as ProductType,
+      unit: product.unit as ProductUnit,
+      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
       basePrice: this.normalizeCurrency(product.basePrice),
     }));
   }
@@ -228,6 +234,9 @@ export class ProductService extends BaseService {
 
     return result.map((product) => ({
       ...product,
+      type: product.type as ProductType,
+      unit: product.unit as ProductUnit,
+      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
       basePrice: this.normalizeCurrency(product.basePrice),
     }));
   }
@@ -256,6 +265,9 @@ export class ProductService extends BaseService {
 
     return result.map((product) => ({
       ...product,
+      type: product.type as ProductType,
+      unit: product.unit as ProductUnit,
+      createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
       basePrice: this.normalizeCurrency(product.basePrice),
     }));
   }
@@ -287,6 +299,8 @@ export class ProductService extends BaseService {
 
     return result.map((variant) => ({
       ...variant,
+      createdAt: variant.createdAt instanceof Date ? variant.createdAt.toISOString() : variant.createdAt,
+      updatedAt: variant.updatedAt instanceof Date ? variant.updatedAt.toISOString() : variant.updatedAt,
       unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
       price: this.normalizeCurrency(variant.price),
     })) as ProductVariant[];
@@ -317,6 +331,8 @@ export class ProductService extends BaseService {
     const variant = result[0];
     return {
       ...variant,
+      createdAt: variant.createdAt instanceof Date ? variant.createdAt.toISOString() : variant.createdAt,
+      updatedAt: variant.updatedAt instanceof Date ? variant.updatedAt.toISOString() : variant.updatedAt,
       unitQuantity: this.normalizeWeightRequired(variant.unitQuantity),
       price: this.normalizeCurrency(variant.price),
     } as ProductVariant;

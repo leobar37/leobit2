@@ -52,7 +52,6 @@ async function fetchTemplates(filters?: TemplateFilters): Promise<WhatsAppTempla
   const { data, error } = await api.whatsapp.templates.get({
     query: {
       search: filters?.search,
-      category: filters?.category,
       limit: filters?.limit?.toString(),
       offset: filters?.offset?.toString(),
     },

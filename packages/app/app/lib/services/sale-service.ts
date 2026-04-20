@@ -33,6 +33,7 @@ export type SalePaymentType = "contado" | "credito";
  */
 export interface SaleItem {
   id: string;
+  businessId: string;
   saleId: string;
   productId: string;
   variantId: string;
