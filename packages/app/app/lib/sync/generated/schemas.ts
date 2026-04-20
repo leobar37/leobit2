@@ -43,7 +43,7 @@ export const productsSchema = z.object({
   name: z.string(),
   type: z.enum(["pollo", "huevo", "otro"]),
   unit: z.enum(["kg", "unidad"]),
-  basePrice: z.unknown(),
+  basePrice: z.string(),
   isActive: z.boolean(),
   imageId: z.string().nullable(),
   hasVariants: z.boolean(),
@@ -62,7 +62,7 @@ export interface ProductsInput {
   name: string;
   type: "pollo" | "huevo" | "otro";
   unit: "kg" | "unidad";
-  basePrice: unknown;
+  basePrice: string;
   isActive: boolean;
   imageId?: string;
   hasVariants: boolean;
@@ -79,13 +79,13 @@ export const productVariantsSchema = z.object({
   businessId: z.string(),
   name: z.string(),
   sku: z.string().nullable(),
-  unitQuantity: z.unknown(),
-  price: z.unknown(),
-  costPrice: z.unknown(),
+  unitQuantity: z.string(),
+  price: z.string(),
+  costPrice: z.string(),
   sortOrder: z.number(),
   isActive: z.boolean(),
-  lowStockThreshold: z.unknown(),
-  criticalStockThreshold: z.unknown(),
+  lowStockThreshold: z.string(),
+  criticalStockThreshold: z.string(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   version: z.number(),
@@ -101,13 +101,13 @@ export interface ProductVariantsInput {
   businessId: string;
   name: string;
   sku?: string;
-  unitQuantity: unknown;
-  price: unknown;
-  costPrice: unknown;
+  unitQuantity: string;
+  price: string;
+  costPrice: string;
   sortOrder: number;
   isActive: boolean;
-  lowStockThreshold: unknown;
-  criticalStockThreshold: unknown;
+  lowStockThreshold: string;
+  criticalStockThreshold: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   version: number;
@@ -303,11 +303,11 @@ export const salesSchema = z.object({
   type: z.enum(["instant_sale", "pre_order"]),
   saleType: z.enum(["contado", "credito"]),
   paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).nullable(),
-  totalAmount: z.unknown(),
-  amountPaid: z.unknown(),
-  balanceDue: z.unknown(),
-  tara: z.unknown().nullable(),
-  netWeight: z.unknown().nullable(),
+  totalAmount: z.string(),
+  amountPaid: z.string(),
+  balanceDue: z.string(),
+  tara: z.string().nullable(),
+  netWeight: z.string().nullable(),
   saleDate: z.coerce.date(),
   deliveryDate: z.coerce.date().nullable(),
   orderDate: z.coerce.date().nullable(),
@@ -322,7 +322,7 @@ export const salesSchema = z.object({
   cancelledAt: z.coerce.date().nullable(),
   cancelledBy: z.string().nullable(),
   cancelReason: z.string().nullable(),
-  refundAmount: z.unknown().nullable(),
+  refundAmount: z.string().nullable(),
   refundDate: z.coerce.date().nullable(),
   refundMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "saldo"]).nullable(),
   refundReference: z.string().nullable(),
@@ -346,11 +346,11 @@ export interface SalesInput {
   type: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
-  totalAmount: unknown;
-  amountPaid: unknown;
-  balanceDue: unknown;
-  tara?: unknown;
-  netWeight?: unknown;
+  totalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  tara?: string;
+  netWeight?: string;
   saleDate: Date;
   deliveryDate?: Date;
   orderDate?: Date;
@@ -365,7 +365,7 @@ export interface SalesInput {
   cancelledAt?: Date;
   cancelledBy?: string;
   cancelReason?: string;
-  refundAmount?: unknown;
+  refundAmount?: string;
   refundDate?: Date;
   refundMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "saldo";
   refundReference?: string;
@@ -385,16 +385,16 @@ export const saleItemsSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.unknown().nullable(),
-  orderedQuantity: z.unknown().nullable(),
-  deliveredQuantity: z.unknown().nullable(),
-  unitPrice: z.unknown().nullable(),
-  unitPriceQuoted: z.unknown().nullable(),
-  unitPriceFinal: z.unknown().nullable(),
-  subtotal: z.unknown(),
-  costPriceSnapshot: z.unknown().nullable(),
+  quantity: z.string().nullable(),
+  orderedQuantity: z.string().nullable(),
+  deliveredQuantity: z.string().nullable(),
+  unitPrice: z.string().nullable(),
+  unitPriceQuoted: z.string().nullable(),
+  unitPriceFinal: z.string().nullable(),
+  subtotal: z.string(),
+  costPriceSnapshot: z.string().nullable(),
   isModified: z.boolean(),
-  originalQuantity: z.unknown().nullable(),
+  originalQuantity: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
@@ -412,16 +412,16 @@ export interface SaleItemsInput {
   variantId: string;
   productName: string;
   variantName: string;
-  quantity?: unknown;
-  orderedQuantity?: unknown;
-  deliveredQuantity?: unknown;
-  unitPrice?: unknown;
-  unitPriceQuoted?: unknown;
-  unitPriceFinal?: unknown;
-  subtotal: unknown;
-  costPriceSnapshot?: unknown;
+  quantity?: string;
+  orderedQuantity?: string;
+  deliveredQuantity?: string;
+  unitPrice?: string;
+  unitPriceQuoted?: string;
+  unitPriceFinal?: string;
+  subtotal: string;
+  costPriceSnapshot?: string;
   isModified: boolean;
-  originalQuantity?: unknown;
+  originalQuantity?: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
@@ -434,7 +434,7 @@ export const purchasesSchema = z.object({
   businessId: z.string(),
   supplierId: z.string().nullable(),
   purchaseDate: z.coerce.date().nullable(),
-  totalAmount: z.unknown(),
+  totalAmount: z.string(),
   status: z.enum(["draft", "pending", "received", "cancelled"]),
   invoiceNumber: z.string().nullable(),
   receiptImageId: z.string().nullable(),
@@ -454,7 +454,7 @@ export interface PurchasesInput {
   businessId: string;
   supplierId?: string;
   purchaseDate?: Date;
-  totalAmount: unknown;
+  totalAmount: string;
   status: "draft" | "pending" | "received" | "cancelled";
   invoiceNumber?: string;
   receiptImageId?: string;
@@ -474,9 +474,9 @@ export const purchaseItemsSchema = z.object({
   productId: z.string(),
   variantId: z.string().nullable(),
   unitId: z.string().nullable(),
-  quantity: z.unknown(),
-  unitCost: z.unknown(),
-  totalCost: z.unknown(),
+  quantity: z.string(),
+  unitCost: z.string(),
+  totalCost: z.string(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
@@ -494,9 +494,9 @@ export interface PurchaseItemsInput {
   productId: string;
   variantId?: string;
   unitId?: string;
-  quantity: unknown;
-  unitCost: unknown;
-  totalCost: unknown;
+  quantity: string;
+  unitCost: string;
+  totalCost: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
@@ -511,7 +511,7 @@ export const distribucionesSchema = z.object({
   vendedorId: z.string(),
   puntoVenta: z.string(),
   puntoVentaId: z.string().nullable(),
-  montoRecaudado: z.unknown(),
+  montoRecaudado: z.string(),
   notaCreacion: z.string().nullable(),
   notaCierre: z.string().nullable(),
   fecha: z.coerce.date(),
@@ -533,7 +533,7 @@ export interface DistribucionesInput {
   vendedorId: string;
   puntoVenta: string;
   puntoVentaId?: string;
-  montoRecaudado: unknown;
+  montoRecaudado: string;
   notaCreacion?: string;
   notaCierre?: string;
   fecha: Date;
@@ -552,8 +552,8 @@ export const distribucionItemsSchema = z.object({
   businessId: z.string(),
   distribucionId: z.string(),
   variantId: z.string(),
-  cantidadAsignada: z.unknown(),
-  cantidadVendida: z.unknown(),
+  cantidadAsignada: z.string(),
+  cantidadVendida: z.string(),
   unidad: z.string(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
@@ -569,8 +569,8 @@ export interface DistribucionItemsInput {
   businessId: string;
   distribucionId: string;
   variantId: string;
-  cantidadAsignada: unknown;
-  cantidadVendida: unknown;
+  cantidadAsignada: string;
+  cantidadVendida: string;
   unidad: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
@@ -584,7 +584,7 @@ export const abonosSchema = z.object({
   businessId: z.string(),
   customerId: z.string(),
   sellerId: z.string().nullable(),
-  amount: z.unknown(),
+  amount: z.string(),
   paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta", "saldo"]),
   notes: z.string().nullable(),
   proofImageId: z.string().nullable(),
@@ -604,7 +604,7 @@ export interface AbonosInput {
   businessId: string;
   customerId: string;
   sellerId?: string;
-  amount: unknown;
+  amount: string;
   paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
   notes?: string;
   proofImageId?: string;

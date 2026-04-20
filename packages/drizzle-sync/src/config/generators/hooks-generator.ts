@@ -272,6 +272,27 @@ export function generateHooksFile(
     shouldGenerateHooks(name, allEntities)
   );
 
+  // Collect all child entity Input types that are referenced by parent entities
+  // These are needed because create hooks for parents include child types in their signatures
+  const childInputTypes = new Set<string>();
+  for (const [, config] of Object.entries(allEntities)) {
+    if (config.relations?.children) {
+      for (const child of config.relations.children) {
+        // Skip junction tables - they don't have Input types
+        if (allEntities[child.entity]?.metadata?.isJunctionTable === true) {
+          continue;
+        }
+        childInputTypes.add(`${pascalCase(child.entity)}Input`);
+      }
+    }
+  }
+
+  // Combine parent entity Input types with child Input types
+  const allInputTypes = [
+    ...entityNames.map((e) => `${pascalCase(e)}Input`),
+    ...childInputTypes,
+  ];
+
   const imports = `
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
@@ -280,7 +301,7 @@ import {
   ${entityNames.map((e) => `${e}Schema`).join(", ")}
 } from "./schemas";
 import type { 
-  ${entityNames.map((e) => `${pascalCase(e)}Input`).join(", ")}
+  ${allInputTypes.join(", ")}
 } from "./types";
 import { generateIdempotencyKey } from "@avileo/shared";
 `;

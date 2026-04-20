@@ -9,7 +9,7 @@ import {
   customersSchema, productsSchema, suppliersSchema, tagsSchema, customerGroupsSchema, distribucionesSchema, productVariantsSchema, salesSchema, purchasesSchema, abonosSchema, visitasSchema
 } from "./schemas";
 import type { 
-  CustomersInput, ProductsInput, SuppliersInput, TagsInput, CustomerGroupsInput, DistribucionesInput, ProductVariantsInput, SalesInput, PurchasesInput, AbonosInput, VisitasInput
+  CustomersInput, ProductsInput, SuppliersInput, TagsInput, CustomerGroupsInput, DistribucionesInput, ProductVariantsInput, SalesInput, PurchasesInput, AbonosInput, VisitasInput, SaleItemsInput, PurchaseItemsInput, DistribucionItemsInput
 } from "./types";
 import { generateIdempotencyKey } from "@avileo/shared";
 

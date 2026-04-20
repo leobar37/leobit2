@@ -71,6 +71,10 @@ function mapDrizzleToDataType(column: PgColumn): ColumnMetadata["dataType"] {
   if (columnType.includes("json") || columnType.includes("jsonb")) {
     return "json";
   }
+  // Decimal/numeric columns store as strings to preserve precision
+  if (columnType.includes("decimal") || columnType.includes("numeric")) {
+    return "string";
+  }
 
   if (isEnumColumn(column)) {
     return "enum";

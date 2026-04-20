@@ -653,10 +653,15 @@ export const customerTags = pgTable(
     assignedBy: uuid("assigned_by"),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_customer_tags_customer_id").on(table.customerId),
     index("idx_customer_tags_tag_id").on(table.tagId),
+    index("idx_customer_tags_sync_status").on(table.syncStatus),
+    index("idx_customer_tags_updated_at").on(table.updatedAt),
   ]
 );
 
@@ -721,11 +726,16 @@ export const customerGroupMembers = pgTable(
     addedBy: uuid("added_by"),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_customer_group_members_business_id").on(table.businessId),
     index("idx_customer_group_members_group_id").on(table.groupId),
     index("idx_customer_group_members_customer_id").on(table.customerId),
+    index("idx_customer_group_members_sync_status").on(table.syncStatus),
+    index("idx_customer_group_members_updated_at").on(table.updatedAt),
   ]
 );
 

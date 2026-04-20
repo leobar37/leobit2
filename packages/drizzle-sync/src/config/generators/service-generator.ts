@@ -263,16 +263,12 @@ function generateInsertFieldsJunction(columns: ColumnMetadata[], _tableRef: stri
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
-    // For nullable columns (not required), use ?? undefined to handle missing input
-    // This ensures we don't pass null to fields that expect Date or other types
+    // For nullable columns (not required), use ?? null to handle missing input
     if (!col.notNull) {
-      // Nullable column - use undefined as fallback for missing input
-      lines.push(`      ${fieldName}: input.${fieldName} ?? undefined,`);
+      lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
     } else if (col.default !== undefined) {
-      // Has default - use input value or default
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
     } else {
-      // Required - use input value directly
       lines.push(`      ${fieldName}: input.${fieldName},`);
     }
   }
@@ -288,16 +284,12 @@ function generateInsertFields(columns: ColumnMetadata[], tableRef: string): stri
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
-    // For nullable columns (not required), use ?? undefined to handle missing input
-    // This ensures we don't pass null to fields that expect Date or other types
+    // For nullable columns (not required), use ?? null to handle missing input
     if (!col.notNull) {
-      // Nullable column - use undefined as fallback for missing input
-      lines.push(`      ${fieldName}: input.${fieldName} ?? undefined,`);
+      lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
     } else if (col.default !== undefined) {
-      // Has default - use input value or default
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
     } else {
-      // Required - use input value directly
       lines.push(`      ${fieldName}: input.${fieldName},`);
     }
   }
@@ -340,6 +332,7 @@ function generateUpdateFields(columns: ColumnMetadata[], _tableRef: string): str
  * Get TypeScript type for a column
  * Note: Date columns return 'string' because PGlite stores dates as ISO strings
  * and the frontend Zod schemas (e.g., distribuciones.fecha) expect strings.
+ * The actual Date objects are constructed when needed for Drizzle operations.
  */
 function getTypeScriptType(col: ColumnMetadata): string {
   switch (col.dataType) {
@@ -350,6 +343,8 @@ function getTypeScriptType(col: ColumnMetadata): string {
     case "boolean":
       return "boolean";
     case "date":
+      // PGlite stores dates as ISO strings, so use string for input types
+      // The entity construction will handle proper Date conversion
       return "string";
     case "enum":
       return col.enumValues?.map((v) => `"${v}"`).join(" | ") || "string";
