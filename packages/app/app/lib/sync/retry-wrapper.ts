@@ -3,8 +3,8 @@
  * Provides retry logic for transient errors with configurable options
  */
 
-import { isTransientError, sleep } from "./backoff";
-import { syncLogger } from "./sync-logger";
+import { isTransientError, sleep } from "@avileo/drizzle-sync/core";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 100;

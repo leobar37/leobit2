@@ -1,7 +1,6 @@
 /**
  * Products Hook (Service-based)
  * Reactively fetch and mutate products using PGlite services (offline-first)
- * @deprecated This file will be replaced. Use exports from use-products directly.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "plan": "drizzle-sync-codegen",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Freeze codegen contract and migration target",
+      "file": "tasks/01-freeze-codegen-contract-and-migration-target.md",
+      "status": "pending",
+      "phase": "contracts",
+      "dependencies": [],
+      "requirements": [
+        "FR-010"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Wire SDK generation into main pipeline",
+      "file": "tasks/02-wire-sdk-generation-into-main-pipeline.md",
+      "status": "pending",
+      "phase": "generator-core",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-001",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Complete SDK generator CRUD/read surface",
+      "file": "tasks/03-complete-sdk-generator-crud-read-surface.md",
+      "status": "pending",
+      "phase": "generator-core",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-008",
+        "FR-009",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Add generated SDK runtime and React provider",
+      "file": "tasks/04-add-generated-sdk-runtime-and-react-provider.md",
+      "status": "pending",
+      "phase": "runtime-react",
+      "dependencies": [
+        "T-002",
+        "T-003"
+      ],
+      "requirements": [
+        "FR-005",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Generate SDK-backed TanStack hooks",
+      "file": "tasks/05-generate-sdk-backed-tanstack-hooks.md",
+      "status": "pending",
+      "phase": "generator-hooks",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-006",
+        "FR-007",
+        "FR-009"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Adapt app provider and bootstrap SDK context",
+      "file": "tasks/06-adapt-app-provider-and-bootstrap-sdk-context.md",
+      "status": "pending",
+      "phase": "app-integration",
+      "dependencies": [
+        "T-004",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-005",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Migrate entity hooks from manual to generated",
+      "file": "tasks/07-migrate-entity-hooks-from-manual-to-generated.md",
+      "status": "pending",
+      "phase": "app-migration",
+      "dependencies": [
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "FR-007",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Align sales sync contracts and wrapper hooks",
+      "file": "tasks/08-align-sales-sync-contracts-and-wrapper-hooks.md",
+      "status": "pending",
+      "phase": "sales-alignment",
+      "dependencies": [
+        "T-003",
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "FR-008",
+        "FR-010"
+      ]
+    },
+    {
+      "id": "T-009",
+      "title": "Validate rollout and deprecate remote-first hooks",
+      "file": "tasks/09-validate-rollout-and-deprecate-remote-hooks.md",
+      "status": "pending",
+      "phase": "rollout",
+      "dependencies": [
+        "T-007",
+        "T-008"
+      ],
+      "requirements": [
+        "NFR-001",
+        "NFR-002",
+        "NFR-003",
+        "NFR-005"
+      ]
+    }
+  ]
+}

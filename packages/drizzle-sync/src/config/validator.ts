@@ -256,6 +256,7 @@ function validateNewEntity(
   warnings: ConfigValidationWarning[]
 ): void {
   const path = `entities.${name}`;
+  let validFields: string[] = [];
 
   if (!entity.table) {
     errors.push({
@@ -273,24 +274,66 @@ function validateNewEntity(
     });
   }
 
-  if (entity.fields) {
-    try {
-      const columns = introspectTable(entity.table);
-      const validFields = columns.map((c) => c.name);
-      const invalidFields = entity.fields.filter((f) => !validFields.includes(f));
+  try {
+    const columns = introspectTable(entity.table);
+    validFields = columns.map((c) => c.name);
+  } catch {
+    errors.push({
+      path: `${path}.table`,
+      message: "Failed to introspect table",
+      hint: "Ensure the table is a valid Drizzle pgTable",
+    });
+    return;
+  }
 
-      if (invalidFields.length > 0) {
-        errors.push({
-          path: `${path}.fields`,
-          message: `Invalid field names: ${invalidFields.join(", ")}`,
-          hint: `Valid fields are: ${validFields.join(", ")}`,
-        });
-      }
-    } catch (e) {
+  if (entity.fields) {
+    const invalidFields = entity.fields.filter((f) => !validFields.includes(f));
+
+    if (invalidFields.length > 0) {
       errors.push({
-        path: `${path}.table`,
-        message: "Failed to introspect table",
-        hint: "Ensure the table is a valid Drizzle pgTable",
+        path: `${path}.fields`,
+        message: `Invalid field names: ${invalidFields.join(", ")}`,
+        hint: `Valid fields are: ${validFields.join(", ")}`,
+      });
+    }
+  }
+
+  if (entity.fieldCodecs) {
+    const codecFields = Object.keys(entity.fieldCodecs);
+    const invalidCodecFields = codecFields.filter((f) => !validFields.includes(f));
+
+    if (invalidCodecFields.length > 0) {
+      errors.push({
+        path: `${path}.fieldCodecs`,
+        message: `Codec fields not found in table: ${invalidCodecFields.join(", ")}`,
+        hint: `Valid fields are: ${validFields.join(", ")}`,
+      });
+    }
+
+    if (codecFields.length === 0) {
+      warnings.push({
+        path: `${path}.fieldCodecs`,
+        message: "fieldCodecs is present but empty",
+      });
+    }
+  }
+
+  const childRelations = entity.relations?.children || [];
+  for (const relation of childRelations) {
+    if (relation.payloadKey && relation.payloadKey.includes("_")) {
+      warnings.push({
+        path: `${path}.relations.children.${relation.entity}.payloadKey`,
+        message: "payloadKey should be camelCase for payload contracts",
+      });
+    }
+  }
+
+  const parentRelations = entity.relations?.parents || [];
+  for (const relation of parentRelations) {
+    if (relation.payloadKey && relation.payloadKey.includes("_")) {
+      warnings.push({
+        path: `${path}.relations.parents.${relation.entity}.payloadKey`,
+        message: "payloadKey should be camelCase for payload contracts",
       });
     }
   }

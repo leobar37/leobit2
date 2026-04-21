@@ -41,7 +41,7 @@
     {
       "id": "T-005",
       "title": "Compose Avileo Apps on Top of the Library",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": [
         "T-004"
       ],
@@ -50,7 +50,7 @@
     {
       "id": "T-006",
       "title": "Validate, Migrate, and Rollout",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "T-005"
       ],

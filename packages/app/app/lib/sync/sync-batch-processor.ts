@@ -1,6 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { ENTITY_PRIORITIES } from "@avileo/shared";
-import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "./config";
+import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "@avileo/drizzle-sync/shared";
 import type { ISyncHttpClient } from "./http/sync-http-client";
 import type { BatchSyncResponse, SyncOperationRecord } from "./types";
 import { SyncAutoRunner } from "./sync-auto-runner";

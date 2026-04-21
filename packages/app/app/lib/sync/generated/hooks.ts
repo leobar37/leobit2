@@ -69,7 +69,7 @@ export function useCreateCustomers() {
         entityId: createId(),
         payload: {
           ...item,
-          customer_id: parentId,
+          customerId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -83,7 +83,7 @@ export function useCreateCustomers() {
         entityId: createId(),
         payload: {
           ...item,
-          customer_id: parentId,
+          customerId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -97,7 +97,7 @@ export function useCreateCustomers() {
         entityId: createId(),
         payload: {
           ...item,
-          customer_id: parentId,
+          customerId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -208,12 +208,12 @@ export function useCreateProducts() {
       
       const productVariantsOps = (input.productVariants?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "productVariants",
+        entityType: "product_variants",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          product_id: parentId,
+          productId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -222,12 +222,12 @@ export function useCreateProducts() {
 
       const saleItemsOps = (input.saleItems?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "saleItems",
+        entityType: "sale_items",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          product_id: parentId,
+          productId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -236,12 +236,12 @@ export function useCreateProducts() {
 
       const purchaseItemsOps = (input.purchaseItems?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "purchaseItems",
+        entityType: "purchase_items",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          product_id: parentId,
+          productId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -357,7 +357,7 @@ export function useCreateSuppliers() {
         entityId: createId(),
         payload: {
           ...item,
-          supplier_id: parentId,
+          supplierId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -824,7 +824,7 @@ export function useCreateSales() {
         entityId: createId(),
         payload: {
           ...item,
-          sale_id: parentId,
+          saleId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -833,12 +833,12 @@ export function useCreateSales() {
 
       const saleItemsOps = (input.saleItems?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "saleItems",
+        entityType: "sale_items",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          sale_id: parentId,
+          saleId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -948,12 +948,12 @@ export function useCreatePurchases() {
       
       const purchaseItemsOps = (input.purchaseItems?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "purchaseItems",
+        entityType: "purchase_items",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          purchase_id: parentId,
+          purchaseId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -1151,7 +1151,7 @@ export function useCreateVisitas() {
         entityId: createId(),
         payload: {
           ...item,
-          visita_id: parentId,
+          visitaId: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),

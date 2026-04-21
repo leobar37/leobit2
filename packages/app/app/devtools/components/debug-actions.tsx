@@ -19,7 +19,7 @@ import { cn } from "~/lib/utils";
 import { useSyncService, useSyncState } from "~/lib/sync/service-provider";
 import { useSync } from "~/components/sync/sync-status";
 import { runManualSync } from "~/lib/sync/manual-sync";
-import { syncLogger } from "~/lib/sync/sync-logger";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
 import { useToast } from "~/hooks/use-toast";
 
 interface DebugActionsProps {

@@ -1,4 +1,4 @@
-import { camelCase, pascalCase } from "../../utils/string-utils";
+import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
 import type { EntitySyncConfig, RelationGraph } from "../../config/types";
 import { buildRelationGraph } from "../../config/introspect";
 
@@ -113,6 +113,7 @@ function generateCreateWithChildren(
   apiPath: string
 ): string {
   const pascalName = pascalCase(entityName);
+  const parentEntityType = snakeCase(entityName);
   // Filter out junction tables and child entities without standalone endpoints
   // Junction tables are managed through the sync batch, not standalone endpoints
   const children = (graph[entityName]?.children || []).filter((child) => {
@@ -131,15 +132,17 @@ function generateCreateWithChildren(
         (c) => c.entity === child
       );
       const fkColumn = relationConfig?.foreignKey || `${entityName.replace(/s$/, "")}_id`;
+      const payloadKey = relationConfig?.payloadKey || camelCase(fkColumn);
+      const childEntityType = snakeCase(child);
       return `
       const ${child}Ops = (input.${child}?.map((item) => ({
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "${child}",
+        entityType: "${childEntityType}",
         operation: "create" as const,
         entityId: createId(),
         payload: {
           ...item,
-          ${fkColumn}: parentId,
+          ${payloadKey}: parentId,
         },
         localVersion: 1,
         localTimestamp: new Date().toISOString(),
@@ -162,7 +165,7 @@ export function useCreate${pascalName}() {
       // 2. Build parent operation (uses FK-based ordering via payload references)
       const parentOp = {
         idempotencyKey: generateIdempotencyKey(),
-        entityType: "${entityName}",
+        entityType: "${parentEntityType}",
         operation: "create" as const,
         entityId: parentId,
         payload: { ...input, id: parentId },

@@ -3,7 +3,7 @@ import {
   CONFLICT_STRATEGY,
   SYNC_INTERVAL_MS,
   type ConflictStrategy,
-} from "./config";
+} from "@avileo/drizzle-sync/shared";
 import type { ISyncQueue } from "./types";
 import type { ISyncHttpClient } from "./http/sync-http-client";
 import { PgSyncQueue } from "./queue/pg-sync-queue";

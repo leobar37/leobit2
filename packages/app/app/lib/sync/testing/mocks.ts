@@ -7,7 +7,7 @@
 import type { ISyncQueue } from "../types";
 import type { ISyncHttpClient } from "../http/sync-http-client";
 import type { SyncOperationRecord, DeadLetterOperationRecord, SyncStatus, EnqueueParams, BatchSyncResponse } from "../types";
-import type { ConflictStrategy } from "../config";
+import type { ConflictStrategy } from "@avileo/drizzle-sync/shared";
 import type { QueueOptions } from "../types";
 
 export class MockSyncQueue implements ISyncQueue {

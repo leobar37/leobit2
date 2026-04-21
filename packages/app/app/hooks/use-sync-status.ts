@@ -10,7 +10,7 @@ import type {
   SyncOperationRecord,
   DeadLetterOperationRecord,
 } from "~/lib/sync/sync-service";
-import type { ConflictStrategy } from "~/lib/sync/config";
+import type { ConflictStrategy } from "@avileo/drizzle-sync/shared";
 
 const QUERY_KEYS = {
   syncStatus: ["sync", "status"],

@@ -303,11 +303,11 @@ export const salesSchema = z.object({
   type: z.enum(["instant_sale", "pre_order"]),
   saleType: z.enum(["contado", "credito"]),
   paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).nullable(),
-  totalAmount: z.string(),
-  amountPaid: z.string(),
-  balanceDue: z.string(),
-  tara: z.string().nullable(),
-  netWeight: z.string().nullable(),
+  totalAmount: z.union([z.string(), z.number()]),
+  amountPaid: z.union([z.string(), z.number()]),
+  balanceDue: z.union([z.string(), z.number()]),
+  tara: z.union([z.string(), z.number()]).nullable(),
+  netWeight: z.union([z.string(), z.number()]).nullable(),
   saleDate: z.coerce.date(),
   deliveryDate: z.coerce.date().nullable(),
   orderDate: z.coerce.date().nullable(),
@@ -346,11 +346,11 @@ export interface SalesInput {
   type: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
   paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
-  totalAmount: string;
-  amountPaid: string;
-  balanceDue: string;
-  tara?: string;
-  netWeight?: string;
+  totalAmount: string | number;
+  amountPaid: string | number;
+  balanceDue: string | number;
+  tara?: string | number;
+  netWeight?: string | number;
   saleDate: Date;
   deliveryDate?: Date;
   orderDate?: Date;
@@ -385,16 +385,16 @@ export const saleItemsSchema = z.object({
   variantId: z.string(),
   productName: z.string(),
   variantName: z.string(),
-  quantity: z.string().nullable(),
-  orderedQuantity: z.string().nullable(),
-  deliveredQuantity: z.string().nullable(),
-  unitPrice: z.string().nullable(),
-  unitPriceQuoted: z.string().nullable(),
-  unitPriceFinal: z.string().nullable(),
-  subtotal: z.string(),
-  costPriceSnapshot: z.string().nullable(),
+  quantity: z.union([z.string(), z.number()]).nullable(),
+  orderedQuantity: z.union([z.string(), z.number()]).nullable(),
+  deliveredQuantity: z.union([z.string(), z.number()]).nullable(),
+  unitPrice: z.union([z.string(), z.number()]).nullable(),
+  unitPriceQuoted: z.union([z.string(), z.number()]).nullable(),
+  unitPriceFinal: z.union([z.string(), z.number()]).nullable(),
+  subtotal: z.union([z.string(), z.number()]),
+  costPriceSnapshot: z.union([z.string(), z.number()]).nullable(),
   isModified: z.boolean(),
-  originalQuantity: z.string().nullable(),
+  originalQuantity: z.union([z.string(), z.number()]).nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
@@ -412,16 +412,16 @@ export interface SaleItemsInput {
   variantId: string;
   productName: string;
   variantName: string;
-  quantity?: string;
-  orderedQuantity?: string;
-  deliveredQuantity?: string;
-  unitPrice?: string;
-  unitPriceQuoted?: string;
-  unitPriceFinal?: string;
-  subtotal: string;
-  costPriceSnapshot?: string;
+  quantity?: string | number;
+  orderedQuantity?: string | number;
+  deliveredQuantity?: string | number;
+  unitPrice?: string | number;
+  unitPriceQuoted?: string | number;
+  unitPriceFinal?: string | number;
+  subtotal: string | number;
+  costPriceSnapshot?: string | number;
   isModified: boolean;
-  originalQuantity?: string;
+  originalQuantity?: string | number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
@@ -434,7 +434,7 @@ export const purchasesSchema = z.object({
   businessId: z.string(),
   supplierId: z.string().nullable(),
   purchaseDate: z.coerce.date().nullable(),
-  totalAmount: z.string(),
+  totalAmount: z.union([z.string(), z.number()]),
   status: z.enum(["draft", "pending", "received", "cancelled"]),
   invoiceNumber: z.string().nullable(),
   receiptImageId: z.string().nullable(),
@@ -454,7 +454,7 @@ export interface PurchasesInput {
   businessId: string;
   supplierId?: string;
   purchaseDate?: Date;
-  totalAmount: string;
+  totalAmount: string | number;
   status: "draft" | "pending" | "received" | "cancelled";
   invoiceNumber?: string;
   receiptImageId?: string;
@@ -474,9 +474,9 @@ export const purchaseItemsSchema = z.object({
   productId: z.string(),
   variantId: z.string().nullable(),
   unitId: z.string().nullable(),
-  quantity: z.string(),
-  unitCost: z.string(),
-  totalCost: z.string(),
+  quantity: z.union([z.string(), z.number()]),
+  unitCost: z.union([z.string(), z.number()]),
+  totalCost: z.union([z.string(), z.number()]),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
   syncGroupId: z.string().nullable(),
@@ -494,9 +494,9 @@ export interface PurchaseItemsInput {
   productId: string;
   variantId?: string;
   unitId?: string;
-  quantity: string;
-  unitCost: string;
-  totalCost: string;
+  quantity: string | number;
+  unitCost: string | number;
+  totalCost: string | number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
   syncGroupId?: string;
@@ -511,7 +511,7 @@ export const distribucionesSchema = z.object({
   vendedorId: z.string(),
   puntoVenta: z.string(),
   puntoVentaId: z.string().nullable(),
-  montoRecaudado: z.string(),
+  montoRecaudado: z.union([z.string(), z.number()]),
   notaCreacion: z.string().nullable(),
   notaCierre: z.string().nullable(),
   fecha: z.coerce.date(),
@@ -533,7 +533,7 @@ export interface DistribucionesInput {
   vendedorId: string;
   puntoVenta: string;
   puntoVentaId?: string;
-  montoRecaudado: string;
+  montoRecaudado: string | number;
   notaCreacion?: string;
   notaCierre?: string;
   fecha: Date;
@@ -552,8 +552,8 @@ export const distribucionItemsSchema = z.object({
   businessId: z.string(),
   distribucionId: z.string(),
   variantId: z.string(),
-  cantidadAsignada: z.string(),
-  cantidadVendida: z.string(),
+  cantidadAsignada: z.union([z.string(), z.number()]),
+  cantidadVendida: z.union([z.string(), z.number()]),
   unidad: z.string(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
@@ -569,8 +569,8 @@ export interface DistribucionItemsInput {
   businessId: string;
   distribucionId: string;
   variantId: string;
-  cantidadAsignada: string;
-  cantidadVendida: string;
+  cantidadAsignada: string | number;
+  cantidadVendida: string | number;
   unidad: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
@@ -584,7 +584,7 @@ export const abonosSchema = z.object({
   businessId: z.string(),
   customerId: z.string(),
   sellerId: z.string().nullable(),
-  amount: z.string(),
+  amount: z.union([z.string(), z.number()]),
   paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta", "saldo"]),
   notes: z.string().nullable(),
   proofImageId: z.string().nullable(),
@@ -604,7 +604,7 @@ export interface AbonosInput {
   businessId: string;
   customerId: string;
   sellerId?: string;
-  amount: string;
+  amount: string | number;
   paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
   notes?: string;
   proofImageId?: string;

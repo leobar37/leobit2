@@ -32,7 +32,7 @@ import type {
   SyncStatus,
   DeadLetterOperationRecord,
 } from "./types";
-import type { ConflictStrategy } from "./config";
+import type { ConflictStrategy } from "@avileo/drizzle-sync/shared";
 
 /**
  * ISyncService interface
@@ -282,24 +282,6 @@ export interface IStagedPullCoordinator {
    * @param stage - The sync stage to load (CRITICAL, RECENT_SALES, HISTORICAL)
    */
   loadStage(stage: SyncStage): Promise<StagedPullState>;
-
-  /**
-   * Load CRITICAL stage data
-   * @deprecated Use loadStage("CRITICAL") instead
-   */
-  loadCriticalData(): Promise<StagedPullState>;
-
-  /**
-   * Load RECENT_SALES stage data
-   * @deprecated Use loadStage("RECENT_SALES") instead
-   */
-  loadRecentSales(): Promise<StagedPullState>;
-
-  /**
-   * Load HISTORICAL stage data
-   * @deprecated Use loadStage("HISTORICAL") instead
-   */
-  loadHistoricalData(): Promise<StagedPullState>;
 
   /**
    * Execute full staged load sequence

@@ -1,4 +1,4 @@
-import { BACKOFF_BASE_MS, BACKOFF_MAX_MS, SYNC_INTERVAL_MS } from "./config";
+import { BACKOFF_BASE_MS, BACKOFF_MAX_MS, SYNC_INTERVAL_MS } from "@avileo/drizzle-sync/shared";
 
 /**
  * Owns auto-sync timers and cancelable backoff state for push sync.

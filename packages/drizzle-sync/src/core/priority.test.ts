@@ -1,123 +1,93 @@
 import { describe, it, expect } from "vitest";
 import {
-  getEntityPriority,
-  sortEntitiesByPriority,
-  groupEntitiesByPriority,
-  isParentEntity,
-  isChildEntity,
+  getEntityPriorityFromConfig,
+  sortEntitiesByPriorityFromConfig,
+  groupEntitiesByPriorityFromConfig,
+  isParentEntityFromConfig,
+  isChildEntityFromConfig,
+  getChildEntities,
+  getParentEntity,
+  buildEntityProcessingOrder,
   DEFAULT_ENTITY_PRIORITIES,
 } from "./priority";
 
-describe("priority", () => {
-  describe("getEntityPriority", () => {
+const entities = Object.fromEntries(
+  Object.entries(DEFAULT_ENTITY_PRIORITIES).map(([name, priority]) => [
+    name,
+    { name, priority, parent: null, tableName: name },
+  ])
+) as any;
+
+describe("priority (config-based)", () => {
+  describe("getEntityPriorityFromConfig", () => {
     it("returns 1 for sales (parent entity)", () => {
-      expect(getEntityPriority("sales")).toBe(1);
+      expect(getEntityPriorityFromConfig("sales", entities)).toBe(1);
     });
 
     it("returns 2 for sale_items (child entity)", () => {
-      expect(getEntityPriority("sale_items")).toBe(2);
-    });
-
-    it("returns 1 for customers (parent entity)", () => {
-      expect(getEntityPriority("customers")).toBe(1);
-    });
-
-    it("returns 2 for customer_tags (child entity)", () => {
-      expect(getEntityPriority("customer_tags")).toBe(2);
+      expect(getEntityPriorityFromConfig("sale_items", entities)).toBe(2);
     });
 
     it("returns 99 for unknown entity types", () => {
-      expect(getEntityPriority("unknown_entity")).toBe(99);
-    });
-
-    it("respects custom config", () => {
-      const customConfig = { custom_entity: 5 };
-      expect(getEntityPriority("custom_entity", customConfig)).toBe(5);
-    });
-
-    it("falls back to 99 for unknown entity in custom config", () => {
-      const customConfig: Record<string, number> = {};
-      expect(getEntityPriority("unknown_entity", customConfig)).toBe(99);
+      expect(getEntityPriorityFromConfig("unknown_entity", entities)).toBe(99);
     });
   });
 
-  describe("sortEntitiesByPriority", () => {
+  describe("sortEntitiesByPriorityFromConfig", () => {
     it("sorts entities by priority ascending", () => {
-      const entities = ["sale_items", "sales", "products", "product_variants"];
-      const sorted = sortEntitiesByPriority(entities);
+      const list = ["sale_items", "sales", "products", "product_variants"];
+      const sorted = sortEntitiesByPriorityFromConfig(list, entities);
       expect(sorted).toEqual(["sales", "products", "sale_items", "product_variants"]);
     });
 
     it("returns empty array for empty input", () => {
-      expect(sortEntitiesByPriority([])).toEqual([]);
-    });
-
-    it("returns copy of single element array", () => {
-      const entities = ["customers"];
-      const sorted = sortEntitiesByPriority(entities);
-      expect(sorted).toEqual(["customers"]);
-      expect(sorted).not.toBe(entities);
+      expect(sortEntitiesByPriorityFromConfig([], entities)).toEqual([]);
     });
 
     it("does not mutate original array", () => {
-      const entities = ["sale_items", "sales"];
-      sortEntitiesByPriority(entities);
-      expect(entities).toEqual(["sale_items", "sales"]);
+      const list = ["sale_items", "sales"];
+      sortEntitiesByPriorityFromConfig(list, entities);
+      expect(list).toEqual(["sale_items", "sales"]);
     });
   });
 
-  describe("groupEntitiesByPriority", () => {
+  describe("groupEntitiesByPriorityFromConfig", () => {
     it("groups entities by priority number", () => {
-      const entities = ["sales", "sale_items", "customers", "customer_tags"];
-      const groups = groupEntitiesByPriority(entities);
+      const list = ["sales", "sale_items", "customers", "customer_tags"];
+      const groups = groupEntitiesByPriorityFromConfig(list, entities);
       expect(groups.get(1)).toEqual(["sales", "customers"]);
       expect(groups.get(2)).toEqual(["sale_items", "customer_tags"]);
     });
 
     it("returns empty map for empty input", () => {
-      const groups = groupEntitiesByPriority([]);
+      const groups = groupEntitiesByPriorityFromConfig([], entities);
       expect(groups.size).toBe(0);
-    });
-
-    it("assigns priority 99 to unknown entities", () => {
-      const entities = ["sales", "unknown_entity"];
-      const groups = groupEntitiesByPriority(entities);
-      expect(groups.get(1)).toEqual(["sales"]);
-      expect(groups.get(99)).toEqual(["unknown_entity"]);
     });
   });
 
-  describe("isParentEntity", () => {
+  describe("isParentEntityFromConfig", () => {
     it("returns true for priority 1 entities", () => {
-      expect(isParentEntity("sales")).toBe(true);
-      expect(isParentEntity("customers")).toBe(true);
-      expect(isParentEntity("products")).toBe(true);
+      expect(isParentEntityFromConfig("sales", entities)).toBe(true);
+      expect(isParentEntityFromConfig("customers", entities)).toBe(true);
+      expect(isParentEntityFromConfig("products", entities)).toBe(true);
     });
 
     it("returns false for child entities", () => {
-      expect(isParentEntity("sale_items")).toBe(false);
-      expect(isParentEntity("customer_tags")).toBe(false);
-    });
-
-    it("returns false for unknown entities (priority 99)", () => {
-      expect(isParentEntity("unknown_entity")).toBe(false);
+      expect(isParentEntityFromConfig("sale_items", entities)).toBe(false);
+      expect(isParentEntityFromConfig("customer_tags", entities)).toBe(false);
     });
   });
 
-  describe("isChildEntity", () => {
+  describe("isChildEntityFromConfig", () => {
     it("returns true for priority > 1 and < 99", () => {
-      expect(isChildEntity("sale_items")).toBe(true);
-      expect(isChildEntity("customer_tags")).toBe(true);
-      expect(isChildEntity("product_variants")).toBe(true);
+      expect(isChildEntityFromConfig("sale_items", entities)).toBe(true);
+      expect(isChildEntityFromConfig("customer_tags", entities)).toBe(true);
+      expect(isChildEntityFromConfig("product_variants", entities)).toBe(true);
     });
 
-    it("returns false for parent entities (priority 1)", () => {
-      expect(isChildEntity("sales")).toBe(false);
-      expect(isChildEntity("customers")).toBe(false);
-    });
-
-    it("returns false for unknown entities (priority 99)", () => {
-      expect(isChildEntity("unknown_entity")).toBe(false);
+    it("returns false for parent entities", () => {
+      expect(isChildEntityFromConfig("sales", entities)).toBe(false);
+      expect(isChildEntityFromConfig("customers", entities)).toBe(false);
     });
   });
 

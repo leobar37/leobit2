@@ -76,7 +76,6 @@ export {
   type PullServiceOptions,
   type PullServiceEvents,
   type ICursorStorage,
-  type ISyncMutex,
 } from "./pull-service";
 
 // ============================================================================
@@ -126,6 +125,17 @@ export {
 } from "./sync-logger";
 
 // ============================================================================
+// Sync Mutex
+// ============================================================================
+
+export {
+  SyncMutex,
+  createSyncMutex,
+  type SyncOperationType,
+  type ISyncMutex,
+} from "./sync-mutex";
+
+// ============================================================================
 // Sync Events (re-exported from core for convenience)
 // ============================================================================
 
@@ -156,3 +166,102 @@ export {
   type PgSyncQueueOptions,
   type EntityPriorityConfig,
 } from "./pg-sync-queue";
+
+// ============================================================================
+// Sync Batch Processor
+// ============================================================================
+
+export {
+  SyncBatchProcessor,
+  type ProcessPendingResult,
+  type GroupProcessResult,
+  type SyncOperationResult,
+  type EntityPriorityMap,
+  type ISyncBackoffController,
+  type ISyncLifecycleService,
+  type SyncBatchProcessorOptions,
+} from "./sync-batch-processor";
+
+// ============================================================================
+// Sync Coordinator
+// ============================================================================
+
+export {
+  SyncCoordinator,
+  createSyncCoordinator,
+  type SyncCoordinatorOptions,
+  type SyncCoordinatorStatus,
+  type ISyncService,
+  type IPullService,
+} from "./coordinator";
+
+// ============================================================================
+// Staged Pull Coordinator
+// ============================================================================
+
+export {
+  StagedPullCoordinator,
+  type StagedPullState,
+  type StagedPullResult,
+  type StagedPullProgressCallback,
+  type StagedPullCoordinatorOptions,
+  type IPullService as IStagedPullService,
+  type StageBehaviorConfig,
+  type StageConfig,
+  type SyncStagesConfig,
+} from "./staged-pull-coordinator";
+
+// ============================================================================
+// Sync Auto Runner
+// ============================================================================
+
+export {
+  SyncAutoRunner,
+  SYNC_INTERVAL_MS,
+  BACKOFF_BASE_MS,
+  BACKOFF_MAX_MS,
+} from "./sync-auto-runner";
+
+// ============================================================================
+// Sync Entity Status Updater
+// ============================================================================
+
+export {
+  SyncEntityStatusUpdater,
+  type SyncEntityStatusUpdaterOptions,
+} from "./sync-entity-status-updater";
+
+// ============================================================================
+// Sync Initialization Service
+// ============================================================================
+
+export {
+  SyncInitializationService,
+  DEFAULT_SYNC_INFRASTRUCTURE_SQL,
+  type SyncInfrastructureSQL,
+  type SyncInitializationServiceOptions,
+} from "./sync-initialization-service";
+
+// ============================================================================
+// Sync Operation Lifecycle Service
+// ============================================================================
+
+export {
+  SyncOperationLifecycleService,
+  type SyncOperationLifecycleServiceOptions,
+  type IEntityStatusUpdater,
+} from "./sync-operation-lifecycle-service";
+
+// ============================================================================
+// Sync Service (Push Orchestration)
+// ============================================================================
+
+export {
+  SyncService,
+  createSyncService,
+  type SyncServiceOptions,
+  type ISyncHttpClient,
+  type BackendConflict,
+  type BackendConflictListResponse,
+  type BackendConflictResponse,
+} from "./sync-service";

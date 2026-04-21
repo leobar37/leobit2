@@ -36,6 +36,8 @@ export {
   type HandlerFactory as ConfigHandlerFactory,
 } from './config';
 
+export * from "./codecs/index";
+
 // ============================================================================
 // Re-export core module
 // ============================================================================

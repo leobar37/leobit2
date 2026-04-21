@@ -17,7 +17,7 @@ import { VisitaService } from "../services/visita-service";
 import { CustomerGroupService } from "../services/customer-group-service";
 import { DistribucionService } from "../services/distribucion-service";
 import { SupplierService } from "../services/supplier-service";
-import type { ConflictStrategy } from "../sync/config";
+import type { ConflictStrategy } from "@avileo/drizzle-sync/shared";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { initializeEventBuffer } from "./sync-event-buffer";
 import { SyncProvider, useSyncState as useLibrarySyncState } from "@avileo/drizzle-sync/react";

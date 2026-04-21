@@ -1,4 +1,5 @@
 import type { PgTable } from "drizzle-orm/pg-core";
+import type { FieldCodecMap } from "../codecs/types";
 
 // Legacy exports (mantener compatibilidad)
 export type ConflictResolutionStrategy =
@@ -35,6 +36,7 @@ export interface ConflictResolution {
 export interface ChildRelationConfig {
   entity: string; // Nombre de la entidad hija
   foreignKey: string; // Columna FK en la tabla hija
+  payloadKey?: string; // Campo FK en payload camelCase (si difiere de foreignKey)
   cascade?: boolean; // Incluir automáticamente en operaciones
 }
 
@@ -44,6 +46,7 @@ export interface ChildRelationConfig {
 export interface ParentRelationConfig {
   entity: string; // Nombre de la entidad padre
   foreignKey: string; // Columna FK en esta tabla
+  payloadKey?: string; // Campo FK en payload camelCase (si difiere de foreignKey)
   required?: boolean; // Si el FK es NOT NULL
 }
 
@@ -77,6 +80,9 @@ export interface EntitySyncConfig<TTable extends PgTable = PgTable> {
 
   // Hooks opcionales
   hooks?: EntityHooks;
+
+  // Serialización por campo (complementa Zod, no lo reemplaza)
+  fieldCodecs?: FieldCodecMap;
 
   // API path override - when the entity name differs from the API route path
   // e.g., entity "customerGroups" has API path "groups"

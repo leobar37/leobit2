@@ -250,55 +250,6 @@ export class StagedPullCoordinator {
   }
 
   /**
-   * Stage 1: Load critical reference data (blocking)
-   * - customers, products, product_variants
-   * - Last 30 days
-   * - App waits for this to complete
-   *
-   * @deprecated Use loadStage("CRITICAL") instead. Note: loadStage throws on error while this method returns error state.
-   */
-  async loadCriticalData(): Promise<StagedPullState> {
-    try {
-      return await this.loadStage("CRITICAL");
-    } catch (error) {
-      // Backward compatibility: return error state instead of throwing
-      const state = this.getState("CRITICAL");
-      return state;
-    }
-  }
-
-  /**
-   * Stage 2: Load recent sales data (blocking)
-   * - sales, sale_items
-   * - Last 7 days
-   * - App waits for this to complete
-   *
-   * @deprecated Use loadStage("RECENT_SALES") instead. Note: loadStage throws on error while this method returns error state.
-   */
-  async loadRecentSales(): Promise<StagedPullState> {
-    try {
-      return await this.loadStage("RECENT_SALES");
-    } catch (error) {
-      // Backward compatibility: return error state instead of throwing
-      const state = this.getState("RECENT_SALES");
-      return state;
-    }
-  }
-
-  /**
-   * Stage 3: Load historical data (background/non-blocking)
-   * - abonos, purchases, distribuciones, etc.
-   * - All historical data
-   * - App is usable during this stage
-   *
-   * @deprecated Use loadStage("HISTORICAL") instead. Note: loadStage throws on error while this method returns error state.
-   */
-  async loadHistoricalData(): Promise<StagedPullState> {
-    // HISTORICAL has onError: "continue" so it never throws
-    return this.loadStage("HISTORICAL");
-  }
-
-  /**
    * Execute the full staged loading sequence
    * Returns after critical and recent stages (app is usable)
    * Historical stage runs in background

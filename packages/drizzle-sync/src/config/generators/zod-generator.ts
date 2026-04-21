@@ -1,6 +1,7 @@
 import { camelCase, pascalCase } from "../../utils/string-utils";
 import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
 import { introspectTable, resolveColumns } from "../../config/introspect";
+import type { FieldCodec } from "../../codecs/types";
 
 export interface ZodSchemaOutput {
   name: string;
@@ -19,7 +20,7 @@ export function generateZodSchema(
   const fields: string[] = [];
 
   for (const col of columnsToInclude) {
-    const zodCode = columnToZod(col);
+    const zodCode = columnToZod(col, config.fieldCodecs?.[col.name]);
     fields.push(`  ${camelCase(col.name)}: ${zodCode},`);
   }
 
@@ -38,7 +39,7 @@ export function generateZodSchema(
 
   const interfaceFields = columnsToInclude
     .map((col) => {
-      const type = getTypeScriptType(col);
+      const type = getTypeScriptType(col, config.fieldCodecs?.[col.name]);
       return `  ${camelCase(col.name)}${col.notNull ? "" : "?"}: ${type};`;
     })
     .join("\n");
@@ -53,7 +54,14 @@ export function generateZodSchema(
   };
 }
 
-function columnToZod(col: ColumnMetadata): string {
+function columnToZod(col: ColumnMetadata, codec?: FieldCodec): string {
+  if (codec) {
+    const codecZod = codecToZod(codec);
+    if (codecZod) {
+      return col.notNull ? codecZod : `${codecZod}.nullable()`;
+    }
+  }
+
   let base: string;
 
   switch (col.dataType) {
@@ -91,7 +99,29 @@ function columnToZod(col: ColumnMetadata): string {
   return base;
 }
 
-function getTypeScriptType(col: ColumnMetadata): string {
+function codecToZod(codec: FieldCodec): string | null {
+  switch (codec.kind) {
+    case "currency":
+    case "weight":
+    case "decimal":
+      return "z.union([z.string(), z.number()])";
+    case "empty-string-to-null":
+      return "z.string()";
+    case "date-only":
+      return "z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/)";
+    default:
+      return null;
+  }
+}
+
+function getTypeScriptType(col: ColumnMetadata, codec?: FieldCodec): string {
+  if (codec) {
+    const codecType = codecToTypeScript(codec);
+    if (codecType) {
+      return codecType;
+    }
+  }
+
   switch (col.dataType) {
     case "string":
       return "string";
@@ -107,6 +137,21 @@ function getTypeScriptType(col: ColumnMetadata): string {
       return "Record<string, unknown>";
     default:
       return "unknown";
+  }
+}
+
+function codecToTypeScript(codec: FieldCodec): string | null {
+  switch (codec.kind) {
+    case "currency":
+    case "weight":
+    case "decimal":
+      return "string | number";
+    case "empty-string-to-null":
+      return "string";
+    case "date-only":
+      return "string";
+    default:
+      return null;
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { calculateBackoffDelay, isTransientError, sleep } from "../backoff";
+import { calculateBackoffDelay, isTransientError, sleep } from "@avileo/drizzle-sync/core";
 
 describe("calculateBackoffDelay", () => {
   it("returns 0 when no failures", () => {

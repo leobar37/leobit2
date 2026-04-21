@@ -6,16 +6,16 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { PULL_INTERVAL_MS, MAX_STALE_PULLS, MAX_EMPTY_PULLS } from "./config";
+import { PULL_INTERVAL_MS, MAX_STALE_PULLS, MAX_EMPTY_PULLS } from "@avileo/drizzle-sync/shared";
 import { getLocalDatabaseNamespace, getPullCursorStorageKey } from "~/lib/session-storage";
 import type { PullChange, PullResponse, PullResult, PullStatus } from "./types";
 import { syncEvents } from "./sync-events";
-import { syncLogger } from "./sync-logger";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
 
 // Re-export types for backward compatibility
 export type { PullStatus, PullResult, PullChange, PullResponse } from "./types";
-import { applyChange, applyChangesBatch } from "./change-applier";
-import { calculateBackoffDelay } from "./backoff";
+import { applyChange, applyChangesBatch } from "@avileo/drizzle-sync/pglite";
+import { calculateBackoffDelay } from "@avileo/drizzle-sync/core";
 import { syncMutex } from "./sync-mutex";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";

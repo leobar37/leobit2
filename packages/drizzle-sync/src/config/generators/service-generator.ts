@@ -1,6 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
 import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
 import { introspectTable, resolveColumns } from "../../config/introspect";
+import type { FieldCodecMap } from "../../codecs/types";
 
 export interface ServiceOutput {
   name: string;
@@ -189,7 +190,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     const now = this.now();
 
     const entity: typeof ${tableRef}.$inferInsert = {
-${junctionTable ? generateInsertFieldsJunction(userColumns, tableRef) : `      id,\n${generateInsertFields(userColumns, tableRef)}`}
+${junctionTable ? generateInsertFieldsJunction(userColumns, config.fieldCodecs) : `      id,\n${generateInsertFields(userColumns, config.fieldCodecs)}`}
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,${junctionTable ? "" : `\n      businessId: this.businessId,`}
 ${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
@@ -198,7 +199,7 @@ ${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      
     await this.db.insert(${tableRef}).values(entity);
 
     await this.queueSync("create", id, {
-${generatePayloadFields(userColumns, tableRef)}
+${generatePayloadFields(userColumns, config.fieldCodecs)}
     });
 
     return { ...entity } as typeof ${tableRef}.$inferSelect;
@@ -221,13 +222,15 @@ ${junctionTable ? "" : `
       syncStatus: SyncStatus.PENDING,
     };
 
-${generateUpdateFields(userColumns, tableRef)}
+    const syncPayload: Record<string, unknown> = {};
+
+${generateUpdateFields(userColumns, config.fieldCodecs)}
     await this.db
       .update(${tableRef})
       .set(updateData)
       .where(eq(${tableRef}.id, id));
 
-    await this.queueSync("update", id, input as Record<string, unknown>);
+    await this.queueSync("update", id, syncPayload);
   }
 
   /**
@@ -258,11 +261,22 @@ ${generateUpdateFields(userColumns, tableRef)}
 /**
  * Generate the field assignments for the insert operation (for junction tables without 'id')
  */
-function generateInsertFieldsJunction(columns: ColumnMetadata[], _tableRef: string): string {
+function generateInsertFieldsJunction(columns: ColumnMetadata[], fieldCodecs?: FieldCodecMap): string {
   const lines: string[] = [];
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
+    const codec = fieldCodecs?.[col.name];
+    const sourceExpr = `input.${fieldName}`;
+    const transformedExpr = codec
+      ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
+      : sourceExpr;
+
+    if (codec) {
+      lines.push(`      ${fieldName}: ${transformedExpr},`);
+      continue;
+    }
+
     // For nullable columns (not required), use ?? null to handle missing input
     if (!col.notNull) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
@@ -279,11 +293,22 @@ function generateInsertFieldsJunction(columns: ColumnMetadata[], _tableRef: stri
 /**
  * Generate the field assignments for the insert operation
  */
-function generateInsertFields(columns: ColumnMetadata[], tableRef: string): string {
+function generateInsertFields(columns: ColumnMetadata[], fieldCodecs?: FieldCodecMap): string {
   const lines: string[] = [];
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
+    const codec = fieldCodecs?.[col.name];
+    const sourceExpr = `input.${fieldName}`;
+    const transformedExpr = codec
+      ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
+      : sourceExpr;
+
+    if (codec) {
+      lines.push(`      ${fieldName}: ${transformedExpr},`);
+      continue;
+    }
+
     // For nullable columns (not required), use ?? null to handle missing input
     if (!col.notNull) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
@@ -300,12 +325,17 @@ function generateInsertFields(columns: ColumnMetadata[], tableRef: string): stri
 /**
  * Generate the payload fields for queueSync
  */
-function generatePayloadFields(columns: ColumnMetadata[], _tableRef: string): string {
+function generatePayloadFields(columns: ColumnMetadata[], fieldCodecs?: FieldCodecMap): string {
   const lines: string[] = [];
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
-    lines.push(`      ${fieldName}: input.${fieldName},`);
+    const codec = fieldCodecs?.[col.name];
+    const sourceExpr = `input.${fieldName}`;
+    const transformedExpr = codec
+      ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
+      : sourceExpr;
+    lines.push(`      ${fieldName}: ${transformedExpr},`);
   }
 
   return lines.join("\n");
@@ -314,18 +344,50 @@ function generatePayloadFields(columns: ColumnMetadata[], _tableRef: string): st
 /**
  * Generate the update field assignments
  */
-function generateUpdateFields(columns: ColumnMetadata[], _tableRef: string): string {
+function generateUpdateFields(columns: ColumnMetadata[], fieldCodecs?: FieldCodecMap): string {
   const lines: string[] = [];
 
   for (const col of columns) {
     const fieldName = camelCase(col.name);
+    const codec = fieldCodecs?.[col.name];
+    const sourceExpr = `input.${fieldName}`;
+    const transformedExpr = codec
+      ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
+      : sourceExpr;
+
     lines.push(`    if (input.${fieldName} !== undefined) {`);
-    lines.push(`      updateData.${fieldName} = input.${fieldName};`);
+    lines.push(`      updateData.${fieldName} = ${transformedExpr};`);
+    lines.push(`      syncPayload.${fieldName} = ${transformedExpr};`);
     lines.push(`    }`);
     lines.push("");
   }
 
   return lines.join("\n");
+}
+
+function getCodecTransformExpression(codec: { kind: string; isNullable?: boolean }, sourceExpr: string, required: boolean): string {
+  const nullable = codec.isNullable === true || !required;
+
+  switch (codec.kind) {
+    case "currency":
+      return nullable
+        ? `this.normalizeNullableCurrency(${sourceExpr})`
+        : `this.normalizeCurrency(${sourceExpr})`;
+    case "weight":
+      return nullable
+        ? `this.normalizeWeight(${sourceExpr})`
+        : `this.normalizeWeightRequired(${sourceExpr})`;
+    case "empty-string-to-null":
+      return `(${sourceExpr} === "" ? null : (${sourceExpr} ?? null))`;
+    case "date-only":
+      return sourceExpr;
+    case "decimal":
+      return nullable
+        ? `this.normalizeNullableCurrency(${sourceExpr})`
+        : `this.normalizeCurrency(${sourceExpr})`;
+    default:
+      return sourceExpr;
+  }
 }
 
 /**

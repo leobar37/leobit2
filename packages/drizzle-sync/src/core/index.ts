@@ -91,17 +91,10 @@ export type {
 
 export type { EntityPriorityConfig, SyncEntity } from "./priority";
 
-// Legacy exports (deprecated)
 export {
   DEFAULT_ENTITY_PRIORITIES,
-  getEntityPriority,
-  sortEntitiesByPriority,
-  groupEntitiesByPriority,
-  isParentEntity,
-  isChildEntity,
 } from "./priority";
 
-// Generic config-based exports (NEW)
 export {
   DEFAULT_PRIORITY,
   getEntityPriorityFromConfig,

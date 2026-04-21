@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { MAX_RETRIES, OPERATION_STATUS } from "./config";
+import { MAX_RETRIES, OPERATION_STATUS } from "@avileo/drizzle-sync/shared";
 import type { ISyncQueue } from "./types";
 import type {
   DeadLetterOperationRecord,
@@ -7,7 +7,7 @@ import type {
 } from "./types";
 import { SELF_HEAL_INSERTABLE_ENTITIES, classifyError, parsePayload } from "./types";
 import { buildPlaceholders } from "./types";
-import { syncLogger } from "./sync-logger";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
 import { SyncEntityStatusUpdater } from "./sync-entity-status-updater";
 
 export class SyncOperationLifecycleService {

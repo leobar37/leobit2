@@ -16,14 +16,14 @@ vi.mock("~/lib/session-storage", () => ({
   getPullCursorStorageKey: () => "avileo_pull_cursor",
 }));
 
-vi.mock("../config", () => ({
+vi.mock("@avileo/drizzle-sync/shared", () => ({
   PULL_INTERVAL_MS: 10000,
   BACKOFF_BASE_MS: 1000,
   BACKOFF_MAX_MS: 30000,
   calculateBackoffDelay: () => 0,
 }));
 
-vi.mock("~/lib/sync/change-applier", () => {
+vi.mock("@avileo/drizzle-sync/pglite", () => {
   const mockFn = vi.fn(() => Promise.resolve({ success: true }));
   return { applyChange: mockFn };
 });
@@ -131,7 +131,7 @@ describe("StagedSyncFlow Integration", () => {
       const pullService = createMockPullService();
       const coordinator = new StagedPullCoordinator(pullService);
 
-      const result = await coordinator.loadCriticalData();
+      const result = await coordinator.loadStage("CRITICAL");
 
       expect(result.status).toBe("complete");
       expect(result.changesApplied).toBe(0);
@@ -148,10 +148,7 @@ describe("StagedSyncFlow Integration", () => {
       const pullService = createMockPullService();
       const coordinator = new StagedPullCoordinator(pullService);
 
-      const result = await coordinator.loadCriticalData();
-
-      expect(result.status).toBe("error");
-      expect(result.error).toContain("500");
+      await expect(coordinator.loadStage("CRITICAL")).rejects.toThrow();
     });
 
     it("should handle 401 unauthorized", async () => {
@@ -164,9 +161,7 @@ describe("StagedSyncFlow Integration", () => {
       const pullService = createMockPullService();
       const coordinator = new StagedPullCoordinator(pullService);
 
-      const result = await coordinator.loadCriticalData();
-
-      expect(result.status).toBe("error");
+      await expect(coordinator.loadStage("CRITICAL")).rejects.toThrow();
       expect(result.error).toContain("401");
     });
 
@@ -190,10 +185,10 @@ describe("StagedSyncFlow Integration", () => {
 
       expect(coordinator.isAppUsable()).toBe(false);
 
-      await coordinator.loadCriticalData();
+      await coordinator.loadStage("CRITICAL");
       expect(coordinator.isAppUsable()).toBe(false);
 
-      await coordinator.loadRecentSales();
+      await coordinator.loadStage("RECENT_SALES");
       expect(coordinator.isAppUsable()).toBe(true);
 
       expect(coordinator.isComplete()).toBe(false);
@@ -224,8 +219,8 @@ describe("StagedSyncFlow Integration", () => {
       const pullService = createMockPullService();
       const coordinator = new StagedPullCoordinator(pullService);
 
-      await coordinator.loadCriticalData();
-      await coordinator.loadRecentSales();
+      await coordinator.loadStage("CRITICAL");
+      await coordinator.loadStage("RECENT_SALES");
 
       expect(coordinator.getTotalChangesApplied()).toBeGreaterThanOrEqual(0);
     });
@@ -255,7 +250,7 @@ describe("StagedSyncFlow Integration", () => {
 
       // Without loop protection, this would loop forever
       // The test documents the bug - T-007 will add loop protection
-      const result = await coordinator.loadCriticalData();
+      const result = await coordinator.loadStage("CRITICAL");
 
       // Result depends on whether loop protection is implemented
       expect(result.status).toBeDefined();

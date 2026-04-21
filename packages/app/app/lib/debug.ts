@@ -15,10 +15,3 @@ import { addServiceDebugHelpers } from "~/devtools/console";
 
 export { addServiceDebugHelpers };
 export type { ServiceDebugHelpers } from "~/devtools/console";
-
-/**
- * @deprecated Kept for backwards compatibility with existing import sites.
- */
-export function registerDebugServices(services: Parameters<typeof addServiceDebugHelpers>[0]): void {
-  addServiceDebugHelpers(services);
-}

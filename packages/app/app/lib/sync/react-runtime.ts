@@ -26,7 +26,7 @@ import type { PullService } from "./pull-service";
 import { syncEvents } from "./sync-events";
 import { getQueryKeysForEntity } from "./query-keys";
 import type { QueryClient } from "@tanstack/react-query";
-import { syncLogger } from "./sync-logger";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
 
 /**
  * Default sync state snapshot

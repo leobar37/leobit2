@@ -16,14 +16,12 @@ export { SYNC_STATUS_TRACKED, SELF_HEAL_INSERTABLE };
 /**
  * Entity types that are tracked for sync status
  * Alias for compatibility with existing code
- * @deprecated Use getSyncStatusTrackedEntities(config) instead
  */
 export const SYNC_STATUS_ENTITY_TABLES: ReadonlySet<string> = new Set(SYNC_STATUS_TRACKED);
 
 /**
  * Entity types that support self-healing (update → create conversion)
  * Alias for compatibility with existing code
- * @deprecated Use getSelfHealEntities(config) instead
  */
 export const SELF_HEAL_INSERTABLE_ENTITIES: ReadonlySet<string> = new Set(SELF_HEAL_INSERTABLE);
 

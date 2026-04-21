@@ -1,9 +1,10 @@
 /**
- * Sync Events - Core Event Contract and Emitter
+ * Sync Events - Unified Event Contract and Emitter
  *
  * Lightweight event system for sync observability.
  * Provides typed events for stale pull, pull complete, push complete,
- * and conflict detection without introducing new dependencies.
+ * conflict detection, status changes, and sync state without
+ * introducing new dependencies.
  *
  * ## Design Principles
  *
@@ -12,6 +13,7 @@
  * - **Optional**: Event emission is optional; systems work without it
  * - **Non-blocking**: Event handlers are called synchronously but don't block
  * - **Backward compatible**: Existing callback hooks in pull-service remain
+ * - **EventTargetAdapter**: Browser-compatible via EventTarget pattern
  *
  * ## Usage
  *
@@ -23,6 +25,11 @@
  * // Subscribe to events
  * emitter.on("pull:complete", (event) => {
  *   console.log(`Applied ${event.changesApplied} changes`);
+ * });
+ *
+ * // Subscribe once (fires only once then auto-unsubscribes)
+ * emitter.once("coordinator:started", () => {
+ *   console.log("Coordinator is running!");
  * });
  *
  * // Emit events
@@ -39,15 +46,30 @@
 // ============================================================================
 
 /**
- * Event types for sync operations
+ * Unified event types for sync operations
  */
 export type SyncEventType =
+  // Pull events
   | "pull:complete"
   | "pull:stale"
   | "pull:error"
+  // Push events
   | "push:complete"
   | "push:error"
-  | "conflict:detected";
+  // Conflict events
+  | "conflict:detected"
+  // Status events
+  | "status:changed"
+  // Operation events
+  | "operation:completed"
+  | "operation:failed"
+  | "operation:conflict"
+  // Sync state events
+  | "sync:online"
+  | "sync:offline"
+  // Coordinator events
+  | "coordinator:started"
+  | "coordinator:stopped";
 
 /**
  * Event payload for pull:complete
@@ -140,6 +162,68 @@ export interface ConflictDetectedEvent {
 }
 
 /**
+ * Event payload for status:changed
+ */
+export interface StatusChangedEvent {
+  /** Number of pending operations */
+  pending: number;
+  /** Number of failed operations */
+  failed: number;
+  /** Number of conflicts */
+  conflict: number;
+  /** Number of dead letter operations */
+  deadLetter: number;
+}
+
+/**
+ * Event payload for operation:completed
+ */
+export interface OperationCompletedEvent {
+  /** Operation ID */
+  id: string;
+  /** Entity type */
+  entityType: string;
+  /** Operation type */
+  operation: string;
+}
+
+/**
+ * Event payload for operation:failed
+ */
+export interface OperationFailedEvent {
+  /** Operation ID */
+  id: string;
+  /** Error message */
+  error: string;
+}
+
+/**
+ * Event payload for operation:conflict
+ */
+export interface OperationConflictEvent {
+  /** Operation ID */
+  id: string;
+  /** Entity type */
+  entityType: string;
+}
+
+/**
+ * Event payload for sync:online / sync:offline
+ */
+export interface SyncStateEvent {
+  /** ISO timestamp when event occurred */
+  timestamp?: string;
+}
+
+/**
+ * Event payload for coordinator:started / coordinator:stopped
+ */
+export interface CoordinatorStateEvent {
+  /** ISO timestamp when event occurred */
+  timestamp?: string;
+}
+
+/**
  * Map of event types to their payload types
  */
 export interface SyncEventTypeMap {
@@ -149,6 +233,14 @@ export interface SyncEventTypeMap {
   "push:complete": PushCompleteEvent;
   "push:error": PushErrorEvent;
   "conflict:detected": ConflictDetectedEvent;
+  "status:changed": StatusChangedEvent;
+  "operation:completed": OperationCompletedEvent;
+  "operation:failed": OperationFailedEvent;
+  "operation:conflict": OperationConflictEvent;
+  "sync:online": SyncStateEvent;
+  "sync:offline": SyncStateEvent;
+  "coordinator:started": CoordinatorStateEvent;
+  "coordinator:stopped": CoordinatorStateEvent;
 }
 
 // ============================================================================
@@ -175,7 +267,7 @@ export type Unsubscribe = () => void;
  * Interface for sync event emitters
  *
  * This interface allows for different emitter implementations
- * (e.g., in-memory, broadcast channel, etc.)
+ * (e.g., in-memory, broadcast channel, EventTarget adapter, etc.)
  */
 export interface ISyncEventEmitter {
   /**
@@ -186,6 +278,14 @@ export interface ISyncEventEmitter {
     eventType: T,
     handler: SyncEventHandler<T>
   ): Unsubscribe;
+
+  /**
+   * Subscribe to an event type once (auto-unsubscribes after first emission)
+   */
+  once<T extends SyncEventType>(
+    eventType: T,
+    handler: SyncEventHandler<T>
+  ): void;
 
   /**
    * Emit an event
@@ -212,6 +312,122 @@ export interface ISyncEventEmitter {
 }
 
 // ============================================================================
+// EventTarget Adapter (for browser compatibility)
+// ============================================================================
+
+/**
+ * EventTarget-based event emitter for browser environments.
+ *
+ * Uses the native EventTarget API for optimal browser compatibility
+ * while providing the same interface as the in-memory emitter.
+ *
+ * @example
+ * ```typescript
+ * const emitter = new EventTargetAdapter();
+ *
+ * // Subscribe
+ * const unsubscribe = emitter.on("pull:complete", (event) => {
+ *   console.log(`Applied ${event.changesApplied} changes`);
+ * });
+ *
+ * // Subscribe once
+ * emitter.once("coordinator:started", () => {
+ *   console.log("Coordinator started!");
+ * });
+ *
+ * // Emit
+ * emitter.emit("pull:complete", {
+ *   changesApplied: 5,
+ *   entityTypes: ["sales"],
+ *   hasMore: false,
+ *   timestamp: new Date().toISOString(),
+ * });
+ *
+ * // Unsubscribe
+ * unsubscribe();
+ * ```
+ */
+export class EventTargetAdapter implements ISyncEventEmitter {
+  private target: EventTarget;
+
+  constructor(eventTarget: EventTarget = new EventTarget()) {
+    this.target = eventTarget;
+  }
+
+  /**
+   * Subscribe to an event type
+   * @returns Unsubscribe function
+   */
+  on<T extends SyncEventType>(
+    eventType: T,
+    handler: SyncEventHandler<T>
+  ): Unsubscribe {
+    const wrapper = (e: CustomEvent) => handler(e.detail as SyncEventTypeMap[T]);
+    this.target.addEventListener(eventType, wrapper as EventListener);
+    return () => {
+      this.target.removeEventListener(eventType, wrapper as EventListener);
+    };
+  }
+
+  /**
+   * Subscribe to an event type once (auto-unsubscribes after first emission)
+   */
+  once<T extends SyncEventType>(
+    eventType: T,
+    handler: SyncEventHandler<T>
+  ): void {
+    const wrapper = (e: CustomEvent) => {
+      handler(e.detail as SyncEventTypeMap[T]);
+    };
+    let fired = false;
+    const onceWrapper: EventListener = (e: Event) => {
+      if (fired) return;
+      fired = true;
+      handler((e as CustomEvent).detail as SyncEventTypeMap[T]);
+      this.target.removeEventListener(eventType, onceWrapper);
+    };
+    this.target.addEventListener(eventType, onceWrapper);
+  }
+
+  /**
+   * Emit an event to all listeners
+   */
+  emit<T extends SyncEventType>(
+    eventType: T,
+    event: SyncEventTypeMap[T]
+  ): void {
+    this.target.dispatchEvent(new CustomEvent(eventType, { detail: event }));
+  }
+
+  /**
+   * Remove all listeners for an event type
+   */
+  off(eventType: SyncEventType): void {
+    // EventTarget doesn't support removing all listeners for a specific type
+    // without tracking them. This is a limitation of the EventTarget API.
+    // For full off() support, use SyncEventEmitter instead.
+  }
+
+  /**
+   * Remove all listeners for all events
+   */
+  clear(): void {
+    // EventTarget doesn't support clearing all listeners
+    // without tracking them. This is a limitation of the EventTarget API.
+    // For full clear() support, use SyncEventEmitter instead.
+  }
+
+  /**
+   * Check if there are any listeners for an event type
+   */
+  hasListeners(eventType: SyncEventType): boolean {
+    // EventTarget doesn't support listener detection
+    // This is a limitation of the EventTarget API.
+    return false;
+  }
+}
+
+// ============================================================================
 // In-Memory Event Emitter Implementation
 // ============================================================================
 
@@ -228,6 +444,11 @@ export interface ISyncEventEmitter {
  * // Subscribe
  * const unsubscribe = emitter.on("pull:complete", (event) => {
  *   console.log(`Applied ${event.changesApplied} changes`);
+ * });
+ *
+ * // Subscribe once
+ * emitter.once("coordinator:started", () => {
+ *   console.log("Coordinator started!");
  * });
  *
  * // Emit
@@ -270,6 +491,19 @@ export class SyncEventEmitter implements ISyncEventEmitter {
   }
 
   /**
+   * Subscribe to an event type once (auto-unscribes after first emission)
+   */
+  once<T extends SyncEventType>(
+    eventType: T,
+    handler: SyncEventHandler<T>
+  ): void {
+    const unsubscribe = this.on(eventType, (event) => {
+      unsubscribe();
+      handler(event);
+    });
+  }
+
+  /**
    * Emit an event to all listeners
    *
    * Handlers are called synchronously in insertion order.
@@ -285,7 +519,10 @@ export class SyncEventEmitter implements ISyncEventEmitter {
       return;
     }
 
-    for (const handler of handlers) {
+    // Create a copy to avoid mutation issues if handlers modify the listener set
+    const handlersCopy = new Set(handlers);
+
+    for (const handler of handlersCopy) {
       try {
         handler(event);
       } catch (error) {
@@ -343,6 +580,8 @@ export class NoOpSyncEventEmitter implements ISyncEventEmitter {
     return () => {};
   }
 
+  once<T extends SyncEventType>(_eventType: T, _handler: SyncEventHandler<T>): void {}
+
   emit<T extends SyncEventType>(_eventType: T, _event: SyncEventTypeMap[T]): void {}
 
   off(_eventType: SyncEventType): void {}
@@ -372,4 +611,14 @@ export const noOpSyncEventEmitter = new NoOpSyncEventEmitter();
  */
 export function createSyncEventEmitter(): ISyncEventEmitter {
   return new SyncEventEmitter();
+}
+
+/**
+ * Create an EventTarget-based event emitter.
+ *
+ * Use this in browser environments for optimal compatibility
+ * with the native EventTarget API.
+ */
+export function createEventTargetAdapter(): ISyncEventEmitter {
+  return new EventTargetAdapter();
 }

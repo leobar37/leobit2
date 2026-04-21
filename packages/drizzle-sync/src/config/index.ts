@@ -48,3 +48,14 @@ export { defineSyncConfig, createId, generateSyncGroupId, generateIdempotencyKey
 export { introspectTable, detectRelations, buildRelationGraph, resolveColumns } from "./introspect";
 export { loadConfig } from "./loader";
 export { generateAll } from "./generator";
+
+export {
+  generateLocalFirstHooksFactory,
+  generateLocalFirstHooksWithChildren,
+  generateAllLocalFirstHooks,
+  generateLocalFirstHooksFile,
+  type LocalFirstHooks,
+  type LocalFirstHooksOutput,
+} from "./generators/local-first-hooks-generator";
+
+export type { FieldCodec, FieldCodecMap } from "../codecs/types";

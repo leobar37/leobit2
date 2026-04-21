@@ -1,4 +1,5 @@
 import { defineSyncConfig } from "@avileo/drizzle-sync/config";
+import { currency, weight } from "@avileo/drizzle-sync/codecs";
 import {
   customers,
   sales,
@@ -90,6 +91,13 @@ export const syncConfig = defineSyncConfig({
       table: sales,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        total_amount: currency(),
+        amount_paid: currency({ nullable: true }),
+        balance_due: currency({ nullable: true }),
+        tara: weight({ nullable: true }),
+        net_weight: weight({ nullable: true }),
+      },
       relations: {
         children: [
           {
@@ -105,12 +113,26 @@ export const syncConfig = defineSyncConfig({
       table: saleItems,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        quantity: weight({ nullable: true }),
+        ordered_quantity: weight({ nullable: true }),
+        delivered_quantity: weight({ nullable: true }),
+        unit_price: currency({ nullable: true }),
+        unit_price_quoted: currency({ nullable: true }),
+        unit_price_final: currency({ nullable: true }),
+        subtotal: currency(),
+        cost_price_snapshot: currency({ nullable: true }),
+        original_quantity: weight({ nullable: true }),
+      },
     },
 
     purchases: {
       table: purchases,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        total_amount: currency(),
+      },
       relations: {
         children: [
           {
@@ -126,12 +148,20 @@ export const syncConfig = defineSyncConfig({
       table: purchaseItems,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        quantity: weight(),
+        unit_cost: currency(),
+        total_cost: currency({ nullable: true }),
+      },
     },
 
     distribuciones: {
       table: distribuciones,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        monto_recaudado: currency({ nullable: true }),
+      },
       relations: {
         children: [
           {
@@ -147,6 +177,10 @@ export const syncConfig = defineSyncConfig({
       table: distribucionItems,
       syncable: true,
       conflictResolver: "version-based",
+      fieldCodecs: {
+        cantidad_asignada: weight(),
+        cantidad_vendida: weight({ nullable: true }),
+      },
     },
 
     // Payments (abonos) - API uses /payments prefix
@@ -155,6 +189,9 @@ export const syncConfig = defineSyncConfig({
       syncable: true,
       conflictResolver: "version-based",
       apiPath: "payments",
+      fieldCodecs: {
+        amount: currency(),
+      },
     },
   },
 

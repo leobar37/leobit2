@@ -10,7 +10,7 @@ import { SyncService } from "../sync-service";
 import type { ISyncQueue } from "../types";
 import type { SyncOperation } from "../interfaces";
 import type { ISyncHttpClient, SyncResult } from "../http/sync-http-client";
-import type { IBackoffStrategy } from "../backoff";
+import type { IBackoffStrategy } from "@avileo/drizzle-sync/core";
 import { createMockPGlite, createMockDrizzleDB } from "../testing/factories";
 
 // Mock implementations

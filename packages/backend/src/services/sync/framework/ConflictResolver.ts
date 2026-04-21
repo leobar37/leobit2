@@ -101,14 +101,6 @@ abstract class BaseVersionConflictResolver implements IConflictResolver {
   }
 }
 
-// @deprecated Use BaseVersionConflictResolver instead
-// Kept for backward compatibility during transition
-abstract class BaseTimestampConflictResolver extends BaseVersionConflictResolver {
-  protected getVersionField(): string {
-    return "version";
-  }
-}
-
 // Entity-specific resolvers (now using version-based conflict detection)
 class CustomerConflictResolver extends BaseVersionConflictResolver {
   protected getEntityName() { return "Customer"; }

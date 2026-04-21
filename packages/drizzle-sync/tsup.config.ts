@@ -91,6 +91,16 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
   },
+  // Codecs submodule
+  {
+    entry: ["src/codecs/index.ts"],
+    format: ["esm"],
+    dts: true,
+    outDir: "dist/codecs",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+  },
   {
     entry: ["src/cli.ts"],
     format: ["esm"],

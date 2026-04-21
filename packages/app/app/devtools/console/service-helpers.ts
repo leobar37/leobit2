@@ -658,8 +658,6 @@ avileoDebug.help()              → Show this help
 /**
  * Registers service-level debug helpers by merging onto the existing window.avileoDebug object.
  * Must be called AFTER initDevTools() has been called (so window.avileoDebug already exists).
- *
- * @deprecated Use createServiceDebugHelpers from ~/devtools/console directly for new code.
  */
 export function addServiceDebugHelpers(services: {
   purchaseService: PurchaseService;

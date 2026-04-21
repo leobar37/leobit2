@@ -80,8 +80,7 @@ export class GenericHandlerRegistry<
 }
 
 /**
- * HandlerRegistry (legacy static registry)
- * @deprecated Use GenericHandlerRegistry instance instead
+ * HandlerRegistry (static registry for entity handlers)
  */
 export class HandlerRegistry {
   private static handlers: Map<SyncEntity, HandlerFactory> = new Map();

@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drizzle Sync — Flujo de Sincronización</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#f97316',
+            surface: '#18181b',
+            card: '#27272a',
+            muted: '#71717a',
+            success: '#22c55e',
+            warning: '#eab308',
+            danger: '#ef4444',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #09090b; color: #fafafa; font-family: system-ui, sans-serif; }
+    .node { transition: all 0.2s; }
+    .node:hover { transform: scale(1.02); filter: brightness(1.1); }
+    .arrow { animation: flow 2s ease-in-out infinite; }
+    @keyframes flow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .pulse { animation: pulse 3s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-active { border-bottom: 2px solid #f97316; color: #f97316; }
+    pre { background: #1c1c1e; border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 13px; }
+    code { font-family: 'Fira Code', monospace; }
+  </style>
+</head>
+<body class="min-h-screen p-6">
+
+  <div class="max-w-6xl mx-auto space-y-8">
+
+    <!-- Header -->
+    <header class="text-center fade-in">
+      <h1 class="text-4xl font-bold mb-2">
+        <span class="text-primary">drizzle</span>sync
+      </h1>
+      <p class="text-muted text-lg">Biblioteca de sincronización offline-first para PostgreSQL y PGlite</p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="flex gap-6 border-b border-zinc-800 pb-0 text-sm">
+      <button class="tab-btn tab-active pb-3 px-2 text-zinc-400 hover:text-white transition" data-tab="overview">Arquitectura General</button>
+      <button class="tab-btn pb-3 px-2 text-zinc-400 hover:text-white transition" data-tab="push">Push ( Cola → Backend)</button>
+      <button class="tab-btn pb-3 px-2 text-zinc-400 hover:text-white transition" data-tab="sorting">Ordenamiento Topológico</button>
+      <button class="tab-btn pb-3 px-2 text-zinc-400 hover:text-white transition" data-tab="compound">Eventos Compuestos</button>
+      <button class="tab-btn pb-3 px-2 text-zinc-400 hover:text-white transition" data-tab="pull">Pull (Server → Clientes)</button>
+    </nav>
+
+    <!-- ===================== OVERVIEW TAB ===================== -->
+    <section id="tab-overview" class="tab-content fade-in">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4 text-primary">Flujo General de Sincronización</h2>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 320" class="w-full min-w-[700px] h-auto">
+
+            <!-- Background grid -->
+            <defs>
+              <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#27272a" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="900" height="320" fill="url(#grid)"/>
+
+            <!-- FRONTEND box -->
+            <rect x="20" y="80" width="160" height="160" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="100" y="60" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600" letter-spacing="1">FRONTEND (PGlite)</text>
+
+            <!-- PGlite DB inside Frontend -->
+            <rect x="40" y="85" width="120" height="50" rx="8" fill="#27272a" stroke="#f97316" stroke-width="1"/>
+            <text x="100" y="105" text-anchor="middle" fill="#f97316" font-size="11" font-weight="700">PGlite</text>
+            <text x="100" y="120" text-anchor="middle" fill="#a1a1aa" font-size="10">(PostgreSQL WASM)</text>
+
+            <!-- SyncQueue inside Frontend -->
+            <rect x="40" y="145" width="120" height="45" rx="8" fill="#27272a" stroke="#3f3f46" stroke-width="1"/>
+            <text x="100" y="162" text-anchor="middle" fill="#eab308" font-size="10" font-weight="700">SyncQueue</text>
+            <text x="100" y="177" text-anchor="middle" fill="#a1a1aa" font-size="9">enqueue() / getPending()</text>
+
+            <!-- App logic inside Frontend -->
+            <rect x="40" y="200" width="120" height="30" rx="6" fill="#27272a" stroke="#3f3f46" stroke-width="1"/>
+            <text x="100" y="218" text-anchor="middle" fill="#a1a1aa" font-size="9">App Logic</text>
+
+            <!-- Arrow: Frontend Queue → Backend -->
+            <path d="M 185 167 L 245 167" stroke="#f97316" stroke-width="2" fill="none" marker-end="url(#arrow-orange)"/>
+            <text x="215" y="158" text-anchor="middle" fill="#f97316" font-size="9">POST /sync/batch</text>
+
+            <!-- Arrow: Backend → Frontend (responses) -->
+            <path d="M 245 190 L 185 190" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="215" y="182" text-anchor="middle" fill="#22c55e" font-size="9">results[]</text>
+
+            <!-- BACKEND box -->
+            <rect x="250" y="40" width="260" height="240" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="380" y="20" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600" letter-spacing="1">BACKEND (PostgreSQL)</text>
+
+            <!-- SyncEngine -->
+            <rect x="270" y="55" width="220" height="55" rx="8" fill="#27272a" stroke="#f97316" stroke-width="1.5"/>
+            <text x="380" y="75" text-anchor="middle" fill="#f97316" font-size="12" font-weight="800">SyncEngine</text>
+            <text x="380" y="92" text-anchor="middle" fill="#a1a1aa" font-size="10">processBatch() → operación por operación</text>
+            <text x="380" y="106" text-anchor="middle" fill="#71717a" font-size="9">savepoints para rollback parcial</text>
+
+            <!-- ConflictResolver -->
+            <rect x="270" y="120" width="105" height="40" rx="6" fill="#27272a" stroke="#eab308" stroke-width="1"/>
+            <text x="322" y="137" text-anchor="middle" fill="#eab308" font-size="9" font-weight="700">ConflictResolver</text>
+            <text x="322" y="151" text-anchor="middle" fill="#71717a" font-size="8">checkConflict()</text>
+
+            <!-- OperationSorter -->
+            <rect x="385" y="120" width="105" height="40" rx="6" fill="#27272a" stroke="#a78bfa" stroke-width="1"/>
+            <text x="437" y="137" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">OperationSorter</text>
+            <text x="437" y="151" text-anchor="middle" fill="#71717a" font-size="8">topologicalSort()</text>
+
+            <!-- EntityRegistry -->
+            <rect x="270" y="170" width="220" height="40" rx="6" fill="#27272a" stroke="#22c55e" stroke-width="1"/>
+            <text x="380" y="187" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">EntityRegistry (batch)</text>
+            <text x="380" y="201" text-anchor="middle" fill="#71717a" font-size="8">wasCreated() → evita queries redundantes</text>
+
+            <!-- HandlerRegistry -->
+            <rect x="270" y="220" width="220" height="45" rx="6" fill="#27272a" stroke="#3f3f46" stroke-width="1"/>
+            <text x="380" y="238" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="700">HandlerRegistry</text>
+            <text x="380" y="252" text-anchor="middle" fill="#71717a" font-size="9">getHandler(entityType) → 14 entity handlers</text>
+
+            <!-- Arrow: Backend → DB -->
+            <path d="M 515 160 L 575 160" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="545" y="152" text-anchor="middle" fill="#22c55e" font-size="9">INSERT/UPDATE/DELETE</text>
+
+            <!-- DATABASE box -->
+            <rect x="580" y="80" width="140" height="160" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="650" y="60" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600" letter-spacing="1">DATABASE</text>
+
+            <rect x="595" y="95" width="110" height="30" rx="6" fill="#27272a" stroke="#f97316" stroke-width="1"/>
+            <text x="650" y="113" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">sync_operations</text>
+
+            <rect x="595" y="135" width="110" height="30" rx="6" fill="#27272a" stroke="#22c55e" stroke-width="1"/>
+            <text x="650" y="153" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">entities</text>
+
+            <rect x="595" y="175" width="110" height="30" rx="6" fill="#27272a" stroke="#eab308" stroke-width="1"/>
+            <text x="650" y="193" text-anchor="middle" fill="#eab308" font-size="9" font-weight="700">conflicts</text>
+
+            <!-- Arrow: DB → Clients -->
+            <path d="M 650 245 L 650 295 L 750 295 L 750 240" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)" class="arrow"/>
+            <text x="700" y="288" text-anchor="middle" fill="#22c55e" font-size="9">broadcast / polling</text>
+
+            <!-- CLIENTS -->
+            <rect x="720" y="80" width="160" height="155" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="800" y="60" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600" letter-spacing="1">OTROS CLIENTES</text>
+
+            <rect x="735" y="85" width="130" height="30" rx="6" fill="#27272a" stroke="#3f3f46"/>
+            <text x="800" y="103" text-anchor="middle" fill="#a1a1aa" font-size="10">📱 Mobile A</text>
+
+            <rect x="735" y="125" width="130" height="30" rx="6" fill="#27272a" stroke="#3f3f46"/>
+            <text x="800" y="143" text-anchor="middle" fill="#a1a1aa" font-size="10">💻 Web</text>
+
+            <rect x="735" y="165" width="130" height="30" rx="6" fill="#27272a" stroke="#3f3f46"/>
+            <text x="800" y="183" text-anchor="middle" fill="#a1a1aa" font-size="10">📱 Mobile B</text>
+
+            <!-- Legend -->
+            <rect x="250" y="275" width="300" height="35" rx="6" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1"/>
+            <circle cx="268" cy="292" r="5" fill="#f97316" class="pulse"/>
+            <text x="280" y="296" fill="#a1a1aa" font-size="9">Push (frontend→backend)</text>
+            <circle cx="390" cy="292" r="5" fill="#22c55e" class="pulse"/>
+            <text x="402" y="296" fill="#a1a1aa" font-size="9">Pull (backend→clientes)</text>
+            <circle cx="508" cy="292" r="5" fill="#eab308"/>
+            <text x="520" y="296" fill="#a1a1aa" font-size="9">Conflict</text>
+
+            <!-- Marker definitions -->
+            <defs>
+              <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#f97316"/>
+              </marker>
+              <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Key concepts cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">📤</span>
+            <h3 class="font-semibold text-primary">Push (Envío)</h3>
+          </div>
+          <p class="text-muted text-sm">El frontend encola operaciones locally en PGlite y las envía en batch al backend via <code class="text-xs bg-zinc-800 px-1 rounded">POST /sync/batch</code></p>
+        </div>
+
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">🔄</span>
+            <h3 class="font-semibold text-success">Pull (Recepción)</h3>
+          </div>
+          <p class="text-muted text-sm">El frontend polléa cambios del servidor via <code class="text-xs bg-zinc-800 px-1 rounded">GET /sync/changes</code> con cursor-based pagination</p>
+        </div>
+
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">⚠️</span>
+            <h3 class="font-semibold text-warning">Conflictos</h3>
+          </div>
+          <p class="text-muted text-sm">El <code class="text-xs bg-zinc-800 px-1 rounded">ConflictResolver</code> detecta versiones desfasadas y los persiste para resolución admin</p>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ===================== PUSH TAB ===================== -->
+    <section id="tab-push" class="tab-content hidden">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Flujo de Push — De Frontend a Backend</h2>
+        <p class="text-muted text-sm mb-6">Cómo las operaciones locales llegan a la base de datos y se distribuyen</p>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 380" class="w-full min-w-[700px] h-auto">
+
+            <!-- Step 1: Frontend local write -->
+            <rect x="20" y="30" width="180" height="100" rx="10" fill="#1e1e1e" stroke="#f97316" stroke-width="1.5"/>
+            <text x="110" y="18" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">STEP 1</text>
+            <text x="110" y="52" text-anchor="middle" fill="#f97316" font-size="12" font-weight="700">Frontend</text>
+            <text x="110" y="72" text-anchor="middle" fill="#a1a1aa" font-size="10">Venta creada por usuario</text>
+            <text x="110" y="90" text-anchor="middle" fill="#71717a" font-size="9">app/lib/sales/createSale()</text>
+            <text x="110" y="108" text-anchor="middle" fill="#22c55e" font-size="9">✅ Guardado en PGlite local</text>
+
+            <!-- Arrow 1→2 -->
+            <path d="M 205 80 L 255 80" stroke="#f97316" stroke-width="2" fill="none" marker-end="url(#arrow-orange)"/>
+            <text x="230" y="72" text-anchor="middle" fill="#f97316" font-size="9">syncQueue.enqueue()</text>
+
+            <!-- Step 2: Queue -->
+            <rect x="260" y="30" width="180" height="100" rx="10" fill="#1e1e1e" stroke="#eab308" stroke-width="1.5"/>
+            <text x="350" y="18" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">STEP 2</text>
+            <text x="350" y="52" text-anchor="middle" fill="#eab308" font-size="12" font-weight="700">SyncQueue (PGlite)</text>
+            <text x="350" y="72" text-anchor="middle" fill="#a1a1aa" font-size="10">Operación encolada</text>
+            <text x="350" y="90" text-anchor="middle" fill="#71717a" font-size="9">status: "pending"</text>
+            <text x="350" y="108" text-anchor="middle" fill="#71717a" font-size="9">deviceId + idempotencyKey</text>
+
+            <!-- Arrow 2→3 -->
+            <path d="M 445 80 L 495 80" stroke="#f97316" stroke-width="2" fill="none" marker-end="url(#arrow-orange)"/>
+            <text x="470" y="72" text-anchor="middle" fill="#f97316" font-size="9">POST /sync/batch</text>
+            <text x="470" y="60" text-anchor="middle" fill="#71717a" font-size="8">batch de operaciones</text>
+
+            <!-- Step 3: Backend receives -->
+            <rect x="500" y="30" width="180" height="100" rx="10" fill="#1e1e1e" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="590" y="18" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">STEP 3</text>
+            <text x="590" y="52" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="700">SyncEngine</text>
+            <text x="590" y="72" text-anchor="middle" fill="#a1a1aa" font-size="10">processBatch() recibido</text>
+            <text x="590" y="90" text-anchor="middle" fill="#71717a" font-size="9">operationSorter.sort()</text>
+            <text x="590" y="108" text-anchor="middle" fill="#71717a" font-size="9">idempotency check</text>
+
+            <!-- Arrow 3→4 -->
+            <path d="M 685 80 L 735 80" stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#arrow-purple)"/>
+            <text x="710" y="72" text-anchor="middle" fill="#a78bfa" font-size="9">ConflictResolver</text>
+
+            <!-- Step 4: Process -->
+            <rect x="740" y="30" width="150" height="100" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="815" y="18" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">STEP 4</text>
+            <text x="815" y="52" text-anchor="middle" fill="#22c55e" font-size="12" font-weight="700">Handler</text>
+            <text x="815" y="72" text-anchor="middle" fill="#a1a1aa" font-size="10">execute()</text>
+            <text x="815" y="90" text-anchor="middle" fill="#71717a" font-size="9">INSERT → DB</text>
+            <text x="815" y="108" text-anchor="middle" fill="#22c55e" font-size="9">✅ syncStatus: "synced"</text>
+
+            <!-- Step 5: Response -->
+            <rect x="260" y="160" width="630" height="60" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="575" y="148" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">STEP 5: Respuesta al Frontend</text>
+            <text x="575" y="175" text-anchor="middle" fill="#22c55e" font-size="10">results[] = [{ idempotencyKey, success: true, serverTimestamp }]</text>
+            <text x="575" y="195" text-anchor="middle" fill="#71717a" font-size="9">Frontend actualiza syncStatus local → "synced"</text>
+
+            <!-- Queue states -->
+            <rect x="20" y="240" width="860" height="130" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="450" y="228" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600">Estados de la SyncQueue (PGlite)</text>
+
+            <g transform="translate(40, 255)">
+              <rect width="180" height="50" rx="8" fill="#27272a" stroke="#71717a"/>
+              <text x="90" y="20" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="700">pending</text>
+              <text x="90" y="38" text-anchor="middle" fill="#71717a" font-size="9">Esperando envío</text>
+            </g>
+
+            <g transform="translate(240, 255)">
+              <rect width="180" height="50" rx="8" fill="#27272a" stroke="#f97316"/>
+              <text x="90" y="20" text-anchor="middle" fill="#f97316" font-size="10" font-weight="700">processing</text>
+              <text x="90" y="38" text-anchor="middle" fill="#71717a" font-size="9">Enviado, esperando respuesta</text>
+            </g>
+
+            <g transform="translate(440, 255)">
+              <rect width="180" height="50" rx="8" fill="#27272a" stroke="#22c55e"/>
+              <text x="90" y="20" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">completed</text>
+              <text x="90" y="38" text-anchor="middle" fill="#71717a" font-size="9">Confirmado por el servidor</text>
+            </g>
+
+            <g transform="translate(640, 255)">
+              <rect width="180" height="50" rx="8" fill="#27272a" stroke="#ef4444"/>
+              <text x="90" y="20" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700">failed</text>
+              <text x="90" y="38" text-anchor="middle" fill="#71717a" font-size="9">Reintento automático</text>
+            </g>
+
+            <!-- Retry arrow -->
+            <path d="M 760 255 L 760 240 L 280 240 L 280 255" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arrow-red)"/>
+            <text x="520" y="252" text-anchor="middle" fill="#ef4444" font-size="8">retryOperation()</text>
+
+            <defs>
+              <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/>
+              </marker>
+              <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <h3 class="font-semibold mb-3 text-primary">Idempotencia</h3>
+          <p class="text-muted text-sm mb-3">Cada operación tiene un <code class="bg-zinc-800 px-1 rounded text-xs">idempotencyKey</code> único (cliente genera). Si el servidor ya la procesó, retorna el resultado anterior sin re-ejecutar.</p>
+          <pre class="text-xs"><code>// Cliente genera la key
+const key = `${deviceId}:${entityId}:${operation}:${localTimestamp}`;
+// Si el server ya la procesó → returns { success: true } sin ejecutar de nuevo</code></pre>
+        </div>
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <h3 class="font-semibold mb-3 text-warning">Savepoints (Rollback Parcial)</h3>
+          <p class="text-muted text-sm mb-3">El SyncEngine usa PostgreSQL savepoints. Si una operación falla, solo esa operación hace rollback — las demás del batch siguen.</p>
+          <pre class="text-xs"><code>// Por cada operación:
+SAVEPOINT sp_op_0;
+// ... execute handler ...
+RELEASE SAVEPOINT sp_op_0;
+// Si falla → ROLLBACK TO sp_op_0</code></pre>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================== SORTING TAB ===================== -->
+    <section id="tab-sorting" class="tab-content hidden">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Ordenamiento Topológico — OperationSorter</h2>
+        <p class="text-muted text-sm mb-6">Garantiza que los padres se procesen antes que los hijos usando un sort topológico basado en FK</p>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 320" class="w-full min-w-[700px] h-auto">
+
+            <!-- Problem illustration -->
+            <rect x="20" y="20" width="380" height="130" rx="10" fill="#1e1e1e" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="210" y="10" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="600">❌ SIN ORDENAR — Llega en cualquier orden</text>
+
+            <rect x="40" y="35" width="70" height="30" rx="6" fill="#27272a" stroke="#f97316"/>
+            <text x="75" y="55" text-anchor="middle" fill="#f97316" font-size="10">sale_items</text>
+
+            <rect x="130" y="35" width="70" height="30" rx="6" fill="#27272a" stroke="#f97316"/>
+            <text x="165" y="55" text-anchor="middle" fill="#f97316" font-size="10">sales</text>
+
+            <rect x="220" y="35" width="70" height="30" rx="6" fill="#27272a" stroke="#22c55e"/>
+            <text x="255" y="55" text-anchor="middle" fill="#22c55e" font-size="10">customers</text>
+
+            <rect x="40" y="80" width="250" height="55" rx="6" fill="#27272a" stroke="#3f3f46"/>
+            <text x="165" y="100" text-anchor="middle" fill="#a1a1aa" font-size="9">Si sale_items se procesa ANTES que sales:</text>
+            <text x="165" y="118" text-anchor="middle" fill="#ef4444" font-size="9">❌ FK constraint error — sale_id no existe</text>
+
+            <!-- Arrow -->
+            <path d="M 415 85 L 455 85" stroke="#a78bfa" stroke-width="3" fill="none" marker-end="url(#arrow-purple)"/>
+
+            <!-- Solution -->
+            <rect x="470" y="20" width="410" height="130" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="675" y="10" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="600">✅ ORDENADO — Topological Sort</text>
+
+            <!-- Priority 1: customers -->
+            <rect x="490" y="35" width="80" height="35" rx="6" fill="#27272a" stroke="#22c55e" stroke-width="2"/>
+            <text x="530" y="52" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">customers</text>
+            <text x="530" y="65" text-anchor="middle" fill="#71717a" font-size="8">priority: 1</text>
+
+            <!-- Arrow: customers → sales -->
+            <path d="M 575 52 L 595 52" stroke="#a78bfa" stroke-width="1.5" fill="none"/>
+            <text x="585" y="45" text-anchor="middle" fill="#a78bfa" font-size="7">FK</text>
+
+            <!-- Priority 2: sales -->
+            <rect x="600" y="35" width="70" height="35" rx="6" fill="#27272a" stroke="#f97316" stroke-width="2"/>
+            <text x="635" y="52" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">sales</text>
+            <text x="635" y="65" text-anchor="middle" fill="#71717a" font-size="8">priority: 2</text>
+
+            <!-- Arrow: sales → sale_items -->
+            <path d="M 675 52 L 695 52" stroke="#a78bfa" stroke-width="1.5" fill="none"/>
+            <text x="685" y="45" text-anchor="middle" fill="#a78bfa" font-size="7">FK</text>
+
+            <!-- Priority 2: sale_items -->
+            <rect x="700" y="35" width="80" height="35" rx="6" fill="#27272a" stroke="#f97316" stroke-width="2"/>
+            <text x="740" y="52" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">sale_items</text>
+            <text x="740" y="65" text-anchor="middle" fill="#71717a" font-size="8">priority: 2</text>
+
+            <text x="530" y="100" text-anchor="middle" fill="#a1a1aa" font-size="9">sale_items.sale_id → sales.id</text>
+            <text x="530" y="118" text-anchor="middle" fill="#22c55e" font-size="9">✅ Padres procesados primero</text>
+
+            <!-- Dependency graph -->
+            <rect x="20" y="165" width="860" height="145" rx="10" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="450" y="155" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600">Algoritmo: Kahn's Topological Sort</text>
+
+            <!-- Graph nodes -->
+            <circle cx="80" cy="210" r="28" fill="#27272a" stroke="#22c55e" stroke-width="2"/>
+            <text x="80" y="206" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">customers</text>
+            <text x="80" y="218" text-anchor="middle" fill="#71717a" font-size="7">in-deg: 0</text>
+
+            <circle cx="200" cy="210" r="28" fill="#27272a" stroke="#f97316" stroke-width="2"/>
+            <text x="200" y="206" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">sales</text>
+            <text x="200" y="218" text-anchor="middle" fill="#71717a" font-size="7">in-deg: 1</text>
+
+            <circle cx="340" cy="210" r="28" fill="#27272a" stroke="#f97316" stroke-width="2"/>
+            <text x="340" y="206" text-anchor="middle" fill="#f97316" font-size="8" font-weight="700">sale_items</text>
+            <text x="340" y="218" text-anchor="middle" fill="#71717a" font-size="7">in-deg: 2</text>
+
+            <circle cx="480" cy="210" r="28" fill="#27272a" stroke="#22c55e" stroke-width="2"/>
+            <text x="480" y="206" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">products</text>
+            <text x="480" y="218" text-anchor="middle" fill="#71717a" font-size="7">in-deg: 0</text>
+
+            <circle cx="600" cy="210" r="28" fill="#27272a" stroke="#f97316" stroke-width="2"/>
+            <text x="600" y="206" text-anchor="middle" fill="#f97316" font-size="8" font-weight="700">variants</text>
+            <text x="600" y="218" text-anchor="middle" fill="#71717a" font-size="7">in-deg: 1</text>
+
+            <!-- Edges -->
+            <path d="M 108 210 L 172 210" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-purple)"/>
+            <path d="M 228 210 L 312 210" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-purple)"/>
+            <path d="M 508 210 L 572 210" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-purple)"/>
+
+            <!-- Processing order -->
+            <rect x="680" y="185" width="190" height="70" rx="8" fill="#27272a" stroke="#3f3f46"/>
+            <text x="775" y="203" text-anchor="middle" fill="#a1a1aa" font-size="9" font-weight="700">Orden de procesamiento:</text>
+            <text x="775" y="220" text-anchor="middle" fill="#22c55e" font-size="10">1. customers</text>
+            <text x="775" y="235" text-anchor="middle" fill="#f97316" font-size="10">2. sales</text>
+            <text x="775" y="250" text-anchor="middle" fill="#f97316" font-size="10">3. products → variants → sale_items</text>
+
+          </svg>
+        </div>
+      </div>
+
+      <div class="bg-card rounded-xl p-5 border border-zinc-800">
+        <h3 class="font-semibold mb-3 text-primary">EntityRegistry — Optimización en Batch</h3>
+        <p class="text-muted text-sm mb-3">Dentro de un mismo batch, si un handler necesita verificar que un padre existe, el <code class="bg-zinc-800 px-1 rounded text-xs">EntityRegistry</code> evita queries redundantes a la DB.</p>
+        <pre class="text-xs"><code>// En BaseSyncHandler.ensureParentExists():
+if (this.registry?.wasCreated(parentId)) {
+  return; // Skip DB query — el padre se creó en este batch
+}
+const parent = await findInDb(); // Solo si no está en registry</code></pre>
+      </div>
+
+    </section>
+
+    <!-- ===================== COMPOUND TAB ===================== -->
+    <section id="tab-compound" class="tab-content hidden">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Eventos Compuestos — Ventas con Múltiples Líneas</h2>
+        <p class="text-muted text-sm mb-6">Cómo la librería resuelve escenarios donde una venta tiene múltiples eventos asociados</p>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 400" class="w-full min-w-[700px] h-auto">
+
+            <!-- Frontend sends batch -->
+            <rect x="20" y="30" width="280" height="120" rx="10" fill="#1e1e1e" stroke="#f97316" stroke-width="1.5"/>
+            <text x="160" y="15" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">FRONTEND — Venta con 3 eventos</text>
+
+            <rect x="40" y="35" width="240" height="25" rx="5" fill="#27272a" stroke="#22c55e"/>
+            <text x="160" y="52" text-anchor="middle" fill="#22c55e" font-size="9">① create sale (id: sale_001)</text>
+
+            <rect x="40" y="65" width="240" height="25" rx="5" fill="#27272a" stroke="#f97316"/>
+            <text x="160" y="82" text-anchor="middle" fill="#f97316" font-size="9">② create sale_item (sale_id: sale_001)</text>
+
+            <rect x="40" y="95" width="240" height="25" rx="5" fill="#27272a" stroke="#f97316"/>
+            <text x="160" y="112" text-anchor="middle" fill="#f97316" font-size="9">③ create sale_item (sale_id: sale_001)</text>
+
+            <text x="160" y="138" text-anchor="middle" fill="#71717a" font-size="9">syncGroupId: "sale_001_compound"</text>
+
+            <!-- Arrow to backend -->
+            <path d="M 305 90 L 355 90" stroke="#f97316" stroke-width="2" fill="none" marker-end="url(#arrow-orange)"/>
+            <text x="330" y="80" text-anchor="middle" fill="#f97316" font-size="9">POST /sync/batch</text>
+
+            <!-- Backend Processing -->
+            <rect x="360" y="20" width="260" height="150" rx="10" fill="#1e1e1e" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="490" y="5" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">BACKEND — SyncEngine.processBatch()</text>
+
+            <!-- Step 1: Sort -->
+            <rect x="380" y="30" width="220" height="35" rx="6" fill="#27272a" stroke="#a78bfa"/>
+            <text x="490" y="47" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">1. OperationSorter.topologicalSort()</text>
+            <text x="490" y="62" text-anchor="middle" fill="#71717a" font-size="8">sale_items.sale_id → sales.id (FK)</text>
+
+            <!-- Step 2: Process -->
+            <rect x="380" y="75" width="220" height="35" rx="6" fill="#27272a" stroke="#f97316"/>
+            <text x="490" y="92" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">2. savepoint + execute() por operación</text>
+            <text x="490" y="107" text-anchor="middle" fill="#71717a" font-size="8">Transacción atómica — todo o nada</text>
+
+            <!-- Step 3: Registry -->
+            <rect x="380" y="120" width="220" height="35" rx="6" fill="#27272a" stroke="#22c55e"/>
+            <text x="490" y="137" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">3. EntityRegistry.register() por cada op</text>
+            <text x="490" y="152" text-anchor="middle" fill="#71717a" font-size="8">wasCreated("sale_001") = true</text>
+
+            <!-- Arrow to DB -->
+            <path d="M 625 90 L 675 90" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="650" y="80" text-anchor="middle" fill="#22c55e" font-size="9">3 queries INSERT</text>
+
+            <!-- DB result -->
+            <rect x="680" y="50" width="200" height="90" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="780" y="35" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="600">DATABASE</text>
+            <text x="720" y="75" text-anchor="middle" fill="#22c55e" font-size="9">INSERT sales ...</text>
+            <text x="720" y="95" text-anchor="middle" fill="#f97316" font-size="9">INSERT sale_items ... (x2)</text>
+            <text x="720" y="115" text-anchor="middle" fill="#22c55e" font-size="9">✅ COMMIT</text>
+
+            <!-- Second scenario: mixed operations -->
+            <rect x="20" y="190" width="860" height="190" rx="12" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="450" y="178" text-anchor="middle" fill="#a1a1aa" font-size="11" font-weight="600">ESCENARIO COMPUESTO: Venta existente + Abono + Actualización</text>
+
+            <!-- Operations list -->
+            <g transform="translate(40, 200)">
+              <text x="0" y="15" fill="#a1a1aa" font-size="9" font-weight="700">Operaciones en el batch:</text>
+
+              <rect x="0" y="25" width="200" height="22" rx="4" fill="#27272a" stroke="#22c55e"/>
+              <text x="100" y="40" text-anchor="middle" fill="#22c55e" font-size="8">update sales (id: sale_001)</text>
+
+              <rect x="0" y="52" width="200" height="22" rx="4" fill="#27272a" stroke="#22c55e"/>
+              <text x="100" y="67" text-anchor="middle" fill="#22c55e" font-size="8">create abonos (customer_id: C1)</text>
+
+              <rect x="0" y="79" width="200" height="22" rx="4" fill="#27272a" stroke="#f97316"/>
+              <text x="100" y="94" text-anchor="middle" fill="#f97316" font-size="8">update customers (id: C1)</text>
+
+              <rect x="0" y="106" width="200" height="22" rx="4" fill="#27272a" stroke="#f97316"/>
+              <text x="100" y="121" text-anchor="middle" fill="#f97316" font-size="8">delete visitas (id: V1)</text>
+            </g>
+
+            <!-- Arrow -->
+            <path d="M 255 260 L 305 260" stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#arrow-purple)"/>
+
+            <!-- Dependency analysis -->
+            <g transform="translate(320, 200)">
+              <text x="0" y="15" fill="#a1a1aa" font-size="9" font-weight="700">Análisis de dependencias FK:</text>
+
+              <rect x="0" y="25" width="220" height="22" rx="4" fill="#27272a" stroke="#22c55e"/>
+              <text x="110" y="40" text-anchor="middle" fill="#22c55e" font-size="8">customers (no parents) → prioridad 1</text>
+
+              <rect x="0" y="52" width="220" height="22" rx="4" fill="#27272a" stroke="#f97316"/>
+              <text x="110" y="67" text-anchor="middle" fill="#f97316" font-size="8">sales → customers ✅ (listo)</text>
+
+              <rect x="0" y="79" width="220" height="22" rx="4" fill="#27272a" stroke="#f97316"/>
+              <text x="110" y="94" text-anchor="middle" fill="#f97316" font-size="8">abonos → customers ✅ (listo)</text>
+
+              <rect x="0" y="106" width="220" height="22" rx="4" fill="#27272a" stroke="#f97316"/>
+              <text x="110" y="121" text-anchor="middle" fill="#f97316" font-size="8">visitas → customers ✅ (listo)</text>
+            </g>
+
+            <!-- Arrow -->
+            <path d="M 555 260 L 605 260" stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#arrow-purple)"/>
+
+            <!-- Final order -->
+            <g transform="translate(620, 200)">
+              <text x="0" y="15" fill="#a1a1aa" font-size="9" font-weight="700">Orden topológico final:</text>
+
+              <text x="0" y="42" fill="#22c55e" font-size="10">1. customers (priority 1, in-deg: 0)</text>
+              <text x="0" y="67" fill="#f97316" font-size="10">2. sales (parents: customers ✅)</text>
+              <text x="0" y="92" fill="#f97316" font-size="10">3. abonos (parents: customers ✅)</text>
+              <text x="0" y="117" fill="#f97316" font-size="10">4. visitas (parents: customers ✅)</text>
+            </g>
+
+          </svg>
+        </div>
+      </div>
+
+      <div class="bg-card rounded-xl p-5 border border-zinc-800 mb-6">
+        <h3 class="font-semibold mb-3 text-primary">ConflictResolver — Detección de Versiones</h3>
+        <p class="text-muted text-sm mb-3">Cada entidad tiene un <code class="bg-zinc-800 px-1 rounded text-xs">version</code> campo. Si la versión del cliente es menor que la del servidor, hay conflicto.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+          <div class="bg-zinc-900 rounded-lg p-3">
+            <h4 class="text-warning text-sm font-semibold mb-1">last-write-wins</h4>
+            <p class="text-muted text-xs">tags, products, abonos — no hay versión, gana el último write</p>
+          </div>
+          <div class="bg-zinc-900 rounded-lg p-3">
+            <h4 class="text-danger text-sm font-semibold mb-1">version-based</h4>
+            <p class="text-muted text-xs">sales — usa columna <code class="bg-zinc-800 px-1 rounded text-xs">version</code> para detectar conflictos</p>
+          </div>
+          <div class="bg-zinc-900 rounded-lg p-3">
+            <h4 class="text-success text-sm font-semibold mb-1">conflict persisted</h4>
+            <p class="text-muted text-xs">Si hay conflicto → se guarda en <code class="bg-zinc-800 px-1 rounded text-xs">sync_conflicts</code> para resolución admin</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================== PULL TAB ===================== -->
+    <section id="tab-pull" class="tab-content hidden">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Flujo de Pull — Del Backend a los Clientes</h2>
+        <p class="text-muted text-sm mb-6">Estrategia de 3 etapas para distribuir cambios: CRITICAL → RECENT_SALES → HISTORICAL</p>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 380" class="w-full min-w-[700px] h-auto">
+
+            <!-- DB as source -->
+            <rect x="20" y="80" width="160" height="120" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="100" y="65" text-anchor="middle" fill="#22c55e" font-size="11" font-weight="600">DATABASE</text>
+            <text x="100" y="105" text-anchor="middle" fill="#a1a1aa" font-size="9">changed_since(cursor)</text>
+            <text x="100" y="125" text-anchor="middle" fill="#71717a" font-size="9">cursor = updated_at</text>
+            <text x="100" y="145" text-anchor="middle" fill="#71717a" font-size="9">delivered = false</text>
+
+            <!-- Arrow DB → Backend -->
+            <path d="M 185 140 L 235 140" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="210" y="130" text-anchor="middle" fill="#22c55e" font-size="9">fetch changes</text>
+
+            <!-- Backend /changes endpoint -->
+            <rect x="240" y="60" width="260" height="160" rx="10" fill="#1e1e1e" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="370" y="45" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">GET /sync/changes?since={cursor}&amp;limit=100</text>
+
+            <!-- 3 stages -->
+            <rect x="255" y="75" width="230" height="30" rx="6" fill="#27272a" stroke="#ef4444"/>
+            <text x="370" y="95" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="700">CRITICAL: customers, products, suppliers</text>
+
+            <rect x="255" y="112" width="230" height="30" rx="6" fill="#27272a" stroke="#f97316"/>
+            <text x="370" y="132" text-anchor="middle" fill="#f97316" font-size="9" font-weight="700">RECENT_SALES: sales + items (últimos 7 días)</text>
+
+            <rect x="255" y="149" width="230" height="30" rx="6" fill="#27272a" stroke="#22c55e"/>
+            <text x="370" y="169" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">HISTORICAL: el resto con paginación</text>
+
+            <!-- Cursor management -->
+            <rect x="255" y="190" width="230" height="22" rx="4" fill="#27272a" stroke="#71717a"/>
+            <text x="370" y="205" text-anchor="middle" fill="#71717a" font-size="8">cursor actualizado al final</text>
+
+            <!-- Arrow to clients -->
+            <path d="M 505 140 L 555 140" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="530" y="130" text-anchor="middle" fill="#22c55e" font-size="9">response</text>
+
+            <!-- Pull service (per client) -->
+            <rect x="560" y="60" width="160" height="160" rx="10" fill="#1e1e1e" stroke="#f97316" stroke-width="1.5"/>
+            <text x="640" y="45" text-anchor="middle" fill="#f97316" font-size="11" font-weight="600">PullService (por cliente)</text>
+
+            <text x="640" y="80" text-anchor="middle" fill="#a1a1aa" font-size="9">applyChangesBatch()</text>
+
+            <rect x="575" y="95" width="130" height="25" rx="5" fill="#27272a" stroke="#22c55e"/>
+            <text x="640" y="112" text-anchor="middle" fill="#22c55e" font-size="8">PGlite: UPSERT</text>
+
+            <rect x="575" y="128" width="130" height="25" rx="5" fill="#27272a" stroke="#22c55e"/>
+            <text x="640" y="145" text-anchor="middle" fill="#22c55e" font-size="8">UI listeners notified</text>
+
+            <rect x="575" y="161" width="130" height="22" rx="4" fill="#27272a" stroke="#71717a"/>
+            <text x="640" y="176" text-anchor="middle" fill="#71717a" font-size="8">cursor saved locally</text>
+
+            <!-- Arrow to client -->
+            <path d="M 725 140 L 775 140" stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"/>
+            <text x="750" y="130" text-anchor="middle" fill="#22c55e" font-size="9">pull:complete event</text>
+
+            <!-- Clients -->
+            <rect x="780" y="90" width="110" height="100" rx="10" fill="#1e1e1e" stroke="#3f3f46" stroke-width="1.5"/>
+            <text x="835" y="75" text-anchor="middle" fill="#a1a1aa" font-size="10" font-weight="600">Clientes</text>
+
+            <text x="835" y="110" text-anchor="middle" fill="#a1a1aa" font-size="9">📱 Mobile</text>
+            <text x="835" y="130" text-anchor="middle" fill="#a1a1aa" font-size="9">💻 Web</text>
+            <text x="835" y="150" text-anchor="middle" fill="#a1a1aa" font-size="9">📱 Tablet</text>
+
+            <!-- Stale detection box -->
+            <rect x="20" y="240" width="860" height="120" rx="10" fill="#1e1e1e" stroke="#eab308" stroke-width="1.5"/>
+            <text x="450" y="228" text-anchor="middle" fill="#eab308" font-size="11" font-weight="600">Stale Pull Detection — Previniendo Infinite Loops</text>
+
+            <g transform="translate(40, 250)">
+              <text x="0" y="20" fill="#a1a1aa" font-size="9" font-weight="700">Problema:</text>
+              <text x="0" y="40" fill="#71717a" font-size="8">Cursor avanza pero server dice hasMore=true con 0 cambios → loop infinito</text>
+
+              <text x="0" y="65" fill="#a1a1aa" font-size="9" font-weight="700">Solución:</text>
+              <text x="0" y="85" fill="#22c55e" font-size="8">consecutiveEmptyPulls++ si hasMore=true && changes=0</text>
+              <text x="0" y="100" fill="#ef4444" font-size="8">MAX_EMPTY_PULLS=3 → isStuck: true + stopAutoPull()</text>
+            </g>
+
+            <g transform="translate(320, 250)">
+              <text x="0" y="20" fill="#a1a1aa" font-size="9" font-weight="700">Cursor Stuck:</text>
+              <text x="0" y="40" fill="#71717a" font-size="8">cursor no avanza por 3 pulls consecutivos</text>
+              <text x="0" y="65" fill="#a1a1aa" font-size="9" font-weight="700">MAX_STALE_PULLS=3:</text>
+              <text x="0" y="85" fill="#ef4444" font-size="8">→ SyncEngine.isStuck = true</text>
+              <text x="0" y="100" fill="#ef4444" font-size="8">→ UI muestra alerta al usuario</text>
+            </g>
+
+            <g transform="translate(600, 250)">
+              <text x="0" y="20" fill="#a1a1aa" font-size="9" font-weight="700">Recuperación:</text>
+              <text x="0" y="40" fill="#71717a" font-size="8">forceReset() → limpia cursor y stale counters</text>
+              <text x="0" y="65" fill="#22c55e" font-size="8">clearCursor()</text>
+              <text x="0" y="85" fill="#22c55e" font-size="8">consecutiveEmptyPulls = 0</text>
+              <text x="0" y="100" fill="#22c55e" font-size="8">startAutoPull() de nuevo</text>
+            </g>
+
+          </svg>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <h3 class="font-semibold mb-3 text-primary">Cursor-based Pagination</h3>
+          <p class="text-muted text-sm mb-3">El cursor es un timestamp (<code class="bg-zinc-800 px-1 rounded text-xs">updated_at</code>). Se persiste en local storage para sobrevivir recargas.</p>
+          <pre class="text-xs"><code>GET /sync/changes?since=2024-01-15T10:30:00Z&limit=100
+// Response:
+{ data: { changes: [...], nextSince: "...", hasMore: true } }</code></pre>
+        </div>
+        <div class="bg-card rounded-xl p-5 border border-zinc-800">
+          <h3 class="font-semibold mb-3 text-success">Auto-pull</h3>
+          <p class="text-muted text-sm mb-3">PullService hace polling automático cada <code class="bg-zinc-800 px-1 rounded text-xs">PULL_INTERVAL_MS</code> (default 5s) cuando está online.</p>
+          <pre class="text-xs"><code>// Stops when offline, resumes when back
+if (isOnlineFn() && !isPullingFlag) {
+  await pull();
+}</code></pre>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================== EVENTS TAB ===================== -->
+    <section id="tab-events" class="tab-content hidden">
+
+      <div class="bg-card rounded-xl p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Sistema de Eventos</h2>
+        <p class="text-muted text-sm mb-6">Eventos tipados para observabilidad de sync (push:complete, pull:stale, conflict:detected, etc.)</p>
+
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 900 280" class="w-full min-w-[700px] h-auto">
+
+            <!-- Event types as cards -->
+            <rect x="20" y="30" width="195" height="110" rx="10" fill="#1e1e1e" stroke="#f97316" stroke-width="1.5"/>
+            <text x="117" y="50" text-anchor="middle" fill="#f97316" font-size="10" font-weight="700">push:complete</text>
+            <text x="117" y="72" text-anchor="middle" fill="#a1a1aa" font-size="9">{ operationsProcessed,</text>
+            <text x="117" y="88" text-anchor="middle" fill="#a1a1aa" font-size="9">succeeded, failed, conflicts }</text>
+            <text x="117" y="110" text-anchor="middle" fill="#71717a" font-size="8">After batch processed</text>
+
+            <rect x="230" y="30" width="195" height="110" rx="10" fill="#1e1e1e" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="327" y="50" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">pull:complete</text>
+            <text x="327" y="72" text-anchor="middle" fill="#a1a1aa" font-size="9">{ changesApplied,</text>
+            <text x="327" y="88" text-anchor="middle" fill="#a1a1aa" font-size="9">entityTypes[], hasMore }</text>
+            <text x="327" y="110" text-anchor="middle" fill="#71717a" font-size="8">After changes applied</text>
+
+            <rect x="440" y="30" width="195" height="110" rx="10" fill="#1e1e1e" stroke="#eab308" stroke-width="1.5"/>
+            <text x="537" y="50" text-anchor="middle" fill="#eab308" font-size="10" font-weight="700">pull:stale</text>
+            <text x="537" y="72" text-anchor="middle" fill="#a1a1aa" font-size="9">{ consecutiveStalePulls,</text>
+            <text x="537" y="88" text-anchor="middle" fill="#a1a1aa" font-size="9">reason: cursor|empty }</text>
+            <text x="537" y="110" text-anchor="middle" fill="#71717a" font-size="8">Sync stuck detected</text>
+
+            <rect x="650" y="30" width="230" height="110" rx="10" fill="#1e1e1e" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="765" y="50" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700">conflict:detected</text>
+            <text x="765" y="72" text-anchor="middle" fill="#a1a1aa" font-size="9">{ entityType, entityId,</text>
+            <text x="765" y="88" text-anchor="middle" fill="#a1a1aa" font-size="9">clientVersion, serverVersion }</text>
+            <text x="765" y="110" text-anchor="middle" fill="#71717a" font-size="8">Conflict persisted for admin</text>
+
+            <!-- EventEmitter -->
+            <rect x="250" y="170" width="400" height="90" rx="10" fill="#1e1e1e" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="450" y="190" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="700">SyncEventEmitter</text>
+
+            <text x="450" y="212" text-anchor="middle" fill="#a1a1aa" font-size="9">Zero-dependency in-memory event bus</text>
+            <text x="450" y="232" text-anchor="middle" fill="#71717a" font-size="9">emitter.on("pull:complete", handler)</text>
+            <text x="450" y="250" text-anchor="middle" fill="#71717a" font-size="9">emitter.emit("push:complete", { ... })</text>
+
+          </svg>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-muted text-sm pt-4 border-t border-zinc-800">
+      <p>drizzle-sync · @avileo/drizzle-sync · Arquitectura offline-first</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+
+        tabs.forEach(t => t.classList.remove('tab-active'));
+        tab.classList.add('tab-active');
+
+        contents.forEach(content => {
+          content.classList.add('hidden');
+          content.classList.remove('fade-in');
+        });
+
+        const targetContent = document.getElementById(`tab-${target}`);
+        targetContent.classList.remove('hidden');
+        // Re-trigger animation
+        targetContent.classList.remove('fade-in');
+        void targetContent.offsetWidth;
+        targetContent.classList.add('fade-in');
+      });
+    });
+  </script>
+
+</body>
+</html>

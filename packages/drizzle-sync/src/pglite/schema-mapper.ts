@@ -107,7 +107,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     "id", "business_id", "sale_id", "product_id", "variant_id", "product_name",
     "variant_name", "quantity", "ordered_quantity", "delivered_quantity", "unit_price",
     "unit_price_quoted", "unit_price_final", "cost_price_snapshot", "subtotal", "is_modified", "original_quantity",
-    "sync_status", "sync_attempts", "sync_group_id", "created_at", "updated_at"
+    "sync_status", "sync_attempts", "created_at", "updated_at"
   ]),
   abonos: new Set([
     "id", "business_id", "customer_id", "seller_id", "related_sale_id", "amount", "payment_method",
@@ -117,11 +117,11 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
   purchases: new Set([
     "id", "business_id", "supplier_id", "purchase_date", "status", "total_amount",
     "invoice_number", "receipt_image_id", "notes",
-    "sync_status", "sync_attempts", "sync_group_id", "created_at", "updated_at"
+    "sync_status", "sync_attempts", "created_at", "updated_at"
   ]),
   purchase_items: new Set([
     "id", "business_id", "purchase_id", "product_id", "variant_id", "unit_id", "quantity",
-    "unit_cost", "total_cost", "sync_status", "sync_attempts", "sync_group_id", "created_at", "updated_at"
+    "unit_cost", "total_cost", "sync_status", "sync_attempts", "created_at", "updated_at"
   ]),
   suppliers: new Set([
     "id", "business_id", "name", "type", "ruc", "phone", "email", "address", "notes",

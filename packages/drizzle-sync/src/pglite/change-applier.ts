@@ -44,57 +44,20 @@ const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> = {
 
 /**
  * Apply a single change to the local database with retry logic.
- * @deprecated Use overload without _db parameter
- */
-export async function applyChange(
-  pg: PGlite,
-  _db: unknown,
-  change: PullChange,
-  businessId: string,
-  options?: ApplyChangeOptions
-): Promise<ChangeApplicationResult>;
-
-/**
- * Apply a single change to the local database with retry logic.
  */
 export async function applyChange(
   pg: PGlite,
   change: PullChange,
   businessId: string,
   options?: ApplyChangeOptions
-): Promise<ChangeApplicationResult>;
-
-/**
- * Implementation
- */
-export async function applyChange(
-  pg: PGlite,
-  arg2: unknown,
-  arg3: PullChange | string,
-  arg4?: ApplyChangeOptions | string,
-  arg5?: ApplyChangeOptions
 ): Promise<ChangeApplicationResult> {
-  // Handle overload signatures
-  // arg2 is _db (unknown) when using deprecated signature, or change when using new signature
-  const change: PullChange =
-    arg2 && typeof arg2 === "object" && "entityType" in arg2
-      ? (arg2 as PullChange)
-      : (arg3 as PullChange);
-  const businessId: string =
-    arg2 && typeof arg2 === "object" && "entityType" in arg2
-      ? (arg3 as string)
-      : (arg4 as string);
-  const options: ApplyChangeOptions =
-    arg2 && typeof arg2 === "object" && "entityType" in arg2
-      ? (arg4 as ApplyChangeOptions ?? {})
-      : (arg5 ?? {});
 
   const {
     maxRetries = 3,
     checkConflicts = true,
     conflictStrategy = "none",
-    conflictedIds = new Set(),
-  } = options;
+    conflictedIds = new Set<string>(),
+  } = options ?? {};
 
   const tableName = change.entityType;
 
@@ -370,22 +333,6 @@ async function computeConflictedIds(
 
 /**
  * Batch-apply multiple changes with optional transaction support.
- * @deprecated Use overload without _db parameter
- */
-export async function applyChangesBatch(
-  pg: PGlite,
-  _db: unknown,
-  changes: PullChange[],
-  businessId: string,
-  options?: {
-    checkConflicts?: boolean;
-    useTransaction?: boolean;
-    maxRetries?: number;
-  }
-): Promise<ApplyChangesBatchResult>;
-
-/**
- * Batch-apply multiple changes with optional transaction support.
  */
 export async function applyChangesBatch(
   pg: PGlite,
@@ -396,27 +343,9 @@ export async function applyChangesBatch(
     useTransaction?: boolean;
     maxRetries?: number;
   }
-): Promise<ApplyChangesBatchResult>;
-
-/**
- * Implementation
- */
-export async function applyChangesBatch(
-  pg: PGlite,
-  arg2: unknown,
-  arg3: PullChange[] | string,
-  arg4?: string | { checkConflicts?: boolean; useTransaction?: boolean; maxRetries?: number },
-  arg5?: { checkConflicts?: boolean; useTransaction?: boolean; maxRetries?: number }
 ): Promise<ApplyChangesBatchResult> {
-  // Handle overload signatures
-  const changes: PullChange[] =
-    Array.isArray(arg2) ? arg2 : (arg3 as PullChange[]);
-  const businessId: string =
-    Array.isArray(arg2) ? (arg3 as string) : (arg4 as string);
-  const options =
-    Array.isArray(arg2) ? (arg4 as { checkConflicts?: boolean; useTransaction?: boolean; maxRetries?: number } ?? {}) : (arg5 ?? {});
 
-  const { checkConflicts = true, useTransaction = false, maxRetries = 3 } = options;
+  const { checkConflicts = true, useTransaction = false, maxRetries = 3 } = options ?? {};
 
   // Pre-compute conflicted IDs
   const conflictedIds = checkConflicts ? await computeConflictedIds(pg, changes) : new Set<string>();

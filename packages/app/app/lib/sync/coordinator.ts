@@ -1,8 +1,8 @@
 import { type PullStatus, PullService } from "./pull-service";
 import { type SyncStatus, SyncService } from "./sync-service";
 import { syncEvents } from "./sync-events";
-import { syncLogger } from "./sync-logger";
-import { ExponentialBackoff } from "./backoff";
+import { syncLogger } from "@avileo/drizzle-sync/pglite";
+import { ExponentialBackoff } from "@avileo/drizzle-sync/core";
 
 export interface SyncCoordinatorConfig {
   pushIntervalMs: number;

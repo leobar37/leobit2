@@ -25,7 +25,6 @@ export interface EntityPriorityConfig {
 
 /**
  * Default priority tiers for sync entity processing.
- * @deprecated Use config-based getEntityPriority(entity, entities) instead
  */
 export const DEFAULT_ENTITY_PRIORITIES: EntityPriorityConfig = ENTITY_PRIORITIES as EntityPriorityConfig;
 
@@ -165,75 +164,4 @@ export function buildPriorityConfigFromEntities<TEntity extends string>(
     config[entityType] = entityConfig.priority;
   }
   return config;
-}
-
-// ============================================================================
-// Legacy Functions (backward compat)
-// ============================================================================
-
-/**
- * @deprecated Use getEntityPriorityFromConfig(entity, entities) instead
- */
-export function getEntityPriority(
-  entityType: string,
-  config: EntityPriorityConfig = DEFAULT_ENTITY_PRIORITIES
-): number {
-  if (config === DEFAULT_ENTITY_PRIORITIES) {
-    return sharedGetEntityPriority(entityType as SyncEntity);
-  }
-  return config[entityType] ?? 99;
-}
-
-/**
- * @deprecated Use sortEntitiesByPriorityFromConfig(entityTypes, entities) instead
- */
-export function sortEntitiesByPriority(
-  entityTypes: string[],
-  config: EntityPriorityConfig = DEFAULT_ENTITY_PRIORITIES
-): string[] {
-  return [...entityTypes].sort((a, b) => {
-    const priorityA = getEntityPriority(a, config);
-    const priorityB = getEntityPriority(b, config);
-    return priorityA - priorityB;
-  });
-}
-
-/**
- * @deprecated Use groupEntitiesByPriorityFromConfig(entityTypes, entities) instead
- */
-export function groupEntitiesByPriority(
-  entityTypes: string[],
-  config: EntityPriorityConfig = DEFAULT_ENTITY_PRIORITIES
-): Map<number, string[]> {
-  const groups = new Map<number, string[]>();
-
-  for (const entityType of entityTypes) {
-    const priority = getEntityPriority(entityType, config);
-    const existing = groups.get(priority) ?? [];
-    existing.push(entityType);
-    groups.set(priority, existing);
-  }
-
-  return groups;
-}
-
-/**
- * @deprecated Use isParentEntityFromConfig(entity, entities) instead
- */
-export function isParentEntity(
-  entityType: string,
-  config: EntityPriorityConfig = DEFAULT_ENTITY_PRIORITIES
-): boolean {
-  return getEntityPriority(entityType, config) === 1;
-}
-
-/**
- * @deprecated Use isChildEntityFromConfig(entity, entities) instead
- */
-export function isChildEntity(
-  entityType: string,
-  config: EntityPriorityConfig = DEFAULT_ENTITY_PRIORITIES
-): boolean {
-  const priority = getEntityPriority(entityType, config);
-  return priority > 1 && priority < 99;
 }
