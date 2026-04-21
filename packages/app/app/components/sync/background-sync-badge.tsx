@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { useSyncState } from "~/lib/sync/service-provider";
+import { useSyncState } from "~/lib/sync/engine-provider";
 
 const DEBOUNCE_MS = 800;
 

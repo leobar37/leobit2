@@ -7,7 +7,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
-import { SyncService } from "../sync/sync-service";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 /** Inventory item for a product variant */
 export interface VariantInventoryItem {
@@ -34,7 +34,7 @@ export class InventoryService extends BaseService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

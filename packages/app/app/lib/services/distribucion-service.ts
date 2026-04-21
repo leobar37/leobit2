@@ -12,9 +12,9 @@ import {
   type CreateDistribucionesInput,
   type UpdateDistribucionesInput,
 } from "~/lib/sync/generated/services";
-import { SyncService } from "../sync/sync-service";
 import { distribuciones, distribucionItems, type Distribucion } from "@avileo/shared";
 import { mapToCamelCase } from "../mappers/entity-mapper";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export Distribucion for backward compatibility
 export { type Distribucion } from "@avileo/shared";
@@ -87,7 +87,7 @@ export class DistribucionService extends DistribucionesService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

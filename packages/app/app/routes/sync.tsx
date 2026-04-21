@@ -1,6 +1,6 @@
 import { Loader2, CloudDownload, Database, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DebugWidget } from "~/devtools";
+import { SyncDevTools } from "@avileo/drizzle-sync/react/devtools";
 import { useInitialSync } from "~/hooks/use-initial-sync";
 
 export default function SyncPage() {
@@ -147,7 +147,7 @@ export default function SyncPage() {
           </div>
         )}
       </div>
-      <DebugWidget />
+      <SyncDevTools enabled={import.meta.env.DEV} />
     </div>
   );
 }

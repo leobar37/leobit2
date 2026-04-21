@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTagService } from "~/lib/sync/service-provider";
+import { useTagService } from "~/lib/sync/engine-provider";
 import type { Tag } from "@avileo/shared";
 import type { CreateTagInput, UpdateTagInput } from "~/lib/services/tag-service";
 

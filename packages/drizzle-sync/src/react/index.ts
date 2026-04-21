@@ -49,6 +49,10 @@ export {
 export {
   useSyncState,
   useSyncStatus,
+  useSyncEngine,
+  useSyncEngineReady,
+  useEngineService,
+  useSyncOperations,
   useSyncLifecycle,
   useSyncEvent,
   useSyncLogs,

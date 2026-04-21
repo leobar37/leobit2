@@ -7,7 +7,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity, SyncStatus } from "@avileo/shared";
-import { SyncService, type EnqueueParams } from "../sync/sync-service";
+import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
 import { VALID_TABLES } from "../sync/schema-mapper";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
@@ -83,14 +83,14 @@ function validateTableName(tableName: string): string {
 export abstract class BaseService {
   protected readonly pg: PGlite;
   protected readonly db: ReturnType<typeof drizzle>;
-  protected readonly syncService: SyncService;
+  protected readonly syncService: SyncWritePort;
   protected readonly businessId: string;
   protected readonly businessUserId: string;
 
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

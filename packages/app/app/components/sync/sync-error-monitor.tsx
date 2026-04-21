@@ -9,7 +9,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
-import { useSyncStatus } from "~/lib/sync/service-provider";
+import { useSyncStatus } from "~/lib/sync/engine-provider";
 import { cn } from "~/lib/utils";
 
 /**

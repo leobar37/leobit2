@@ -1,7 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
-import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
-import { introspectTable, resolveColumns } from "../../config/introspect";
+import type { ColumnMetadata } from "../../config/types";
 import type { FieldCodecMap } from "../../codecs/types";
+import { getAllColumns, getColumnsToInclude, getGeneratorConfig, type GeneratorEntity } from "./schema-adapter";
 
 export interface ServiceOutput {
   name: string;
@@ -63,10 +63,11 @@ function isJunctionTable(columns: ColumnMetadata[], metadata?: Record<string, un
  */
 export function generateService(
   entityName: string,
-  config: EntitySyncConfig
+  entity: GeneratorEntity
 ): ServiceOutput {
-  const columns = introspectTable(config.table);
-  const columnsToInclude = resolveColumns(columns, config);
+  const columns = getAllColumns(entity);
+  const columnsToInclude = getColumnsToInclude(entity);
+  const config = getGeneratorConfig(entity);
 
   // Check if this is a junction table (no 'id' column, composite primary key)
   // Or explicitly marked via metadata.isJunctionTable

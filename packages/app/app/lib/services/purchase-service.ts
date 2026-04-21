@@ -12,7 +12,7 @@ import {
   type CreatePurchasesInput,
   type UpdatePurchasesInput,
 } from "~/lib/sync/generated/services";
-import { SyncService } from "../sync/sync-service";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 import {
   SyncStatus,
   purchases,
@@ -81,7 +81,7 @@ export class PurchaseService extends PurchasesService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {
@@ -732,7 +732,7 @@ export class PurchaseService extends PurchasesService {
 export function createPurchaseService(
   pg: PGlite,
   db: ReturnType<typeof drizzle>,
-  syncService: SyncService,
+  syncService: SyncWritePort,
   businessId: string
 ): PurchaseService {
   return new PurchaseService(pg, db, syncService, businessId, "");

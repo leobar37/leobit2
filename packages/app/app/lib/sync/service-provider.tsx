@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useEffect, useRef, type ReactNode }
 import { useQueryClient } from "@tanstack/react-query";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
 import { SyncCoordinator } from "./coordinator";
 import { SyncService, type SyncStatus } from "../sync/sync-service";
 import { PullService, type PullStatus } from "../sync/pull-service";
@@ -26,9 +27,9 @@ import { createAvileoSyncRuntime } from "./react-runtime";
 export interface ServicesContextValue {
   pg: PGlite;
   db: ReturnType<typeof drizzle>;
-  coordinator: SyncCoordinator;
-  syncService: SyncService;
-  pullService: PullService;
+  coordinator: unknown;
+  syncService: unknown;
+  pullService: unknown;
   customerService: CustomerService;
   saleService: SaleService;
   paymentService: PaymentService;
@@ -71,6 +72,8 @@ interface ServicesProviderProps {
   businessUserId: string;
   authToken: string;
   children: ReactNode;
+  /** Engine instance — when provided, services are read from the engine instead of created locally */
+  engine?: SyncClientEngine;
 }
 
 export function ServicesProvider({
@@ -80,45 +83,57 @@ export function ServicesProvider({
   businessUserId,
   authToken,
   children,
+  engine,
 }: ServicesProviderProps) {
-  // Use refs to ensure single instances
+  // Legacy refs for fallback mode (when engine is not provided)
   const syncServiceRef = useRef<SyncService | null>(null);
   const pullServiceRef = useRef<PullService | null>(null);
   const coordinatorRef = useRef<SyncCoordinator | null>(null);
 
-  // Create services once per provider lifecycle
   const services = useMemo(() => {
-    // Create SyncService if not exists
+    if (engine) {
+      // Engine mode: read services from the engine
+      const syncService = engine.getSyncService()!;
+      const pullService = engine.getPullService()!;
+      const coordinator = engine.getCoordinator()!;
+
+      return {
+        pg,
+        db,
+        coordinator,
+        syncService,
+        pullService,
+        customerService: engine.getService<CustomerService>("customers"),
+        saleService: engine.getService<SaleService>("sales"),
+        paymentService: engine.getService<PaymentService>("payments"),
+        purchaseService: engine.getService<PurchaseService>("purchases"),
+        productService: engine.getService<ProductService>("products"),
+        inventoryService: engine.getService<InventoryService>("inventory"),
+        tagService: engine.getService<TagService>("tags"),
+        customerTagService: engine.getService<CustomerTagService>("customerTags"),
+        visitaService: engine.getService<VisitaService>("visitas"),
+        customerGroupService: engine.getService<CustomerGroupService>("customerGroups"),
+        distribucionService: engine.getService<DistribucionService>("distribuciones"),
+        supplierService: engine.getService<SupplierService>("suppliers"),
+        businessId,
+        businessUserId,
+        authToken,
+      };
+    }
+
+    // Legacy mode: create services locally
     if (!syncServiceRef.current) {
       syncServiceRef.current = new SyncService(pg, businessId, authToken);
     }
-
-    // Create PullService if not exists
     if (!pullServiceRef.current) {
       pullServiceRef.current = new PullService(pg, db, businessId, authToken);
     }
-
     const syncService = syncServiceRef.current;
     const pullService = pullServiceRef.current;
-
     if (!coordinatorRef.current) {
       coordinatorRef.current = new SyncCoordinator(syncService, pullService);
     }
-
     const coordinator = coordinatorRef.current;
-
-    const customerService = new CustomerService(pg, db, syncService, businessId, businessUserId);
-    const saleService = new SaleService(pg, db, syncService, businessId, businessUserId);
-    const paymentService = new PaymentService(pg, db, syncService, businessId, businessUserId);
-    const purchaseService = new PurchaseService(pg, db, syncService, businessId, businessUserId);
-    const productService = new ProductService(pg, db, syncService, businessId, businessUserId);
-    const inventoryService = new InventoryService(pg, db, syncService, businessId, businessUserId);
-    const tagService = new TagService(pg, db, syncService, businessId, businessUserId);
-    const customerTagService = new CustomerTagService(pg, db, syncService, businessId, businessUserId);
-    const visitaService = new VisitaService(pg, db, syncService, businessId, businessUserId);
-    const customerGroupService = new CustomerGroupService(pg, db, syncService, businessId, businessUserId);
-    const distribucionService = new DistribucionService(pg, db, syncService, businessId, businessUserId);
-    const supplierService = new SupplierService(pg, db, syncService, businessId, businessUserId);
 
     return {
       pg,
@@ -126,26 +141,28 @@ export function ServicesProvider({
       coordinator,
       syncService,
       pullService,
-      customerService,
-      saleService,
-      paymentService,
-      purchaseService,
-      productService,
-      inventoryService,
-      tagService,
-      customerTagService,
-      visitaService,
-      customerGroupService,
-      distribucionService,
-      supplierService,
+      customerService: new CustomerService(pg, db, syncService, businessId, businessUserId),
+      saleService: new SaleService(pg, db, syncService, businessId, businessUserId),
+      paymentService: new PaymentService(pg, db, syncService, businessId, businessUserId),
+      purchaseService: new PurchaseService(pg, db, syncService, businessId, businessUserId),
+      productService: new ProductService(pg, db, syncService, businessId, businessUserId),
+      inventoryService: new InventoryService(pg, db, syncService, businessId, businessUserId),
+      tagService: new TagService(pg, db, syncService, businessId, businessUserId),
+      customerTagService: new CustomerTagService(pg, db, syncService, businessId, businessUserId),
+      visitaService: new VisitaService(pg, db, syncService, businessId, businessUserId),
+      customerGroupService: new CustomerGroupService(pg, db, syncService, businessId, businessUserId),
+      distribucionService: new DistribucionService(pg, db, syncService, businessId, businessUserId),
+      supplierService: new SupplierService(pg, db, syncService, businessId, businessUserId),
       businessId,
       businessUserId,
       authToken,
     };
-  }, [pg, db, businessId, businessUserId, authToken]);
+  }, [pg, db, businessId, businessUserId, authToken, engine]);
 
-  // Start auto-sync when services are ready
+  // Start auto-sync when services are ready (legacy mode only)
   useEffect(() => {
+    if (engine) return; // Engine handles its own lifecycle
+
     const syncService = syncServiceRef.current;
     const pullService = pullServiceRef.current;
     const coordinator = coordinatorRef.current;
@@ -154,7 +171,6 @@ export function ServicesProvider({
 
     let eventBufferCleanup: (() => void) | null = null;
 
-    // Initialize services before starting
     const initAndStart = async () => {
       const perfStart = performance.now();
       try {
@@ -182,55 +198,24 @@ export function ServicesProvider({
         console.error("[ServicesProvider] Failed to initialize sync services:", error);
       }
     };
-    
+
     initAndStart();
 
-    // Cleanup old drafts on startup
-    const cleanupDrafts = async () => {
-      try {
-        const purchaseService = services.purchaseService;
-        const drafts = await purchaseService.findDrafts();
-        const now = new Date();
-        const maxAgeDays = 30;
-
-        const oldDrafts = drafts.filter(draft => {
-          const updatedAt = new Date(draft.updatedAt);
-          const daysDiff = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
-          return daysDiff > maxAgeDays;
-        });
-
-        if (oldDrafts.length > 0) {
-          console.log(`[ServicesProvider] Cleaning up ${oldDrafts.length} old drafts`);
-          for (const draft of oldDrafts) {
-            try {
-              await purchaseService.delete(draft.id);
-            } catch (err) {
-              console.error(`[ServicesProvider] Failed to delete draft ${draft.id}:`, err);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("[ServicesProvider] Draft cleanup error:", err);
-      }
-    };
-    cleanupDrafts();
-
-    // Register debug utilities for browser console access
     addServiceDebugHelpers({
       purchaseService: services.purchaseService,
       supplierService: services.supplierService,
-      syncService: services.syncService,
+      syncService: services.syncService as SyncService,
       productService: services.productService,
       customerService: services.customerService,
       saleService: services.saleService,
     });
 
     return () => {
-      coordinator.stop();
+      (coordinator as SyncCoordinator).stop();
       eventBufferCleanup?.();
       console.log("[ServicesProvider] SyncCoordinator stopped");
     };
-  }, [services]);
+  }, [services, engine]);
 
   return (
     <ServicesContext.Provider value={services}>
@@ -242,24 +227,33 @@ export function ServicesProvider({
 }
 
 /**
- * Provider that wraps the library's SyncProvider and adapts to app's sync state
+ * Provider that wraps the library's SyncProvider and adapts to app's sync state.
+ * Only uses the library SyncProvider when in engine mode (syncService is from SyncClientEngine).
+ * In legacy mode, provides default sync state directly.
  */
 function LibrarySyncStateProvider({ children }: { children: ReactNode }) {
   const services = useContext(ServicesContext);
   const queryClient = useQueryClient();
 
-  // Create runtime factory that memoizes the runtime
+  // Detect engine mode: syncService has getSyncOperations (engine) vs processPending (legacy)
+  const isEngineMode = services && "getSyncOperations" in (services.syncService as object);
+
+  // Create runtime factory for engine mode
   const runtimeFactory = useMemo(() => {
-    if (!services) return null;
-    return () => createAvileoSyncRuntime(
-      services.syncService,
-      services.pullService,
-      queryClient
-    );
-  }, [services, queryClient]);
+    if (!services || !isEngineMode) return null;
+    // In engine mode, syncService is actually the engine's sync service
+    // We need to get the engine from somewhere - for now, engine mode
+    // should be handled by SyncEngineProvider, not ServicesProvider
+    return null;
+  }, [services, isEngineMode, queryClient]);
 
   if (!runtimeFactory) {
-    return <>{children}</>;
+    // Legacy mode: provide default sync state directly without library provider
+    return (
+      <SyncStateContext.Provider value={null}>
+        {children}
+      </SyncStateContext.Provider>
+    );
   }
 
   return (
@@ -282,7 +276,7 @@ function SyncStateAdapter({ children }: { children: ReactNode }) {
   // Uses rich push/pull state when available from the runtime
   const syncState = useMemo<SyncState>(() => {
     // Use rich pull state from library if available, otherwise fall back to service
-    const pullStatus: PullStatus = libraryState.pull ?? services?.pullService?.getStatus() ?? {
+    const pullStatus: PullStatus = libraryState.pull ?? (services?.pullService as PullService | undefined)?.getStatus() ?? {
       isPulling: libraryState.isSyncing,
       lastPullTime: libraryState.lastSyncTime,
       lastError: null,
@@ -345,7 +339,7 @@ export function useSyncService(): SyncService | null {
   if (!context) {
     return null;
   }
-  return context.syncService;
+  return context.syncService as SyncService;
 }
 
 export function useSyncCoordinator(): SyncCoordinator | null {
@@ -353,7 +347,7 @@ export function useSyncCoordinator(): SyncCoordinator | null {
   if (!context) {
     return null;
   }
-  return context.coordinator;
+  return context.coordinator as SyncCoordinator;
 }
 
 export function usePullService(): PullService | null {
@@ -361,7 +355,7 @@ export function usePullService(): PullService | null {
   if (!context) {
     return null;
   }
-  return context.pullService;
+  return context.pullService as PullService;
 }
 
 /**
@@ -457,7 +451,7 @@ export function useIsSyncStuck(): boolean {
 export function useForceResetSync(): () => Promise<void> {
   const services = useServices();
   return async () => {
-    await services.coordinator.forceResetSync();
+    await (services.coordinator as SyncCoordinator).forceResetSync();
   };
 }
 

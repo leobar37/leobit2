@@ -6,12 +6,14 @@
 
 import { createContext, useContext } from "react";
 import type { SyncReactRuntime, SyncStateSnapshot } from "./types";
+import type { SyncClientEngine } from "../client";
 
 /**
  * Context value for the sync runtime
  */
 export interface SyncRuntimeContextValue {
   runtime: SyncReactRuntime;
+  engine?: SyncClientEngine;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCustomerGroupService } from "~/lib/sync/service-provider";
+import { useCustomerGroupService } from "~/lib/sync/engine-provider";
 
 export interface CustomerGroupBadgeItem {
   id: string;

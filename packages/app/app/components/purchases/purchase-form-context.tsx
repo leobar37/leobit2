@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { useUploadFile } from "~/hooks/use-files";
-import { usePurchaseService } from "~/lib/sync/service-provider";
+import { usePurchaseService } from "~/lib/sync/engine-provider";
 import type { PurchaseWithItems } from "~/lib/services/purchase-service";
 
 interface PurchaseItem {

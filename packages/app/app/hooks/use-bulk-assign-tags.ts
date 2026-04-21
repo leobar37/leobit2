@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCustomerTagService } from "~/lib/sync/service-provider";
+import { useCustomerTagService } from "~/lib/sync/engine-provider";
 import { customerTagsKeys } from "./use-customer-tags";
 
 export interface BulkAssignTagsInput {

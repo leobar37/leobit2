@@ -13,6 +13,7 @@ import type {
   SyncConflictRecord,
 } from "./types";
 import { useSyncRuntime, useSyncStateContext, SyncRuntimeContext } from "./context";
+import type { SyncClientEngine } from "../client";
 
 /**
  * Default sync state snapshot for fallback
@@ -181,4 +182,35 @@ export function useHasFailedSync(): boolean {
 export function useIsSyncStuck(): boolean {
   const { isStuck } = useSyncState();
   return isStuck;
+}
+
+export function useSyncEngine(): SyncClientEngine {
+  const runtimeContext = useContext(SyncRuntimeContext);
+  const engine = runtimeContext?.engine;
+  if (!engine) {
+    throw new Error("useSyncEngine must be used within a SyncProvider with an engine");
+  }
+  return engine;
+}
+
+export function useEngineService<T = unknown>(name: string): T {
+  const engine = useSyncEngine();
+  return engine.getService<T>(name);
+}
+
+export function useSyncOperations() {
+  const engine = useSyncEngine();
+  const operations = engine.getSyncOperations();
+  if (!operations) {
+    throw new Error("Sync operations are not available on the current engine");
+  }
+  return operations;
+}
+
+export function useSyncEngineReady(): { isReady: boolean; error: Error | null } {
+  const runtimeContext = useContext(SyncRuntimeContext);
+  return {
+    isReady: !!runtimeContext?.engine,
+    error: null,
+  };
 }

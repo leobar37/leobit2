@@ -106,6 +106,20 @@ export interface SyncConfig<
   };
 }
 
+export interface SchemaConfig {
+  output: string;
+  format?: "json";
+  autoBuild?: boolean;
+  watch?: boolean;
+  watchPath?: string;
+}
+
+export interface SyncConfigInput<
+  TEntities extends Record<string, EntitySyncConfig> = Record<string, EntitySyncConfig>
+> extends SyncConfig<TEntities> {
+  schema?: SchemaConfig;
+}
+
 /**
  * Resultado de introspección de columna
  */

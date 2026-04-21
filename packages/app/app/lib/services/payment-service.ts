@@ -6,13 +6,13 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { SyncService } from "../sync/sync-service";
 import { abonos } from "@avileo/shared";
 import { eq } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
 
 // Import generated base service
 import { AbonosService } from "~/lib/sync/generated/services";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 import type {
   CreateAbonosInput,
   UpdateAbonosInput,
@@ -85,7 +85,7 @@ export class PaymentService extends AbonosService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {
@@ -505,7 +505,7 @@ export class PaymentService extends AbonosService {
 export function createPaymentService(
   pg: PGlite,
   db: ReturnType<typeof drizzle>,
-  syncService: SyncService,
+  syncService: SyncWritePort,
   businessId: string,
   businessUserId: string
 ): PaymentService {

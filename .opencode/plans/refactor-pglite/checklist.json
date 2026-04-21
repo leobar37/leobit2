@@ -1,0 +1,114 @@
+{
+  "planName": "refactor-pglite",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create SqlExecutor abstraction",
+      "file": "tasks/T-001-sql-executor.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "Create config defaults",
+      "file": "tasks/T-002-config-defaults.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-003",
+      "title": "Refactor change applier to domain/change/",
+      "file": "tasks/T-003-change-applier.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001", "T-002"]
+    },
+    {
+      "id": "T-004",
+      "title": "Refactor queue to domain/queue/",
+      "file": "tasks/T-004-queue.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-005",
+      "title": "Refactor push service to domain/push/",
+      "file": "tasks/T-005-push-service.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001", "T-004"]
+    },
+    {
+      "id": "T-006",
+      "title": "Refactor pull service to domain/pull/",
+      "file": "tasks/T-006-pull-service.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-001", "T-003"]
+    },
+    {
+      "id": "T-007",
+      "title": "Update SyncClientEngine",
+      "file": "tasks/T-007-update-engine.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-005", "T-006"]
+    },
+    {
+      "id": "T-008",
+      "title": "Create new public API index.ts",
+      "file": "tasks/T-008-public-api.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-003", "T-004", "T-005", "T-006"]
+    },
+    {
+      "id": "T-009",
+      "title": "Delete old files",
+      "file": "tasks/T-009-cleanup.md",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-007", "T-008"]
+    },
+    {
+      "id": "T-010",
+      "title": "Verify integration tests pass",
+      "file": "tasks/T-010-verification.md",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-009"]
+    }
+  ],
+  "executionOrder": {
+    "phases": [
+      {
+        "name": "Foundation",
+        "tasks": ["T-001", "T-002"],
+        "parallel": true
+      },
+      {
+        "name": "Domain Layer",
+        "tasks": ["T-003", "T-004"],
+        "parallel": true
+      },
+      {
+        "name": "Services Layer",
+        "tasks": ["T-005", "T-006"],
+        "parallel": false
+      },
+      {
+        "name": "Engine Integration",
+        "tasks": ["T-007"],
+        "parallel": false
+      },
+      {
+        "name": "API and Cleanup",
+        "tasks": ["T-008", "T-009", "T-010"],
+        "parallel": false
+      }
+    ]
+  }
+}

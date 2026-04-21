@@ -8,11 +8,11 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { BaseService, type EntityType } from "./base-service";
-import { SyncService } from "../sync/sync-service";
 import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 /**
  * Sale status types
@@ -191,7 +191,7 @@ export class SaleService extends BaseService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

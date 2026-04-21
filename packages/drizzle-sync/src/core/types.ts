@@ -99,6 +99,16 @@ export interface EnqueueParams {
 }
 
 /**
+ * Narrow sync write port for domain services.
+ *
+ * Consumers that only enqueue local-first writes should depend on this
+ * interface instead of a concrete SyncService implementation.
+ */
+export interface SyncWritePort {
+  enqueue(params: EnqueueParams): Promise<string>;
+}
+
+/**
  * Record representing a sync operation in the database
  * Uses snake_case field names matching the DB schema
  */

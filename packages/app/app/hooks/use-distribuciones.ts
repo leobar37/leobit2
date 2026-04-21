@@ -16,7 +16,7 @@ import {
 } from "~/engine/schema";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
-import { useDistribucionService } from "~/lib/sync/service-provider";
+import { useDistribucionService } from "~/lib/sync/engine-provider";
 import type { CreateDistribucionInput, CreateDistribucionItemInput } from "~/lib/services/distribucion-service";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 import { useManualSync } from "./use-manual-sync";

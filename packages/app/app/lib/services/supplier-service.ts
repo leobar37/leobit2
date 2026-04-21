@@ -11,7 +11,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, like, and, desc } from "drizzle-orm";
-import { SyncService } from "~/lib/sync/sync-service";
 import { suppliers, type Supplier } from "@avileo/shared";
 
 // Import the generated SuppliersService and its input types
@@ -20,6 +19,7 @@ import {
   type CreateSuppliersInput, 
   type UpdateSuppliersInput 
 } from "~/lib/sync/generated/services";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types for backward compatibility
 export type CreateSupplierInput = CreateSuppliersInput;
@@ -36,7 +36,7 @@ export class SupplierService extends SuppliersService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

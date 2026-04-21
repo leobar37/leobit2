@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { useSyncService, usePullService, useSyncState } from "~/lib/sync/service-provider";
+import { useSyncService, usePullService, useSyncState } from "~/lib/sync/engine-provider";
 
 export interface ManualSyncResult {
   success: boolean;

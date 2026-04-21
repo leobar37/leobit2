@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCustomerService } from "~/lib/sync/service-provider";
+import { useCustomerService } from "~/lib/sync/engine-provider";
 import type { Customer } from "@avileo/shared";
 import type {
   CreateCustomerInput,

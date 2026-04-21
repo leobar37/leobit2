@@ -4,6 +4,7 @@ import type {
   ValidationResult as LegacyValidationResult,
   ValidationError as LegacyValidationError,
   SyncConfig,
+  SyncConfigInput,
   EntitySyncConfig,
 } from "./types";
 import { introspectTable } from "./introspect";
@@ -224,9 +225,27 @@ export function assertValidConfig<TEntity extends string>(
 // NUEVO VALIDATOR PARA CODEGEN (EntitySyncConfig)
 // ============================================
 
-export function validateSyncConfig(config: SyncConfig): ConfigValidationResult {
+export function validateSyncConfig(config: SyncConfig | SyncConfigInput): ConfigValidationResult {
   const errors: ConfigValidationError[] = [];
   const warnings: ConfigValidationWarning[] = [];
+
+  if ("schema" in config && config.schema) {
+    if (!config.schema.output || config.schema.output.trim().length === 0) {
+      errors.push({
+        path: "schema.output",
+        message: "schema.output is required when schema config is provided",
+        hint: "Use a path like ./src/sync.schema.json",
+      });
+    }
+
+    if (config.schema.format && config.schema.format !== "json") {
+      errors.push({
+        path: "schema.format",
+        message: `Unsupported schema format: ${config.schema.format}`,
+        hint: "Only 'json' is currently supported",
+      });
+    }
+  }
 
   if (!config.entities || Object.keys(config.entities).length === 0) {
     errors.push({

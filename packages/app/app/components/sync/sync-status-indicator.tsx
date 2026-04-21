@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Cloud, CloudOff, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useSyncState, useSyncStatus } from "~/lib/sync/service-provider";
+import { useSyncState, useSyncStatus } from "~/lib/sync/engine-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";

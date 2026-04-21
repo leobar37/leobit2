@@ -7,7 +7,7 @@
 
 import { ENTITY_PRIORITIES, getEntityPriority, type SyncEntity } from "@avileo/shared";
 import type { SyncOperationInput } from "./types";
-import { avileoEntities } from "../presets/avileo";
+import type { ParentRelationConfig } from "../config/types";
 
 /**
  * Result of sorting operations
@@ -26,12 +26,14 @@ interface ParentReference {
 }
 
 /**
- * Build a map of entity type -> parent references from avileo config
+ * Build a map of entity type -> parent references from entity config
  */
-function buildParentMap(): Map<string, ParentReference[]> {
+function buildParentMap(
+  entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>
+): Map<string, ParentReference[]> {
   const parentMap = new Map<string, ParentReference[]>();
 
-  for (const [entityName, config] of Object.entries(avileoEntities)) {
+  for (const [entityName, config] of Object.entries(entityConfigs)) {
     if (config.relations?.parents) {
       parentMap.set(entityName, config.relations.parents);
     }
@@ -196,8 +198,10 @@ function topologicalSort(
 export class OperationSorter {
   private parentMap: Map<string, ParentReference[]>;
 
-  constructor() {
-    this.parentMap = buildParentMap();
+  constructor(
+    entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>
+  ) {
+    this.parentMap = buildParentMap(entityConfigs);
   }
 
   /**

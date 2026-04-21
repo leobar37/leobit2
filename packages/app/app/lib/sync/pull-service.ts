@@ -582,7 +582,6 @@ export class PullService {
   ): Promise<{ appliedCount: number; entityTypes: Set<string> }> {
     const { entityTypes, failedChanges } = await applyChangesBatch(
       this.pg,
-      this.db,
       changes,
       this.businessId,
       { useTransaction: true, checkConflicts: true }

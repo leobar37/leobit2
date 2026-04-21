@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
+import type { SyncConfigBuilder } from "./builder";
 
 export async function loadConfig(configPath: string) {
   const absolutePath = resolve(configPath);
@@ -16,8 +17,9 @@ export async function loadConfig(configPath: string) {
     throw new Error(`Config must export 'syncConfig'`);
   }
 
-  if (!config.entities) {
-    throw new Error(`Config must have 'entities' property`);
+  const maybeBuilder = config as SyncConfigBuilder & { entities?: unknown };
+  if (!maybeBuilder.entities && typeof maybeBuilder.getRuntimeConfig !== "function") {
+    throw new Error(`Config must have 'entities' property or export SyncConfigBuilder`);
   }
 
   return config;

@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, ilike } from "drizzle-orm";
 import { getDatabase } from "~/engine";
 import { suppliers, type Supplier } from "~/engine/schema";
-import { useSupplierService } from "~/lib/sync/service-provider";
+import { useSupplierService } from "~/lib/sync/engine-provider";
 
 export type { Supplier };
 

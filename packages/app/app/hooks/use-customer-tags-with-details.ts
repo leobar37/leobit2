@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCustomerTagService, useTagService } from "~/lib/sync/service-provider";
+import { useCustomerTagService, useTagService } from "~/lib/sync/engine-provider";
 import type { CustomerTag, Tag } from "@avileo/shared";
 
 export interface CustomerTagWithDetails extends CustomerTag {

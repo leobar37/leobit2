@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useProductService } from "~/lib/sync/service-provider";
+import { useProductService } from "~/lib/sync/engine-provider";
 import type {
   ProductVariant,
   CreateVariantInput,

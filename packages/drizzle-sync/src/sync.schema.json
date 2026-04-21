@@ -1,0 +1,3311 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-04-21T17:28:20.921Z",
+  "entities": {
+    "customers": {
+      "name": "customers",
+      "tableName": "customers",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "dni",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "phone",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "address",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "notes",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_by",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses"
+        ],
+        "children": [
+          "customerTags",
+          "customerGroupMembers",
+          "visitas",
+          "sales",
+          "abonos"
+        ],
+        "priority": 1
+      }
+    },
+    "products": {
+      "name": "products",
+      "tableName": "products",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "type",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "pollo",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pollo",
+            "huevo",
+            "otro"
+          ]
+        },
+        {
+          "name": "unit",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "kg",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "kg",
+            "unidad"
+          ]
+        },
+        {
+          "name": "base_price",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "cost_price",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "is_active",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": true,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "image_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "has_variants",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": false,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "autoFields": true,
+        "excludeFields": [
+          "cost_price"
+        ],
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "images"
+        ],
+        "children": [
+          "productVariants",
+          "saleItems",
+          "purchaseItems"
+        ],
+        "priority": 1
+      }
+    },
+    "productVariants": {
+      "name": "productVariants",
+      "tableName": "product_variants",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "product_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "sku",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "unit_quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "price",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "cost_price",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "sort_order",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "is_active",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": true,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "low_stock_threshold",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "10",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "critical_stock_threshold",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "5",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "apiPath": "variants",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "products",
+          "businesses"
+        ],
+        "children": [],
+        "priority": 2
+      }
+    },
+    "suppliers": {
+      "name": "suppliers",
+      "tableName": "suppliers",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "type",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "regular",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "generic",
+            "regular",
+            "internal"
+          ]
+        },
+        {
+          "name": "ruc",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "address",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "phone",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "email",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "notes",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "is_active",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": true,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses"
+        ],
+        "children": [
+          "purchases"
+        ],
+        "priority": 1
+      }
+    },
+    "tags": {
+      "name": "tags",
+      "tableName": "tags",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "color",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "#f97316",
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses"
+        ],
+        "children": [
+          "customerTags"
+        ],
+        "priority": 1
+      }
+    },
+    "customerTags": {
+      "name": "customerTags",
+      "tableName": "customer_tags",
+      "columns": [
+        {
+          "name": "customer_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "tag_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "assigned_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "assigned_by",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {},
+        "metadata": {
+          "isJunctionTable": true
+        }
+      },
+      "graph": {
+        "parents": [
+          "customers",
+          "tags"
+        ],
+        "children": [],
+        "priority": 2
+      }
+    },
+    "customerGroups": {
+      "name": "customerGroups",
+      "tableName": "customer_groups",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "apiPath": "groups",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses"
+        ],
+        "children": [],
+        "priority": 1
+      }
+    },
+    "customerGroupMembers": {
+      "name": "customerGroupMembers",
+      "tableName": "customer_group_members",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "group_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "customer_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "added_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "added_by",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {},
+        "metadata": {
+          "isJunctionTable": true
+        }
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "customer_groups",
+          "customers"
+        ],
+        "children": [],
+        "priority": 2
+      }
+    },
+    "visitas": {
+      "name": "visitas",
+      "tableName": "visitas",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "distribucion_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "customer_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "vendedor_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "pendiente",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pendiente",
+            "compro",
+            "no_compra"
+          ]
+        },
+        {
+          "name": "motivo_no_compra",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "sale_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "distribucions",
+          "customers",
+          "vendedors",
+          "sales"
+        ],
+        "children": [
+          "sales"
+        ],
+        "priority": 3
+      }
+    },
+    "sales": {
+      "name": "sales",
+      "tableName": "sales",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "customer_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "seller_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "distribucion_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "visita_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "type",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "instant_sale",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "instant_sale",
+            "pre_order"
+          ]
+        },
+        {
+          "name": "sale_type",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "contado",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "contado",
+            "credito"
+          ]
+        },
+        {
+          "name": "payment_mode",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pago_total",
+            "a_cuenta",
+            "debe_todo"
+          ]
+        },
+        {
+          "name": "total_amount",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "amount_paid",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "balance_due",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "tara",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "net_weight",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "sale_date",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "delivery_date",
+          "dataType": "date",
+          "drizzleType": "PgDateString",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "order_date",
+          "dataType": "date",
+          "drizzleType": "PgDateString",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "draft",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "draft",
+            "confirmed",
+            "active",
+            "delivered",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "confirmed_snapshot",
+          "dataType": "json",
+          "drizzleType": "PgJsonb",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "delivered_snapshot",
+          "dataType": "json",
+          "drizzleType": "PgJsonb",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "allow_customer_edit",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": true,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_group_id",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "cancelled_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "cancelled_by",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "cancel_reason",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "refund_amount",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "refund_date",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "refund_method",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "efectivo",
+            "yape",
+            "plin",
+            "transferencia",
+            "saldo"
+          ]
+        },
+        {
+          "name": "refund_reference",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "refund_notes",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "advance_payment_method",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "advance_reference_number",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "advance_proof_image_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "total_amount": {
+            "kind": "currency",
+            "nullable": false
+          },
+          "amount_paid": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "balance_due": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "tara": {
+            "kind": "weight",
+            "nullable": true
+          },
+          "net_weight": {
+            "kind": "weight",
+            "nullable": true
+          }
+        },
+        "relations": {
+          "children": [
+            {
+              "entity": "saleItems",
+              "foreignKey": "sale_id",
+              "cascade": true
+            }
+          ]
+        }
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "customers",
+          "sellers",
+          "distribucions",
+          "visitas",
+          "sync_groups",
+          "advance_proof_images"
+        ],
+        "children": [
+          "visitas",
+          "saleItems"
+        ],
+        "priority": 2
+      }
+    },
+    "saleItems": {
+      "name": "saleItems",
+      "tableName": "sale_items",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sale_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "product_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "variant_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "product_name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "variant_name",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "ordered_quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "delivered_quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "unit_price",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "unit_price_quoted",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "unit_price_final",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "subtotal",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "cost_price_snapshot",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "is_modified",
+          "dataType": "boolean",
+          "drizzleType": "PgBoolean",
+          "notNull": true,
+          "hasDefault": true,
+          "default": false,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "original_quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_group_id",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "quantity": {
+            "kind": "weight",
+            "nullable": true
+          },
+          "ordered_quantity": {
+            "kind": "weight",
+            "nullable": true
+          },
+          "delivered_quantity": {
+            "kind": "weight",
+            "nullable": true
+          },
+          "unit_price": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "unit_price_quoted": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "unit_price_final": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "subtotal": {
+            "kind": "currency",
+            "nullable": false
+          },
+          "cost_price_snapshot": {
+            "kind": "currency",
+            "nullable": true
+          },
+          "original_quantity": {
+            "kind": "weight",
+            "nullable": true
+          }
+        },
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "sales",
+          "products",
+          "product_variants",
+          "sync_groups"
+        ],
+        "children": [],
+        "priority": 3
+      }
+    },
+    "purchases": {
+      "name": "purchases",
+      "tableName": "purchases",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "supplier_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "purchase_date",
+          "dataType": "date",
+          "drizzleType": "PgDateString",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "total_amount",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "draft",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "draft",
+            "pending",
+            "received",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "invoice_number",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "receipt_image_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "notes",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_group_id",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "total_amount": {
+            "kind": "currency",
+            "nullable": false
+          }
+        },
+        "relations": {
+          "children": [
+            {
+              "entity": "purchaseItems",
+              "foreignKey": "purchase_id",
+              "cascade": true
+            }
+          ]
+        }
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "suppliers",
+          "receipt_images",
+          "sync_groups"
+        ],
+        "children": [
+          "purchaseItems"
+        ],
+        "priority": 2
+      }
+    },
+    "purchaseItems": {
+      "name": "purchaseItems",
+      "tableName": "purchase_items",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "purchase_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "product_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "variant_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "unit_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "quantity",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "unit_cost",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 2
+        },
+        {
+          "name": "total_cost",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_group_id",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "quantity": {
+            "kind": "weight",
+            "nullable": false
+          },
+          "unit_cost": {
+            "kind": "currency",
+            "nullable": false
+          },
+          "total_cost": {
+            "kind": "currency",
+            "nullable": true
+          }
+        },
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "purchases",
+          "products",
+          "product_variants",
+          "units",
+          "sync_groups"
+        ],
+        "children": [],
+        "priority": 3
+      }
+    },
+    "distribuciones": {
+      "name": "distribuciones",
+      "tableName": "distribuciones",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "vendedor_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "punto_venta",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "punto_venta_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "monto_recaudado",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "nota_creacion",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "nota_cierre",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "fecha",
+          "dataType": "date",
+          "drizzleType": "PgDateString",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "estado",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "activo",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "activo",
+            "cerrado",
+            "en_ruta"
+          ]
+        },
+        {
+          "name": "closed_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "closed_by",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "monto_recaudado": {
+            "kind": "currency",
+            "nullable": true
+          }
+        },
+        "relations": {
+          "children": [
+            {
+              "entity": "distribucionItems",
+              "foreignKey": "distribucion_id",
+              "cascade": true
+            }
+          ]
+        }
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "vendedors",
+          "punto_ventas"
+        ],
+        "children": [],
+        "priority": 1
+      }
+    },
+    "distribucionItems": {
+      "name": "distribucionItems",
+      "tableName": "distribucion_items",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "distribucion_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "variant_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "cantidad_asignada",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "cantidad_vendida",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "0",
+          "primary": false,
+          "isEnum": false,
+          "precision": 10,
+          "scale": 3
+        },
+        {
+          "name": "unidad",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "kg",
+          "primary": false,
+          "isEnum": false,
+          "length": 20
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "fieldCodecs": {
+          "cantidad_asignada": {
+            "kind": "weight",
+            "nullable": false
+          },
+          "cantidad_vendida": {
+            "kind": "weight",
+            "nullable": true
+          }
+        },
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "distribucions",
+          "product_variants"
+        ],
+        "children": [],
+        "priority": 1
+      }
+    },
+    "abonos": {
+      "name": "abonos",
+      "tableName": "abonos",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "customer_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "seller_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "amount",
+          "dataType": "string",
+          "drizzleType": "PgNumeric",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "name": "payment_method",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "efectivo",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "efectivo",
+            "yape",
+            "plin",
+            "transferencia",
+            "tarjeta",
+            "saldo"
+          ]
+        },
+        {
+          "name": "notes",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "proof_image_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "reference_number",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 50
+        },
+        {
+          "name": "related_sale_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "conflictResolver": "version-based",
+        "apiPath": "payments",
+        "fieldCodecs": {
+          "amount": {
+            "kind": "currency",
+            "nullable": false
+          }
+        },
+        "relations": {}
+      },
+      "graph": {
+        "parents": [
+          "businesses",
+          "customers",
+          "sellers",
+          "proof_images",
+          "related_sales"
+        ],
+        "children": [],
+        "priority": 2
+      }
+    }
+  }
+}

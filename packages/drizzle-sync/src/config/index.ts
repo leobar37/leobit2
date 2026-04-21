@@ -21,7 +21,19 @@ export type {
   GeneratedApplierConfig,
   ChildRelationConfig,
   ParentRelationConfig,
+  SchemaConfig,
+  SyncConfigInput,
 } from "./types";
+
+export type {
+  SyncSchema,
+  SerializedEntity,
+  SerializedEntityConfig,
+  SerializedColumn,
+  SerializedFieldCodec,
+  SerializedRelationNode,
+  SerializedSqlDefault,
+} from "./schema-types";
 
 // Tipos de validación desde validator
 export type {
@@ -48,6 +60,9 @@ export { defineSyncConfig, createId, generateSyncGroupId, generateIdempotencyKey
 export { introspectTable, detectRelations, buildRelationGraph, resolveColumns } from "./introspect";
 export { loadConfig } from "./loader";
 export { generateAll } from "./generator";
+export { SyncConfigBuilder, type RuntimeSyncConfig } from "./builder";
+export { SchemaManager } from "./schema-manager";
+export { SYNC_SCHEMA_VERSION } from "./schema-types";
 
 export {
   generateLocalFirstHooksFactory,

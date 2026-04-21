@@ -11,7 +11,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, sql } from "drizzle-orm";
-import { SyncService } from "~/lib/sync/sync-service";
 import { customerTags } from "@avileo/shared";
 
 // Import the generated TagsService and its input types
@@ -20,6 +19,7 @@ import {
   type CreateTagsInput, 
   type UpdateTagsInput
 } from "~/lib/sync/generated/services";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export input types with the original names for backward compatibility
 export type CreateTagInput = CreateTagsInput;
@@ -36,7 +36,7 @@ export class TagService extends TagsService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

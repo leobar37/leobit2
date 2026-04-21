@@ -15,15 +15,12 @@
 import type {
   SyncReactRuntime,
   SyncStateSnapshot,
-  SyncEventSource,
   PushStateSnapshot,
   PullStateSnapshot,
   SyncLogEntry,
   SyncConflictRecord,
 } from "@avileo/drizzle-sync/react";
-import type { SyncService, SyncStatus, BackendConflict } from "./sync-service";
-import type { PullService } from "./pull-service";
-import { syncEvents } from "./sync-events";
+import type { BackendConflict, SyncClientEngine, SyncClientServicePort } from "@avileo/drizzle-sync/client";
 import { getQueryKeysForEntity } from "./query-keys";
 import type { QueryClient } from "@tanstack/react-query";
 import { syncLogger } from "@avileo/drizzle-sync/pglite";
@@ -50,24 +47,18 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
   private logListeners = new Set<() => void>();
   private conflictListeners = new Set<() => void>();
   private currentState: SyncStateSnapshot;
-  private cachedPushStatus: SyncStatus | null = null;
+  private cachedPushStatus: Awaited<ReturnType<SyncClientServicePort["getStatus"]>> | null = null;
   private cachedConflicts: SyncConflictRecord[] = [];
   private conflictsLoading = false;
-  private unsubscribeFromEvents: (() => void) | null = null;
   private disposed = false;
 
   constructor(
-    private syncService: SyncService,
-    private pullService: PullService,
-    private queryClient: QueryClient
+    private engine: SyncClientEngine,
+    private queryClient: QueryClient,
+    private startOnMount: boolean
   ) {
     this.currentState = { ...DEFAULT_SYNC_STATE };
-
-    // Subscribe to app-specific sync events
-    this.subscribeToEvents();
-
-    // Load initial state asynchronously
-    this.loadInitialState();
+    void this.initialize();
   }
 
   /**
@@ -90,12 +81,9 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
   /**
    * Event source for subscribing to specific events
    */
-  eventSource: SyncEventSource = {
-    on: (eventType: string, handler: (event: unknown) => void) => {
-      // Map library event types to app-specific events
-      return syncEvents.on(eventType as never, handler as never);
-    },
-  };
+  get eventSource() {
+    return this.engine.getEventEmitter();
+  }
 
   /**
    * Get current logs from syncLogger
@@ -148,30 +136,23 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
     if (this.disposed) return;
     this.disposed = true;
 
-    if (this.unsubscribeFromEvents) {
-      this.unsubscribeFromEvents();
-      this.unsubscribeFromEvents = null;
-    }
-
     this.listeners.clear();
     this.logListeners.clear();
     this.conflictListeners.clear();
+    void this.engine.stop();
   }
 
-  /**
-   * Load initial state asynchronously
-   */
-  private async loadInitialState(): Promise<void> {
+  private async initialize(): Promise<void> {
     try {
-      this.cachedPushStatus = await this.syncService.getStatus();
-      this.updateState();
-      // Load conflicts in background (non-blocking)
-      this.refreshConflicts();
-    } catch (error) {
-      // Silently ignore "not initialized" errors during startup
-      if (error instanceof Error && error.message.includes("not initialized")) {
-        return;
+      await this.engine.initialize();
+      if (this.startOnMount) {
+        await this.engine.start();
       }
+      const syncOperations = this.engine.getSyncOperations();
+      this.cachedPushStatus = syncOperations ? await syncOperations.getStatus() : null;
+      this.updateState();
+      await this.refreshConflicts();
+    } catch (error) {
       console.error("[AvileoSyncReactRuntime] Failed to load initial state:", error);
     }
   }
@@ -187,7 +168,9 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
 
     this.conflictsLoading = true;
     try {
-      const result = await this.syncService.getBackendConflicts({ status: "pending", limit: 50 });
+      const syncOperations = this.engine.getSyncOperations();
+      if (!syncOperations) return;
+      const result = await syncOperations.getBackendConflicts({ status: "pending", limit: 50 });
       if (result.success && result.data?.conflicts) {
         this.cachedConflicts = result.data.conflicts.map((c: BackendConflict) => ({
           id: c.id,
@@ -199,6 +182,8 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
           serverVersion: c.serverVersion,
           status: c.status as "pending" | "resolved",
           resolution: c.resolution as "server" | "local" | "merge" | null,
+          createdAt: c.createdAt,
+          resolvedAt: c.resolvedAt,
         }));
         this.notifyConflictListeners();
       }
@@ -216,7 +201,15 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
    * Compute current state from services
    */
   private computeState(): SyncStateSnapshot {
-    const pullStatus = this.pullService.getStatus();
+    const pullStatus = this.engine.getPullService()?.getStatus() ?? {
+      isPulling: false,
+      lastPullTime: null,
+      lastError: null,
+      consecutiveFailures: 0,
+      cursor: null,
+      isStuck: false,
+      consecutiveStalePulls: 0,
+    };
     const pushStatus = this.cachedPushStatus || {
       pending: 0,
       processing: 0,
@@ -264,106 +257,6 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
       // Rich push/pull snapshots
       push: pushSnapshot,
       pull: pullSnapshot,
-    };
-  }
-
-  /**
-   * Subscribe to app-specific sync events
-   */
-  private subscribeToEvents(): void {
-    const handleStatusChanged = (status: {
-      pending: number;
-      failed: number;
-      conflict: number;
-      deadLetter: number;
-    }) => {
-      // Update cached push status from event
-      if (this.cachedPushStatus) {
-        this.cachedPushStatus = {
-          ...this.cachedPushStatus,
-          ...status,
-        };
-      }
-      this.updateState();
-      // Also notify log listeners since logs may have changed
-      this.notifyLogListeners();
-    };
-
-    const handlePullCompleted = ({
-      entityTypes,
-    }: {
-      changesApplied: number;
-      entityTypes: string[];
-    }) => {
-      this.updateState();
-
-      // Invalidate TanStack Query caches for affected entity types (app-specific logic)
-      if (entityTypes && entityTypes.length > 0) {
-        for (const entityType of entityTypes) {
-          const keys = getQueryKeysForEntity(entityType);
-          for (const key of keys) {
-            this.queryClient.invalidateQueries({ queryKey: key });
-          }
-        }
-      }
-
-      // Notify log listeners
-      this.notifyLogListeners();
-    };
-
-    const handlePullError = () => {
-      this.updateState();
-      this.notifyLogListeners();
-    };
-
-    const handlePullStale = () => {
-      this.updateState();
-    };
-
-    const handleOnline = () => {
-      this.updateState({ isOnline: true });
-      // Refresh conflicts when coming back online
-      this.refreshConflicts();
-    };
-
-    const handleOffline = () => {
-      this.updateState({ isOnline: false });
-    };
-
-    const handleConflictDetected = () => {
-      // Refresh conflicts when a conflict is detected
-      this.refreshConflicts();
-      this.updateState();
-    };
-
-    // Subscribe to all relevant events
-    const unsubStatus = syncEvents.on("status:changed", handleStatusChanged);
-    const unsubPullCompleted = syncEvents.on("pull:completed", handlePullCompleted);
-    const unsubPullError = syncEvents.on("pull:error", handlePullError);
-    const unsubPullStale = syncEvents.on("pull:stale", handlePullStale);
-    const unsubOnline = syncEvents.on("sync:online", handleOnline);
-    const unsubOffline = syncEvents.on("sync:offline", handleOffline);
-    const unsubConflict = syncEvents.on("operation:conflict", handleConflictDetected);
-
-    // Also listen to browser online/offline events
-    const handleBrowserOnline = () => {
-      this.updateState({ isOnline: true });
-      this.refreshConflicts();
-    };
-    const handleBrowserOffline = () => this.updateState({ isOnline: false });
-    window.addEventListener("online", handleBrowserOnline);
-    window.addEventListener("offline", handleBrowserOffline);
-
-    this.unsubscribeFromEvents = () => {
-      unsubStatus();
-      unsubPullCompleted();
-      unsubPullError();
-      unsubPullStale();
-      unsubOnline();
-      unsubOffline();
-      unsubConflict();
-      window.removeEventListener("online", handleBrowserOnline);
-      window.removeEventListener("offline", handleBrowserOffline);
     };
   }
 
@@ -420,9 +313,58 @@ export class AvileoSyncReactRuntime implements SyncReactRuntime {
  * Factory function to create the Avileo sync runtime
  */
 export function createAvileoSyncRuntime(
-  syncService: SyncService,
-  pullService: PullService,
-  queryClient: QueryClient
+  engine: SyncClientEngine,
+  queryClient: QueryClient,
+  startOnMount = true
 ): SyncReactRuntime {
-  return new AvileoSyncReactRuntime(syncService, pullService, queryClient);
+  const runtime = new AvileoSyncReactRuntime(engine, queryClient, startOnMount);
+  const events = engine.getEventEmitter();
+
+  const invalidateEntities = (entityTypes: string[]) => {
+    for (const entityType of entityTypes) {
+      const keys = getQueryKeysForEntity(entityType);
+      for (const key of keys) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
+    }
+  };
+
+  events.on("pull:complete", async (event) => {
+    const syncOperations = engine.getSyncOperations();
+    if (syncOperations) {
+      runtime["cachedPushStatus"] = await syncOperations.getStatus();
+    }
+    invalidateEntities(event.entityTypes);
+    runtime["updateState"]();
+    runtime["notifyLogListeners"]();
+  });
+
+  events.on("pull:error", () => {
+    runtime["updateState"]();
+    runtime["notifyLogListeners"]();
+  });
+
+  events.on("pull:stale", () => {
+    runtime["updateState"]();
+  });
+
+  events.on("sync:online", () => {
+    runtime["updateState"]({ isOnline: true });
+    void runtime["refreshConflicts"]();
+  });
+
+  events.on("sync:offline", () => {
+    runtime["updateState"]({ isOnline: false });
+  });
+
+  events.on("push:complete", async () => {
+    const syncOperations = engine.getSyncOperations();
+    if (syncOperations) {
+      runtime["cachedPushStatus"] = await syncOperations.getStatus();
+    }
+    runtime["updateState"]();
+    runtime["notifyLogListeners"]();
+  });
+
+  return runtime;
 }

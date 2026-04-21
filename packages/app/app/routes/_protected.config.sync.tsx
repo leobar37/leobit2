@@ -17,14 +17,12 @@ import {
   Server,
 } from "lucide-react";
 import { useSync } from "~/components/sync/sync-status";
-import { useSyncService } from "~/lib/sync/service-provider";
+import { useSyncService } from "~/lib/sync/engine-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useToast } from "~/hooks/use-toast";
-import { useDevToolsData } from "~/devtools/sync/hooks/use-devtools-data";
 import { runManualSync } from "~/lib/sync/manual-sync";
-import { TablesTab } from "~/devtools/sync/tabs/tables-tab";
-import { OperationsTab } from "~/devtools/sync/tabs/operations-tab";
-import { DLQTab } from "~/devtools/sync/tabs/dlq-tab";
+import { useDevToolsData } from "@avileo/drizzle-sync/react/devtools";
+import { TablesTab, OperationsTab, DLQTab } from "@avileo/drizzle-sync/react/devtools";
 
 export default function SyncAdminPage() {
   const { isOnline: engineOnline, isSyncing, isInitialized } = useEngine();

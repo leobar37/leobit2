@@ -7,9 +7,9 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { VisitasService } from "~/lib/sync/generated/services";
-import { SyncService } from "../sync/sync-service";
 import { SyncStatus, visitas, customers, type Visita } from "@avileo/shared";
 import { eq, desc } from "drizzle-orm";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types for backward compatibility
 export type { CreateVisitasInput, UpdateVisitasInput } from "~/lib/sync/generated/services";
@@ -48,7 +48,7 @@ export class VisitaService extends VisitasService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

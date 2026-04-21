@@ -1,24 +1,39 @@
 // @ts-nocheck - Route file with complex type errors
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
-import { DebugWidget, SyncDevToolsDrawer } from "~/devtools";
+
+function DevToolsWithConfig({ children }: { children: React.ReactNode }) {
+  const clearSync = useClearSyncStorage();
+  return (
+    <SyncDevToolsProvider config={{ onClearStorage: () => clearSync.mutateAsync({ preserveSession: false }) }}>
+      {children}
+    </SyncDevToolsProvider>
+  );
+}
+import { SyncDevTools, SyncDevToolsProvider } from "@avileo/drizzle-sync/react/devtools";
+import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
 import {
   ConflictResolver,
   type ConflictData,
   type ConflictResolution,
 } from "~/components/sync/conflict-resolver";
 import { EngineProvider, useEngine } from "~/engine";
-import { ServicesProvider } from "~/lib/sync/service-provider";
+import { ServicesProvider } from "~/lib/sync/engine-provider";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 import { useBusiness } from "~/hooks/use-business";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
+import { createSyncClientEngine, createLocalStorageCursorStorage } from "@avileo/drizzle-sync/client";
+import { SyncEngineProvider } from "~/lib/sync/engine-provider";
+import { createSyncEngineHttpClient } from "~/lib/sync/engine-http-adapter";
+import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
+import { engineServiceEntities, onServicesReady } from "~/lib/sync/engine-service-factories";
 
 function OutletWithLog() {
   useAutoFileUploadProcessor();
@@ -38,6 +53,37 @@ function ServicesProviderWrapper({
 }) {
   const { pg, db, isInitialized, error, schemaError, resetAndLogout } = useEngine();
   const queryClient = useQueryClient();
+
+  // Create SyncClientEngine once dependencies are available
+  const engine = useMemo<SyncClientEngine | null>(() => {
+    if (!pg || !db || !businessId || !token) return null;
+    const businessUserId = getStoredBusinessUserId() || "";
+
+    try {
+      return createSyncClientEngine({
+        pg,
+        db,
+        businessId,
+        businessUserId,
+        authToken: token,
+        apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
+        httpClient: createSyncEngineHttpClient(businessId),
+        entities: engineServiceEntities,
+        cursorStorage: createLocalStorageCursorStorage(),
+        sync: {
+          pushIntervalMs: 5000,
+          pullIntervalMs: 10000,
+          enableAutoSync: false, // Old coordinator handles sync during migration
+        },
+        callbacks: {
+          onServicesReady,
+        },
+      });
+    } catch (err) {
+      console.error("[ServicesProviderWrapper] Failed to create SyncClientEngine:", err);
+      return null;
+    }
+  }, [pg, db, businessId, token]);
 
   // ALL hooks must be called before any conditional returns (Rules of Hooks)
   const { data: business, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness, isFetching } = useBusiness();
@@ -119,7 +165,7 @@ function ServicesProviderWrapper({
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
           <p className="text-sm text-muted-foreground">Inicializando base de datos local...</p>
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -136,20 +182,29 @@ function ServicesProviderWrapper({
     window.location.href = "/login";
   };
 
-  if (!isInitialized) {
+  const wrapWithEngine = (content: React.ReactNode) => {
+    if (!engine) return <>{content}</>;
     return (
+      <SyncEngineProvider engine={engine} startOnMount={false}>
+        {content}
+      </SyncEngineProvider>
+    );
+  };
+
+  if (!isInitialized) {
+    return wrapWithEngine(
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
           <p className="text-sm text-muted-foreground">Inicializando base de datos local...</p>
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
   if (schemaError) {
-    return (
+    return wrapWithEngine(
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4">
           <div className="text-center space-y-2">
@@ -170,7 +225,7 @@ function ServicesProviderWrapper({
             Resetear e ir al login
           </button>
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -178,8 +233,8 @@ function ServicesProviderWrapper({
   // Offline mode: we have cached business data from persister but API failed or we're offline
   if (isOfflineMode && business) {
     const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
-    return (
-      <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
+    return wrapWithEngine(
+      <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
         <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
           <WifiOff className="h-3 w-3" />
           Modo offline - datos del negocio en cache
@@ -194,8 +249,8 @@ function ServicesProviderWrapper({
     // If we have business data from persister, use it even on timeout
     if (business) {
       const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
-      return (
-        <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
+      return wrapWithEngine(
+        <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
           <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
             <WifiOff className="h-3 w-3" />
             Modo offline - datos del negocio en cache
@@ -205,7 +260,7 @@ function ServicesProviderWrapper({
       );
     }
 
-    return (
+    return wrapWithEngine(
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
@@ -239,14 +294,14 @@ function ServicesProviderWrapper({
             </button>
           </div>
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
   if (businessError) {
     // API error and no cached data - show error UI
-    return (
+    return wrapWithEngine(
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
@@ -282,13 +337,13 @@ function ServicesProviderWrapper({
             </button>
           </div>
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
   if (isBusinessLoading || !business) {
-    return (
+    return wrapWithEngine(
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -299,15 +354,15 @@ function ServicesProviderWrapper({
             </p>
           )}
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
   const businessUserId = business.businessUserId;
 
-  return (
-    <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token}>
+  return wrapWithEngine(
+    <ServicesProvider pg={pg} db={db} businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
       {children}
     </ServicesProvider>
   );
@@ -392,7 +447,7 @@ export default function ProtectedLayout() {
         <div className="min-h-screen flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         </div>
-        <DebugWidget />
+        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -409,19 +464,18 @@ export default function ProtectedLayout() {
     <EngineProvider businessId={businessId} token={token}>
       <SyncProvider>
         <ServicesProviderWrapper businessId={businessId} token={token}>
-          <AppLayout
-            headerAccessory={
-              <SyncDevToolsDrawer triggerClassName="text-muted-foreground hover:text-foreground" />
-            }
-          >
-            <OutletWithLog />
-            <ConflictResolver
-              conflict={activeConflict}
-              isOpen={!!activeConflict}
-              onClose={() => setActiveConflict(null)}
-              onResolve={handleResolveConflict}
-            />
-          </AppLayout>
+          <DevToolsWithConfig>
+            <AppLayout>
+              <OutletWithLog />
+              <SyncDevTools enabled={import.meta.env.DEV} />
+              <ConflictResolver
+                conflict={activeConflict}
+                isOpen={!!activeConflict}
+                onClose={() => setActiveConflict(null)}
+                onResolve={handleResolveConflict}
+              />
+            </AppLayout>
+          </DevToolsWithConfig>
         </ServicesProviderWrapper>
       </SyncProvider>
     </EngineProvider>

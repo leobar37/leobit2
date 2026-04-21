@@ -11,6 +11,16 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
   },
+  // Shared submodule (must be early to avoid race with clean:true main entry)
+  {
+    entry: ["src/shared/index.ts"],
+    format: ["esm"],
+    dts: true,
+    outDir: "dist/shared",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+  },
   // Core submodule
   {
     entry: ["src/core/index.ts"],
@@ -21,16 +31,7 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
   },
-  // Shared submodule
-  {
-    entry: ["src/shared/index.ts"],
-    format: ["esm"],
-    dts: true,
-    outDir: "dist/shared",
-    clean: false,
-    splitting: false,
-    treeshake: true,
-  },
+
   // PGlite submodule (frontend)
   {
     entry: ["src/pglite/index.ts"],
@@ -67,6 +68,20 @@ export default defineConfig([
     // Externalize React (peer dependency)
     external: ["react", "react/jsx-runtime"],
     // Enable JSX transformation
+    esbuildOptions(options) {
+      options.jsx = "automatic";
+    },
+  },
+  // React DevTools submodule
+  {
+    entry: ["src/react/devtools/index.ts"],
+    format: ["esm"],
+    dts: true,
+    outDir: "dist/react/devtools",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+    external: ["react", "react/jsx-runtime", "lucide-react"],
     esbuildOptions(options) {
       options.jsx = "automatic";
     },
@@ -110,5 +125,16 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
     noExternal: ["commander"],
+  },
+  // Client submodule (frontend - framework-agnostic)
+  {
+    entry: ["src/client/index.ts"],
+    format: ["esm"],
+    dts: true,
+    outDir: "dist/client",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+    external: ["@electric-sql/pglite", "drizzle-orm", "drizzle-orm/pglite", "react", "react/jsx-runtime"],
   },
 ]);

@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCustomerGroupService } from "~/lib/sync/service-provider";
+import { useCustomerGroupService } from "~/lib/sync/engine-provider";
 import { toast } from "sonner";
 
 export interface GroupMember {

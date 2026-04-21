@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useInventoryService } from "~/lib/sync/service-provider";
+import { useInventoryService } from "~/lib/sync/engine-provider";
 import type {
   VariantInventoryItem,
   StockValidationResult,

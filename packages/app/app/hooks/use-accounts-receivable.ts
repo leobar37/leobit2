@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { usePaymentService } from "~/lib/sync/service-provider";
+import { usePaymentService } from "~/lib/sync/engine-provider";
 import type { Customer } from "@avileo/shared";
 
 export interface AccountsReceivableItem {

@@ -1,5 +1,6 @@
-import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
-import { introspectTable, resolveColumns } from "../../config/introspect";
+import type { ColumnMetadata } from "../../config/types";
+import type { SerializedEntity } from "../../config/schema-types";
+import { getColumnsToInclude, isSerializedEntity, type GeneratorEntity } from "./schema-adapter";
 
 export interface PostgreSQLDDLOutput {
   tableName: string;
@@ -23,11 +24,10 @@ export interface PostgreSQLDDLOutput {
  */
 export function generatePostgreSQLDDL(
   entityName: string,
-  config: EntitySyncConfig
+  entity: GeneratorEntity
 ): PostgreSQLDDLOutput {
-  const tableName = entityName;
-  const columns = introspectTable(config.table);
-  const columnsToInclude = resolveColumns(columns, config);
+  const tableName = isSerializedEntity(entity) ? entity.tableName : entityName;
+  const columnsToInclude = getColumnsToInclude(entity);
 
   const columnDefs: string[] = [];
 
@@ -204,4 +204,11 @@ export function generatePostgreSQLDDLFile(outputs: PostgreSQLDDLOutput[]): strin
   }
 
   return lines.join("\n");
+}
+
+export function generatePostgreSQLDDLFromSerialized(
+  entityName: string,
+  entity: SerializedEntity
+): PostgreSQLDDLOutput {
+  return generatePostgreSQLDDL(entityName, entity);
 }

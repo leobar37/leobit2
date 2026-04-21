@@ -126,6 +126,10 @@ export interface SyncConflictRecord {
   status: "pending" | "resolved";
   /** Resolution chosen */
   resolution: "server" | "local" | "merge" | null;
+  /** Creation timestamp */
+  createdAt?: string;
+  /** Resolution timestamp */
+  resolvedAt?: string | null;
 }
 
 /**

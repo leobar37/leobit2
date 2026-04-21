@@ -1,0 +1,207 @@
+{
+  "plan": "schema-builder-refactor",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create schema-types.ts with SyncSchema types",
+      "file": "tasks/T-001-schema-types.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "Create serializer.ts with serialization utilities",
+      "file": "tasks/T-002-serializer.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Create SchemaManager class",
+      "file": "tasks/T-003-schema-manager.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Create SyncConfigBuilder class",
+      "file": "tasks/T-004-sync-config-builder.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-003"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Update defineSyncConfig to return builder",
+      "file": "tasks/T-005-define-sync-config.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Update config types and add SchemaConfig",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Update config/index.ts exports",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-005"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Create CLI schema-loader.ts",
+      "file": "tasks/T-008-cli-schema-loader.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-009",
+      "title": "Refactor CLI to use schema.json",
+      "file": "tasks/T-009-cli-refactor.md",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [
+        "T-008"
+      ]
+    },
+    {
+      "id": "T-010",
+      "title": "Update generators to accept SyncSchema",
+      "file": "tasks/T-010-generators-schema.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-011",
+      "title": "Update generator.ts orchestrator",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-010"
+      ]
+    },
+    {
+      "id": "T-012",
+      "title": "Add watch mode to SchemaManager",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-003"
+      ]
+    },
+    {
+      "id": "T-013",
+      "title": "Update validator for schema config",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "low",
+      "dependencies": [
+        "T-006"
+      ]
+    },
+    {
+      "id": "T-014",
+      "title": "Update backend sync.config.ts",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-005"
+      ]
+    },
+    {
+      "id": "T-015",
+      "title": "Add tests for SchemaManager",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-003"
+      ]
+    },
+    {
+      "id": "T-016",
+      "title": "Add tests for SyncConfigBuilder",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": [
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-017",
+      "title": "Update package.json exports if needed",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "low",
+      "dependencies": []
+    },
+    {
+      "id": "T-018",
+      "title": "Update tsup.config.ts for CLI build",
+      "file": "task-index.md",
+      "status": "completed",
+      "priority": "low",
+      "dependencies": []
+    },
+    {
+      "id": "T-019",
+      "title": "Write documentation for new architecture",
+      "file": "task-index.md",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007",
+        "T-008",
+        "T-009",
+        "T-010",
+        "T-011",
+        "T-012",
+        "T-013",
+        "T-014",
+        "T-015",
+        "T-016",
+        "T-017",
+        "T-018"
+      ]
+    }
+  ]
+}

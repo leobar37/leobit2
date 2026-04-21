@@ -5,7 +5,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-import { useSaleService } from "~/lib/sync/service-provider";
+import { useSaleService } from "~/lib/sync/engine-provider";
 import type { PeriodType } from "~/components/dashboard/period-selector";
 
 export interface PeriodParams {

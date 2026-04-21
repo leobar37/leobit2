@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePaymentService } from "~/lib/sync/service-provider";
+import { usePaymentService } from "~/lib/sync/engine-provider";
 import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/payment-service";
 import { useBusiness } from "~/hooks/use-business";
 

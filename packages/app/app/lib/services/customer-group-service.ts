@@ -10,10 +10,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { SyncService } from "~/lib/sync/sync-service";
 import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup } from "@avileo/shared";
 
 import { CustomerGroupsService, type CreateCustomerGroupsInput, type UpdateCustomerGroupsInput } from "~/lib/sync/generated/services";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export input types with original names for backward compatibility
 export type CreateCustomerGroupInput = CreateCustomerGroupsInput;
@@ -63,7 +63,7 @@ export class CustomerGroupService extends CustomerGroupsService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

@@ -10,7 +10,7 @@ import {
   useDeliverSale,
 } from "./use-sales";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSaleService, useProductService } from "~/lib/sync/service-provider";
+import { useSaleService, useProductService } from "~/lib/sync/engine-provider";
 import type { SaleWithItems, SaleItem } from "~/lib/services/sale-service";
 
 export { useSales, useSalesByCustomer, useConfirmSale, useCancelSale, useDeleteSale, useDeliverSale };

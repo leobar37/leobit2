@@ -1,7 +1,8 @@
 import { camelCase, pascalCase } from "../../utils/string-utils";
-import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
-import { introspectTable, resolveColumns } from "../../config/introspect";
+import type { ColumnMetadata } from "../../config/types";
 import type { FieldCodec } from "../../codecs/types";
+import type { SerializedEntity } from "../../config/schema-types";
+import { getColumnsToInclude, getGeneratorConfig, type GeneratorEntity } from "./schema-adapter";
 
 export interface ZodSchemaOutput {
   name: string;
@@ -12,10 +13,10 @@ export interface ZodSchemaOutput {
 
 export function generateZodSchema(
   entityName: string,
-  config: EntitySyncConfig
+  entity: GeneratorEntity
 ): ZodSchemaOutput {
-  const columns = introspectTable(config.table);
-  const columnsToInclude = resolveColumns(columns, config);
+  const columnsToInclude = getColumnsToInclude(entity);
+  const config = getGeneratorConfig(entity);
 
   const fields: string[] = [];
 
@@ -163,4 +164,11 @@ export function generateZodSchemasFile(schemas: ZodSchemaOutput[]): string {
   const content = schemas.map((s) => `${s.schemaCode}\n\n${s.typeCode}\n\n${s.interfaceCode}`).join("\n\n");
 
   return warning + imports + content;
+}
+
+export function generateZodSchemaFromSerialized(
+  entityName: string,
+  entity: SerializedEntity
+): ZodSchemaOutput {
+  return generateZodSchema(entityName, entity);
 }

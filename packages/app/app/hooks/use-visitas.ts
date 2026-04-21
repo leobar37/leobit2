@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useVisitaService, useCustomerGroupService } from "~/lib/sync/service-provider";
+import { useVisitaService, useCustomerGroupService } from "~/lib/sync/engine-provider";
 import { toast } from "sonner";
 import type { CreateVisitaInput, UpdateVisitaInput } from "~/lib/services/visita-service";
 

@@ -11,8 +11,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { ProductsService, ProductVariantsService } from "~/lib/sync/generated/services";
-import { SyncService } from "../sync/sync-service";
 import { SyncStatus, products, productVariants, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
+import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types from @avileo/shared for backward compatibility
 export type Product = SharedProduct;
@@ -81,7 +81,7 @@ export class ProductService extends ProductsService {
   constructor(
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
+    syncService: SyncWritePort,
     businessId: string,
     businessUserId: string
   ) {

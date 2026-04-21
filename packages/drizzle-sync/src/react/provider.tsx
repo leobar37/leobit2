@@ -9,12 +9,11 @@ import {
   useState,
   useEffect,
   useMemo,
-  useCallback,
-  useRef,
   type ReactNode,
 } from "react";
 import type { SyncReactRuntime, SyncStateSnapshot } from "./types";
 import { SyncRuntimeContext, SyncStateContext } from "./context";
+import type { SyncClientEngine } from "../client";
 
 /**
  * Default sync state snapshot
@@ -38,6 +37,8 @@ export interface SyncProviderProps {
   runtime: SyncReactRuntime | (() => SyncReactRuntime) | (() => Promise<SyncReactRuntime>);
   /** Children to render */
   children: ReactNode;
+  /** Optional engine to expose via context */
+  engine?: SyncClientEngine;
 }
 
 /**
@@ -52,7 +53,7 @@ export interface SyncProviderProps {
  * </SyncProvider>
  * ```
  */
-export function SyncProvider({ runtime: runtimeInput, children }: SyncProviderProps): ReactNode {
+export function SyncProvider({ runtime: runtimeInput, children, engine }: SyncProviderProps): ReactNode {
   const [runtime, setRuntime] = useState<SyncReactRuntime | null>(null);
   const [state, setState] = useState<SyncStateSnapshot>(DEFAULT_SYNC_STATE);
   const [error, setError] = useState<Error | null>(null);
@@ -109,8 +110,8 @@ export function SyncProvider({ runtime: runtimeInput, children }: SyncProviderPr
 
   // Memoized context values
   const runtimeContextValue = useMemo(
-    () => (runtime ? { runtime } : null),
-    [runtime]
+    () => (runtime ? { runtime, engine } : null),
+    [runtime, engine]
   );
 
   // Handle error state

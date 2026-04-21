@@ -17,6 +17,7 @@ export type {
 // Core sync types (snake_case DB fields)
 export type {
   EnqueueParams,
+  SyncWritePort,
   SyncOperationRecord,
   SyncOperation, // Compatibility alias
   SyncStatus,
@@ -175,3 +176,12 @@ export {
   noOpSyncEventEmitter,
   createSyncEventEmitter,
 } from "./sync-events";
+
+// Event Buffer (for devtools timeline)
+export type { TimelineEvent } from "./event-buffer";
+export {
+  initializeEventBuffer,
+  getEventBuffer,
+  clearEventBuffer,
+  getEventsByType,
+} from "./event-buffer";

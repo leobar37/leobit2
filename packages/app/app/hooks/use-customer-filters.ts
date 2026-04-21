@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQueryState, parseAsArrayOf, parseAsString } from "nuqs";
 import { useQuery } from "@tanstack/react-query";
-import { useCustomerTagService } from "~/lib/sync/service-provider";
+import { useCustomerTagService } from "~/lib/sync/engine-provider";
 import { filterBySearch, useDebounce, type SearchableField } from "~/lib/search";
 import type { Customer } from "@avileo/shared";
 

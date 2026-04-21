@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "plan": "sync-client-engine-core",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Define engine config types",
+      "file": "tasks/01-config-types.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Implement SyncClientEngine class",
+      "file": "tasks/02-engine-class.md",
+      "status": "completed",
+      "phase": "core",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-007",
+        "FR-009",
+        "FR-010",
+        "NFR-002",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Implement service registry",
+      "file": "tasks/03-service-registry.md",
+      "status": "completed",
+      "phase": "core",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-006",
+        "FR-012",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Create factory function and client entry point",
+      "file": "tasks/04-factory-entry-point.md",
+      "status": "completed",
+      "phase": "integration",
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003"
+      ],
+      "requirements": [
+        "FR-008",
+        "FR-011",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Integration validation",
+      "file": "tasks/05-integration-validation.md",
+      "status": "completed",
+      "phase": "validation",
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "NFR-001",
+        "NFR-002",
+        "NFR-003",
+        "NFR-004",
+        "NFR-005"
+      ]
+    }
+  ]
+}

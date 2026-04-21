@@ -9,7 +9,7 @@ import { getToday } from "~/lib/date-utils";
 import { useSearchParams, useNavigate } from "react-router";
 import { FormPage } from "~/components/layout/form-page";
 import { useSync } from "~/components/sync/sync-status";
-import { useHasPendingSync } from "~/lib/sync/service-provider";
+import { useHasPendingSync } from "~/lib/sync/engine-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
 

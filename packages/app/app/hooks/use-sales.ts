@@ -6,7 +6,7 @@
 import { useCallback } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
-import { useSaleService } from "~/lib/sync/service-provider";
+import { useSaleService } from "~/lib/sync/engine-provider";
 import { useToastError } from "~/hooks/use-toast-error";
 import { useManualSync } from "~/hooks/use-manual-sync";
 import type {
