@@ -8,7 +8,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity, SyncStatus } from "@avileo/shared";
 import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
-import { VALID_TABLES } from "../sync/schema-mapper";
+import { VALID_TABLES } from "../sync/generated/applier";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
 import { formatCurrency, formatWeight } from "~/lib/utils";

@@ -34,28 +34,38 @@ const updateSchema = z.object({
 
 // Mock request context
 const mockCtx = {
-  businessId: "biz-123",
-  businessUserId: "user-456",
+  tenantId: "biz-123",
+  userId: "user-456",
 };
 
 // Helper to create sync operations
 function makeOp(
   partial: Partial<SyncOperationInput> & {
     idempotencyKey: string;
-    entityType: "test_entity";
+    entityType: "sales";
     entityId: string;
     operation: "create" | "update" | "delete";
   }
 ): SyncOperationInput {
+  const {
+    idempotencyKey,
+    entityType,
+    entityId,
+    operation,
+    payload,
+    localVersion,
+    ...rest
+  } = partial;
+
   return {
-    idempotencyKey: partial.idempotencyKey,
-    entityType: partial.entityType,
-    entityId: partial.entityId,
-    operation: partial.operation,
-    payload: partial.payload ?? {},
-    localVersion: partial.localVersion ?? 1,
+    idempotencyKey,
+    entityType,
+    entityId,
+    operation,
+    payload: payload ?? {},
+    localVersion: localVersion ?? 1,
     localTimestamp: new Date().toISOString(),
-    ...partial,
+    ...rest,
   } as SyncOperationInput;
 }
 
@@ -74,24 +84,24 @@ describe("GenericSyncHandler", () => {
   describe("constructor", () => {
     it("creates handler with config", () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
-      expect(handler.entityType).toBe("test_entity");
+      expect(handler.entityType).toBe("sales");
     });
   });
 
   describe("execute - create", () => {
     it("executes create operation with repo", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test Entity" },
@@ -110,7 +120,7 @@ describe("GenericSyncHandler", () => {
 
     it("applies field mapping on create", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         createFieldMapping: { name: "entity_name", email: "contact_email" },
       });
@@ -118,7 +128,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test", email: "test@example.com" },
@@ -135,7 +145,7 @@ describe("GenericSyncHandler", () => {
 
     it("applies create defaults before mapping", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         createDefaults: { age: 25, status: "active" },
         createFieldMapping: { name: "entity_name" },
@@ -144,7 +154,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -164,7 +174,7 @@ describe("GenericSyncHandler", () => {
     it("calls postCreate hook after successful create", async () => {
       const postCreate = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         postCreate,
       });
@@ -172,7 +182,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test Entity" },
@@ -189,10 +199,10 @@ describe("GenericSyncHandler", () => {
       const enricher = vi.fn().mockImplementation((ctx, payload) => ({
         ...payload,
         enriched: "yes",
-        businessId: ctx.businessId,
+        tenantId: ctx.tenantId,
       }));
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         payloadEnricher: enricher,
       });
@@ -200,7 +210,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -222,7 +232,7 @@ describe("GenericSyncHandler", () => {
     it("skips create silently if parentCheck parent does not exist", async () => {
       const findParent = vi.fn().mockResolvedValue(null);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         parentCheck: {
           parentIdField: "parentId",
@@ -234,7 +244,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test", parentId: "parent-1" },
@@ -259,7 +269,7 @@ describe("GenericSyncHandler", () => {
       };
 
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         parentCheck: {
           parentIdField: "parentId",
@@ -272,7 +282,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test", parentId: "parent-1" },
@@ -287,7 +297,7 @@ describe("GenericSyncHandler", () => {
     it("uses customCreate instead of repo.create when provided", async () => {
       const customCreate = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         customCreate,
       });
@@ -295,7 +305,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -310,7 +320,7 @@ describe("GenericSyncHandler", () => {
     it("calls preValidation hook before schema parsing", async () => {
       const preValidation = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         preValidation,
       });
@@ -318,7 +328,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -336,7 +346,7 @@ describe("GenericSyncHandler", () => {
     it("calls postOperation hook after any CRUD operation", async () => {
       const postOperation = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         postOperation,
       });
@@ -344,7 +354,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -364,14 +374,14 @@ describe("GenericSyncHandler", () => {
   describe("execute - update", () => {
     it("executes update operation with repo", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated Name" },
@@ -390,7 +400,7 @@ describe("GenericSyncHandler", () => {
 
     it("applies field mapping on update", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         updateFieldMapping: { name: "entity_name" },
       });
@@ -398,7 +408,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated" },
@@ -422,7 +432,7 @@ describe("GenericSyncHandler", () => {
       });
 
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         versionConflictField: "version",
       });
@@ -430,7 +440,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated", version: 3 }, // Client thinks it's version 3
@@ -452,7 +462,7 @@ describe("GenericSyncHandler", () => {
       });
 
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         versionConflictField: "version",
       });
@@ -460,7 +470,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated", version: 3 },
@@ -476,7 +486,7 @@ describe("GenericSyncHandler", () => {
     it("calls postUpdate hook after successful update", async () => {
       const postUpdate = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         postUpdate,
       });
@@ -484,7 +494,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated" },
@@ -500,7 +510,7 @@ describe("GenericSyncHandler", () => {
     it("uses customUpdate instead of repo.update when provided", async () => {
       const customUpdate = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         customUpdate,
       });
@@ -508,7 +518,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated" },
@@ -524,14 +534,14 @@ describe("GenericSyncHandler", () => {
   describe("execute - delete", () => {
     it("executes delete operation with repo", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: {},
@@ -547,14 +557,14 @@ describe("GenericSyncHandler", () => {
       (mockRepo.findById as any).mockResolvedValue(undefined);
 
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-nonexistent",
         operation: "delete",
         payload: {},
@@ -571,7 +581,7 @@ describe("GenericSyncHandler", () => {
 
       const findParent = vi.fn().mockResolvedValue(null);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         skipOnParentMissing: true,
         parentCheck: {
@@ -584,7 +594,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: { parentId: "parent-nonexistent" },
@@ -599,7 +609,7 @@ describe("GenericSyncHandler", () => {
     it("uses customDelete instead of repo.delete when provided", async () => {
       const customDelete = vi.fn().mockResolvedValue(undefined);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         customDelete,
       });
@@ -607,7 +617,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: {},
@@ -623,14 +633,14 @@ describe("GenericSyncHandler", () => {
   describe("schema validation failure", () => {
     it("returns failure when create payload fails schema validation", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: 123 }, // Should be string
@@ -645,14 +655,14 @@ describe("GenericSyncHandler", () => {
 
     it("returns failure when update payload fails schema validation", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
       });
       handler.setRepo(mockRepo);
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { email: "not-an-email" }, // Invalid email
@@ -669,7 +679,7 @@ describe("GenericSyncHandler", () => {
   describe("unsupported operation", () => {
     it("throws error for unsupported operation type", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         supportedOperations: ["create", "update"], // No delete
       });
@@ -677,7 +687,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: {},
@@ -693,7 +703,7 @@ describe("GenericSyncHandler", () => {
   describe("transaction required guard", () => {
     it("throws error when txRequired but no tx provided", async () => {
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         txRequired: true,
       });
@@ -701,7 +711,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -717,7 +727,7 @@ describe("GenericSyncHandler", () => {
     it("allows operation when txRequired and tx is provided", async () => {
       const mockTx = {};
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         txRequired: true,
       });
@@ -725,7 +735,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -746,7 +756,7 @@ describe("GenericSyncHandler", () => {
     it("validates multiple parents when additionalParentChecks provided", async () => {
       const findTag = vi.fn().mockResolvedValue(null);
       const handler = new GenericSyncHandler({
-        entityType: "test_entity",
+        entityType: "sales",
         schemas: { create: createSchema, update: updateSchema },
         parentCheck: {
           parentIdField: "customerId",
@@ -765,7 +775,7 @@ describe("GenericSyncHandler", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test", customerId: "cust-1", tagId: "tag-missing" },
@@ -783,13 +793,13 @@ describe("GenericSyncHandler", () => {
     it("creates handler with repo pre-configured", () => {
       const handler = GenericSyncHandler.createWithRepo(
         {
-          entityType: "test_entity",
+          entityType: "sales",
           schemas: { create: createSchema, update: updateSchema },
         },
         mockRepo
       );
 
-      expect(handler.entityType).toBe("test_entity");
+      expect(handler.entityType).toBe("sales");
     });
   });
 });

@@ -37,10 +37,6 @@
       "types": "./dist/codecs/index.d.ts",
       "import": "./dist/codecs/index.js"
     },
-    "./presets": {
-      "types": "./dist/presets/index.d.ts",
-      "import": "./dist/presets/index.js"
-    },
     "./client": {
       "types": "./dist/client/index.d.ts",
       "import": "./dist/client/index.js"

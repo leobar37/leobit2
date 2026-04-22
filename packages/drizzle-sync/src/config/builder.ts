@@ -12,6 +12,7 @@ export interface RuntimeSyncConfig<
   TEntities extends Record<string, EntitySyncConfig> = Record<string, EntitySyncConfig>
 > {
   entities: TEntities;
+  tenancy?: SyncConfig<TEntities>["tenancy"];
   options?: SyncConfig<TEntities>["options"];
 }
 
@@ -46,7 +47,7 @@ export class SyncConfigBuilder<
     }
 
     const graph = buildRelationGraph(this.input.entities);
-    return this._schemaManager.build(this.input.entities, graph);
+    return this._schemaManager.build(this.input.entities, graph, this.input.tenancy);
   }
 
   getSchema(): SyncSchema | undefined {
@@ -56,6 +57,7 @@ export class SyncConfigBuilder<
   getRuntimeConfig(): RuntimeSyncConfig<TEntities> {
     return {
       entities: this.input.entities,
+      tenancy: this.input.tenancy,
       options: this.input.options,
     };
   }

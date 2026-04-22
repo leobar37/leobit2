@@ -4,7 +4,7 @@ import { defineEntity } from '../config';
 import type { GenericSyncOperationInput } from '../server/types';
 
 describe('createSyncEngine', () => {
-  const mockContext = { businessId: 'biz-1', userId: 'user-1' };
+  const mockContext = { tenantId: 'biz-1', userId: 'user-1' };
 
   describe('basic creation', () => {
     it('creates sync engine with valid config', () => {

@@ -5,11 +5,17 @@ import { emptyStringToNull } from "../../codecs/empty-string-to-null";
 import type { FieldCodecMap } from "../../codecs/types";
 import { weight } from "../../codecs/weight";
 import { getTableName } from "drizzle-orm";
+import { camelCase } from "../../utils/string-utils";
 import { introspectTable, resolveColumns } from "../introspect";
 import type { SerializedEntity, SerializedFieldCodec } from "../schema-types";
 import type { ColumnMetadata, EntitySyncConfig } from "../types";
 
 export type GeneratorEntity = EntitySyncConfig | SerializedEntity;
+
+export interface GeneratorTenancyOptions {
+  tenantColumn?: string;
+  tenantField?: string;
+}
 
 export interface GeneratorEntityConfig {
   fields?: string[];
@@ -21,7 +27,11 @@ export interface GeneratorEntityConfig {
     parents?: Array<{ entity: string; foreignKey: string; payloadKey?: string; required?: boolean }>;
   };
   apiPath?: string;
-  fieldCodecs?: Record<string, { kind: string; isNullable?: boolean }>;
+  tenancy?: {
+    mode?: "required" | "none";
+    tenantColumn?: string;
+  };
+  fieldCodecs?: FieldCodecMap;
 }
 
 export function isSerializedEntity(entity: GeneratorEntity): entity is SerializedEntity {
@@ -37,6 +47,7 @@ export function getGeneratorConfig(entity: GeneratorEntity): GeneratorEntityConf
       metadata: entity.config.metadata,
       relations: entity.config.relations,
       apiPath: entity.config.apiPath,
+      tenancy: entity.config.tenancy,
       fieldCodecs: mapSerializedCodecs(entity.config.fieldCodecs),
     };
   }
@@ -48,6 +59,7 @@ export function getGeneratorConfig(entity: GeneratorEntity): GeneratorEntityConf
     metadata: entity.metadata,
     relations: entity.relations,
     apiPath: entity.apiPath,
+    tenancy: entity.tenancy,
     fieldCodecs: entity.fieldCodecs,
   };
 }
@@ -66,6 +78,35 @@ export function getColumnsToInclude(entity: GeneratorEntity): ColumnMetadata[] {
   return resolveColumns(columns, entity);
 }
 
+export function resolveTenantColumn(
+  entity: GeneratorEntity,
+  options?: GeneratorTenancyOptions
+): string {
+  const config = getGeneratorConfig(entity);
+  return config.tenancy?.tenantColumn ?? options?.tenantColumn ?? "tenant_id";
+}
+
+export function resolveTenantField(
+  entity: GeneratorEntity,
+  options?: GeneratorTenancyOptions
+): string {
+  const config = getGeneratorConfig(entity);
+  if (options?.tenantField) return options.tenantField;
+  return camelCase(resolveTenantColumn(entity, options));
+}
+
+export function isTenantScopedEntity(
+  entity: GeneratorEntity,
+  options?: GeneratorTenancyOptions
+): boolean {
+  const config = getGeneratorConfig(entity);
+  if (config.tenancy?.mode === "none") return false;
+  if (config.tenancy?.mode === "required") return true;
+
+  const tenantColumn = resolveTenantColumn(entity, options);
+  return getAllColumns(entity).some((col) => col.name === tenantColumn);
+}
+
 export function getAllColumns(entity: GeneratorEntity): ColumnMetadata[] {
   if (isSerializedEntity(entity)) {
     return entity.columns as ColumnMetadata[];
@@ -76,7 +117,7 @@ export function getAllColumns(entity: GeneratorEntity): ColumnMetadata[] {
 
 export function extractTableName(entityName: string, entity: GeneratorEntity): string {
   if (isSerializedEntity(entity)) {
-    return entity.tableName || entityName;
+    return entity.tableName || entity.entityType || entityName;
   }
 
   try {

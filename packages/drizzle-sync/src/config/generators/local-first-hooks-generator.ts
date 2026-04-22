@@ -13,52 +13,42 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
-import type { EntitySyncConfig } from "../../config/types";
+import type { EntitySyncConfig, SyncTenancyConfig } from "../../config/types";
 import type { ISyncQueue } from "../../core/interfaces";
 import type { EnqueueParams } from "../../core/types";
 import { introspectTable, resolveColumns, buildRelationGraph } from "../../config/introspect";
 
 // Columns that are auto-managed by the database or sync system
-const AUTO_COLUMNS = new Set([
-  "id",
-  "sync_status",
-  "sync_attempts",
-  "business_id",
-  "businessid",
-  "created_at",
-  "createdat",
-  "updated_at",
-  "updatedat",
-  "version",
-]);
-
-/**
- * Local-first hook factory interface
- * Takes PGlite and SyncQueue instances and returns entity-specific hooks
- */
-export interface LocalFirstHooks {
-  /** Create a new entity - writes to PGlite first, enqueues sync, returns optimistically */
-  create: (input: Record<string, unknown>, businessId: string) => Promise<{ id: string }>;
-  /** Update an existing entity */
-  update: (id: string, input: Record<string, unknown>, businessId: string) => Promise<{ id: string }>;
-  /** Delete an entity */
-  delete: (id: string, businessId: string) => Promise<void>;
+function getAutoColumns(tenantColumn: string): Set<string> {
+  return new Set([
+    "id",
+    "sync_status",
+    "sync_attempts",
+    tenantColumn,
+    tenantColumn.replace(/_/g, ""),
+    "created_at",
+    "createdat",
+    "updated_at",
+    "updatedat",
+    "version",
+  ]);
 }
 
-/**
- * Generated local-first hooks for a single entity
- */
+function getUserColumns(columns: ReturnType<typeof introspectTable>, tenantColumn: string = "tenant_id") {
+  const autoColumns = getAutoColumns(tenantColumn);
+  return columns.filter((col) => !autoColumns.has(col.name.toLowerCase()));
+}
+
+export interface LocalFirstHooks {
+  create: (input: Record<string, unknown>, tenantId: string) => Promise<{ id: string }>;
+  update: (id: string, input: Record<string, unknown>, tenantId: string) => Promise<{ id: string }>;
+  delete: (id: string, tenantId: string) => Promise<void>;
+}
+
 export interface LocalFirstHooksOutput {
   name: string;
   hooksCode: string;
   factoryCode: string;
-}
-
-/**
- * Get user-editable columns (excluding auto-managed columns)
- */
-function getUserColumns(columns: ReturnType<typeof introspectTable>) {
-  return columns.filter((col) => !AUTO_COLUMNS.has(col.name.toLowerCase()));
 }
 
 /**
@@ -90,12 +80,17 @@ function generateInsertSQL(
  */
 export function generateLocalFirstHooksFactory(
   entityName: string,
-  config: EntitySyncConfig
+  config: EntitySyncConfig,
+  tenancy?: SyncTenancyConfig
 ): LocalFirstHooksOutput {
   const columns = introspectTable(config.table);
   const columnsToInclude = resolveColumns(columns, config);
-  const userColumns = getUserColumns(columnsToInclude);
+  const tenantColumn = config.tenancy?.tenantColumn ?? tenancy?.tenantColumn ?? "tenant_id";
+  const userColumns = getUserColumns(columnsToInclude, tenantColumn);
   const tableName = getTableName(config.table);
+  const tenantScoped = config.tenancy?.mode === "none"
+    ? false
+    : columnsToInclude.some((col) => col.name === tenantColumn);
   const pascalName = pascalCase(entityName);
   const camelName = camelCase(entityName);
   const entityType = snakeCase(entityName);
@@ -128,12 +123,12 @@ export function create${pascalName}LocalHooks(
      * Create a new ${pascalName} entity
      * Writes to PGlite immediately and enqueues sync operation
      */
-    async create(input: Record<string, unknown>, businessId: string): Promise<{ id: string }> {
+    async create(input: Record<string, unknown>, tenantId: string): Promise<{ id: string }> {
       const id = crypto.randomUUID();
 
       // 1. Build parameter array from input
       const params = [
-        ${userColumns.map((col) => `input.${camelCase(col.name)}`).join(",\n        ")}
+        ${userColumns.map((col) => `input.${camelCase(col.name)}`).join(",\n        ")}${tenantScoped ? ",\n        tenantId" : ""}
       ];
 
       // 2. Insert into PGlite immediately (optimistic write)
@@ -155,7 +150,7 @@ export function create${pascalName}LocalHooks(
      * Update an existing ${pascalName} entity
      * Writes to PGlite immediately and enqueues sync operation
      */
-    async update(id: string, input: Record<string, unknown>, businessId: string): Promise<{ id: string }> {
+    async update(id: string, input: Record<string, unknown>, tenantId: string): Promise<{ id: string }> {
       // 1. Build SET clause for UPDATE
       const updates = [${userColumns
         .map((col, i) => `${snakeCase(col.name)} = $${i + 2}`)
@@ -163,8 +158,8 @@ export function create${pascalName}LocalHooks(
 
       // 2. Update in PGlite immediately (optimistic write)
       await pg.query(
-        \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND business_id = \${"$" + (userColumns.length + 2)}\`,
-        [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}, businessId]
+        \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = ${"$" + (userColumns.length + 2)}` : ""}\`,
+        [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}${tenantScoped ? ", tenantId" : ""}]
       );
 
       // 3. Enqueue sync operation for background sync
@@ -183,11 +178,11 @@ export function create${pascalName}LocalHooks(
      * Delete a ${pascalName} entity
      * Marks for deletion in PGlite and enqueues sync operation
      */
-    async delete(id: string, businessId: string): Promise<void> {
+    async delete(id: string, tenantId: string): Promise<void> {
       // 1. Mark as deleted in PGlite (soft delete via sync_status)
       await pg.query(
-        \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1 AND business_id = $2\`,
-        [id, businessId]
+        \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = $2` : ""}\`,
+        [id${tenantScoped ? ", tenantId" : ""}]
       );
 
       // 2. Enqueue sync operation for background sync
@@ -204,10 +199,10 @@ export function create${pascalName}LocalHooks(
 
   // Generate the hooks object initialization code (without imports)
   const hooksCode = `{
-  create: async (input, businessId) => {
+  create: async (input, tenantId) => {
     const id = crypto.randomUUID();
     const params = [
-      ${userColumns.map((col) => `input.${camelCase(col.name)}`).join(",\n      ")}
+      ${userColumns.map((col) => `input.${camelCase(col.name)}`).join(",\n      ")}${tenantScoped ? ",\n      tenantId" : ""}
     ];
     await pg.query(\`\${insertSQL}\`, params);
     await syncService.enqueue({
@@ -219,13 +214,13 @@ export function create${pascalName}LocalHooks(
     });
     return { id };
   },
-  update: async (id, input, businessId) => {
+  update: async (id, input, tenantId) => {
     const updates = [${userColumns
       .map((col, i) => `${snakeCase(col.name)} = $${i + 2}`)
       .join(", ")}];
     await pg.query(
-      \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND business_id = \${"$" + (userColumns.length + 2)}\`,
-      [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}, businessId]
+      \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = ${"$" + (userColumns.length + 2)}` : ""}\`,
+      [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}${tenantScoped ? ", tenantId" : ""}]
     );
     await syncService.enqueue({
       entity_type: "${entityType}",
@@ -236,10 +231,10 @@ export function create${pascalName}LocalHooks(
     });
     return { id };
   },
-  delete: async (id, businessId) => {
+  delete: async (id, tenantId) => {
     await pg.query(
-      \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1 AND business_id = $2\`,
-      [id, businessId]
+      \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = $2` : ""}\`,
+      [id${tenantScoped ? ", tenantId" : ""}]
     );
     await syncService.enqueue({
       entity_type: "${entityType}",
@@ -265,7 +260,8 @@ export function create${pascalName}LocalHooks(
 export function generateLocalFirstHooksWithChildren(
   entityName: string,
   config: EntitySyncConfig,
-  allEntities: Record<string, EntitySyncConfig>
+  allEntities: Record<string, EntitySyncConfig>,
+  tenancy?: SyncTenancyConfig
 ): LocalFirstHooksOutput {
   const graph = buildRelationGraph(allEntities);
   const children = graph[entityName]?.children || [];
@@ -273,13 +269,17 @@ export function generateLocalFirstHooksWithChildren(
 
   // If no children, generate simple hooks
   if (children.length === 0) {
-    return generateLocalFirstHooksFactory(entityName, config);
+    return generateLocalFirstHooksFactory(entityName, config, tenancy);
   }
 
   const columns = introspectTable(config.table);
   const columnsToInclude = resolveColumns(columns, config);
-  const userColumns = getUserColumns(columnsToInclude);
+  const tenantColumn = config.tenancy?.tenantColumn ?? tenancy?.tenantColumn ?? "tenant_id";
+  const userColumns = getUserColumns(columnsToInclude, tenantColumn);
   const tableName = getTableName(config.table);
+  const tenantScoped = config.tenancy?.mode === "none"
+    ? false
+    : columnsToInclude.some((col) => col.name === tenantColumn);
   const entityType = snakeCase(entityName);
 
   // Generate INSERT SQL
@@ -339,7 +339,7 @@ export function create${pascalName}LocalHooks(
      * Create a new ${pascalName} entity with children
      * Writes to PGlite immediately and enqueues sync operation for parent and all children
      */
-    async create(input: Record<string, unknown> & { ${children.map((c) => `${c}?: Record<string, unknown>[]`).join("; ")} }, businessId: string): Promise<{ id: string }> {
+    async create(input: Record<string, unknown> & { ${children.map((c) => `${c}?: Record<string, unknown>[]`).join("; ")} }, tenantId: string): Promise<{ id: string }> {
       const parentId = crypto.randomUUID();
 
       // 1. Extract and build parent params
@@ -366,14 +366,14 @@ export function create${pascalName}LocalHooks(
     /**
      * Update an existing ${pascalName} entity
      */
-    async update(id: string, input: Record<string, unknown>, businessId: string): Promise<{ id: string }> {
+    async update(id: string, input: Record<string, unknown>, tenantId: string): Promise<{ id: string }> {
       const updates = [${userColumns
         .map((col, i) => `${snakeCase(col.name)} = $${i + 2}`)
         .join(", ")}];
 
       await pg.query(
-        \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND business_id = \${"$" + (userColumns.length + 2)}\`,
-        [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}, businessId]
+        \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = ${"$" + (userColumns.length + 2)}` : ""}\`,
+        [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}${tenantScoped ? ", tenantId" : ""}]
       );
 
       await syncService.enqueue({
@@ -390,10 +390,10 @@ export function create${pascalName}LocalHooks(
     /**
      * Delete a ${pascalName} entity
      */
-    async delete(id: string, businessId: string): Promise<void> {
+    async delete(id: string, tenantId: string): Promise<void> {
       await pg.query(
-        \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1 AND business_id = $2\`,
-        [id, businessId]
+        \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = $2` : ""}\`,
+        [id${tenantScoped ? ", tenantId" : ""}]
       );
 
       await syncService.enqueue({
@@ -418,7 +418,8 @@ export function create${pascalName}LocalHooks(
  * Generate all local-first hooks factories for a sync config
  */
 export function generateAllLocalFirstHooks(
-  entities: Record<string, EntitySyncConfig>
+  entities: Record<string, EntitySyncConfig>,
+  tenancy?: SyncTenancyConfig
 ): Map<string, LocalFirstHooksOutput> {
   const result = new Map<string, LocalFirstHooksOutput>();
   const graph = buildRelationGraph(entities);
@@ -432,8 +433,8 @@ export function generateAllLocalFirstHooks(
     const hasChildren = (graph[entityName]?.children?.length ?? 0) > 0;
 
     const output = hasChildren
-      ? generateLocalFirstHooksWithChildren(entityName, config, entities)
-      : generateLocalFirstHooksFactory(entityName, config);
+      ? generateLocalFirstHooksWithChildren(entityName, config, entities, tenancy)
+      : generateLocalFirstHooksFactory(entityName, config, tenancy);
 
     result.set(entityName, output);
   }

@@ -1,39 +1,48 @@
 import { camelCase, pascalCase, snakeCase } from "../../utils/string-utils";
 import type { ColumnMetadata } from "../../config/types";
 import type { FieldCodecMap } from "../../codecs/types";
-import { getAllColumns, getColumnsToInclude, getGeneratorConfig, type GeneratorEntity } from "./schema-adapter";
+import {
+  getAllColumns,
+  getColumnsToInclude,
+  getGeneratorConfig,
+  isTenantScopedEntity,
+  resolveTenantField,
+  type GeneratorEntity,
+  type GeneratorTenancyOptions,
+} from "./schema-adapter";
 
 export interface ServiceOutput {
   name: string;
   serviceCode: string;
 }
 
-// Columns that are auto-managed and should not appear in user input interfaces
-const AUTO_MANAGED_COLUMNS = new Set([
-  "id",
-  "sync_status",
-  "sync_status",
-  "sync_attempts",
-  "business_id",
-  "businessid",
-  "created_at",
-  "createdat",
-  "updated_at",
-  "updatedat",
-  "version",
-]);
+function getAutoManagedColumns(tenantColumn: string): Set<string> {
+  return new Set([
+    "id",
+    "sync_status",
+    "sync_attempts",
+    tenantColumn,
+    tenantColumn.replace(/_/g, ""),
+    "created_at",
+    "createdat",
+    "updated_at",
+    "updatedat",
+    "version",
+  ]);
+}
 
-// System columns that are auto-injected by the sync system
-const SYSTEM_COLUMNS = new Set([
-  "sync_status",
-  "sync_attempts",
-  "business_id",
-  "businessid",
-  "created_at",
-  "createdat",
-  "updated_at",
-  "updatedat",
-]);
+function getSystemColumns(tenantColumn: string): Set<string> {
+  return new Set([
+    "sync_status",
+    "sync_attempts",
+    tenantColumn,
+    tenantColumn.replace(/_/g, ""),
+    "created_at",
+    "createdat",
+    "updated_at",
+    "updatedat",
+  ]);
+}
 
 /**
  * Check if a table has an 'id' column (as opposed to composite primary key)
@@ -63,7 +72,8 @@ function isJunctionTable(columns: ColumnMetadata[], metadata?: Record<string, un
  */
 export function generateService(
   entityName: string,
-  entity: GeneratorEntity
+  entity: GeneratorEntity,
+  tenancy?: GeneratorTenancyOptions
 ): ServiceOutput {
   const columns = getAllColumns(entity);
   const columnsToInclude = getColumnsToInclude(entity);
@@ -72,10 +82,14 @@ export function generateService(
   // Check if this is a junction table (no 'id' column, composite primary key)
   // Or explicitly marked via metadata.isJunctionTable
   const junctionTable = isJunctionTable(columns, config.metadata);
+  const tenantScoped = isTenantScopedEntity(entity, tenancy);
+  const tenantField = resolveTenantField(entity, tenancy);
+  const tenantColumn = tenancy?.tenantColumn ?? "tenant_id";
+  const autoManagedColumns = getAutoManagedColumns(tenantColumn);
 
   // Filter out auto-managed columns for input interfaces
   const userColumns = columnsToInclude.filter(
-    (col) => !AUTO_MANAGED_COLUMNS.has(col.name.toLowerCase())
+    (col) => !autoManagedColumns.has(col.name.toLowerCase())
   );
 
   // Get required vs optional fields for CreateInput
@@ -158,10 +172,10 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    businessId: string,
-    businessUserId: string
+    tenantId: string,
+    userId: string
   ) {
-    super(pg, db, syncService, businessId, businessUserId);
+    super(pg, db, syncService, tenantId, userId);
   }
 
   getEntityType(): EntityType {
@@ -173,13 +187,12 @@ export class ${pascalCase(entityName)}Service extends BaseService {
   }${findByIdMethod}
 
   /**
-   * Find all ${entityName} for the current business
-   * Junction tables don't have businessId, so return all records
+   * List ${entityName} records in current tenant scope
    */
-  async findByBusiness(): Promise<typeof ${tableRef}.$inferSelect[]> {
+  async list(): Promise<typeof ${tableRef}.$inferSelect[]> {
     return this.db
       .select()
-      .from(${tableRef})${junctionTable ? "" : `.where(eq(${tableRef}.businessId, this.businessId))`}${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
+      .from(${tableRef})${tenantScoped ? `.where(eq(${tableRef}.${tenantField}, this.tenantId))` : ""}${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
   }
 
   /**
@@ -193,7 +206,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     const entity: typeof ${tableRef}.$inferInsert = {
 ${junctionTable ? generateInsertFieldsJunction(userColumns, config.fieldCodecs) : `      id,\n${generateInsertFields(userColumns, config.fieldCodecs)}`}
       syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,${junctionTable ? "" : `\n      businessId: this.businessId,`}
+      syncAttempts: 0,${tenantScoped ? `\n      ${tenantField}: this.tenantId,` : ""}
 ${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
     };
 

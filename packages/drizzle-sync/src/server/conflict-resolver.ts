@@ -23,7 +23,7 @@ export abstract class BaseVersionConflictResolver<
   protected abstract getEntityName(): string;
   protected abstract getTable(): TTable;
   protected abstract getIdField(): string;
-  protected abstract getBusinessIdField(): string;
+  protected abstract getTenantIdField(): string;
   protected abstract getVersionField(): string;
   protected abstract getServerDataFields(record: unknown): Record<string, unknown>;
 
@@ -31,7 +31,7 @@ export abstract class BaseVersionConflictResolver<
     return null;
   }
 
-  protected abstract getBusinessIdFromContext(ctx: TRequestContext): string;
+  protected abstract getTenantIdFromContext(ctx: TRequestContext): string;
 
   protected abstract executeQuery(
     tx: TTransaction,
@@ -50,7 +50,7 @@ export abstract class BaseVersionConflictResolver<
 
     const table = this.getTable() as Record<string, unknown>;
     const idField = this.getIdField();
-    const businessIdField = this.getBusinessIdField();
+    const tenantIdField = this.getTenantIdField();
     const versionField = this.getVersionField();
 
     const queryName = this.getQueryRelationName() ?? getTableName(table as unknown as Parameters<typeof getTableName>[0]);
@@ -60,7 +60,7 @@ export abstract class BaseVersionConflictResolver<
       queryName,
       and(
         eq(table[idField] as Parameters<typeof eq>[0], operation.entityId),
-        eq(table[businessIdField] as Parameters<typeof eq>[0], this.getBusinessIdFromContext(ctx))
+        eq(table[tenantIdField] as Parameters<typeof eq>[0], this.getTenantIdFromContext(ctx))
       )
     );
 

@@ -1,6 +1,6 @@
 import { uploadFile } from "~/lib/api-client";
-import { getDatabase } from "~/engine";
-import { abonos } from "~/engine/schema";
+import { getDatabase } from "@avileo/drizzle-sync/client";
+import { abonos } from "@avileo/shared";
 import { eq, sql } from "drizzle-orm";
 import {
   getUploadsReadyForRetry,

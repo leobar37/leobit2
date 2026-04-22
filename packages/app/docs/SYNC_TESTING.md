@@ -24,7 +24,7 @@
 ### Verificación:
 ```javascript
 // En DevTools Console:
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { db } = getDatabase();
 const result = await db.execute("SELECT * FROM customers WHERE name = 'Test Offline'");
 console.log(result.rows[0].sync_status); // Debe ser 'pending'
@@ -38,7 +38,7 @@ console.log(result.rows[0].sync_status); // Debe ser 'pending'
 1. Mantener offline del Test 1
 2. Verificar que hay operaciones pendientes:
    ```javascript
-   const { getDatabase } = await import("~/engine");
+   const { getDatabase } = await import("@avileo/drizzle-sync/client");
    const { db } = getDatabase();
    const result = await db.execute("SELECT COUNT(*) FROM sync_operations WHERE status = 'pending'");
    console.log(result.rows[0].count); // Debe ser >= 1
@@ -81,7 +81,7 @@ bun -e "const { db } = require('./src/lib/db'); db.select().from(require('./src/
 ### Verificación:
 ```javascript
 // Verificar que hay conflicto registrado
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { db } = getDatabase();
 const result = await db.execute("SELECT * FROM sync_operations WHERE status = 'conflict'");
 console.log(result.rows);
@@ -105,7 +105,7 @@ console.log(result.rows);
 ### Verificación:
 ```javascript
 // Verificar grupo de sync
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { db } = getDatabase();
 const result = await db.execute(`
   SELECT sync_group_id, entity_type, status 
@@ -138,7 +138,7 @@ console.log(result.rows);
 ### Verificación:
 ```javascript
 // Verificar intentos
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { db } = getDatabase();
 const result = await db.execute(`
   SELECT id, attempts, last_error, status
@@ -194,7 +194,7 @@ console.log(result.rows);
 
 ### Ver estado de sync en PGlite:
 ```javascript
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { db } = getDatabase();
 
 // Contar por estado
@@ -208,7 +208,7 @@ console.table(result.rows);
 
 ### Forzar sincronización manual:
 ```javascript
-const { getDatabase } = await import("~/engine");
+const { getDatabase } = await import("@avileo/drizzle-sync/client");
 const { pg } = getDatabase();
 const { SyncService } = await import("~/lib/sync/sync-service");
 

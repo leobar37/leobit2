@@ -1,4 +1,4 @@
-import type { ColumnMetadata, EntitySyncConfig } from "../../config/types";
+import type { ColumnMetadata, EntitySyncConfig, SyncTenancyConfig } from "../../config/types";
 import { introspectTable, resolveColumns } from "../../config/introspect";
 
 export interface DDLOutput {
@@ -7,7 +7,11 @@ export interface DDLOutput {
   indexes: string[];
 }
 
-export function generateDDL(entityName: string, config: EntitySyncConfig): DDLOutput {
+export function generateDDL(
+  entityName: string,
+  config: EntitySyncConfig,
+  tenancy?: SyncTenancyConfig
+): DDLOutput {
   const tableName = entityName;
   const columns = introspectTable(config.table);
   const columnsToInclude = resolveColumns(columns, config);
@@ -34,7 +38,8 @@ export function generateDDL(entityName: string, config: EntitySyncConfig): DDLOu
 
   const createTable = `CREATE TABLE IF NOT EXISTS "${tableName}" (\n${columnDefs.join(",\n")}\n);`;
 
-  const indexes = generateIndexes(tableName, columnsToInclude);
+  const tenantColumn = config.tenancy?.tenantColumn ?? tenancy?.tenantColumn ?? "tenant_id";
+  const indexes = generateIndexes(tableName, columnsToInclude, tenantColumn);
 
   return {
     tableName,
@@ -80,13 +85,13 @@ function formatSQLiteDefault(value: unknown, dataType: ColumnMetadata["dataType"
   return "NULL";
 }
 
-function generateIndexes(tableName: string, columns: ColumnMetadata[]): string[] {
+function generateIndexes(tableName: string, columns: ColumnMetadata[], tenantColumn: string): string[] {
   const indexes: string[] = [];
 
   indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_sync_status" ON "${tableName}"(sync_status);`);
 
-  if (columns.find((c) => c.name === "business_id")) {
-    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_business_id" ON "${tableName}"(business_id);`);
+  if (columns.find((c) => c.name === tenantColumn)) {
+    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_${tenantColumn}" ON "${tableName}"(${tenantColumn});`);
   }
 
   const fkColumns = columns.filter((c) => c.name.endsWith("_id") && !c.primary);

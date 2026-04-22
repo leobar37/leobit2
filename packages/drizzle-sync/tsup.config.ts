@@ -96,16 +96,6 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
   },
-  // Presets submodule
-  {
-    entry: ["src/presets/index.ts"],
-    format: ["esm"],
-    dts: true,
-    outDir: "dist/presets",
-    clean: false,
-    splitting: false,
-    treeshake: true,
-  },
   // Codecs submodule
   {
     entry: ["src/codecs/index.ts"],
@@ -136,5 +126,16 @@ export default defineConfig([
     splitting: false,
     treeshake: true,
     external: ["@electric-sql/pglite", "drizzle-orm", "drizzle-orm/pglite", "react", "react/jsx-runtime"],
+  },
+  // Client worker entry (consumed via new URL from database-init)
+  {
+    entry: ["src/client/pglite.worker.ts"],
+    format: ["esm"],
+    dts: false,
+    outDir: "dist/client",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+    external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
   },
 ]);

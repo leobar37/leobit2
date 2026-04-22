@@ -10,7 +10,7 @@ import type { EntitySyncConfig } from "./types";
 
 const customersTable = pgTable("customers_test_schema_manager", {
   id: uuid("id").primaryKey(),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
 });
 

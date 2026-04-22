@@ -3,7 +3,6 @@
  * Implements ISyncQueue using SqlExecutor and repository pattern
  */
 
-import type { PGlite } from "@electric-sql/pglite";
 import type { SyncClientEngineContext } from "../client/types";
 import type { ISyncQueue, SyncOperationRecord, SyncStatus, EnqueueParams, DeadLetterOperationRecord } from "../core";
 import type { ISyncLogger } from "../core";
@@ -22,40 +21,15 @@ export class PgSyncQueue implements ISyncQueue {
   constructor(
     context: SyncClientEngineContext,
     options?: QueueOptions
-  );
-  constructor(
-    pg: PGlite,
-    businessId: string,
-    options?: QueueOptions
-  );
-  constructor(
-    contextOrPg: SyncClientEngineContext | PGlite,
-    businessIdOrOptions?: string | QueueOptions,
-    options?: QueueOptions
   ) {
-    let ctx: SyncClientEngineContext;
-    let opts: QueueOptions | undefined;
-
-    if (typeof businessIdOrOptions === 'string') {
-      // Legacy API: (pg, businessId, options?)
-      ctx = {
-        pg: contextOrPg as PGlite,
-        businessId: businessIdOrOptions,
-        db: undefined as any,
-        businessUserId: '',
-        syncService: {} as any,
-      } as SyncClientEngineContext;
-      opts = options;
-    } else {
-      // New API: (context, options?)
-      ctx = contextOrPg as SyncClientEngineContext;
-      opts = businessIdOrOptions as QueueOptions | undefined;
-    }
+    const ctx = context;
+    const opts = options;
 
     this.context = ctx;
     this.repository = new QueueRepository(
       createSqlExecutor(ctx),
-      ctx.businessId
+      ctx.tenantId,
+      ctx.tenantColumn
     );
     this.logger = opts?.logger;
   }
@@ -64,7 +38,8 @@ export class PgSyncQueue implements ISyncQueue {
     const id = crypto.randomUUID();
     const operation: SyncOperationRecord = {
       id,
-      business_id: this.context.businessId,
+      tenant_id: this.context.tenantId,
+      [this.context.tenantColumn]: this.context.tenantId,
       entity_type: params.entity_type,
       operation: params.operation,
       entity_id: params.entityId,

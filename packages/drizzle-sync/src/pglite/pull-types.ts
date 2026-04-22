@@ -6,10 +6,12 @@ import type { ISyncLogger } from "../core";
 import type { ISyncMutex } from "./sync-mutex";
 import type { ChangeApplier } from "./change-applier";
 import type { SyncClientEngineContext } from "../client/types";
+import type { ChangeApplierConfig } from "./schema-mapper";
 
 export interface PullServiceOptions {
   httpClient: PullHttpClient;
   applier?: ChangeApplier;
+  applierConfig?: ChangeApplierConfig;
   cursorStorage?: CursorStorage;
   mutex?: ISyncMutex;
   logger?: ISyncLogger;
@@ -18,7 +20,7 @@ export interface PullServiceOptions {
 
 export interface PullHttpClient {
   getChanges(params: {
-    businessId: string;
+    tenantId: string;
     since?: string;
     entityTypes?: string[];
     limit?: number;

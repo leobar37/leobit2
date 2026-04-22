@@ -1,4 +1,4 @@
-import { getDatabase } from "~/engine";
+import { getDatabase } from "@avileo/drizzle-sync/client";
 import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
 
 export async function runManualSync(options?: { actualOnline?: boolean }) {

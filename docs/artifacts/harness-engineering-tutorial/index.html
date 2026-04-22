@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harness Engineering - Tutorial Visual Completo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- Hero Section -->
+  <header class="bg-gradient-to-br from-slate-900 via-purple-950/30 to-slate-900 border-b border-slate-800">
+    <div class="max-w-5xl mx-auto px-6 py-16 text-center">
+      <div class="inline-flex items-center gap-2 bg-purple-500/10 text-purple-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        AI Agents & Trust
+      </div>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-4">
+        <span class="gradient-text">Harness Engineering</span>
+      </h1>
+      <p class="text-xl text-slate-400 max-w-2xl mx-auto">
+        Cómo construir confianza en código generado por IA. Un marco mental para separar lo que controlamos de lo que no.
+      </p>
+      <p class="text-sm text-slate-500 mt-4">Birgitta Böckeler & Martin Fowler · Abril 2026</p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- El Problema -->
+    <section>
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+          <span class="bg-red-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+          El Problema: Confianza en IA
+        </h2>
+
+        <div class="bg-red-950/20 border border-red-900/50 rounded-xl p-6 mb-6">
+          <p class="text-slate-300 leading-relaxed">
+            Los modelos de IA son <strong class="text-red-400">no determinísticos</strong>, no conocen nuestro contexto, y no entienden realmente el código — piensan en <strong class="text-red-400">tokens</strong>. ¿Cómo podemos confiar en lo que producen?
+          </p>
+        </div>
+
+        <!-- Analogia del Puente -->
+        <div class="bg-gradient-to-r from-amber-950/30 to-orange-950/30 border border-amber-900/50 rounded-xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="text-5xl">🌉</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">Analogía: El Puente Peatonal</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Imagina un puente peatonal de cristal sobre un cañón. El vidrio es seguro el 99% de las veces... pero ese 1% te mata. ¿Caminarías sin mirar?
+              </p>
+              <p class="text-amber-400 text-sm mt-3 font-medium">
+                → El código de IA es como el puente: probablemente funciona, pero necesitamos "arneses" (harnesses) por si algo sale mal.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Qué es un Harness -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+        ¿Qué es un Harness? (Arnés)
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <!-- Definicion -->
+        <div class="mb-8">
+          <p class="text-lg text-slate-300 leading-relaxed">
+            <strong class="text-purple-400">Harness</strong> = Todo en un agente de IA <em>excepto</em> el modelo itself.
+          </p>
+          <p class="text-slate-400 mt-2">
+            En ingeniería, un "harness" conecta algo con algo más — como el arnés de un paracaídas. Nos permite <strong>controlar</strong> sin detener.
+          </p>
+        </div>
+
+        <!-- Diagrama de circulos concéntricos -->
+        <div class="flex justify-center mb-8">
+          <svg viewBox="0 0 400 300" class="w-full max-w-md">
+            <!-- Outer circle - User Harness -->
+            <circle cx="200" cy="150" r="140" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="8,4"/>
+            <text x="200" y="40" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600">USER HARNESS</text>
+            <text x="200" y="55" text-anchor="middle" fill="#a78bfa" font-size="9">(El que construimos nosotros)</text>
+
+            <!-- Middle circle - Builder Harness -->
+            <circle cx="200" cy="150" r="95" fill="none" stroke="#6366f1" stroke-width="3"/>
+            <text x="200" y="75" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="500">BUILDER HARNESS</text>
+            <text x="200" y="88" text-anchor="middle" fill="#818cf8" font-size="9">(Claude Code, Cursor, etc.)</text>
+
+            <!-- Inner circle - Model -->
+            <circle cx="200" cy="150" r="50" fill="#4f46e5" fill-opacity="0.3" stroke="#4f46e5" stroke-width="2"/>
+            <text x="200" y="145" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="600">MODEL</text>
+            <text x="200" y="162" text-anchor="middle" fill="#a5b4fc" font-size="9">(GPT, Claude, etc.)</text>
+
+            <!-- Labels -->
+            <text x="320" y="130" fill="#c7d2fe" font-size="10">No controlable</text>
+            <text x="320" y="145" fill="#a78bfa" font-size="10">↓</text>
+            <text x="320" y="160" fill="#8b5cf6" font-size="10">Controlable</text>
+          </svg>
+        </div>
+
+        <!-- La formula -->
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="text-center">
+            <span class="text-slate-400 text-sm uppercase tracking-wider">La Fórmula</span>
+            <div class="mt-2 mono text-2xl">
+              <span class="text-purple-400">Agent</span> <span class="text-slate-500">=</span>
+              <span class="text-blue-400">Model</span> <span class="text-slate-500">+</span>
+              <span class="text-orange-400">Harness</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Los Dos Pilares -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+        Los Dos Pilares: Guides y Sensors
+      </h2>
+
+      <div class="grid md:grid-cols-2 gap-6">
+
+        <!-- Guides -->
+        <div class="bg-gradient-to-b from-blue-950/50 to-slate-900 border border-blue-900/50 rounded-2xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-blue-400">Guides</h3>
+              <p class="text-slate-400 text-sm">Feedforward Controls · Antes de actuar</p>
+            </div>
+          </div>
+
+          <div class="bg-blue-950/30 rounded-lg p-4 mb-4">
+            <p class="text-slate-300 text-sm">
+              <strong>Anticipan</strong> el comportamiento del agent y buscan <strong>guiarlo antes</strong> de que actúe.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              AGENTS.md (convenciones)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Skills (instrucciones de bootstrap)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              MCP servers (conocimiento del equipo)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              System prompts
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensors -->
+        <div class="bg-gradient-to-b from-green-950/50 to-slate-900 border border-green-900/50 rounded-2xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-green-400">Sensors</h3>
+              <p class="text-slate-400 text-sm">Feedback Controls · Después de actuar</p>
+            </div>
+          </div>
+
+          <div class="bg-green-950/30 rounded-lg p-4 mb-4">
+            <p class="text-slate-300 text-sm">
+              <strong>Observan</strong> después de que el agent actúa y ayudan a <strong>auto-corregirse</strong>.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Linters (ESLint, Prettier)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Tests (unit, integration)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Mutation testing
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              AI code review
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analogia GPS + Espejo -->
+      <div class="mt-6 bg-amber-950/20 border border-amber-900/50 rounded-xl p-6">
+        <h3 class="font-bold mb-3 flex items-center gap-2">
+          <span class="text-2xl">🚗💡</span>
+          Analogía: Conducir un Auto
+        </h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="bg-slate-800/50 rounded-lg p-4">
+            <p class="text-amber-400 font-medium mb-2">Guide = GPS</p>
+            <p class="text-slate-400 text-sm">
+              Te dice la ruta <strong>antes</strong> de que tomes una decisión mala. "Gira a la derecha en 500m" — anticipa.
+            </p>
+          </div>
+          <div class="bg-slate-800/50 rounded-lg p-4">
+            <p class="text-green-400 font-medium mb-2">Sensor = Espejos</p>
+            <p class="text-slate-400 text-sm">
+              Te muestran cuando te <strong>desviaste</strong> después de que ya ibas mal. "Te estás saliendo del carril" — corrige.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Computational vs Inferential -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+        Dos Tipos de Ejecución
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <p class="text-slate-400 mb-6 text-center">
+          Los guides y sensors pueden ejecutarse de dos formas diferentes:
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+
+          <!-- Computational -->
+          <div class="bg-gradient-to-b from-cyan-950/50 to-slate-900 border border-cyan-900/50 rounded-xl p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xl">⚡</div>
+              <div>
+                <h3 class="font-bold text-lg text-cyan-400">Computational</h3>
+                <p class="text-slate-400 text-sm">Determinístico y rápido</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Velocidad</span>
+                <span class="text-cyan-400 font-medium">ms - segundos</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Confiabilidad</span>
+                <span class="text-green-400 font-medium">100% determinístico</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Costo</span>
+                <span class="text-green-400 font-medium">Barato</span>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-cyan-900/50">
+              <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Ejemplos</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="bg-cyan-500/10 text-cyan-300 px-2 py-1 rounded text-xs">Type checkers</span>
+                <span class="bg-cyan-500/10 text-cyan-300 px-2 py-1 rounded text-xs">Linters</span>
+                <span class="bg-cyan-500/10 text-cyan-300 px-2 py-1 rounded text-xs">Unit tests</span>
+                <span class="bg-cyan-500/10 text-cyan-300 px-2 py-1 rounded text-xs">ArchUnit</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inferential -->
+          <div class="bg-gradient-to-b from-purple-950/50 to-slate-900 border border-purple-900/50 rounded-xl p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center text-xl">🧠</div>
+              <div>
+                <h3 class="font-bold text-lg text-purple-400">Inferential</h3>
+                <p class="text-slate-400 text-sm">Semántico y probabilístico</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Velocidad</span>
+                <span class="text-purple-400 font-medium">segundos - minutos</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Confiabilidad</span>
+                <span class="text-amber-400 font-medium">Probabilística</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-300">Costo</span>
+                <span class="text-amber-400 font-medium">GPU = caro</span>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-purple-900/50">
+              <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Ejemplos</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="bg-purple-500/10 text-purple-300 px-2 py-1 rounded text-xs">AI code review</span>
+                <span class="bg-purple-500/10 text-purple-300 px-2 py-1 rounded text-xs">LLM as judge</span>
+                <span class="bg-purple-500/10 text-purple-300 px-2 py-1 rounded text-xs">Semantic analysis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recomendacion -->
+        <div class="mt-6 bg-green-950/20 border border-green-900/50 rounded-xl p-4">
+          <p class="text-green-300 text-sm font-medium text-center">
+            💡 Usa <strong>Computational</strong> siempre que sea posible — es más barato y confiable.
+            <br><span class="text-slate-400 font-normal">Usa <strong>Inferential</strong> solo cuando necesitas juicio semántico.</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Steering Loop -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">5</span>
+        The Steering Loop (Ciclo de Dirección)
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="mb-6">
+          <p class="text-slate-300 leading-relaxed">
+            El trabajo del humano es <strong class="text-purple-400">dirigir</strong> (steer) el agent iterando sobre el harness.
+            <em>No es programar con el agent — es programar el harness.</em>
+          </p>
+        </div>
+
+        <!-- Diagrama del steering loop -->
+        <div class="flex justify-center mb-8">
+          <svg viewBox="0 0 500 200" class="w-full max-w-lg">
+            <!-- Issue box -->
+            <rect x="175" y="10" width="150" height="50" rx="8" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2"/>
+            <text x="250" y="40" text-anchor="middle" fill="#fca5a5" font-size="12" font-weight="600">Issue detectado</text>
+
+            <!-- Arrow down -->
+            <path d="M250 60 L250 80" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+            <!-- Improve harness box -->
+            <rect x="150" y="85" width="200" height="50" rx="8" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2"/>
+            <text x="250" y="105" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="500">Mejora el Harness</text>
+            <text x="250" y="120" text-anchor="middle" fill="#a78bfa" font-size="9">(El agent puede ayudarte)</text>
+
+            <!-- Arrow down -->
+            <path d="M250 135 L250 155" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+            <!-- Less issues box -->
+            <rect x="150" y="160" width="200" height="40" rx="8" fill="#22c55e" fill-opacity="0.2" stroke="#22c55e" stroke-width="2"/>
+            <text x="250" y="185" text-anchor="middle" fill="#86efac" font-size="11" font-weight="500">Menos issues probables</text>
+
+            <!-- Arrow that loops -->
+            <path d="M 100 180 Q 50 180 50 100 Q 50 20 175 20" stroke="#8b5cf6" stroke-width="2" fill="none" stroke-dasharray="6,4"/>
+            <text x="30" y="100" fill="#a78bfa" font-size="9" writing-mode="vertical-rl">Iteración</text>
+
+            <!-- Arrowhead definition -->
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+
+        <!-- Concepto clave -->
+        <div class="bg-purple-950/30 border border-purple-900/50 rounded-xl p-5">
+          <h3 class="font-bold text-purple-300 mb-2">💡 Concepto Clave</h3>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            El agent no es tu programador. Es tu <strong>pair</strong> que te ayuda a construir las herramientas que te dan confianza en el agent.
+            <br><br>
+            <span class="text-slate-400">Ejemplo: Un agent puede ayudarte a escribir tests estructurales, generar reglas de un patrón observado, o crear linters custom.</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Keep Quality Left -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">6</span>
+        Keep Quality Left
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="bg-blue-950/30 border border-blue-900/50 rounded-xl p-5 mb-6">
+          <p class="text-blue-300 font-medium">
+            "Checks as far <strong>left</strong> in the path to production as possible — the earlier you find issues, the cheaper they are to fix."
+          </p>
+        </div>
+
+        <!-- Pipeline visual -->
+        <div class="overflow-x-auto">
+          <div class="flex items-center justify-center min-w-max gap-4 mb-6">
+            <!-- Before Commit -->
+            <div class="bg-slate-800/70 border border-slate-700/50 rounded-xl p-4 w-48">
+              <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Before Commit</div>
+              <div class="space-y-2 text-xs text-slate-300">
+                <div class="flex items-center gap-1">
+                  <span class="text-blue-400">●</span> LSP
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-blue-400">●</span> AGENTS.md
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-blue-400">●</span> /how-to skill
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-blue-400">●</span> MCP server
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700">
+                <span class="text-green-400 text-xs font-medium">⚡ Fast</span>
+              </div>
+            </div>
+
+            <!-- Arrow -->
+            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+
+            <!-- Post-Integration -->
+            <div class="bg-slate-800/70 border border-slate-700/50 rounded-xl p-4 w-48">
+              <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Post-Integration</div>
+              <div class="space-y-2 text-xs text-slate-300">
+                <div class="flex items-center gap-1">
+                  <span class="text-purple-400">●</span> Fast tests
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-purple-400">●</span> /code-review
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-purple-400">●</span> semgrep
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-purple-400">●</span> coverage
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700">
+                <span class="text-amber-400 text-xs font-medium">⏱ Medium</span>
+              </div>
+            </div>
+
+            <!-- Arrow -->
+            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+
+            <!-- Pipeline -->
+            <div class="bg-slate-800/70 border border-slate-700/50 rounded-xl p-4 w-48">
+              <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Pipeline</div>
+              <div class="space-y-2 text-xs text-slate-300">
+                <div class="flex items-center gap-1">
+                  <span class="text-red-400">●</span> Mutation testing
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-red-400">●</span> /architecture-review
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-red-400">●</span> /detailed-review
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-red-400">●</span> Full test suite
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700">
+                <span class="text-red-400 text-xs font-medium">🐢 Slow</span>
+              </div>
+            </div>
+
+            <!-- Arrow -->
+            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+
+            <!-- Continuous -->
+            <div class="bg-slate-800/70 border border-slate-700/50 rounded-xl p-4 w-48">
+              <div class="text-xs text-slate-500 uppercase tracking-wider mb-2">Continuous</div>
+              <div class="space-y-2 text-xs text-slate-300">
+                <div class="flex items-center gap-1">
+                  <span class="text-cyan-400">●</span> /find-dead-code
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-cyan-400">●</span> Coverage quality
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-cyan-400">●</span> SLOs
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-cyan-400">●</span> Log anomalies
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700">
+                <span class="text-cyan-400 text-xs font-medium">🔄 Always-on</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center text-slate-400 text-sm">
+          ← Más rápido | más barato | más frecuente | Ejecución constante →
+        </div>
+      </div>
+    </section>
+
+    <!-- Las 3 Categorías de Regulation -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">7</span>
+        Las 3 Categorías de Regulación
+      </h2>
+
+      <div class="space-y-4">
+
+        <!-- Maintainability -->
+        <div class="bg-gradient-to-r from-green-950/40 to-slate-900 border border-green-900/50 rounded-xl overflow-hidden">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">🔧</span>
+              </div>
+              <div>
+                <div class="text-green-400 text-xs font-semibold uppercase tracking-wider">Más fácil</div>
+                <h3 class="text-xl font-bold text-green-300">Maintainability Harness</h3>
+              </div>
+              <div class="ml-auto bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-xs font-medium">
+                Confianza: Alta
+              </div>
+            </div>
+
+            <p class="text-slate-300 text-sm mb-4">
+              Regula la calidad interna del código y mantenibilidad. Tenemos mucho tooling existente.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Computational Sensors</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="bg-green-500/10 text-green-300 px-2 py-1 rounded text-xs">Linters</span>
+                  <span class="bg-green-500/10 text-green-300 px-2 py-1 rounded text-xs">Type checkers</span>
+                  <span class="bg-green-500/10 text-green-300 px-2 py-1 rounded text-xs">Coverage</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Lo que NO detecta</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="bg-red-500/10 text-red-300 px-2 py-1 rounded text-xs">Misdiagnosis</span>
+                  <span class="bg-red-500/10 text-red-300 px-2 py-1 rounded text-xs">Overengineering</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="bg-gradient-to-r from-blue-950/40 to-slate-900 border border-blue-900/50 rounded-xl overflow-hidden">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">🏗️</span>
+              </div>
+              <div>
+                <div class="text-blue-400 text-xs font-semibold uppercase tracking-wider">Media</div>
+                <h3 class="text-xl font-bold text-blue-300">Architecture Fitness Harness</h3>
+              </div>
+              <div class="ml-auto bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-medium">
+                Confianza: Media
+              </div>
+            </div>
+
+            <p class="text-slate-300 text-sm mb-4">
+              Define y verifica características arquitectónicas. [Fitness Functions](https://www.thoughtworks.com/en-de/radar/techniques/architectural-fitness-function)
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Ejemplos de Guides</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs">Performance requirements</span>
+                  <span class="bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs">Logging standards</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Ejemplos de Sensors</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs">Performance tests</span>
+                  <span class="bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs">Debugging instructions</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Behaviour -->
+        <div class="bg-gradient-to-r from-red-950/40 to-slate-900 border border-red-900/50 rounded-xl overflow-hidden">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">🐘</span>
+              </div>
+              <div>
+                <div class="text-red-400 text-xs font-semibold uppercase tracking-wider">Más difícil</div>
+                <h3 class="text-xl font-bold text-red-300">Behaviour Harness</h3>
+              </div>
+              <div class="ml-auto bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium">
+                Confianza: Baja
+              </div>
+            </div>
+
+            <p class="text-slate-300 text-sm mb-4">
+              ¿El código hace <strong>funcionalmente</strong> lo que necesitamos? Este es "el elefante en la habitación".
+            </p>
+
+            <div class="bg-red-950/30 rounded-lg p-4 mb-4">
+              <p class="text-red-300 text-sm">
+                ⚠️ <strong>Problema:</strong> Poner toda la fe en AI-generated tests "is not good enough yet".
+              </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Feedforward</p>
+                <div class="bg-slate-800/50 rounded-lg p-3">
+                  <p class="text-slate-300 text-sm">Functional specification (de short prompt a multi-file)</p>
+                </div>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Feedback</p>
+                <div class="bg-slate-800/50 rounded-lg p-3">
+                  <p class="text-slate-300 text-sm">AI-generated test suite + manual testing</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 bg-green-950/20 border border-green-900/30 rounded-lg p-3">
+              <p class="text-green-300 text-sm">
+                💡 Algunos equipos usan <strong>Approved Fixtures Pattern</strong> — más fácil en algunas áreas que otras.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Harnessability -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">8</span>
+        Harnessability
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <p class="text-slate-300 mb-6 text-center">
+          No todos los codebases son igualmente "harnesables" (amigables para harness).
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <!-- Greenfield -->
+          <div class="bg-gradient-to-b from-green-950/40 to-slate-900 border border-green-900/50 rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-2xl">🌱</span>
+              <h3 class="font-bold text-green-300">Greenfield</h3>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">
+              Puedes construir el harness desde el día uno.
+            </p>
+            <div class="bg-green-500/10 rounded-lg p-3">
+              <p class="text-green-300 text-sm font-medium">✓ Decisiones tecnológicas = harnessability</p>
+            </div>
+          </div>
+
+          <!-- Legacy -->
+          <div class="bg-gradient-to-b from-amber-950/40 to-slate-900 border border-amber-900/50 rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-2xl">🏚️</span>
+              <h3 class="font-bold text-amber-300">Legacy</h3>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">
+              El harness es más necesario... pero más difícil de construir.
+            </p>
+            <div class="bg-amber-500/10 rounded-lg p-3">
+              <p class="text-amber-300 text-sm font-medium">⚠️ Technical debt = harder harness</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Factors -->
+        <div class="bg-slate-800/50 rounded-xl p-5">
+          <p class="text-slate-400 text-sm mb-4">Qué hace a un codebase más "harnesable":</p>
+          <div class="grid sm:grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span class="text-xl">🔤</span>
+              </div>
+              <p class="text-slate-300 text-sm font-medium">Strongly Typed</p>
+              <p class="text-slate-500 text-xs">Type checking como sensor</p>
+            </div>
+            <div class="text-center">
+              <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span class="text-xl">🧱</span>
+              </div>
+              <p class="text-slate-300 text-sm font-medium">Módulos Claros</p>
+              <p class="text-slate-500 text-xs">Architectural constraints</p>
+            </div>
+            <div class="text-center">
+              <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span class="text-xl">⚙️</span>
+              </div>
+              <p class="text-slate-300 text-sm font-medium">Frameworks</p>
+              <p class="text-slate-500 text-xs">Opinionados = menos detalles</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- El Rol del Humano -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-purple-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">9</span>
+        El Rol del Humano
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="bg-purple-950/30 border border-purple-900/50 rounded-xl p-5 mb-6">
+          <p class="text-purple-300 text-center font-medium">
+            "A good harness should not necessarily aim to fully eliminate human input, but to <strong>direct it to where our input is most important.</strong>"
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Humano -->
+          <div class="bg-slate-800/50 rounded-xl p-5">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+              <span class="text-2xl">👤</span> Humano
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start gap-3 text-sm text-slate-300">
+                <span class="text-green-400 mt-0.5">✓</span>
+                Social accountability (nombre en el commit)
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-300">
+                <span class="text-green-400 mt-0.5">✓</span>
+                Aesthetic disgust (funciones de 300 líneas)
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-300">
+                <span class="text-green-400 mt-0.5">✓</span>
+                "We don't do it that way here"
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-300">
+                <span class="text-green-400 mt-0.5">✓</span>
+                Organizational memory
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-300">
+                <span class="text-green-400 mt-0.5">✓</span>
+                Small steps, human pace
+              </li>
+            </ul>
+          </div>
+
+          <!-- Agent -->
+          <div class="bg-slate-800/50 rounded-xl p-5">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+              <span class="text-2xl">🤖</span> Agent
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start gap-3 text-sm text-slate-400">
+                <span class="text-red-400 mt-0.5">✗</span>
+                No tiene nombre en el commit
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-400">
+                <span class="text-red-400 mt-0.5">✗</span>
+                No le importa el código feo
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-400">
+                <span class="text-red-400 mt-0.5">✗</span>
+                No sabe las convenciones locales
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-400">
+                <span class="text-red-400 mt-0.5">✗</span>
+                No tiene memoria organizacional
+              </li>
+              <li class="flex items-start gap-3 text-sm text-slate-400">
+                <span class="text-red-400 mt-0.5">✗</span>
+                Piensa en tokens, no en significado
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Takeaways -->
+    <section class="bg-gradient-to-br from-purple-950/30 to-slate-900 border border-purple-900/30 rounded-2xl p-8">
+      <h2 class="text-2xl font-bold mb-6">Key Takeaways</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">1</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Agent = Model + Harness</h3>
+            <p class="text-slate-400 text-sm">El model es lo que no controlas. El harness es donde tú intervienes.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">2</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Guides + Sensors</h3>
+            <p class="text-slate-400 text-sm">Anticipar (feedforward) + Detectar/Auto-corregir (feedback). Ambos necesarios.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">3</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Computational > Inferential</h3>
+            <p class="text-slate-400 text-sm">Más barato, determinístico. Usa inferential solo cuando necesitas juicio semántico.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">4</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Behaviour es difícil</h3>
+            <p class="text-slate-400 text-sm">Maintainability = fácil. Behaviour = el problema abierto más grande.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">5</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Programa el harness, no el código</h3>
+            <p class="text-slate-400 text-sm">El steering loop es sobre mejorar controles, no sobre escribir código.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-purple-400 font-bold">6</span>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Keep Quality Left</h3>
+            <p class="text-slate-400 text-sm">Checks lo más a la izquierda posible — CI/CD y harness comparten esta filosofía.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 mt-16 py-8 text-center text-slate-500 text-sm">
+    <p>Basado en <a href="https://martinfowler.com/articles/harness-engineering.html" class="text-purple-400 hover:underline">martinfowler.com/articles/harness-engineering.html</a></p>
+    <p class="mt-1">Birgitta Böckeler & Martin Fowler · Abril 2026</p>
+  </footer>
+
+</body>
+</html>

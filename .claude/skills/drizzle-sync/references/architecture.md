@@ -10,8 +10,8 @@
 | `@avileo/drizzle-sync/server` | Backend | `SyncEngine`, `BaseSyncHandler`, `HandlerRegistry`, conflict resolvers |
 | `@avileo/drizzle-sync/pglite` | Frontend | `PullService`, `applyChange`, `applyChangesBatch`, schema mapper |
 | `@avileo/drizzle-sync/react` | React | `SyncProvider`, hooks, `SyncReactRuntime` |
-| `@avileo/drizzle-sync/config` | Config + codegen | `defineSyncConfig`, validators, generators (partial) |
-| `@avileo/drizzle-sync/presets` | Avileo preset | 19 entities (customers, sales, products, etc.) |
+| `@avileo/drizzle-sync/config` | Config + codegen | `defineSyncConfig`, validators, generators |
+| `@avileo/drizzle-sync/client` | Frontend client | `createSyncClient`, `PendingData`, `SyncClientEngine` |
 
 ## Dual API Pattern (Legacy → Generic Migration)
 
@@ -54,11 +54,11 @@ const handler = registry.getHandler("sales");
 - **`SyncProvider`** (`provider.tsx:55`) — Accepts sync or async factory. Dual context: `SyncRuntimeContext` + `SyncStateContext`. Throws to error boundary if init fails.
 - **8 Hooks** (`hooks.ts`): `useSyncState`, `useSyncStatus`, `useSyncLifecycle`, `useSyncEvent`, `useSyncLogs`, `useSyncConflicts`, `useHasPendingSync`, `useHasFailedSync`, `useIsSyncStuck`
 
-## Avileo Preset Entities (19 total)
+## Avileo Entities (Source of Truth)
 
-Priority 1 (parents): `customers`, `sales`, `products`, `purchases`, `suppliers`, `distribuciones`, `tags`, `customer_groups`
+The authoritative entity configuration is in `packages/backend/src/sync.config.ts`.
 
-Priority 2 (children): `sale_items`, `abonos`, `product_variants`, `purchase_items`, `distribucion_items`, `visitas`, `customer_tags`, `customer_group_members`
+Entity relations are passed to `SyncEngine` via `entityRelations` config, which `OperationSorter` uses for FK-based topological sorting.
 
 ## Known Migration Gaps
 

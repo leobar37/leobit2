@@ -1,9 +1,14 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-21T17:28:20.921Z",
+  "generatedAt": "2026-04-22T15:31:45.478Z",
+  "tenancy": {
+    "tenantColumn": "business_id",
+    "tenantField": "businessId"
+  },
   "entities": {
     "customers": {
       "name": "customers",
+      "entityType": "customers",
       "tableName": "customers",
       "columns": [
         {
@@ -164,8 +169,8 @@
           "businesses"
         ],
         "children": [
-          "customerTags",
-          "customerGroupMembers",
+          "customer_tags",
+          "customer_group_members",
           "visitas",
           "sales",
           "abonos"
@@ -175,6 +180,7 @@
     },
     "products": {
       "name": "products",
+      "entityType": "products",
       "tableName": "products",
       "columns": [
         {
@@ -371,15 +377,16 @@
           "images"
         ],
         "children": [
-          "productVariants",
-          "saleItems",
-          "purchaseItems"
+          "product_variants",
+          "sale_items",
+          "purchase_items"
         ],
         "priority": 1
       }
     },
-    "productVariants": {
-      "name": "productVariants",
+    "product_variants": {
+      "name": "product_variants",
+      "entityType": "product_variants",
       "tableName": "product_variants",
       "columns": [
         {
@@ -590,12 +597,17 @@
           "products",
           "businesses"
         ],
-        "children": [],
+        "children": [
+          "sale_items",
+          "purchase_items",
+          "distribucion_items"
+        ],
         "priority": 2
       }
     },
     "suppliers": {
       "name": "suppliers",
+      "entityType": "suppliers",
       "tableName": "suppliers",
       "columns": [
         {
@@ -789,6 +801,7 @@
     },
     "tags": {
       "name": "tags",
+      "entityType": "tags",
       "tableName": "tags",
       "columns": [
         {
@@ -908,13 +921,14 @@
           "businesses"
         ],
         "children": [
-          "customerTags"
+          "customer_tags"
         ],
         "priority": 1
       }
     },
-    "customerTags": {
-      "name": "customerTags",
+    "customer_tags": {
+      "name": "customer_tags",
+      "entityType": "customer_tags",
       "tableName": "customer_tags",
       "columns": [
         {
@@ -1039,8 +1053,9 @@
         "priority": 2
       }
     },
-    "customerGroups": {
-      "name": "customerGroups",
+    "customer_groups": {
+      "name": "customer_groups",
+      "entityType": "customer_groups",
       "tableName": "customer_groups",
       "columns": [
         {
@@ -1149,12 +1164,15 @@
         "parents": [
           "businesses"
         ],
-        "children": [],
+        "children": [
+          "customer_group_members"
+        ],
         "priority": 1
       }
     },
-    "customerGroupMembers": {
-      "name": "customerGroupMembers",
+    "customer_group_members": {
+      "name": "customer_group_members",
+      "entityType": "customer_group_members",
       "tableName": "customer_group_members",
       "columns": [
         {
@@ -1305,6 +1323,7 @@
     },
     "visitas": {
       "name": "visitas",
+      "entityType": "visitas",
       "tableName": "visitas",
       "columns": [
         {
@@ -1479,6 +1498,7 @@
     },
     "sales": {
       "name": "sales",
+      "entityType": "sales",
       "tableName": "sales",
       "columns": [
         {
@@ -1950,7 +1970,7 @@
         "relations": {
           "children": [
             {
-              "entity": "saleItems",
+              "entity": "sale_items",
               "foreignKey": "sale_id",
               "cascade": true
             }
@@ -1969,13 +1989,14 @@
         ],
         "children": [
           "visitas",
-          "saleItems"
+          "sale_items"
         ],
         "priority": 2
       }
     },
-    "saleItems": {
-      "name": "saleItems",
+    "sale_items": {
+      "name": "sale_items",
+      "entityType": "sale_items",
       "tableName": "sale_items",
       "columns": [
         {
@@ -2291,6 +2312,7 @@
     },
     "purchases": {
       "name": "purchases",
+      "entityType": "purchases",
       "tableName": "purchases",
       "columns": [
         {
@@ -2480,7 +2502,7 @@
         "relations": {
           "children": [
             {
-              "entity": "purchaseItems",
+              "entity": "purchase_items",
               "foreignKey": "purchase_id",
               "cascade": true
             }
@@ -2495,13 +2517,14 @@
           "sync_groups"
         ],
         "children": [
-          "purchaseItems"
+          "purchase_items"
         ],
         "priority": 2
       }
     },
-    "purchaseItems": {
-      "name": "purchaseItems",
+    "purchase_items": {
+      "name": "purchase_items",
+      "entityType": "purchase_items",
       "tableName": "purchase_items",
       "columns": [
         {
@@ -2710,6 +2733,7 @@
     },
     "distribuciones": {
       "name": "distribuciones",
+      "entityType": "distribuciones",
       "tableName": "distribuciones",
       "columns": [
         {
@@ -2917,7 +2941,7 @@
         "relations": {
           "children": [
             {
-              "entity": "distribucionItems",
+              "entity": "distribucion_items",
               "foreignKey": "distribucion_id",
               "cascade": true
             }
@@ -2934,8 +2958,9 @@
         "priority": 1
       }
     },
-    "distribucionItems": {
-      "name": "distribucionItems",
+    "distribucion_items": {
+      "name": "distribucion_items",
+      "entityType": "distribucion_items",
       "tableName": "distribucion_items",
       "columns": [
         {
@@ -3100,11 +3125,12 @@
           "product_variants"
         ],
         "children": [],
-        "priority": 1
+        "priority": 3
       }
     },
     "abonos": {
       "name": "abonos",
+      "entityType": "abonos",
       "tableName": "abonos",
       "columns": [
         {

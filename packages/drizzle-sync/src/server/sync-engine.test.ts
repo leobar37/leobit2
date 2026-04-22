@@ -12,7 +12,7 @@ import type {
 import type { SyncEntity } from "@avileo/shared";
 import { SyncEventEmitter } from "../core";
 
-type SyncRequestContext = { businessId: string; businessUserId: string };
+type SyncRequestContext = { tenantId: string; userId: string };
 type MockTransaction = unknown;
 
 describe("sync-engine", () => {
@@ -42,8 +42,8 @@ describe("sync-engine", () => {
   };
 
   const makeContext = (): SyncRequestContext => ({
-    businessId: "biz-1",
-    businessUserId: "user-1",
+    tenantId: "biz-1",
+    userId: "user-1",
   });
 
   describe("constructor", () => {
@@ -445,7 +445,7 @@ function createMockConflictRepo(): ISyncConflictRepository<SyncRequestContext, M
   return {
     create: vi.fn().mockResolvedValue({
       id: "conflict-1",
-      businessId: "biz-1",
+      tenantId: "biz-1",
       operationId: "op-1",
       entityType: "sales",
       entityId: "entity-1",
@@ -461,8 +461,8 @@ function createMockConflictRepo(): ISyncConflictRepository<SyncRequestContext, M
     }),
     findById: vi.fn().mockResolvedValue(undefined),
     findByOperationId: vi.fn().mockResolvedValue(undefined),
-    findPendingByBusiness: vi.fn().mockResolvedValue([]),
-    findByBusiness: vi.fn().mockResolvedValue([]),
+    findPending: vi.fn().mockResolvedValue([]),
+    findMany: vi.fn().mockResolvedValue([]),
     countPending: vi.fn().mockResolvedValue(0),
     resolve: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(true),

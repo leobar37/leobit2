@@ -27,14 +27,15 @@ import { EntityRegistry } from "./entity-registry";
 import { syncLogger } from "./sync-logger";
 import type { ISyncOperationRepository } from "./operation-repository";
 import type { ISyncConflictRepository } from "./conflict-repository";
+import type { ParentRelationConfig } from "../config/types";
 
 /**
  * Request context interface for sync engine
  * Index signature allows compatibility with extended context types (e.g., RequestContext)
  */
 export interface SyncRequestContext {
-  businessId: string;
-  businessUserId: string;
+  tenantId: string;
+  userId: string;
   [key: string]: unknown;
 }
 
@@ -111,6 +112,8 @@ export interface SyncEngineConfig<
   /** Sync conflict repository (optional) */
   syncConflictRepo?: ISyncConflictRepository<TRequestContext, TTransaction>;
   conflictResolverRegistry?: GenericConflictResolverRegistry<string, TRequestContext, TTransaction>;
+  /** Entity relations config for FK-based sorting (entity name -> relations) */
+  entityRelations?: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>;
   /** Logger implementation */
   logger?: {
     info: (data: unknown) => void;
@@ -159,7 +162,7 @@ export class SyncEngine<
     this.config = config;
     this.syncOpRepo = config.syncOpRepo;
     this.syncConflictRepo = config.syncConflictRepo ?? this.createDefaultConflictRepo();
-    this.operationSorter = new OperationSorter();
+    this.operationSorter = new OperationSorter(config.entityRelations ?? {});
     this.eventEmitter = config.eventEmitter ?? noOpSyncEventEmitter;
     this.conflictResolverRegistry = config.conflictResolverRegistry ?? new GenericConflictResolverRegistry<string, TRequestContext, TTransaction>();
   }
@@ -178,8 +181,8 @@ export class SyncEngine<
       msg: "📥 Sync batch received",
       correlationId: batchCorrelationId,
       operations: operations.length,
-      businessId: ctx.businessId,
-      userId: ctx.businessUserId,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
     });
 
     const { operations: sortedOperations, groupCount } =
@@ -554,7 +557,7 @@ export class SyncEngine<
         });
         return {
           id: "noop",
-          businessId: ctx.businessId,
+          tenantId: ctx.tenantId,
           operationId: data.operationId,
           entityType: data.entityType,
           entityId: data.entityId,
@@ -575,10 +578,10 @@ export class SyncEngine<
       async findByOperationId() {
         return undefined;
       },
-      async findPendingByBusiness() {
+      async findPending() {
         return [];
       },
-      async findByBusiness() {
+      async findMany() {
         return [];
       },
       async countPending() {

@@ -229,6 +229,22 @@ export function validateSyncConfig(config: SyncConfig | SyncConfigInput): Config
   const errors: ConfigValidationError[] = [];
   const warnings: ConfigValidationWarning[] = [];
 
+  if (config.tenancy?.tenantField && !/^[a-zA-Z][a-zA-Z0-9]*$/.test(config.tenancy.tenantField)) {
+    errors.push({
+      path: "tenancy.tenantField",
+      message: "tenantField must be a valid camelCase identifier",
+      hint: "Example: tenantId",
+    });
+  }
+
+  if (config.tenancy?.tenantColumn && !/^[a-z_][a-z0-9_]*$/.test(config.tenancy.tenantColumn)) {
+    errors.push({
+      path: "tenancy.tenantColumn",
+      message: "tenantColumn must be a valid snake_case column name",
+      hint: "Example: tenant_id",
+    });
+  }
+
   if ("schema" in config && config.schema) {
     if (!config.schema.output || config.schema.output.trim().length === 0) {
       errors.push({
@@ -335,6 +351,22 @@ function validateNewEntity(
         message: "fieldCodecs is present but empty",
       });
     }
+  }
+
+  if (entity.tenancy?.mode && entity.tenancy.mode !== "required" && entity.tenancy.mode !== "none") {
+    errors.push({
+      path: `${path}.tenancy.mode`,
+      message: `Invalid tenancy mode: ${entity.tenancy.mode}`,
+      hint: "Use one of: required, none",
+    });
+  }
+
+  if (entity.tenancy?.tenantColumn && !/^[a-z_][a-z0-9_]*$/.test(entity.tenancy.tenantColumn)) {
+    errors.push({
+      path: `${path}.tenancy.tenantColumn`,
+      message: "tenantColumn must be a valid snake_case column name",
+      hint: "Example: tenant_id",
+    });
   }
 
   const childRelations = entity.relations?.children || [];

@@ -21,6 +21,9 @@ export type {
   GeneratedApplierConfig,
   ChildRelationConfig,
   ParentRelationConfig,
+  TenancyMode,
+  SyncTenancyConfig,
+  EntityTenancyConfig,
   SchemaConfig,
   SyncConfigInput,
 } from "./types";

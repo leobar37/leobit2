@@ -66,8 +66,8 @@ const ServicesContext = createContext<ServicesContextValue | null>(null);
 const SyncStateContext = createContext<SyncState | null>(null);
 
 interface ServicesProviderProps {
-  pg: PGlite;
-  db: ReturnType<typeof drizzle>;
+  pg?: PGlite;
+  db?: ReturnType<typeof drizzle>;
   businessId: string;
   businessUserId: string;
   authToken: string;
@@ -98,8 +98,8 @@ export function ServicesProvider({
       const coordinator = engine.getCoordinator()!;
 
       return {
-        pg,
-        db,
+        pg: pg ?? engine.getPg(),
+        db: db ?? engine.getDb(),
         coordinator,
         syncService,
         pullService,
@@ -121,7 +121,10 @@ export function ServicesProvider({
       };
     }
 
-    // Legacy mode: create services locally
+    // Legacy mode: create services locally (requires pg and db)
+    if (!pg || !db) {
+      throw new Error("ServicesProvider requires 'pg' and 'db' props when 'engine' is not provided.");
+    }
     if (!syncServiceRef.current) {
       syncServiceRef.current = new SyncService(pg, businessId, authToken);
     }

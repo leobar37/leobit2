@@ -22,8 +22,8 @@ export interface SyncOperationRecord {
  * Request context interface for repositories
  */
 export interface RepositoryRequestContext {
-  businessId: string;
-  businessUserId?: string;
+  tenantId: string;
+  userId?: string;
 }
 
 /**

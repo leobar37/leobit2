@@ -81,13 +81,13 @@ export interface LegacyApplyOptions {
   logger?: ISyncLogger;
 }
 
-function buildContext(pg: PGlite, businessId: string): SyncClientEngineContext {
-  // The new ChangeApplier only needs pg + businessId; the rest are dummies.
+function buildContext(pg: PGlite, tenantId: string, tenantColumn?: string): SyncClientEngineContext {
   return {
     pg,
-    businessId,
+    tenantId,
+    tenantColumn: tenantColumn ?? "tenant_id",
     db: undefined as any,
-    businessUserId: "",
+    userId: "",
     syncService: {} as any,
   };
 }
@@ -99,10 +99,11 @@ function buildContext(pg: PGlite, businessId: string): SyncClientEngineContext {
 export async function applyChange(
   pg: PGlite,
   change: PullChange,
-  businessId: string,
-  opts?: LegacyApplyOptions
+  tenantId: string,
+  opts?: LegacyApplyOptions,
+  tenantColumn?: string
 ): Promise<ApplyResult> {
-  const context = buildContext(pg, businessId);
+  const context = buildContext(pg, tenantId, tenantColumn);
   const applier = new ChangeApplier(context, {
     maxRetries: opts?.maxRetries,
     checkConflicts: opts?.checkConflicts,
@@ -119,13 +120,14 @@ export async function applyChange(
 export async function applyChangesBatch(
   pg: PGlite,
   changes: PullChange[],
-  businessId: string,
-  opts?: LegacyApplyOptions
+  tenantId: string,
+  opts?: LegacyApplyOptions,
+  tenantColumn?: string
 ): Promise<{
   entityTypes: Set<string>;
   failedChanges: Array<{ change: PullChange; error: string }>;
 }> {
-  const context = buildContext(pg, businessId);
+  const context = buildContext(pg, tenantId, tenantColumn);
   const applier = new ChangeApplier(context, {
     maxRetries: opts?.maxRetries,
     checkConflicts: opts?.checkConflicts,

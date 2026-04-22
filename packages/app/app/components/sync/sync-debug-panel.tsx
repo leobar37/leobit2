@@ -59,7 +59,7 @@ export function SyncDebugPanel() {
   };
 
   const querySyncTable = async () => {
-    const { getDatabase } = await import("~/engine");
+    const { getDatabase } = await import("@avileo/drizzle-sync/client");
     const { db } = getDatabase();
     const result = await db.execute(`
       SELECT status, entity, operation, COUNT(*) as count

@@ -50,6 +50,18 @@ export interface ParentRelationConfig {
   required?: boolean; // Si el FK es NOT NULL
 }
 
+export type TenancyMode = "required" | "none";
+
+export interface SyncTenancyConfig {
+  tenantField?: string;
+  tenantColumn?: string;
+}
+
+export interface EntityTenancyConfig {
+  mode?: TenancyMode;
+  tenantColumn?: string;
+}
+
 /**
  * Configuración de entidad para sync
  * Con soporte para hybrid field definition y CUID2
@@ -88,6 +100,9 @@ export interface EntitySyncConfig<TTable extends PgTable = PgTable> {
   // e.g., entity "customerGroups" has API path "groups"
   apiPath?: string;
 
+  // Multi-tenant partitioning policy
+  tenancy?: EntityTenancyConfig;
+
   // Metadata adicional
   metadata?: Record<string, unknown>;
 }
@@ -99,6 +114,7 @@ export interface SyncConfig<
   TEntities extends Record<string, EntitySyncConfig> = Record<string, EntitySyncConfig>
 > {
   entities: TEntities;
+  tenancy?: SyncTenancyConfig;
   options?: {
     batchSize?: number;
     maxRetries?: number;

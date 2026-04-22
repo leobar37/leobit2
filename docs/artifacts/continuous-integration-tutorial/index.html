@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continuous Integration - Tutorial Visual</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- Hero Section -->
+  <header class="bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/30 border-b border-slate-800">
+    <div class="max-w-5xl mx-auto px-6 py-16 text-center">
+      <div class="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        DevOps & Continuous Delivery
+      </div>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-4">
+        <span class="gradient-text">Continuous Integration</span>
+      </h1>
+      <p class="text-xl text-slate-400 max-w-2xl mx-auto">
+        Una práctica de desarrollo de software donde cada miembro del equipo integra sus cambios al menos una vez al día, verificando cada integración con un build automático.
+      </p>
+      <p class="text-sm text-slate-500 mt-4">Artículo de Martin Fowler · Enero 2024</p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- Qué es CI -->
+    <section>
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+          <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+          ¿Qué es Continuous Integration?
+        </h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+            <div class="text-orange-400 font-semibold mb-3">Definición Core</div>
+            <p class="text-slate-300 leading-relaxed">
+              Cada desarrollador integra su código al <strong class="text-white">mainline compartido</strong> al menos diariamente. Cada integración se verifica automáticamente para detectar errores lo antes posible.
+            </p>
+          </div>
+          <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+            <div class="text-orange-400 font-semibold mb-3">El Ciclo Diario</div>
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <div class="text-center">
+                <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mb-1 mx-auto">
+                  <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <span class="text-slate-400">Pull</span>
+              </div>
+              <div class="flex-1 h-px bg-slate-600"></div>
+              <div class="text-center">
+                <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mb-1 mx-auto">
+                  <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </div>
+                <span class="text-slate-400">Code</span>
+              </div>
+              <div class="flex-1 h-px bg-slate-600"></div>
+              <div class="text-center">
+                <div class="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center mb-1 mx-auto">
+                  <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </div>
+                <span class="text-slate-400">Build</span>
+              </div>
+              <div class="flex-1 h-px bg-slate-600"></div>
+              <div class="text-center">
+                <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center mb-1 mx-auto">
+                  <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                </div>
+                <span class="text-slate-400">Push</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Los 3 Estilos de Integración -->
+    <section x-data="{ open: null }">
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+        Los 3 Estilos de Integración
+      </h2>
+
+      <div class="grid lg:grid-cols-3 gap-4">
+
+        <!-- Pre-Release -->
+        <div class="bg-red-950/30 border border-red-900/50 rounded-xl overflow-hidden">
+          <button @click="open = open === 1 ? null : 1" class="w-full p-5 text-left flex items-center justify-between">
+            <div>
+              <div class="text-red-400 text-xs font-semibold uppercase tracking-wider mb-1">Waterfall</div>
+              <div class="font-bold text-lg">Pre-Release</div>
+            </div>
+            <svg class="w-5 h-5 text-slate-400 transition-transform" :class="open === 1 && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div x-show="open === 1" x-collapse class="border-t border-red-900/50 p-5 space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center text-sm font-bold text-red-400">1</div>
+              <span class="text-slate-300 text-sm">Meses de trabajo paralelo</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center text-sm font-bold text-red-400">2</div>
+              <span class="text-slate-300 text-sm">Una sola integración</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center text-sm font-bold text-red-400">3</div>
+              <span class="text-slate-300 text-sm">"Integration Hell"</span>
+            </div>
+            <div class="pt-3 border-t border-red-900/50">
+              <p class="text-red-300 text-sm font-medium">⚠️ Alto riesgo e impredecible</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature Branches -->
+        <div class="bg-amber-950/30 border border-amber-900/50 rounded-xl overflow-hidden">
+          <button @click="open = open === 2 ? null : 2" class="w-full p-5 text-left flex items-center justify-between">
+            <div>
+              <div class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Moda actual</div>
+              <div class="font-bold text-lg">Feature Branches</div>
+            </div>
+            <svg class="w-5 h-5 text-slate-400 transition-transform" :class="open === 2 && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div x-show="open === 2" x-collapse class="border-t border-amber-900/50 p-5 space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center text-sm font-bold text-amber-400">1</div>
+              <span class="text-slate-300 text-sm">Cada feature en branch</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center text-sm font-bold text-amber-400">2</div>
+              <span class="text-slate-300 text-sm">Merge al completar</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center text-sm font-bold text-amber-400">3</div>
+              <span class="text-slate-300 text-sm">Semi-integración</span>
+            </div>
+            <div class="pt-3 border-t border-amber-900/50">
+              <p class="text-amber-300 text-sm font-medium">⚠️ Esperas por code reviews</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CI -->
+        <div class="bg-green-950/30 border border-green-900/50 rounded-xl overflow-hidden">
+          <button @click="open = open === 3 ? null : 3" class="w-full p-5 text-left flex items-center justify-between">
+            <div>
+              <div class="text-green-400 text-xs font-semibold uppercase tracking-wider mb-1">Best Practice</div>
+              <div class="font-bold text-lg">Continuous Integration</div>
+            </div>
+            <svg class="w-5 h-5 text-slate-400 transition-transform" :class="open === 3 && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div x-show="open === 3" x-collapse class="border-t border-green-900/50 p-5 space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center text-sm font-bold text-green-400">1</div>
+              <span class="text-slate-300 text-sm">Integración diaria al main</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center text-sm font-bold text-green-400">2</div>
+              <span class="text-slate-300 text-sm">Conflictos pequeños</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center text-sm font-bold text-green-400">3</div>
+              <span class="text-slate-300 text-sm">"Non-event"</span>
+            </div>
+            <div class="pt-3 border-t border-green-900/50">
+              <p class="text-green-300 text-sm font-medium">✓ Integration is a non-event</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparativa Visual -->
+      <div class="mt-6 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+        <h3 class="font-semibold mb-4 text-slate-300">Comparativa de Frecuencia de Integración</h3>
+        <div class="space-y-4">
+          <div class="flex items-center gap-4">
+            <span class="w-28 text-sm text-slate-400">Pre-Release</span>
+            <div class="flex-1 bg-slate-800 rounded-full h-4 overflow-hidden">
+              <div class="bg-red-500 h-full rounded-full" style="width: 5%"></div>
+            </div>
+            <span class="text-xs text-slate-500">Meses/Años</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="w-28 text-sm text-slate-400">Feature Branches</span>
+            <div class="flex-1 bg-slate-800 rounded-full h-4 overflow-hidden">
+              <div class="bg-amber-500 h-full rounded-full" style="width: 25%"></div>
+            </div>
+            <span class="text-xs text-slate-500">Semanas/Días</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="w-28 text-sm text-slate-400">CI</span>
+            <div class="flex-1 bg-slate-800 rounded-full h-4 overflow-hidden">
+              <div class="bg-green-500 h-full rounded-full" style="width: 100%"></div>
+            </div>
+            <span class="text-xs text-slate-500">Diario/Múltiple</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Las 11 Prácticas -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+        Las 11 Prácticas de CI
+      </h2>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">1</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Version Controlled Mainline</h3>
+              <p class="text-slate-400 text-xs">Todo en VCS: código, tests, schema, config. Un solo branch compartido.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">2</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Automated Build</h3>
+              <p class="text-slate-400 text-xs">Build con un solo comando. Sin clicks ni procesos manuales.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">3</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Self-Testing Build</h3>
+              <p class="text-slate-400 text-xs">Tests automatizados que verifican el código. Frameworks xUnit.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">4</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Daily Commits</h3>
+              <p class="text-slate-400 text-xs">Todos hacen push al mainline al menos una vez al día.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">5</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">CI Service on Mainline</h3>
+              <p class="text-slate-400 text-xs">Cada push dispara un build automático en entorno de referencia.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">6</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Fix Broken Builds Immediately</h3>
+              <p class="text-slate-400 text-xs">"Nobody has a higher priority task than fixing the build"</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">7</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Keep the Build Fast</h3>
+              <p class="text-slate-400 text-xs">Guideline: menos de 10 minutos para commit build.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">8</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Hide Work-in-Progress</h3>
+              <p class="text-slate-400 text-xs">Feature flags, Keystone Interfaces para integrar código incompleto.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">9</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Test in Production Clone</h3>
+              <p class="text-slate-400 text-xs">Mismo SO, DB, librerías, hardware que producción.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">10</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Everyone Can See Results</h3>
+              <p class="text-slate-400 text-xs">Dashboards, notifications, displays físicos del estado del build.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700/50 rounded-xl p-4 hover:border-orange-500/50 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span class="text-orange-400 font-bold text-sm">11</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-sm mb-1">Automated Deployment</h3>
+              <p class="text-slate-400 text-xs">Scripts para deploy a cualquier ambiente automáticamente.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Deployment Pipeline -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+        Deployment Pipeline
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <p class="text-slate-400 mb-8 text-center">Para mantener builds rápidos sin sacrificar calidad, se usa un pipeline de múltiples etapas:</p>
+
+        <div class="flex flex-col md:flex-row items-stretch gap-4">
+
+          <!-- Commit Stage -->
+          <div class="flex-1 bg-gradient-to-b from-blue-950/50 to-blue-900/20 border border-blue-800/50 rounded-xl p-5 text-center">
+            <div class="text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">Stage 1</div>
+            <div class="text-xl font-bold mb-3">Commit Build</div>
+            <div class="space-y-2 text-left">
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Compilation
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Fast Unit Tests
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Test Doubles (mocks)
+              </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-blue-800/50">
+              <div class="text-2xl font-bold text-blue-400">&lt;10 min</div>
+              <div class="text-xs text-slate-500">STOP THE WORLD si falla</div>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="hidden md:flex items-center">
+            <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </div>
+
+          <!-- Secondary Stage -->
+          <div class="flex-1 bg-gradient-to-b from-purple-950/50 to-purple-900/20 border border-purple-800/50 rounded-xl p-5 text-center">
+            <div class="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-2">Stage 2+</div>
+            <div class="text-xl font-bold mb-3">Secondary Build</div>
+            <div class="space-y-2 text-left">
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Integration Tests
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Real Database
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                End-to-End Tests
+              </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-purple-800/50">
+              <div class="text-2xl font-bold text-purple-400">Horas</div>
+              <div class="text-xs text-slate-500">No bloqueante pero se arregla</div>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div class="hidden md:flex items-center">
+            <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </div>
+
+          <!-- Production -->
+          <div class="flex-1 bg-gradient-to-b from-green-950/50 to-green-900/20 border border-green-800/50 rounded-xl p-5 text-center">
+            <div class="text-green-400 text-xs font-semibold uppercase tracking-wider mb-2">Final</div>
+            <div class="text-xl font-bold mb-3">Production</div>
+            <div class="space-y-2 text-left">
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Blue-Green Deploy
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Canary Releases
+              </div>
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Auto Rollback
+              </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-green-800/50">
+              <div class="text-2xl font-bold text-green-400">CD</div>
+              <div class="text-xs text-slate-500">Continuous Deployment</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Beneficios -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">5</span>
+        Beneficios de CI
+      </h2>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Reduced Delivery Risk</h3>
+          <p class="text-slate-400 text-sm">Integraciones pequeñas = menos incertidumbre. El peor caso es perder menos de un día de trabajo.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Less Time Wasted</h3>
+          <p class="text-slate-400 text-sm">Relación no lineal: 2x código = 4x tiempo de integración. CI evita esta trampa.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Less Bugs</h3>
+          <p class="text-slate-400 text-sm">Self-testing + detección rápida. DORA research: elite teams tienen menos fallos.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Enables Refactoring</h3>
+          <p class="text-slate-400 text-sm">Sin CI, refactors grandes causan integraciones doloras. CI permite refactors pequeños y frecuentes.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Release is a Business Decision</h3>
+          <p class="text-slate-400 text-sm">Release-Ready Mainline = deploy en minutos. Stakeholders deciden cuándo, no el código.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </div>
+          <h3 class="font-bold mb-2">Team Visibility</h3>
+          <p class="text-slate-400 text-sm">Todos ven el estado del sistema. CI es comunicación, no solo tecnología.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CI vs CD vs CDep -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-orange-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">6</span>
+        CI vs CD vs Continuous Deployment
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
+
+          <div class="text-center">
+            <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <span class="text-2xl font-bold text-blue-400">CI</span>
+            </div>
+            <div class="font-semibold">Continuous Integration</div>
+            <p class="text-slate-400 text-sm mt-1">Integrar código ≥ diariamente</p>
+          </div>
+
+          <svg class="w-8 h-8 text-slate-600 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+
+          <div class="text-center">
+            <div class="w-20 h-20 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <span class="text-2xl font-bold text-purple-400">CD</span>
+            </div>
+            <div class="font-semibold">Continuous Delivery</div>
+            <p class="text-slate-400 text-sm mt-1">Producto siempre releaseable</p>
+          </div>
+
+          <svg class="w-8 h-8 text-slate-600 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+
+          <div class="text-center">
+            <div class="w-20 h-20 bg-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <span class="text-2xl font-bold text-green-400">CDp</span>
+            </div>
+            <div class="font-semibold">Continuous Deployment</div>
+            <p class="text-slate-400 text-sm mt-1">Auto-deploy a producción</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Takeaways -->
+    <section class="bg-gradient-to-br from-orange-950/30 to-slate-900 border border-orange-900/30 rounded-2xl p-8">
+      <h2 class="text-2xl font-bold mb-6">Key Takeaways</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">CI ≠ CI Service</h3>
+            <p class="text-slate-400 text-sm">Jenkins/GitHub Actions son herramientas, no CI en sí. Correr CI en feature branches es semi-integración.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Self-Testing es prerrequisito</h3>
+            <p class="text-slate-400 text-sm">Sin tests automatizados, CI no funciona. TDD es la mejor forma de lograrlos.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">Integrar antes de "completar"</h3>
+            <p class="text-slate-400 text-sm">Feature flags permiten integrar código incompleto sin exponerlo a users.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1">10 minutos o menos</h3>
+            <p class="text-slate-400 text-sm">Si el build tarda más, implementar deployment pipeline con stages.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 mt-16 py-8 text-center text-slate-500 text-sm">
+    <p>Basado en <a href="https://martinfowler.com/articles/continuousIntegration.html" class="text-orange-400 hover:underline">martinfowler.com/articles/continuousIntegration.html</a></p>
+    <p class="mt-1">Artículo actualizado: Enero 2024</p>
+  </footer>
+
+</body>
+</html>

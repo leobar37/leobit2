@@ -1,25 +1,14 @@
 /**
- * Avileo Database Initialization
+ * Avileo Database Configuration
  *
- * Thin wrapper around @avileo/drizzle-sync/client database init.
- * Provides Avileo-specific configuration:
- * - Schema SQL from generated DDL + sync infrastructure
- * - Pending data tables (sales, abonos, customers, etc.)
- * - localStorage keys and database naming
+ * Specific database initialization config for the Avileo app.
+ * This replaces the old app/engine/db.ts wrapper.
  */
 
-import { drizzle } from "drizzle-orm/pglite";
-import * as schema from "./schema";
+import * as schema from "@avileo/shared";
 import { getLocalDatabaseName } from "~/lib/session-storage";
 import { FULL_SCHEMA } from "~/lib/sync/schema";
-import {
-  initPgliteDatabase,
-  getDatabase as getDbFromLib,
-  disposeDatabase as disposeDbFromLib,
-  resetDatabase as resetDbFromLib,
-  type DatabaseInitResult,
-  type PendingTableConfig,
-} from "@avileo/drizzle-sync/client";
+import type { DatabaseInitConfig, PendingTableConfig } from "@avileo/drizzle-sync/client";
 
 const VERSION_KEY = "avileo_schema_hash";
 export const SCHEMA_HASH_KEY = VERSION_KEY;
@@ -34,11 +23,6 @@ function locatePgliteFile(file: string): string {
   return file;
 }
 
-/**
- * Avileo-specific pending data table configuration
- * Preserves unsynced sales, abonos, customers, visitas, and customer groups
- * across schema resets.
- */
 const avileoPendingTables: PendingTableConfig[] = [
   { name: "customers", where: "sync_status IN ('pending', 'error')" },
   { name: "sales", where: "sync_status IN ('pending', 'error')" },
@@ -49,13 +33,10 @@ const avileoPendingTables: PendingTableConfig[] = [
   { name: "customer_group_members", where: "sync_status IN ('pending', 'error')", dependsOn: ["customer_groups"] },
 ];
 
-/**
- * Initialize the Avileo local database
- */
-export async function initDatabase(): Promise<DatabaseInitResult> {
+export function createAvileoDatabaseConfig(): DatabaseInitConfig {
   const databaseName = getLocalDatabaseName();
 
-  return initPgliteDatabase({
+  return {
     dataDir: `idb://${databaseName}`,
     schemaSql: FULL_SCHEMA,
     drizzleSchema: schema,
@@ -66,26 +47,5 @@ export async function initDatabase(): Promise<DatabaseInitResult> {
     onAfterInit: (_pg, _db) => {
       console.log(`[DB] Database namespace: ${databaseName}`);
     },
-  });
-}
-
-/**
- * Get initialized database instance
- */
-export function getDatabase(): DatabaseInitResult {
-  return getDbFromLib();
-}
-
-/**
- * Dispose database and clear state
- */
-export async function disposeDatabase(): Promise<void> {
-  return disposeDbFromLib();
-}
-
-/**
- * Reset database (clears schema hash and forces re-init)
- */
-export async function resetDatabase(): Promise<void> {
-  return resetDbFromLib({ versionKey: VERSION_KEY });
+  };
 }

@@ -6,14 +6,14 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { eq, and, gte, desc, like, or } from "drizzle-orm";
-import { getDatabase } from "~/engine";
+import { getDatabase } from "@avileo/drizzle-sync/client";
 import {
   distribuciones,
   distribucionItems,
+  DistribucionStatus,
   type Distribucion,
   type DistribucionItem,
-  DistribucionStatus,
-} from "~/engine/schema";
+} from "@avileo/shared";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
 import { useDistribucionService } from "~/lib/sync/engine-provider";

@@ -134,12 +134,21 @@ const DEFAULT_SYNC_STATE: SyncStateSnapshot = {
 
 ## Usage Example
 
+In Avileo, the sync engine is created on the backend and passed to the frontend via the API. For frontend-only or custom setups:
+
 ```tsx
 import { SyncProvider } from "@avileo/drizzle-sync/react";
 import { createSyncEngine } from "@avileo/drizzle-sync";
-import { avileoConfig } from "@avileo/drizzle-sync/presets";
 
-const runtime = createSyncEngine(avileoConfig);
+const runtime = createSyncEngine({
+  // Entity configuration with syncable entities
+  entities: {
+    customers: { table: customersTable, syncable: true },
+    sales: { table: salesTable, syncable: true, relations: { children: [...] } },
+    // ...
+  },
+  // ...
+});
 
 <SyncProvider runtime={runtime}>
   <App />

@@ -30,13 +30,21 @@ vi.mock("~/lib/session-storage", () => ({
     mockGetPullCursorStorageKey(namespace),
 }));
 
-// Mock engine/db
-const mockInitDatabase = vi.fn();
+// Mock database init
+const mockInitPgliteDatabase = vi.fn();
 const mockResetDatabase = vi.fn();
 
-vi.mock("~/engine/db", () => ({
-  initDatabase: () => mockInitDatabase(),
-  resetDatabase: () => mockResetDatabase(),
+vi.mock("@avileo/drizzle-sync/client", async () => {
+  const actual = await vi.importActual("@avileo/drizzle-sync/client");
+  return {
+    ...actual,
+    initPgliteDatabase: () => mockInitPgliteDatabase(),
+    resetDatabase: () => mockResetDatabase(),
+  };
+});
+
+vi.mock("~/lib/sync/db-config", () => ({
+  createAvileoDatabaseConfig: () => ({}),
   SCHEMA_HASH_KEY: "avileo_schema_hash",
 }));
 
@@ -75,7 +83,7 @@ describe("useInitialSync", () => {
     mockGetLocalDatabaseNamespace.mockReturnValue("test-namespace");
     mockGetPullCursorStorageKey.mockReturnValue("avileo_pull_cursor:test-namespace");
 
-    mockInitDatabase.mockResolvedValue({
+    mockInitPgliteDatabase.mockResolvedValue({
       pg: {},
       db: {},
     });
@@ -145,7 +153,7 @@ describe("useInitialSync", () => {
       const { result } = renderHook(() => useInitialSync());
 
       await waitFor(() => {
-        expect(mockInitDatabase).toHaveBeenCalled();
+        expect(mockInitPgliteDatabase).toHaveBeenCalled();
       });
 
       await waitFor(() => {
@@ -225,7 +233,7 @@ describe("useInitialSync", () => {
       const { result } = renderHook(() => useInitialSync());
 
       await waitFor(() => {
-        expect(mockInitDatabase).toHaveBeenCalled();
+        expect(mockInitPgliteDatabase).toHaveBeenCalled();
       });
 
       await waitFor(() => {
@@ -300,7 +308,7 @@ describe("useInitialSync", () => {
 
   describe("error handling", () => {
     it("detects schema errors", async () => {
-      mockInitDatabase.mockRejectedValue(new Error("column does not exist: user_id"));
+      mockInitPgliteDatabase.mockRejectedValue(new Error("column does not exist: user_id"));
 
       const { result } = renderHook(() => useInitialSync());
 
@@ -313,7 +321,7 @@ describe("useInitialSync", () => {
     });
 
     it("detects relation errors as schema errors", async () => {
-      mockInitDatabase.mockRejectedValue(
+      mockInitPgliteDatabase.mockRejectedValue(
         new Error('relation "users" does not exist')
       );
 
@@ -327,7 +335,7 @@ describe("useInitialSync", () => {
     });
 
     it("does not mark non-schema errors as schema errors", async () => {
-      mockInitDatabase.mockRejectedValue(new Error("Network timeout"));
+      mockInitPgliteDatabase.mockRejectedValue(new Error("Network timeout"));
 
       const { result } = renderHook(() => useInitialSync());
 

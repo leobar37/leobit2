@@ -12,8 +12,8 @@
  * const engine = createSyncClientEngine({
  *   pg: myPglite,
  *   db: drizzle(myPglite),
- *   businessId: 'biz-123',
- *   businessUserId: 'user-456',
+ *   tenantId: 'biz-123',
+ *   userId: 'user-456',
  *   authToken: 'token',
  *   apiUrl: 'https://api.example.com',
  *   httpClient: myHttpClient,
@@ -47,6 +47,7 @@ import type {
   SyncClientEngineContext,
   SyncClientEngineStatus,
 } from "./types";
+import { initPgliteDatabase, disposeDatabase, resetDatabase } from "./database-init";
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
 
@@ -57,6 +58,8 @@ export class SyncClientEngine {
   private readonly services: Map<string, unknown> = new Map();
 
   private state: EngineState = "uninitialized";
+  private pg: PGlite | null = null;
+  private db: ReturnType<typeof drizzle> | null = null;
   private syncQueue: ISyncQueue | null = null;
   private syncService: PushSyncService | null = null;
   private pullService: PullSyncService | null = null;
@@ -71,19 +74,49 @@ export class SyncClientEngine {
     this.mutex = config.mutex ?? new SyncMutex();
   }
 
+  getPg(): PGlite {
+    if (!this.pg) {
+      throw new Error("PGlite not initialized. Call initialize() first.");
+    }
+    return this.pg;
+  }
+
+  getDb(): ReturnType<typeof drizzle> {
+    if (!this.db) {
+      throw new Error("Drizzle not initialized. Call initialize() first.");
+    }
+    return this.db;
+  }
+
   async initialize(): Promise<void> {
     if (this.state !== "uninitialized") {
       return;
     }
 
-    const { pg, db, businessId, businessUserId, authToken, apiUrl, httpClient, sync, cursorStorage } = this.config;
+    // Auto-initialize database if databaseConfig is provided
+    if (this.config.databaseConfig) {
+      const result = await initPgliteDatabase(this.config.databaseConfig);
+      this.pg = result.pg;
+      this.db = result.db;
+    } else if (this.config.pg && this.config.db) {
+      this.pg = this.config.pg;
+      this.db = this.config.db;
+    } else {
+      throw new Error(
+        "SyncClientEngine requires either 'databaseConfig' or both 'pg' and 'db'. " +
+        "Provide databaseConfig for auto-init, or pg/db for manual mode."
+      );
+    }
+
+    const { tenantId, userId, tenantColumn, authToken, apiUrl, httpClient, sync, cursorStorage } = this.config;
 
     // Create context for dependency injection
     const context: SyncClientEngineContext = {
-      pg,
-      db,
-      businessId,
-      businessUserId,
+      pg: this.pg,
+      db: this.db,
+      tenantId,
+      tenantColumn: tenantColumn ?? "tenant_id",
+      userId,
       syncService: null as any, // Will be set after creation
     };
 
@@ -109,7 +142,7 @@ export class SyncClientEngine {
       },
       fetchChanges: async (cursor?: string, limit?: number) => {
         const result = await httpClient.getChanges({
-          businessId,
+          tenantId,
           since: cursor,
           limit,
         });
@@ -137,6 +170,7 @@ export class SyncClientEngine {
 
     const pullServiceOptions: PullServiceOptions = {
       httpClient: pullHttpClient,
+      applierConfig: this.config.applierConfig,
       cursorStorage: cursorStorage ?? undefined,
       mutex: this.mutex,
       logger: this.config.logger,
@@ -311,6 +345,60 @@ export class SyncClientEngine {
     return this.coordinator;
   }
 
+  async dispose(): Promise<void> {
+    await this.stop();
+    if (this.pg) {
+      try {
+        await this.pg.close();
+      } catch (error) {
+        console.warn("[SyncClientEngine] Failed to close PGlite:", error);
+      }
+    }
+    this.pg = null;
+    this.db = null;
+    this.state = "uninitialized";
+  }
+
+  async resetAndLogout(options?: {
+    redirectUrl?: string;
+    preserveSession?: boolean;
+    reloadPage?: boolean;
+    clearStorageKeys?: string[];
+  }): Promise<void> {
+    const {
+      redirectUrl = "/login",
+      preserveSession = false,
+      reloadPage = false,
+      clearStorageKeys = [],
+    } = options ?? {};
+
+    await this.dispose();
+
+    // Clear IndexedDB databases
+    const dataDir = this.config.databaseConfig?.dataDir;
+    if (dataDir) {
+      await resetDatabase({
+        versionKey: this.config.databaseConfig?.versionKey,
+        storage: this.config.databaseConfig?.storage,
+      });
+    }
+
+    // Clear specified localStorage keys
+    const keysToClear = [
+      ...clearStorageKeys,
+      ...(preserveSession ? [] : ["bearer_token", "current_business_id", "business_user_id"]),
+    ];
+    for (const key of keysToClear) {
+      localStorage.removeItem(key);
+    }
+
+    if (reloadPage) {
+      window.location.reload();
+    } else {
+      window.location.href = redirectUrl;
+    }
+  }
+
   private ensureInitialized(): void {
     if (this.state === "uninitialized") {
       throw new Error("SyncClientEngine not initialized. Call initialize() first.");
@@ -318,13 +406,14 @@ export class SyncClientEngine {
   }
 
   private instantiateServices(): void {
-    const { pg, db, businessId, businessUserId } = this.config;
+    const { tenantId, userId, tenantColumn } = this.config;
 
     const context: SyncClientEngineContext = {
-      pg,
-      db,
-      businessId,
-      businessUserId,
+      pg: this.getPg(),
+      db: this.getDb(),
+      tenantId,
+      tenantColumn: tenantColumn ?? "tenant_id",
+      userId,
       syncService: this.syncService!,
     };
 

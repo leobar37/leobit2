@@ -21,7 +21,7 @@ const testTagTable = pgTable("tags", {
   color: varchar("color", { length: 20 }),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -44,7 +44,7 @@ const testCustomerTable = pgTable("customers", {
   isActive: boolean("is_active").notNull().default(true),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -64,7 +64,7 @@ const testProductTable = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -77,7 +77,7 @@ const productConfig: EntitySyncConfig = {
 };
 
 // Junction table without 'id' column (like customer_tags with composite PK on customerId+tagId)
-// Note: Junction tables should NOT have businessId column - that's the bug we're fixing
+// Note: Junction tables should NOT have tenantId column - that's the bug we're fixing
 const testJunctionTable = pgTable("customer_tags", {
   customerId: uuid("customer_id").notNull(),
   tagId: uuid("tag_id").notNull(),
@@ -85,7 +85,7 @@ const testJunctionTable = pgTable("customer_tags", {
   assignedBy: uuid("assigned_by"),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  // NO businessId column - junction tables don't have businessId
+  // NO tenantId column - junction tables don't have tenantId
 }, (table) => ({
   // Composite primary key on customerId + tagId (not using 'id' column)
 }));
@@ -104,7 +104,7 @@ const testDistribucionTable = pgTable("distribuciones", {
   estado: text("estado").notNull().default("activo"),
   syncStatus: text("sync_status").notNull().default("pending"),
   syncAttempts: integer("sync_attempts").notNull().default(0),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -153,13 +153,13 @@ describe("Service Generator", () => {
       expect(result.serviceCode).toContain("async findById(id: string)");
     });
 
-    it("generates findByBusiness method filtering by businessId", () => {
+    it("generates findMany method filtering by tenantId", () => {
       const result = generateService("tags", tagConfig);
 
-      // Should filter by this.businessId and order by desc(createdAt)
-      expect(result.serviceCode).toContain("findByBusiness()");
-      expect(result.serviceCode).toContain("this.businessId");
-      expect(result.serviceCode).toContain("eq(tags.businessId, this.businessId)");
+      // Should filter by this.tenantId and order by desc(createdAt)
+      expect(result.serviceCode).toContain("list()");
+      expect(result.serviceCode).toContain("this.tenantId");
+      expect(result.serviceCode).toContain("eq(tags.tenantId, this.tenantId)");
       expect(result.serviceCode).toContain("orderBy(desc(tags.createdAt))");
     });
 
@@ -180,10 +180,10 @@ describe("Service Generator", () => {
       expect(result.serviceCode).toContain("syncAttempts: 0");
     });
 
-    it("generates create method that sets businessId", () => {
+    it("generates create method that sets tenantId", () => {
       const result = generateService("tags", tagConfig);
 
-      expect(result.serviceCode).toContain("businessId: this.businessId");
+      expect(result.serviceCode).toContain("tenantId: this.tenantId");
     });
 
     it("generates update method with sync queueing", () => {
@@ -245,11 +245,11 @@ describe("Service Generator", () => {
     it("does not duplicate sync columns in input interfaces", () => {
       const result = generateService("tags", tagConfig);
 
-      // syncStatus, syncAttempts, businessId, id, createdAt, updatedAt should not be in input
+      // syncStatus, syncAttempts, tenantId, id, createdAt, updatedAt should not be in input
       expect(result.serviceCode).not.toContain("id?:");
       expect(result.serviceCode).not.toContain("syncStatus?:");
       expect(result.serviceCode).not.toContain("syncAttempts?:");
-      expect(result.serviceCode).not.toContain("businessId?:");
+      expect(result.serviceCode).not.toContain("tenantId?:");
       expect(result.serviceCode).not.toContain("createdAt?:");
       expect(result.serviceCode).not.toContain("updatedAt?:");
     });
@@ -273,7 +273,7 @@ describe("Service Generator", () => {
 
       expect(result.serviceCode).toContain("from(customerGroups)");
       expect(result.serviceCode).toContain("where(eq(customerGroups.id, id))");
-      expect(result.serviceCode).toContain("where(eq(customerGroups.businessId, this.businessId))");
+      expect(result.serviceCode).toContain("where(eq(customerGroups.tenantId, this.tenantId))");
     });
 
     it("generates update with partial update logic", () => {
@@ -493,7 +493,7 @@ describe("Service Generator", () => {
       const result = generateService("tags", tagConfig);
 
       expect(result.serviceCode).toContain("findById(");
-      expect(result.serviceCode).toContain("findByBusiness(");
+      expect(result.serviceCode).toContain("list(");
       expect(result.serviceCode).toContain("create(");
       expect(result.serviceCode).toContain("update(");
       expect(result.serviceCode).toContain("delete(");
@@ -570,12 +570,12 @@ describe("Service Generator", () => {
       expect(result.serviceCode).not.toContain("where(eq(customerTags.id");
     });
 
-    it("generates findByBusiness for junction tables (no businessId filter)", () => {
+    it("generates findMany for junction tables (no tenantId filter)", () => {
       const result = generateService("customer_tags", junctionConfig);
 
-      expect(result.serviceCode).toContain("findByBusiness()");
-      // Junction tables don't have businessId, so no filter by businessId
-      expect(result.serviceCode).not.toContain("eq(customerTags.businessId");
+      expect(result.serviceCode).toContain("list()");
+      // Junction tables don't have tenantId, so no filter by tenantId
+      expect(result.serviceCode).not.toContain("eq(customerTags.tenantId");
     });
 
     it("does not generate update method for junction tables", () => {
@@ -620,17 +620,17 @@ describe("Service Generator", () => {
 
       // The entity should be built without id field
       expect(result.serviceCode).toContain("const entity: typeof customerTags.$inferInsert = {");
-      // Should have syncStatus, syncAttempts, but NO businessId (junction tables don't have it)
+      // Should have syncStatus, syncAttempts, but NO tenantId (junction tables don't have it)
       expect(result.serviceCode).toContain("syncStatus: SyncStatus.PENDING");
       expect(result.serviceCode).toContain("syncAttempts: 0");
-      expect(result.serviceCode).not.toContain("businessId: this.businessId");
+      expect(result.serviceCode).not.toContain("tenantId: this.tenantId");
     });
 
-    it("junction table has no update or delete methods but still has findByBusiness and create", () => {
+    it("junction table has no update or delete methods but still has findMany and create", () => {
       const result = generateService("customer_tags", junctionConfig);
 
       // Should have these
-      expect(result.serviceCode).toContain("findByBusiness()");
+      expect(result.serviceCode).toContain("list()");
       expect(result.serviceCode).toContain("create(");
       expect(result.serviceCode).toContain("queueSync(\"create\"");
 

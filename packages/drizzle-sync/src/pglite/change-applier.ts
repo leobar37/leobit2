@@ -10,7 +10,7 @@ import type { ISyncLogger } from "../core";
 import type { ApplyResult, BatchApplyResult, ApplierOptions, ConflictStrategy as ConflictCheckStrategy } from "./change-types";
 import { createSqlExecutor } from "./sql-executor";
 import { withRetry } from "../core";
-import { isValidTableName } from "./schema-mapper";
+import { isValidTableName, type ChangeApplierConfig } from "./schema-mapper";
 import { NoOpLogger } from "./change-noop-logger";
 import { executeInsert, executeUpdate, executeDelete } from "./change-strategies";
 import { checkForConflict, computeConflictedIds } from "./change-conflict-checker";
@@ -18,7 +18,9 @@ import { checkForConflict, computeConflictedIds } from "./change-conflict-checke
 export class ChangeApplier {
   private readonly executor: SqlExecutor;
   private readonly logger: ISyncLogger;
-  private readonly businessId: string;
+  private readonly tenantId: string;
+  private readonly tenantColumn: string;
+  private readonly applierConfig?: ChangeApplierConfig;
 
   constructor(
     private readonly context: SyncClientEngineContext,
@@ -26,7 +28,9 @@ export class ChangeApplier {
   ) {
     this.executor = createSqlExecutor(context);
     this.logger = options?.logger ?? new NoOpLogger();
-    this.businessId = context.businessId;
+    this.tenantId = context.tenantId;
+    this.tenantColumn = context.tenantColumn;
+    this.applierConfig = options?.applierConfig;
   }
 
   /**
@@ -43,7 +47,7 @@ export class ChangeApplier {
     const tableName = change.entityType;
 
     // Validate table name for safety (SQL injection protection)
-    if (!isValidTableName(tableName)) {
+    if (!isValidTableName(tableName, this.applierConfig)) {
       return {
         success: false,
         operation: change.operation as 'insert' | 'update' | 'delete',
@@ -78,13 +82,33 @@ export class ChangeApplier {
           switch (change.operation) {
             case "create":
             case "insert":
-              return await executeInsert(this.executor, tableName, change, this.businessId);
+              return await executeInsert(
+                this.executor,
+                tableName,
+                change,
+                this.tenantId,
+                this.tenantColumn,
+                this.applierConfig
+              );
 
             case "update":
-              return await executeUpdate(this.executor, tableName, change, this.businessId);
+              return await executeUpdate(
+                this.executor,
+                tableName,
+                change,
+                this.tenantId,
+                this.tenantColumn,
+                this.applierConfig
+              );
 
             case "delete":
-              return await executeDelete(this.executor, tableName, change, this.businessId);
+              return await executeDelete(
+                this.executor,
+                tableName,
+                change,
+                this.tenantId,
+                this.applierConfig
+              );
 
             default:
               throw new Error(`Unknown operation: ${change.operation}`);
@@ -134,7 +158,7 @@ export class ChangeApplier {
 
     // Pre-compute conflicted IDs
     const conflictedIds = checkConflicts 
-      ? await computeConflictedIds(this.executor, changes) 
+      ? await computeConflictedIds(this.executor, changes, this.applierConfig) 
       : new Set<string>();
 
     const entityTypes = new Set<string>();

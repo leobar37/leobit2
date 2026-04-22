@@ -39,7 +39,7 @@ interface SyncErrorEvent {
   errorType: string;
   payload?: Record<string, unknown>;
   validationErrors?: string[];
-  businessId: string;
+  tenantId: string;
   userId: string;
   timestamp: string;
   stack?: string;
@@ -61,7 +61,7 @@ interface OperationContext {
  * Request context interface for logging
  */
 export interface LogRequestContext {
-  businessId: string;
+  tenantId: string;
   userId: string;
 }
 
@@ -134,7 +134,7 @@ export class SyncLogger {
       entityType: params.entityType,
       entityId: params.entityId,
       operation: params.operation,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       userId: ctx.userId,
     });
 
@@ -161,7 +161,7 @@ export class SyncLogger {
       entityId: opContext.entityId,
       operation: opContext.operation,
       duration,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       ...details,
     });
   }
@@ -188,7 +188,7 @@ export class SyncLogger {
       error: error.message,
       errorType,
       payload: this.sanitizePayload(payload),
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       userId: ctx.userId,
       timestamp: new Date().toISOString(),
       stack: error.stack,
@@ -207,7 +207,7 @@ export class SyncLogger {
       error: error.message,
       errorType,
       duration,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       userId: ctx.userId,
       payload: errorEvent.payload,
       stack: error.stack,
@@ -239,7 +239,7 @@ export class SyncLogger {
       errorType: "VALIDATION_ERROR",
       payload: this.sanitizePayload(payload),
       validationErrors,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       userId: ctx.userId,
       timestamp: new Date().toISOString(),
     };
@@ -255,7 +255,7 @@ export class SyncLogger {
       operation: opContext.operation,
       error: error.message,
       validationErrors,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       payload: errorEvent.payload,
       payloadKeys: Object.keys(payload || {}),
       hasItems: Array.isArray(payload?.items),
@@ -282,7 +282,7 @@ export class SyncLogger {
       entityId: opContext.entityId,
       operation: opContext.operation,
       reason,
-      businessId: ctx.businessId,
+      tenantId: ctx.tenantId,
       payloadKeys: payload ? Object.keys(payload) : undefined,
     });
   }
@@ -476,7 +476,7 @@ export class SyncLogger {
       errorType: errorEvent.errorType,
       error: errorEvent.error,
       errorCount: this.ERROR_THRESHOLD,
-      businessId: errorEvent.businessId,
+      tenantId: errorEvent.tenantId,
       recommendation: "Check sync configuration and data consistency",
     });
   }

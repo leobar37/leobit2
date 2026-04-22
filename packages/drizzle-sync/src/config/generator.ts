@@ -72,6 +72,7 @@ export async function generateAll(
 
   const entities = toEntityMap(config);
   const entityNames = Object.keys(entities);
+  const tenancy = isSyncSchema(config) ? config.tenancy : config.tenancy;
 
   // 1. Generate Zod schemas
   const zodSchemas = entityNames.map((name) =>
@@ -83,7 +84,7 @@ export async function generateAll(
   files.push(`${outputDir}/schemas.ts`);
 
   // 2. Generate DDL (PostgreSQL for PGlite)
-  const ddlOutputs = entityNames.map((name) => generatePostgreSQLDDL(name, entities[name]));
+  const ddlOutputs = entityNames.map((name) => generatePostgreSQLDDL(name, entities[name], tenancy));
   const ddlFile = generatePostgreSQLDDLFile(ddlOutputs);
   writeFileSync(`${outputDir}/init.sql`, ddlFile);
   files.push(`${outputDir}/init.sql`);
@@ -114,7 +115,7 @@ export async function generateAll(
 
   // 5. Generate services (BaseService subclasses for PGlite)
   const serviceOutputs = entityNames.map((name) =>
-    generateService(name, entities[name])
+    generateService(name, entities[name], tenancy)
   );
   const servicesPath = `${outputDir}/services.ts`;
   const servicesFile = generateServicesFile(serviceOutputs);

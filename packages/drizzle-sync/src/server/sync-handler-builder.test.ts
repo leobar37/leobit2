@@ -32,28 +32,38 @@ const updateSchema = z.object({
 
 // Mock request context
 const mockCtx = {
-  businessId: "biz-123",
-  businessUserId: "user-456",
+  tenantId: "biz-123",
+  userId: "user-456",
 };
 
 // Helper to create sync operations
 function makeOp(
   partial: Partial<SyncOperationInput> & {
     idempotencyKey: string;
-    entityType: "test_entity";
+    entityType: "sales";
     entityId: string;
     operation: "create" | "update" | "delete";
   }
 ): SyncOperationInput {
+  const {
+    idempotencyKey,
+    entityType,
+    entityId,
+    operation,
+    payload,
+    localVersion,
+    ...rest
+  } = partial;
+
   return {
-    idempotencyKey: partial.idempotencyKey,
-    entityType: partial.entityType,
-    entityId: partial.entityId,
-    operation: partial.operation,
-    payload: partial.payload ?? {},
-    localVersion: partial.localVersion ?? 1,
+    idempotencyKey,
+    entityType,
+    entityId,
+    operation,
+    payload: payload ?? {},
+    localVersion: localVersion ?? 1,
     localTimestamp: new Date().toISOString(),
-    ...partial,
+    ...rest,
   } as SyncOperationInput;
 }
 
@@ -71,50 +81,50 @@ describe("SyncHandlerBuilder", () => {
 
   describe("constructor", () => {
     it("creates builder with entity type", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       expect(builder).toBeDefined();
     });
   });
 
   describe("fluent API - all methods return this", () => {
     it("withSchemas returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withSchemas(createSchema, updateSchema);
       expect(result).toBe(builder);
     });
 
     it("withSupportedOperations returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withSupportedOperations(["create", "update"]);
       expect(result).toBe(builder);
     });
 
     it("withCreateFields returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withCreateFields({ name: "entity_name" });
       expect(result).toBe(builder);
     });
 
     it("withUpdateFields returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withUpdateFields({ name: "entity_name" });
       expect(result).toBe(builder);
     });
 
     it("withPostCreate returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withPostCreate(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withPostUpdate returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withPostUpdate(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withParentCheck returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withParentCheck({
         parentIdField: "parentId",
         parentName: "Parent",
@@ -124,79 +134,79 @@ describe("SyncHandlerBuilder", () => {
     });
 
     it("withTxRequired returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withTxRequired(true);
       expect(result).toBe(builder);
     });
 
     it("withRepo returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withRepo(mockRepo);
       expect(result).toBe(builder);
     });
 
     it("withCustomCreate returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withCustomCreate(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withCustomUpdate returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withCustomUpdate(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withCustomDelete returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withCustomDelete(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withPreValidation returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withPreValidation(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withPayloadEnricher returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withPayloadEnricher(() => ({}));
       expect(result).toBe(builder);
     });
 
     it("withPostOperation returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withPostOperation(async () => {});
       expect(result).toBe(builder);
     });
 
     it("withAdditionalParentChecks returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withAdditionalParentChecks([]);
       expect(result).toBe(builder);
     });
 
     it("withSkipOnParentMissing returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withSkipOnParentMissing();
       expect(result).toBe(builder);
     });
 
     it("withVersionConflictField returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withVersionConflictField("version");
       expect(result).toBe(builder);
     });
 
     it("withCreateDefaults returns this", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.withCreateDefaults({ status: "active" });
       expect(result).toBe(builder);
     });
 
     it("build returns GenericSyncHandler instance", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const result = builder.build();
       expect(result).toBeInstanceOf(GenericSyncHandler);
     });
@@ -204,7 +214,7 @@ describe("SyncHandlerBuilder", () => {
 
   describe("chaining multiple methods", () => {
     it("chains 5+ methods and returns same instance", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
 
       const r1 = builder.withSchemas(createSchema, updateSchema);
       const r2 = builder.withCreateFields({ name: "entity_name" });
@@ -222,7 +232,7 @@ describe("SyncHandlerBuilder", () => {
     it("full chain produces working handler", async () => {
       const postCreate = vi.fn().mockResolvedValue(undefined);
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withCreateFields({ name: "entity_name", email: "contact_email" })
         .withUpdateFields({ name: "entity_name" })
@@ -234,7 +244,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test Entity", email: "test@example.com" },
@@ -259,7 +269,7 @@ describe("SyncHandlerBuilder", () => {
 
   describe("build() produces valid handler", () => {
     it("build() returns GenericSyncHandler instance", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const handler = builder.build();
       expect(handler).toBeInstanceOf(GenericSyncHandler);
     });
@@ -271,12 +281,12 @@ describe("SyncHandlerBuilder", () => {
     });
 
     it("handler with repo has repo attached", () => {
-      const builder = new SyncHandlerBuilder("test_entity");
+      const builder = new SyncHandlerBuilder("sales");
       const handler = builder.withRepo(mockRepo).build();
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -292,14 +302,14 @@ describe("SyncHandlerBuilder", () => {
     it("builds handler with customCreate only (no repo)", async () => {
       const customCreate = vi.fn().mockResolvedValue(undefined);
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withCustomCreate(customCreate)
         .build();
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -321,7 +331,7 @@ describe("SyncHandlerBuilder", () => {
       const customUpdate = vi.fn().mockResolvedValue(undefined);
       const customDelete = vi.fn().mockResolvedValue(undefined);
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withSupportedOperations(["create", "update", "delete"])
         .withCustomCreate(customCreate)
@@ -332,7 +342,7 @@ describe("SyncHandlerBuilder", () => {
       // Test create
       const createOp = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -343,7 +353,7 @@ describe("SyncHandlerBuilder", () => {
       // Test update
       const updateOp = makeOp({
         idempotencyKey: "key-2",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated" },
@@ -354,7 +364,7 @@ describe("SyncHandlerBuilder", () => {
       // Test delete
       const deleteOp = makeOp({
         idempotencyKey: "key-3",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: {},
@@ -366,7 +376,7 @@ describe("SyncHandlerBuilder", () => {
     it("builds handler with postOperation hook", async () => {
       const postOperation = vi.fn().mockResolvedValue(undefined);
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withPostOperation(postOperation)
         .withRepo(mockRepo)
@@ -374,7 +384,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -393,10 +403,10 @@ describe("SyncHandlerBuilder", () => {
     it("builds handler with payloadEnricher", async () => {
       const enricher = vi.fn().mockImplementation((ctx, payload) => ({
         ...payload,
-        businessId: ctx.businessId,
+        tenantId: ctx.tenantId,
       }));
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withPayloadEnricher(enricher)
         .withRepo(mockRepo)
@@ -404,7 +414,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -426,7 +436,7 @@ describe("SyncHandlerBuilder", () => {
     it("builds handler with parentCheck", async () => {
       const findParent = vi.fn().mockResolvedValue({ id: "parent-1" });
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withParentCheck({
           parentIdField: "parentId",
@@ -438,7 +448,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test", parentId: "parent-1" },
@@ -451,7 +461,7 @@ describe("SyncHandlerBuilder", () => {
     });
 
     it("builds handler with txRequired", async () => {
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withTxRequired(true)
         .withRepo(mockRepo)
@@ -459,7 +469,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "create",
         payload: { name: "Test" },
@@ -481,7 +491,7 @@ describe("SyncHandlerBuilder", () => {
         version: 5,
       });
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withVersionConflictField("version")
         .withRepo(mockRepo)
@@ -489,7 +499,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "update",
         payload: { name: "Updated", version: 3 },
@@ -506,7 +516,7 @@ describe("SyncHandlerBuilder", () => {
       (mockRepo.findById as any).mockResolvedValue(undefined);
       const findParent = vi.fn().mockResolvedValue(null);
 
-      const handler = new SyncHandlerBuilder("test_entity")
+      const handler = new SyncHandlerBuilder("sales")
         .withSchemas(createSchema, updateSchema)
         .withSkipOnParentMissing()
         .withParentCheck({
@@ -519,7 +529,7 @@ describe("SyncHandlerBuilder", () => {
 
       const op = makeOp({
         idempotencyKey: "key-1",
-        entityType: "test_entity",
+        entityType: "sales",
         entityId: "entity-1",
         operation: "delete",
         payload: { parentId: "parent-nonexistent" },

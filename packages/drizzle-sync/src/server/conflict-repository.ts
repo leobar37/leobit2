@@ -12,7 +12,7 @@ import type { SyncOperationInput } from "./types";
  */
 export interface SyncConflict {
   id: string;
-  businessId: string;
+  tenantId: string;
   operationId: string;
   entityType: string;
   entityId: string;
@@ -41,8 +41,8 @@ export interface ConflictResolutionData {
  * Request context interface for repositories
  */
 export interface RepositoryRequestContext {
-  businessId: string;
-  businessUserId?: string;
+  tenantId: string;
+  userId?: string;
 }
 
 /**
@@ -85,7 +85,7 @@ export interface ISyncConflictRepository<
     operationId: string
   ): Promise<SyncConflict | undefined>;
 
-  findPendingByBusiness(
+  findPending(
     ctx: TRequestContext,
     options?: {
       limit?: number;
@@ -93,7 +93,7 @@ export interface ISyncConflictRepository<
     }
   ): Promise<SyncConflict[]>;
 
-  findByBusiness(
+  findMany(
     ctx: TRequestContext,
     options?: {
       status?: string;
@@ -173,7 +173,7 @@ export abstract class SyncConflictRepository<
   /**
    * Find pending conflicts by business
    */
-  abstract findPendingByBusiness(
+  abstract findPending(
     ctx: TRequestContext,
     options?: {
       limit?: number;
@@ -184,7 +184,7 @@ export abstract class SyncConflictRepository<
   /**
    * Find conflicts by business with filters
    */
-  abstract findByBusiness(
+  abstract findMany(
     ctx: TRequestContext,
     options?: {
       status?: string;

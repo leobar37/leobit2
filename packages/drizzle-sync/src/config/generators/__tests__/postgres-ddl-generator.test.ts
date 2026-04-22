@@ -17,11 +17,11 @@ const testTable = pgTable(
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     price: decimal("price", { precision: 10, scale: 2 }),
     status: text("status").notNull().default("draft"),
-    businessId: uuid("business_id").notNull(),
+    tenantId: uuid("tenant_id").notNull(),
   },
   (table) => [
     index("idx_test_entity_name").on(table.name),
-    index("idx_test_entity_business_id").on(table.businessId),
+    index("idx_test_entity_tenant_id").on(table.tenantId),
   ]
 );
 
@@ -101,7 +101,7 @@ describe("PostgreSQL DDL Generator", () => {
       expect(result.createTable).toContain('"is_active" BOOLEAN NOT NULL');
       expect(result.createTable).toContain('"created_at" TIMESTAMP NOT NULL');
       expect(result.createTable).toContain('"status" TEXT NOT NULL');
-      expect(result.createTable).toContain('"business_id" UUID NOT NULL');
+      expect(result.createTable).toContain('"tenant_id" UUID NOT NULL');
     });
 
     it("auto-injects sync_status column if not present", () => {
@@ -147,10 +147,10 @@ describe("PostgreSQL DDL Generator", () => {
       expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_entity_sync_status" ON "test_entity"(sync_status);');
     });
 
-    it("generates indexes for business_id", () => {
+    it("generates indexes for tenant_id", () => {
       const result = generatePostgreSQLDDL("test_entity", testConfig);
 
-      expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_entity_business_id" ON "test_entity"(business_id);');
+      expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_entity_tenant_id" ON "test_entity"(tenant_id);');
     });
 
     it("generates indexes for FK columns", () => {
@@ -160,7 +160,7 @@ describe("PostgreSQL DDL Generator", () => {
           id: uuid("id").primaryKey(),
           customerId: uuid("customer_id").notNull(),
           productId: uuid("product_id").notNull(),
-          businessId: uuid("business_id").notNull(),
+          tenantId: uuid("tenant_id").notNull(),
         }
       );
 
@@ -175,7 +175,7 @@ describe("PostgreSQL DDL Generator", () => {
 
       expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_fk_customer_id" ON "test_fk"("customer_id");');
       expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_fk_product_id" ON "test_fk"("product_id");');
-      expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_fk_business_id" ON "test_fk"(business_id);');
+      expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_fk_tenant_id" ON "test_fk"(tenant_id);');
       expect(result.indexes).toContain('CREATE INDEX IF NOT EXISTS "idx_test_fk_sync_status" ON "test_fk"(sync_status);');
     });
 
@@ -184,7 +184,7 @@ describe("PostgreSQL DDL Generator", () => {
 
       expect(result.createTable).toContain('"id"');
       expect(result.createTable).toContain('"name"');
-      expect(result.createTable).toContain('"business_id"');
+      expect(result.createTable).toContain('"tenant_id"');
       expect(result.indexes[0]).toContain('"test_entity"');
     });
 

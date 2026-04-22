@@ -19,10 +19,12 @@ import type {
   ISyncLogger,
   ISyncQueue,
 } from "../core";
+import type { DatabaseInitConfig } from "./database-init";
 import type { ConflictStrategy } from "../shared";
 import type { PushSyncService } from "../pglite/push-service";
 import type { ISyncMutex } from "../pglite/sync-mutex";
 import type { PullStatus } from "../pglite/pull-types";
+import type { ChangeApplierConfig } from "../pglite/schema-mapper";
 
 export interface SyncClientStatusOperations {
   getStatus(): Promise<SyncStatus>;
@@ -74,9 +76,11 @@ export interface SyncClientEngineContext {
   /** Drizzle ORM instance for type-safe queries */
   db: ReturnType<typeof drizzle>;
   /** Business/tenant ID for multi-tenancy */
-  businessId: string;
+  tenantId: string;
+  /** Tenant partition column for scoped entities */
+  tenantColumn: string;
   /** Business user ID for audit trails */
-  businessUserId: string;
+  userId: string;
   /** Sync service for enqueuing operations */
   syncService: SyncWritePort;
 }
@@ -187,7 +191,7 @@ export interface ISyncClientHttpClient {
   postBatch(operations: unknown[]): Promise<{ success: boolean; results: unknown[] }>;
   /** Fetch changes from the server since a given cursor */
   getChanges(params: {
-    businessId: string;
+    tenantId: string;
     since?: string;
     entityTypes?: string[];
     limit?: number;
@@ -230,8 +234,8 @@ export interface IClientCursorStorage {
  * const engine = createSyncClientEngine({
  *   pg: myPgliteInstance,
  *   db: drizzle(myPgliteInstance),
- *   businessId: 'biz-123',
- *   businessUserId: 'user-456',
+ *   tenantId: 'biz-123',
+ *   userId: 'user-456',
  *   authToken: 'token-abc',
  *   apiUrl: 'https://api.example.com',
  *   httpClient: myHttpClient,
@@ -239,7 +243,7 @@ export interface IClientCursorStorage {
  *     {
  *       name: 'customers',
  *       entityType: 'customers',
- *       factory: (ctx) => new CustomerService(ctx.pg, ctx.db, ctx.syncService, ctx.businessId, ctx.businessUserId),
+ *       factory: (ctx) => new CustomerService(ctx.pg, ctx.db, ctx.syncService, ctx.tenantId, ctx.userId),
  *     },
  *   ],
  *   sync: { pushIntervalMs: 5000, pullIntervalMs: 10000 },
@@ -252,14 +256,27 @@ export interface IClientCursorStorage {
  * ```
  */
 export interface SyncClientEngineConfig<TStage extends string = string> {
-  /** PGlite database instance */
-  pg: PGlite;
-  /** Drizzle ORM instance built from the PGlite instance */
-  db: ReturnType<typeof drizzle>;
+  /**
+   * PGlite database instance (legacy mode — provide this OR databaseConfig).
+   * If omitted, the engine will auto-initialize PGlite using databaseConfig.
+   */
+  pg?: PGlite;
+  /**
+   * Drizzle ORM instance (legacy mode — provide this OR databaseConfig).
+   * Must match the pg instance if both are provided.
+   */
+  db?: ReturnType<typeof drizzle>;
+  /**
+   * Database initialization config (auto-init mode — provide this OR pg/db).
+   * When provided, the engine creates and manages its own PGlite instance.
+   */
+  databaseConfig?: DatabaseInitConfig;
   /** Business/tenant ID */
-  businessId: string;
+  tenantId: string;
+  /** Tenant partition column used by pull/apply writes (default: tenant_id) */
+  tenantColumn?: string;
   /** Business user ID (for audit) */
-  businessUserId: string;
+  userId: string;
   /** Authentication token for API calls */
   authToken: string;
   /** Base URL for the sync API */
@@ -272,6 +289,8 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
   mutex?: ISyncMutex;
   /** Optional custom logger implementation */
   logger?: ISyncLogger;
+  /** Optional generated config used by pull/apply validation */
+  applierConfig?: ChangeApplierConfig;
   /** Entity service definitions to register with the engine */
   entities: EntityServiceDefinition[];
   /** Optional sync timing configuration */

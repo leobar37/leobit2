@@ -6,19 +6,19 @@ import type { ChangeApplierConfig } from "@avileo/drizzle-sync/pglite";
 export const VALID_TABLES = new Set([
   "customers",
   "products",
-  "productVariants",
+  "product_variants",
   "suppliers",
   "tags",
-  "customerTags",
-  "customerGroups",
-  "customerGroupMembers",
+  "customer_tags",
+  "customer_groups",
+  "customer_group_members",
   "visitas",
   "sales",
-  "saleItems",
+  "sale_items",
   "purchases",
-  "purchaseItems",
+  "purchase_items",
   "distribuciones",
-  "distribucionItems",
+  "distribucion_items",
   "abonos",
 ]);
 
@@ -54,7 +54,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "sync_attempts",
     "version",
   ]),
-  productVariants: new Set([
+  product_variants: new Set([
     "id",
     "product_id",
     "business_id",
@@ -101,7 +101,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  customerTags: new Set([
+  customer_tags: new Set([
     "customer_id",
     "tag_id",
     "assigned_at",
@@ -112,7 +112,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  customerGroups: new Set([
+  customer_groups: new Set([
     "id",
     "name",
     "business_id",
@@ -122,7 +122,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  customerGroupMembers: new Set([
+  customer_group_members: new Set([
     "id",
     "business_id",
     "group_id",
@@ -190,7 +190,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  saleItems: new Set([
+  sale_items: new Set([
     "id",
     "business_id",
     "sale_id",
@@ -231,7 +231,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  purchaseItems: new Set([
+  purchase_items: new Set([
     "id",
     "business_id",
     "purchase_id",
@@ -267,7 +267,7 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  distribucionItems: new Set([
+  distribucion_items: new Set([
     "id",
     "business_id",
     "distribucion_id",
@@ -309,7 +309,7 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  productVariants: {
+  product_variants: {
     sync_status: "synced",
     sync_attempts: 0,
   },
@@ -321,15 +321,15 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  customerTags: {
+  customer_tags: {
     sync_status: "synced",
     sync_attempts: 0,
   },
-  customerGroups: {
+  customer_groups: {
     sync_status: "synced",
     sync_attempts: 0,
   },
-  customerGroupMembers: {
+  customer_group_members: {
     sync_status: "synced",
     sync_attempts: 0,
   },
@@ -341,7 +341,7 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  saleItems: {
+  sale_items: {
     sync_status: "synced",
     sync_attempts: 0,
   },
@@ -349,7 +349,7 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  purchaseItems: {
+  purchase_items: {
     sync_status: "synced",
     sync_attempts: 0,
   },
@@ -357,7 +357,7 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  distribucionItems: {
+  distribucion_items: {
     sync_status: "synced",
     sync_attempts: 0,
   },
@@ -372,18 +372,18 @@ export const APPLY_ORDER = [
   "products",
   "suppliers",
   "tags",
-  "customerGroups",
+  "customer_groups",
   "distribuciones",
-  "distribucionItems",
-  "productVariants",
-  "customerTags",
-  "customerGroupMembers",
+  "product_variants",
+  "customer_tags",
+  "customer_group_members",
   "sales",
   "purchases",
   "abonos",
   "visitas",
-  "saleItems",
-  "purchaseItems",
+  "sale_items",
+  "purchase_items",
+  "distribucion_items",
 ];
 
 export const applierConfig: ChangeApplierConfig = {

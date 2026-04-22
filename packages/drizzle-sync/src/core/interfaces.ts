@@ -114,7 +114,7 @@ export interface ISyncQueue {
  */
 export interface SyncContext {
   /** Business/tenant ID for multi-tenancy */
-  businessId: string;
+  tenantId: string;
   /** User performing the operation */
   userId: string;
   /** Correlation ID for distributed tracing */

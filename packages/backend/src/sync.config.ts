@@ -36,7 +36,7 @@ export const syncConfig = defineSyncConfig({
       conflictResolver: "version-based",
     },
 
-    productVariants: {
+    product_variants: {
       table: productVariants,
       syncable: true,
       conflictResolver: "version-based",
@@ -56,7 +56,7 @@ export const syncConfig = defineSyncConfig({
       conflictResolver: "version-based",
     },
 
-    customerTags: {
+    customer_tags: {
       table: customerTags,
       syncable: true,
       conflictResolver: "version-based",
@@ -64,7 +64,7 @@ export const syncConfig = defineSyncConfig({
       metadata: { isJunctionTable: true },
     },
 
-    customerGroups: {
+    customer_groups: {
       table: customerGroups,
       syncable: true,
       conflictResolver: "version-based",
@@ -72,7 +72,7 @@ export const syncConfig = defineSyncConfig({
       apiPath: "groups",
     },
 
-    customerGroupMembers: {
+    customer_group_members: {
       table: customerGroupMembers,
       syncable: true,
       conflictResolver: "version-based",
@@ -101,15 +101,15 @@ export const syncConfig = defineSyncConfig({
       relations: {
         children: [
           {
-            entity: "saleItems",
-            foreignKey: "sale_id",
-            cascade: true,
-          },
-        ],
-      },
-    },
+             entity: "sale_items",
+             foreignKey: "sale_id",
+             cascade: true,
+           },
+         ],
+       },
+     },
 
-    saleItems: {
+    sale_items: {
       table: saleItems,
       syncable: true,
       conflictResolver: "version-based",
@@ -136,15 +136,15 @@ export const syncConfig = defineSyncConfig({
       relations: {
         children: [
           {
-            entity: "purchaseItems",
-            foreignKey: "purchase_id",
-            cascade: true,
-          },
-        ],
-      },
-    },
+             entity: "purchase_items",
+             foreignKey: "purchase_id",
+             cascade: true,
+           },
+         ],
+       },
+     },
 
-    purchaseItems: {
+    purchase_items: {
       table: purchaseItems,
       syncable: true,
       conflictResolver: "version-based",
@@ -165,15 +165,15 @@ export const syncConfig = defineSyncConfig({
       relations: {
         children: [
           {
-            entity: "distribucionItems",
-            foreignKey: "distribucion_id",
-            cascade: true,
-          },
-        ],
-      },
-    },
+             entity: "distribucion_items",
+             foreignKey: "distribucion_id",
+             cascade: true,
+           },
+         ],
+       },
+     },
 
-    distribucionItems: {
+    distribucion_items: {
       table: distribucionItems,
       syncable: true,
       conflictResolver: "version-based",
@@ -195,10 +195,15 @@ export const syncConfig = defineSyncConfig({
     },
   },
 
+  tenancy: {
+    tenantColumn: "business_id",
+    tenantField: "businessId",
+  },
+
   options: {
     batchSize: 50,
     maxRetries: 3,
-    syncInterval: 30000, // 30 seconds
+    syncInterval: 30000,
   },
 
   schema: {

@@ -15,8 +15,7 @@ packages/drizzle-sync/src/
 ├── server/     # Backend: SyncEngine (batch processing), handlers, conflict resolvers
 ├── pglite/     # Frontend: PullService, ChangeApplier, schema mapper
 ├── react/      # React: SyncProvider, hooks (8 total)
-├── config/     # Config types, validators, codegen generators (partial)
-├── presets/    # Avileo preset (19 entities)
+├── config/     # Config types, validators, codegen generators
 └── shared/     # Constants
 ```
 
@@ -30,7 +29,7 @@ packages/drizzle-sync/src/
 | ChangeApplier (client) | `packages/drizzle-sync/src/pglite/change-applier.ts` |
 | BaseSyncHandler | `packages/drizzle-sync/src/server/base-handler.ts` |
 | SyncProvider (React) | `packages/drizzle-sync/src/react/provider.tsx` |
-| Avileo preset | `packages/drizzle-sync/src/presets/avileo.ts` |
+| Sync config (Avileo) | `packages/backend/src/sync.config.ts` |
 
 ## Architecture Patterns
 

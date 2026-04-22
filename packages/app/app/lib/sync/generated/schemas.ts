@@ -73,7 +73,7 @@ export interface ProductsInput {
   version: number;
 }
 
-export const productVariantsSchema = z.object({
+export const product_variantsSchema = z.object({
   id: z.string(),
   productId: z.string(),
   businessId: z.string(),
@@ -93,7 +93,7 @@ export const productVariantsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type ProductVariants = z.infer<typeof productVariantsSchema>;
+export type ProductVariants = z.infer<typeof product_variantsSchema>;
 
 export interface ProductVariantsInput {
   id: string;
@@ -179,7 +179,7 @@ export interface TagsInput {
   updatedAt: Date;
 }
 
-export const customerTagsSchema = z.object({
+export const customer_tagsSchema = z.object({
   customerId: z.string(),
   tagId: z.string(),
   assignedAt: z.coerce.date(),
@@ -191,7 +191,7 @@ export const customerTagsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type CustomerTags = z.infer<typeof customerTagsSchema>;
+export type CustomerTags = z.infer<typeof customer_tagsSchema>;
 
 export interface CustomerTagsInput {
   customerId: string;
@@ -205,7 +205,7 @@ export interface CustomerTagsInput {
   updatedAt: Date;
 }
 
-export const customerGroupsSchema = z.object({
+export const customer_groupsSchema = z.object({
   id: z.string(),
   name: z.string(),
   businessId: z.string(),
@@ -216,7 +216,7 @@ export const customerGroupsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type CustomerGroups = z.infer<typeof customerGroupsSchema>;
+export type CustomerGroups = z.infer<typeof customer_groupsSchema>;
 
 export interface CustomerGroupsInput {
   id: string;
@@ -229,7 +229,7 @@ export interface CustomerGroupsInput {
   updatedAt: Date;
 }
 
-export const customerGroupMembersSchema = z.object({
+export const customer_group_membersSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   groupId: z.string(),
@@ -243,7 +243,7 @@ export const customerGroupMembersSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type CustomerGroupMembers = z.infer<typeof customerGroupMembersSchema>;
+export type CustomerGroupMembers = z.infer<typeof customer_group_membersSchema>;
 
 export interface CustomerGroupMembersInput {
   id: string;
@@ -377,7 +377,7 @@ export interface SalesInput {
   updatedAt: Date;
 }
 
-export const saleItemsSchema = z.object({
+export const sale_itemsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   saleId: z.string(),
@@ -402,7 +402,7 @@ export const saleItemsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type SaleItems = z.infer<typeof saleItemsSchema>;
+export type SaleItems = z.infer<typeof sale_itemsSchema>;
 
 export interface SaleItemsInput {
   id: string;
@@ -467,7 +467,7 @@ export interface PurchasesInput {
   updatedAt: Date;
 }
 
-export const purchaseItemsSchema = z.object({
+export const purchase_itemsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   purchaseId: z.string(),
@@ -485,7 +485,7 @@ export const purchaseItemsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type PurchaseItems = z.infer<typeof purchaseItemsSchema>;
+export type PurchaseItems = z.infer<typeof purchase_itemsSchema>;
 
 export interface PurchaseItemsInput {
   id: string;
@@ -547,7 +547,7 @@ export interface DistribucionesInput {
   updatedAt: Date;
 }
 
-export const distribucionItemsSchema = z.object({
+export const distribucion_itemsSchema = z.object({
   id: z.string(),
   businessId: z.string(),
   distribucionId: z.string(),
@@ -562,7 +562,7 @@ export const distribucionItemsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export type DistribucionItems = z.infer<typeof distribucionItemsSchema>;
+export type DistribucionItems = z.infer<typeof distribucion_itemsSchema>;
 
 export interface DistribucionItemsInput {
   id: string;

@@ -8,7 +8,7 @@ import type { EntitySyncConfig } from "./types";
 
 const customersTable = pgTable("customers_test_builder", {
   id: uuid("id").primaryKey(),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
 });
 

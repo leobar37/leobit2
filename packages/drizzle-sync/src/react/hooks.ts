@@ -214,3 +214,106 @@ export function useSyncEngineReady(): { isReady: boolean; error: Error | null } 
     error: null,
   };
 }
+
+interface SyncEngineInitState {
+  isReady: boolean;
+  isLoading: boolean;
+  error: Error | null;
+  schemaError: Error | null;
+  hasInitTimeout: boolean;
+}
+
+/**
+ * Hook to initialize a SyncClientEngine automatically.
+ * Handles database initialization, timeout detection, and schema error detection.
+ *
+ * @param engine - The SyncClientEngine instance to initialize
+ * @param options - Initialization options
+ * @returns Initialization state
+ *
+ * @example
+ * ```tsx
+ * const engine = createSyncClientEngine({ databaseConfig: {...}, ... });
+ * const { isReady, error, schemaError, hasInitTimeout } = useSyncEngineInit(engine, { timeoutMs: 30000 });
+ * ```
+ */
+export function useSyncEngineInit(
+  engine: SyncClientEngine | null,
+  options?: { timeoutMs?: number }
+): SyncEngineInitState {
+  const [state, setState] = useState<SyncEngineInitState>({
+    isReady: false,
+    isLoading: false,
+    error: null,
+    schemaError: null,
+    hasInitTimeout: false,
+  });
+
+  const timeoutMs = options?.timeoutMs ?? 30000;
+
+  useEffect(() => {
+    if (!engine || state.isReady || state.isLoading) return;
+
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
+
+    const init = async () => {
+      try {
+        // Set timeout
+        timeoutId = setTimeout(() => {
+          if (mounted) {
+            setState({
+              isReady: false,
+              isLoading: false,
+              error: new Error(`Engine initialization timed out after ${timeoutMs}ms`),
+              schemaError: null,
+              hasInitTimeout: true,
+            });
+          }
+        }, timeoutMs);
+
+        await engine.initialize();
+
+        if (!mounted) return;
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        setState({
+          isReady: true,
+          isLoading: false,
+          error: null,
+          schemaError: null,
+          hasInitTimeout: false,
+        });
+      } catch (err) {
+        if (!mounted) return;
+        if (timeoutId) clearTimeout(timeoutId);
+
+        const error = err instanceof Error ? err : new Error(String(err));
+        const isSchemaError =
+          error.message?.includes("column") ||
+          error.message?.includes("does not exist") ||
+          error.message?.includes("no existe");
+
+        setState({
+          isReady: false,
+          isLoading: false,
+          error: isSchemaError ? null : error,
+          schemaError: isSchemaError ? error : null,
+          hasInitTimeout: false,
+        });
+      }
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [engine, timeoutMs]); // Intentionally not depending on state to avoid loops
+
+  return state;
+}

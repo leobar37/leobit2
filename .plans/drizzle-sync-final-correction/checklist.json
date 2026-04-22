@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "plan": "drizzle-sync-final-correction",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-000",
+      "title": "Post-migration stabilization",
+      "file": "tasks/T-000-post-migration-stabilization.md",
+      "status": "in_progress",
+      "phase": "stabilization",
+      "dependencies": [],
+      "requirements": [
+        "FR-008"
+      ]
+    },
+    {
+      "id": "T-001",
+      "title": "Canonical entity identity",
+      "file": "tasks/T-001-canonical-entity-identity.md",
+      "status": "in_progress",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Schema-driven applier generation",
+      "file": "tasks/T-002-schema-driven-applier-generation.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": [
+        "T-000",
+        "T-001"
+      ],
+      "requirements": [
+        "FR-002",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Runtime apply integration",
+      "file": "tasks/T-003-runtime-apply-integration.md",
+      "status": "pending",
+      "phase": "integration",
+      "dependencies": [
+        "T-000",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-003"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Decouple generic library from shared",
+      "file": "tasks/T-004-decouple-generic-library-from-shared.md",
+      "status": "pending",
+      "phase": "hardening",
+      "dependencies": [
+        "T-001",
+        "T-003"
+      ],
+      "requirements": [
+        "FR-004",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Persisted entityType migration",
+      "file": "tasks/T-005-persisted-entitytype-migration.md",
+      "status": "pending",
+      "phase": "hardening",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-005",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Introspection and validation hardening",
+      "file": "tasks/T-006-introspection-and-validation-hardening.md",
+      "status": "pending",
+      "phase": "hardening",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-006"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Consumer alignment",
+      "file": "tasks/T-007-consumer-alignment.md",
+      "status": "pending",
+      "phase": "integration",
+      "dependencies": [
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "FR-007",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Validation and regression coverage",
+      "file": "tasks/T-008-validation-and-regression-coverage.md",
+      "status": "pending",
+      "phase": "validation",
+      "dependencies": [
+        "T-000",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007",
+        "T-009"
+      ],
+      "requirements": [
+        "NFR-004",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-009",
+      "title": "Worker and debug follow-up",
+      "file": "tasks/T-009-worker-and-debug-follow-up.md",
+      "status": "pending",
+      "phase": "hardening",
+      "dependencies": [
+        "T-000"
+      ],
+      "requirements": [
+        "FR-009"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Phase 0: Stabilization",
+      "tasks": [
+        "T-000"
+      ],
+      "canParallelize": false
+    },
+    {
+      "name": "Phase 1: Identity + Generation Foundation",
+      "tasks": [
+        "T-001",
+        "T-002"
+      ],
+      "canParallelize": false
+    },
+    {
+      "name": "Phase 2: Runtime Integration",
+      "tasks": [
+        "T-003"
+      ],
+      "canParallelize": false
+    },
+    {
+      "name": "Phase 3: Hardening",
+      "tasks": [
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-009"
+      ],
+      "canParallelize": true
+    },
+    {
+      "name": "Phase 4: Consumer Alignment",
+      "tasks": [
+        "T-007"
+      ],
+      "canParallelize": false
+    },
+    {
+      "name": "Phase 5: Validation Gate",
+      "tasks": [
+        "T-008"
+      ],
+      "canParallelize": false
+    }
+  ]
+}

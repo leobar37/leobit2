@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAI Streaming - Explicación Visual</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .gradient-text { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    .cursor::after { content: '|'; animation: blink 1s infinite; color: #3b82f6; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- Hero -->
+  <header class="bg-gradient-to-br from-slate-900 via-blue-950/30 to-slate-900 border-b border-slate-800">
+    <div class="max-w-5xl mx-auto px-6 py-16 text-center">
+      <div class="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        OpenAI API Deep Dive
+      </div>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-4">
+        <span class="gradient-text">Streaming de Chat Completions</span>
+      </h1>
+      <p class="text-xl text-slate-400 max-w-2xl mx-auto">
+        Entendiendo text delta, tool calls, y cómo funciona el streaming en la API de OpenAI
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- El concepto central -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+        El Concepto: Por qué existen los "Deltas"
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="bg-red-950/20 border border-red-900/50 rounded-xl p-5 mb-6">
+          <p class="text-slate-300 leading-relaxed">
+            <strong class="text-red-400">Problema:</strong> Cuando pides una respuesta grande a GPT, no llega toda de una vez. Llega <strong class="text-white">fragmento por fragmento</strong> (tokens).
+          </p>
+        </div>
+
+        <!-- Sin streaming vs Con streaming -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <!-- Sin streaming -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+            <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+              <span class="text-red-400 text-xl">✗</span> Sin Streaming
+            </h3>
+            <div class="space-y-2">
+              <div class="h-4 bg-slate-700 rounded w-full"></div>
+              <div class="h-4 bg-slate-700 rounded w-3/4"></div>
+              <div class="h-4 bg-slate-700 rounded w-5/6"></div>
+            </div>
+            <p class="text-slate-400 text-sm mt-3">
+              Esperas 5-10 segundos... luego aparece todo junto
+            </p>
+          </div>
+
+          <!-- Con streaming -->
+          <div class="bg-blue-950/30 border border-blue-900/50 rounded-xl p-5">
+            <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+              <span class="text-green-400 text-xl">✓</span> Con Streaming
+            </h3>
+            <div x-data="{ text: '' }" x-init="setInterval(() => { if(text.length < 20) text += '█' }, 100)">
+              <p class="mono text-green-400" x-text="text + '█'"></p>
+            </div>
+            <p class="text-slate-400 text-sm mt-3">
+              Ves cada fragmento llegar en tiempo real (~100ms)
+            </p>
+          </div>
+        </div>
+
+        <!-- Diagrama de chunks -->
+        <div class="bg-slate-800/50 rounded-xl p-5">
+          <p class="text-sm text-slate-400 mb-4">Cómo llega la respuesta "Hola mundo" (simplificado):</p>
+          <div class="flex items-center gap-2 overflow-x-auto pb-2">
+            <div class="flex-shrink-0 bg-blue-500/20 border border-blue-500/50 rounded px-3 py-2 text-sm mono">
+              Chunk 1: "Ho"
+            </div>
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <div class="flex-shrink-0 bg-blue-500/20 border border-blue-500/50 rounded px-3 py-2 text-sm mono">
+              Chunk 2: "la"
+            </div>
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <div class="flex-shrink-0 bg-blue-500/20 border border-blue-500/50 rounded px-3 py-2 text-sm mono">
+              Chunk 3: " mun"
+            </div>
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <div class="flex-shrink-0 bg-blue-500/20 border border-blue-500/50 rounded px-3 py-2 text-sm mono">
+              Chunk 4: "do"
+            </div>
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <div class="flex-shrink-0 bg-green-500/20 border border-green-500/50 rounded px-3 py-2 text-sm mono">
+              ✓ "Hola mundo"
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Qué es un Delta -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+        ¿Qué es un "Text Delta"?
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="bg-blue-950/30 border border-blue-900/50 rounded-xl p-5 mb-6">
+          <p class="text-blue-300 leading-relaxed">
+            <strong>Delta</strong> = la <em>diferencia</em> (cambio) desde el último chunk. Es incremental — solo llega el texto que es <strong>nuevo</strong>.
+          </p>
+        </div>
+
+        <!-- Ejemplo visual de delta -->
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+            <div class="flex-1 bg-slate-800/50 rounded-lg p-4">
+              <p class="text-slate-400 text-sm mb-2">Recibiste:</p>
+              <p class="mono text-green-400">"Ho"</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+            <div class="flex-1 bg-slate-800/50 rounded-lg p-4">
+              <p class="text-slate-400 text-sm mb-2">Recibiste:</p>
+              <p class="mono text-green-400">"la"</p>
+              <p class="text-slate-500 text-xs mt-1">(No "Hola", solo "la" — el delta)</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+            <div class="flex-1 bg-slate-800/50 rounded-lg p-4">
+              <p class="text-slate-400 text-sm mb-2">Recibiste:</p>
+              <p class="mono text-green-400">" mun"</p>
+              <p class="text-slate-500 text-xs mt-1">(Incluye espacio: " mun")</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+            <div class="flex-1 bg-slate-800/50 rounded-lg p-4">
+              <p class="text-slate-400 text-sm mb-2">Recibiste:</p>
+              <p class="mono text-green-400">"do"</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Código relevante -->
+        <div class="mt-6 bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">Código del ejemplo</p>
+          <pre class="mono text-sm text-slate-300 overflow-x-auto"><code>const deltaText = extractTextFromContent(delta.content);
+// "Ho", "la", " mun", "do"...
+
+iterationText += deltaText;
+// "H" + "o" + "la" + " mun" + "do" = "Hola mundo"
+
+await onDeltaText(deltaText, iterationText);
+// Callbacks para UI en tiempo real</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Qué son Tool Calls -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+        ¿Qué son "Tool Calls"?
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <div class="bg-purple-950/30 border border-purple-900/50 rounded-xl p-5 mb-6">
+          <p class="text-purple-300 leading-relaxed">
+            <strong>Tool Calls</strong> = Cuando el modelo decide llamar a una función/herramienta (como buscar en la web, ejecutar código, etc.)
+          </p>
+        </div>
+
+        <!-- Flujo de un tool call -->
+        <div class="mb-6">
+          <p class="text-slate-400 text-sm mb-4">Cómo funciona un tool call en streaming:</p>
+
+          <div class="bg-slate-800/50 rounded-xl p-5">
+            <!-- Paso 1: El modelo decide -->
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-amber-400 text-lg">1</span>
+              </div>
+              <div>
+                <p class="font-medium mb-1">El modelo decide llamar una herramienta</p>
+                <p class="text-slate-400 text-sm">Pero aún no tiene todos los argumentos...</p>
+              </div>
+            </div>
+
+            <div class="flex justify-center">
+              <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+            </div>
+
+            <!-- Paso 2: Tool call empieza -->
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-green-400 text-lg">2</span>
+              </div>
+              <div>
+                <p class="font-medium mb-1">Tool call empieza (incomplete)</p>
+                <p class="text-slate-400 text-sm mono">id: "call_abc123", name: "get_weather"</p>
+                <p class="text-slate-500 text-xs mt-1">arguments: "" (vacío todavía)</p>
+              </div>
+            </div>
+
+            <div class="flex justify-center">
+              <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+            </div>
+
+            <!-- Paso 3: Argumentos llegan en chunks -->
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-blue-400 text-lg">3</span>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium mb-1">Argumentos llegan fragmento por fragmento</p>
+                <div class="space-y-1">
+                  <div class="bg-slate-700/50 rounded px-2 py-1 text-xs mono text-slate-300">
+                    argumentsDelta: '{"ciudad":'
+                  </div>
+                  <div class="bg-slate-700/50 rounded px-2 py-1 text-xs mono text-slate-300">
+                    argumentsDelta: '"Lima", '
+                  </div>
+                  <div class="bg-slate-700/50 rounded px-2 py-1 text-xs mono text-slate-300">
+                    argumentsDelta: '"pais": "Peru"}'
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-center">
+              <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+            </div>
+
+            <!-- Paso 4: Completo -->
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-green-400 text-lg">4</span>
+              </div>
+              <div class="flex-1 bg-green-950/30 border border-green-900/50 rounded-lg px-3 py-2">
+                <p class="font-medium mb-1 text-green-300">Tool call completo</p>
+                <p class="text-xs mono text-slate-300">{"ciudad": "Lima", "pais": "Peru"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Por qué llega en chunks -->
+        <div class="bg-amber-950/20 border border-amber-900/50 rounded-xl p-5">
+          <h3 class="font-bold mb-2 flex items-center gap-2">
+            <span class="text-xl">💡</span> ¿Por qué llega en partes?
+          </h3>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            El modelo <strong>genera tokens uno por uno</strong>. No sabe de antemano todos los argumentos completos. Conforme va "pensando", va emitiendo caracteres/palabras. Por eso los argumentos llegan como <code class="bg-slate-800 px-1 rounded">argumentsDelta</code> — cada chunk es una adición incremental al JSON.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- El código desglosado -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+        Tu Código: Desglose Visual
+      </h2>
+
+      <div class="space-y-6">
+
+        <!-- extractTextFromContent -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+          <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 text-sm font-bold">A</span>
+            extractTextFromContent()
+          </h3>
+
+          <p class="text-slate-400 text-sm mb-4">
+            OpenAI puede devolver el contenido de dos formas:
+          </p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <!-- String -->
+            <div class="bg-slate-800/50 rounded-lg p-4">
+              <p class="text-green-400 text-sm font-medium mb-2">1. String directo</p>
+              <pre class="mono text-xs text-slate-300">"Hola mundo"</pre>
+              <p class="text-slate-500 text-xs mt-2">→ Se devuelve tal cual</p>
+            </div>
+
+            <!-- Array (content parts) -->
+            <div class="bg-slate-800/50 rounded-lg p-4">
+              <p class="text-blue-400 text-sm font-medium mb-2">2. Array de partes</p>
+              <pre class="mono text-xs text-slate-300">[
+  { type: "text", text: "Hola" },
+  { type: "text", text: " mundo" }
+]</pre>
+              <p class="text-slate-500 text-xs mt-2">→ Se extrae solo el .text</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Callbacks -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+          <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 text-sm font-bold">B</span>
+            Los 3 Callbacks (lo que hace la magia)
+          </h3>
+
+          <div class="space-y-4">
+            <!-- onDeltaText -->
+            <div class="bg-green-950/20 border border-green-900/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <code class="mono text-sm text-green-400">onDeltaText(deltaText, iterationText)</code>
+              </div>
+              <p class="text-slate-400 text-sm">
+                Se llama por cada fragmento de texto. <strong class="text-slate-300">deltaText</strong> = el fragmento nuevo. <strong class="text-slate-300">iterationText</strong> = todo lo acumulado.
+              </p>
+              <p class="text-slate-500 text-xs mt-2">
+                → Úsalo para mostrar texto en tiempo real en la UI
+              </p>
+            </div>
+
+            <!-- onToolCallStart -->
+            <div class="bg-blue-950/20 border border-blue-900/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <code class="mono text-sm text-blue-400">onToolCallStart(info)</code>
+              </div>
+              <p class="text-slate-400 text-sm">
+                Se llama cuando inicia un tool call. Informa el <code class="bg-slate-800 px-1 rounded">id</code> y <code class="bg-slate-800 px-1 rounded">name</code> de la función.
+              </p>
+              <p class="text-slate-500 text-xs mt-2">
+                → Úsalo para mostrar "Llamando a get_weather..."
+              </p>
+            </div>
+
+            <!-- onToolInputDelta -->
+            <div class="bg-purple-950/20 border border-purple-900/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <code class="mono text-sm text-purple-400">onToolInputDelta(info)</code>
+              </div>
+              <p class="text-slate-400 text-sm">
+                Se llama por cada fragmento de argumentos JSON. <code class="bg-slate-800 px-1 rounded">argumentsDelta</code> = el chunk nuevo. <code class="bg-slate-800 px-1 rounded">argumentsJson</code> = JSON completo hasta ahora.
+              </p>
+              <p class="text-slate-500 text-xs mt-2">
+                → Úsalo para mostrar los argumentos construyéndose en tiempo real
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- toolCallsByIndex Map -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+          <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 text-sm font-bold">C</span>
+            ¿Por qué una Map&lt;index, state&gt;?
+          </h3>
+
+          <p class="text-slate-400 text-sm mb-4">
+            Porque múltiples tool calls pueden llegar <strong>intercalados</strong>:
+          </p>
+
+          <div class="bg-slate-800/50 rounded-lg p-4">
+            <p class="text-xs text-slate-500 mb-2">Ejemplo: 2 tool calls llegan en paralelo</p>
+            <pre class="mono text-xs text-slate-300 overflow-x-auto">Chunk 1: { tool_calls: [{ index: 0, function: { name: "get_weather", arguments: '{"ciu' } }] }
+Chunk 2: { tool_calls: [{ index: 1, function: { name: "get_time", arguments: '{"zone":' } }] }
+Chunk 3: { tool_calls: [{ index: 0, function: { arguments: 'dad": "Lima"}' } }] }
+Chunk 4: { tool_calls: [{ index: 1, function: { arguments: '"America/Lima"}' } }] }</pre>
+          </div>
+
+          <p class="text-slate-400 text-sm mt-4">
+            El <code class="bg-slate-800 px-1 rounded">index</code> indica qué tool call es. La <code class="bg-slate-800 px-1 rounded">Map</code> acumula el estado de cada uno independientemente.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Ejemplo completo del flujo -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">5</span>
+        Ejemplo Completo: Tool Call Completo
+      </h2>
+
+      <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
+        <p class="text-slate-400 mb-6 text-center">
+          Cómo se construiría un tool call para <code class="bg-slate-800 px-2 py-1 rounded">get_weather("Lima", "Peru")</code>
+        </p>
+
+        <!-- Timeline visual -->
+        <div class="relative">
+          <!-- Línea central -->
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-700"></div>
+
+          <div class="space-y-6 pl-12">
+            <!-- Inicio -->
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-green-500/20 border-2 border-green-500 rounded-full flex items-center justify-center">
+                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              <div class="bg-slate-800/50 rounded-lg p-4">
+                <p class="text-green-400 text-sm font-medium mb-1">onToolCallStart</p>
+                <pre class="mono text-xs text-slate-300">{ id: "call_abc", name: "get_weather" }</pre>
+              </div>
+            </div>
+
+            <!-- Delta 1 -->
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-blue-500/20 border-2 border-blue-500 rounded-full flex items-center justify-center">
+                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+              </div>
+              <div class="bg-slate-800/50 rounded-lg p-4">
+                <p class="text-blue-400 text-sm font-medium mb-1">onToolInputDelta</p>
+                <pre class="mono text-xs text-slate-300">{ argumentsDelta: '{"ciudad":', argumentsJson: '{"ciudad":' }</pre>
+              </div>
+            </div>
+
+            <!-- Delta 2 -->
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-blue-500/20 border-2 border-blue-500 rounded-full flex items-center justify-center">
+                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+              </div>
+              <div class="bg-slate-800/50 rounded-lg p-4">
+                <p class="text-blue-400 text-sm font-medium mb-1">onToolInputDelta</p>
+                <pre class="mono text-xs text-slate-300">{ argumentsDelta: '"Lima", ', argumentsJson: '{"ciudad":"Lima", ' }</pre>
+              </div>
+            </div>
+
+            <!-- Delta 3 -->
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-blue-500/20 border-2 border-blue-500 rounded-full flex items-center justify-center">
+                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+              </div>
+              <div class="bg-slate-800/50 rounded-lg p-4">
+                <p class="text-blue-400 text-sm font-medium mb-1">onToolInputDelta</p>
+                <pre class="mono text-xs text-slate-300">{ argumentsDelta: '"pais": "Peru"}', argumentsJson: '{"ciudad":"Lima","pais":"Peru"}' }</pre>
+              </div>
+            </div>
+
+            <!-- Final -->
+            <div class="relative">
+              <div class="absolute -left-12 w-8 h-8 bg-green-500/20 border-2 border-green-500 rounded-full flex items-center justify-center">
+                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              <div class="bg-green-950/30 border border-green-900/50 rounded-lg p-4">
+                <p class="text-green-400 text-sm font-medium mb-1">Tool Call Completo</p>
+                <pre class="mono text-xs text-slate-300">{
+  id: "call_abc",
+  name: "get_weather",
+  argumentsJson: '{"ciudad":"Lima","pais":"Peru"}'
+}</pre>
+                <p class="text-slate-500 text-xs mt-2">→ Listo para ejecutar con JSON.parse()</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Por qué es importante -->
+    <section>
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+        <span class="bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold">6</span>
+        ¿Por qué es importante entender esto?
+      </h2>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">⚡</span>
+          </div>
+          <h3 class="font-bold mb-2">UX en Tiempo Real</h3>
+          <p class="text-slate-400 text-sm">Puedes mostrar el texto mientras llega, no después de 10 segundos.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">🔄</span>
+          </div>
+          <h3 class="font-bold mb-2">Tool Calls Interactivos</h3>
+          <p class="text-slate-400 text-sm">Mostrar "Ejecutando get_weather..." conforme los argumentos se construyen.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">🛑</span>
+          </div>
+          <h3 class="font-bold mb-2">Cancellable</h3>
+          <p class="text-slate-400 text-sm">Puedes abortar el stream con AbortController sin esperar toda la respuesta.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">💰</span>
+          </div>
+          <h3 class="font-bold mb-2">Tokens Eficiente</h3>
+          <p class="text-slate-400 text-sm">Puedes procesar parcialmente sin esperar todo para tomar decisiones.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">📊</span>
+          </div>
+          <h3 class="font-bold mb-2">Progreso Visible</h3>
+          <p class="text-slate-400 text-sm">Barras de progreso, indicadores de "escribiendo..." para el usuario.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-700/50 rounded-xl p-5">
+          <div class="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-4">
+            <span class="text-2xl">🔧</span>
+          </div>
+          <h3 class="font-bold mb-2">Debugging Fácil</h3>
+          <p class="text-slate-400 text-sm">Ver exactamente qué llega en cada chunk para investigar problemas.</p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 mt-16 py-8 text-center text-slate-500 text-sm">
+    <p>Código fuente: <code class="bg-slate-800 px-2 py-1 rounded">runChatCompletionIteration</code></p>
+  </footer>
+
+</body>
+</html>

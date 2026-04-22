@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEngine } from "~/engine";
+import { useSyncEngine, useSyncEngineReady, useSyncState } from "@avileo/drizzle-sync/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,10 @@ import { useDevToolsData } from "@avileo/drizzle-sync/react/devtools";
 import { TablesTab, OperationsTab, DLQTab } from "@avileo/drizzle-sync/react/devtools";
 
 export default function SyncAdminPage() {
-  const { isOnline: engineOnline, isSyncing, isInitialized } = useEngine();
+  const engine = useSyncEngine();
+  const { isReady: isInitialized } = useSyncEngineReady();
+  const engineOnline = engine.getStatus().isOnline;
+  const { isSyncing } = useSyncState();
   const { isOnline, actualIsOnline } = useSync();
   const syncService = useSyncService();
   const { confirm, ConfirmDialog } = useConfirmDialog();

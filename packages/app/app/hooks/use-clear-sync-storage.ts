@@ -4,7 +4,7 @@
  */
 import { useMutation } from "@tanstack/react-query";
 import { clearSyncStorage } from "~/lib/session-storage";
-import { resetDatabase } from "~/engine";
+import { resetDatabase } from "@avileo/drizzle-sync/client";
 
 export interface ClearSyncStorageInput {
   /** Whether to reload the page after clearing (default: true) */

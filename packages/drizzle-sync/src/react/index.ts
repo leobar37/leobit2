@@ -51,6 +51,7 @@ export {
   useSyncStatus,
   useSyncEngine,
   useSyncEngineReady,
+  useSyncEngineInit,
   useEngineService,
   useSyncOperations,
   useSyncLifecycle,

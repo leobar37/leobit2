@@ -9,6 +9,7 @@ import type {
   SerializedRelationNode,
   SerializedSqlDefault,
 } from "./schema-types";
+import type { ChildRelationConfig, ParentRelationConfig } from "./types";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -104,7 +105,7 @@ export function serializeFieldCodecs(
 }
 
 function serializeChildRelations(
-  children?: EntitySyncConfig["relations"]["children"]
+  children?: ChildRelationConfig[]
 ): SerializedChildRelation[] | undefined {
   if (!children || children.length === 0) {
     return undefined;
@@ -119,7 +120,7 @@ function serializeChildRelations(
 }
 
 function serializeParentRelations(
-  parents?: EntitySyncConfig["relations"]["parents"]
+  parents?: ParentRelationConfig[]
 ): SerializedParentRelation[] | undefined {
   if (!parents || parents.length === 0) {
     return undefined;
@@ -142,6 +143,7 @@ export function serializeEntityConfig(config: EntitySyncConfig): SerializedEntit
     priority: config.priority,
     conflictResolver: config.conflictResolver,
     apiPath: config.apiPath,
+    tenancy: config.tenancy,
     fieldCodecs: serializeFieldCodecs(config.fieldCodecs),
     relations: {
       children: serializeChildRelations(config.relations?.children),

@@ -11,7 +11,6 @@
  * - `@avileo/drizzle-sync/pglite` - PGlite adapters (frontend)
  * - `@avileo/drizzle-sync/server` - PostgreSQL adapters (backend)
  * - `@avileo/drizzle-sync/config` - Configuration types and helpers
- * - `@avileo/drizzle-sync/presets` - Pre-configured presets (e.g., Avileo)
  * - `@avileo/drizzle-sync/react` - React integration
  */
 

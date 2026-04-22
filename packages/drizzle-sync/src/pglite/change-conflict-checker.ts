@@ -5,7 +5,7 @@
 
 import type { SqlExecutor } from "./sql-executor";
 import type { PullChange } from "./types";
-import { isValidTableName } from "./schema-mapper";
+import { isValidTableName, type ChangeApplierConfig } from "./schema-mapper";
 
 export type ConflictCheckStrategy = 'pre-computed-set' | 'check-db' | 'none';
 
@@ -46,7 +46,8 @@ export async function checkForConflict(
  */
 export async function computeConflictedIds(
   executor: SqlExecutor,
-  changes: PullChange[]
+  changes: PullChange[],
+  config?: ChangeApplierConfig
 ): Promise<Set<string>> {
   const conflictedIds = new Set<string>();
   const updateChanges = changes.filter((c) => c.operation === "update");
@@ -65,7 +66,7 @@ export async function computeConflictedIds(
 
   // One query per table instead of N queries per change
   for (const [tableName, entityIds] of byTable) {
-    if (!isValidTableName(tableName)) continue;
+    if (!isValidTableName(tableName, config)) continue;
     try {
       const result = await executor.query<{ id: string }>(
         `SELECT id FROM "${tableName}" WHERE id = ANY($1) AND sync_status IN ('pending','syncing','failed')`,

@@ -8,21 +8,28 @@ import type { SyncOperationRecord, SyncStatus, DeadLetterOperationRecord } from 
 import { OPERATION_STATUS } from "./queue-types";
 
 export class QueueRepository {
+  private tenantColumn: string;
+  private readonly quotedTenantColumn: string;
+
   constructor(
     private executor: SqlExecutor,
-    private businessId: string
-  ) {}
+    private tenantId: string,
+    tenantColumn?: string
+  ) {
+    this.tenantColumn = tenantColumn ?? "tenant_id";
+    this.quotedTenantColumn = `"${this.tenantColumn}"`;
+  }
 
   async insert(operation: SyncOperationRecord): Promise<void> {
     await this.executor.exec(
       `INSERT INTO sync_operations (
-         id, business_id, entity_type, operation, entity_id,
+         id, ${this.tenantColumn}, entity_type, operation, entity_id,
          payload, status, version, sync_attempts, last_error,
          last_attempt_at, idempotency_key, created_at, updated_at
        ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, 0, NULL, NULL, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         operation.id,
-        this.businessId,
+        this.tenantId,
         operation.entity_type,
         operation.operation,
         operation.entity_id,
@@ -37,19 +44,19 @@ export class QueueRepository {
   async findPending(limit: number): Promise<SyncOperationRecord[]> {
     const result = await this.executor.query<SyncOperationRecord>(
       `SELECT * FROM sync_operations
-       WHERE business_id = $1
+       WHERE ${this.quotedTenantColumn} = $1
          AND status IN ($2, $3)
        ORDER BY created_at ASC
        LIMIT $4`,
-      [this.businessId, OPERATION_STATUS.PENDING, OPERATION_STATUS.FAILED, limit]
+      [this.tenantId, OPERATION_STATUS.PENDING, OPERATION_STATUS.FAILED, limit]
     );
     return result.rows;
   }
 
   async findById(id: string): Promise<SyncOperationRecord | null> {
     const result = await this.executor.query<SyncOperationRecord>(
-      `SELECT * FROM sync_operations WHERE id = $1 AND business_id = $2`,
-      [id, this.businessId]
+      `SELECT * FROM sync_operations WHERE id = $1 AND ${this.quotedTenantColumn} = $2`,
+      [id, this.tenantId]
     );
     return result.rows[0] ?? null;
   }
@@ -67,20 +74,20 @@ export class QueueRepository {
       }
     }
     
-    params.push(id, this.businessId);
+    params.push(id, this.tenantId);
     
     await this.executor.exec(
       `UPDATE sync_operations
        SET ${updates.join(', ')}
-       WHERE id = $${params.length - 1} AND business_id = $${params.length}`,
+       WHERE id = $${params.length - 1} AND ${this.quotedTenantColumn} = $${params.length}`,
       params
     );
   }
 
   async delete(id: string): Promise<void> {
     await this.executor.exec(
-      `DELETE FROM sync_operations WHERE id = $1 AND business_id = $2`,
-      [id, this.businessId]
+      `DELETE FROM sync_operations WHERE id = $1 AND ${this.quotedTenantColumn} = $2`,
+      [id, this.tenantId]
     );
   }
 
@@ -88,9 +95,9 @@ export class QueueRepository {
     const result = await this.executor.query<{ status: string; count: string }>(
       `SELECT status, COUNT(*) as count
        FROM sync_operations
-       WHERE business_id = $1
+       WHERE ${this.quotedTenantColumn} = $1
        GROUP BY status`,
-      [this.businessId]
+      [this.tenantId]
     );
 
     const status: SyncStatus = {
@@ -124,12 +131,12 @@ export class QueueRepository {
   async moveToDeadLetter(operation: SyncOperationRecord, error: string): Promise<void> {
     await this.executor.exec(
       `INSERT INTO sync_dead_letter (
-         id, business_id, operation_id, entity_type, operation,
+         id, ${this.tenantColumn}, operation_id, entity_type, operation,
          entity_id, data, error, sync_attempts, original_error, created_at
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         crypto.randomUUID(),
-        this.businessId,
+        this.tenantId,
         operation.id,
         operation.entity_type,
         operation.operation,
@@ -145,15 +152,15 @@ export class QueueRepository {
     await this.executor.exec(
       `UPDATE sync_operations
        SET status = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND business_id = $3`,
-      [OPERATION_STATUS.DEAD_LETTER, operation.id, this.businessId]
+       WHERE id = $2 AND ${this.quotedTenantColumn} = $3`,
+      [OPERATION_STATUS.DEAD_LETTER, operation.id, this.tenantId]
     );
   }
 
   async getDeadLetterOperations(limit: number): Promise<DeadLetterOperationRecord[]> {
     const result = await this.executor.query<DeadLetterOperationRecord>(
-      `SELECT * FROM sync_dead_letter WHERE business_id = $1 LIMIT $2`,
-      [this.businessId, limit]
+      `SELECT * FROM sync_dead_letter WHERE ${this.quotedTenantColumn} = $1 LIMIT $2`,
+      [this.tenantId, limit]
     );
     return result.rows;
   }

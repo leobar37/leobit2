@@ -25,7 +25,10 @@ export class PullSyncService {
     private readonly context: SyncClientEngineContext,
     private readonly options: PullServiceOptions
   ) {
-    this.applier = options.applier ?? new ChangeApplier(context, { logger: options.logger });
+    this.applier = options.applier ?? new ChangeApplier(context, {
+      logger: options.logger,
+      applierConfig: options.applierConfig,
+    });
     this.cursorStorage = options.cursorStorage ?? new MemoryCursorStorage();
     this.logger = options.logger ?? new NoOpLogger();
     this.mutex = options.mutex ?? new SyncMutex();
@@ -57,7 +60,7 @@ export class PullSyncService {
       const cursor = this.cursorStorage.get("pull-cursor") ?? undefined;
       
       const response = await this.httpClient.getChanges({
-        businessId: this.context.businessId,
+        tenantId: this.context.tenantId,
         since: cursor,
         limit: 100,
       });
@@ -150,14 +153,6 @@ export class PullSyncService {
       isStuck: false,
       consecutiveStalePulls: 0,
     };
-  }
-
-  /**
-   * Force an immediate pull (alias for pull() for backward compatibility).
-   * @deprecated Use pull() directly.
-   */
-  async forcePullNow(): Promise<PullResult> {
-    return this.pull();
   }
 
   getStatus(): PullStatus {

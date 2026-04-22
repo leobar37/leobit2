@@ -37,6 +37,7 @@ import { SaleSyncHandler } from "./handlers/SaleSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
 import { PurchaseSyncHandler } from "./handlers/PurchaseSyncHandler";
 import { logger } from "../../lib/logger";
+import { syncConfig } from "../../sync.config";
 
 export type {
   SyncEntity,
@@ -115,6 +116,11 @@ export class SyncService {
     const syncOpRepo = new SyncOperationRepository();
     const syncConflictRepo = deps.syncConflictRepo ?? new SyncConflictRepository();
 
+    const entityRelations: Record<string, { relations?: { parents?: { entity: string; foreignKey: string; payloadKey?: string; required?: boolean }[] } }> = {};
+    for (const [name, entity] of Object.entries(syncConfig.entities)) {
+      entityRelations[name] = { relations: entity.relations };
+    }
+
     this.engine = new SyncEngine<RequestContext, DbTransaction, SyncServiceDeps>(deps, {
       db: {
         transaction: <T>(fn: (tx: DbTransaction) => Promise<T>) => db.transaction(fn as any),
@@ -123,6 +129,7 @@ export class SyncService {
       syncOpRepo,
       syncConflictRepo,
       conflictResolverRegistry: createConflictResolverRegistry(),
+      entityRelations,
       middleware: createSyncPipelineMiddleware(),
       now: () => toISODate(now()),
       savepointSql: (name: string) => sql.raw(`SAVEPOINT ${name}`),

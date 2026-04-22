@@ -41,12 +41,20 @@ vi.mock("~/lib/session-storage", () => ({
   setLocalDatabaseNamespace: vi.fn(),
 }));
 
-vi.mock("~/engine/db", () => ({
-  initDatabase: vi.fn().mockResolvedValue({
-    pg: {},
-    db: {},
-  }),
-  resetDatabase: vi.fn().mockResolvedValue(undefined),
+vi.mock("@avileo/drizzle-sync/client", async () => {
+  const actual = await vi.importActual("@avileo/drizzle-sync/client");
+  return {
+    ...actual,
+    initPgliteDatabase: vi.fn().mockResolvedValue({
+      pg: {},
+      db: {},
+    }),
+    resetDatabase: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("~/lib/sync/db-config", () => ({
+  createAvileoDatabaseConfig: () => ({}),
   SCHEMA_HASH_KEY: "avileo_schema_hash",
 }));
 

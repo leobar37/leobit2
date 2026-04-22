@@ -62,6 +62,10 @@ export interface SerializedEntityConfig {
   priority?: number;
   conflictResolver?: string;
   apiPath?: string;
+  tenancy?: {
+    mode?: "required" | "none";
+    tenantColumn?: string;
+  };
   fieldCodecs?: Record<string, SerializedFieldCodec>;
   relations?: {
     children?: SerializedChildRelation[];
@@ -72,6 +76,7 @@ export interface SerializedEntityConfig {
 
 export interface SerializedEntity {
   name: string;
+  entityType: string;
   tableName: string;
   columns: SerializedColumn[];
   config: SerializedEntityConfig;
@@ -81,5 +86,9 @@ export interface SerializedEntity {
 export interface SyncSchema {
   version: string;
   generatedAt: string;
+  tenancy?: {
+    tenantField?: string;
+    tenantColumn?: string;
+  };
   entities: Record<string, SerializedEntity>;
 }

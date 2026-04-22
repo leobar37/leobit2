@@ -32,7 +32,8 @@ export class SchemaManager {
 
   async build(
     entities: Record<string, EntitySyncConfig>,
-    relations: RelationGraph
+    relations: RelationGraph,
+    tenancy?: { tenantField?: string; tenantColumn?: string }
   ): Promise<SyncSchema> {
     const serializedEntities: Record<string, SerializedEntity> = {};
 
@@ -40,6 +41,7 @@ export class SchemaManager {
       const columns = introspectTable(config.table);
       serializedEntities[name] = {
         name,
+        entityType: name,
         tableName: this.extractTableName(config.table),
         columns: serializeColumns(columns),
         config: serializeEntityConfig(config),
@@ -50,6 +52,7 @@ export class SchemaManager {
     this.currentSchema = {
       version: SYNC_SCHEMA_VERSION,
       generatedAt: new Date().toISOString(),
+      tenancy,
       entities: serializedEntities,
     };
 

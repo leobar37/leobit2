@@ -75,7 +75,7 @@ describe("conflict-resolver", () => {
 
   describe("BaseVersionConflictResolver", () => {
     // Concrete implementation for testing
-    class TestResolver extends BaseVersionConflictResolver<{ businessId: string }, unknown, Record<string, unknown>> {
+    class TestResolver extends BaseVersionConflictResolver<{ tenantId: string }, unknown, Record<string, unknown>> {
       protected getEntityName(): string {
         return "TestEntity";
       }
@@ -88,8 +88,8 @@ describe("conflict-resolver", () => {
         return "id";
       }
 
-      protected getBusinessIdField(): string {
-        return "businessId";
+      protected getTenantIdField(): string {
+        return "tenantId";
       }
 
       protected getVersionField(): string {
@@ -100,8 +100,8 @@ describe("conflict-resolver", () => {
         return record as Record<string, unknown>;
       }
 
-      protected getBusinessIdFromContext(ctx: { businessId: string }): string {
-        return ctx.businessId;
+      protected getTenantIdFromContext(ctx: { tenantId: string }): string {
+        return ctx.tenantId;
       }
 
       protected executeQuery(): Promise<unknown | undefined> {
@@ -130,17 +130,17 @@ describe("conflict-resolver", () => {
       }) as unknown as SyncOperationInput;
 
     it("returns no conflict for create operations", async () => {
-      const result = await resolver.checkConflict({ businessId: "biz-1" }, makeOp("create"), {});
+      const result = await resolver.checkConflict({ tenantId: "biz-1" }, makeOp("create"), {});
       expect(result).toEqual({ hasConflict: false });
     });
 
     it("returns no conflict for delete operations", async () => {
-      const result = await resolver.checkConflict({ businessId: "biz-1" }, makeOp("delete"), {});
+      const result = await resolver.checkConflict({ tenantId: "biz-1" }, makeOp("delete"), {});
       expect(result).toEqual({ hasConflict: false });
     });
 
     it("returns no conflict when no record exists", async () => {
-      const result = await resolver.checkConflict({ businessId: "biz-1" }, makeOp("update"), {});
+      const result = await resolver.checkConflict({ tenantId: "biz-1" }, makeOp("update"), {});
       expect(result).toEqual({ hasConflict: false });
     });
   });

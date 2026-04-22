@@ -113,34 +113,21 @@ export interface SyncWritePort {
  * Uses snake_case field names matching the DB schema
  */
 export interface SyncOperationRecord {
-  /** Unique identifier for the operation */
   id: string;
-  /** Business/tenant ID for multi-tenancy - snake_case for DB */
-  business_id: string;
-  /** Entity type (e.g., 'sales', 'customers') - snake_case for DB */
+  tenant_id: string;
   entity_type: string;
-  /** Operation type */
   operation: SyncOperationType;
-  /** Entity instance ID - snake_case for DB */
   entity_id: string;
-  /** Operation payload (entity data) */
   payload: unknown;
-  /** Current sync status */
   status: string;
-  /** Version number for optimistic locking */
   version: number;
-  /** Number of sync attempts - snake_case for DB */
   sync_attempts: number;
-  /** Last error message (if failed) - snake_case for DB */
   last_error: string | null;
-  /** Timestamp of last attempt - snake_case for DB */
   last_attempt_at: string | null;
-  /** Unique key for idempotency - snake_case for DB */
   idempotency_key: string | null;
-  /** Creation timestamp (ISO string) - snake_case for DB */
   created_at: string;
-  /** Last update timestamp (ISO string) - snake_case for DB */
   updated_at: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -202,7 +189,7 @@ export interface BackendConflict {
   /** Unique identifier */
   id: string;
   /** Business/tenant ID */
-  businessId: string;
+  tenantId: string;
   /** Original operation ID */
   operationId: string;
   /** Entity type */
@@ -314,28 +301,18 @@ export interface ClassifiedError {
  * to the dead letter queue for manual intervention.
  */
 export interface DeadLetterOperationRecord {
-  /** Unique identifier */
   id: string;
-  /** Business/tenant ID - snake_case for DB */
-  business_id: string;
-  /** Original operation ID - snake_case for DB */
+  tenant_id: string;
   operation_id: string;
-  /** Entity type - snake_case for DB */
   entity_type: string;
-  /** Operation type */
   operation: SyncOperationType;
-  /** Entity instance ID - snake_case for DB */
   entity_id: string;
-  /** Serialized operation data */
   data: string;
-  /** Error message */
   error: string;
-  /** Number of sync attempts - snake_case for DB */
   sync_attempts: number;
-  /** Original error message - snake_case for DB */
   original_error: string | null;
-  /** Creation timestamp - snake_case for DB */
   created_at: string;
+  [key: string]: unknown;
 }
 
 /**

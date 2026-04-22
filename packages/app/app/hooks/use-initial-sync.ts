@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { initDatabase, resetDatabase, SCHEMA_HASH_KEY } from "~/engine/db";
+import { initPgliteDatabase, resetDatabase } from "@avileo/drizzle-sync/client";
+import { SCHEMA_HASH_KEY, createAvileoDatabaseConfig } from "~/lib/sync/db-config";
 import { PullService } from "~/lib/sync/pull-service";
 import {
   StagedPullCoordinator,
@@ -342,7 +343,7 @@ export function useInitialSync(): UseInitialSyncReturn {
         progress: 10,
       });
 
-      const { pg, db } = await initDatabase();
+      const { pg, db } = await initPgliteDatabase(createAvileoDatabaseConfig());
 
       // Step 2: Check if we have a cursor (previous sync)
       const namespace = getLocalDatabaseNamespace();

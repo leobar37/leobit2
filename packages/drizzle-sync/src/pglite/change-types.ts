@@ -5,6 +5,7 @@
 
 import type { PullChange } from "./types";
 import type { ISyncLogger } from "../core";
+import type { ChangeApplierConfig } from "./schema-mapper";
 
 export interface ApplyResult {
   success: boolean;
@@ -33,6 +34,7 @@ export interface ApplierOptions {
   checkConflicts?: boolean;
   conflictStrategy?: 'pre-computed-set' | 'check-db' | 'none';
   logger?: ISyncLogger;
+  applierConfig?: ChangeApplierConfig;
 }
 
 export type ConflictStrategy = 'pre-computed-set' | 'check-db' | 'none';

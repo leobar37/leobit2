@@ -2,11 +2,58 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { OperationSorter } from "./operation-sorter";
 import type { SyncOperationInput } from "./types";
 
+const mockEntityConfigs: Record<string, { relations?: { parents?: { entity: string; foreignKey: string; required?: boolean }[] } }> = {
+  sales: {
+    relations: {
+      parents: [{ entity: "customers", foreignKey: "customer_id", required: false }],
+    },
+  },
+  sale_items: {
+    relations: {
+      parents: [
+        { entity: "sales", foreignKey: "sale_id", required: true },
+        { entity: "products", foreignKey: "product_id", required: true },
+        { entity: "product_variants", foreignKey: "variant_id", required: true },
+      ],
+    },
+  },
+  abonos: {
+    relations: {
+      parents: [
+        { entity: "customers", foreignKey: "customer_id", required: true },
+        { entity: "sales", foreignKey: "related_sale_id", required: false },
+      ],
+    },
+  },
+  customers: {
+    relations: {},
+  },
+  products: {
+    relations: {},
+  },
+  product_variants: {
+    relations: {
+      parents: [{ entity: "products", foreignKey: "product_id", required: true }],
+    },
+  },
+  visitas: {
+    relations: {
+      parents: [
+        { entity: "distribuciones", foreignKey: "distribucion_id", required: true },
+        { entity: "customers", foreignKey: "customer_id", required: true },
+      ],
+    },
+  },
+  distribuciones: {
+    relations: {},
+  },
+};
+
 describe("operation-sorter", () => {
   let sorter: OperationSorter;
 
   beforeEach(() => {
-    sorter = new OperationSorter();
+    sorter = new OperationSorter(mockEntityConfigs);
   });
 
   const makeOp = (

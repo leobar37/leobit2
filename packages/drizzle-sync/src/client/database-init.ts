@@ -83,7 +83,7 @@ async function createPgliteInstance(
       const [{ PGliteWorker }] = await Promise.all([import("@electric-sql/pglite/worker")]);
 
       const worker = new Worker(
-        new URL("./pglite.worker.ts", import.meta.url),
+        new URL("./pglite.worker.js", import.meta.url),
         { type: "module" }
       );
 

@@ -30,8 +30,8 @@ export interface DeadLetterRecord {
  * Request context interface for repositories
  */
 export interface RepositoryRequestContext {
-  businessId: string;
-  businessUserId?: string;
+  tenantId: string;
+  userId?: string;
 }
 
 /**
@@ -59,14 +59,14 @@ export interface ISyncDeadLetterRepository<
     tx?: TTransaction
   ): Promise<DeadLetterRecord>;
 
-  findByBusiness(
+  findMany(
     ctx: TRequestContext,
     options: { limit: number; offset: number; entity?: string }
   ): Promise<DeadLetterRecord[]>;
 
-  countByBusiness(ctx: TRequestContext): Promise<number>;
+  count(ctx: TRequestContext): Promise<number>;
 
-  countByBusinessAndEntity(ctx: TRequestContext, entity: string): Promise<number>;
+  countByEntity(ctx: TRequestContext, entity: string): Promise<number>;
 
   findById(ctx: TRequestContext, id: string): Promise<DeadLetterRecord | undefined>;
 
@@ -103,7 +103,7 @@ export abstract class SyncDeadLetterRepository<
   /**
    * Find dead letter records by business
    */
-  abstract findByBusiness(
+  abstract findMany(
     ctx: TRequestContext,
     options: { limit: number; offset: number; entity?: string }
   ): Promise<DeadLetterRecord[]>;
@@ -111,12 +111,12 @@ export abstract class SyncDeadLetterRepository<
   /**
    * Count dead letter records by business
    */
-  abstract countByBusiness(ctx: TRequestContext): Promise<number>;
+  abstract count(ctx: TRequestContext): Promise<number>;
 
   /**
    * Count dead letter records by business and entity
    */
-  abstract countByBusinessAndEntity(
+  abstract countByEntity(
     ctx: TRequestContext,
     entity: string
   ): Promise<number>;

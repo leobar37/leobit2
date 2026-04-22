@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync } from "fs";
+import { existsSync, rmSync } from "fs";
 import { resolve } from "path";
 import { Command } from "commander";
 import type { SyncConfigBuilder } from "./config/builder";
@@ -117,7 +117,7 @@ program
         process.exit(0);
       }
 
-      await new Response(Bun.spawn(["rm", "-rf", outputDir]).stdout).text();
+      rmSync(outputDir, { recursive: true, force: true });
       console.log("Generated files removed\n");
       process.exit(0);
     } catch (error) {

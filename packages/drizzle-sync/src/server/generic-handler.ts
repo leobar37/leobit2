@@ -6,8 +6,8 @@
  * custom operations, and various hooks for business logic integration.
  */
 
-import type { SyncEntity } from "@avileo/shared";
 import type {
+  GenericSyncOperationInput,
   SyncOperationInput,
   SyncHandlerResult,
   EntityRegistry,
@@ -115,8 +115,9 @@ export interface GenericFieldMapping {
 export interface IGenericHandlerConfig<
   C extends Record<string, unknown> = Record<string, unknown>,
   U extends Record<string, unknown> = Record<string, unknown>,
+  TEntity extends string = string,
 > {
-  entityType: SyncEntity;
+  entityType: TEntity;
   schemas: GenericEntitySchemas<C, U>;
   supportedOperations?: ("create" | "update" | "delete")[];
   createFieldMapping?: GenericFieldMapping;
@@ -224,15 +225,16 @@ function mergeDefined(
 export class GenericSyncHandler<
   C extends Record<string, unknown> = Record<string, unknown>,
   U extends Record<string, unknown> = Record<string, unknown>,
+  TEntity extends string = string,
 > extends BaseSyncHandler<SyncRequestContext, DbTransaction> {
-  readonly entityType: SyncEntity;
-  private config: IGenericHandlerConfig<C, U>;
+  readonly entityType: SyncOperationInput["entityType"];
+  private config: IGenericHandlerConfig<C, U, TEntity>;
   private repo?: GenericRepo;
 
-  constructor(config: IGenericHandlerConfig<C, U>) {
+  constructor(config: IGenericHandlerConfig<C, U, TEntity>) {
     super();
     this.config = config;
-    this.entityType = config.entityType;
+    this.entityType = config.entityType as SyncOperationInput["entityType"];
   }
 
   /**

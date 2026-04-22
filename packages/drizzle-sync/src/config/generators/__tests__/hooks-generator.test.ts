@@ -5,7 +5,7 @@ import { generateHooks, generateHooksFile } from "../hooks-generator";
 
 const salesTable = pgTable("sales", {
   id: uuid("id").primaryKey(),
-  businessId: uuid("business_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
   totalAmount: text("total_amount").notNull(),
 });
 

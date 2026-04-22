@@ -6,8 +6,8 @@
  * const engine = createSyncClientEngine({
  *   pg: myPglite,
  *   db: drizzle(myPglite),
- *   businessId: 'biz-123',
- *   businessUserId: 'user-456',
+ *   tenantId: 'biz-123',
+ *   userId: 'user-456',
  *   authToken: 'token',
  *   apiUrl: 'https://api.example.com',
  *   httpClient: myHttpClient,
@@ -24,11 +24,18 @@ import type { SyncClientEngineConfig } from "./types";
 export function createSyncClientEngine(
   config: SyncClientEngineConfig
 ): SyncClientEngine {
-  if (!config.pg) {
-    throw new Error("SyncClientEngine config requires a 'pg' (PGlite) instance");
+  // Validate database source: either databaseConfig or pg+db
+  if (!config.databaseConfig && !(config.pg && config.db)) {
+    throw new Error(
+      "SyncClientEngine config requires either 'databaseConfig' (for auto-init) " +
+      "or both 'pg' and 'db' (for manual mode)."
+    );
   }
-  if (!config.businessId) {
-    throw new Error("SyncClientEngine config requires a 'businessId'");
+  if (!config.tenantId) {
+    throw new Error("SyncClientEngine config requires a 'tenantId'");
+  }
+  if (!config.userId) {
+    throw new Error("SyncClientEngine config requires a 'userId'");
   }
   if (!config.authToken) {
     throw new Error("SyncClientEngine config requires an 'authToken'");
@@ -38,6 +45,9 @@ export function createSyncClientEngine(
   }
   if (!config.httpClient) {
     throw new Error("SyncClientEngine config requires an 'httpClient'");
+  }
+  if (config.tenantColumn && !/^[a-z_][a-z0-9_]*$/.test(config.tenantColumn)) {
+    throw new Error("SyncClientEngine config 'tenantColumn' must be snake_case");
   }
 
   return new SyncClientEngine(config);

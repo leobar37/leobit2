@@ -113,7 +113,6 @@ export function markLocalDatabaseForReset() {
 }
 
 // Known IndexedDB database names used by the app
-// Note: 'avileo-pg' is handled by resetDatabase() in ~/engine/db.ts
 const KNOWN_DB_NAMES = [
   'pglite', 
   'electric',

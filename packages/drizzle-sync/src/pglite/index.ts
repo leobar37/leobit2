@@ -90,10 +90,6 @@ export type {
   StagedPullCoordinatorOptions,
 } from "./coordination-staged-pull-coordinator";
 
-// Backward-compatible legacy exports (deprecated - will be removed in a future version)
-export { syncLogger, applyChange, applyChangesBatch } from "./compat";
-export type { LegacyApplyOptions } from "./compat";
-
 // Re-export queue constants and types for app compatibility
 export { OPERATION_STATUS } from "./queue-types";
 export type { QueueOptions as PgSyncQueueOptions } from "./queue-types";
@@ -112,3 +108,11 @@ export {
   type TableMap,
   type ChangeApplierConfig,
 } from "./schema-mapper";
+
+// Backward compatibility exports used by app integrations
+export {
+  syncLogger,
+  applyChange,
+  applyChangesBatch,
+  type LegacyApplyOptions,
+} from "./compat";

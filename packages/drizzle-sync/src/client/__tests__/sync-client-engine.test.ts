@@ -23,8 +23,8 @@ function createMockConfig(
   return {
     pg: createMockPg() as any,
     db: {} as any,
-    businessId: "biz-001",
-    businessUserId: "user-001",
+    tenantId: "biz-001",
+    userId: "user-001",
     authToken: "token-abc",
     apiUrl: "http://localhost:5201",
     httpClient: {
@@ -51,12 +51,12 @@ describe("createSyncClientEngine", () => {
 
   it("throws if pg is missing", () => {
     const config = createMockConfig({ pg: undefined as any });
-    expect(() => createSyncClientEngine(config)).toThrow("pg");
+    expect(() => createSyncClientEngine(config)).toThrow("databaseConfig");
   });
 
-  it("throws if businessId is missing", () => {
-    const config = createMockConfig({ businessId: "" });
-    expect(() => createSyncClientEngine(config)).toThrow("businessId");
+  it("throws if tenantId is missing", () => {
+    const config = createMockConfig({ tenantId: "" });
+    expect(() => createSyncClientEngine(config)).toThrow("tenantId");
   });
 
   it("throws if authToken is missing", () => {
@@ -206,8 +206,8 @@ describe("SyncClientEngine service registry", () => {
     await engine.initialize();
 
     expect(receivedContext).toBeDefined();
-    expect(receivedContext.businessId).toBe("biz-001");
-    expect(receivedContext.businessUserId).toBe("user-001");
+    expect(receivedContext.tenantId).toBe("biz-001");
+    expect(receivedContext.userId).toBe("user-001");
     expect(receivedContext.pg).toBeDefined();
     expect(receivedContext.db).toBeDefined();
     expect(receivedContext.syncService).toBeDefined();

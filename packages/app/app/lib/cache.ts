@@ -25,7 +25,7 @@ async function ensureTable(pg: PGlite): Promise<void> {
 
 async function getPgAsync(): Promise<PGlite | null> {
   try {
-    const { getDatabase } = await import("~/engine");
+    const { getDatabase } = await import("@avileo/drizzle-sync/client");
     const result = getDatabase();
     return result?.pg ?? null;
   } catch {

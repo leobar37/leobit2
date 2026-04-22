@@ -1,4 +1,4 @@
-import type { ColumnMetadata } from "../../config/types";
+import type { ColumnMetadata, SyncTenancyConfig } from "../../config/types";
 import type { SerializedEntity } from "../../config/schema-types";
 import { getColumnsToInclude, isSerializedEntity, type GeneratorEntity } from "./schema-adapter";
 
@@ -24,7 +24,8 @@ export interface PostgreSQLDDLOutput {
  */
 export function generatePostgreSQLDDL(
   entityName: string,
-  entity: GeneratorEntity
+  entity: GeneratorEntity,
+  tenancy?: SyncTenancyConfig
 ): PostgreSQLDDLOutput {
   const tableName = isSerializedEntity(entity) ? entity.tableName : entityName;
   const columnsToInclude = getColumnsToInclude(entity);
@@ -54,7 +55,11 @@ export function generatePostgreSQLDDL(
 
   const createTable = `CREATE TABLE IF NOT EXISTS "${tableName}" (\n${columnDefs.join(",\n")}\n);`;
 
-  const indexes = generatePostgresIndexes(tableName, columnsToInclude);
+  const tenantColumn =
+    ("config" in entity ? entity.config.tenancy?.tenantColumn : entity.tenancy?.tenantColumn) ??
+    tenancy?.tenantColumn ??
+    "tenant_id";
+  const indexes = generatePostgresIndexes(tableName, columnsToInclude, tenantColumn);
 
   return {
     tableName,
@@ -163,7 +168,7 @@ function formatPostgresDefault(value: unknown, dataType: ColumnMetadata["dataTyp
   return "NULL";
 }
 
-function generatePostgresIndexes(tableName: string, columns: ColumnMetadata[]): string[] {
+function generatePostgresIndexes(tableName: string, columns: ColumnMetadata[], tenantColumn: string): string[] {
   const indexes: string[] = [];
   const indexedColumns = new Set<string>();
 
@@ -171,10 +176,10 @@ function generatePostgresIndexes(tableName: string, columns: ColumnMetadata[]): 
   indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_sync_status" ON "${tableName}"(sync_status);`);
   indexedColumns.add("sync_status");
 
-  // Index on business_id
-  if (columns.find((c) => c.name === "business_id")) {
-    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_business_id" ON "${tableName}"(business_id);`);
-    indexedColumns.add("business_id");
+  // Index on tenant partition column
+  if (columns.find((c) => c.name === tenantColumn)) {
+    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_${tenantColumn}" ON "${tableName}"(${tenantColumn});`);
+    indexedColumns.add(tenantColumn);
   }
 
   // Indexes on FK columns (columns ending with _id that are not primary keys and not already indexed)
@@ -210,5 +215,5 @@ export function generatePostgreSQLDDLFromSerialized(
   entityName: string,
   entity: SerializedEntity
 ): PostgreSQLDDLOutput {
-  return generatePostgreSQLDDL(entityName, entity);
+  return generatePostgreSQLDDL(entityName, entity, undefined);
 }
