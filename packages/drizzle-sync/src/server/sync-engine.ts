@@ -27,7 +27,7 @@ import { EntityRegistry } from "./entity-registry";
 import { syncLogger } from "./sync-logger";
 import type { ISyncOperationRepository } from "./operation-repository";
 import type { ISyncConflictRepository } from "./conflict-repository";
-import type { ParentRelationConfig } from "../config/types";
+import type { ParentRelationConfig, ChildRelationConfig } from "../config/types";
 
 /**
  * Request context interface for sync engine
@@ -113,7 +113,12 @@ export interface SyncEngineConfig<
   syncConflictRepo?: ISyncConflictRepository<TRequestContext, TTransaction>;
   conflictResolverRegistry?: GenericConflictResolverRegistry<string, TRequestContext, TTransaction>;
   /** Entity relations config for FK-based sorting (entity name -> relations) */
-  entityRelations?: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>;
+  entityRelations?: Record<
+    string,
+    { relations?: { parents?: ParentRelationConfig[]; children?: ChildRelationConfig[] }; priority?: number }
+  >;
+  /** Optional entity priority map for fallback sorting */
+  entityPriorities?: Record<string, number>;
   /** Logger implementation */
   logger?: {
     info: (data: unknown) => void;
@@ -162,7 +167,9 @@ export class SyncEngine<
     this.config = config;
     this.syncOpRepo = config.syncOpRepo;
     this.syncConflictRepo = config.syncConflictRepo ?? this.createDefaultConflictRepo();
-    this.operationSorter = new OperationSorter(config.entityRelations ?? {});
+    this.operationSorter = new OperationSorter(config.entityRelations ?? {}, {
+      priorities: config.entityPriorities,
+    });
     this.eventEmitter = config.eventEmitter ?? noOpSyncEventEmitter;
     this.conflictResolverRegistry = config.conflictResolverRegistry ?? new GenericConflictResolverRegistry<string, TRequestContext, TTransaction>();
   }

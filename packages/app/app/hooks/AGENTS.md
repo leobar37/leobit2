@@ -322,6 +322,70 @@ describe("useChickenCalculator", () => {
 });
 ```
 
+## Generated Hooks vs Custom Hooks
+
+### Generated Hooks (Engine-First)
+
+The `drizzle-sync` code generator produces CRUD hooks in `packages/app/app/lib/sync/generated/hooks.ts` that consume `useEngineService<T>()` from `@avileo/drizzle-sync/react`. For each non-junction, non-child entity, it generates 5 hooks:
+
+- `use{Entity}s(options?: ListOptions)` — List with basic filters (`search`, `limit`, `offset`, `sortBy`, `sortOrder`)
+- `use{Entity}(id: string | null)` — Single item by ID
+- `useCreate{Entity}()` — Create mutation
+- `useUpdate{Entity}()` — Update mutation
+- `useDelete{Entity}()` — Delete mutation
+
+**Do NOT edit generated files** — they are overwritten on `bun run sync:generate`.
+
+### When to Use Generated Hooks
+
+Use generated hooks when you only need basic CRUD with standard filters.
+
+### When to Write Custom Hooks
+
+Write a custom hook when you need:
+- Domain-specific filters (e.g., `hasDni`, `tagIds`, customer search by phone)
+- Pagination with custom shapes
+- Atomic multi-entity operations (e.g., Sale + SaleItems in one transaction)
+- Non-CRUD service methods (e.g., `createDraft()`, `finalizeSale()`)
+
+### Custom Hook Extension Pattern
+
+```typescript
+// app/hooks/use-customers.ts
+import { useQuery } from "@tanstack/react-query";
+import { useCustomerService } from "~/lib/sync/engine-provider";
+import type { CustomerSearchFilters } from "~/lib/services/customer-service";
+
+export function useCustomers(filters?: CustomerSearchFilters) {
+  const service = useCustomerService();
+
+  return useQuery({
+    queryKey: filters ? ["customers", "search", filters] : ["customers"],
+    queryFn: () => service.findByBusiness(filters),
+  });
+}
+```
+
+Import the typed service from the engine provider (`useCustomerService()`, `useProductService()`, etc.), then call domain methods on it.
+
+### Regeneration Command
+
+```bash
+# From packages/backend
+bun run sync:generate
+
+# Output: packages/app/app/lib/sync/generated/
+# Files: hooks.ts, services.ts, schemas.ts, types.ts, applier.ts, init.sql
+```
+
+### Service Class Naming Convention
+
+| Entity | Generated Service | Custom Service |
+|--------|------------------|----------------|
+| customers | `CustomersService` | `CustomerService extends CustomersService` |
+| tags | `TagsService` | `TagService extends TagsService` |
+| products | `ProductsService` | `ProductService extends ProductsService` |
+
 ---
 
 *See [App AGENTS.md](../AGENTS.md) for frontend architecture overview.*

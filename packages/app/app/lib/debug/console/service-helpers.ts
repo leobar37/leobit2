@@ -5,7 +5,6 @@
 
 import type { PurchaseService } from "~/lib/services/purchase-service";
 import type { SupplierService } from "~/lib/services/supplier-service";
-import type { SyncService } from "~/lib/sync/sync-service";
 import type { ProductService } from "~/lib/services/product-service";
 import type { CustomerService } from "~/lib/services/customer-service";
 import type { SaleService } from "~/lib/services/sale-service";
@@ -67,10 +66,23 @@ export interface ServiceDebugHelpers {
   help: () => void;
 }
 
+export interface SyncStatusProvider {
+  getStatus(): Promise<{
+    pending: number;
+    processing: number;
+    syncing: number;
+    completed: number;
+    failed: number;
+    conflict: number;
+    deadLetter: number;
+    total: number;
+  }>;
+}
+
 export interface ServiceDebugDeps {
   purchaseService: PurchaseService;
   supplierService: SupplierService;
-  syncService: SyncService;
+  syncService: SyncStatusProvider;
   productService?: ProductService | null;
   customerService?: CustomerService | null;
   saleService?: SaleService | null;
@@ -662,7 +674,7 @@ avileoDebug.help()              → Show this help
 export function addServiceDebugHelpers(services: {
   purchaseService: PurchaseService;
   supplierService: SupplierService;
-  syncService: SyncService;
+  syncService: SyncStatusProvider;
   productService?: ProductService;
   customerService?: CustomerService;
   saleService?: SaleService;
@@ -684,4 +696,13 @@ export function addServiceDebugHelpers(services: {
 
   // Merge service helpers onto existing window.avileoDebug (do NOT overwrite)
   window.avileoDebug = { ...window.avileoDebug, ...serviceHelpers };
+
+  // Keep metadata API in sync with merged helpers.
+  // This preserves compatibility for tooling that reads window.avileoDebugApi.helpers.
+  if (window.avileoDebugApi) {
+    window.avileoDebugApi = {
+      ...window.avileoDebugApi,
+      helpers: window.avileoDebug,
+    };
+  }
 }

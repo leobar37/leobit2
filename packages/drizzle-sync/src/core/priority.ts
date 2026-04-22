@@ -4,29 +4,34 @@
  * Defines processing order for sync entities.
  * Parent entities (lower priority) are processed before children (higher priority).
  * This ensures referential integrity during batch operations.
- *
- * Uses canonical configuration from @avileo/shared to avoid duplication.
- * Also provides generic config-based functions for use with the new config system.
  */
-
-import {
-  ENTITY_PRIORITIES,
-  getEntityPriority as sharedGetEntityPriority,
-  type SyncEntity,
-} from "@avileo/shared";
 
 import type { EntityConfig } from "../config/types";
 
-export type { SyncEntity } from "@avileo/shared";
+export type SyncEntity = string;
 
 export interface EntityPriorityConfig {
   [entityType: string]: number;
 }
 
 /**
- * Default priority tiers for sync entity processing.
+ * Optional default priority map.
+ *
+ * Domain consumers can configure this via `configureDefaultEntityPriorities`.
  */
-export const DEFAULT_ENTITY_PRIORITIES: EntityPriorityConfig = ENTITY_PRIORITIES as EntityPriorityConfig;
+const defaultEntityPrioritiesStore: EntityPriorityConfig = {};
+export const DEFAULT_ENTITY_PRIORITIES: EntityPriorityConfig = defaultEntityPrioritiesStore;
+
+export function configureDefaultEntityPriorities(
+  priorities: Record<string, number>
+): void {
+  for (const key of Object.keys(defaultEntityPrioritiesStore)) {
+    delete defaultEntityPrioritiesStore[key];
+  }
+  for (const [entityType, priority] of Object.entries(priorities)) {
+    defaultEntityPrioritiesStore[entityType] = priority;
+  }
+}
 
 // ============================================================================
 // Generic Config-Based Functions (NEW)

@@ -22,6 +22,8 @@ import {
   type ConflictResolution,
 } from "~/components/sync/conflict-resolver";
 import { ServicesProvider } from "~/lib/sync/service-provider";
+import { initDevTools } from "~/lib/debug/console";
+import { addServiceDebugHelpers } from "~/lib/debug";
 import { AppLayout } from "~/components/layout/app-layout";
 import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 import { useBusiness } from "~/hooks/use-business";
@@ -89,6 +91,35 @@ function ServicesProviderWrapper({
 
   // Initialize engine automatically with timeout and schema error detection
   const { isReady, isLoading: isEngineLoading, error, schemaError, hasInitTimeout } = useSyncEngineInit(engine, { timeoutMs: 30000 });
+
+  useEffect(() => {
+    if (!engine || !isReady) {
+      return;
+    }
+
+    initDevTools({
+      pg: engine.getPg(),
+    });
+
+    const syncService = engine.getSyncService();
+    if (!syncService) {
+      return;
+    }
+
+    const purchaseService = engine.getService<import("~/lib/services/purchase-service").PurchaseService>("purchases");
+    const supplierService = engine.getService<import("~/lib/services/supplier-service").SupplierService>("suppliers");
+
+    if (purchaseService && supplierService) {
+      addServiceDebugHelpers({
+        purchaseService,
+        supplierService,
+        syncService,
+        productService: engine.getService<import("~/lib/services/product-service").ProductService>("products"),
+        customerService: engine.getService<import("~/lib/services/customer-service").CustomerService>("customers"),
+        saleService: engine.getService<import("~/lib/services/sale-service").SaleService>("sales"),
+      });
+    }
+  }, [engine, isReady]);
 
   // ALL hooks must be called before any conditional returns (Rules of Hooks)
   const { data: business, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness, isFetching } = useBusiness();

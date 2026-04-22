@@ -11,6 +11,8 @@ This document describes Avileo's sync system architecture. It covers both the **
 
 **Key principle:** The current system uses explicit, hand-written handlers with shared definitions. The generator proposal remains future work and is not required for current development.
 
+Related migration boundary note: `docs/new-sync/WORKER_DEBUG_BOUNDARY.md`.
+
 ---
 
 ## Shared Manifest Architecture

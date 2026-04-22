@@ -9,8 +9,8 @@
  * - Instance (new): new HandlerRegistry(deps) with generic TEntity
  */
 
-import type { SyncEntity } from "@avileo/shared";
 import type { ISyncHandler, IGenericSyncHandler, SyncEngineDeps } from "./types";
+import type { SyncEntity } from "./types";
 
 /**
  * Factory function type for creating handlers (legacy)

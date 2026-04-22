@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { HandlerRegistry } from "./handler-registry";
-import type { ISyncHandler, SyncEngineDeps } from "./types";
-import type { SyncEntity } from "@avileo/shared";
+import type { ISyncHandler, SyncEngineDeps, SyncEntity } from "./types";
 
 describe("handler-registry", () => {
   afterEach(() => {

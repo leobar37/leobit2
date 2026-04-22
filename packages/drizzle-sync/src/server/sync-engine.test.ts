@@ -8,8 +8,8 @@ import type {
   SyncBatchResult,
   SyncOperationResult,
   ISyncHandler,
+  SyncEntity,
 } from "./types";
-import type { SyncEntity } from "@avileo/shared";
 import { SyncEventEmitter } from "../core";
 
 type SyncRequestContext = { tenantId: string; userId: string };

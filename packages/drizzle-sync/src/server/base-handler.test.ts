@@ -4,8 +4,7 @@ import {
   SyncErrorCategory,
   type PostgresErrorDetails,
 } from "./base-handler";
-import type { SyncOperationInput, EntityRegistry } from "./types";
-import type { SyncEntity } from "@avileo/shared";
+import type { SyncOperationInput, EntityRegistry, SyncEntity } from "./types";
 
 describe("base-handler", () => {
   // Concrete implementation for testing abstract class

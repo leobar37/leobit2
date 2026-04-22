@@ -9,6 +9,18 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 
+const LEGACY_ENTITY_TYPE_ALIASES: Record<string, string> = {
+  saleItems: "sale_items",
+  purchaseItems: "purchase_items",
+  productVariants: "product_variants",
+  customerTags: "customer_tags",
+  customerGroups: "customer_groups",
+  customerGroupMembers: "customer_group_members",
+  distribucionItems: "distribucion_items",
+};
+
+const LEGACY_ENTITY_TYPE_MAPPINGS = Object.entries(LEGACY_ENTITY_TYPE_ALIASES);
+
 // Re-export sync table schemas (sync infrastructure - not generated)
 export {
   SCHEMA_NAME,
@@ -144,4 +156,28 @@ export async function ensureSyncSchema(
      WHERE business_id IS NULL`,
     [businessId]
   );
+}
+
+/**
+ * Normalize legacy camelCase entity names to canonical snake_case.
+ *
+ * Idempotent: if rows are already canonical, updates are no-ops.
+ */
+export async function normalizeLegacySyncEntityTypes(pg: PGlite): Promise<void> {
+  for (const [legacyEntityType, canonicalEntityType] of LEGACY_ENTITY_TYPE_MAPPINGS) {
+    await pg.query(
+      `UPDATE sync_operations
+       SET entity_type = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE entity_type = $2`,
+      [canonicalEntityType, legacyEntityType]
+    );
+
+    await pg.query(
+      `UPDATE sync_dead_letter
+       SET entity_type = $1
+       WHERE entity_type = $2`,
+      [canonicalEntityType, legacyEntityType]
+    );
+  }
 }

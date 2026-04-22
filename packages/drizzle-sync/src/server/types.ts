@@ -6,9 +6,7 @@
  * Now includes generic versions alongside legacy types.
  */
 
-import type { SyncEntity } from "@avileo/shared";
-
-export type { SyncEntity } from "@avileo/shared";
+export type SyncEntity = string;
 
 /**
  * Sync operation types

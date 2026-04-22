@@ -6,8 +6,8 @@
  * without dealing with complex object structures.
  */
 
-import type { SyncEntity } from "@avileo/shared";
 import type { SyncOperationInput } from "./types";
+import type { SyncEntity } from "./types";
 import type { SyncRequestContext, DbTransaction } from "./sync-engine";
 import { GenericSyncHandler, type GenericRepo, type IGenericHandlerConfig } from "./generic-handler";
 import type {

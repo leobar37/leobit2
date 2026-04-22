@@ -1,6 +1,12 @@
 import type { PgTable, PgColumn } from "drizzle-orm/pg-core";
 import { getTableColumns } from "drizzle-orm";
-import type { ColumnMetadata, RelationGraph, RelationNode } from "./types";
+import type {
+  ChildRelationConfig,
+  ColumnMetadata,
+  ParentRelationConfig,
+  RelationGraph,
+  RelationNode,
+} from "./types";
 
 /**
  * Introspect a Drizzle table and extract column metadata
@@ -106,7 +112,7 @@ export function detectRelations(table: PgTable) {
     .filter((col) => col.name.endsWith("_id") && !col.primary)
     .map((col) => ({
       column: col.name,
-      references: inferReferencedTable(col.name),
+      references: inferDefaultReference(col.name),
       isRequired: col.notNull,
     }));
 
@@ -116,47 +122,117 @@ export function detectRelations(table: PgTable) {
   };
 }
 
-function inferReferencedTable(columnName: string): string {
+function inferDefaultReference(columnName: string): string {
   const baseName = columnName.replace("_id", "");
+  return `${baseName}s`;
+}
 
-  const pluralMap: Record<string, string> = {
-    sale: "sales",
-    customer: "customers",
-    product: "products",
-    user: "users",
-    business: "businesses",
-    purchase: "purchases",
-    supplier: "suppliers",
-    order: "orders",
-    item: "items",
-    variant: "product_variants",
-    tag: "tags",
-    group: "customer_groups",
-  };
+function inferDeclaredReference(
+  columnName: string,
+  declaredEntities: ReadonlySet<string>
+): string | undefined {
+  const baseName = columnName.replace("_id", "");
+  const candidates = [baseName, `${baseName}s`];
 
-  return pluralMap[baseName] || `${baseName}s`;
+  return candidates.find((candidate) => declaredEntities.has(candidate));
+}
+
+function linkParentChild(graph: Record<string, RelationNode>, parent: string, child: string): void {
+  if (!graph[parent] || !graph[child]) {
+    return;
+  }
+
+  if (!graph[child].parents.includes(parent)) {
+    graph[child].parents.push(parent);
+  }
+
+  if (!graph[parent].children.includes(child)) {
+    graph[parent].children.push(child);
+  }
+}
+
+function applyExplicitRelations(
+  graph: Record<string, RelationNode>,
+  entityName: string,
+  declaredEntities: ReadonlySet<string>,
+  relations?: {
+    children?: ChildRelationConfig[];
+    parents?: ParentRelationConfig[];
+  }
+): boolean {
+  let applied = false;
+
+  for (const child of relations?.children ?? []) {
+    if (!declaredEntities.has(child.entity)) {
+      continue;
+    }
+
+    linkParentChild(graph, entityName, child.entity);
+    applied = true;
+  }
+
+  for (const parent of relations?.parents ?? []) {
+    if (!declaredEntities.has(parent.entity)) {
+      continue;
+    }
+
+    linkParentChild(graph, parent.entity, entityName);
+    applied = true;
+  }
+
+  return applied;
 }
 
 /**
  * Build relation graph across all entities
  */
-export function buildRelationGraph(entities: Record<string, { table: PgTable }>): RelationGraph {
+export function buildRelationGraph(
+  entities: Record<
+    string,
+    {
+      table: PgTable;
+      relations?: {
+        children?: ChildRelationConfig[];
+        parents?: ParentRelationConfig[];
+      };
+    }
+  >
+): RelationGraph {
   const graph: Record<string, RelationNode> = {};
+  const declaredEntities = new Set(Object.keys(entities));
 
-  for (const [name, config] of Object.entries(entities)) {
-    const relations = detectRelations(config.table);
+  for (const name of Object.keys(entities)) {
     graph[name] = {
-      parents: relations.foreignKeys.map((fk) => fk.references),
+      parents: [],
       children: [],
       priority: 1,
     };
   }
 
-  for (const [name, node] of Object.entries(graph)) {
-    for (const parent of node.parents) {
-      if (graph[parent]) {
-        graph[parent].children.push(name);
+  for (const [name, config] of Object.entries(entities)) {
+    const hasExplicitRelations = applyExplicitRelations(
+      graph,
+      name,
+      declaredEntities,
+      config.relations
+    );
+
+    if (hasExplicitRelations) {
+      continue;
+    }
+
+    const columns = Object.values(getTableColumns(config.table)) as PgColumn[];
+    for (const col of columns) {
+      if (!col.name.endsWith("_id") || col.primary) {
+        continue;
       }
+
+      const parent = inferDeclaredReference(col.name, declaredEntities);
+      if (!parent || parent === name) {
+        continue;
+      }
+
+      linkParentChild(graph, parent, name);
     }
   }
 

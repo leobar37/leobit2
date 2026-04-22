@@ -9,7 +9,7 @@
       "id": "T-000",
       "title": "Post-migration stabilization",
       "file": "tasks/T-000-post-migration-stabilization.md",
-      "status": "in_progress",
+      "status": "completed",
       "phase": "stabilization",
       "dependencies": [],
       "requirements": [
@@ -20,7 +20,7 @@
       "id": "T-001",
       "title": "Canonical entity identity",
       "file": "tasks/T-001-canonical-entity-identity.md",
-      "status": "in_progress",
+      "status": "completed",
       "phase": "foundation",
       "dependencies": [],
       "requirements": [
@@ -31,7 +31,7 @@
       "id": "T-002",
       "title": "Schema-driven applier generation",
       "file": "tasks/T-002-schema-driven-applier-generation.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "foundation",
       "dependencies": [
         "T-000",
@@ -46,7 +46,7 @@
       "id": "T-003",
       "title": "Runtime apply integration",
       "file": "tasks/T-003-runtime-apply-integration.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "integration",
       "dependencies": [
         "T-000",
@@ -60,7 +60,7 @@
       "id": "T-004",
       "title": "Decouple generic library from shared",
       "file": "tasks/T-004-decouple-generic-library-from-shared.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "hardening",
       "dependencies": [
         "T-001",
@@ -75,7 +75,7 @@
       "id": "T-005",
       "title": "Persisted entityType migration",
       "file": "tasks/T-005-persisted-entitytype-migration.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "hardening",
       "dependencies": [
         "T-001"
@@ -89,7 +89,7 @@
       "id": "T-006",
       "title": "Introspection and validation hardening",
       "file": "tasks/T-006-introspection-and-validation-hardening.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "hardening",
       "dependencies": [
         "T-001"
@@ -102,7 +102,7 @@
       "id": "T-007",
       "title": "Consumer alignment",
       "file": "tasks/T-007-consumer-alignment.md",
-      "status": "pending",
+      "status": "in_progress",
       "phase": "integration",
       "dependencies": [
         "T-003",
@@ -140,7 +140,7 @@
       "id": "T-009",
       "title": "Worker and debug follow-up",
       "file": "tasks/T-009-worker-and-debug-follow-up.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "hardening",
       "dependencies": [
         "T-000"

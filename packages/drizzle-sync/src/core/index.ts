@@ -43,12 +43,13 @@ export type {
   DeadLetterOperation, // Compatibility alias
 } from "./types";
 
-// Entity tracking sets (from @avileo/shared)
+// Entity tracking defaults (configurable at runtime)
 export {
   SYNC_STATUS_TRACKED,
   SELF_HEAL_INSERTABLE,
   SYNC_STATUS_ENTITY_TABLES,
   SELF_HEAL_INSERTABLE_ENTITIES,
+  configureEntityTracking,
 } from "./types";
 
 // Generic entity tracking (config-based)
@@ -94,6 +95,7 @@ export type { EntityPriorityConfig, SyncEntity } from "./priority";
 
 export {
   DEFAULT_ENTITY_PRIORITIES,
+  configureDefaultEntityPriorities,
 } from "./priority";
 
 export {

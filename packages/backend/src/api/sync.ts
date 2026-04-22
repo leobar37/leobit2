@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { SYNC_ENTITIES } from "@avileo/shared";
+import type { SyncEntity } from "@avileo/shared";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
@@ -19,7 +20,30 @@ const MAX_BATCH_SIZE = 100;
 const MAX_CHANGES_LIMIT = 500;
 const DEFAULT_CHANGES_LIMIT = 100;
 
-const entityLiterals = SYNC_ENTITIES.map((entity) => t.Literal(entity)) as [
+const LEGACY_ENTITY_TYPE_ALIASES = {
+  saleItems: "sale_items",
+  purchaseItems: "purchase_items",
+  productVariants: "product_variants",
+  customerTags: "customer_tags",
+  customerGroups: "customer_groups",
+  customerGroupMembers: "customer_group_members",
+  distribucionItems: "distribucion_items",
+} as const satisfies Record<string, SyncEntity>;
+
+type LegacyEntityType = keyof typeof LEGACY_ENTITY_TYPE_ALIASES;
+
+function normalizeEntityType(entityType: SyncEntity | LegacyEntityType): SyncEntity {
+  return LEGACY_ENTITY_TYPE_ALIASES[entityType as LegacyEntityType] ?? entityType;
+}
+
+function normalizeEntityTypeFilter(entityType: string): string {
+  return LEGACY_ENTITY_TYPE_ALIASES[entityType as LegacyEntityType] ?? entityType;
+}
+
+const entityLiterals = [
+  ...SYNC_ENTITIES,
+  ...(Object.keys(LEGACY_ENTITY_TYPE_ALIASES) as LegacyEntityType[]),
+].map((entity) => t.Literal(entity)) as [
   ReturnType<typeof t.Literal>,
   ...ReturnType<typeof t.Literal>[],
 ];
@@ -32,7 +56,14 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   .post(
     "/batch",
     async ({ syncService, ctx, body, set }) => {
-      const operations = body.operations as SyncOperationInput[];
+      const operations = (
+        body.operations as (SyncOperationInput & {
+          entityType: SyncEntity | LegacyEntityType;
+        })[]
+      ).map((operation) => ({
+        ...operation,
+        entityType: normalizeEntityType(operation.entityType),
+      }));
 
       // Enforce batch size limit
       if (operations.length > MAX_BATCH_SIZE) {
@@ -220,7 +251,11 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       // Parse entityTypes filter for staged loading (comma-separated list)
       let entityTypes: string[] | undefined;
       if (query.entityTypes) {
-        entityTypes = query.entityTypes.split(",").filter(Boolean);
+        entityTypes = query.entityTypes
+          .split(",")
+          .map((entityType) => entityType.trim())
+          .filter(Boolean)
+          .map(normalizeEntityTypeFilter);
       }
 
       const result = await syncService.getChanges(
@@ -283,7 +318,9 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         ctx as RequestContext,
         {
           status: query.status || "pending",
-          entityType: query.entityType,
+          entityType: query.entityType
+            ? normalizeEntityTypeFilter(query.entityType)
+            : undefined,
           limit,
           offset,
         }
@@ -443,7 +480,9 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         dlqRepo.findByBusiness(ctx as RequestContext, {
           limit,
           offset,
-          entity: query.entity,
+          entity: query.entity
+            ? normalizeEntityTypeFilter(query.entity)
+            : undefined,
         }),
         dlqRepo.countByBusiness(ctx as RequestContext),
       ]);

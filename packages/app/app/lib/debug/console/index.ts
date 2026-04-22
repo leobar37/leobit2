@@ -12,10 +12,19 @@ export { createServiceDebugHelpers, addServiceDebugHelpers } from "./service-hel
 export type { DiagnosticReport, EngineDebugHelpers } from "./engine-helpers";
 export type { ServiceDebugHelpers, ServiceDebugDeps } from "./service-helpers";
 
+export const AVILEO_DEBUG_API_VERSION = "2.0";
+
+export interface AvileoDebugApi {
+  helpers: EngineDebugHelpers & ServiceDebugHelpers;
+  version: string;
+  initializedAt: string;
+}
+
 // Augment window with avileoDebug global
 declare global {
   interface Window {
     avileoDebug?: EngineDebugHelpers & ServiceDebugHelpers;
+    avileoDebugApi?: AvileoDebugApi;
   }
 }
 
@@ -50,6 +59,12 @@ export function initDevTools(options: InitDevToolsOptions): void {
     ...engineHelpers,
     ...serviceHelpers,
   } as EngineDebugHelpers & ServiceDebugHelpers;
+
+  window.avileoDebugApi = {
+    helpers: window.avileoDebug,
+    version: AVILEO_DEBUG_API_VERSION,
+    initializedAt: new Date().toISOString(),
+  };
 
   console.log("🔧 Avileo Debug ready! Run avileoDebug.help() for commands");
 }

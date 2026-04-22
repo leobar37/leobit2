@@ -116,9 +116,21 @@ export class SyncService {
     const syncOpRepo = new SyncOperationRepository();
     const syncConflictRepo = deps.syncConflictRepo ?? new SyncConflictRepository();
 
-    const entityRelations: Record<string, { relations?: { parents?: { entity: string; foreignKey: string; payloadKey?: string; required?: boolean }[] } }> = {};
+    const entityRelations: Record<
+      string,
+      {
+        relations?: {
+          parents?: { entity: string; foreignKey: string; payloadKey?: string; required?: boolean }[];
+          children?: { entity: string; foreignKey: string; payloadKey?: string; cascade?: boolean }[];
+        };
+        priority?: number;
+      }
+    > = {};
     for (const [name, entity] of Object.entries(syncConfig.entities)) {
-      entityRelations[name] = { relations: entity.relations };
+      entityRelations[name] = {
+        relations: entity.relations,
+        priority: entity.priority,
+      };
     }
 
     this.engine = new SyncEngine<RequestContext, DbTransaction, SyncServiceDeps>(deps, {

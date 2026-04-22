@@ -35,7 +35,7 @@ const saleItemsConfig: EntitySyncConfig = {
 };
 
 describe("hooks-generator", () => {
-  it("generates snake_case entityType and camelCase payload FK", () => {
+  it("generates engine-first create hook using useEngineService", () => {
     const entities = {
       sales: salesConfig,
       saleItems: saleItemsConfig,
@@ -43,31 +43,23 @@ describe("hooks-generator", () => {
 
     const hooks = generateHooks("sales", salesConfig, entities);
 
-    expect(hooks.createHook).toContain('entityType: "sales"');
-    expect(hooks.createHook).toContain('entityType: "sale_items"');
-    expect(hooks.createHook).toContain("saleId: parentId");
-    expect(hooks.createHook).not.toContain("sale_id: parentId");
-    expect(hooks.createHook).not.toContain('entityType: "saleItems"');
+    expect(hooks.createHook).toContain("useEngineService<SalesService>");
+    expect(hooks.createHook).toContain('("sales")');
+    expect(hooks.createHook).toContain("service.create(input)");
+    expect(hooks.createHook).toContain("CreateSalesInput");
   });
 
-  it("falls back to camelCase fk payload key when payloadKey is omitted", () => {
+  it("generates engine-first list and single hooks", () => {
     const entities = {
-      sales: {
-        ...salesConfig,
-        relations: {
-          children: [
-            {
-              entity: "saleItems",
-              foreignKey: "sale_id",
-            },
-          ],
-        },
-      },
+      sales: salesConfig,
       saleItems: saleItemsConfig,
     };
 
-    const hooks = generateHooks("sales", entities.sales, entities);
-    expect(hooks.createHook).toContain("saleId: parentId");
+    const hooks = generateHooks("sales", salesConfig, entities);
+
+    expect(hooks.listHook).toContain("useEngineService<SalesService>");
+    expect(hooks.listHook).toContain("service.list(options)");
+    expect(hooks.singleHook).toContain("service.findById(id)");
   });
 
   it("includes generated hooks in aggregate file", () => {
@@ -83,5 +75,6 @@ describe("hooks-generator", () => {
 
     const file = generateHooksFile(hooksMap, entities);
     expect(file).toContain("useCreateSales");
+    expect(file).toContain('from "@avileo/drizzle-sync/react"');
   });
 });

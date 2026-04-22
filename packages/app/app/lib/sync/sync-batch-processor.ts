@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { ENTITY_PRIORITIES } from "@avileo/shared";
+import { ENTITY_PRIORITIES, getEntityPriority, isSyncEntity } from "@avileo/shared";
 import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "@avileo/drizzle-sync/shared";
 import type { ISyncHttpClient } from "./http/sync-http-client";
 import type { BatchSyncResponse, SyncOperationRecord } from "./types";
@@ -26,16 +26,24 @@ type SyncOperationResult = {
   };
 };
 
+const ENTITY_PRIORITY_CASE_SQL = Object.entries(ENTITY_PRIORITIES)
+  .filter(([, priority]) => typeof priority === "number")
+  .sort((left, right) => (left[1] ?? 99) - (right[1] ?? 99))
+  .map(([entity, priority]) => `WHEN '${entity}' THEN ${priority}`)
+  .join("\n           ");
+
 function isOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine;
 }
 
 function sortOperations(operations: SyncOperationRecord[]): SyncOperationRecord[] {
   return [...operations].sort((left, right) => {
-    const leftPriority =
-      ENTITY_PRIORITIES[left.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
-    const rightPriority =
-      ENTITY_PRIORITIES[right.entity_type as keyof typeof ENTITY_PRIORITIES] ?? 99;
+    const leftPriority = isSyncEntity(left.entity_type)
+      ? getEntityPriority(left.entity_type)
+      : 99;
+    const rightPriority = isSyncEntity(right.entity_type)
+      ? getEntityPriority(right.entity_type)
+      : 99;
 
     if (leftPriority !== rightPriority) {
       return leftPriority - rightPriority;
@@ -162,18 +170,8 @@ export class SyncBatchProcessor {
          AND sync_attempts < $4
        ORDER BY
          CASE entity_type
-           WHEN 'customers' THEN 1
-           WHEN 'products' THEN 1
-           WHEN 'product_variants' THEN 2
-           WHEN 'tags' THEN 1
-           WHEN 'customer_groups' THEN 1
-           WHEN 'customer_group_members' THEN 2
-           WHEN 'suppliers' THEN 1
-           WHEN 'sales' THEN 3
-           WHEN 'abonos' THEN 3
-           WHEN 'purchases' THEN 3
-           WHEN 'distribuciones' THEN 3
-           ELSE 4
+           ${ENTITY_PRIORITY_CASE_SQL}
+           ELSE 99
          END,
          created_at ASC
        LIMIT $5`,

@@ -7,7 +7,7 @@ import type {
   SyncConfigInput,
   EntitySyncConfig,
 } from "./types";
-import { introspectTable } from "./introspect";
+import { buildRelationGraph, introspectTable } from "./introspect";
 
 // Tipos de validación exportados
 export interface ConfigValidationError {
@@ -271,9 +271,13 @@ export function validateSyncConfig(config: SyncConfig | SyncConfigInput): Config
     });
   }
 
+  const declaredEntityNames = new Set(Object.keys(config.entities));
+
   for (const [name, entity] of Object.entries(config.entities)) {
-    validateNewEntity(name, entity, errors, warnings);
+    validateNewEntity(name, entity, declaredEntityNames, errors, warnings);
   }
+
+  validateNewRelationGraph(config.entities, errors);
 
   checkNewCircularDependencies(config.entities, errors, warnings);
 
@@ -287,6 +291,7 @@ export function validateSyncConfig(config: SyncConfig | SyncConfigInput): Config
 function validateNewEntity(
   name: string,
   entity: EntitySyncConfig,
+  declaredEntityNames: ReadonlySet<string>,
   errors: ConfigValidationError[],
   warnings: ConfigValidationWarning[]
 ): void {
@@ -371,6 +376,14 @@ function validateNewEntity(
 
   const childRelations = entity.relations?.children || [];
   for (const relation of childRelations) {
+    if (!declaredEntityNames.has(relation.entity)) {
+      errors.push({
+        path: `${path}.relations.children.${relation.entity}`,
+        message: `Child relation references undeclared entity: ${relation.entity}`,
+        hint: "Declare the entity in config.entities or remove this relation",
+      });
+    }
+
     if (relation.payloadKey && relation.payloadKey.includes("_")) {
       warnings.push({
         path: `${path}.relations.children.${relation.entity}.payloadKey`,
@@ -381,6 +394,14 @@ function validateNewEntity(
 
   const parentRelations = entity.relations?.parents || [];
   for (const relation of parentRelations) {
+    if (!declaredEntityNames.has(relation.entity)) {
+      errors.push({
+        path: `${path}.relations.parents.${relation.entity}`,
+        message: `Parent relation references undeclared entity: ${relation.entity}`,
+        hint: "Declare the entity in config.entities or remove this relation",
+      });
+    }
+
     if (relation.payloadKey && relation.payloadKey.includes("_")) {
       warnings.push({
         path: `${path}.relations.parents.${relation.entity}.payloadKey`,
@@ -406,30 +427,51 @@ function validateNewEntity(
   }
 }
 
+function validateNewRelationGraph(
+  entities: Record<string, EntitySyncConfig>,
+  errors: ConfigValidationError[]
+): void {
+  if (!entities || Object.keys(entities).length === 0) {
+    return;
+  }
+
+  const declaredEntityNames = new Set(Object.keys(entities));
+  const graph = buildRelationGraph(entities);
+
+  for (const [entityName, node] of Object.entries(graph)) {
+    if (!declaredEntityNames.has(entityName)) {
+      errors.push({
+        path: `entities.${entityName}`,
+        message: `Relation graph contains undeclared entity node: ${entityName}`,
+      });
+    }
+
+    for (const parent of node.parents) {
+      if (!declaredEntityNames.has(parent)) {
+        errors.push({
+          path: `entities.${entityName}.graph.parents`,
+          message: `Relation graph references undeclared parent entity: ${parent}`,
+        });
+      }
+    }
+
+    for (const child of node.children) {
+      if (!declaredEntityNames.has(child)) {
+        errors.push({
+          path: `entities.${entityName}.graph.children`,
+          message: `Relation graph references undeclared child entity: ${child}`,
+        });
+      }
+    }
+  }
+}
+
 function checkNewCircularDependencies(
   entities: Record<string, EntitySyncConfig>,
   errors: ConfigValidationError[],
   warnings: ConfigValidationWarning[]
 ): void {
-  const graph: Record<string, Array<{ name: string; nullable: boolean }>> = {};
-
-  for (const [name, entity] of Object.entries(entities)) {
-    if (!entity.table) continue;
-
-    try {
-      const columns = introspectTable(entity.table);
-      const foreignKeys = columns
-        .filter((col) => col.name.endsWith("_id") && !col.primary)
-        .map((col) => ({
-          name: col.name.replace("_id", "").replace(/s$/, ""),
-          nullable: !col.notNull,
-        }));
-
-      graph[name] = foreignKeys;
-    } catch {
-      graph[name] = [];
-    }
-  }
+  const graph = buildRelationGraph(entities);
 
   const visited = new Set<string>();
   const visiting = new Set<string>();
@@ -450,11 +492,8 @@ function checkNewCircularDependencies(
     visiting.add(name);
     path.push(name);
 
-    for (const dep of graph[name] || []) {
-      const depEntity = Object.keys(entities).find((e) => e === dep.name || e === `${dep.name}s`);
-      if (depEntity) {
-        visit(depEntity, [...path]);
-      }
+    for (const child of graph[name]?.children || []) {
+      visit(child, [...path]);
     }
 
     visiting.delete(name);
@@ -463,7 +502,7 @@ function checkNewCircularDependencies(
     return false;
   }
 
-  for (const name of Object.keys(graph)) {
+  for (const name of Object.keys(entities)) {
     if (!visited.has(name)) {
       visit(name, []);
     }

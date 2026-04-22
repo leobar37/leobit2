@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SYNC_ENTITIES } from "@avileo/shared";
 
 // ============================================================================
 // Numeric String Transformation Helpers
@@ -360,7 +361,7 @@ export const purchaseItemUpdateSchema = z.object({
 
 export const syncOperationSchema = z.object({
   idempotencyKey: z.string(),
-  entityType: z.enum(["customers", "sales", "sale_items", "abonos", "distribuciones", "distribucion_items", "products", "product_variants", "tags", "customer_tags", "purchases", "purchase_items", "customer_groups", "customer_group_members", "visitas", "suppliers"]),
+  entityType: z.enum(SYNC_ENTITIES),
   entityId: z.string(),
   operation: z.enum(["create", "update", "delete"]),
   payload: z.record(z.string(), z.unknown()),

@@ -1,6 +1,7 @@
 import { buildRelationGraph } from "./introspect";
 import { SchemaManager } from "./schema-manager";
 import type { SyncSchema } from "./schema-types";
+import { validateSyncConfig } from "./validator";
 import type {
   EntitySyncConfig,
   SchemaConfig,
@@ -44,6 +45,14 @@ export class SyncConfigBuilder<
   async buildSchema(): Promise<SyncSchema> {
     if (!this._schemaManager) {
       throw new Error("SchemaManager not initialized. Add 'schema' config to defineSyncConfig.");
+    }
+
+    const validation = validateSyncConfig(this.getRuntimeConfig());
+    if (!validation.valid) {
+      const message = validation.errors
+        .map((error) => `${error.path}: ${error.message}`)
+        .join("\n");
+      throw new Error(`Invalid sync configuration:\n${message}`);
     }
 
     const graph = buildRelationGraph(this.input.entities);

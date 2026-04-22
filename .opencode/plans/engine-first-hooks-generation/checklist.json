@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "plan": "engine-first-hooks-generation",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Fix tenant/business naming in service-generator.ts",
+      "file": "tasks/01-fix-tenant-business-naming.md",
+      "status": "pending",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": ["NFR-002"]
+    },
+    {
+      "id": "T-002",
+      "title": "Redesign hooks-generator.ts for engine-first with basic filters",
+      "file": "tasks/02-redesign-hooks-generator.md",
+      "status": "pending",
+      "phase": "core",
+      "dependencies": ["T-001"],
+      "requirements": ["FR-001", "FR-002", "FR-003", "FR-004", "FR-007"]
+    },
+    {
+      "id": "T-003",
+      "title": "Fix output directory and remove dead backend hooks",
+      "file": "tasks/03-fix-output-directory.md",
+      "status": "pending",
+      "phase": "core",
+      "dependencies": ["T-002"],
+      "requirements": ["FR-005", "FR-006"]
+    },
+    {
+      "id": "T-004",
+      "title": "End-to-end validation with test entity",
+      "file": "tasks/04-e2e-validation.md",
+      "status": "pending",
+      "phase": "validation",
+      "dependencies": ["T-003"],
+      "requirements": ["NFR-001", "NFR-003"]
+    },
+    {
+      "id": "T-005",
+      "title": "Document custom hook extension pattern",
+      "file": "tasks/05-document-extension-pattern.md",
+      "status": "pending",
+      "phase": "documentation",
+      "dependencies": ["T-004"],
+      "requirements": ["NFR-001"]
+    }
+  ]
+}

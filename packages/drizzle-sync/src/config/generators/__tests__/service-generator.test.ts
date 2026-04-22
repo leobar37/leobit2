@@ -156,10 +156,9 @@ describe("Service Generator", () => {
     it("generates findMany method filtering by tenantId", () => {
       const result = generateService("tags", tagConfig);
 
-      // Should filter by this.tenantId and order by desc(createdAt)
-      expect(result.serviceCode).toContain("list()");
-      expect(result.serviceCode).toContain("this.tenantId");
-      expect(result.serviceCode).toContain("eq(tags.tenantId, this.tenantId)");
+      expect(result.serviceCode).toContain("list(options");
+      expect(result.serviceCode).toContain("this.businessId");
+      expect(result.serviceCode).toContain("eq(tags.tenantId, this.businessId)");
       expect(result.serviceCode).toContain("orderBy(desc(tags.createdAt))");
     });
 
@@ -183,7 +182,7 @@ describe("Service Generator", () => {
     it("generates create method that sets tenantId", () => {
       const result = generateService("tags", tagConfig);
 
-      expect(result.serviceCode).toContain("tenantId: this.tenantId");
+      expect(result.serviceCode).toContain("tenantId: this.businessId");
     });
 
     it("generates update method with sync queueing", () => {
@@ -273,7 +272,7 @@ describe("Service Generator", () => {
 
       expect(result.serviceCode).toContain("from(customerGroups)");
       expect(result.serviceCode).toContain("where(eq(customerGroups.id, id))");
-      expect(result.serviceCode).toContain("where(eq(customerGroups.tenantId, this.tenantId))");
+      expect(result.serviceCode).toContain("where(eq(customerGroups.tenantId, this.businessId))");
     });
 
     it("generates update with partial update logic", () => {
@@ -346,14 +345,14 @@ describe("Service Generator", () => {
       expect(fileContent).toContain('import { eq, and, desc } from "drizzle-orm"');
     });
 
-    it("imports table schemas from @avileo/shared when using real service code", () => {
+    it("imports table schemas from generated schema module when using real service code", () => {
       const tagService = generateService("tags", tagConfig);
 
       const outputs: ServiceOutput[] = [tagService];
       const fileContent = generateServicesFile(outputs);
 
-      // Should contain the @avileo/shared import with table name
-      expect(fileContent).toContain('from "@avileo/shared"');
+      // Should contain the generated schema import with table name
+      expect(fileContent).toContain('from "~/lib/sync/drizzle-schema"');
       // The table name should be in the import
       expect(fileContent).toContain("tags");
     });
@@ -401,7 +400,7 @@ describe("Service Generator", () => {
         }
       }
 
-      // Should have imports for: @electric-sql/pglite, drizzle-orm, base-service, sync-service, @avileo/shared
+      // Should have imports for: @electric-sql/pglite, drizzle-orm, base-service, sync-service, generated schema
       expect(seenModules.size).toBeGreaterThanOrEqual(4);
     });
 
@@ -413,12 +412,14 @@ describe("Service Generator", () => {
       const outputs: ServiceOutput[] = [tagService, customerService];
       const fileContent = generateServicesFile(outputs);
 
-      // The @avileo/shared import should include all table names from all services
-      // Count how many times @avileo/shared appears - should be minimal (ideally 1)
-      const avileoSharedLines = fileContent.split("\n").filter((line) => line.includes('@avileo/shared'));
+      // The generated schema import should include all table names from all services
+      // Count how many times it appears - should be minimal (ideally 1)
+      const schemaImportLines = fileContent
+        .split("\n")
+        .filter((line) => line.includes('~/lib/sync/drizzle-schema'));
       
-      // There should be only ONE line that imports from @avileo/shared (deduplicated)
-      expect(avileoSharedLines.length).toBe(1);
+      // There should be only ONE line that imports from generated schema module (deduplicated)
+      expect(schemaImportLines.length).toBe(1);
     });
 
     it("does not duplicate 'and' imports from drizzle-orm", () => {
@@ -463,7 +464,7 @@ describe("Service Generator", () => {
       expect(uniqueImportLines.size).toBe(importLines.length);
     });
 
-    it("includes table names in @avileo/shared import when services are aggregated", () => {
+    it("includes table names in generated schema import when services are aggregated", () => {
       // Generate real service code for tags and customers
       const tagService = generateService("tags", tagConfig);
       const customerService = generateService("customers", customerConfig);
@@ -471,12 +472,14 @@ describe("Service Generator", () => {
       const outputs: ServiceOutput[] = [tagService, customerService];
       const fileContent = generateServicesFile(outputs);
 
-      // The @avileo/shared import should include tags and customers table names
-      const avileoSharedLine = fileContent.split("\n").find((line) => line.includes('@avileo/shared'));
-      expect(avileoSharedLine).toBeDefined();
+      // The generated schema import should include tags and customers table names
+      const schemaImportLine = fileContent
+        .split("\n")
+        .find((line) => line.includes('~/lib/sync/drizzle-schema'));
+      expect(schemaImportLine).toBeDefined();
       // Should include both table names
-      expect(avileoSharedLine).toContain("tags");
-      expect(avileoSharedLine).toContain("customers");
+      expect(schemaImportLine).toContain("tags");
+      expect(schemaImportLine).toContain("customers");
     });
   });
 
@@ -573,7 +576,7 @@ describe("Service Generator", () => {
     it("generates findMany for junction tables (no tenantId filter)", () => {
       const result = generateService("customer_tags", junctionConfig);
 
-      expect(result.serviceCode).toContain("list()");
+      expect(result.serviceCode).toContain("list(options");
       // Junction tables don't have tenantId, so no filter by tenantId
       expect(result.serviceCode).not.toContain("eq(customerTags.tenantId");
     });
@@ -630,7 +633,7 @@ describe("Service Generator", () => {
       const result = generateService("customer_tags", junctionConfig);
 
       // Should have these
-      expect(result.serviceCode).toContain("list()");
+      expect(result.serviceCode).toContain("list(options");
       expect(result.serviceCode).toContain("create(");
       expect(result.serviceCode).toContain("queueSync(\"create\"");
 

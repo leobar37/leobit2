@@ -6,9 +6,9 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
-import { ensureSyncSchema } from "./schema";
+import { ensureSyncSchema, normalizeLegacySyncEntityTypes } from "./schema";
 
-export const SYNC_SCHEMA_VERSION = 1;
+export const SYNC_SCHEMA_VERSION = 2;
 
 export interface SchemaVersionRecord {
   version: number;
@@ -62,9 +62,14 @@ async function runMigrations(
       case 1:
         await ensureSyncSchema(pg, businessId);
         break;
+
+      case 2:
+        await ensureSyncSchema(pg, businessId);
+        await normalizeLegacySyncEntityTypes(pg);
+        break;
       
       // Future migrations go here:
-      // case 2:
+      // case 3:
       //   await pg.exec(`ALTER TABLE sync_operations ADD COLUMN ...`);
       //   break;
     }

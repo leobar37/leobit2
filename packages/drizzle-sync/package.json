@@ -62,7 +62,6 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@avileo/shared": "workspace:*",
     "prettier": "^3.6.2"
   },
   "peerDependencies": {

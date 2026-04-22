@@ -53,7 +53,20 @@ describe("operation-sorter", () => {
   let sorter: OperationSorter;
 
   beforeEach(() => {
-    sorter = new OperationSorter(mockEntityConfigs);
+    sorter = new OperationSorter(mockEntityConfigs, {
+      priorities: {
+        sales: 1,
+        customers: 1,
+        tags: 1,
+        products: 1,
+        distribuciones: 1,
+        sale_items: 2,
+        product_variants: 2,
+        abonos: 2,
+        visitas: 2,
+        customer_tags: 2,
+      },
+    });
   });
 
   const makeOp = (
@@ -587,7 +600,7 @@ describe("operation-sorter", () => {
   });
 
   describe("getPriorityMap", () => {
-    it("returns ENTITY_PRIORITIES copy", () => {
+    it("returns configured priority map copy", () => {
       const map = sorter.getPriorityMap();
       expect(map["sales"]).toBe(1);
       expect(map["sale_items"]).toBe(2);

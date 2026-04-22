@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-22T15:31:45.478Z",
+  "generatedAt": "2026-04-22T17:22:40.592Z",
   "tenancy": {
     "tenantColumn": "business_id",
     "tenantField": "businessId"
@@ -165,14 +165,11 @@
         "relations": {}
       },
       "graph": {
-        "parents": [
-          "businesses"
-        ],
+        "parents": [],
         "children": [
           "customer_tags",
           "customer_group_members",
           "visitas",
-          "sales",
           "abonos"
         ],
         "priority": 1
@@ -372,10 +369,7 @@
         "relations": {}
       },
       "graph": {
-        "parents": [
-          "businesses",
-          "images"
-        ],
+        "parents": [],
         "children": [
           "product_variants",
           "sale_items",
@@ -594,14 +588,9 @@
       },
       "graph": {
         "parents": [
-          "products",
-          "businesses"
+          "products"
         ],
-        "children": [
-          "sale_items",
-          "purchase_items",
-          "distribucion_items"
-        ],
+        "children": [],
         "priority": 2
       }
     },
@@ -790,12 +779,8 @@
         "relations": {}
       },
       "graph": {
-        "parents": [
-          "businesses"
-        ],
-        "children": [
-          "purchases"
-        ],
+        "parents": [],
+        "children": [],
         "priority": 1
       }
     },
@@ -917,9 +902,7 @@
         "relations": {}
       },
       "graph": {
-        "parents": [
-          "businesses"
-        ],
+        "parents": [],
         "children": [
           "customer_tags"
         ],
@@ -1161,12 +1144,8 @@
         "relations": {}
       },
       "graph": {
-        "parents": [
-          "businesses"
-        ],
-        "children": [
-          "customer_group_members"
-        ],
+        "parents": [],
+        "children": [],
         "priority": 1
       }
     },
@@ -1313,8 +1292,6 @@
       },
       "graph": {
         "parents": [
-          "businesses",
-          "customer_groups",
           "customers"
         ],
         "children": [],
@@ -1484,16 +1461,11 @@
       },
       "graph": {
         "parents": [
-          "businesses",
-          "distribucions",
           "customers",
-          "vendedors",
           "sales"
         ],
-        "children": [
-          "sales"
-        ],
-        "priority": 3
+        "children": [],
+        "priority": 2
       }
     },
     "sales": {
@@ -1978,20 +1950,12 @@
         }
       },
       "graph": {
-        "parents": [
-          "businesses",
-          "customers",
-          "sellers",
-          "distribucions",
-          "visitas",
-          "sync_groups",
-          "advance_proof_images"
-        ],
+        "parents": [],
         "children": [
           "visitas",
           "sale_items"
         ],
-        "priority": 2
+        "priority": 1
       }
     },
     "sale_items": {
@@ -2300,14 +2264,11 @@
       },
       "graph": {
         "parents": [
-          "businesses",
           "sales",
-          "products",
-          "product_variants",
-          "sync_groups"
+          "products"
         ],
         "children": [],
-        "priority": 3
+        "priority": 2
       }
     },
     "purchases": {
@@ -2510,16 +2471,11 @@
         }
       },
       "graph": {
-        "parents": [
-          "businesses",
-          "suppliers",
-          "receipt_images",
-          "sync_groups"
-        ],
+        "parents": [],
         "children": [
           "purchase_items"
         ],
-        "priority": 2
+        "priority": 1
       }
     },
     "purchase_items": {
@@ -2720,15 +2676,11 @@
       },
       "graph": {
         "parents": [
-          "businesses",
           "purchases",
-          "products",
-          "product_variants",
-          "units",
-          "sync_groups"
+          "products"
         ],
         "children": [],
-        "priority": 3
+        "priority": 2
       }
     },
     "distribuciones": {
@@ -2949,12 +2901,10 @@
         }
       },
       "graph": {
-        "parents": [
-          "businesses",
-          "vendedors",
-          "punto_ventas"
+        "parents": [],
+        "children": [
+          "distribucion_items"
         ],
-        "children": [],
         "priority": 1
       }
     },
@@ -3120,12 +3070,10 @@
       },
       "graph": {
         "parents": [
-          "businesses",
-          "distribucions",
-          "product_variants"
+          "distribuciones"
         ],
         "children": [],
-        "priority": 3
+        "priority": 2
       }
     },
     "abonos": {
@@ -3323,11 +3271,7 @@
       },
       "graph": {
         "parents": [
-          "businesses",
-          "customers",
-          "sellers",
-          "proof_images",
-          "related_sales"
+          "customers"
         ],
         "children": [],
         "priority": 2

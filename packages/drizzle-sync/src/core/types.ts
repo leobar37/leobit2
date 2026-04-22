@@ -2,28 +2,56 @@
  * Core Sync Types
  *
  * Runtime-agnostic types for sync operations, status tracking, and results.
- * These types preserve the exact Avileo sync shapes for compatibility.
  */
 
-import {
-  SYNC_STATUS_TRACKED,
-  SELF_HEAL_INSERTABLE,
-} from "@avileo/shared";
-
-// Re-export from shared for convenience
-export { SYNC_STATUS_TRACKED, SELF_HEAL_INSERTABLE };
+/**
+ * Optional defaults for entities tracked by sync helpers.
+ *
+ * Domain packages can configure these at runtime via `configureEntityTracking`.
+ */
+export const SYNC_STATUS_TRACKED: string[] = [];
+export const SELF_HEAL_INSERTABLE: string[] = [];
 
 /**
  * Entity types that are tracked for sync status
  * Alias for compatibility with existing code
  */
-export const SYNC_STATUS_ENTITY_TABLES: ReadonlySet<string> = new Set(SYNC_STATUS_TRACKED);
+const syncStatusEntityTables = new Set<string>();
+const selfHealInsertableEntities = new Set<string>();
+
+export const SYNC_STATUS_ENTITY_TABLES: ReadonlySet<string> = syncStatusEntityTables;
 
 /**
  * Entity types that support self-healing (update → create conversion)
  * Alias for compatibility with existing code
  */
-export const SELF_HEAL_INSERTABLE_ENTITIES: ReadonlySet<string> = new Set(SELF_HEAL_INSERTABLE);
+export const SELF_HEAL_INSERTABLE_ENTITIES: ReadonlySet<string> = selfHealInsertableEntities;
+
+/**
+ * Configure optional runtime entity-tracking defaults.
+ */
+export function configureEntityTracking(config: {
+  syncStatusTracked?: Iterable<string>;
+  selfHealInsertable?: Iterable<string>;
+}): void {
+  if (config.syncStatusTracked !== undefined) {
+    SYNC_STATUS_TRACKED.length = 0;
+    syncStatusEntityTables.clear();
+    for (const entity of config.syncStatusTracked) {
+      SYNC_STATUS_TRACKED.push(entity);
+      syncStatusEntityTables.add(entity);
+    }
+  }
+
+  if (config.selfHealInsertable !== undefined) {
+    SELF_HEAL_INSERTABLE.length = 0;
+    selfHealInsertableEntities.clear();
+    for (const entity of config.selfHealInsertable) {
+      SELF_HEAL_INSERTABLE.push(entity);
+      selfHealInsertableEntities.add(entity);
+    }
+  }
+}
 
 // ============================================================================
 // Generic Entity Tracking (config-based)
@@ -382,6 +410,9 @@ export function parsePayload(payload: unknown): Record<string, unknown> {
  * Validate that an entity type is a tracked sync table
  */
 export function validateEntityTableName(entityType: string): string | null {
+  if (SYNC_STATUS_ENTITY_TABLES.size === 0) {
+    return entityType;
+  }
   return SYNC_STATUS_ENTITY_TABLES.has(entityType) ? entityType : null;
 }
 

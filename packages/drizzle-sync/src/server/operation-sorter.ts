@@ -5,9 +5,8 @@
  * Ensures parent entities are processed before children based on payload FK references.
  */
 
-import { ENTITY_PRIORITIES, getEntityPriority, type SyncEntity } from "@avileo/shared";
 import type { SyncOperationInput } from "./types";
-import type { ParentRelationConfig } from "../config/types";
+import type { ParentRelationConfig, ChildRelationConfig } from "../config/types";
 
 /**
  * Result of sorting operations
@@ -29,13 +28,31 @@ interface ParentReference {
  * Build a map of entity type -> parent references from entity config
  */
 function buildParentMap(
-  entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>
+  entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[]; children?: ChildRelationConfig[] } }>
 ): Map<string, ParentReference[]> {
   const parentMap = new Map<string, ParentReference[]>();
 
+  const addParent = (entityName: string, parent: ParentReference): void => {
+    const existing = parentMap.get(entityName) ?? [];
+    if (!existing.some((entry) => entry.entity === parent.entity && entry.foreignKey === parent.foreignKey)) {
+      existing.push(parent);
+    }
+    parentMap.set(entityName, existing);
+  };
+
   for (const [entityName, config] of Object.entries(entityConfigs)) {
-    if (config.relations?.parents) {
-      parentMap.set(entityName, config.relations.parents);
+    for (const parent of config.relations?.parents ?? []) {
+      addParent(entityName, {
+        entity: parent.entity,
+        foreignKey: parent.foreignKey,
+      });
+    }
+
+    for (const child of config.relations?.children ?? []) {
+      addParent(child.entity, {
+        entity: entityName,
+        foreignKey: child.foreignKey,
+      });
     }
   }
 
@@ -197,11 +214,70 @@ function topologicalSort(
  */
 export class OperationSorter {
   private parentMap: Map<string, ParentReference[]>;
+  private priorityMap: Record<string, number>;
 
   constructor(
-    entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[] } }>
+    entityConfigs: Record<
+      string,
+      { relations?: { parents?: ParentRelationConfig[]; children?: ChildRelationConfig[] }; priority?: number }
+    >,
+    options?: { priorities?: Record<string, number> }
   ) {
     this.parentMap = buildParentMap(entityConfigs);
+    this.priorityMap = this.buildDerivedPriorityMap(entityConfigs);
+
+    for (const [entityType, config] of Object.entries(entityConfigs)) {
+      if (typeof config.priority === "number") {
+        this.priorityMap[entityType] = config.priority;
+      }
+    }
+
+    if (options?.priorities) {
+      Object.assign(this.priorityMap, options.priorities);
+    }
+  }
+
+  private buildDerivedPriorityMap(
+    entityConfigs: Record<string, { relations?: { parents?: ParentRelationConfig[]; children?: ChildRelationConfig[] } }>
+  ): Record<string, number> {
+    const parentEdges = buildParentMap(entityConfigs);
+    const cache = new Map<string, number>();
+    const visiting = new Set<string>();
+
+    const resolve = (entityType: string): number => {
+      const cached = cache.get(entityType);
+      if (cached !== undefined) {
+        return cached;
+      }
+
+      if (visiting.has(entityType)) {
+        return 1;
+      }
+
+      visiting.add(entityType);
+
+      const parentPriorities = (parentEdges.get(entityType) ?? [])
+        .map((parent) => resolve(parent.entity))
+        .filter((priority) => Number.isFinite(priority));
+
+      const derived = parentPriorities.length > 0
+        ? Math.max(...parentPriorities) + 1
+        : 1;
+
+      visiting.delete(entityType);
+      cache.set(entityType, derived);
+      return derived;
+    };
+
+    const result: Record<string, number> = {};
+    for (const entityType of Object.keys(entityConfigs)) {
+      result[entityType] = resolve(entityType);
+    }
+    return result;
+  }
+
+  private getEntityPriority(entityType: string): number {
+    return this.priorityMap[entityType] ?? 99;
   }
 
   /**
@@ -261,8 +337,8 @@ export class OperationSorter {
       }
 
       // Then, sort by entity priority
-      const priorityA = getEntityPriority(a.entityType as SyncEntity);
-      const priorityB = getEntityPriority(b.entityType as SyncEntity);
+      const priorityA = this.getEntityPriority(a.entityType);
+      const priorityB = this.getEntityPriority(b.entityType);
       if (priorityA !== priorityB) return priorityA - priorityB;
 
       // Finally, sort by timestamp
@@ -285,7 +361,7 @@ export class OperationSorter {
   /**
    * Get the entity priority map
    */
-  getPriorityMap(): Partial<Record<SyncEntity, number>> {
-    return { ...ENTITY_PRIORITIES };
+  getPriorityMap(): Partial<Record<string, number>> {
+    return { ...this.priorityMap };
   }
 }

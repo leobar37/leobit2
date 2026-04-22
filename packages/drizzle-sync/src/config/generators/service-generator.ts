@@ -16,6 +16,8 @@ export interface ServiceOutput {
   serviceCode: string;
 }
 
+const DRIZZLE_SCHEMA_IMPORT_PATH = "~/lib/sync/drizzle-schema";
+
 function getAutoManagedColumns(tenantColumn: string): Set<string> {
   return new Set([
     "id",
@@ -158,7 +160,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
 import { SyncService } from "~/lib/sync/sync-service";
-import { SyncStatus, ${tableRef} } from "@avileo/shared";
+import { SyncStatus, ${tableRef} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 
 ${createInputInterface}
 ${updateInputInterface}
@@ -172,10 +174,10 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     pg: PGlite,
     db: ReturnType<typeof drizzle>,
     syncService: SyncService,
-    tenantId: string,
-    userId: string
+    businessId: string,
+    businessUserId: string
   ) {
-    super(pg, db, syncService, tenantId, userId);
+    super(pg, db, syncService, businessId, businessUserId);
   }
 
   getEntityType(): EntityType {
@@ -189,10 +191,10 @@ export class ${pascalCase(entityName)}Service extends BaseService {
   /**
    * List ${entityName} records in current tenant scope
    */
-  async list(): Promise<typeof ${tableRef}.$inferSelect[]> {
+  async list(options?: { search?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<typeof ${tableRef}.$inferSelect[]> {
     return this.db
       .select()
-      .from(${tableRef})${tenantScoped ? `.where(eq(${tableRef}.${tenantField}, this.tenantId))` : ""}${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
+      .from(${tableRef})${tenantScoped ? `.where(eq(${tableRef}.${tenantField}, this.businessId))` : ""}${hasCreatedAt ? "\n      .orderBy(desc(" + tableRef + ".createdAt))" : ""};
   }
 
   /**
@@ -206,7 +208,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
     const entity: typeof ${tableRef}.$inferInsert = {
 ${junctionTable ? generateInsertFieldsJunction(userColumns, config.fieldCodecs) : `      id,\n${generateInsertFields(userColumns, config.fieldCodecs)}`}
       syncStatus: SyncStatus.PENDING,
-      syncAttempts: 0,${tenantScoped ? `\n      ${tenantField}: this.tenantId,` : ""}
+      syncAttempts: 0,${tenantScoped ? `\n      ${tenantField}: this.businessId,` : ""}
 ${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
     };
 
@@ -510,9 +512,12 @@ export function generateServicesFile(outputs: ServiceOutput[]): string {
   for (const output of outputs) {
     // Extract table name from service code (e.g., "tags" from 'import { SyncStatus, tags }')
     // Use ['\"] to match both single and double quotes
-    const match = output.serviceCode.match(/import\s+\{[^}]+\}\s+from\s+['"]@avileo\/shared['"]/);
+    const importPattern = new RegExp(
+      `import\\s+\\{[^}]+\\}\\s+from\\s+['\"]${DRIZZLE_SCHEMA_IMPORT_PATH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}['\"]`
+    );
+    const match = output.serviceCode.match(importPattern);
     if (match) {
-      // Extract all named imports from @avileo/shared
+      // Extract all named imports from schema module
       const importsMatch = match[0].match(/\{([^}]+)\}/);
       if (importsMatch) {
         const names = importsMatch[1].split(",").map((n) => n.trim());
@@ -530,7 +535,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
 import { SyncService } from "~/lib/sync/sync-service";
-import { SyncStatus${tableImports.size > 0 ? `, ${[...tableImports].join(", ")}` : ""} } from "@avileo/shared";
+import { SyncStatus${tableImports.size > 0 ? `, ${[...tableImports].join(", ")}` : ""} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 `;
 
   // Strip imports from each service code to avoid duplication

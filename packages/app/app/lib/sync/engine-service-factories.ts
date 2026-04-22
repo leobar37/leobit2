@@ -164,7 +164,7 @@ export const engineServiceEntities: EntityServiceDefinition[] = [
   { name: "payments", entityType: "abonos", factory: createPaymentService },
   { name: "purchases", entityType: "purchases", factory: createPurchaseService },
   { name: "products", entityType: "products", factory: createProductService },
-  { name: "inventory", entityType: "inventory", factory: createInventoryService },
+  { name: "inventory", entityType: "variant_inventory", factory: createInventoryService },
   { name: "tags", entityType: "tags", factory: createTagService },
   { name: "customerTags", entityType: "customer_tags", factory: createCustomerTagService },
   { name: "visitas", entityType: "visitas", factory: createVisitaService },
