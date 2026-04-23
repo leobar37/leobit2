@@ -4,10 +4,8 @@
  * Inventory is managed by backend through purchases/sales, vendors only read
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { BaseService, type EntityType } from "./base-service";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 /** Inventory item for a product variant */
 export interface VariantInventoryItem {
@@ -31,14 +29,8 @@ export interface StockValidationResult {
  * Stock is updated through purchases, sales, and distribution operations
  */
 export class InventoryService extends BaseService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

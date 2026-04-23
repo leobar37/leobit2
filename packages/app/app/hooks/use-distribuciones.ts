@@ -16,7 +16,8 @@ import {
 } from "@avileo/shared";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
-import { useDistribucionService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { DistribucionService } from "~/lib/services/distribucion-service";
 import type { CreateDistribucionInput, CreateDistribucionItemInput } from "~/lib/services/distribucion-service";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 import { useManualSync } from "./use-manual-sync";
@@ -431,7 +432,8 @@ export function useDeleteDistribucion() {
  * Add an item to a distribucion
  */
 export function useAddDistribucionItem() {
-  const distribucionService = useDistribucionService();
+  const engine = useSyncEngine();
+  const distribucionService = engine.use("distribuciones", () => new DistribucionService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -459,7 +461,8 @@ export function useAddDistribucionItem() {
  * Update a distribucion item
  */
 export function useUpdateDistribucionItem() {
-  const distribucionService = useDistribucionService();
+  const engine = useSyncEngine();
+  const distribucionService = engine.use("distribuciones", () => new DistribucionService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -492,7 +495,8 @@ export function useUpdateDistribucionItem() {
  * Remove an item from a distribucion
  */
 export function useRemoveDistribucionItem() {
-  const distribucionService = useDistribucionService();
+  const engine = useSyncEngine();
+  const distribucionService = engine.use("distribuciones", () => new DistribucionService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({

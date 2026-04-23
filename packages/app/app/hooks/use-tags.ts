@@ -4,7 +4,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTagService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { TagService } from "~/lib/services/tag-service";
 import type { Tag } from "@avileo/shared";
 import type { CreateTagInput, UpdateTagInput } from "~/lib/services/tag-service";
 
@@ -20,7 +21,8 @@ const QUERY_KEYS = {
  * Get all tags for the current business
  */
 export function useTags() {
-  const tagService = useTagService();
+  const engine = useSyncEngine();
+  const tagService = engine.use("tags", () => new TagService(engine));
 
   return useQuery({
     queryKey: QUERY_KEYS.tags,
@@ -34,7 +36,8 @@ export function useTags() {
  * Get a single tag by ID
  */
 export function useTag(id: string | null) {
-  const tagService = useTagService();
+  const engine = useSyncEngine();
+  const tagService = engine.use("tags", () => new TagService(engine));
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.tag(id) : ["tags", "detail"],
@@ -50,7 +53,8 @@ export function useTag(id: string | null) {
  * Create a new tag
  */
 export function useCreateTag() {
-  const tagService = useTagService();
+  const engine = useSyncEngine();
+  const tagService = engine.use("tags", () => new TagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -67,7 +71,8 @@ export function useCreateTag() {
  * Update an existing tag
  */
 export function useUpdateTag() {
-  const tagService = useTagService();
+  const engine = useSyncEngine();
+  const tagService = engine.use("tags", () => new TagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -93,7 +98,8 @@ export function useUpdateTag() {
  * Delete a tag
  */
 export function useDeleteTag() {
-  const tagService = useTagService();
+  const engine = useSyncEngine();
+  const tagService = engine.use("tags", () => new TagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({

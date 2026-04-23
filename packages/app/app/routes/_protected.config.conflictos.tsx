@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBusiness } from "~/hooks/use-business";
 import { getStoredBusinessId, getStoredAuthToken } from "~/lib/session-storage";
-import type { BackendConflict } from "~/lib/sync/sync-service";
+import type { BackendConflict } from "~/lib/sync/types";
 
 interface ConflictListItemProps {
   conflict: BackendConflict;

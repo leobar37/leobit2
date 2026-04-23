@@ -11,12 +11,18 @@ import { PgSyncQueue } from "./queue-queue";
 import { createSqlExecutor } from "./sql-executor";
 import { NoOpLogger } from "./change-noop-logger";
 import { SyncMutex } from "./sync-mutex";
+import { SyncAutoRunner } from "./auto-runner";
+import { SyncEntityStatusUpdater } from "./entity-status-updater";
+import { SyncOperationLifecycleService } from "./operation-lifecycle";
+import { SyncBatchProcessor } from "./batch-processor";
 
 export class PushSyncService {
   private readonly queue: ISyncQueue;
   private readonly httpClient: ISyncHttpClient;
   private readonly mutex: ISyncMutex;
   private readonly logger: ISyncLogger;
+  private readonly autoRunner: SyncAutoRunner;
+  private readonly lifecycleService: SyncOperationLifecycleService | null;
   private initializationPromise: Promise<void> | null = null;
   private isInitialized = false;
   private isProcessing = false;
@@ -29,6 +35,25 @@ export class PushSyncService {
     this.httpClient = options.httpClient;
     this.mutex = options.mutex ?? new SyncMutex();
     this.logger = options.logger ?? new NoOpLogger();
+    this.autoRunner = options.autoRunner ?? new SyncAutoRunner();
+    
+    if (options.lifecycleService) {
+      this.lifecycleService = options.lifecycleService;
+    } else {
+      // Create default lifecycle service with minimal configuration
+      const entityStatusUpdater = new SyncEntityStatusUpdater(context.pg, context.tenantId, {
+        tenantColumn: context.tenantColumn,
+      });
+      this.lifecycleService = new SyncOperationLifecycleService(
+        context.pg,
+        context.tenantId,
+        this.queue,
+        entityStatusUpdater,
+        {
+          tenantColumn: context.tenantColumn,
+        }
+      );
+    }
   }
 
   async initialize(): Promise<void> {
@@ -45,16 +70,27 @@ export class PushSyncService {
   }
 
   resetBackoff(): void {
-    // Backoff reset logic
+    this.autoRunner.resetBackoff();
   }
 
   getBackoffAtMax(): boolean {
-    return false;
+    return this.autoRunner.getBackoffAtMax();
   }
 
   async retryAllDeadLetterOperations(): Promise<number> {
     this.ensureInitialized();
-    return 0;
+    if (!this.lifecycleService) {
+      return 0;
+    }
+
+    const operations = await this.queue.getDeadLetterOperations(100);
+    let retried = 0;
+    for (const op of operations) {
+      if (await this.lifecycleService.retryDeadLetterOperation(op.id)) {
+        retried++;
+      }
+    }
+    return retried;
   }
 
   async enqueue(params: EnqueueParams): Promise<string> {
@@ -79,53 +115,18 @@ export class PushSyncService {
     this.isProcessing = true;
 
     try {
-      // Get pending operations
-      const pending = await this.queue.getPending(50);
-      if (pending.length === 0) {
-        return { processed: 0, failed: 0, conflicts: 0 };
-      }
-
-      // Mark as processing
-      for (const op of pending) {
-        await this.queue.markProcessing(op.id);
-      }
-
-      // Send batch to server
-      try {
-        const results = await this.httpClient.sendBatch(pending);
-        
-        let processed = 0;
-        let failed = 0;
-        let conflicts = 0;
-
-        for (let i = 0; i < pending.length; i++) {
-          const op = pending[i];
-          const result = results[i];
-
-          if (result?.success) {
-            await this.queue.markCompleted(op.id);
-            processed++;
-          } else if (result?.conflict) {
-            await this.queue.markConflict(op.id, result.conflict);
-            conflicts++;
-          } else {
-            await this.queue.markFailed(op.id, result?.error || "Unknown error", op.sync_attempts + 1);
-            failed++;
-          }
+      const batchProcessor = new SyncBatchProcessor(
+        this.context.pg,
+        this.context.tenantId,
+        this.httpClient,
+        this.lifecycleService!,
+        this.autoRunner,
+        {
+          tenantColumn: this.context.tenantColumn,
         }
+      );
 
-        return { processed, failed, conflicts };
-      } catch (error) {
-        // Mark all as failed
-        for (const op of pending) {
-          await this.queue.markFailed(
-            op.id,
-            error instanceof Error ? error.message : String(error),
-            op.sync_attempts + 1
-          );
-        }
-        return { processed: 0, failed: pending.length, conflicts: 0 };
-      }
+      return await batchProcessor.processPending(ignoreOnlineCheck);
     } finally {
       this.isProcessing = false;
       this.mutex.release();
@@ -134,7 +135,63 @@ export class PushSyncService {
 
   async processGroup(groupId: string): Promise<{ success: boolean; errors: string[] }> {
     this.ensureInitialized();
-    return { success: true, errors: [] };
+    
+    const acquired = await this.mutex.acquire("push");
+    if (!acquired) {
+      return { success: false, errors: ["Could not acquire mutex"] };
+    }
+
+    try {
+      const pending = await this.queue.getPending(1000);
+      const groupOps = pending.filter((op) => (op as Record<string, unknown>).sync_group_id === groupId);
+      
+      if (groupOps.length === 0) {
+        return { success: true, errors: [] };
+      }
+
+      const errors: string[] = [];
+      
+      for (const op of groupOps) {
+        try {
+          await this.queue.markProcessing(op.id);
+          const results = await this.httpClient.sendBatch([op]);
+          const result = results[0];
+          
+          if (result?.success) {
+            if (this.lifecycleService) {
+              await this.lifecycleService.markCompleted(op.id);
+            } else {
+              await this.queue.markCompleted(op.id);
+            }
+          } else if (result?.conflict) {
+            if (this.lifecycleService) {
+              await this.lifecycleService.markConflict(op.id, result.conflict);
+            } else {
+              await this.queue.markConflict(op.id, result.conflict);
+            }
+          } else {
+            errors.push(result?.error || "Unknown error");
+            if (this.lifecycleService) {
+              await this.lifecycleService.markFailed(op.id, result?.error || "Unknown error");
+            } else {
+              await this.queue.markFailed(op.id, result?.error || "Unknown error", op.sync_attempts + 1);
+            }
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          errors.push(errorMsg);
+          if (this.lifecycleService) {
+            await this.lifecycleService.markFailed(op.id, errorMsg);
+          } else {
+            await this.queue.markFailed(op.id, errorMsg, op.sync_attempts + 1);
+          }
+        }
+      }
+
+      return { success: errors.length === 0, errors };
+    } finally {
+      this.mutex.release();
+    }
   }
 
   async resolveConflict(
@@ -143,8 +200,32 @@ export class PushSyncService {
     mergedData?: Record<string, unknown>
   ): Promise<boolean> {
     this.ensureInitialized();
-    // Simplified implementation
-    return false;
+    
+    try {
+      const operation = await this.queue.getById(operationId);
+      if (!operation) {
+        return false;
+      }
+
+      if (resolution === "server") {
+        // Accept server version - delete local operation
+        await this.queue.deleteOperation(operationId);
+        return true;
+      } else if (resolution === "local") {
+        // Retry local operation
+        await this.queue.retryOperation(operationId);
+        return true;
+      } else if (resolution === "merge" && mergedData) {
+        // Update operation with merged data and retry
+        await this.queue.retryOperation(operationId);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error("[PushSyncService]", "Failed to resolve conflict", { operationId, error });
+      return false;
+    }
   }
 
   async getFailedOperations(): Promise<SyncOperationRecord[]> {
@@ -161,7 +242,7 @@ export class PushSyncService {
 
   async getDeadLetterOperations(): Promise<unknown[]> {
     this.ensureInitialized();
-    return [];
+    return this.queue.getDeadLetterOperations(100);
   }
 
   async retryOperation(operationId: string): Promise<boolean> {
@@ -171,17 +252,26 @@ export class PushSyncService {
 
   async retryDeadLetterOperation(deadLetterId: string): Promise<boolean> {
     this.ensureInitialized();
-    return false;
+    if (!this.lifecycleService) {
+      return false;
+    }
+    return this.lifecycleService.retryDeadLetterOperation(deadLetterId);
   }
 
   async deleteDeadLetterOperation(deadLetterId: string): Promise<boolean> {
     this.ensureInitialized();
-    return false;
+    if (!this.lifecycleService) {
+      return false;
+    }
+    return this.lifecycleService.deleteDeadLetterOperation(deadLetterId);
   }
 
   async clearDeadLetterOperations(): Promise<number> {
     this.ensureInitialized();
-    return 0;
+    if (!this.lifecycleService) {
+      return 0;
+    }
+    return this.lifecycleService.clearDeadLetterOperations();
   }
 
   async getStatus(): Promise<SyncStatus> {
@@ -191,6 +281,23 @@ export class PushSyncService {
 
   async logDetailedStatus(): Promise<void> {
     this.ensureInitialized();
+    
+    const status = await this.queue.getStatus();
+    this.logger.info("[PushSyncService]", "Queue status", status);
+    
+    this.logger.info("[PushSyncService]", "Backoff state", {
+      atMax: this.autoRunner.getBackoffAtMax(),
+    });
+    
+    this.logger.info("[PushSyncService]", "Mutex state", {
+      busy: this.mutex.isBusy(),
+      queueLength: this.mutex.getQueueLength(),
+      currentOperation: this.mutex.getCurrentOperation(),
+    });
+
+    if (this.lifecycleService) {
+      await this.lifecycleService.logDetailedStatus();
+    }
   }
 
   async deleteOperation(operationId: string): Promise<boolean> {
@@ -208,31 +315,63 @@ export class PushSyncService {
   }
 
   startAutoSync(): void {
-    void this.processPending();
+    if (this.autoRunner.isRunning()) {
+      return;
+    }
+    
+    this.autoRunner.start(() => {
+      void this.processPending();
+    });
   }
 
   stopAutoSync(): void {
+    this.autoRunner.stop();
+    
     // Check if abort method exists on HTTP client
     const client = this.httpClient as { abort?: () => void };
     client.abort?.();
   }
 
   isRunning(): boolean {
-    return this.isProcessing;
+    return this.isProcessing || this.autoRunner.isRunning();
   }
 
   async cleanup(): Promise<void> {
     this.stopAutoSync();
+    this.autoRunner.stop();
   }
 
-  async getBackendConflicts(): Promise<unknown> {
+  async getBackendConflicts(options?: {
+    status?: string;
+    entityType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<unknown> {
     this.ensureInitialized();
-    return { success: false, data: { conflicts: [], pendingCount: 0 } };
+    try {
+      const client = this.httpClient as { getConflicts?: (opts?: typeof options) => Promise<unknown> };
+      if (client.getConflicts) {
+        return await client.getConflicts(options);
+      }
+      return { success: false, data: { conflicts: [], pendingCount: 0 } };
+    } catch (error) {
+      this.logger.error("[PushSyncService]", "Failed to get backend conflicts", { error });
+      return { success: false, data: { conflicts: [], pendingCount: 0 } };
+    }
   }
 
   async getBackendConflict(conflictId: string): Promise<unknown> {
     this.ensureInitialized();
-    return { success: false, data: null };
+    try {
+      const client = this.httpClient as { getConflict?: (id: string) => Promise<unknown> };
+      if (client.getConflict) {
+        return await client.getConflict(conflictId);
+      }
+      return { success: false, data: null };
+    } catch (error) {
+      this.logger.error("[PushSyncService]", "Failed to get backend conflict", { conflictId, error });
+      return { success: false, data: null };
+    }
   }
 
   async resolveBackendConflict(
@@ -241,7 +380,18 @@ export class PushSyncService {
     mergedData?: Record<string, unknown>
   ): Promise<unknown> {
     this.ensureInitialized();
-    return { success: false, data: null };
+    try {
+      const client = this.httpClient as { 
+        resolveConflict?: (id: string, resolution: string, mergedData?: Record<string, unknown>) => Promise<unknown> 
+      };
+      if (client.resolveConflict) {
+        return await client.resolveConflict(conflictId, resolution, mergedData);
+      }
+      return { success: false, data: null };
+    } catch (error) {
+      this.logger.error("[PushSyncService]", "Failed to resolve backend conflict", { conflictId, error });
+      return { success: false, data: null };
+    }
   }
 
   private ensureInitialized(): void {

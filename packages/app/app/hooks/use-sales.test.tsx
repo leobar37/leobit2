@@ -3,10 +3,31 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "../lib/query/persisted-query-keys";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ServicesProvider } from "../lib/sync/service-provider";
 import { SaleService } from "../lib/services/sale-service";
 
 const mockInvalidateQueries = vi.fn();
+
+vi.mock("@avileo/drizzle-sync/react", () => {
+  const instances = new Map();
+  return {
+    useSyncEngine: () => ({
+      use: (name: string, factory: () => unknown) => {
+        if (!instances.has(name)) instances.set(name, factory());
+        return instances.get(name);
+      },
+      getConfig: () => ({
+        tenantId: "biz-1",
+        userId: "seller-123",
+      }),
+      getPg: () => ({
+        exec: vi.fn().mockResolvedValue(undefined),
+        query: vi.fn().mockResolvedValue({ rows: [] }),
+      }),
+      getDb: () => ({}),
+      getSyncOperations: () => ({ enqueue: vi.fn().mockResolvedValue("op-1") }),
+    }),
+  };
+});
 
 import { useCreateDraftSale } from "./use-sales";
 
@@ -17,24 +38,13 @@ function createWrapper(businessUserId?: string) {
   queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.business, {
     businessUserId,
   });
-  const pg = {
-    exec: vi.fn().mockResolvedValue(undefined),
-    query: vi.fn().mockResolvedValue({ rows: [] }),
-  };
 
   return {
     queryClient,
     wrapper: function Wrapper({ children }: { children: ReactNode }) {
       return (
         <QueryClientProvider client={queryClient}>
-          <ServicesProvider
-            pg={pg as never}
-            businessId="biz-1"
-            businessUserId={businessUserId || "seller-123"}
-            authToken="token-1"
-          >
-            {children}
-          </ServicesProvider>
+          {children}
         </QueryClientProvider>
       );
     },

@@ -9,7 +9,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
-import { useSyncStatus } from "~/lib/sync/engine-provider";
+import { useSyncStatus } from "@avileo/drizzle-sync/react";
 import { cn } from "~/lib/utils";
 
 /**

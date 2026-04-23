@@ -7,7 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, ilike } from "drizzle-orm";
 import { getDatabase } from "@avileo/drizzle-sync/client";
 import { suppliers, type Supplier } from "@avileo/shared";
-import { useSupplierService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { SupplierService } from "~/lib/services/supplier-service";
 
 export type { Supplier };
 
@@ -116,7 +117,8 @@ export function useSupplier(id: string | null) {
  * Create a new supplier
  */
 export function useCreateSupplier() {
-  const supplierService = useSupplierService();
+  const engine = useSyncEngine();
+  const supplierService = engine.use("suppliers", () => new SupplierService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -133,7 +135,8 @@ export function useCreateSupplier() {
  * Update a supplier
  */
 export function useUpdateSupplier() {
-  const supplierService = useSupplierService();
+  const engine = useSyncEngine();
+  const supplierService = engine.use("suppliers", () => new SupplierService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -153,7 +156,8 @@ export function useUpdateSupplier() {
  * Delete a supplier
  */
 export function useDeleteSupplier() {
-  const supplierService = useSupplierService();
+  const engine = useSyncEngine();
+  const supplierService = engine.use("suppliers", () => new SupplierService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({

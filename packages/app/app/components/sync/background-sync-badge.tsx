@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { useSyncState } from "~/lib/sync/engine-provider";
+import { useSyncState } from "@avileo/drizzle-sync/react";
 
 const DEBOUNCE_MS = 800;
 
@@ -16,7 +16,7 @@ export function BackgroundSyncBadge() {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isActive = pull.isPulling || push.syncing > 0;
+  const isActive = (pull?.isPulling ?? false) || (push?.syncingCount ?? 0) > 0;
 
   useEffect(() => {
     if (isActive) {

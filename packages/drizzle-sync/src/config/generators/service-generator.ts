@@ -159,7 +159,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
-import { SyncService } from "~/lib/sync/sync-service";
+import type { SyncClientEngineLike } from "~/lib/services/base-service";
 import { SyncStatus, ${tableRef} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 
 ${createInputInterface}
@@ -170,14 +170,8 @@ export class ${pascalCase(entityName)}Service extends BaseService {
   private static readonly ENTITY_TYPE: EntityType = "${entityType}";
   private static readonly ID_PREFIX = "${idPrefix}";
 
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncService,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   getEntityType(): EntityType {
@@ -534,7 +528,7 @@ export function generateServicesFile(outputs: ServiceOutput[]): string {
 import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
-import { SyncService } from "~/lib/sync/sync-service";
+import type { SyncClientEngineLike } from "~/lib/services/base-service";
 import { SyncStatus${tableImports.size > 0 ? `, ${[...tableImports].join(", ")}` : ""} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 `;
 

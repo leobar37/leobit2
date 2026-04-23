@@ -1,4 +1,8 @@
-import type { ColumnMetadata, EntitySyncConfig, SyncTenancyConfig } from "../../config/types";
+import type {
+  ColumnMetadata,
+  EntitySyncConfig,
+  SyncTenancyConfig,
+} from "../../config/types";
 import { introspectTable, resolveColumns } from "../../config/introspect";
 
 export interface DDLOutput {
@@ -10,7 +14,7 @@ export interface DDLOutput {
 export function generateDDL(
   entityName: string,
   config: EntitySyncConfig,
-  tenancy?: SyncTenancyConfig
+  tenancy?: SyncTenancyConfig,
 ): DDLOutput {
   const tableName = entityName;
   const columns = introspectTable(config.table);
@@ -30,7 +34,9 @@ export function generateDDL(
     columnDefs.push(`  sync_attempts INTEGER NOT NULL DEFAULT 0`);
   }
 
-  const primaryKeys = columnsToInclude.filter((c) => c.primary).map((c) => c.name);
+  const primaryKeys = columnsToInclude
+    .filter((c) => c.primary)
+    .map((c) => c.name);
 
   if (primaryKeys.length > 0) {
     columnDefs.push(`  PRIMARY KEY (${primaryKeys.join(", ")})`);
@@ -38,7 +44,8 @@ export function generateDDL(
 
   const createTable = `CREATE TABLE IF NOT EXISTS "${tableName}" (\n${columnDefs.join(",\n")}\n);`;
 
-  const tenantColumn = config.tenancy?.tenantColumn ?? tenancy?.tenantColumn ?? "tenant_id";
+  const tenantColumn =
+    config.tenancy?.tenantColumn ?? tenancy?.tenantColumn ?? "tenant_id";
   const indexes = generateIndexes(tableName, columnsToInclude, tenantColumn);
 
   return {
@@ -51,9 +58,14 @@ export function generateDDL(
 function columnToSQLiteDef(col: ColumnMetadata): string {
   const sqliteType = mapToSQLiteType(col.dataType);
   const nullable = col.notNull ? "NOT NULL" : "";
-  const defaultVal = col.default !== undefined ? `DEFAULT ${formatSQLiteDefault(col.default, col.dataType)}` : "";
+  const defaultVal =
+    col.default !== undefined
+      ? `DEFAULT ${formatSQLiteDefault(col.default, col.dataType)}`
+      : "";
 
-  const parts = [`"${col.name}"`, sqliteType, nullable, defaultVal].filter(Boolean).join(" ");
+  const parts = [`"${col.name}"`, sqliteType, nullable, defaultVal]
+    .filter(Boolean)
+    .join(" ");
 
   return parts;
 }
@@ -77,7 +89,10 @@ function mapToSQLiteType(dataType: ColumnMetadata["dataType"]): string {
   }
 }
 
-function formatSQLiteDefault(value: unknown, dataType: ColumnMetadata["dataType"]): string {
+function formatSQLiteDefault(
+  value: unknown,
+  dataType: ColumnMetadata["dataType"],
+): string {
   if (value === null) return "NULL";
   if (typeof value === "boolean") return value ? "1" : "0";
   if (typeof value === "number") return String(value);
@@ -85,18 +100,28 @@ function formatSQLiteDefault(value: unknown, dataType: ColumnMetadata["dataType"
   return "NULL";
 }
 
-function generateIndexes(tableName: string, columns: ColumnMetadata[], tenantColumn: string): string[] {
+function generateIndexes(
+  tableName: string,
+  columns: ColumnMetadata[],
+  tenantColumn: string,
+): string[] {
   const indexes: string[] = [];
 
-  indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_sync_status" ON "${tableName}"(sync_status);`);
+  indexes.push(
+    `CREATE INDEX IF NOT EXISTS "idx_${tableName}_sync_status" ON "${tableName}"(sync_status);`,
+  );
 
   if (columns.find((c) => c.name === tenantColumn)) {
-    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_${tenantColumn}" ON "${tableName}"(${tenantColumn});`);
+    indexes.push(
+      `CREATE INDEX IF NOT EXISTS "idx_${tableName}_${tenantColumn}" ON "${tableName}"(${tenantColumn});`,
+    );
   }
 
   const fkColumns = columns.filter((c) => c.name.endsWith("_id") && !c.primary);
   for (const col of fkColumns) {
-    indexes.push(`CREATE INDEX IF NOT EXISTS "idx_${tableName}_${col.name}" ON "${tableName}"(${col.name});`);
+    indexes.push(
+      `CREATE INDEX IF NOT EXISTS "idx_${tableName}_${col.name}" ON "${tableName}"(${col.name});`,
+    );
   }
 
   return indexes;

@@ -51,7 +51,7 @@ export {
   useSyncStatus,
   useSyncEngine,
   useSyncEngineReady,
-  useSyncEngineInit,
+  useSyncInit,
   useEngineService,
   useSyncOperations,
   useSyncLifecycle,
@@ -66,5 +66,13 @@ export {
   useSyncStatus as useSyncStatusFlags,
 } from "./hooks";
 
+export type { SyncInitProgress, SyncInitState } from "./hooks";
+
 // Provider
 export { SyncProvider, type SyncProviderProps } from "./provider";
+
+// Runtime factory
+export {
+  createSyncReactRuntime,
+  type CreateSyncReactRuntimeOptions,
+} from "./create-sync-runtime";

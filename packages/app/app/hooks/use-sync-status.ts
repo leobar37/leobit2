@@ -4,13 +4,13 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncService } from "~/lib/sync/engine-provider";
+import { useSyncOperations } from "@avileo/drizzle-sync/react";
+import type { SyncStatus } from "@avileo/drizzle-sync/core";
 import type {
-  SyncStatus,
   SyncOperationRecord,
   DeadLetterOperationRecord,
-} from "~/lib/sync/sync-service";
-import type { ConflictStrategy } from "@avileo/drizzle-sync/shared";
+} from "@avileo/drizzle-sync/core";
+import type { PushConflictStrategy as ConflictStrategy } from "@avileo/drizzle-sync/pglite";
 
 const QUERY_KEYS = {
   syncStatus: ["sync", "status"],
@@ -22,7 +22,7 @@ const QUERY_KEYS = {
  * Get current sync status (pending, failed, conflict counts)
  */
 export function useSyncStatus() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
 
   return useQuery({
     queryKey: QUERY_KEYS.syncStatus,
@@ -41,7 +41,7 @@ export function useSyncStatus() {
  * Get failed operations for manual retry
  */
 export function useFailedOperations() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
 
   return useQuery({
     queryKey: QUERY_KEYS.failedOperations,
@@ -59,7 +59,7 @@ export function useFailedOperations() {
  * Retry a failed operation
  */
 export function useRetryOperation() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -77,7 +77,7 @@ export function useRetryOperation() {
 }
 
 export function useDeadLetterOperations() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
 
   return useQuery({
     queryKey: QUERY_KEYS.deadLetterOperations,
@@ -85,14 +85,14 @@ export function useDeadLetterOperations() {
       if (!syncService) {
         throw new Error("SyncService not available");
       }
-      return syncService.getDeadLetterOperations();
+      return syncService.getDeadLetterOperations() as Promise<DeadLetterOperationRecord[]>;
     },
     enabled: !!syncService,
   });
 }
 
 export function useRetryDeadLetterOperation() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -111,7 +111,7 @@ export function useRetryDeadLetterOperation() {
 }
 
 export function useClearDeadLetterOperations() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -133,7 +133,7 @@ export function useClearDeadLetterOperations() {
  * Resolve a sync conflict
  */
 export function useResolveConflict() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -162,7 +162,7 @@ export function useResolveConflict() {
  * Force sync all pending operations
  */
 export function useForceSync() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -187,7 +187,7 @@ export function useForceSync() {
  * Process a sync group atomically
  */
 export function useProcessGroup() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const queryClient = useQueryClient();
 
   return useMutation({

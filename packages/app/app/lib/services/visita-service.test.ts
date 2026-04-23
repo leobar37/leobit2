@@ -5,9 +5,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { VisitaService, type VisitaWithCustomer } from "./visita-service";
 
-// Mock dependencies
 const mockPg = {} as PGlite;
 const mockDb = {
   select: vi.fn(),
@@ -22,18 +22,21 @@ const mockSyncService = {
 const mockBusinessId = "bus_123";
 const mockBusinessUserId = "user_123";
 
+function createMockEngine(): SyncClientEngineLike {
+  return {
+    getPg: () => mockPg,
+    getDb: () => mockDb,
+    getSyncOperations: () => mockSyncService as any,
+    getConfig: () => ({ tenantId: mockBusinessId, userId: mockBusinessUserId }),
+  };
+}
+
 describe("VisitaService", () => {
   let service: VisitaService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new VisitaService(
-      mockPg,
-      mockDb,
-      mockSyncService,
-      mockBusinessId,
-      mockBusinessUserId
-    );
+    service = new VisitaService(createMockEngine());
   });
 
   describe("findById", () => {

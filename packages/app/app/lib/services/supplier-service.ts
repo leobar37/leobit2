@@ -8,8 +8,7 @@
  * Generated at: 2026-04-19
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, like, and, desc } from "drizzle-orm";
 import { suppliers, type Supplier } from "@avileo/shared";
 
@@ -19,7 +18,6 @@ import {
   type CreateSuppliersInput, 
   type UpdateSuppliersInput 
 } from "~/lib/sync/generated/services";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types for backward compatibility
 export type CreateSupplierInput = CreateSuppliersInput;
@@ -33,14 +31,8 @@ export type SupplierType = "generic" | "regular" | "internal";
  * Extends the generated SuppliersService with custom search functionality.
  */
 export class SupplierService extends SuppliersService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

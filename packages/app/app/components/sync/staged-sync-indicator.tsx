@@ -3,12 +3,14 @@ import { cn } from "~/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle2, AlertCircle, Database } from "lucide-react";
-import type { StagedPullState } from "~/lib/sync/staged-pull-coordinator";
+import type { StagedPullState } from "@avileo/drizzle-sync/pglite";
+
+type StagedPullStateStr = StagedPullState<string>;
 
 interface StagedSyncIndicatorProps {
-  critical: StagedPullState;
-  recent: StagedPullState;
-  historical: StagedPullState;
+  critical: StagedPullStateStr;
+  recent: StagedPullStateStr;
+  historical: StagedPullStateStr;
   isUsable: boolean;
   totalChanges: number;
   className?: string;
@@ -100,7 +102,7 @@ function StatusIcon({
   status, 
   color 
 }: { 
-  status: StagedPullState["status"]; 
+  status: StagedPullStateStr["status"]; 
   color: string;
 }) {
   switch (status) {

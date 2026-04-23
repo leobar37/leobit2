@@ -8,8 +8,7 @@
  * Generated at: 2026-04-19
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, and } from "drizzle-orm";
 import { customerTags, type CustomerTag } from "@avileo/shared";
 
@@ -18,7 +17,6 @@ import {
   CustomerTagsService, 
   type CreateCustomerTagsInput 
 } from "~/lib/sync/generated/services";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export input types for backward compatibility
 export type CreateCustomerTagInput = CreateCustomerTagsInput;
@@ -28,14 +26,8 @@ export type CreateCustomerTagInput = CreateCustomerTagsInput;
  * Extends the generated CustomerTagsService with custom tag assignment methods.
  */
 export class CustomerTagService extends CustomerTagsService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

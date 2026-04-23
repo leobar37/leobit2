@@ -4,12 +4,10 @@
  * Extends generated CustomersService to preserve custom search/filter logic
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { CustomersService, type CreateCustomersInput, type UpdateCustomersInput } from "~/lib/sync/generated/services";
 import { SyncStatus, customers, customerTags, customerGroupMembers, tags, type Customer } from "@avileo/shared";
 import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types for backward compatibility
 export type { CreateCustomersInput as CreateCustomerInput, UpdateCustomersInput as UpdateCustomerInput } from "~/lib/sync/generated/services";
@@ -46,14 +44,8 @@ export interface CustomerTagSummary {
  * including tag filtering, group filtering, and pagination
  */
 export class CustomerService extends CustomersService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   private buildFilterConditions(filters?: CustomerSearchFilters) {

@@ -5,8 +5,9 @@
 
 import { useCallback } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { SaleService } from "~/lib/services/sale-service";
 import { useBusiness } from "~/hooks/use-business";
-import { useSaleService } from "~/lib/sync/engine-provider";
 import { useToastError } from "~/hooks/use-toast-error";
 import { useManualSync } from "~/hooks/use-manual-sync";
 import type {
@@ -53,7 +54,8 @@ export interface PaginatedSalesResult {
  * Get all sales with optional filters (paginated - max 50 per page)
  */
 export function useSales(filters?: SaleFilters) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
@@ -77,7 +79,8 @@ export function useSales(filters?: SaleFilters) {
 }
 
 export function usePaginatedSales(query: SalePageQuery) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
 
   return useQuery({
     queryKey: QUERY_KEYS.page(query),
@@ -92,7 +95,8 @@ export function usePaginatedSales(query: SalePageQuery) {
  * Get a single sale by ID with items
  */
 export function useSale(id: string | null) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.sale(id) : ["sales-new", "detail"],
@@ -140,7 +144,8 @@ export function useSaleSyncStatus(saleId: string | null) {
  * Get sales by customer ID (paginated)
  */
 export function useSalesByCustomer(customerId: string) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
@@ -161,7 +166,8 @@ export function useSalesByCustomer(customerId: string) {
  * Get sales by status (paginated)
  */
 export function useSalesByStatus(status: SaleStatus) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
@@ -181,7 +187,8 @@ export function useSalesByStatus(status: SaleStatus) {
  * Create a new sale with items
  */
 export function useCreateSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -205,7 +212,8 @@ export function useCreateSale() {
  * Create a draft sale without items and return the created sale
  */
 export function useCreateDraftSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
   const { data: business } = useBusiness();
 
@@ -254,7 +262,8 @@ export function useCreateDraftSale() {
  * Confirm a sale (draft -> active)
  */
 export function useConfirmSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -276,7 +285,8 @@ export function useConfirmSale() {
  * Confirm a pre_order (draft -> confirmed)
  */
 export function useConfirmPreOrder() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
   const { showError } = useToastError();
 
@@ -313,7 +323,8 @@ export function useConfirmPreOrder() {
  * Deliver a pre_order (confirmed -> delivered)
  */
 export function useDeliverSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -337,7 +348,8 @@ export function useDeliverSale() {
  * Cancel a sale
  */
 export function useCancelSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -360,7 +372,8 @@ export function useCancelSale() {
  * Update a sale
  */
 export function useUpdateSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -406,7 +419,8 @@ import { api } from "~/lib/api-client";
  * Delete a draft sale (hard delete) or processed sale (soft delete)
  */
 export function useDeleteSale() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({

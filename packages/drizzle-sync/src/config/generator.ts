@@ -6,6 +6,10 @@ import { generatePostgreSQLDDL, generatePostgreSQLDDLFile } from "./generators/p
 import { generateApplierConfig, mergeApplierConfigs, generateApplierFile } from "./generators/applier-generator";
 import { generateHooks, generateHooksFile } from "./generators/hooks-generator";
 import { generateService, generateServicesFile } from "./generators/service-generator";
+import { generateSchemaSQLFile } from "./generators/schema-sql-generator";
+import { generateTableRegistry, generateTableRegistryFile } from "./generators/table-registry-generator";
+import { generateQueryKeysFile } from "./generators/query-keys-generator";
+import { generateEngineFactoryFile } from "./generators/engine-factory-generator";
 import type { SerializedEntity, SyncSchema } from "./schema-types";
 import { CodeBuilder, formatGeneratedCode } from "./generators/code-builder";
 
@@ -85,9 +89,16 @@ export async function generateAll(
 
   // 2. Generate DDL (PostgreSQL for PGlite)
   const ddlOutputs = entityNames.map((name) => generatePostgreSQLDDL(name, entities[name], tenancy));
-  const ddlFile = generatePostgreSQLDDLFile(ddlOutputs);
+  const infraTenantColumn = tenancy?.tenantColumn ?? "tenant_id";
+  const ddlFile = generatePostgreSQLDDLFile(ddlOutputs, infraTenantColumn);
   writeFileSync(`${outputDir}/init.sql`, ddlFile);
   files.push(`${outputDir}/init.sql`);
+
+  // 2b. Generate schema SQL as TypeScript string (replaces init.sql import)
+  const schemaSqlPath = `${outputDir}/schema-sql.ts`;
+  const schemaSqlFile = generateSchemaSQLFile(ddlFile);
+  writeFileSync(schemaSqlPath, await formatGeneratedCode(schemaSqlFile, schemaSqlPath));
+  files.push(`${outputDir}/schema-sql.ts`);
 
   // 3. Generate applier config
   const applierConfigs = entityNames.map((name) =>
@@ -127,6 +138,25 @@ export async function generateAll(
   const typesFile = generateTypesFile(entityNames);
   writeFileSync(typesPath, await formatGeneratedCode(typesFile, typesPath));
   files.push(`${outputDir}/types.ts`);
+
+  // 7. Generate table registry for pending data export/import
+  const tableRegistry = generateTableRegistry(entityNames, entities);
+  const tableRegistryPath = `${outputDir}/sync-tables.ts`;
+  const tableRegistryFile = generateTableRegistryFile(tableRegistry);
+  writeFileSync(tableRegistryPath, await formatGeneratedCode(tableRegistryFile, tableRegistryPath));
+  files.push(`${outputDir}/sync-tables.ts`);
+
+  // 8. Generate query keys for TanStack Query cache invalidation
+  const queryKeysPath = `${outputDir}/query-keys.ts`;
+  const queryKeysFile = generateQueryKeysFile(entityNames);
+  writeFileSync(queryKeysPath, await formatGeneratedCode(queryKeysFile, queryKeysPath));
+  files.push(`${outputDir}/query-keys.ts`);
+
+  // 9. Generate engine factory
+  const engineFactoryPath = `${outputDir}/engine.ts`;
+  const engineFactoryFile = generateEngineFactoryFile({ entityNames });
+  writeFileSync(engineFactoryPath, await formatGeneratedCode(engineFactoryFile, engineFactoryPath));
+  files.push(`${outputDir}/engine.ts`);
 
   // Detect changes
   if (isSyncSchema(config)) {

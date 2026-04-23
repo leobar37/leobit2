@@ -5,14 +5,12 @@
  * Note: Uses FK references (saleId in payload) instead of syncGroupId for ordering
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { BaseService, type EntityType } from "./base-service";
 import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 /**
  * Sale status types
@@ -188,14 +186,8 @@ export interface UpdateSaleInput {
  * Extends BaseService for common sync and ID generation functionality
  */
 export class SaleService extends BaseService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

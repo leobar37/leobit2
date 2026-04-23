@@ -237,22 +237,59 @@ interface SyncEngineInitState {
  * const { isReady, error, schemaError, hasInitTimeout } = useSyncEngineInit(engine, { timeoutMs: 30000 });
  * ```
  */
-export function useSyncEngineInit(
+export interface SyncInitProgress {
+  stage: string;
+  status: "pending" | "loading" | "complete" | "error";
+  changesApplied: number;
+  message?: string;
+}
+
+export interface SyncInitState {
+  isReady: boolean;
+  isLoading: boolean;
+  error: Error | null;
+  schemaError: Error | null;
+  hasInitTimeout: boolean;
+  progress: SyncInitProgress | null;
+  totalChanges: number;
+}
+
+/**
+ * Hook to initialize sync engine and perform initial sync.
+ * Handles database initialization, staged pull, and progress tracking.
+ *
+ * @param engine - The SyncClientEngine instance
+ * @param options - Initialization options
+ * @returns Initialization state with progress
+ *
+ * @example
+ * ```tsx
+ * const engine = createSyncClientEngine({ databaseConfig: {...}, ... });
+ * const { isReady, progress, error, totalChanges } = useSyncInit(engine);
+ *
+ * if (!isReady) return <LoadingScreen progress={progress} />;
+ * return <App />;
+ * ```
+ */
+export function useSyncInit(
   engine: SyncClientEngine | null,
-  options?: { timeoutMs?: number }
-): SyncEngineInitState {
-  const [state, setState] = useState<SyncEngineInitState>({
+  options?: { timeoutMs?: number; autoStart?: boolean }
+): SyncInitState {
+  const [state, setState] = useState<SyncInitState>({
     isReady: false,
     isLoading: false,
     error: null,
     schemaError: null,
     hasInitTimeout: false,
+    progress: null,
+    totalChanges: 0,
   });
 
   const timeoutMs = options?.timeoutMs ?? 30000;
+  const autoStart = options?.autoStart ?? true;
 
   useEffect(() => {
-    if (!engine || state.isReady || state.isLoading) return;
+    if (!engine || state.isReady || state.isLoading || !autoStart) return;
 
     setState((prev) => ({ ...prev, isLoading: true }));
 
@@ -261,7 +298,6 @@ export function useSyncEngineInit(
 
     const init = async () => {
       try {
-        // Set timeout
         timeoutId = setTimeout(() => {
           if (mounted) {
             setState({
@@ -270,22 +306,43 @@ export function useSyncEngineInit(
               error: new Error(`Engine initialization timed out after ${timeoutMs}ms`),
               schemaError: null,
               hasInitTimeout: true,
+              progress: null,
+              totalChanges: 0,
             });
           }
         }, timeoutMs);
 
+        // Step 1: Initialize engine (database, services)
         await engine.initialize();
 
         if (!mounted) return;
 
+        // Step 2: Perform initial sync (staged or quick)
+        const result = await engine.performInitialSync((progress) => {
+          if (!mounted) return;
+          setState((prev) => ({
+            ...prev,
+            progress: {
+              stage: progress.stage,
+              status: progress.status,
+              changesApplied: progress.changesApplied,
+              message: `${progress.stage}: ${progress.status}`,
+            },
+            totalChanges: progress.changesApplied,
+          }));
+        });
+
+        if (!mounted) return;
         if (timeoutId) clearTimeout(timeoutId);
 
         setState({
-          isReady: true,
+          isReady: result.success,
           isLoading: false,
-          error: null,
+          error: result.success ? null : new Error("Initial sync failed"),
           schemaError: null,
           hasInitTimeout: false,
+          progress: null,
+          totalChanges: result.totalChanges,
         });
       } catch (err) {
         if (!mounted) return;
@@ -303,6 +360,8 @@ export function useSyncEngineInit(
           error: isSchemaError ? null : error,
           schemaError: isSchemaError ? error : null,
           hasInitTimeout: false,
+          progress: null,
+          totalChanges: 0,
         });
       }
     };
@@ -313,7 +372,7 @@ export function useSyncEngineInit(
       mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [engine, timeoutMs]); // Intentionally not depending on state to avoid loops
+  }, [engine, timeoutMs, autoStart]); // Intentionally not depending on state to avoid loops
 
   return state;
 }

@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useQueryState, parseAsArrayOf, parseAsString } from "nuqs";
 import { useQuery } from "@tanstack/react-query";
-import { useCustomerTagService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { filterBySearch, useDebounce, type SearchableField } from "~/lib/search";
 import type { Customer } from "@avileo/shared";
 
@@ -40,7 +41,8 @@ export function useCustomerFilters({
   debounceMs = 300,
   loadTagRelations = true,
 }: UseCustomerFiltersParams = {}): UseCustomerFiltersResult {
-  const customerTagService = useCustomerTagService();
+  const engine = useSyncEngine();
+  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
 
   const [tagIds, setTagIds] = useQueryState(
     "tags",

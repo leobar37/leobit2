@@ -340,7 +340,7 @@ describe("Service Generator", () => {
       expect(fileContent).toContain('import type { PGlite } from "@electric-sql/pglite"');
       expect(fileContent).toContain('import type { drizzle } from "drizzle-orm/pglite"');
       expect(fileContent).toContain('import { BaseService, type EntityType } from "~/lib/services/base-service"');
-      expect(fileContent).toContain('import { SyncService } from "~/lib/sync/sync-service"');
+      expect(fileContent).toContain('import type { SyncClientEngine } from "@avileo/drizzle-sync/client"');
       expect(fileContent).toContain('import { SyncStatus');
       expect(fileContent).toContain('import { eq, and, desc } from "drizzle-orm"');
     });

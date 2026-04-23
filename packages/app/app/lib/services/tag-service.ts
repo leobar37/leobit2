@@ -8,8 +8,7 @@
  * Generated at: 2026-04-19
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, sql } from "drizzle-orm";
 import { customerTags } from "@avileo/shared";
 
@@ -19,7 +18,6 @@ import {
   type CreateTagsInput, 
   type UpdateTagsInput
 } from "~/lib/sync/generated/services";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export input types with the original names for backward compatibility
 export type CreateTagInput = CreateTagsInput;
@@ -33,14 +31,8 @@ export type UpdateTagInput = UpdateTagsInput;
  * - getCustomerCount(tagId: string): Promise<number> - Get number of customers with this tag
  */
 export class TagService extends TagsService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

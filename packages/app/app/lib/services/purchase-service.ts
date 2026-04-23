@@ -4,15 +4,13 @@
  * Extends generated PurchasesService to preserve atomic items operations
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc, sql } from "drizzle-orm";
 import {
   PurchasesService,
   type CreatePurchasesInput,
   type UpdatePurchasesInput,
 } from "~/lib/sync/generated/services";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 import {
   SyncStatus,
   purchases,
@@ -78,14 +76,8 @@ export interface UpdatePurchaseInput {
  * Extends generated PurchasesService for local-first operations with sync integration
  */
 export class PurchaseService extends PurchasesService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**
@@ -730,10 +722,7 @@ export class PurchaseService extends PurchasesService {
  * Factory function to create a PurchaseService instance
  */
 export function createPurchaseService(
-  pg: PGlite,
-  db: ReturnType<typeof drizzle>,
-  syncService: SyncWritePort,
-  businessId: string
+  engine: SyncClientEngineLike
 ): PurchaseService {
-  return new PurchaseService(pg, db, syncService, businessId, "");
+  return new PurchaseService(engine);
 }

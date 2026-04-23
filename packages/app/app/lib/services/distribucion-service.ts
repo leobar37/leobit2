@@ -4,8 +4,7 @@
  * Extends generated DistribucionesService to preserve atomic items operations
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc } from "drizzle-orm";
 import {
   DistribucionesService,
@@ -14,7 +13,6 @@ import {
 } from "~/lib/sync/generated/services";
 import { distribuciones, distribucionItems, type Distribucion } from "@avileo/shared";
 import { mapToCamelCase } from "../mappers/entity-mapper";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export Distribucion for backward compatibility
 export { type Distribucion } from "@avileo/shared";
@@ -84,14 +82,8 @@ export interface FindDistribucionesFilters {
  * Uses FK references (distribucionId in payload) instead of syncGroupId
  */
 export class DistribucionService extends DistribucionesService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-22T17:22:40.592Z",
+  "generatedAt": "2026-04-22T20:47:09.603Z",
   "tenancy": {
     "tenantColumn": "business_id",
     "tenantField": "businessId"

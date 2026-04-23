@@ -51,13 +51,28 @@ import { initPgliteDatabase, disposeDatabase, resetDatabase } from "./database-i
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
 
+export interface InitialSyncProgress {
+  stage: string;
+  status: "pending" | "loading" | "complete" | "error";
+  changesApplied: number;
+  error?: string;
+}
+
+export interface InitialSyncResult {
+  success: boolean;
+  totalChanges: number;
+  stages: Record<string, { status: string; changesApplied: number; error?: string }>;
+}
+
 export class SyncClientEngine {
   private readonly config: SyncClientEngineConfig;
   private readonly eventEmitter: ISyncEventEmitter;
   private readonly mutex: ISyncMutex;
   private readonly services: Map<string, unknown> = new Map();
+  private readonly instances: Map<string, unknown> = new Map();
 
   private state: EngineState = "uninitialized";
+  private initPromise: Promise<void> | null = null;
   private pg: PGlite | null = null;
   private db: ReturnType<typeof drizzle> | null = null;
   private syncQueue: ISyncQueue | null = null;
@@ -72,6 +87,10 @@ export class SyncClientEngine {
     this.config = config;
     this.eventEmitter = config.eventEmitter ?? new SyncEventEmitter();
     this.mutex = config.mutex ?? new SyncMutex();
+  }
+
+  getConfig(): Readonly<SyncClientEngineConfig> {
+    return this.config;
   }
 
   getPg(): PGlite {
@@ -89,10 +108,21 @@ export class SyncClientEngine {
   }
 
   async initialize(): Promise<void> {
+    // Guard against concurrent initialization calls
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
     if (this.state !== "uninitialized") {
       return;
     }
 
+    this.initPromise = this.doInitialize();
+    await this.initPromise;
+    this.initPromise = null;
+  }
+
+  private async doInitialize(): Promise<void> {
     // Auto-initialize database if databaseConfig is provided
     if (this.config.databaseConfig) {
       const result = await initPgliteDatabase(this.config.databaseConfig);
@@ -214,6 +244,114 @@ export class SyncClientEngine {
     this.state = "initialized";
   }
 
+  /**
+   * Perform initial sync (staged pull for first-time, quick pull for returning users).
+   * Automatically detects if this is a first-time sync based on cursor presence.
+   * Safe to call multiple times - will skip if already syncing.
+   */
+  async performInitialSync(
+    onProgress?: (progress: InitialSyncProgress) => void
+  ): Promise<InitialSyncResult> {
+    this.ensureInitialized();
+
+    if (!this.pullService) {
+      throw new Error("Pull service not available");
+    }
+
+    // Check if we have a cursor from previous sync
+    const hasCursor = this.pullService.getStatus().cursor !== null;
+
+    if (hasCursor) {
+      // Returning user - do a quick pull
+      return this.performQuickSync(onProgress);
+    }
+
+    // First-time user - do staged sync
+    return this.performStagedSync(onProgress);
+  }
+
+  private async performQuickSync(
+    onProgress?: (progress: InitialSyncProgress) => void
+  ): Promise<InitialSyncResult> {
+    onProgress?.({
+      stage: "quick",
+      status: "loading",
+      changesApplied: 0,
+    });
+
+    const result = await this.pullService!.pull();
+
+    onProgress?.({
+      stage: "quick",
+      status: result.success ? "complete" : "error",
+      changesApplied: result.changesApplied,
+      error: result.success ? undefined : (result.error || "Sync failed"),
+    });
+
+    return {
+      success: result.success,
+      totalChanges: result.changesApplied,
+      stages: {
+        quick: {
+          status: result.success ? "complete" : "error",
+          changesApplied: result.changesApplied,
+          error: result.success ? undefined : (result.error || undefined),
+        },
+      },
+    };
+  }
+
+  private async performStagedSync(
+    onProgress?: (progress: InitialSyncProgress) => void
+  ): Promise<InitialSyncResult> {
+    const stages = this.config.stages;
+    if (!stages || !this.stagedPullCoordinator) {
+      // No staged config - fall back to quick sync
+      return this.performQuickSync(onProgress);
+    }
+
+    // Set up progress tracking
+    this.stagedPullCoordinator.setOnProgress((state) => {
+      onProgress?.({
+        stage: state.stage,
+        status: state.status,
+        changesApplied: state.changesApplied,
+        error: state.error,
+      });
+    });
+
+    const { critical, recent, historical } = await this.stagedPullCoordinator.executeStagedLoad();
+
+    // Wait for historical to complete
+    const historicalState = await historical;
+
+    const stageResults: Record<string, { status: string; changesApplied: number; error?: string }> = {};
+    stageResults[critical.stage] = {
+      status: critical.status,
+      changesApplied: critical.changesApplied,
+      error: critical.error,
+    };
+    stageResults[recent.stage] = {
+      status: recent.status,
+      changesApplied: recent.changesApplied,
+      error: recent.error,
+    };
+    stageResults[historicalState.stage] = {
+      status: historicalState.status,
+      changesApplied: historicalState.changesApplied,
+      error: historicalState.error,
+    };
+
+    const totalChanges = critical.changesApplied + recent.changesApplied + historicalState.changesApplied;
+    const success = critical.status !== "error" && recent.status !== "error";
+
+    return {
+      success,
+      totalChanges,
+      stages: stageResults,
+    };
+  }
+
   async start(): Promise<void> {
     if (this.state === "uninitialized") {
       throw new Error("SyncClientEngine not initialized. Call initialize() first.");
@@ -327,6 +465,23 @@ export class SyncClientEngine {
 
   getAllServiceNames(): string[] {
     return Array.from(this.services.keys());
+  }
+
+  use<T>(name: string, factory: () => T): T {
+    if (this.instances.has(name)) {
+      return this.instances.get(name) as T;
+    }
+    const instance = factory();
+    this.instances.set(name, instance);
+    return instance;
+  }
+
+  hasInstance(name: string): boolean {
+    return this.instances.has(name);
+  }
+
+  getInstance<T>(name: string): T | undefined {
+    return this.instances.get(name) as T | undefined;
   }
 
   getSyncService(): PushSyncService | null {

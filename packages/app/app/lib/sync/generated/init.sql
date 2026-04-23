@@ -390,3 +390,45 @@ CREATE INDEX IF NOT EXISTS "idx_abonos_customer_id" ON "abonos"("customer_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_seller_id" ON "abonos"("seller_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");
+
+-- Sync infrastructure tables
+
+CREATE TABLE IF NOT EXISTS sync_operations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  payload JSONB,
+  status TEXT NOT NULL DEFAULT 'pending',
+  version INTEGER NOT NULL DEFAULT 1,
+  sync_attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  last_attempt_at TIMESTAMP,
+  idempotency_key TEXT UNIQUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_operations_tenant ON sync_operations(business_id);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(business_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(business_id, status);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
+
+CREATE TABLE IF NOT EXISTS sync_dead_letter (
+  id TEXT PRIMARY KEY,
+  business_id UUID NOT NULL,
+  operation_id TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  data TEXT NOT NULL,
+  error TEXT NOT NULL,
+  sync_attempts INTEGER NOT NULL,
+  original_error TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_tenant ON sync_dead_letter(business_id);
+CREATE INDEX IF NOT EXISTS idx_sync_dead_letter_operation_id ON sync_dead_letter(operation_id);

@@ -1,0 +1,896 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fdrizzle-team%2Fdrizzle-orm
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=drizzle-team%2Fdrizzle-orm
+            - button "Appearance settings" [disabled] [ref=e58]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - img [ref=e67]
+          - link "drizzle-team" [ref=e70] [cursor=pointer]:
+            - /url: /drizzle-team
+          - generic [ref=e71]: /
+          - strong [ref=e72]:
+            - link "drizzle-orm" [ref=e73] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm
+          - generic [ref=e74]: Public
+        - generic [ref=e75]:
+          - list:
+            - listitem [ref=e76]:
+              - link "Sponsor @drizzle-team" [ref=e77] [cursor=pointer]:
+                - /url: /sponsors/drizzle-team
+                - generic [ref=e79]:
+                  - img [ref=e80]
+                  - text: Sponsor
+            - listitem [ref=e82]:
+              - link "You must be signed in to change notification settings" [ref=e83] [cursor=pointer]:
+                - /url: /login?return_to=%2Fdrizzle-team%2Fdrizzle-orm
+                - img [ref=e84]
+                - text: Notifications
+            - listitem [ref=e86]:
+              - link "Fork 1.3k" [ref=e87] [cursor=pointer]:
+                - /url: /login?return_to=%2Fdrizzle-team%2Fdrizzle-orm
+                - img [ref=e88]
+                - text: Fork
+                - generic "1,346" [ref=e90]: 1.3k
+            - listitem [ref=e91]:
+              - link "You must be signed in to star a repository" [ref=e93] [cursor=pointer]:
+                - /url: /login?return_to=%2Fdrizzle-team%2Fdrizzle-orm
+                - img [ref=e94]
+                - text: Star
+                - generic "33994 users starred this repository" [ref=e96]: 34k
+      - navigation "Repository" [ref=e97]:
+        - list [ref=e98]:
+          - listitem [ref=e99]:
+            - link "Code" [ref=e100] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm
+              - img [ref=e101]
+              - generic [ref=e103]: Code
+          - listitem [ref=e104]:
+            - link "Issues 1.3k" [ref=e105] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/issues
+              - img [ref=e106]
+              - generic [ref=e109]: Issues
+              - generic "1,275" [ref=e110]: 1.3k
+          - listitem [ref=e111]:
+            - link "Pull requests 430" [ref=e112] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/pulls
+              - img [ref=e113]
+              - generic [ref=e115]: Pull requests
+              - generic "430" [ref=e116]
+          - listitem [ref=e117]:
+            - link "Discussions" [ref=e118] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/discussions
+              - img [ref=e119]
+              - generic [ref=e121]: Discussions
+          - listitem [ref=e122]:
+            - link "Actions" [ref=e123] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/actions
+              - img [ref=e124]
+              - generic [ref=e126]: Actions
+          - listitem [ref=e127]:
+            - link "Projects" [ref=e128] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/projects
+              - img [ref=e129]
+              - generic [ref=e131]: Projects
+          - listitem [ref=e132]:
+            - link "Security and quality 1" [ref=e133] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/security
+              - img [ref=e134]
+              - generic [ref=e136]: Security and quality
+              - generic "1" [ref=e137]
+          - listitem [ref=e138]:
+            - link "Insights" [ref=e139] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/pulse
+              - img [ref=e140]
+              - generic [ref=e142]: Insights
+    - generic [ref=e155]:
+      - heading "drizzle-team/drizzle-orm" [level=1] [ref=e157]
+      - generic [ref=e158]:
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - button "main branch" [ref=e165] [cursor=pointer]:
+                - generic [ref=e166]:
+                  - generic [ref=e168]:
+                    - img [ref=e170]
+                    - generic [ref=e173]: main
+                  - generic:
+                    - img
+              - generic [ref=e174]:
+                - link "53 Branches" [ref=e175] [cursor=pointer]:
+                  - /url: /drizzle-team/drizzle-orm/branches
+                  - generic [ref=e176]:
+                    - generic:
+                      - img
+                    - generic [ref=e178]:
+                      - strong [ref=e179]: "53"
+                      - text: Branches
+                - link "178 Tags" [ref=e180] [cursor=pointer]:
+                  - /url: /drizzle-team/drizzle-orm/tags
+                  - generic [ref=e181]:
+                    - generic:
+                      - img
+                    - generic [ref=e183]:
+                      - strong [ref=e184]: "178"
+                      - text: Tags
+            - generic [ref=e185]:
+              - generic [ref=e189]:
+                - img [ref=e191]
+                - combobox "Go to file" [ref=e193]
+              - button "Code" [ref=e194] [cursor=pointer]:
+                - generic [ref=e195]:
+                  - generic:
+                    - img
+                  - generic [ref=e196]: Code
+                  - generic:
+                    - img
+          - generic [ref=e197]:
+            - generic [ref=e198]:
+              - heading "Folders and files" [level=2] [ref=e199]
+              - table "Folders and files" [ref=e200]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message":
+                      - generic "Last commit message"
+                    - columnheader "Last commit date":
+                      - generic "Last commit date"
+                - rowgroup [ref=e201]:
+                  - row "Latest commit Sukairo-02 AndriiSherman commits by Sukairo-02 and commits by AndriiSherman Netlify-DB for main (#5663) Open commit details success Commit 48e5406 · Apr 22, 2026yesterday History 2,933 Commits" [ref=e202]:
+                    - cell "Latest commit Sukairo-02 AndriiSherman commits by Sukairo-02 and commits by AndriiSherman Netlify-DB for main (#5663) Open commit details success Commit 48e5406 · Apr 22, 2026yesterday History 2,933 Commits" [ref=e203]:
+                      - generic [ref=e204]:
+                        - heading "Latest commit" [level=2] [ref=e205]
+                        - generic [ref=e206]:
+                          - generic [ref=e207]:
+                            - generic [ref=e209]:
+                              - img "Sukairo-02" [ref=e210]
+                              - img "AndriiSherman" [ref=e211]
+                            - link "commits by Sukairo-02" [ref=e213] [cursor=pointer]:
+                              - /url: /drizzle-team/drizzle-orm/commits?author=Sukairo-02
+                              - text: Sukairo-02
+                            - generic [ref=e214]: and
+                            - link "commits by AndriiSherman" [ref=e216] [cursor=pointer]:
+                              - /url: /drizzle-team/drizzle-orm/commits?author=AndriiSherman
+                              - text: AndriiSherman
+                          - generic [ref=e217]:
+                            - generic [ref=e219]:
+                              - link "Netlify-DB for" [ref=e220] [cursor=pointer]:
+                                - /url: /drizzle-team/drizzle-orm/commit/48e5406027103a9fca6eb66417187c4a8b5c6aa3
+                              - code [ref=e221]:
+                                - link "main" [ref=e222] [cursor=pointer]:
+                                  - /url: /drizzle-team/drizzle-orm/commit/48e5406027103a9fca6eb66417187c4a8b5c6aa3
+                              - link "(" [ref=e223] [cursor=pointer]:
+                                - /url: /drizzle-team/drizzle-orm/commit/48e5406027103a9fca6eb66417187c4a8b5c6aa3
+                              - link "#5663" [ref=e224] [cursor=pointer]:
+                                - /url: https://github.com/drizzle-team/drizzle-orm/pull/5663
+                              - link ")" [ref=e225] [cursor=pointer]:
+                                - /url: /drizzle-team/drizzle-orm/commit/48e5406027103a9fca6eb66417187c4a8b5c6aa3
+                            - button "Open commit details" [ref=e226] [cursor=pointer]:
+                              - img [ref=e227]
+                            - button "success" [ref=e229] [cursor=pointer]:
+                              - img [ref=e230]
+                        - generic [ref=e232]:
+                          - generic [ref=e234]:
+                            - link "Commit 48e5406" [ref=e235] [cursor=pointer]:
+                              - /url: /drizzle-team/drizzle-orm/commit/48e5406027103a9fca6eb66417187c4a8b5c6aa3
+                              - text: "48e5406"
+                            - text: ·
+                            - generic "Apr 22, 2026, 7:11 AM GMT-5" [ref=e236]: Apr 22, 2026yesterday
+                          - generic [ref=e237]:
+                            - heading "History" [level=2] [ref=e238]
+                            - link "2,933 Commits" [ref=e239] [cursor=pointer]:
+                              - /url: /drizzle-team/drizzle-orm/commits/main/
+                              - generic [ref=e240]:
+                                - generic:
+                                  - img
+                                - generic [ref=e241]: 2,933 Commits
+                  - row ".github, (Directory)" [ref=e242]:
+                    - cell ".github, (Directory)" [ref=e243]:
+                      - generic [ref=e244]:
+                        - img [ref=e245]
+                        - link ".github, (Directory)" [ref=e250] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/.github
+                          - text: .github
+                    - cell [ref=e251]
+                    - cell [ref=e253]
+                  - row "changelogs, (Directory)" [ref=e256]:
+                    - cell "changelogs, (Directory)" [ref=e257]:
+                      - generic [ref=e258]:
+                        - img [ref=e259]
+                        - link "changelogs, (Directory)" [ref=e264] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/changelogs
+                          - text: changelogs
+                    - cell [ref=e265]
+                    - cell [ref=e267]
+                  - row "docs, (Directory)" [ref=e270]:
+                    - cell "docs, (Directory)" [ref=e271]:
+                      - generic [ref=e272]:
+                        - img [ref=e273]
+                        - link "docs, (Directory)" [ref=e278] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/docs
+                          - text: docs
+                    - cell [ref=e279]
+                    - cell [ref=e281]
+                  - row "drizzle-arktype, (Directory)" [ref=e284]:
+                    - cell "drizzle-arktype, (Directory)" [ref=e285]:
+                      - generic [ref=e286]:
+                        - img [ref=e287]
+                        - link "drizzle-arktype, (Directory)" [ref=e292] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-arktype
+                          - text: drizzle-arktype
+                    - cell [ref=e293]
+                    - cell [ref=e295]
+                  - row "drizzle-kit, (Directory)" [ref=e298]:
+                    - cell "drizzle-kit, (Directory)" [ref=e299]:
+                      - generic [ref=e300]:
+                        - img [ref=e301]
+                        - link "drizzle-kit, (Directory)" [ref=e306] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-kit
+                          - text: drizzle-kit
+                    - cell [ref=e307]
+                    - cell [ref=e309]
+                  - row "drizzle-orm, (Directory)" [ref=e312]:
+                    - cell "drizzle-orm, (Directory)" [ref=e313]:
+                      - generic [ref=e314]:
+                        - img [ref=e315]
+                        - link "drizzle-orm, (Directory)" [ref=e320] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-orm
+                          - text: drizzle-orm
+                    - cell [ref=e321]
+                    - cell [ref=e323]
+                  - row "drizzle-seed, (Directory)" [ref=e326]:
+                    - cell "drizzle-seed, (Directory)" [ref=e327]:
+                      - generic [ref=e328]:
+                        - img [ref=e329]
+                        - link "drizzle-seed, (Directory)" [ref=e334] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-seed
+                          - text: drizzle-seed
+                    - cell [ref=e335]
+                    - cell [ref=e337]
+                  - row "drizzle-typebox, (Directory)" [ref=e340]:
+                    - cell "drizzle-typebox, (Directory)" [ref=e341]:
+                      - generic [ref=e342]:
+                        - img [ref=e343]
+                        - link "drizzle-typebox, (Directory)" [ref=e348] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-typebox
+                          - text: drizzle-typebox
+                    - cell [ref=e349]
+                    - cell [ref=e351]
+                  - row "drizzle-valibot, (Directory)" [ref=e354]:
+                    - cell "drizzle-valibot, (Directory)" [ref=e355]:
+                      - generic [ref=e356]:
+                        - img [ref=e357]
+                        - link "drizzle-valibot, (Directory)" [ref=e362] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-valibot
+                          - text: drizzle-valibot
+                    - cell [ref=e363]
+                    - cell [ref=e365]
+                  - row "drizzle-zod, (Directory)" [ref=e368]:
+                    - cell "drizzle-zod, (Directory)" [ref=e369]:
+                      - generic [ref=e370]:
+                        - img [ref=e371]
+                        - link "drizzle-zod, (Directory)" [ref=e376] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/drizzle-zod
+                          - text: drizzle-zod
+                    - cell [ref=e377]
+                    - cell [ref=e379]
+                  - row "eslint-plugin-drizzle, (Directory)" [ref=e382]:
+                    - cell "eslint-plugin-drizzle, (Directory)" [ref=e383]:
+                      - generic [ref=e384]:
+                        - img [ref=e385]
+                        - link "eslint-plugin-drizzle, (Directory)" [ref=e390] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/eslint-plugin-drizzle
+                          - text: eslint-plugin-drizzle
+                    - cell [ref=e391]
+                    - cell [ref=e393]
+                  - row "eslint/eslint-plugin-drizzle-internal, (Directory)" [ref=e396]:
+                    - cell "eslint/eslint-plugin-drizzle-internal, (Directory)" [ref=e397]:
+                      - generic [ref=e398]:
+                        - img [ref=e399]
+                        - link "eslint/eslint-plugin-drizzle-internal, (Directory)" [ref=e404] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/eslint/eslint-plugin-drizzle-internal
+                          - text: eslint/eslint-plugin-drizzle-internal
+                    - cell [ref=e405]
+                    - cell [ref=e407]
+                  - row "integration-tests, (Directory)" [ref=e410]:
+                    - cell "integration-tests, (Directory)" [ref=e411]:
+                      - generic [ref=e412]:
+                        - img [ref=e413]
+                        - link "integration-tests, (Directory)" [ref=e418] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/integration-tests
+                          - text: integration-tests
+                    - cell [ref=e419]
+                    - cell [ref=e421]
+                  - row "misc/readme, (Directory)" [ref=e424]:
+                    - cell "misc/readme, (Directory)" [ref=e425]:
+                      - generic [ref=e426]:
+                        - img [ref=e427]
+                        - link "misc/readme, (Directory)" [ref=e432] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/misc/readme
+                          - text: misc/readme
+                    - cell [ref=e433]
+                    - cell [ref=e435]
+                  - row "patches, (Directory)" [ref=e438]:
+                    - cell "patches, (Directory)" [ref=e439]:
+                      - generic [ref=e440]:
+                        - img [ref=e441]
+                        - link "patches, (Directory)" [ref=e446] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/tree/main/patches
+                          - text: patches
+                    - cell [ref=e447]
+                    - cell [ref=e449]
+                  - row ".eslintignore, (File)" [ref=e452]:
+                    - cell ".eslintignore, (File)" [ref=e453]:
+                      - generic [ref=e454]:
+                        - img [ref=e455]
+                        - link ".eslintignore, (File)" [ref=e460] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.eslintignore
+                          - text: .eslintignore
+                    - cell [ref=e461]
+                    - cell [ref=e463]
+                  - row ".eslintrc.yaml, (File)" [ref=e466]:
+                    - cell ".eslintrc.yaml, (File)" [ref=e467]:
+                      - generic [ref=e468]:
+                        - img [ref=e469]
+                        - link ".eslintrc.yaml, (File)" [ref=e474] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.eslintrc.yaml
+                          - text: .eslintrc.yaml
+                    - cell [ref=e475]
+                    - cell [ref=e477]
+                  - row ".gitignore, (File)" [ref=e480]:
+                    - cell ".gitignore, (File)" [ref=e481]:
+                      - generic [ref=e482]:
+                        - img [ref=e483]
+                        - link ".gitignore, (File)" [ref=e488] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.gitignore
+                          - text: .gitignore
+                    - cell [ref=e489]
+                    - cell [ref=e491]
+                  - row ".markdownlint.yaml, (File)" [ref=e494]:
+                    - cell ".markdownlint.yaml, (File)" [ref=e495]:
+                      - generic [ref=e496]:
+                        - img [ref=e497]
+                        - link ".markdownlint.yaml, (File)" [ref=e502] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.markdownlint.yaml
+                          - text: .markdownlint.yaml
+                    - cell [ref=e503]
+                    - cell [ref=e505]
+                  - row ".npmrc, (File)" [ref=e508]:
+                    - cell ".npmrc, (File)" [ref=e509]:
+                      - generic [ref=e510]:
+                        - img [ref=e511]
+                        - link ".npmrc, (File)" [ref=e516] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.npmrc
+                          - text: .npmrc
+                    - cell [ref=e517]
+                    - cell [ref=e519]
+                  - row ".nvmrc, (File)" [ref=e522]:
+                    - cell ".nvmrc, (File)" [ref=e523]:
+                      - generic [ref=e524]:
+                        - img [ref=e525]
+                        - link ".nvmrc, (File)" [ref=e530] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/.nvmrc
+                          - text: .nvmrc
+                    - cell [ref=e531]
+                    - cell [ref=e533]
+                  - row "CODE_OF_CONDUCT.md, (File)" [ref=e536]:
+                    - cell "CODE_OF_CONDUCT.md, (File)" [ref=e537]:
+                      - generic [ref=e538]:
+                        - img [ref=e539]
+                        - link "CODE_OF_CONDUCT.md, (File)" [ref=e544] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/CODE_OF_CONDUCT.md
+                          - text: CODE_OF_CONDUCT.md
+                    - cell [ref=e545]
+                    - cell [ref=e547]
+                  - row "CONTRIBUTING.md, (File)" [ref=e550]:
+                    - cell "CONTRIBUTING.md, (File)" [ref=e551]:
+                      - generic [ref=e552]:
+                        - img [ref=e553]
+                        - link "CONTRIBUTING.md, (File)" [ref=e558] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/CONTRIBUTING.md
+                          - text: CONTRIBUTING.md
+                    - cell [ref=e559]
+                    - cell [ref=e561]
+                  - row "LICENSE, (File)" [ref=e564]:
+                    - cell "LICENSE, (File)" [ref=e565]:
+                      - generic [ref=e566]:
+                        - img [ref=e567]
+                        - link "LICENSE, (File)" [ref=e572] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/LICENSE
+                          - text: LICENSE
+                    - cell [ref=e573]
+                    - cell [ref=e575]
+                  - row "README.md, (File)" [ref=e578]:
+                    - cell "README.md, (File)" [ref=e579]:
+                      - generic [ref=e580]:
+                        - img [ref=e581]
+                        - link "README.md, (File)" [ref=e586] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/README.md
+                          - text: README.md
+                    - cell [ref=e587]
+                    - cell [ref=e589]
+                  - row "SECURITY.md, (File)" [ref=e592]:
+                    - cell "SECURITY.md, (File)" [ref=e593]:
+                      - generic [ref=e594]:
+                        - img [ref=e595]
+                        - link "SECURITY.md, (File)" [ref=e600] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/SECURITY.md
+                          - text: SECURITY.md
+                    - cell [ref=e601]
+                    - cell [ref=e603]
+                  - row "dprint.json, (File)" [ref=e606]:
+                    - cell "dprint.json, (File)" [ref=e607]:
+                      - generic [ref=e608]:
+                        - img [ref=e609]
+                        - link "dprint.json, (File)" [ref=e614] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/dprint.json
+                          - text: dprint.json
+                    - cell [ref=e615]
+                    - cell [ref=e617]
+                  - row "package.json, (File)" [ref=e620]:
+                    - cell "package.json, (File)" [ref=e621]:
+                      - generic [ref=e622]:
+                        - img [ref=e623]
+                        - link "package.json, (File)" [ref=e628] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/package.json
+                          - text: package.json
+                    - cell [ref=e629]
+                    - cell [ref=e631]
+                  - row "pnpm-lock.yaml, (File)" [ref=e634]:
+                    - cell "pnpm-lock.yaml, (File)" [ref=e635]:
+                      - generic [ref=e636]:
+                        - img [ref=e637]
+                        - link "pnpm-lock.yaml, (File)" [ref=e642] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/pnpm-lock.yaml
+                          - text: pnpm-lock.yaml
+                    - cell [ref=e643]
+                    - cell [ref=e645]
+                  - row "pnpm-workspace.yaml, (File)" [ref=e648]:
+                    - cell "pnpm-workspace.yaml, (File)" [ref=e649]:
+                      - generic [ref=e650]:
+                        - img [ref=e651]
+                        - link "pnpm-workspace.yaml, (File)" [ref=e656] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/pnpm-workspace.yaml
+                          - text: pnpm-workspace.yaml
+                    - cell [ref=e657]
+                    - cell [ref=e659]
+                  - row "tsconfig.json, (File)" [ref=e662]:
+                    - cell "tsconfig.json, (File)" [ref=e663]:
+                      - generic [ref=e664]:
+                        - img [ref=e665]
+                        - link "tsconfig.json, (File)" [ref=e670] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/tsconfig.json
+                          - text: tsconfig.json
+                    - cell [ref=e671]
+                    - cell [ref=e673]
+                  - row "turbo.json, (File)" [ref=e676]:
+                    - cell "turbo.json, (File)" [ref=e677]:
+                      - generic [ref=e678]:
+                        - img [ref=e679]
+                        - link "turbo.json, (File)" [ref=e684] [cursor=pointer]:
+                          - /url: /drizzle-team/drizzle-orm/blob/main/turbo.json
+                          - text: turbo.json
+                    - cell [ref=e685]
+                    - cell [ref=e687]
+            - generic [ref=e691]:
+              - generic [ref=e692]:
+                - heading "Repository files navigation" [level=2] [ref=e693]
+                - navigation "Repository files" [ref=e694]:
+                  - list [ref=e695]:
+                    - listitem [ref=e696]:
+                      - link "README" [ref=e697] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e699]
+                        - generic [ref=e701]: README
+                    - listitem [ref=e702]:
+                      - link "Code of conduct" [ref=e703] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e705]
+                        - generic [ref=e707]: Code of conduct
+                    - listitem [ref=e708]:
+                      - link "Contributing" [ref=e709] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e711]
+                        - generic [ref=e713]: Contributing
+                    - listitem [ref=e714]:
+                      - link "Apache-2.0 license" [ref=e715] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e717]
+                        - generic [ref=e719]: Apache-2.0 license
+                    - listitem [ref=e720]:
+                      - link "Security" [ref=e721] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e723]
+                        - generic [ref=e725]: Security
+                - button "Outline" [ref=e726] [cursor=pointer]:
+                  - img [ref=e727]
+              - article [ref=e730]:
+                - link [ref=e732] [cursor=pointer]:
+                  - /url: /drizzle-team/drizzle-orm/blob/main/misc/readme/logo-github-sq-light.svg#gh-light-mode-only
+                  - img [ref=e733]
+                - generic [ref=e734]:
+                  - generic [ref=e735]:
+                    - heading "Headless ORM for NodeJS, TypeScript and JavaScript 🚀" [level=3] [ref=e736]
+                    - 'link "Permalink: Headless ORM for NodeJS, TypeScript and JavaScript 🚀" [ref=e737] [cursor=pointer]':
+                      - /url: "#headless-orm-for-nodejs-typescript-and-javascript-"
+                      - img [ref=e738]
+                  - link "Website" [ref=e740] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team
+                  - text: •
+                  - link "Documentation" [ref=e741] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/overview
+                  - text: •
+                  - link "Twitter" [ref=e742] [cursor=pointer]:
+                    - /url: https://x.com/drizzleorm
+                  - text: •
+                  - link "Discord" [ref=e743] [cursor=pointer]:
+                    - /url: https://driz.link/discord
+                - generic [ref=e744]:
+                  - heading "What's Drizzle?" [level=3] [ref=e745]
+                  - 'link "Permalink: What''s Drizzle?" [ref=e746] [cursor=pointer]':
+                    - /url: "#whats-drizzle"
+                    - img [ref=e747]
+                - paragraph [ref=e749]:
+                  - text: Drizzle is a modern TypeScript ORM developers
+                  - link "wanna use in their next project" [ref=e750] [cursor=pointer]:
+                    - /url: https://stateofdb.com/tools/drizzle
+                  - text: . It is
+                  - link "lightweight" [ref=e751] [cursor=pointer]:
+                    - /url: https://bundlephobia.com/package/drizzle-orm
+                  - text: at only ~7.4kb minified+gzipped, and it's tree shakeable with exactly 0 dependencies.
+                - paragraph [ref=e752]:
+                  - strong [ref=e753]: Drizzle supports every PostgreSQL, MySQL and SQLite database
+                  - text: ", including serverless ones like"
+                  - link "Turso" [ref=e754] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-sqlite#turso
+                  - text: ","
+                  - link "Neon" [ref=e755] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-postgresql#neon
+                  - text: ","
+                  - link "Xata" [ref=e756] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/connect-xata
+                  - text: ","
+                  - link "PlanetScale" [ref=e757] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-mysql#planetscale
+                  - text: ","
+                  - link "Cloudflare D1" [ref=e758] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-sqlite#cloudflare-d1
+                  - text: ","
+                  - link "FlyIO LiteFS" [ref=e759] [cursor=pointer]:
+                    - /url: https://fly.io/docs/litefs/
+                  - text: ","
+                  - link "Vercel Postgres" [ref=e760] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-postgresql#vercel-postgres
+                  - text: ","
+                  - link "Supabase" [ref=e761] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-postgresql#supabase
+                  - text: and
+                  - link "AWS Data API" [ref=e762] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/get-started-postgresql#aws-data-api
+                  - text: . No bells and whistles, no Rust binaries, no serverless adapters, everything just works out of the box.
+                - paragraph [ref=e763]:
+                  - strong [ref=e764]: Drizzle is serverless-ready by design
+                  - text: . It works in every major JavaScript runtime like NodeJS, Bun, Deno, Cloudflare Workers, Supabase functions, any Edge runtime, and even in browsers.
+                  - text: With Drizzle you can be
+                  - link "fast out of the box" [ref=e765] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/benchmarks
+                    - strong [ref=e766]: fast out of the box
+                  - text: and save time and costs while never introducing any data proxies into your infrastructure.
+                - paragraph [ref=e767]:
+                  - text: While you can use Drizzle as a JavaScript library, it shines with TypeScript. It lets you
+                  - link "declare SQL schemas" [ref=e768] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/sql-schema-declaration
+                    - strong [ref=e769]: declare SQL schemas
+                  - text: and build both
+                  - link "relational" [ref=e770] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/rqb
+                    - strong [ref=e771]: relational
+                  - text: and
+                  - link "SQL-like queries" [ref=e772] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/select
+                    - strong [ref=e773]: SQL-like queries
+                  - text: ", while keeping the balance between type-safety and extensibility for toolmakers to build on top."
+                - generic [ref=e774]:
+                  - heading "Ecosystem" [level=3] [ref=e775]
+                  - 'link "Permalink: Ecosystem" [ref=e776] [cursor=pointer]':
+                    - /url: "#ecosystem"
+                    - img [ref=e777]
+                - paragraph [ref=e779]: While Drizzle ORM remains a thin typed layer on top of SQL, we made a set of tools for people to have best possible developer experience.
+                - paragraph [ref=e780]:
+                  - text: Drizzle comes with a powerful
+                  - link "Drizzle Kit" [ref=e781] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/kit-docs/overview
+                    - strong [ref=e782]: Drizzle Kit
+                  - text: CLI companion for you to have hassle-free migrations. It can generate SQL migration files for you or apply schema changes directly to the database.
+                - paragraph [ref=e783]:
+                  - text: We also have
+                  - link "Drizzle Studio" [ref=e784] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/drizzle-studio/overview
+                    - strong [ref=e785]: Drizzle Studio
+                  - text: for you to effortlessly browse and manipulate data in your database of choice.
+                - generic [ref=e786]:
+                  - heading "Documentation" [level=3] [ref=e787]
+                  - 'link "Permalink: Documentation" [ref=e788] [cursor=pointer]':
+                    - /url: "#documentation"
+                    - img [ref=e789]
+                - paragraph [ref=e791]:
+                  - text: Check out the full documentation on
+                  - link "the website" [ref=e792] [cursor=pointer]:
+                    - /url: https://orm.drizzle.team/docs/overview
+                  - text: .
+                - generic [ref=e793]:
+                  - heading "Our sponsors ❤️" [level=3] [ref=e794]
+                  - 'link "Permalink: Our sponsors ❤️" [ref=e795] [cursor=pointer]':
+                    - /url: "#our-sponsors-️"
+                    - img [ref=e796]
+                - paragraph [ref=e798]:
+                  - link [ref=e799] [cursor=pointer]:
+                    - /url: https://drizzle.team
+                    - img [ref=e800]
+        - generic [ref=e804]:
+          - generic [ref=e807]:
+            - heading "About" [level=2] [ref=e808]
+            - paragraph [ref=e809]: ORM
+            - generic [ref=e810]:
+              - img [ref=e811]
+              - link "orm.drizzle.team" [ref=e814] [cursor=pointer]:
+                - /url: https://orm.drizzle.team
+            - heading "Topics" [level=3] [ref=e815]
+            - generic [ref=e817]:
+              - link "nodejs" [ref=e818] [cursor=pointer]:
+                - /url: /topics/nodejs
+              - link "mysql" [ref=e819] [cursor=pointer]:
+                - /url: /topics/mysql
+              - link "postgres" [ref=e820] [cursor=pointer]:
+                - /url: /topics/postgres
+              - link "typescript" [ref=e821] [cursor=pointer]:
+                - /url: /topics/typescript
+              - link "sql" [ref=e822] [cursor=pointer]:
+                - /url: /topics/sql
+              - link "orm" [ref=e823] [cursor=pointer]:
+                - /url: /topics/orm
+              - link "sqlite" [ref=e824] [cursor=pointer]:
+                - /url: /topics/sqlite
+              - link "postgresql" [ref=e825] [cursor=pointer]:
+                - /url: /topics/postgresql
+              - link "bunjs" [ref=e826] [cursor=pointer]:
+                - /url: /topics/bunjs
+              - link "turso" [ref=e827] [cursor=pointer]:
+                - /url: /topics/turso
+            - heading "Resources" [level=3] [ref=e828]
+            - link "Readme" [ref=e830] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+              - img [ref=e831]
+              - text: Readme
+            - heading "License" [level=3] [ref=e833]
+            - link "Apache-2.0 license" [ref=e835] [cursor=pointer]:
+              - /url: "#Apache-2.0-1-ov-file"
+              - img [ref=e836]
+              - text: Apache-2.0 license
+            - heading "Code of conduct" [level=3] [ref=e838]
+            - link "Code of conduct" [ref=e840] [cursor=pointer]:
+              - /url: "#coc-ov-file"
+              - img [ref=e841]
+              - text: Code of conduct
+            - heading "Contributing" [level=3] [ref=e843]
+            - link "Contributing" [ref=e845] [cursor=pointer]:
+              - /url: "#contributing-ov-file"
+              - img [ref=e846]
+              - text: Contributing
+            - heading "Security policy" [level=3] [ref=e848]
+            - link "Security policy" [ref=e850] [cursor=pointer]:
+              - /url: "#security-ov-file"
+              - img [ref=e851]
+              - text: Security policy
+            - link "Activity" [ref=e854] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/activity
+              - img [ref=e855]
+              - text: Activity
+            - link "Custom properties" [ref=e858] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/custom-properties
+              - img [ref=e859]
+              - text: Custom properties
+            - heading "Stars" [level=3] [ref=e861]
+            - link "34k stars" [ref=e863] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/stargazers
+              - img [ref=e864]
+              - strong [ref=e866]: 34k
+              - text: stars
+            - heading "Watchers" [level=3] [ref=e867]
+            - link "87 watching" [ref=e869] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/watchers
+              - img [ref=e870]
+              - strong [ref=e872]: "87"
+              - text: watching
+            - heading "Forks" [level=3] [ref=e873]
+            - link "1.3k forks" [ref=e875] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/forks
+              - img [ref=e876]
+              - strong [ref=e878]: 1.3k
+              - text: forks
+            - link "Report repository" [ref=e880] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fdrizzle-team%2Fdrizzle-orm&report=drizzle-team+%28user%29
+          - generic [ref=e882]:
+            - heading "Releases 178" [level=2] [ref=e883]:
+              - link "Releases 178" [ref=e884] [cursor=pointer]:
+                - /url: /drizzle-team/drizzle-orm/releases
+                - text: Releases
+                - generic "178" [ref=e885]
+            - link "0.45.2 Latest Mar 27, 2026last month" [ref=e886] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/releases/tag/0.45.2
+              - img [ref=e887]
+              - generic [ref=e889]:
+                - generic [ref=e890]:
+                  - generic [ref=e891]: 0.45.2
+                  - 'generic "Label: Latest" [ref=e892]': Latest
+                - generic [ref=e893]: Mar 27, 2026last month
+            - link "+ 177 releases" [ref=e895] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/releases
+          - generic [ref=e897]:
+            - heading "Sponsor this project" [level=2] [ref=e898]
+            - generic "Loading sponsorable links" [ref=e899]:
+              - button "Sponsor" [disabled] [ref=e903]:
+                - img [ref=e904]
+                - text: Sponsor
+            - link "Learn more about GitHub Sponsors" [ref=e907] [cursor=pointer]:
+              - /url: /sponsors
+          - generic [ref=e909]:
+            - heading "Contributors 140" [level=2] [ref=e910]:
+              - link "Contributors 140" [ref=e911] [cursor=pointer]:
+                - /url: /drizzle-team/drizzle-orm/graphs/contributors
+                - text: Contributors
+                - generic "140" [ref=e912]
+            - list [ref=e913]:
+              - listitem [ref=e914]:
+                - link "@AndriiSherman" [ref=e915] [cursor=pointer]:
+                  - /url: https://github.com/AndriiSherman
+                  - img "@AndriiSherman" [ref=e916]
+              - listitem [ref=e917]:
+                - link "@dankochetov" [ref=e918] [cursor=pointer]:
+                  - /url: https://github.com/dankochetov
+                  - img "@dankochetov" [ref=e919]
+              - listitem [ref=e920]:
+                - link "@L-Mario564" [ref=e921] [cursor=pointer]:
+                  - /url: https://github.com/L-Mario564
+                  - img "@L-Mario564" [ref=e922]
+              - listitem [ref=e923]:
+                - link "@AlexBlokh" [ref=e924] [cursor=pointer]:
+                  - /url: https://github.com/AlexBlokh
+                  - img "@AlexBlokh" [ref=e925]
+              - listitem [ref=e926]:
+                - link "@Sukairo-02" [ref=e927] [cursor=pointer]:
+                  - /url: https://github.com/Sukairo-02
+                  - img "@Sukairo-02" [ref=e928]
+              - listitem [ref=e929]:
+                - link "@Angelelz" [ref=e930] [cursor=pointer]:
+                  - /url: https://github.com/Angelelz
+                  - img "@Angelelz" [ref=e931]
+              - listitem [ref=e932]:
+                - link "@AleksandrSherman" [ref=e933] [cursor=pointer]:
+                  - /url: https://github.com/AleksandrSherman
+                  - img "@AleksandrSherman" [ref=e934]
+              - listitem [ref=e935]:
+                - link "@OleksiiKH0240" [ref=e936] [cursor=pointer]:
+                  - /url: https://github.com/OleksiiKH0240
+                  - img "@OleksiiKH0240" [ref=e937]
+              - listitem [ref=e938]:
+                - link "@RomanNabukhotnyi" [ref=e939] [cursor=pointer]:
+                  - /url: https://github.com/RomanNabukhotnyi
+                  - img "@RomanNabukhotnyi" [ref=e940]
+              - listitem [ref=e941]:
+                - link "@realmikesolo" [ref=e942] [cursor=pointer]:
+                  - /url: https://github.com/realmikesolo
+                  - img "@realmikesolo" [ref=e943]
+              - listitem [ref=e944]:
+                - link "@raducristianpopa" [ref=e945] [cursor=pointer]:
+                  - /url: https://github.com/raducristianpopa
+                  - img "@raducristianpopa" [ref=e946]
+              - listitem [ref=e947]:
+                - link "@ProvorovOleksii" [ref=e948] [cursor=pointer]:
+                  - /url: https://github.com/ProvorovOleksii
+                  - img "@ProvorovOleksii" [ref=e949]
+              - listitem [ref=e950]:
+                - link "@hugo082" [ref=e951] [cursor=pointer]:
+                  - /url: https://github.com/hugo082
+                  - img "@hugo082" [ref=e952]
+              - listitem [ref=e953]:
+                - link "@AppelBoomHD" [ref=e954] [cursor=pointer]:
+                  - /url: https://github.com/AppelBoomHD
+                  - img "@AppelBoomHD" [ref=e955]
+            - link "+ 126 contributors" [ref=e957] [cursor=pointer]:
+              - /url: /drizzle-team/drizzle-orm/graphs/contributors
+          - generic [ref=e959]:
+            - heading "Languages" [level=2] [ref=e960]
+            - list [ref=e965]:
+              - listitem [ref=e966]:
+                - link "TypeScript 98.7%" [ref=e967] [cursor=pointer]:
+                  - /url: /drizzle-team/drizzle-orm/search?l=typescript
+                  - img [ref=e968]
+                  - generic [ref=e970]: TypeScript
+                  - generic [ref=e971]: 98.7%
+              - listitem [ref=e972]:
+                - link "JavaScript 1.3%" [ref=e973] [cursor=pointer]:
+                  - /url: /drizzle-team/drizzle-orm/search?l=javascript
+                  - img [ref=e974]
+                  - generic [ref=e976]: JavaScript
+                  - generic [ref=e977]: 1.3%
+  - contentinfo [ref=e979]:
+    - heading "Footer" [level=2] [ref=e980]
+    - generic [ref=e981]:
+      - generic [ref=e982]:
+        - link "GitHub Homepage" [ref=e983] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e984]
+        - generic [ref=e986]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e987]:
+        - heading "Footer navigation" [level=3] [ref=e988]
+        - list "Footer navigation" [ref=e989]:
+          - listitem [ref=e990]:
+            - link "Terms" [ref=e991] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e992]:
+            - link "Privacy" [ref=e993] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e994]:
+            - link "Security" [ref=e995] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e996]:
+            - link "Status" [ref=e997] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e998]:
+            - link "Community" [ref=e999] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e1000]:
+            - link "Docs" [ref=e1001] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e1002]:
+            - link "Contact" [ref=e1003] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e1004]:
+            - button "Manage cookies" [ref=e1006] [cursor=pointer]
+          - listitem [ref=e1007]:
+            - button "Do not share my personal information" [ref=e1009] [cursor=pointer]

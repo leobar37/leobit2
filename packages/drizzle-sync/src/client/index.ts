@@ -18,7 +18,11 @@
 // Engine class
 export { SyncClientEngine } from "./sync-client-engine";
 
-export type { SyncClientEngine as SyncClientEngineClass } from "./sync-client-engine";
+export type {
+  SyncClientEngine as SyncClientEngineClass,
+  InitialSyncProgress,
+  InitialSyncResult,
+} from "./sync-client-engine";
 
 // Factory function
 export { createSyncClientEngine } from "./create-sync-client-engine";
@@ -36,6 +40,7 @@ export type {
   EntityServiceDefinition,
   ISyncClientHttpClient,
   IClientCursorStorage,
+  SyncTableEntry,
 } from "./types";
 
 export type {
@@ -69,6 +74,7 @@ export {
   exportPendingData,
   importPendingData,
   buildPendingDataConfig,
+  buildPendingDataFromRegistry,
   type PendingTableConfig,
   type PendingTableData,
   type PendingDataConfig,
@@ -76,6 +82,12 @@ export {
 
 // Cursor storage
 export { createLocalStorageCursorStorage } from "./local-storage-cursor";
+
+// Fetch HTTP client
+export {
+  createFetchHttpClient,
+  type FetchHttpClientConfig,
+} from "./fetch-http-client";
 
 // Re-export event types from core for convenience
 export type {

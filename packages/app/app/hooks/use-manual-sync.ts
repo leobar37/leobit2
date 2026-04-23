@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { useSyncService, usePullService, useSyncState } from "~/lib/sync/engine-provider";
+import { useSyncOperations, useSyncEngine, useSyncState } from "@avileo/drizzle-sync/react";
 
 export interface ManualSyncResult {
   success: boolean;
@@ -34,8 +34,8 @@ export interface UseManualSyncResult {
  * Uses the existing SyncService and PullService from context
  */
 export function useManualSync(): UseManualSyncResult {
-  const syncService = useSyncService();
-  const pullService = usePullService();
+  const syncService = useSyncOperations();
+  const pullService = useSyncEngine().getPullService();
   const { isOnline, isSyncing: contextSyncing } = useSyncState();
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
@@ -61,7 +61,7 @@ export function useManualSync(): UseManualSyncResult {
     }
 
     try {
-      const result = await pullService.forcePullNow();
+      const result = await pullService.pull();
       return {
         changesApplied: result.changesApplied,
         hasMore: result.hasMore,

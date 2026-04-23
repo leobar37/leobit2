@@ -119,6 +119,19 @@ export interface SyncClientEngineCallbacks {
 }
 
 /**
+ * Entry in the sync table registry used for pending data export/import.
+ * Auto-generated from entity configuration.
+ */
+export interface SyncTableEntry {
+  /** Database table name */
+  name: string;
+  /** Entity type identifier */
+  entityType: string;
+  /** Parent tables this table depends on (for ordering) */
+  dependsOn: string[];
+}
+
+/**
  * Configuration for sync timing and auto-sync behavior.
  */
 export interface SyncClientEngineSyncConfig {

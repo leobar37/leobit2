@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useSyncService } from "~/lib/sync/engine-provider";
+import { useSyncOperations } from "@avileo/drizzle-sync/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 export function SyncDebugPanel() {
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   
   // Early return if sync service is not available
   if (!syncService) {
@@ -49,7 +49,7 @@ export function SyncDebugPanel() {
   const handleForceSync = async () => {
     setIsLoading(true);
     try {
-      await (syncService as any)["processPending"]();
+      await syncService.processPending();
       setLastSync(new Date());
     } catch (error) {
       console.error("Sync failed:", error);

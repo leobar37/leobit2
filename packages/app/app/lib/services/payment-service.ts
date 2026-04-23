@@ -4,15 +4,13 @@
  * Extends AbonosService for basic CRUD, adds payment-specific business logic
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { abonos } from "@avileo/shared";
 import { eq } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
 
 // Import generated base service
 import { AbonosService } from "~/lib/sync/generated/services";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 import type {
   CreateAbonosInput,
   UpdateAbonosInput,
@@ -82,14 +80,8 @@ export interface AccountsReceivablePage {
  * Extends AbonosService for local-first operations with sync integration
  */
 export class PaymentService extends AbonosService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
@@ -503,11 +495,7 @@ export class PaymentService extends AbonosService {
  * Factory function to create a PaymentService instance
  */
 export function createPaymentService(
-  pg: PGlite,
-  db: ReturnType<typeof drizzle>,
-  syncService: SyncWritePort,
-  businessId: string,
-  businessUserId: string
+  engine: SyncClientEngineLike
 ): PaymentService {
-  return new PaymentService(pg, db, syncService, businessId, businessUserId);
+  return new PaymentService(engine);
 }

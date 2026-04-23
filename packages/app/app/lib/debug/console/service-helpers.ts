@@ -8,12 +8,15 @@ import type { SupplierService } from "~/lib/services/supplier-service";
 import type { ProductService } from "~/lib/services/product-service";
 import type { CustomerService } from "~/lib/services/customer-service";
 import type { SaleService } from "~/lib/services/sale-service";
-import {
-  getEventBuffer,
-  getEventsByType,
-  clearEventBuffer,
-  type TimelineEvent,
-} from "~/lib/sync/sync-event-buffer";
+// TODO: Replace with framework event system
+interface TimelineEvent {
+  timestamp: string;
+  type: string;
+  data?: Record<string, unknown>;
+}
+const getEventBuffer = (): TimelineEvent[] => [];
+const getEventsByType = (_type: string): TimelineEvent[] => [];
+const clearEventBuffer = (): void => {};
 
 export interface SyncDebugHelpers {
   timeline: (maxEvents?: number) => TimelineEvent[];

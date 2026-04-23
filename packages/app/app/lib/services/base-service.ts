@@ -8,10 +8,17 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity, SyncStatus } from "@avileo/shared";
 import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
-import { VALID_TABLES } from "../sync/generated/applier";
+import { VALID_TABLES } from "@avileo/drizzle-sync/pglite";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
 import { formatCurrency, formatWeight } from "~/lib/utils";
+
+export interface SyncClientEngineLike {
+  getPg(): PGlite;
+  getDb(): ReturnType<typeof drizzle>;
+  getSyncOperations(): SyncWritePort | null;
+  getConfig(): { tenantId: string; userId: string };
+}
 
 /**
  * Entity types referenced by frontend base services.
@@ -81,24 +88,38 @@ function validateTableName(tableName: string): string {
  * for all entity services
  */
 export abstract class BaseService {
-  protected readonly pg: PGlite;
-  protected readonly db: ReturnType<typeof drizzle>;
-  protected readonly syncService: SyncWritePort;
-  protected readonly businessId: string;
-  protected readonly businessUserId: string;
+  protected readonly engine: SyncClientEngineLike;
 
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    this.pg = pg;
-    this.db = db;
-    this.syncService = syncService;
-    this.businessId = businessId;
-    this.businessUserId = businessUserId;
+  constructor(engine: SyncClientEngineLike) {
+    this.engine = engine;
+  }
+
+  protected get pg(): PGlite {
+    return this.engine.getPg();
+  }
+
+  protected get db(): ReturnType<typeof drizzle> {
+    return this.engine.getDb();
+  }
+
+  protected get syncService(): SyncWritePort {
+    return this.engine.getSyncOperations()!;
+  }
+
+  protected get tenantId(): string {
+    return this.engine.getConfig().tenantId;
+  }
+
+  protected get userId(): string {
+    return this.engine.getConfig().userId;
+  }
+
+  protected get businessId(): string {
+    return this.tenantId;
+  }
+
+  protected get businessUserId(): string {
+    return this.userId;
   }
 
   /**

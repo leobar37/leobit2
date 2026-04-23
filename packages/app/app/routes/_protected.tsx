@@ -21,7 +21,7 @@ import {
   type ConflictData,
   type ConflictResolution,
 } from "~/components/sync/conflict-resolver";
-import { ServicesProvider } from "~/lib/sync/service-provider";
+import { registerAppServices } from "~/lib/sync/register-services";
 import { initDevTools } from "~/lib/debug/console";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { AppLayout } from "~/components/layout/app-layout";
@@ -30,14 +30,11 @@ import { useBusiness } from "~/hooks/use-business";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
-import { createSyncClientEngine, createLocalStorageCursorStorage } from "@avileo/drizzle-sync/client";
-import { SyncEngineProvider } from "~/lib/sync/engine-provider";
-import { createSyncEngineHttpClient } from "~/lib/sync/engine-http-adapter";
+import { createFetchHttpClient } from "@avileo/drizzle-sync/client";
+import { getDeviceId, getDeviceFingerprint } from "~/lib/sync";
 import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
-import { engineServiceEntities, onServicesReady } from "~/lib/sync/engine-service-factories";
-import { createAvileoDatabaseConfig } from "~/lib/sync/db-config";
-import { useSyncEngineInit } from "@avileo/drizzle-sync/react";
-import { applierConfig } from "~/lib/sync/generated/applier";
+import { createAvileoSyncEngine } from "~/lib/sync/generated/engine";
+import { useSyncInit } from "@avileo/drizzle-sync/react";
 
 function OutletWithLog() {
   useAutoFileUploadProcessor();
@@ -63,34 +60,28 @@ function ServicesProviderWrapper({
     const businessUserId = getStoredBusinessUserId() || "";
 
     try {
-      return createSyncClientEngine({
-        databaseConfig: createAvileoDatabaseConfig(),
+      const eng = createAvileoSyncEngine({
         tenantId: businessId,
-        tenantColumn: "business_id",
         userId: businessUserId,
         authToken: token,
         apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
-        httpClient: createSyncEngineHttpClient(businessId),
-        applierConfig,
-        entities: engineServiceEntities,
-        cursorStorage: createLocalStorageCursorStorage(),
-        sync: {
-          pushIntervalMs: 5000,
-          pullIntervalMs: 10000,
-          enableAutoSync: false,
-        },
-        callbacks: {
-          onServicesReady,
-        },
+        httpClient: createFetchHttpClient({
+          baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
+          getAuthToken: () => token,
+          tenantHeader: { key: "x-business-id", value: () => businessId },
+          getDeviceId: () => getDeviceId(),
+          getFingerprint: () => getDeviceFingerprint(),
+        }),
       });
+      registerAppServices(eng);
+      return eng;
     } catch (err) {
       console.error("[ServicesProviderWrapper] Failed to create SyncClientEngine:", err);
       return null;
     }
   }, [businessId, token]);
 
-  // Initialize engine automatically with timeout and schema error detection
-  const { isReady, isLoading: isEngineLoading, error, schemaError, hasInitTimeout } = useSyncEngineInit(engine, { timeoutMs: 30000 });
+  const { isReady, isLoading: isEngineLoading, error, schemaError, hasInitTimeout, progress, totalChanges } = useSyncInit(engine, { timeoutMs: 30000 });
 
   useEffect(() => {
     if (!engine || !isReady) {
@@ -106,19 +97,14 @@ function ServicesProviderWrapper({
       return;
     }
 
-    const purchaseService = engine.getService<import("~/lib/services/purchase-service").PurchaseService>("purchases");
-    const supplierService = engine.getService<import("~/lib/services/supplier-service").SupplierService>("suppliers");
-
-    if (purchaseService && supplierService) {
-      addServiceDebugHelpers({
-        purchaseService,
-        supplierService,
-        syncService,
-        productService: engine.getService<import("~/lib/services/product-service").ProductService>("products"),
-        customerService: engine.getService<import("~/lib/services/customer-service").CustomerService>("customers"),
-        saleService: engine.getService<import("~/lib/services/sale-service").SaleService>("sales"),
-      });
-    }
+    addServiceDebugHelpers({
+      purchaseService: engine.getInstance("purchases"),
+      supplierService: engine.getInstance("suppliers"),
+      syncService,
+      productService: engine.getInstance("products"),
+      customerService: engine.getInstance("customers"),
+      saleService: engine.getInstance("sales"),
+    });
   }, [engine, isReady]);
 
   // ALL hooks must be called before any conditional returns (Rules of Hooks)
@@ -215,22 +201,22 @@ function ServicesProviderWrapper({
     }
   };
 
-  const wrapWithEngine = (content: React.ReactNode) => {
-    if (!engine) return <>{content}</>;
-    return (
-      <SyncEngineProvider engine={engine} startOnMount={false}>
-        {content}
-      </SyncEngineProvider>
-    );
-  };
-
-  // Engine initializing (database creation in progress)
+  // Engine initializing (database creation + staged sync in progress)
   if (!engine || isEngineLoading) {
-    return wrapWithEngine(
+    const progressMessage = progress?.message || "Inicializando base de datos local...";
+    const progressStage = progress?.stage || "";
+    const changesCount = totalChanges > 0 ? `(${totalChanges} registros)` : "";
+
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-sm text-muted-foreground">Inicializando base de datos local...</p>
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">{progressMessage}</p>
+            {changesCount && (
+              <p className="text-xs text-muted-foreground/70">{changesCount}</p>
+            )}
+          </div>
         </div>
         <SyncDevTools enabled={import.meta.env.DEV} />
       </>
@@ -239,7 +225,7 @@ function ServicesProviderWrapper({
 
   // Engine init timeout
   if (hasInitTimeout) {
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
@@ -276,7 +262,7 @@ function ServicesProviderWrapper({
   }
 
   if (schemaError) {
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4">
           <div className="text-center space-y-2">
@@ -303,7 +289,7 @@ function ServicesProviderWrapper({
   }
 
   if (error) {
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4">
           <div className="text-center space-y-2">
@@ -326,15 +312,14 @@ function ServicesProviderWrapper({
 
   // Offline mode: we have cached business data from persister but API failed or we're offline
   if (isOfflineMode && business) {
-    const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
-    return wrapWithEngine(
-      <ServicesProvider businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
+    return (
+      <>
         <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
           <WifiOff className="h-3 w-3" />
           Modo offline - datos del negocio en cache
         </div>
         {children}
-      </ServicesProvider>
+      </>
     );
   }
 
@@ -342,19 +327,18 @@ function ServicesProviderWrapper({
   if (hasTimedOut && (isBusinessLoading || !business)) {
     // If we have business data from persister, use it even on timeout
     if (business) {
-      const businessUserId = business.businessUserId || getStoredBusinessUserId() || "";
-      return wrapWithEngine(
-        <ServicesProvider businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
+      return (
+        <>
           <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
             <WifiOff className="h-3 w-3" />
             Modo offline - datos del negocio en cache
           </div>
           {children}
-        </ServicesProvider>
+        </>
       );
     }
 
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
@@ -395,7 +379,7 @@ function ServicesProviderWrapper({
 
   if (businessError) {
     // API error and no cached data - show error UI
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
@@ -437,7 +421,7 @@ function ServicesProviderWrapper({
   }
 
   if (isBusinessLoading || !business) {
-    return wrapWithEngine(
+    return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -453,13 +437,7 @@ function ServicesProviderWrapper({
     );
   }
 
-  const businessUserId = business.businessUserId;
-
-  return wrapWithEngine(
-    <ServicesProvider businessId={businessId} businessUserId={businessUserId} authToken={token} engine={engine || undefined}>
-      {children}
-    </ServicesProvider>
-  );
+  return <>{children}</>;
 }
 
 export default function ProtectedLayout() {

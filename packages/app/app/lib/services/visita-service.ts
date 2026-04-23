@@ -4,12 +4,10 @@
  * Extends generated VisitasService to provide enriched return types with customer data
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { VisitasService } from "~/lib/sync/generated/services";
 import { SyncStatus, visitas, customers, type Visita } from "@avileo/shared";
 import { eq, desc } from "drizzle-orm";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types for backward compatibility
 export type { CreateVisitasInput, UpdateVisitasInput } from "~/lib/sync/generated/services";
@@ -45,14 +43,8 @@ export interface VisitaWithCustomer extends Omit<Visita, "customerId"> {
  * Extends generated VisitasService to provide enriched return types with customer data
  */
 export class VisitaService extends VisitasService {
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
   }
 
   /**

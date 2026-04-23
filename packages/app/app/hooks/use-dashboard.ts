@@ -5,7 +5,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-import { useSaleService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { SaleService } from "~/lib/services/sale-service";
 import type { PeriodType } from "~/components/dashboard/period-selector";
 
 export interface PeriodParams {
@@ -46,7 +47,8 @@ export interface ChartData {
  * Sales stats - hybrid query (API with local fallback)
  */
 export function useSalesStats(period: PeriodParams) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
 
   return useQuery({
     queryKey: ["dashboard", "sales-stats", period],
@@ -90,7 +92,8 @@ export function useSalesStats(period: PeriodParams) {
  * Debtors summary - hybrid query (API with local fallback)
  */
 export function useDebtorsSummary() {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
 
   return useQuery({
     queryKey: ["dashboard", "debtors-summary"],
@@ -120,7 +123,8 @@ export function useDebtorsSummary() {
  * Sales chart - hybrid query (API with local fallback)
  */
 export function useSalesChart(period: PeriodParams) {
-  const saleService = useSaleService();
+  const engine = useSyncEngine();
+  const saleService = engine.use("sales", () => new SaleService(engine));
 
   return useQuery({
     queryKey: ["dashboard", "sales-chart", period],

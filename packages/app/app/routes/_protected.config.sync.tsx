@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSyncEngine, useSyncEngineReady, useSyncState } from "@avileo/drizzle-sync/react";
+import { useSyncEngine, useSyncEngineReady, useSyncState, useSyncOperations } from "@avileo/drizzle-sync/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +17,8 @@ import {
   Server,
 } from "lucide-react";
 import { useSync } from "~/components/sync/sync-status";
-import { useSyncService } from "~/lib/sync/engine-provider";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useToast } from "~/hooks/use-toast";
-import { runManualSync } from "~/lib/sync/manual-sync";
 import { useDevToolsData } from "@avileo/drizzle-sync/react/devtools";
 import { TablesTab, OperationsTab, DLQTab } from "@avileo/drizzle-sync/react/devtools";
 
@@ -30,7 +28,7 @@ export default function SyncAdminPage() {
   const engineOnline = engine.getStatus().isOnline;
   const { isSyncing } = useSyncState();
   const { isOnline, actualIsOnline } = useSync();
-  const syncService = useSyncService();
+  const syncService = useSyncOperations();
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { toast } = useToast();
   const [isForceSyncing, setIsForceSyncing] = useState(false);
@@ -43,7 +41,11 @@ export default function SyncAdminPage() {
     if (!isInitialized) return;
     setIsForceSyncing(true);
     try {
-      await runManualSync({ actualOnline: actualIsOnline });
+      if (!actualIsOnline) {
+        toast.error("No hay conexión a internet");
+        return;
+      }
+      await engine.triggerSync();
       toast.success("Sincronización iniciada");
     } catch (error) {
       console.error("Sync failed:", error);

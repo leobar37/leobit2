@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { usePaymentService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { PaymentService } from "~/lib/services/payment-service";
 import type { Customer } from "@avileo/shared";
 
 export interface AccountsReceivableItem {
@@ -24,7 +25,8 @@ export interface AccountsReceivablePage {
 }
 
 export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
-  const paymentService = usePaymentService();
+  const engine = useSyncEngine();
+  const paymentService = engine.use("payments", () => new PaymentService(engine));
 
   const limit = filters.limit ?? (filters.customerId ? 1 : 100);
   const offset = filters.offset ?? 0;
@@ -67,7 +69,8 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
 export function useTotalAccountsReceivable(
   filters: AccountsReceivableFilters = {}
 ) {
-  const paymentService = usePaymentService();
+  const engine = useSyncEngine();
+  const paymentService = engine.use("payments", () => new PaymentService(engine));
 
   const { data: totalDebt = 0, isLoading } = useQuery({
     queryKey: ["accounts-receivable", "total", filters],

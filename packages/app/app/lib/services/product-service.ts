@@ -7,12 +7,10 @@
  * Variant management methods preserved for admin operations.
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
+import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc } from "drizzle-orm";
 import { ProductsService, ProductVariantsService } from "~/lib/sync/generated/services";
 import { SyncStatus, products, productVariants, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
-import type { SyncWritePort } from "@avileo/drizzle-sync/client";
 
 // Re-export types from @avileo/shared for backward compatibility
 export type Product = SharedProduct;
@@ -78,15 +76,9 @@ export interface UpdateVariantInput {
 export class ProductService extends ProductsService {
   private variantsService: ProductVariantsService;
 
-  constructor(
-    pg: PGlite,
-    db: ReturnType<typeof drizzle>,
-    syncService: SyncWritePort,
-    businessId: string,
-    businessUserId: string
-  ) {
-    super(pg, db, syncService, businessId, businessUserId);
-    this.variantsService = new ProductVariantsService(pg, db, syncService, businessId, businessUserId);
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
+    this.variantsService = new ProductVariantsService(engine);
   }
 
   // ==================== ADDITIONAL READ METHODS ====================

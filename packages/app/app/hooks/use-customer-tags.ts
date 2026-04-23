@@ -4,7 +4,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCustomerTagService, useTagService } from "~/lib/sync/engine-provider";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import type { CustomerTag, Tag } from "@avileo/shared";
 
 export const customerTagsKeys = {
@@ -16,7 +17,8 @@ export const customerTagsKeys = {
  * Get all tags for a specific customer
  */
 export function useCustomerTags(customerId: string | null) {
-  const customerTagService = useCustomerTagService();
+  const engine = useSyncEngine();
+  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
 
   return useQuery({
     queryKey: customerId ? customerTagsKeys.customerTags(customerId) : ["customer-tags", "none"],
@@ -41,7 +43,8 @@ export function useCustomerTagIds(customerId: string | null) {
  * Add a tag to a customer
  */
 export function useAddCustomerTag() {
-  const customerTagService = useCustomerTagService();
+  const engine = useSyncEngine();
+  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -59,7 +62,8 @@ export function useAddCustomerTag() {
  * Remove a tag from a customer
  */
 export function useRemoveCustomerTag() {
-  const customerTagService = useCustomerTagService();
+  const engine = useSyncEngine();
+  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -77,7 +81,8 @@ export function useRemoveCustomerTag() {
  * Assign tags to a customer (replaces all existing tags)
  */
 export function useAssignCustomerTags() {
-  const customerTagService = useCustomerTagService();
+  const engine = useSyncEngine();
+  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -6,11 +6,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { eq } from "drizzle-orm";
+import type { SyncClientEngineLike } from "./base-service";
 import { DistribucionService, type CreateDistribucionInput, type CreateDistribucionItemInput } from "./distribucion-service";
 import type { Distribucion } from "@avileo/shared";
 
-// Mock SyncService
 const mockSyncService = {
   enqueue: vi.fn().mockResolvedValue("op-1"),
   processPending: vi.fn().mockResolvedValue({ processed: 0, failed: 0, conflicts: 0 }),
@@ -18,18 +17,15 @@ const mockSyncService = {
   getConflicts: vi.fn().mockResolvedValue([]),
 };
 
-// Mock PGlite
 const createMockPg = () => {
-  const mockPg = {
+  return {
     query: vi.fn().mockResolvedValue({ rows: [] }),
     exec: vi.fn().mockResolvedValue(undefined),
   } as unknown as PGlite;
-  return mockPg;
 };
 
-// Mock Drizzle with proper chainable API
 const createMockDb = () => {
-  const mockDb = {
+  return {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -41,9 +37,22 @@ const createMockDb = () => {
     set: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue([]),
     returning: vi.fn().mockResolvedValue([]),
-  };
-  return mockDb as unknown as ReturnType<typeof drizzle>;
+  } as unknown as ReturnType<typeof drizzle>;
 };
+
+function createMockEngine(
+  pg: PGlite,
+  db: ReturnType<typeof drizzle>,
+  businessId: string,
+  businessUserId: string,
+): SyncClientEngineLike {
+  return {
+    getPg: () => pg,
+    getDb: () => db,
+    getSyncOperations: () => mockSyncService as any,
+    getConfig: () => ({ tenantId: businessId, userId: businessUserId }),
+  };
+}
 
 describe("DistribucionService", () => {
   let service: DistribucionService;
@@ -57,7 +66,7 @@ describe("DistribucionService", () => {
     vi.clearAllMocks();
     mockPg = createMockPg();
     mockDb = createMockDb();
-    service = new DistribucionService(mockPg, mockDb, mockSyncService as any, businessId, businessUserId);
+    service = new DistribucionService(createMockEngine(mockPg, mockDb, businessId, businessUserId));
   });
 
   describe("createWithItems", () => {

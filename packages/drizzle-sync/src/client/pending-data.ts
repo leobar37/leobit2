@@ -127,6 +127,22 @@ export async function importPendingData(
 }
 
 /**
+ * Build a PendingDataConfig from a sync table registry (auto-generated).
+ * Uses the registry to determine tables, ordering, and dependencies.
+ */
+export function buildPendingDataFromRegistry(
+  registry: Array<{ name: string; entityType: string; dependsOn: string[] }>
+): PendingDataConfig {
+  return {
+    tables: registry.map((entry) => ({
+      name: entry.name,
+      where: "sync_status IN ('pending', 'error')",
+      dependsOn: entry.dependsOn.length > 0 ? entry.dependsOn : undefined,
+    })),
+  };
+}
+
+/**
  * Build a PendingDataConfig from table names
  */
 export function buildPendingDataConfig(

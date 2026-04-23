@@ -21,6 +21,10 @@ export { StagedPullCoordinator } from "./coordination-staged-pull-coordinator";
 
 // Infra
 export { createSqlExecutor, type SqlExecutor } from "./sql-executor";
+export { SyncAutoRunner } from "./auto-runner";
+export { SyncEntityStatusUpdater } from "./entity-status-updater";
+export { SyncOperationLifecycleService } from "./operation-lifecycle";
+export { SyncBatchProcessor } from "./batch-processor";
 
 // Config
 export {
@@ -43,6 +47,7 @@ export type {
   PullStatus,
 } from "./types";
 
+export { SyncMutex } from "./sync-mutex";
 export type { ISyncMutex } from "./sync-mutex";
 
 // Change applier types

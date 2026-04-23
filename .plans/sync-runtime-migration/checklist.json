@@ -9,46 +9,88 @@
       "id": "T-001",
       "title": "Extract generic sync infrastructure to framework",
       "file": "tasks/01-extract-infrastructure-services.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "foundation",
       "dependencies": [],
-      "requirements": ["FR-001", "FR-002", "FR-003", "FR-007", "NFR-002", "NFR-003"]
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-007",
+        "NFR-002",
+        "NFR-003"
+      ]
     },
     {
       "id": "T-002",
       "title": "Migrate operation lifecycle service to framework",
       "file": "tasks/02-migrate-operation-lifecycle.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "foundation",
-      "dependencies": ["T-001"],
-      "requirements": ["FR-004", "FR-009", "NFR-002", "NFR-003"]
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-009",
+        "NFR-002",
+        "NFR-003"
+      ]
     },
     {
       "id": "T-003",
       "title": "Complete PushSyncService implementation",
       "file": "tasks/03-complete-push-service.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "core",
-      "dependencies": ["T-001", "T-002"],
-      "requirements": ["FR-001", "FR-004", "FR-006", "NFR-002", "NFR-003"]
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-004",
+        "FR-006",
+        "NFR-002",
+        "NFR-003"
+      ]
     },
     {
       "id": "T-004",
       "title": "Migrate batch processor to framework",
       "file": "tasks/04-migrate-batch-processor.md",
-      "status": "pending",
+      "status": "completed",
       "phase": "core",
-      "dependencies": ["T-001", "T-002"],
-      "requirements": ["FR-005", "FR-007", "FR-008", "NFR-002", "NFR-003"]
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-005",
+        "FR-007",
+        "FR-008",
+        "NFR-002",
+        "NFR-003"
+      ]
     },
     {
       "id": "T-005",
       "title": "Deprecate legacy app sync services",
       "file": "tasks/05-deprecate-legacy-services.md",
-      "status": "pending",
+      "status": "in_progress",
       "phase": "cleanup",
-      "dependencies": ["T-001", "T-002", "T-003", "T-004"],
-      "requirements": ["FR-010", "NFR-001", "NFR-003", "NFR-004"]
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-010",
+        "NFR-001",
+        "NFR-003",
+        "NFR-004"
+      ]
     },
     {
       "id": "T-006",
@@ -56,8 +98,16 @@
       "file": "tasks/06-unit-tests-framework.md",
       "status": "pending",
       "phase": "testing",
-      "dependencies": ["T-001", "T-002", "T-003", "T-004"],
-      "requirements": ["FR-006", "NFR-002"]
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-006",
+        "NFR-002"
+      ]
     }
   ]
 }
