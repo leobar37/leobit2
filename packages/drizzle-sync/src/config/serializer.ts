@@ -149,6 +149,7 @@ export function serializeEntityConfig(config: EntitySyncConfig): SerializedEntit
       children: serializeChildRelations(config.relations?.children),
       parents: serializeParentRelations(config.relations?.parents),
     },
+    fileFields: config.fileFields,
     metadata: config.metadata,
   };
 }

@@ -119,11 +119,6 @@ export interface EnqueueParams {
   data: Record<string, unknown>;
   /** Optional unique key for idempotency (auto-generated if not provided) */
   idempotencyKey?: string;
-  /**
-   * Fast-path flag for hot paths.
-   * When true, skips precheck/coalescing lookup work for lower latency.
-   */
-  fastPath?: boolean;
 }
 
 /**

@@ -1,6 +1,6 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { api, extractData } from "~/lib/api-client";
-import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { CustomerGroupService } from "~/lib/services/customer-group-service";
 
 export interface BulkAssignGroupsInput {
   customerIds: string[];
@@ -9,16 +9,18 @@ export interface BulkAssignGroupsInput {
 
 export function useBulkAssignGroups() {
   const queryClient = useQueryClient();
+  const engine = useSyncEngine();
+  const customerGroupService = engine.use(
+    "customerGroups",
+    () => new CustomerGroupService(engine)
+  );
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async ({ customerIds, groupIds }: BulkAssignGroupsInput) => {
-      await Promise.all(
-        groupIds.map(async (groupId) => {
-          await api.groups({ id: groupId }).members.post({ customerIds });
-        })
-      );
+      for (const groupId of groupIds) {
+        await customerGroupService.addMembers(groupId, customerIds);
+      }
     },
-    offlineMessage: "Se requiere conexión a internet para asignar grupos",
     onSuccess: (_, { groupIds }) => {
       queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
       queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });

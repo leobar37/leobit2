@@ -331,7 +331,6 @@ export const volumeHandlers = [
         payload: Record<string, unknown>;
         localVersion: number;
         localTimestamp: string;
-        syncGroupId?: string;
       }>;
     };
 

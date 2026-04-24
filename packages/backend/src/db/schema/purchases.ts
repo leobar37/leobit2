@@ -44,7 +44,6 @@ export const purchases = pgTable(
     // Sync fields for offline-first support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
 
     // Version for optimistic locking (multi-device conflict detection)
     version: integer("version").notNull().default(1),
@@ -58,7 +57,6 @@ export const purchases = pgTable(
     index("idx_purchases_purchase_date").on(table.purchaseDate),
     index("idx_purchases_status").on(table.status),
     index("idx_purchases_receipt_image_id").on(table.receiptImageId),
-    index("idx_purchases_sync_group_id").on(table.syncGroupId),
   ]
 );
 
@@ -93,7 +91,6 @@ export const purchaseItems = pgTable(
     // Sync fields for offline-first support
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
 
     // Version for optimistic locking (multi-device conflict detection)
     version: integer("version").notNull().default(1),
@@ -107,7 +104,6 @@ export const purchaseItems = pgTable(
     index("idx_purchase_items_product_id").on(table.productId),
     index("idx_purchase_items_variant_id").on(table.variantId),
     index("idx_purchase_items_sync_status").on(table.syncStatus),
-    index("idx_purchase_items_sync_group_id").on(table.syncGroupId),
     index("idx_purchase_items_updated_at").on(table.updatedAt),
   ]
 );

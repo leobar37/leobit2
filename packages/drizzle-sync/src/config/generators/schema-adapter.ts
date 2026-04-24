@@ -32,6 +32,7 @@ export interface GeneratorEntityConfig {
     tenantColumn?: string;
   };
   fieldCodecs?: FieldCodecMap;
+  fileFields?: Record<string, { entity: "files" | "assets"; maxSize?: number; accept?: string[] }>;
 }
 
 export function isSerializedEntity(entity: GeneratorEntity): entity is SerializedEntity {
@@ -49,6 +50,7 @@ export function getGeneratorConfig(entity: GeneratorEntity): GeneratorEntityConf
       apiPath: entity.config.apiPath,
       tenancy: entity.config.tenancy,
       fieldCodecs: mapSerializedCodecs(entity.config.fieldCodecs),
+      fileFields: entity.config.fileFields,
     };
   }
 
@@ -61,6 +63,7 @@ export function getGeneratorConfig(entity: GeneratorEntity): GeneratorEntityConf
     apiPath: entity.apiPath,
     tenancy: entity.tenancy,
     fieldCodecs: entity.fieldCodecs,
+    fileFields: entity.fileFields,
   };
 }
 

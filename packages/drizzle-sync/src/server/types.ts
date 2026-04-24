@@ -24,7 +24,6 @@ export interface SyncOperationInput {
   payload: Record<string, unknown>;
   localVersion: number;
   localTimestamp: string;
-  syncGroupId?: string;
   correlationId?: string;
   deviceId?: string;
   sourceFingerprint?: string;
@@ -42,7 +41,6 @@ export interface GenericSyncOperationInput<TEntity extends string = string> {
   payload: Record<string, unknown>;
   localVersion: number;
   localTimestamp: string;
-  syncGroupId?: string;
   correlationId?: string;
   deviceId?: string;
   sourceFingerprint?: string;

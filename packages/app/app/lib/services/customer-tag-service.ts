@@ -155,7 +155,6 @@ export class CustomerTagService extends CustomerTagsService {
         });
 
         // FK references (customerId/tagId) in payload establish the relationship
-        // No syncGroupId needed - operations are independent per customer-tag pair
         await this.queueSync("create", id, {
           customerId,
           tagId,

@@ -140,7 +140,7 @@ export function create${pascalName}LocalHooks(
         entityId: id,
         operation: "create",
         data: { ...input, id },
-        fastPath: true,
+
       });
 
       return { id };
@@ -168,7 +168,7 @@ export function create${pascalName}LocalHooks(
         entityId: id,
         operation: "update",
         data: { ...input, id },
-        fastPath: true,
+
       });
 
       return { id };
@@ -191,7 +191,7 @@ export function create${pascalName}LocalHooks(
         entityId: id,
         operation: "delete",
         data: { id },
-        fastPath: true,
+
       });
     },
   };
@@ -205,16 +205,15 @@ export function create${pascalName}LocalHooks(
       ${userColumns.map((col) => `input.${camelCase(col.name)}`).join(",\n      ")}${tenantScoped ? ",\n      tenantId" : ""}
     ];
     await pg.query(\`\${insertSQL}\`, params);
-    await syncService.enqueue({
-      entity_type: "${entityType}",
-      entityId: id,
-      operation: "create",
-      data: { ...input, id },
-      fastPath: true,
-    });
-    return { id };
-  },
-  update: async (id, input, tenantId) => {
+      await syncService.enqueue({
+        entity_type: "${entityType}",
+        entityId: id,
+        operation: "create",
+        data: { ...input, id },
+      });
+      return { id };
+    },
+    update: async (id, input, tenantId) => {
     const updates = [${userColumns
       .map((col, i) => `${snakeCase(col.name)} = $${i + 2}`)
       .join(", ")}];
@@ -222,29 +221,27 @@ export function create${pascalName}LocalHooks(
       \`UPDATE ${tableName} SET \${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = ${"$" + (userColumns.length + 2)}` : ""}\`,
       [id, ...${userColumns.map((col) => `input.${camelCase(col.name)}`)}${tenantScoped ? ", tenantId" : ""}]
     );
-    await syncService.enqueue({
-      entity_type: "${entityType}",
-      entityId: id,
-      operation: "update",
-      data: { ...input, id },
-      fastPath: true,
-    });
-    return { id };
-  },
-  delete: async (id, tenantId) => {
+      await syncService.enqueue({
+        entity_type: "${entityType}",
+        entityId: id,
+        operation: "update",
+        data: { ...input, id },
+      });
+      return { id };
+    },
+    delete: async (id, tenantId) => {
     await pg.query(
       \`UPDATE ${tableName} SET sync_status = 'deleted' WHERE id = $1${tenantScoped ? ` AND ${tenantColumn} = $2` : ""}\`,
       [id${tenantScoped ? ", tenantId" : ""}]
     );
-    await syncService.enqueue({
-      entity_type: "${entityType}",
-      entityId: id,
-      operation: "delete",
-      data: { id },
-      fastPath: true,
-    });
-  },
-}`;
+      await syncService.enqueue({
+        entity_type: "${entityType}",
+        entityId: id,
+        operation: "delete",
+        data: { id },
+      });
+    },
+  }`;
 
   return {
     name: pascalName,
@@ -317,7 +314,7 @@ export function generateLocalFirstHooksWithChildren(
             entityId: childId,
             operation: "create",
             data: { ...childItem, id: childId, ${camelFkColumn}: parentId },
-            fastPath: true,
+    
           });
         }
       }`;
@@ -357,7 +354,7 @@ export function create${pascalName}LocalHooks(
         entityId: parentId,
         operation: "create",
         data: { ...parentInput, id: parentId },
-        fastPath: true,
+
       });${childCreateCode}
 
       return { id: parentId };
@@ -381,7 +378,7 @@ export function create${pascalName}LocalHooks(
         entityId: id,
         operation: "update",
         data: { ...input, id },
-        fastPath: true,
+
       });
 
       return { id };
@@ -401,7 +398,7 @@ export function create${pascalName}LocalHooks(
         entityId: id,
         operation: "delete",
         data: { id },
-        fastPath: true,
+
       });
     },
   };

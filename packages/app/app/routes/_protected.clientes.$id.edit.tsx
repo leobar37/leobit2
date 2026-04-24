@@ -3,8 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useParams, useNavigate } from "react-router";
 import { User, Loader2 } from "lucide-react";
-import { useCustomer } from "~/hooks/use-customer";
-import { useUpdateCustomer } from "~/hooks/use-customers-live";
+import { useCustomer, useUpdateCustomer } from "~/hooks/use-customers";
 import { Button } from "@/components/ui/button";
 import {
   Card,

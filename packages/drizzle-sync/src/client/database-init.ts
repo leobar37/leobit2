@@ -17,6 +17,7 @@ import {
   type PendingDataConfig,
   type PendingTableData,
 } from "./pending-data";
+import type { StorageAdapter } from "./storage/storage";
 
 const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
 
@@ -42,6 +43,8 @@ export interface DatabaseInitConfig {
   versionKey?: string;
   /** Optional: Storage implementation (default: localStorage) */
   storage?: Storage;
+  /** Optional: StorageAdapter for unified key management (takes precedence over storage/versionKey) */
+  storageAdapter?: StorageAdapter;
   /** Optional: Force reset flag key in storage */
   forceResetKey?: string;
   /** Optional: Callback before database reset */
@@ -166,18 +169,51 @@ async function doInit(config: DatabaseInitConfig): Promise<DatabaseInitResult> {
     pendingDataConfig,
     versionKey = "drizzle_sync_schema_hash",
     storage = typeof localStorage !== "undefined" ? localStorage : undefined,
+    storageAdapter,
     forceResetKey = "DRIZZLE_SYNC_FORCE_RESET",
   } = config;
 
+  // Use StorageAdapter for key resolution when available
+  const getStorageValue = (kind: "schemaHash" | "forceReset"): string | null => {
+    if (storageAdapter) {
+      if (kind === "schemaHash") return storageAdapter.getByKind("schemaHash");
+      if (kind === "forceReset") return storageAdapter.getByKind("forceReset");
+    }
+    // Legacy fallback
+    if (kind === "schemaHash") return storage?.getItem(versionKey) ?? null;
+    if (kind === "forceReset") return storage?.getItem(forceResetKey) ?? null;
+    return null;
+  };
+
+  const setStorageValue = (kind: "schemaHash" | "forceReset", value: string): void => {
+    if (storageAdapter) {
+      if (kind === "schemaHash") { storageAdapter.setByKind("schemaHash", value); return; }
+      if (kind === "forceReset") { storageAdapter.setByKind("forceReset", value); return; }
+    }
+    // Legacy fallback
+    if (kind === "schemaHash") { storage?.setItem(versionKey, value); return; }
+    if (kind === "forceReset") { storage?.setItem(forceResetKey, value); return; }
+  };
+
+  const removeStorageValue = (kind: "schemaHash" | "forceReset"): void => {
+    if (storageAdapter) {
+      if (kind === "schemaHash") { storageAdapter.removeByKind("schemaHash"); return; }
+      if (kind === "forceReset") { storageAdapter.removeByKind("forceReset"); return; }
+    }
+    // Legacy fallback
+    if (kind === "schemaHash") { storage?.removeItem(versionKey); return; }
+    if (kind === "forceReset") { storage?.removeItem(forceResetKey); return; }
+  };
+
   // Check for force reset
-  const forceReset = storage?.getItem(forceResetKey) === "true";
+  const forceReset = getStorageValue("forceReset") === "true";
   if (forceReset) {
-    storage?.removeItem(forceResetKey);
+    removeStorageValue("forceReset");
   }
 
   // Compute schema hash
   const currentHash = await computeSchemaHash(schemaSql);
-  const storedHash = storage?.getItem(versionKey) ?? "";
+  const storedHash = getStorageValue("schemaHash") ?? "";
   const needsReset = forceReset || storedHash !== currentHash;
 
   let pendingData: PendingTableData[] | null = null;
@@ -215,7 +251,7 @@ async function doInit(config: DatabaseInitConfig): Promise<DatabaseInitResult> {
   }
 
   // Save hash before init to prevent infinite loops
-  storage?.setItem(versionKey, currentHash);
+  setStorageValue("schemaHash", currentHash);
 
   // Create fresh instance
   const pg = await createPgliteInstance(dataDir, { locateFile });

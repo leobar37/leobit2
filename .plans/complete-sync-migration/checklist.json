@@ -1,0 +1,51 @@
+{
+  "plan": "complete-sync-migration",
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Migrar useDeleteSale a sync engine",
+      "status": "pending",
+      "priority": "high",
+      "requirements": ["FR-001"],
+      "file": "tasks/T-001-migrate-use-delete-sale.md",
+      "dependsOn": []
+    },
+    {
+      "id": "T-002",
+      "title": "Agregar guardas offline a distribuciones (online-only intencional)",
+      "status": "pending",
+      "priority": "medium",
+      "requirements": ["FR-002"],
+      "file": "tasks/T-002-add-offline-guards-distribuciones.md",
+      "dependsOn": []
+    },
+    {
+      "id": "T-003",
+      "title": "Migrar useBulkAssignGroups a sync engine",
+      "status": "pending",
+      "priority": "medium",
+      "requirements": ["FR-003"],
+      "file": "tasks/T-003-migrate-bulk-assign-groups.md",
+      "dependsOn": []
+    },
+    {
+      "id": "T-004",
+      "title": "Limpieza de codigo legacy (clientes)",
+      "status": "pending",
+      "priority": "low",
+      "requirements": ["FR-004"],
+      "file": "tasks/T-004-cleanup-legacy-code.md",
+      "dependsOn": ["T-001", "T-002", "T-003"]
+    },
+    {
+      "id": "T-005",
+      "title": "Evaluar SaleService con generated service",
+      "status": "pending",
+      "priority": "medium",
+      "requirements": ["FR-005"],
+      "file": "tasks/T-005-evaluate-sale-service-generated.md",
+      "dependsOn": []
+    }
+  ]
+}

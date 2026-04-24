@@ -82,7 +82,6 @@ interface EnqueueParams {
   operation: SyncOperationType;
   data: Record<string, unknown>;
   idempotencyKey?: string;
-  fastPath?: boolean;
 }
 
 interface BatchSyncResponse {

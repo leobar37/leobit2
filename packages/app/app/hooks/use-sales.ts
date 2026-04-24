@@ -413,10 +413,9 @@ export function useUpdateSale() {
   });
 }
 
-import { api } from "~/lib/api-client";
-
 /**
- * Delete a draft sale (hard delete) or processed sale (soft delete)
+ * Delete a draft sale (hard delete) or cancel a processed sale (soft delete)
+ * All operations go through the sync engine
  */
 export function useDeleteSale() {
   const engine = useSyncEngine();
@@ -425,16 +424,12 @@ export function useDeleteSale() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }): Promise<void> => {
-      // Draft sales: hard delete locally
-      // Processed sales: soft delete via API
       if (status === "draft") {
+        // Hard delete for drafts
         return saleService.delete(id);
       } else {
-        // Call backend API for soft delete
-        const { error } = await api.sales({ id }).delete();
-        if (error) {
-          throw new Error(String(error.value));
-        }
+        // Soft delete (cancel) for processed sales
+        return saleService.cancel(id, "Cancelado por el usuario");
       }
     },
     onSuccess: (_, { id }) => {

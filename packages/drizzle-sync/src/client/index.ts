@@ -81,7 +81,26 @@ export {
 } from "./pending-data";
 
 // Cursor storage
+/** @deprecated Use createStorageAdapter() from ./storage instead */
 export { createLocalStorageCursorStorage } from "./local-storage-cursor";
+
+// Storage abstraction
+export {
+  StorageAdapter,
+  createStorageAdapter,
+  createLocalStorageBackend,
+  createNoOpStorage,
+  createMemoryStorage,
+  resolveStorageKey,
+} from "./storage";
+
+export type {
+  IKVStorage,
+  StorageKeyConfig,
+  StorageKeyKind,
+  LogoutCleanupConfig,
+  StorageConfig,
+} from "./storage";
 
 // Fetch HTTP client
 export {
@@ -110,3 +129,20 @@ export {
   noOpSyncEventEmitter,
   createSyncEventEmitter,
 } from "../core/sync-events";
+
+// File upload service
+export {
+  FileUploadServiceImpl,
+  getFileUploadService,
+  resetFileUploadService,
+  saveTemp,
+  uploadFile,
+  isUploaded,
+  getTemp,
+  removeTemp,
+  getPendingUploads,
+  clearAll,
+  type FileUploadMetadata,
+  type PendingFileUpload,
+  type FileUploadResult,
+} from "./file-upload-service";

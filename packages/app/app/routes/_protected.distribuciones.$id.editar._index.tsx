@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 import { useState } from "react";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,8 @@ import { useToastError } from "~/hooks/use-toast-error";
 import { Loader2 } from "lucide-react";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useBusiness } from "@/hooks/use-business";
+import { useSync } from "~/components/sync/sync-status";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function EditarDistribucionPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,7 @@ export default function EditarDistribucionPage() {
   const closeMutation = useCloseDistribucion();
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  const { isOnline } = useSync();
   const [isCloseDrawerOpen, setIsCloseDrawerOpen] = useState(false);
   const [notaCierre, setNotaCierre] = useState("");
 
@@ -130,24 +133,39 @@ export default function EditarDistribucionPage() {
           />
           
           {isActive && isAdmin && (
-            <Button
-              variant="outline"
-              className="w-full mt-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-              onClick={() => setIsCloseDrawerOpen(true)}
-              disabled={closeMutation.isPending}
-            >
-              {closeMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Cerrando...
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4 mr-2" />
-                  Cerrar Distribución
-                </>
+            <>
+              {!isOnline && (
+                <Alert variant="destructive" className="mt-4">
+                  <WifiOff className="h-4 w-4" />
+                  <AlertDescription>
+                    Se requiere conexión a internet para cerrar una distribución.
+                  </AlertDescription>
+                </Alert>
               )}
-            </Button>
+              <Button
+                variant="outline"
+                className="w-full mt-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setIsCloseDrawerOpen(true)}
+                disabled={closeMutation.isPending || !isOnline}
+              >
+                {closeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Cerrando...
+                  </>
+                ) : !isOnline ? (
+                  <>
+                    <WifiOff className="h-4 w-4 mr-2" />
+                    Sin conexión
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Cerrar Distribución
+                  </>
+                )}
+              </Button>
+            </>
           )}
           
           <Button

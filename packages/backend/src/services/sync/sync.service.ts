@@ -32,6 +32,7 @@ import {
   createPurchaseItemHandler,
   createAbonoHandler,
   createDistribucionItemHandler,
+  createFileHandler,
 } from "./handlers/registry";
 import { SaleSyncHandler } from "./handlers/SaleSyncHandler";
 import { DistribucionSyncHandler } from "./handlers/DistribucionSyncHandler";
@@ -172,6 +173,7 @@ export class SyncService {
     LibHandlerRegistry.register("purchase_items", () => createPurchaseItemHandler(deps));
     LibHandlerRegistry.register("abonos", () => createAbonoHandler(deps));
     LibHandlerRegistry.register("distribucion_items", () => createDistribucionItemHandler(deps));
+    LibHandlerRegistry.register("files", () => createFileHandler(deps));
 
     // ─── Explicit handlers (complex state machines, non-migratable) ───────────
     LibHandlerRegistry.register("sales", () => new SaleSyncHandler(deps.saleRepo, deps.paymentRepo));
@@ -190,7 +192,6 @@ export class SyncService {
     ctx: RequestContext,
     since?: Date,
     limit = 100,
-    _syncGroupId?: string,
     entityTypes?: string[],
     cursorOperationId?: string
   ) {
@@ -201,9 +202,6 @@ export class SyncService {
       eq(syncOperations.businessId, ctx.businessId),
       eq(syncOperations.status, "processed"),
     ];
-
-    // Note: syncGroupId filter is deprecated - FK-based ordering is now used instead
-    // The _syncGroupId parameter is kept for backward compatibility but ignored
 
     // Add since filter if provided
     // Use strict greater-than to avoid returning the same record in next page

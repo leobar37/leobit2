@@ -82,9 +82,6 @@ export const sales = pgTable(
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
 
-    // Sync group ID for grouping related operations (create, update, confirm)
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
-
     // Cancellation fields
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: uuid("cancelled_by").references(() => businessUsers.id),
@@ -170,7 +167,6 @@ export const saleItems = pgTable(
     // Sync status for offline-first
     syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -181,7 +177,6 @@ export const saleItems = pgTable(
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
     index("idx_sale_items_variant_id").on(table.variantId),
-    index("idx_sale_items_sync_group_id").on(table.syncGroupId),
   ]
 );
 

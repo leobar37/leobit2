@@ -1,11 +1,15 @@
 # Sync Group ID Deep Dive
 
-## Purpose
+> **MIGRATION PENDING**: `syncGroupId` is part of the old sync pattern. See [migration-v2.md](migration-v2.md) for the complete migration to FK-based ordering. The current app implementation still uses this pattern and needs migration.
+
+## Purpose (Old Pattern - Needs Migration)
 
 `syncGroupId` is a UUID that groups related operations together so they:
 1. Are sent to the server in a single batch request
 2. Are processed in correct dependency order (parent before children)
 3. Can be retried together if any operation fails
+
+**Target approach**: FK-based ordering using foreign key references in payloads (see migration-v2.md).
 
 ## Generation
 

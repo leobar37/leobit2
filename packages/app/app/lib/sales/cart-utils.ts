@@ -1,4 +1,4 @@
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import type { AddFromCalculatorParams, CartItem } from "~/lib/sales/types";
 

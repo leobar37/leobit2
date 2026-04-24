@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, uploadFile } from "~/lib/api-client";
-import {
-  queueFileUpload,
-  uploadFileNow,
-  isOnline,
-  type PendingFileUpload,
-} from "~/lib/file-queue";
+import { getFileUploadService } from "@avileo/drizzle-sync/client";
 
 export interface FileRecord {
   id: string;
@@ -68,7 +63,7 @@ export function useFile(id: string) {
 }
 
 export interface UploadFileOptions {
-  entityType: PendingFileUpload["entityType"];
+  entityType: string;
   entityId?: string;
   fieldName: string;
 }
@@ -83,32 +78,34 @@ export function useUploadFile(options?: UploadFileOptions) {
         throw new Error(validationError);
       }
 
-      if (!isOnline()) {
-        if (!options) {
-          throw new Error("Offline file upload requires options");
-        }
-        const tempId = await queueFileUpload(file, options.entityType, {
-          entityId: options.entityId,
-          fieldName: options.fieldName,
-        });
-        return {
-          id: tempId,
-          filename: file.name,
-          mimeType: file.type,
-          sizeBytes: file.size,
-          createdAt: new Date().toISOString(),
-          isOffline: true,
-        } as FileUploadResponse & { isOffline: boolean };
-      }
-
       return uploadFileNow(file);
     },
-    onSuccess: (data) => {
-      if (!(data as { isOffline?: boolean }).isOffline) {
-        queryClient.invalidateQueries({ queryKey: fileKeys.all });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: fileKeys.all });
     },
   });
+}
+
+export async function uploadFileNow(file: File): Promise<FileUploadResponse> {
+  const fileService = getFileUploadService();
+  const fileId = crypto.randomUUID();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/files/upload", {
+    method: "POST",
+    body: formData,
+    headers: {
+      "X-File-ID": fileId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 export function useDeleteFile() {

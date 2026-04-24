@@ -17,7 +17,7 @@ import {
   type Visita,
 } from "~/hooks/use-visitas";
 import { useCustomerGroups } from "~/hooks/use-grupos";
-import { isOnline } from "~/lib/file-queue/utils";
+import { isOnline } from "~/lib/is-online";
 import { useVisitaDialogs } from "~/hooks/use-visita-dialogs";
 import { VisitaCard } from "~/components/visitas/visita-card";
 import { SelectionDialog } from "~/components/visitas/selection-dialog";

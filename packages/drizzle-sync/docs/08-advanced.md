@@ -376,7 +376,6 @@ await syncService.enqueue({
   entityId: generateId(),
   operation: "create",
   data: { message: "User action" },
-  fastPath: true,  // Skip conflict check
 });
 ```
 

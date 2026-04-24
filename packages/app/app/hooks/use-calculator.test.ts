@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as React from "react";
 import { renderHook, act } from "@testing-library/react";
 import { useCalculator } from "./use-calculator";
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 
 // Mock product and variant

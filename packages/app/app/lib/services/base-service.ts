@@ -166,7 +166,6 @@ export abstract class BaseService {
     entityTypeOverride?: EntityType,
     entityVersion?: number,
     options?: {
-      fastPath?: boolean;
       idempotencyKey?: string;
     }
   ): Promise<void> {
@@ -184,7 +183,6 @@ export abstract class BaseService {
         ...(entityVersion !== undefined && { _localVersion: entityVersion }),
       },
       idempotencyKey: options?.idempotencyKey ?? generateId(),
-      fastPath: options?.fastPath,
     };
 
     await this.syncService.enqueue(params);

@@ -78,8 +78,8 @@ Two alias patterns are used interchangeably:
 // Examples from the codebase:
 import { cn } from "@/lib/utils";           // @ alias
 import { cn } from "~/lib/utils";           // ~ alias
-import type { Customer } from "~/lib/db/schema";
-import { useCustomers } from "~/hooks/use-customers-live";
+import type { Customer } from "@avileo/shared";
+import { useCustomers } from "~/hooks/use-customers";
 ```
 
 ### Naming Conventions
@@ -318,7 +318,7 @@ The `/frontend` skill has a more complete pattern in `patterns/create-modal.md` 
 - Use lucide-react icons (already in dependencies)
 - Follow the orange color scheme for brand consistency
 - Use Spanish for user-facing text (es-PE locale: "es-PE")
-- Import types from `~/lib/db/schema` for domain entities
+- Import types from `@avileo/shared` for domain entities
 - Use `Dialog` for confirmations and small forms
 - Use `Sheet` for large forms and detail views
 
@@ -341,7 +341,7 @@ The app is offline-first. Components should:
 
 ### Internal
 - `~/lib/utils` - `cn()` utility function
-- `~/lib/db/schema` - Database types (Customer, Product, Sale, etc.)
+- `@avileo/shared` - Database types (Customer, Product, Sale, etc.)
 - `~/hooks/*` - Custom hooks for data fetching (useCustomers, useDistribuciones, etc.)
 - `~/hooks/use-modal` - Jotai-based modal state (`createModal<T>()`)
 

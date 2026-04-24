@@ -52,6 +52,18 @@ export interface ParentRelationConfig {
 
 export type TenancyMode = "required" | "none";
 
+/**
+ * Configuration for file fields within an entity
+ */
+export interface FileFieldConfig {
+  /** Target entity for the file reference: 'files' for private files, 'assets' for public assets */
+  entity: "files" | "assets";
+  /** Maximum file size in bytes (default: 5MB) */
+  maxSize?: number;
+  /** Accepted MIME types (e.g., ["image/*", "application/pdf"]) */
+  accept?: string[];
+}
+
 export interface SyncTenancyConfig {
   tenantField?: string;
   tenantColumn?: string;
@@ -102,6 +114,9 @@ export interface EntitySyncConfig<TTable extends PgTable = PgTable> {
 
   // Multi-tenant partitioning policy
   tenancy?: EntityTenancyConfig;
+
+  // File fields configuration
+  fileFields?: Record<string, FileFieldConfig>;
 
   // Metadata adicional
   metadata?: Record<string, unknown>;
@@ -202,6 +217,7 @@ export interface EntityConfig<
   versionField?: string;
   conflictResolver: ConflictResolutionStrategy;
   hooks?: EntityHooks;
+  fileFields?: Record<string, FileFieldConfig>;
   metadata?: Record<string, unknown>;
 }
 

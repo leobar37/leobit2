@@ -95,7 +95,7 @@ test.describe("Offline Sales Performance Baseline", () => {
     await page.waitForTimeout(2000);
 
     const hasEnqueuePerf = perfLogs.some(
-      (line) => line.includes("enqueue") || line.includes("fastPath")
+      (line) => line.includes("enqueue")
     );
     expect(hasEnqueuePerf).toBeTruthy();
   });

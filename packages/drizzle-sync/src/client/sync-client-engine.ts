@@ -48,6 +48,9 @@ import type {
   SyncClientEngineStatus,
 } from "./types";
 import { initPgliteDatabase, disposeDatabase, resetDatabase } from "./database-init";
+import { createStorageAdapter, StorageAdapter } from "./storage/storage";
+import type { StorageConfig } from "./storage/types";
+import { getFileUploadService } from "./file-upload-service";
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
 
@@ -70,6 +73,7 @@ export class SyncClientEngine {
   private readonly mutex: ISyncMutex;
   private readonly services: Map<string, unknown> = new Map();
   private readonly instances: Map<string, unknown> = new Map();
+  private readonly storageAdapter: StorageAdapter;
 
   private state: EngineState = "uninitialized";
   private initPromise: Promise<void> | null = null;
@@ -87,10 +91,84 @@ export class SyncClientEngine {
     this.config = config;
     this.eventEmitter = config.eventEmitter ?? new SyncEventEmitter();
     this.mutex = config.mutex ?? new SyncMutex();
+    this.storageAdapter = config.storageAdapter ?? createStorageAdapter(config.storage);
   }
 
   getConfig(): Readonly<SyncClientEngineConfig> {
     return this.config;
+  }
+
+  getFileFields(entityName: string): Record<string, unknown> | undefined {
+    const metadata = this.config.metadata;
+    if (!metadata?.fileFields) return undefined;
+    return (metadata.fileFields as Record<string, Record<string, unknown>>)[entityName];
+  }
+
+  getFileField(entityName: string, fieldName: string): { entity: string; maxSize?: number; accept?: string[] } | undefined {
+    const entityFields = this.getFileFields(entityName);
+    if (!entityFields) return undefined;
+    return (entityFields as Record<string, { entity: string; maxSize?: number; accept?: string[] }>)[fieldName];
+  }
+
+  isFileField(entityName: string, fieldName: string): boolean {
+    return this.getFileField(entityName, fieldName) !== undefined;
+  }
+
+  /**
+   * Process file fields in a data object: detects File instances,
+   * saves them to temporary IndexedDB storage, and replaces them with
+   * generated CUID2 IDs ready for sync.
+   *
+   * Use this in custom hooks when you need more control than the
+   * auto-generated useCreate*/useUpdate* hooks provide.
+   *
+   * @example
+   * ```typescript
+   * const engine = useSyncEngine();
+   * const processed = await engine.processFileFields("abonos", {
+   *   amount: 100,
+   *   proofImageId: fileObject, // File instance
+   * });
+   * // processed.proofImageId → "clx..." (CUID2 ID)
+   * ```
+   */
+  async processFileFields<T extends Record<string, unknown>>(
+    entityName: string,
+    data: T
+  ): Promise<T> {
+    const fields = this.getFileFields(entityName);
+    if (!fields) return data;
+
+    const fileService = getFileUploadService();
+    const result = { ...data };
+
+    for (const [fieldName, config] of Object.entries(fields)) {
+      const fileConfig = config as { entity: string; maxSize?: number; accept?: string[] };
+      const value = result[fieldName];
+
+      if (value instanceof File) {
+        if (fileConfig.maxSize && value.size > fileConfig.maxSize) {
+          throw new Error(
+            `File "${fieldName}" exceeds maximum size of ${fileConfig.maxSize} bytes`
+          );
+        }
+
+        const { createId } = await import("@paralleldrive/cuid2");
+        const fileId = createId();
+
+        await fileService.saveTemp(fileId, value, {
+          entityType: fileConfig.entity,
+          fieldName,
+          filename: value.name,
+          mimeType: value.type,
+          sizeBytes: value.size,
+        });
+
+        (result as Record<string, unknown>)[fieldName] = fileId;
+      }
+    }
+
+    return result;
   }
 
   getPg(): PGlite {
@@ -125,7 +203,10 @@ export class SyncClientEngine {
   private async doInitialize(): Promise<void> {
     // Auto-initialize database if databaseConfig is provided
     if (this.config.databaseConfig) {
-      const result = await initPgliteDatabase(this.config.databaseConfig);
+      const result = await initPgliteDatabase({
+        ...this.config.databaseConfig,
+        storageAdapter: this.storageAdapter,
+      });
       this.pg = result.pg;
       this.db = result.db;
     } else if (this.config.pg && this.config.db) {
@@ -500,6 +581,14 @@ export class SyncClientEngine {
     return this.coordinator;
   }
 
+  /**
+   * Get the storage adapter for direct key-value access.
+   * Useful for cursor inspection, schema hash checks, or custom cleanup.
+   */
+  getStorageAdapter(): StorageAdapter {
+    return this.storageAdapter;
+  }
+
   async dispose(): Promise<void> {
     await this.stop();
     if (this.pg) {
@@ -522,7 +611,6 @@ export class SyncClientEngine {
   }): Promise<void> {
     const {
       redirectUrl = "/login",
-      preserveSession = false,
       reloadPage = false,
       clearStorageKeys = [],
     } = options ?? {};
@@ -538,14 +626,12 @@ export class SyncClientEngine {
       });
     }
 
-    // Clear specified localStorage keys
-    const keysToClear = [
-      ...clearStorageKeys,
-      ...(preserveSession ? [] : ["bearer_token", "current_business_id", "business_user_id"]),
-    ];
-    for (const key of keysToClear) {
-      localStorage.removeItem(key);
-    }
+    // Clear sync-related keys via StorageAdapter
+    this.storageAdapter.clearSyncKeys();
+
+    // Clear auth/session keys configured by consumer
+    const authKeys = this.config.storage?.logout?.authKeys ?? [];
+    this.storageAdapter.removeKeys([...authKeys, ...clearStorageKeys]);
 
     if (reloadPage) {
       window.location.reload();

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-22T20:47:09.603Z",
+  "generatedAt": "2026-04-23T18:53:35.705Z",
   "tenancy": {
     "tenantColumn": "business_id",
     "tenantField": "businessId"
@@ -366,7 +366,12 @@
           "cost_price"
         ],
         "conflictResolver": "version-based",
-        "relations": {}
+        "relations": {},
+        "fileFields": {
+          "image_id": {
+            "entity": "assets"
+          }
+        }
       },
       "graph": {
         "parents": [],
@@ -1947,6 +1952,11 @@
               "cascade": true
             }
           ]
+        },
+        "fileFields": {
+          "advance_proof_image_id": {
+            "entity": "files"
+          }
         }
       },
       "graph": {
@@ -2468,6 +2478,11 @@
               "cascade": true
             }
           ]
+        },
+        "fileFields": {
+          "receipt_image_id": {
+            "entity": "files"
+          }
         }
       },
       "graph": {
@@ -3267,7 +3282,12 @@
             "nullable": false
           }
         },
-        "relations": {}
+        "relations": {},
+        "fileFields": {
+          "proof_image_id": {
+            "entity": "files"
+          }
+        }
       },
       "graph": {
         "parents": [
@@ -3275,6 +3295,171 @@
         ],
         "children": [],
         "priority": 2
+      }
+    },
+    "files": {
+      "name": "files",
+      "entityType": "files",
+      "tableName": "files",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "gen_random_uuid()"
+          },
+          "primary": true,
+          "isEnum": false
+        },
+        {
+          "name": "business_id",
+          "dataType": "string",
+          "drizzleType": "PgUUID",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "filename",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 255
+        },
+        {
+          "name": "storage_path",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 500
+        },
+        {
+          "name": "mime_type",
+          "dataType": "string",
+          "drizzleType": "PgVarchar",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false,
+          "length": 100
+        },
+        {
+          "name": "size_bytes",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "created_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "deleted_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "deleted_by",
+          "dataType": "string",
+          "drizzleType": "PgText",
+          "notNull": false,
+          "hasDefault": false,
+          "default": null,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "sync_status",
+          "dataType": "enum",
+          "drizzleType": "PgEnumColumn",
+          "notNull": true,
+          "hasDefault": true,
+          "default": "synced",
+          "primary": false,
+          "isEnum": true,
+          "enumValues": [
+            "pending",
+            "synced",
+            "error"
+          ]
+        },
+        {
+          "name": "sync_attempts",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 0,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "version",
+          "dataType": "number",
+          "drizzleType": "PgInteger",
+          "notNull": true,
+          "hasDefault": true,
+          "default": 1,
+          "primary": false,
+          "isEnum": false
+        },
+        {
+          "name": "updated_at",
+          "dataType": "date",
+          "drizzleType": "PgTimestamp",
+          "notNull": true,
+          "hasDefault": true,
+          "default": {
+            "__type": "sql",
+            "value": "now()"
+          },
+          "primary": false,
+          "isEnum": false
+        }
+      ],
+      "config": {
+        "syncable": true,
+        "autoFields": true,
+        "conflictResolver": "version-based",
+        "relations": {}
+      },
+      "graph": {
+        "parents": [],
+        "children": [],
+        "priority": 1
       }
     }
   }

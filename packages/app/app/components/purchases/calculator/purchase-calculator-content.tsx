@@ -12,7 +12,7 @@ import { useVariantsByProduct } from "~/hooks/use-product-variants";
 import { useSmartCalculator } from "~/hooks/use-smart-calculator";
 import { CalculatorInput } from "~/components/calculator/calculator-input";
 import { formatCurrency, formatKilos, cn } from "~/lib/utils";
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import { usePurchaseForm } from "../purchase-form-context";
 import { useUpdatePurchaseItem, useAddPurchaseItem } from "~/hooks/use-purchases";

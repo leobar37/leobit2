@@ -137,8 +137,8 @@ describe("Cross-Milestone Validation", () => {
     });
   });
 
-  describe("VAL-CROSS-003: Queue integrity without syncGroupId", () => {
-    it("should use ENTITY_PRIORITIES for ordering (not syncGroupId)", () => {
+  describe("VAL-CROSS-003: Queue integrity with FK-based ordering", () => {
+    it("should use ENTITY_PRIORITIES for ordering", () => {
       // Verify that the sync system uses entity priorities for ordering
       // This is the FK-based approach where ordering is determined by
       // entity type priorities, not by syncGroupId grouping
@@ -159,10 +159,6 @@ describe("Cross-Milestone Validation", () => {
       expect(priorities.product_variants).toBe(2);
       expect(priorities.customer_tags).toBe(2);
       expect(priorities.customer_group_members).toBe(2);
-
-      // There should be no priority assigned to syncGroupId
-      // because syncGroupId is no longer used
-      expect(priorities).not.toHaveProperty("syncGroupId");
     });
 
     it("EnqueueParams interface should not have syncGroupId", async () => {

@@ -54,6 +54,12 @@ export interface SerializedColumn {
   length?: number;
 }
 
+export interface SerializedFileFieldConfig {
+  entity: "files" | "assets";
+  maxSize?: number;
+  accept?: string[];
+}
+
 export interface SerializedEntityConfig {
   syncable: boolean;
   fields?: string[];
@@ -71,6 +77,7 @@ export interface SerializedEntityConfig {
     children?: SerializedChildRelation[];
     parents?: SerializedParentRelation[];
   };
+  fileFields?: Record<string, SerializedFileFieldConfig>;
   metadata?: Record<string, unknown>;
 }
 

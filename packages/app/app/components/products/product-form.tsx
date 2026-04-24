@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
 interface ProductFormProps {
@@ -34,8 +34,8 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
     values: isEditing
       ? {
           name: product.name,
-          type: product.type,
-          unit: product.unit,
+          type: product.type as "pollo" | "huevo" | "otro",
+          unit: product.unit as "kg" | "unidad",
           basePrice: product.basePrice,
           isActive: product.isActive,
           imageId: product.imageId ?? undefined,

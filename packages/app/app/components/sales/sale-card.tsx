@@ -11,7 +11,7 @@ import { formatDeliveryCountdown, formatRecentDateTime } from "~/lib/date-utils"
 import { cn, formatCurrency } from "~/lib/utils";
 import { useDeleteSale } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import type { Sale } from "~/lib/db/schemas/sale";
+import type { Sale } from "~/lib/services/sale-service";
 
 interface SaleCardProps {
   sale: Sale;

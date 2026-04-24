@@ -233,7 +233,7 @@ export default function CustomersPage() {
             {customers.map((customer) => (
               <CustomerCard
                 key={customer.id}
-                customer={customer as unknown as import("~/lib/db/schema").Customer}
+                customer={customer}
                 compact
                 selectable
                 selected={selectedCustomerIds.has(customer.id)}

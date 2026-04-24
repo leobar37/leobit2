@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "plan": "file-sync-extension",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Configurar fileFields en EntitySyncConfig",
+      "file": "tasks/01-config-api.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Crear Handler de Sync para Entidad files",
+      "file": "tasks/02-backend-file-handler.md",
+      "status": "completed",
+      "phase": "backend",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-010"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Crear FileUploadService en Frontend",
+      "file": "tasks/03-frontend-file-upload-service.md",
+      "status": "completed",
+      "phase": "frontend-core",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-005",
+        "FR-007",
+        "NFR-002",
+        "NFR-003",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Generar Schemas Zod con Soporte de File",
+      "file": "tasks/04-schema-generation.md",
+      "status": "completed",
+      "phase": "frontend-core",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-002",
+        "NFR-005",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Generar Hooks con Procesamiento Automático de Archivos",
+      "file": "tasks/05-hook-generation.md",
+      "status": "completed",
+      "phase": "frontend-integration",
+      "dependencies": [
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-012",
+        "NFR-001",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Generar Componentes FormFileUpload y FormAssetPicker",
+      "file": "tasks/06-form-components.md",
+      "status": "completed",
+      "phase": "frontend-ui",
+      "dependencies": [
+        "T-004",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-008",
+        "FR-009"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Integrar Upload con Sync Engine (Orquestación Pre-Batch)",
+      "file": "tasks/07-sync-integration.md",
+      "status": "completed",
+      "phase": "frontend-integration",
+      "dependencies": [
+        "T-003",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-006",
+        "FR-011",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Migrar file-queue Manual y Testing",
+      "file": "tasks/08-migrate-and-test.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-006",
+        "T-007"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012"
+      ]
+    }
+  ]
+}

@@ -217,7 +217,6 @@ export class PurchaseService extends PurchasesService {
 
   /**
    * Create a new purchase with items atomically
-   * Uses FK reference (purchase_id) in item payload instead of syncGroupId
    */
   async createWithItems(input: CreatePurchaseInput = {}): Promise<PurchaseWithItems> {
     const id = this.generateId();
@@ -264,7 +263,7 @@ export class PurchaseService extends PurchasesService {
       receiptImageId: input.receiptImageId,
     });
 
-    // Insert and sync all items with FK reference (purchase_id in payload, NOT syncGroupId)
+    // Insert and sync all items with FK reference
     const itemIds: { id: string; item: CreatePurchaseItemInput }[] = [];
     if (input.items?.length) {
       for (const item of input.items) {
@@ -293,9 +292,9 @@ export class PurchaseService extends PurchasesService {
         );
         itemIds.push({ id: itemId, item });
 
-        // Queue item sync with FK reference (purchase_id in payload)
+        // Queue item sync with FK reference
         await this.queueSync("create", itemId, {
-          purchaseId: id, // FK reference instead of syncGroupId
+          purchaseId: id,
           productId: item.productId,
           variantId: item.variantId,
           unitId: item.unitId,

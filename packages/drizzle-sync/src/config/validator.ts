@@ -425,6 +425,36 @@ function validateNewEntity(
       message: "Entity is not syncable (syncable: false)",
     });
   }
+
+  // Validate fileFields
+  if (entity.fileFields) {
+    const validFileEntities = ["files", "assets"];
+    for (const [fieldName, fileConfig] of Object.entries(entity.fileFields)) {
+      if (!validFields.includes(fieldName)) {
+        errors.push({
+          path: `${path}.fileFields.${fieldName}`,
+          message: `fileField "${fieldName}" is not a valid field in table`,
+          hint: `Valid fields are: ${validFields.join(", ")}`,
+        });
+      }
+
+      if (!validFileEntities.includes(fileConfig.entity)) {
+        errors.push({
+          path: `${path}.fileFields.${fieldName}.entity`,
+          message: `Invalid file entity type: "${fileConfig.entity}"`,
+          hint: `Use one of: ${validFileEntities.join(", ")}`,
+        });
+      }
+
+      if (fileConfig.maxSize !== undefined && fileConfig.maxSize <= 0) {
+        errors.push({
+          path: `${path}.fileFields.${fieldName}.maxSize`,
+          message: "maxSize must be a positive number",
+          hint: "Use a value like 5242880 for 5MB",
+        });
+      }
+    }
+  }
 }
 
 function validateNewRelationGraph(

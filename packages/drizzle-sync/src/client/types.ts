@@ -20,6 +20,7 @@ import type {
   ISyncQueue,
 } from "../core";
 import type { DatabaseInitConfig } from "./database-init";
+import type { StorageConfig, StorageAdapter } from "./storage";
 import type { ConflictStrategy } from "../shared";
 import type { PushSyncService } from "../pglite/push-service";
 import type { ISyncMutex } from "../pglite/sync-mutex";
@@ -318,4 +319,33 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
   callbacks?: SyncClientEngineCallbacks;
   /** Optional function to check online status (defaults to navigator.onLine) */
   isOnline?: () => boolean;
+
+  /**
+   * Storage configuration for all key-value persistence.
+   *
+   * Controls key naming, backend implementation, and logout cleanup behavior.
+   * When not provided, defaults to localStorage with "drizzle_sync" prefix.
+   *
+   * @example
+   * ```typescript
+   * // Use custom prefix and auth keys for logout
+   * storage: {
+   *   keys: { prefix: 'myapp' },
+   *   logout: { authKeys: ['token', 'business_id'] },
+   * }
+   * ```
+   */
+  storage?: StorageConfig;
+
+  /**
+   * Resolved storage adapter (internal).
+   * If not provided, created from `storage` config or defaults.
+   * @internal
+   */
+  storageAdapter?: StorageAdapter;
+
+  /**
+   * Optional metadata injected by code generation (e.g., file field configuration).
+   */
+  metadata?: Record<string, unknown>;
 }

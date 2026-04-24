@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { useCustomer } from "~/hooks/use-customer";
+import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { validateFile } from "~/hooks/use-files";
-import { isOnline, queueFileUpload, uploadFileNow } from "~/lib/file-queue";
+import { isOnline } from "~/lib/is-online";
+import { uploadFileNow } from "~/hooks/use-files";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { calculateBalanceDue, formatCurrency, parseAmount } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
@@ -229,17 +230,10 @@ export default function NuevoCobroPage() {
         notes: data.notes || undefined,
       });
 
-      if (proofImage) {
-        if (isOnline()) {
-          const uploadedFile = await uploadFileNow(proofImage);
-          proofImageId = uploadedFile.id;
-          await updatePayment(paymentId, { proofImageId });
-        } else {
-          await queueFileUpload(proofImage, "payment", {
-            entityId: paymentId,
-            fieldName: "proofImageId",
-          });
-        }
+      if (proofImage && isOnline()) {
+        const uploadedFile = await uploadFileNow(proofImage);
+        proofImageId = uploadedFile.id;
+        await updatePayment(paymentId, { proofImageId });
       }
 
       navigate(customerId ? `/clientes/${customerId}` : "/cobros");

@@ -16,7 +16,6 @@ interface SyncOperation {
   status: SyncStatus;
   sync_status: SyncStatusType;
   idempotency_key: string;       // Prevents duplicate processing
-  sync_group_id?: string;        // Groups related operations
   created_at: string;
   updated_at: string;
   sync_attempts: number;

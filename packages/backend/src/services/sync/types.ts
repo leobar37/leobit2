@@ -12,7 +12,6 @@ export interface SyncOperationInput {
   payload: Record<string, unknown>;
   localVersion: number;
   localTimestamp: string;
-  syncGroupId?: string;
   correlationId?: string;
   deviceId?: string;
   sourceFingerprint?: string;
@@ -59,6 +58,7 @@ import type { ProductVariantRepository } from "../repository/product-variant.rep
 import type { CustomerGroupRepository } from "../repository/customer-group.repository";
 import type { VisitaRepository } from "../repository/visita.repository";
 import type { SupplierRepository } from "../repository/supplier.repository";
+import type { FileRepository } from "../repository/file.repository";
 import type { SyncConflictRepository } from "./framework/SyncConflictRepository";
 import type { IConflictResolver } from "./framework/types";
 
@@ -79,6 +79,7 @@ export interface SyncEngineDeps {
   customerGroupRepo: CustomerGroupRepository;
   visitaRepo: VisitaRepository;
   supplierRepo: SupplierRepository;
+  fileRepo: FileRepository;
   syncConflictRepo?: SyncConflictRepository;
   /**
    * Conflict resolvers map (instance-based).

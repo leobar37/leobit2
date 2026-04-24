@@ -4,11 +4,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEngineService } from "@avileo/drizzle-sync/react";
+import { useState } from "react";
+import { createId } from "@paralleldrive/cuid2";
+import { getFileUploadService } from "@avileo/drizzle-sync/client";
 import {
   AbonosService,
   CustomerGroupsService,
   CustomersService,
   DistribucionesService,
+  FilesService,
   ProductVariantsService,
   ProductsService,
   PurchasesService,
@@ -22,6 +26,7 @@ import type {
   CreateCustomerGroupsInput,
   CreateCustomersInput,
   CreateDistribucionesInput,
+  CreateFilesInput,
   CreateProductVariantsInput,
   CreateProductsInput,
   CreatePurchasesInput,
@@ -33,6 +38,7 @@ import type {
   UpdateCustomerGroupsInput,
   UpdateCustomersInput,
   UpdateDistribucionesInput,
+  UpdateFilesInput,
   UpdateProductVariantsInput,
   UpdateProductsInput,
   UpdatePurchasesInput,
@@ -78,7 +84,9 @@ export function useCreateCustomers() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateCustomersInput) => {
+    mutationFn: async (inputParam: CreateCustomersInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -92,7 +100,9 @@ export function useUpdateCustomers() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateCustomersInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateCustomersInput }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -150,9 +160,31 @@ export function useProducts(id: string | null) {
 export function useCreateProducts() {
   const service = useEngineService<ProductsService>("products");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async (input: CreateProductsInput) => {
+    mutationFn: async (inputParam: CreateProductsInput) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.imageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.imageId, {
+          entityType: "assets",
+          fieldName: "imageId",
+          filename: input.imageId.name,
+          mimeType: input.imageId.type,
+          sizeBytes: input.imageId.size,
+        });
+        processedInput.imageId = fileId;
+      }
+      input = processedInput;
       return service.create(input);
     },
     onSuccess: () => {
@@ -164,9 +196,31 @@ export function useCreateProducts() {
 export function useUpdateProducts() {
   const service = useEngineService<ProductsService>("products");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateProductsInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateProductsInput }) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.imageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.imageId, {
+          entityType: "assets",
+          fieldName: "imageId",
+          filename: input.imageId.name,
+          mimeType: input.imageId.type,
+          sizeBytes: input.imageId.size,
+        });
+        processedInput.imageId = fileId;
+      }
+      input = processedInput;
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -226,7 +280,9 @@ export function useCreateProductVariants() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateProductVariantsInput) => {
+    mutationFn: async (inputParam: CreateProductVariantsInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -240,7 +296,15 @@ export function useUpdateProductVariants() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateProductVariantsInput }) => {
+    mutationFn: async ({
+      id,
+      input: inputParam,
+    }: {
+      id: string;
+      input: UpdateProductVariantsInput;
+    }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -300,7 +364,9 @@ export function useCreateSuppliers() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateSuppliersInput) => {
+    mutationFn: async (inputParam: CreateSuppliersInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -314,7 +380,9 @@ export function useUpdateSuppliers() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateSuppliersInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateSuppliersInput }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -374,7 +442,9 @@ export function useCreateTags() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateTagsInput) => {
+    mutationFn: async (inputParam: CreateTagsInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -388,7 +458,9 @@ export function useUpdateTags() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateTagsInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateTagsInput }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -448,7 +520,9 @@ export function useCreateCustomerGroups() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateCustomerGroupsInput) => {
+    mutationFn: async (inputParam: CreateCustomerGroupsInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -462,7 +536,15 @@ export function useUpdateCustomerGroups() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateCustomerGroupsInput }) => {
+    mutationFn: async ({
+      id,
+      input: inputParam,
+    }: {
+      id: string;
+      input: UpdateCustomerGroupsInput;
+    }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -522,7 +604,9 @@ export function useCreateVisitas() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateVisitasInput) => {
+    mutationFn: async (inputParam: CreateVisitasInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -536,7 +620,9 @@ export function useUpdateVisitas() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateVisitasInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateVisitasInput }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -601,9 +687,31 @@ export function useSales(id: string | null) {
 export function useCreateSales() {
   const service = useEngineService<SalesService>("sales");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async (input: CreateSalesInput) => {
+    mutationFn: async (inputParam: CreateSalesInput) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.advanceProofImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.advanceProofImageId, {
+          entityType: "files",
+          fieldName: "advanceProofImageId",
+          filename: input.advanceProofImageId.name,
+          mimeType: input.advanceProofImageId.type,
+          sizeBytes: input.advanceProofImageId.size,
+        });
+        processedInput.advanceProofImageId = fileId;
+      }
+      input = processedInput;
       return service.create(input);
     },
     onSuccess: () => {
@@ -615,9 +723,31 @@ export function useCreateSales() {
 export function useUpdateSales() {
   const service = useEngineService<SalesService>("sales");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateSalesInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateSalesInput }) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.advanceProofImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.advanceProofImageId, {
+          entityType: "files",
+          fieldName: "advanceProofImageId",
+          filename: input.advanceProofImageId.name,
+          mimeType: input.advanceProofImageId.type,
+          sizeBytes: input.advanceProofImageId.size,
+        });
+        processedInput.advanceProofImageId = fileId;
+      }
+      input = processedInput;
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -675,9 +805,31 @@ export function usePurchases(id: string | null) {
 export function useCreatePurchases() {
   const service = useEngineService<PurchasesService>("purchases");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async (input: CreatePurchasesInput) => {
+    mutationFn: async (inputParam: CreatePurchasesInput) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.receiptImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.receiptImageId, {
+          entityType: "files",
+          fieldName: "receiptImageId",
+          filename: input.receiptImageId.name,
+          mimeType: input.receiptImageId.type,
+          sizeBytes: input.receiptImageId.size,
+        });
+        processedInput.receiptImageId = fileId;
+      }
+      input = processedInput;
       return service.create(input);
     },
     onSuccess: () => {
@@ -689,9 +841,31 @@ export function useCreatePurchases() {
 export function useUpdatePurchases() {
   const service = useEngineService<PurchasesService>("purchases");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdatePurchasesInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdatePurchasesInput }) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.receiptImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.receiptImageId, {
+          entityType: "files",
+          fieldName: "receiptImageId",
+          filename: input.receiptImageId.name,
+          mimeType: input.receiptImageId.type,
+          sizeBytes: input.receiptImageId.size,
+        });
+        processedInput.receiptImageId = fileId;
+      }
+      input = processedInput;
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -751,7 +925,9 @@ export function useCreateDistribuciones() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateDistribucionesInput) => {
+    mutationFn: async (inputParam: CreateDistribucionesInput) => {
+      let input = inputParam;
+
       return service.create(input);
     },
     onSuccess: () => {
@@ -765,7 +941,15 @@ export function useUpdateDistribuciones() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateDistribucionesInput }) => {
+    mutationFn: async ({
+      id,
+      input: inputParam,
+    }: {
+      id: string;
+      input: UpdateDistribucionesInput;
+    }) => {
+      let input = inputParam;
+
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -823,9 +1007,31 @@ export function useAbonos(id: string | null) {
 export function useCreateAbonos() {
   const service = useEngineService<AbonosService>("abonos");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async (input: CreateAbonosInput) => {
+    mutationFn: async (inputParam: CreateAbonosInput) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.proofImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.proofImageId, {
+          entityType: "files",
+          fieldName: "proofImageId",
+          filename: input.proofImageId.name,
+          mimeType: input.proofImageId.type,
+          sizeBytes: input.proofImageId.size,
+        });
+        processedInput.proofImageId = fileId;
+      }
+      input = processedInput;
       return service.create(input);
     },
     onSuccess: () => {
@@ -837,9 +1043,31 @@ export function useCreateAbonos() {
 export function useUpdateAbonos() {
   const service = useEngineService<AbonosService>("abonos");
   const queryClient = useQueryClient();
+  const [fileUploadState, setFileUploadState] = useState<
+    Record<
+      string,
+      { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }
+    >
+  >({});
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateAbonosInput }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateAbonosInput }) => {
+      let input = inputParam;
+      // Process file fields
+      const fileService = getFileUploadService();
+      let processedInput = { ...input };
+      if (input.proofImageId instanceof File) {
+        const fileId = createId();
+        await fileService.saveTemp(fileId, input.proofImageId, {
+          entityType: "files",
+          fieldName: "proofImageId",
+          filename: input.proofImageId.name,
+          mimeType: input.proofImageId.type,
+          sizeBytes: input.proofImageId.size,
+        });
+        processedInput.proofImageId = fileId;
+      }
+      input = processedInput;
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -859,6 +1087,84 @@ export function useDeleteAbonos() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["abonos"] });
+    },
+  });
+}
+
+// Files hooks
+export interface FilesListOptions {
+  search?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: "createdAt" | "deletedAt" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+}
+
+export function useFiless(options?: FilesListOptions) {
+  const service = useEngineService<FilesService>("files");
+
+  return useQuery({
+    queryKey: options ? ["files", "list", options] : ["files"],
+    queryFn: async () => service.list(options),
+  });
+}
+
+export function useFiles(id: string | null) {
+  const service = useEngineService<FilesService>("files");
+
+  return useQuery({
+    queryKey: id ? ["files", id] : ["files", "detail"],
+    queryFn: async () => {
+      if (!id) return null;
+      return service.findById(id);
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateFiles() {
+  const service = useEngineService<FilesService>("files");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (inputParam: CreateFilesInput) => {
+      let input = inputParam;
+
+      return service.create(input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+    },
+  });
+}
+
+export function useUpdateFiles() {
+  const service = useEngineService<FilesService>("files");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: UpdateFilesInput }) => {
+      let input = inputParam;
+
+      return service.update(id, input);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["files", variables.id] });
+    },
+  });
+}
+
+export function useDeleteFiles() {
+  const service = useEngineService<FilesService>("files");
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return service.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
     },
   });
 }

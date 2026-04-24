@@ -17,7 +17,7 @@ import {
   getSaleDetailPathWithReturn,
   getSaleEditorPathWithReturn,
 } from "~/lib/sales/navigation";
-import type { Sale as SaleCardData } from "~/lib/db/schemas/sale";
+import type { Sale as SaleCardData } from "~/lib/services/sale-service";
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas", actions: <BackgroundSyncBadge /> });

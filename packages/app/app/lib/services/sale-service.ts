@@ -2,7 +2,12 @@
  * SaleService
  * Provides atomic operations for sales with their items
  * Extends BaseService for common sync and ID generation functionality
- * Note: Uses FK references (saleId in payload) instead of syncGroupId for ordering
+ *
+ * NOTE: This service does NOT extend the generated SalesService directly
+ * because it manages TWO entities atomically (sales + sale_items) with
+ * complex business logic (confirm, deliver, cancel, finalize delivery).
+ * Instead, it composes GeneratedSalesService and GeneratedItemsService
+ * to delegate basic CRUD while preserving atomic multi-entity operations.
  */
 
 import type { SyncClientEngineLike } from "./base-service";
@@ -11,6 +16,7 @@ import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@a
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
+import { SalesService as GeneratedSalesService, SaleItemsService as GeneratedItemsService } from "~/lib/sync/generated/services";
 
 /**
  * Sale status types
@@ -88,7 +94,6 @@ export interface Sale {
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId: string | null;
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancelReason: string | null;
@@ -186,8 +191,13 @@ export interface UpdateSaleInput {
  * Extends BaseService for common sync and ID generation functionality
  */
 export class SaleService extends BaseService {
+  private generatedSalesService: GeneratedSalesService;
+  private generatedItemsService: GeneratedItemsService;
+
   constructor(engine: SyncClientEngineLike) {
     super(engine);
+    this.generatedSalesService = new GeneratedSalesService(engine);
+    this.generatedItemsService = new GeneratedItemsService(engine);
   }
 
   /**
@@ -527,290 +537,128 @@ export class SaleService extends BaseService {
   /**
    * Create a draft sale without items
    * Used for creating a new sale that will be edited later
-   * Uses FK references (saleId) for ordering instead of syncGroupId
    */
   async createDraft(saleInput: Omit<CreateSaleInput, "totalAmount"> & { totalAmount?: number }): Promise<Sale> {
     const perfStart = performance.now();
 
-    const now = this.now();
-    const saleId = generateId();
+    const saleDate = this.now();
     const sellerId = saleInput.sellerId;
     const totalAmount = saleInput.totalAmount || 0;
     const type = saleInput.type || "instant_sale";
     const saleType = saleInput.saleType || "contado";
 
-    const insertStart = performance.now();
-    await this.pg.exec("BEGIN");
+    const result = await this.generatedSalesService.create({
+      customerId: saleInput.customerId ?? null,
+      sellerId,
+      distribucionId: saleInput.distribucionId ?? null,
+      visitaId: saleInput.visitaId ?? null,
+      type: type as string,
+      saleType: saleType as string,
+      paymentMode: saleInput.paymentMode ?? null,
+      totalAmount: this.normalizeCurrency(totalAmount),
+      amountPaid: this.normalizeCurrency(0),
+      balanceDue: this.normalizeCurrency(totalAmount),
+      tara: this.normalizeWeight(saleInput.tara),
+      netWeight: this.normalizeWeight(saleInput.netWeight),
+      saleDate,
+      deliveryDate: saleInput.deliveryDate ?? null,
+      orderDate: saleInput.orderDate ?? null,
+      status: "draft",
+      allowCustomerEdit: true,
+      advancePaymentMethod: null,
+      advanceReferenceNumber: null,
+      advanceProofImageId: null,
+      cancelledAt: null,
+      cancelledBy: null,
+      cancelReason: null,
+      refundAmount: null,
+      refundDate: null,
+      refundMethod: null,
+      refundReference: null,
+      refundNotes: null,
+    });
 
-    try {
-      await this.pg.query(
-        `INSERT INTO sales (
-          id, business_id, customer_id, seller_id, distribucion_id, visita_id,
-          type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
-          tara, net_weight, sale_date, delivery_date, order_date,
-          status, version, allow_customer_edit,
-          sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
-        [
-          saleId,
-          this.businessId,
-          saleInput.customerId || null,
-          sellerId,
-          saleInput.distribucionId || null,
-          saleInput.visitaId || null,
-          type,
-          saleType,
-          saleInput.paymentMode || null,
-          this.normalizeCurrency(totalAmount),
-          this.normalizeCurrency(0),
-          this.normalizeCurrency(totalAmount),
-          this.normalizeWeight(saleInput.tara),
-          this.normalizeWeight(saleInput.netWeight),
-          now,
-          saleInput.deliveryDate || null,
-          saleInput.orderDate || null,
-          "draft",
-          1,
-          true,
-          SyncStatus.PENDING,
-          0,
-          now,
-          now,
-        ]
-      );
+    const totalMs = performance.now() - perfStart;
+    console.log("[Perf][SaleService] createDraft", {
+      saleId: result.id,
+      type,
+      saleType,
+      totalMs: Number(totalMs.toFixed(2)),
+    });
 
-      await this.pg.exec("COMMIT");
-      const insertMs = performance.now() - insertStart;
-
-      const enqueueStart = performance.now();
-      // Use FK reference (saleId) for ordering - no syncGroupId needed
-      await this.queueSync(
-        "create",
-        saleId,
-        {
-          customerId: saleInput.customerId,
-          sellerId,
-          distribucionId: saleInput.distribucionId,
-          visitaId: saleInput.visitaId,
-          type,
-          saleType,
-          paymentMode: saleInput.paymentMode,
-          totalAmount: this.normalizeCurrency(totalAmount),
-          amountPaid: this.normalizeCurrency(0),
-          balanceDue: this.normalizeCurrency(totalAmount),
-          tara: this.normalizeWeight(saleInput.tara),
-          netWeight: this.normalizeWeight(saleInput.netWeight),
-          deliveryDate: saleInput.deliveryDate,
-          orderDate: saleInput.orderDate,
-          items: [],
-        },
-        undefined, // entityTypeOverride
-        undefined, // entityVersion
-        {
-          fastPath: true,
-          idempotencyKey: `sale:create:${saleId}`,
-        }
-      );
-      const enqueueMs = performance.now() - enqueueStart;
-
-      const totalMs = performance.now() - perfStart;
-      console.log("[Perf][SaleService] createDraft", {
-        saleId,
-        type,
-        saleType,
-        insertMs: Number(insertMs.toFixed(2)),
-        enqueueMs: Number(enqueueMs.toFixed(2)),
-        totalMs: Number(totalMs.toFixed(2)),
-      });
-
-      return {
-        id: saleId,
-        businessId: this.businessId,
-        customerId: saleInput.customerId || null,
-        customer: null,
-        sellerId,
-        distribucionId: saleInput.distribucionId || null,
-        visitaId: saleInput.visitaId || null,
-        type,
-        saleType,
-        paymentMode: saleInput.paymentMode || null,
-        totalAmount: this.normalizeCurrency(totalAmount),
-        amountPaid: this.normalizeCurrency(0),
-        balanceDue: this.normalizeCurrency(totalAmount),
-        tara: this.normalizeWeight(saleInput.tara),
-        netWeight: this.normalizeWeight(saleInput.netWeight),
-        saleDate: now,
-        deliveryDate: saleInput.deliveryDate || null,
-        orderDate: saleInput.orderDate || null,
-        status: "draft",
-        version: 1,
-        confirmedSnapshot: null,
-        deliveredSnapshot: null,
-        allowCustomerEdit: true,
-        syncStatus: SyncStatus.PENDING,
-        syncAttempts: 0,
-        syncGroupId: null,
-        cancelledAt: null,
-        cancelledBy: null,
-        cancelReason: null,
-        refundAmount: null,
-        refundDate: null,
-        refundMethod: null,
-        refundReference: null,
-        refundNotes: null,
-        advancePaymentMethod: null,
-        advanceReferenceNumber: null,
-        advanceProofImageId: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-    } catch (error) {
-      console.error("[SaleService] createDraft error:", error);
-      await this.pg.exec("ROLLBACK");
-      throw error;
-    }
+    return result as unknown as Sale;
   }
 
   /**
    * Create a sale with items atomically
    * Uses PGlite transaction for atomicity
-   * Uses FK references (saleId) for ordering instead of syncGroupId
    */
   async createWithItems(
     saleInput: CreateSaleInput,
     items: CreateSaleItemInput[]
   ): Promise<Sale> {
-    // Validate that we have at least 1 item
     if (items.length === 0) {
       throw new Error("A sale must have at least 1 item");
     }
 
-    const now = this.now();
-
-    // Generate IDs
-    const saleId = generateId();
+    const saleDate = this.now();
     const sellerId = saleInput.sellerId;
-
-    // Calculate amounts
     const totalAmount = saleInput.totalAmount;
     const amountPaid = saleInput.amountPaid ?? 0;
     const balanceDue = totalAmount - amountPaid;
 
-    // Generate item IDs upfront to ensure consistency between local and sync
-    const itemIds = items.map(() => generateId());
+    const sale = await this.generatedSalesService.create({
+      customerId: saleInput.customerId ?? null,
+      sellerId,
+      distribucionId: saleInput.distribucionId ?? null,
+      visitaId: saleInput.visitaId ?? null,
+      type: saleInput.type || "instant_sale",
+      saleType: saleInput.saleType || "contado",
+      paymentMode: saleInput.paymentMode ?? null,
+      totalAmount: this.normalizeCurrency(totalAmount),
+      amountPaid: this.normalizeCurrency(amountPaid),
+      balanceDue: this.normalizeCurrency(balanceDue),
+      tara: this.normalizeWeight(saleInput.tara),
+      netWeight: this.normalizeWeight(saleInput.netWeight),
+      saleDate,
+      deliveryDate: saleInput.deliveryDate ?? null,
+      orderDate: saleInput.orderDate ?? null,
+      status: "draft",
+      allowCustomerEdit: true,
+      advancePaymentMethod: null,
+      advanceReferenceNumber: null,
+      advanceProofImageId: null,
+      cancelledAt: null,
+      cancelledBy: null,
+      cancelReason: null,
+      refundAmount: null,
+      refundDate: null,
+      refundMethod: null,
+      refundReference: null,
+      refundNotes: null,
+    });
 
-    // Start transaction
-    await this.pg.exec("BEGIN");
-
-    try {
-      // Insert sale record (no syncGroupId - use FK-based ordering)
-      await this.pg.query(
-        `INSERT INTO sales (
-          id, business_id, customer_id, seller_id, distribucion_id, visita_id,
-          type, sale_type, payment_mode, total_amount, amount_paid, balance_due,
-          tara, net_weight, sale_date, delivery_date, order_date,
-          status, version, allow_customer_edit,
-          sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $23)`,
-        [
-          saleId,
-          this.businessId,
-          saleInput.customerId || null,
-          sellerId,
-          saleInput.distribucionId || null,
-          saleInput.visitaId || null,
-          saleInput.type || "instant_sale",
-          saleInput.saleType || "contado",
-          saleInput.paymentMode || null,
-          this.normalizeCurrency(totalAmount),
-          this.normalizeCurrency(amountPaid),
-          this.normalizeCurrency(balanceDue),
-          this.normalizeWeight(saleInput.tara),
-          this.normalizeWeight(saleInput.netWeight),
-          now,
-          saleInput.deliveryDate || null,
-          saleInput.orderDate || null,
-          "draft",
-          1,
-          true,
-          SyncStatus.PENDING,
-          0,
-          now,
-        ]
-      );
-
-      // Insert all sale items with Drizzle (items reference parent via saleId FK)
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const itemId = itemIds[i];
-
-        await this.db.insert(saleItemsTable).values({
-          id: itemId,
-          businessId: this.businessId,
-          saleId: saleId,
-          productId: item.productId,
-          variantId: item.variantId,
-          productName: item.productName,
-          variantName: item.variantName,
-          quantity: this.normalizeWeight(item.quantity),
-          orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-          unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-          unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-          subtotal: this.normalizeCurrency(item.subtotal),
-          isModified: false,
-        });
-      }
-
-      // Commit transaction
-      await this.pg.exec("COMMIT");
-
-      // Queue sync operation for sale with items included in payload
-      // Use FK reference (saleId in items) for ordering - no syncGroupId
-      await this.queueSync(
-        "create",
-        saleId,
-        {
-          customerId: saleInput.customerId,
-          sellerId,
-          distribucionId: saleInput.distribucionId,
-          visitaId: saleInput.visitaId,
-          type: saleInput.type || "instant_sale",
-          saleType: saleInput.saleType || "contado",
-          paymentMode: saleInput.paymentMode,
-          totalAmount: this.normalizeCurrency(totalAmount),
-          amountPaid: this.normalizeCurrency(amountPaid),
-          balanceDue: this.normalizeCurrency(balanceDue),
-          tara: this.normalizeWeight(saleInput.tara),
-          netWeight: this.normalizeWeight(saleInput.netWeight),
-          deliveryDate: saleInput.deliveryDate,
-          orderDate: saleInput.orderDate,
-          items: items.map((item) => ({
-            productId: item.productId,
-            variantId: item.variantId,
-            productName: item.productName,
-            variantName: item.variantName,
-            quantity: this.normalizeWeight(item.quantity),
-            orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-            unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-            unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-            subtotal: this.normalizeCurrency(item.subtotal),
-          })),
-        },
-        undefined // No syncGroupId - use FK-based ordering
-      );
-
-      // Return the created sale
-      const createdSale = await this.findById(saleId);
-      if (!createdSale) {
-        throw new Error("Failed to retrieve created sale");
-      }
-
-      return createdSale;
-    } catch (error) {
-      // Rollback on any error
-      await this.pg.exec("ROLLBACK");
-      throw error;
+    for (const item of items) {
+      await this.generatedItemsService.create({
+        saleId: sale.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        variantName: item.variantName,
+        quantity: this.normalizeWeight(item.quantity),
+        orderedQuantity: this.normalizeWeight(item.orderedQuantity),
+        unitPrice: this.normalizeNullableCurrency(item.unitPrice),
+        unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
+        subtotal: this.normalizeCurrency(item.subtotal),
+      });
     }
+
+    const createdSale = await this.findById(sale.id);
+    if (!createdSale) {
+      throw new Error("Failed to retrieve created sale");
+    }
+
+    return createdSale;
   }
 
   /**
@@ -832,14 +680,10 @@ export class SaleService extends BaseService {
       throw new Error("Only instant_sales can be confirmed directly");
     }
 
-    // Validate that sale has items before confirming
     if (sale.items.length === 0) {
       throw new Error("No puedes confirmar una venta sin productos");
     }
 
-    const now = this.now();
-
-    // Recalculate totals from items to ensure consistency
     const totalAmount = sale.items.reduce(
       (sum, item) => sum + parseFloat(item.subtotal || "0"), 0
     );
@@ -851,44 +695,14 @@ export class SaleService extends BaseService {
         : parseFloat(sale.amountPaid || "0");
     const balanceDue = Math.max(totalAmount - amountPaid, 0);
 
-    await this.pg.query(
-      `UPDATE sales SET
-        status = 'active',
-        total_amount = $1,
-        amount_paid = $2,
-        balance_due = $3,
-        payment_mode = $4,
-        sale_type = $5,
-        updated_at = $6,
-        sync_status = $7
-      WHERE id = $8`,
-      [
-        this.normalizeCurrency(totalAmount),
-        this.normalizeCurrency(amountPaid),
-        this.normalizeCurrency(balanceDue),
-        paymentMode,
-        paymentMode === "pago_total" ? "contado" : "credito",
-        now,
-        SyncStatus.PENDING,
-        id,
-      ]
-    );
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      id,
-      {
-        status: "active",
-        saleType: paymentMode === "pago_total" ? "contado" : "credito",
-        totalAmount: this.normalizeCurrency(totalAmount),
-        amountPaid: this.normalizeCurrency(amountPaid),
-        balanceDue: this.normalizeCurrency(balanceDue),
-        paymentMode,
-      },
-      undefined, // entityTypeOverride
-      sale.version
-    );
+    await this.generatedSalesService.update(id, {
+      status: "active",
+      saleType: paymentMode === "pago_total" ? "contado" : "credito",
+      totalAmount: this.normalizeCurrency(totalAmount),
+      amountPaid: this.normalizeCurrency(amountPaid),
+      balanceDue: this.normalizeCurrency(balanceDue),
+      paymentMode,
+    });
   }
 
   /**
@@ -910,7 +724,6 @@ export class SaleService extends BaseService {
       throw new Error("Only pre_orders use confirmPreOrder");
     }
 
-    // Validate that sale has items before confirming
     if (sale.items.length === 0) {
       throw new Error("No puedes confirmar un pedido sin productos");
     }
@@ -919,9 +732,6 @@ export class SaleService extends BaseService {
       throw new Error("La venta fue modificada por otro usuario. Por favor, intenta de nuevo.");
     }
 
-    const now = this.now();
-
-    // Recalculate totals from items to ensure consistency
     const totalAmount = sale.items.reduce(
       (sum, item) => sum + parseFloat(item.subtotal || "0"), 0
     );
@@ -933,46 +743,14 @@ export class SaleService extends BaseService {
         : parseFloat(sale.amountPaid || "0");
     const balanceDue = Math.max(totalAmount - amountPaid, 0);
 
-    await this.pg.query(
-      `UPDATE sales SET
-        status = 'confirmed',
-        version = version + 1,
-        total_amount = $1,
-        amount_paid = $2,
-        balance_due = $3,
-        payment_mode = $4,
-        sale_type = $5,
-        updated_at = $6,
-        sync_status = $7
-      WHERE id = $8 AND version = $9`,
-      [
-        this.normalizeCurrency(totalAmount),
-        this.normalizeCurrency(amountPaid),
-        this.normalizeCurrency(balanceDue),
-        paymentMode,
-        paymentMode === "pago_total" ? "contado" : "credito",
-        now,
-        SyncStatus.PENDING,
-        id,
-        baseVersion,
-      ]
-    );
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      id,
-      {
-        status: "confirmed",
-        saleType: paymentMode === "pago_total" ? "contado" : "credito",
-        totalAmount: this.normalizeCurrency(totalAmount),
-        amountPaid: this.normalizeCurrency(amountPaid),
-        balanceDue: this.normalizeCurrency(balanceDue),
-        paymentMode,
-      },
-      undefined, // entityTypeOverride
-      sale.version
-    );
+    await this.generatedSalesService.update(id, {
+      status: "confirmed",
+      saleType: paymentMode === "pago_total" ? "contado" : "credito",
+      totalAmount: this.normalizeCurrency(totalAmount),
+      amountPaid: this.normalizeCurrency(amountPaid),
+      balanceDue: this.normalizeCurrency(balanceDue),
+      paymentMode,
+    });
   }
 
   /**
@@ -993,24 +771,10 @@ export class SaleService extends BaseService {
       throw new Error("Only pre_orders can be delivered");
     }
 
-    const now = this.now();
-
-    await this.pg.query(
-      `UPDATE sales SET status = 'delivered', updated_at = $1, sync_status = $2 WHERE id = $3`,
-      [now, SyncStatus.PENDING, id]
-    );
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      id,
-      {
-        status: "delivered",
-        saleType: sale.saleType,
-      },
-      undefined, // entityTypeOverride
-      sale.version
-    );
+    await this.generatedSalesService.update(id, {
+      status: "delivered",
+      saleType: sale.saleType,
+    });
   }
 
   /**
@@ -1044,90 +808,50 @@ export class SaleService extends BaseService {
       throw new Error("Only pre_orders can use finalize delivery");
     }
 
-    const now = this.now();
+    const adjustments: Array<{
+      itemId: string;
+      deliveredQuantity: string;
+      unitPriceFinal: string | null;
+      newSubtotal: string;
+    }> = [];
+    let totalAmount = 0;
 
-    // Start transaction
-    await this.pg.exec("BEGIN");
+    for (const itemUpdate of options.items) {
+      const item = sale.items.find((i) => i.id === itemUpdate.itemId);
+      if (!item) continue;
 
-    try {
-      let totalAmount = 0;
+      const deliveredQty = itemUpdate.deliveredQuantity ?? parseFloat(item.orderedQuantity || "0");
+      const finalPrice = itemUpdate.unitPriceFinal ?? parseFloat(item.unitPriceQuoted || "0");
+      const subtotal = itemUpdate.subtotal ?? deliveredQty * finalPrice;
 
-      // Update each item with final delivery details
-      for (const itemUpdate of options.items) {
-        const item = sale.items.find((i) => i.id === itemUpdate.itemId);
-        if (!item) continue;
+      totalAmount += subtotal;
 
-        const deliveredQty = itemUpdate.deliveredQuantity ?? parseFloat(item.orderedQuantity || "0");
-        const finalPrice = itemUpdate.unitPriceFinal ?? parseFloat(item.unitPriceQuoted || "0");
-        const subtotal = itemUpdate.subtotal ?? deliveredQty * finalPrice;
-
-        totalAmount += subtotal;
-
-        await this.pg.query(
-          `UPDATE sale_items SET
-            delivered_quantity = $1,
-            unit_price_final = $2,
-            subtotal = $3,
-            is_modified = true
-          WHERE id = $4 AND sale_id = $5`,
-          [this.normalizeWeight(deliveredQty), this.normalizeNullableCurrency(finalPrice), this.normalizeCurrency(subtotal), itemUpdate.itemId, id]
-        );
-
-        // Queue sync for item update - use FK reference (saleId in payload)
-        await this.queueSync(
-          "update",
-          itemUpdate.itemId,
-          {
-            saleId: id, // FK reference for ordering
-            deliveredQuantity: this.normalizeWeight(deliveredQty),
-            unitPriceFinal: this.normalizeNullableCurrency(finalPrice),
-            subtotal: this.normalizeCurrency(subtotal),
-            isModified: true,
-          },
-          "sale_items"
-        );
-      }
-
-      // Calculate final amounts
-      const amountPaid = options.amountPaid ?? parseFloat(sale.amountPaid);
-      const balanceDue = totalAmount - amountPaid;
-
-      // Update sale with final totals and mark as delivered
-      await this.pg.query(
-        `UPDATE sales SET
-          status = 'delivered',
-          total_amount = $1,
-          amount_paid = $2,
-          balance_due = $3,
-          payment_mode = $4,
-          updated_at = $5,
-          sync_status = $6
-        WHERE id = $7`,
-        [this.normalizeCurrency(totalAmount), this.normalizeCurrency(amountPaid), this.normalizeCurrency(balanceDue), options.paymentMode ?? sale.paymentMode, now, SyncStatus.PENDING, id]
-      );
-
-      // Commit transaction
-      await this.pg.exec("COMMIT");
-
-      // Queue sync for sale update - use FK-based ordering
-      await this.queueSync(
-        "update",
-        id,
-        {
-          status: "delivered",
-          saleType: sale.saleType,
-          totalAmount: this.normalizeCurrency(totalAmount),
-          amountPaid: this.normalizeCurrency(amountPaid),
-          balanceDue: this.normalizeCurrency(balanceDue),
-          paymentMode: options.paymentMode ?? sale.paymentMode,
-        },
-        undefined, // entityTypeOverride
-        sale.version
-      );
-    } catch (error) {
-      await this.pg.exec("ROLLBACK");
-      throw error;
+      adjustments.push({
+        itemId: itemUpdate.itemId,
+        deliveredQuantity: this.normalizeWeight(deliveredQty),
+        unitPriceFinal: this.normalizeNullableCurrency(finalPrice),
+        newSubtotal: this.normalizeCurrency(subtotal),
+      });
     }
+
+    const amountPaid = options.amountPaid ?? parseFloat(sale.amountPaid);
+    const newBalance = totalAmount - amountPaid;
+
+    for (const adjustment of adjustments) {
+      await this.generatedItemsService.update(adjustment.itemId, {
+        deliveredQuantity: adjustment.deliveredQuantity,
+        unitPriceFinal: adjustment.unitPriceFinal,
+        subtotal: adjustment.newSubtotal,
+        isModified: true,
+      });
+    }
+
+    await this.generatedSalesService.update(id, {
+      status: "delivered",
+      totalAmount: this.normalizeCurrency(totalAmount),
+      balanceDue: this.normalizeCurrency(newBalance),
+      paymentMode: options.paymentMode ?? sale.paymentMode ?? null,
+    });
   }
 
   /**
@@ -1144,34 +868,12 @@ export class SaleService extends BaseService {
       throw new Error("Sale is already cancelled");
     }
 
-    const now = this.now();
-
-    await this.pg.query(
-      `UPDATE sales SET
-        status = 'cancelled',
-        cancelled_at = $1,
-        cancelled_by = $2,
-        cancel_reason = $3,
-        updated_at = $1,
-        sync_status = $4
-      WHERE id = $5`,
-      [now, this.businessUserId, reason, SyncStatus.PENDING, id]
-    );
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      id,
-      {
-        status: "cancelled",
-        cancelReason: reason,
-        cancelledAt: now,
-        cancelledBy: this.businessUserId,
-        refundAmount: sale.refundAmount ? this.normalizeCurrency(sale.refundAmount) : null,
-      },
-      undefined, // entityTypeOverride
-      sale.version
-    );
+    await this.generatedSalesService.update(id, {
+      status: "cancelled",
+      cancelledAt: new Date().toISOString(),
+      cancelledBy: this.engine.getConfig().userId,
+      cancelReason: reason ?? null,
+    });
   }
 
   /**
@@ -1188,114 +890,57 @@ export class SaleService extends BaseService {
       throw new Error("Cannot update a cancelled sale");
     }
 
-    const updates: string[] = [];
-    const params: (string | number | null)[] = [];
-    let paramIndex = 1;
-    const now = this.now();
+    const syncPayload: Record<string, unknown> = {};
 
     if (input.customerId !== undefined) {
-      updates.push(`customer_id = $${paramIndex}`);
-      params.push(input.customerId || null);
-      paramIndex++;
+      syncPayload.customerId = input.customerId || null;
     }
 
     if (input.saleType !== undefined) {
-      updates.push(`sale_type = $${paramIndex}`);
-      params.push(input.saleType);
-      paramIndex++;
+      syncPayload.saleType = input.saleType;
     }
 
     if (input.type !== undefined) {
-      updates.push(`type = $${paramIndex}`);
-      params.push(input.type);
-      paramIndex++;
+      syncPayload.type = input.type;
     }
 
     if (input.totalAmount !== undefined) {
-      updates.push(`total_amount = $${paramIndex}`);
-      params.push(this.normalizeCurrency(input.totalAmount));
-      paramIndex++;
+      syncPayload.totalAmount = this.normalizeCurrency(input.totalAmount);
     }
 
     if (input.amountPaid !== undefined) {
-      updates.push(`amount_paid = $${paramIndex}`);
-      params.push(this.normalizeCurrency(input.amountPaid));
-      paramIndex++;
+      syncPayload.amountPaid = this.normalizeCurrency(input.amountPaid);
     }
 
     if (input.balanceDue !== undefined) {
-      updates.push(`balance_due = $${paramIndex}`);
-      params.push(this.normalizeCurrency(input.balanceDue));
-      paramIndex++;
+      syncPayload.balanceDue = this.normalizeCurrency(input.balanceDue);
     }
 
     if (input.tara !== undefined) {
-      updates.push(`tara = $${paramIndex}`);
-      params.push(this.normalizeWeight(input.tara));
-      paramIndex++;
+      syncPayload.tara = this.normalizeWeight(input.tara);
     }
 
     if (input.netWeight !== undefined) {
-      updates.push(`net_weight = $${paramIndex}`);
-      params.push(this.normalizeWeight(input.netWeight));
-      paramIndex++;
+      syncPayload.netWeight = this.normalizeWeight(input.netWeight);
     }
 
     if (input.deliveryDate !== undefined) {
-      updates.push(`delivery_date = $${paramIndex}`);
-      params.push(input.deliveryDate || null);
-      paramIndex++;
+      syncPayload.deliveryDate = input.deliveryDate || null;
     }
 
     if (input.orderDate !== undefined) {
-      updates.push(`order_date = $${paramIndex}`);
-      params.push(input.orderDate || null);
-      paramIndex++;
+      syncPayload.orderDate = input.orderDate || null;
     }
 
     if (input.paymentMode !== undefined) {
-      updates.push(`payment_mode = $${paramIndex}`);
-      params.push(input.paymentMode || null);
-      paramIndex++;
+      syncPayload.paymentMode = input.paymentMode || null;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(syncPayload).length === 0) {
       return;
     }
 
-    updates.push(`updated_at = $${paramIndex}`);
-    params.push(now);
-    paramIndex++;
-    updates.push(`sync_status = $${paramIndex}`);
-    params.push(SyncStatus.PENDING);
-    paramIndex++;
-
-    // Add id as the last parameter
-    params.push(id);
-
-    await this.pg.query(
-      `UPDATE sales SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
-      params
-    );
-
-    const syncPayload: Record<string, unknown> = { ...input };
-    if (input.totalAmount !== undefined) syncPayload.totalAmount = this.normalizeCurrency(input.totalAmount);
-    if (input.amountPaid !== undefined) syncPayload.amountPaid = this.normalizeCurrency(input.amountPaid);
-    if (input.balanceDue !== undefined) syncPayload.balanceDue = this.normalizeCurrency(input.balanceDue);
-    if (input.tara !== undefined) syncPayload.tara = this.normalizeWeight(input.tara);
-    if (input.netWeight !== undefined) syncPayload.netWeight = this.normalizeWeight(input.netWeight);
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      id,
-      syncPayload,
-      undefined, // entityTypeOverride
-      sale.version,
-      {
-        fastPath: true,
-      }
-    );
+    await this.generatedSalesService.update(id, syncPayload);
   }
 
   /**
@@ -1312,28 +957,11 @@ export class SaleService extends BaseService {
       throw new Error("Only draft sales can be deleted");
     }
 
-    // Start transaction for atomic deletion
-    await this.pg.exec("BEGIN");
-
-    try {
-      // Delete sale items first (cascade on server will handle the sync)
-      await this.pg.query(`DELETE FROM sale_items WHERE sale_id = $1`, [id]);
-
-      // Delete the sale
-      await this.pg.query(`DELETE FROM sales WHERE id = $1`, [id]);
-
-      await this.pg.exec("COMMIT");
-
-      // Queue deletion sync for the sale only (items are handled by cascade)
-      await this.queueSync(
-        "delete",
-        id,
-        {}
-      );
-    } catch (error) {
-      await this.pg.exec("ROLLBACK");
-      throw error;
+    const items = await this.pg.query(`SELECT id FROM sale_items WHERE sale_id = $1 AND business_id = $2`, [id, this.businessId]);
+    for (const item of items.rows) {
+      await this.generatedItemsService.delete(item.id);
     }
+    await this.generatedSalesService.delete(id);
   }
 
   /**
@@ -1373,14 +1001,13 @@ export class SaleService extends BaseService {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
 
-    const itemId = this.generateId();
-    const now = this.now();
+    const sale = await this.findById(saleId);
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
 
-    // Use Drizzle to insert the item (FK reference is saleId in payload for ordering)
-    await this.db.insert(saleItemsTable).values({
-      id: itemId,
-      businessId: this.businessId,
-      saleId: saleId,
+    const result = await this.generatedItemsService.create({
+      saleId,
       productId: item.productId,
       variantId: item.variantId,
       productName: item.productName,
@@ -1390,56 +1017,25 @@ export class SaleService extends BaseService {
       unitPrice: this.normalizeNullableCurrency(item.unitPrice),
       unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
       subtotal: this.normalizeCurrency(item.subtotal),
-      isModified: false,
     });
 
-    // Update sale total atomically to prevent race conditions
-    await this.pg.query(
-      `UPDATE sales SET
-        total_amount = total_amount + $1,
-        balance_due = balance_due + $1,
-        updated_at = $2,
-        sync_status = $3
-      WHERE id = $4`,
-      [this.normalizeCurrency(item.subtotal), now, SyncStatus.PENDING, saleId]
-    );
+    const currentTotal = parseFloat(sale.totalAmount || "0");
+    const currentBalance = parseFloat(sale.balanceDue || "0");
+    const newTotal = currentTotal + parseFloat(item.subtotal);
+    const newBalance = currentBalance + parseFloat(item.subtotal);
 
-    // Queue sync for the new item - use FK reference (saleId) for ordering
-    await this.queueSync(
-      "create",
-      itemId,
-      {
-        saleId,
-        productId: item.productId,
-        variantId: item.variantId,
-        productName: item.productName,
-        variantName: item.variantName,
-        quantity: this.normalizeWeight(item.quantity),
-        orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-        unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-        unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-        subtotal: this.normalizeCurrency(item.subtotal),
-      },
-      "sale_items",
-      undefined,
-      {
-        fastPath: true,
-      }
-    );
-
-    // Return the created item
-    const itemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE id = $1`,
-      [itemId]
-    );
+    await this.generatedSalesService.update(saleId, {
+      totalAmount: this.normalizeCurrency(newTotal),
+      balanceDue: this.normalizeCurrency(newBalance),
+    });
 
     console.log("[Perf][SaleService] addItem", {
       saleId,
-      itemId,
+      itemId: result.id,
       totalMs: Number((performance.now() - perfStart).toFixed(2)),
     });
 
-    return this.normalizeSaleItem(mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem);
+    return result as unknown as SaleItem;
   }
 
   /**
@@ -1475,7 +1071,6 @@ export class SaleService extends BaseService {
       throw new Error("Only draft or confirmed pre_order sales can have items updated");
     }
 
-    // Get existing item to calculate difference
     const itemResult = await this.pg.query<Record<string, unknown>>(
       `SELECT * FROM sale_items WHERE id = $1 AND sale_id = $2`,
       [itemId, saleId]
@@ -1489,52 +1084,29 @@ export class SaleService extends BaseService {
     const oldSubtotal = parseFloat(existingItem.subtotal || "0");
     const newSubtotal = data.subtotal ?? oldSubtotal;
     const subtotalDiff = newSubtotal - oldSubtotal;
-    const now = this.now();
 
-    // Update the item using Drizzle
-    await this.db.update(saleItemsTable)
-      .set({
-        quantity: data.quantity !== undefined ? this.normalizeWeight(data.quantity) : existingItem.quantity,
-        unitPrice: data.unitPrice !== undefined ? this.normalizeNullableCurrency(data.unitPrice) : existingItem.unitPrice,
-        subtotal: data.subtotal !== undefined ? this.normalizeCurrency(data.subtotal) : existingItem.subtotal,
-        isModified: true,
-      })
-      .where(eq(saleItemsTable.id, itemId));
+    const updateData: Record<string, unknown> = {};
+    if (data.quantity !== undefined) updateData.quantity = this.normalizeWeight(data.quantity);
+    if (data.unitPrice !== undefined) updateData.unitPrice = this.normalizeNullableCurrency(data.unitPrice);
+    if (data.subtotal !== undefined) updateData.subtotal = this.normalizeCurrency(data.subtotal);
+    updateData.isModified = true;
 
-    // Update sale total if subtotal changed
+    await this.generatedItemsService.update(itemId, updateData);
+
     if (Math.abs(subtotalDiff) > 0.01) {
-      await this.pg.query(
-        `UPDATE sales SET
-          total_amount = total_amount + $1,
-          balance_due = balance_due + $1,
-          updated_at = $2,
-          sync_status = $3
-        WHERE id = $4`,
-        [this.normalizeCurrency(subtotalDiff), now, SyncStatus.PENDING, saleId]
-      );
-    }
+      const sale = await this.findById(saleId);
+      if (sale) {
+        const currentTotal = parseFloat(sale.totalAmount || "0");
+        const currentBalance = parseFloat(sale.balanceDue || "0");
+        const newTotal = currentTotal + subtotalDiff;
+        const newBalance = currentBalance + subtotalDiff;
 
-    // Queue sync for the updated item - use FK reference (saleId) for ordering
-    const syncPayload: Record<string, unknown> = { saleId };
-    if (data.quantity !== undefined) syncPayload.quantity = this.normalizeWeight(data.quantity);
-    if (data.unitPrice !== undefined) syncPayload.unitPrice = this.normalizeNullableCurrency(data.unitPrice);
-    if (data.subtotal !== undefined) syncPayload.subtotal = this.normalizeCurrency(data.subtotal);
-    await this.queueSync(
-      "update",
-      itemId,
-      syncPayload,
-      "sale_items",
-      undefined,
-      {
-        fastPath: true,
+        await this.generatedSalesService.update(saleId, {
+          totalAmount: this.normalizeCurrency(newTotal),
+          balanceDue: this.normalizeCurrency(newBalance),
+        });
       }
-    );
-
-    // Return updated item
-    const updatedResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE id = $1`,
-      [itemId]
-    );
+    }
 
     console.log("[Perf][SaleService] updateItem", {
       saleId,
@@ -1542,7 +1114,7 @@ export class SaleService extends BaseService {
       totalMs: Number((performance.now() - perfStart).toFixed(2)),
     });
 
-    return this.normalizeSaleItem(mapToCamelCase(updatedResult.rows[0]) as unknown as SaleItem);
+    return existingItem;
   }
 
   /**
@@ -1570,7 +1142,6 @@ export class SaleService extends BaseService {
       throw new Error("Only draft or confirmed pre_order sales can have items removed");
     }
 
-    // Get item to calculate refund
     const itemResult = await this.pg.query<{ subtotal: string }>(
       `SELECT subtotal FROM sale_items WHERE id = $1 AND sale_id = $2`,
       [itemId, saleId]
@@ -1581,35 +1152,21 @@ export class SaleService extends BaseService {
     }
 
     const subtotal = parseFloat(itemResult.rows[0].subtotal);
-    const now = this.now();
 
-    // Delete the item using Drizzle
-    await this.db.delete(saleItemsTable).where(eq(saleItemsTable.id, itemId));
+    await this.generatedItemsService.delete(itemId);
 
-    // Update sale total atomically to prevent race conditions
-    await this.pg.query(
-      `UPDATE sales SET
-        total_amount = total_amount - $1,
-        balance_due = balance_due - $1,
-        updated_at = $2,
-        sync_status = $3
-      WHERE id = $4`,
-      [this.normalizeCurrency(subtotal), now, SyncStatus.PENDING, saleId]
-    );
+    const sale = await this.findById(saleId);
+    if (sale) {
+      const currentTotal = parseFloat(sale.totalAmount || "0");
+      const currentBalance = parseFloat(sale.balanceDue || "0");
+      const newTotal = currentTotal - subtotal;
+      const newBalance = currentBalance - subtotal;
 
-    // Queue sync for the deleted item - use FK reference (saleId) for ordering
-    await this.queueSync(
-      "delete",
-      itemId,
-      {
-        saleId,
-      },
-      "sale_items",
-      undefined,
-      {
-        fastPath: true,
-      }
-    );
+      await this.generatedSalesService.update(saleId, {
+        totalAmount: this.normalizeCurrency(newTotal),
+        balanceDue: this.normalizeCurrency(newBalance),
+      });
+    }
 
     console.log("[Perf][SaleService] removeItem", {
       saleId,
@@ -1632,36 +1189,15 @@ export class SaleService extends BaseService {
       throw new Error("Cannot record payment for cancelled sale");
     }
 
-    const now = this.now();
+    const currentAmountPaid = parseFloat(sale.amountPaid || "0");
+    const currentBalanceDue = parseFloat(sale.balanceDue || "0");
+    const newAmountPaid = currentAmountPaid + amount;
+    const newBalanceDue = Math.max(currentBalanceDue - amount, 0);
 
-    // Use atomic UPDATE to prevent race conditions with concurrent payments
-    await this.pg.query(
-      `UPDATE sales SET
-        amount_paid = amount_paid + $1,
-        balance_due = balance_due - $1,
-        updated_at = $2,
-        sync_status = $3
-      WHERE id = $4`,
-      [this.normalizeCurrency(amount), now, SyncStatus.PENDING, saleId]
-    );
-
-    // Fetch updated values for sync
-    const updatedSale = await this.findById(saleId);
-    if (!updatedSale) {
-      throw new Error("Sale not found after payment");
-    }
-
-    // Use FK-based ordering - no syncGroupId needed
-    await this.queueSync(
-      "update",
-      saleId,
-      {
-        amountPaid: this.normalizeCurrency(updatedSale.amountPaid),
-        balanceDue: this.normalizeCurrency(updatedSale.balanceDue),
-      },
-      undefined, // entityTypeOverride
-      sale.version
-    );
+    await this.generatedSalesService.update(saleId, {
+      amountPaid: this.normalizeCurrency(newAmountPaid),
+      balanceDue: this.normalizeCurrency(newBalanceDue),
+    });
   }
 
   /**

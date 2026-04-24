@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 import type { UseFormReturn } from "react-hook-form";
 import { type ProductFormData } from "~/lib/schemas/product-schema";
 

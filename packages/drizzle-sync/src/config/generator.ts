@@ -10,6 +10,7 @@ import { generateSchemaSQLFile } from "./generators/schema-sql-generator";
 import { generateTableRegistry, generateTableRegistryFile } from "./generators/table-registry-generator";
 import { generateQueryKeysFile } from "./generators/query-keys-generator";
 import { generateEngineFactoryFile } from "./generators/engine-factory-generator";
+import { generateFileFieldsConfig, generateFileFieldsFile } from "./generators/file-fields-generator";
 import type { SerializedEntity, SyncSchema } from "./schema-types";
 import { CodeBuilder, formatGeneratedCode } from "./generators/code-builder";
 
@@ -153,8 +154,18 @@ export async function generateAll(
   files.push(`${outputDir}/query-keys.ts`);
 
   // 9. Generate engine factory
+  const fileFieldsEntries = entityNames
+    .map((name) => generateFileFieldsConfig(name, entities[name]))
+    .filter((e): e is NonNullable<typeof e> => e !== null);
+  const hasFileFields = fileFieldsEntries.length > 0;
+
+  const fileFieldsPath = `${outputDir}/file-fields.ts`;
+  const fileFieldsFile = generateFileFieldsFile(fileFieldsEntries);
+  writeFileSync(fileFieldsPath, await formatGeneratedCode(fileFieldsFile, fileFieldsPath));
+  files.push(`${outputDir}/file-fields.ts`);
+
   const engineFactoryPath = `${outputDir}/engine.ts`;
-  const engineFactoryFile = generateEngineFactoryFile({ entityNames });
+  const engineFactoryFile = generateEngineFactoryFile({ entityNames, hasFileFields });
   writeFileSync(engineFactoryPath, await formatGeneratedCode(engineFactoryFile, engineFactoryPath));
   files.push(`${outputDir}/engine.ts`);
 

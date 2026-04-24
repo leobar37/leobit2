@@ -66,6 +66,28 @@ function getSortableColumns(entity: HookEntity): string[] {
     .map((col) => camelCase(col.name));
 }
 
+function getFileFields(
+  entity: HookEntity
+): Record<string, { entity: "files" | "assets" }> {
+  const fields: Record<string, { entity: "files" | "assets" }> = {};
+
+  if (isSerializedEntity(entity)) {
+    if (entity.config.fileFields) {
+      Object.entries(entity.config.fileFields).forEach(([key, value]) => {
+        fields[key] = value;
+      });
+    }
+  } else {
+    if (entity.fileFields) {
+      Object.entries(entity.fileFields).forEach(([key, value]) => {
+        fields[key] = value;
+      });
+    }
+  }
+
+  return fields;
+}
+
 export interface HookOutput {
   listHook: string;
   singleHook: string;
@@ -105,10 +127,13 @@ export function generateHooks(
 
   const listOptionsType = generateListOptionsType(entityName, sortableColumns);
 
+  const fileFields = getFileFields(entity);
+  const hasFileFields = Object.keys(fileFields).length > 0;
+
   const listHook = generateListHook(entityName, pascalName, serviceClassName, serviceName, listOptionsType);
   const singleHook = isChild ? "" : generateSingleHook(entityName, pascalName, serviceClassName, serviceName);
-  const createHook = generateCreateHook(entityName, pascalName, serviceClassName, serviceName);
-  const updateHook = isChild ? "" : generateUpdateHook(entityName, pascalName, serviceClassName, serviceName);
+  const createHook = generateCreateHook(entityName, pascalName, serviceClassName, serviceName, hasFileFields ? fileFields : undefined);
+  const updateHook = isChild ? "" : generateUpdateHook(entityName, pascalName, serviceClassName, serviceName, hasFileFields ? fileFields : undefined);
   const deleteHook = isChild ? "" : generateDeleteHook(entityName, pascalName, serviceClassName, serviceName);
 
   return { listHook, singleHook, createHook, updateHook, deleteHook };
@@ -183,15 +208,22 @@ function generateCreateHook(
   entityName: string,
   pascalName: string,
   serviceClassName: string,
-  serviceName: string
+  serviceName: string,
+  fileFields?: Record<string, { entity: "files" | "assets" }>
 ): string {
+  const fileProcessingCode = fileFields
+    ? generateFileProcessingCode(fileFields, "input")
+    : "";
+
   return `
 export function useCreate${pascalName}() {
   const service = useEngineService<${serviceClassName}>("${serviceName}");
   const queryClient = useQueryClient();
-
+${fileFields ? '  const [fileUploadState, setFileUploadState] = useState<Record<string, { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }>>({});\n' : ''}
   return useMutation({
-    mutationFn: async (input: Create${pascalName}Input) => {
+    mutationFn: async (inputParam: Create${pascalName}Input) => {
+      let input = inputParam;
+${fileProcessingCode}
       return service.create(input);
     },
     onSuccess: () => {
@@ -202,19 +234,54 @@ export function useCreate${pascalName}() {
 `;
 }
 
+function generateFileProcessingCode(
+  fileFields: Record<string, { entity: "files" | "assets" }>,
+  inputVar: string
+): string {
+  const lines: string[] = [];
+  lines.push(`      // Process file fields`);
+  lines.push(`      const fileService = getFileUploadService();`);
+  lines.push(`      let processedInput = { ...${inputVar} };`);
+
+  for (const [fieldName, config] of Object.entries(fileFields)) {
+    const camelField = camelCase(fieldName);
+    lines.push(`      if (${inputVar}.${camelField} instanceof File) {`);
+    lines.push(`        const fileId = createId();`);
+    lines.push(`        await fileService.saveTemp(fileId, ${inputVar}.${camelField}, {`);
+    lines.push(`          entityType: "${config.entity}",`);
+    lines.push(`          fieldName: "${camelField}",`);
+    lines.push(`          filename: ${inputVar}.${camelField}.name,`);
+    lines.push(`          mimeType: ${inputVar}.${camelField}.type,`);
+    lines.push(`          sizeBytes: ${inputVar}.${camelField}.size,`);
+    lines.push(`        });`);
+    lines.push(`        processedInput.${camelField} = fileId;`);
+    lines.push(`      }`);
+  }
+
+  lines.push(`      ${inputVar} = processedInput;`);
+  return lines.join("\n");
+}
+
 function generateUpdateHook(
   entityName: string,
   pascalName: string,
   serviceClassName: string,
-  serviceName: string
+  serviceName: string,
+  fileFields?: Record<string, { entity: "files" | "assets" }>
 ): string {
+  const fileProcessingCode = fileFields
+    ? generateFileProcessingCode(fileFields, "input")
+    : "";
+
   return `
 export function useUpdate${pascalName}() {
   const service = useEngineService<${serviceClassName}>("${serviceName}");
   const queryClient = useQueryClient();
-
+${fileFields ? '  const [fileUploadState, setFileUploadState] = useState<Record<string, { status: "idle" | "uploading" | "pending" | "done" | "error"; progress: number }>>({});\n' : ''}
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: Update${pascalName}Input }) => {
+    mutationFn: async ({ id, input: inputParam }: { id: string; input: Update${pascalName}Input }) => {
+      let input = inputParam;
+${fileProcessingCode}
       return service.update(id, input);
     },
     onSuccess: (_, variables) => {
@@ -294,6 +361,18 @@ export function generateHooksFile(
   b.blank();
   b.line('import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";');
   b.line('import { useEngineService } from "@avileo/drizzle-sync/react";');
+
+  // Check if any entity has file fields
+  const hasFileFields = entityNames.some((name) => {
+    const entity = allEntities[name];
+    return Object.keys(getFileFields(entity)).length > 0;
+  });
+
+  if (hasFileFields) {
+    b.line('import { useState } from "react";');
+    b.line('import { createId } from "@paralleldrive/cuid2";');
+    b.line('import { getFileUploadService } from "@avileo/drizzle-sync/client";');
+  }
 
   if (serviceImports.size > 0) {
     b.line("import {");

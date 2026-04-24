@@ -2,7 +2,7 @@ import { DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
-import type { Product } from "~/lib/db/schema";
+import type { Product } from "@avileo/shared";
 
 interface ProductCardProps {
   product: Product;
@@ -37,7 +37,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
               </h3>
               <Badge
                 variant="secondary"
-                className={`rounded-full border-0 px-2.5 py-1 text-xs font-medium capitalize ${typeColors[product.type]}`}
+                className={`rounded-full border-0 px-2.5 py-1 text-xs font-medium capitalize ${typeColors[product.type as keyof typeof typeColors]}`}
               >
                 {product.type}
               </Badge>

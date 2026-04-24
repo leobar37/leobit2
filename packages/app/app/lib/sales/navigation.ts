@@ -1,4 +1,4 @@
-import type { Sale } from "~/lib/db/schemas/sale";
+import type { Sale } from "~/lib/services/sale-service";
 import { buildUrlWithReturn } from "~/lib/navigation/return-url";
 
 export function shouldOpenSaleEditor(

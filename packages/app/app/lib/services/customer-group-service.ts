@@ -52,8 +52,8 @@ export interface CustomerGroupWithMembers extends CustomerGroup {
  * - getMembers(groupId): Promise<GroupMemberWithCustomer[]> - Get members with customer info
  * - getCustomerGroups(customerId): Promise<CustomerGroupSummary[]> - Groups for a customer
  * - getCustomerGroupsForCustomers(customerIds): Promise<CustomerGroupSummaryWithCustomerId[]> - Groups for multiple customers
- * - createWithMembers(input, customerIds): Promise<{ group: CustomerGroup }> - Atomic group + members
- * - addMembers(groupId, customerIds, syncGroupId?): Promise<void> - Add members
+   * - createWithMembers(input, customerIds): Promise<{ group: CustomerGroup }> - Atomic group + members
+   * - addMembers(groupId, customerIds): Promise<void> - Add members
  * - removeMember(groupId, customerId): Promise<void> - Remove a member
  * - isMember(groupId, customerId): Promise<boolean> - Check membership
  */
@@ -301,7 +301,6 @@ export class CustomerGroupService extends CustomerGroupsService {
   /**
    * Add members to a group
    * Custom method for member management
-   * Uses FK reference (groupId in payload) for ordering, not syncGroupId
    */
   async addMembers(groupId: string, customerIds: string[]): Promise<void> {
     const group = await this.db

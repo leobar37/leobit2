@@ -111,7 +111,7 @@ describe("DistribucionService", () => {
       expect(mockSyncService.enqueue).toHaveBeenCalledTimes(3); // 1 distribucion + 2 items
     });
 
-    it("should queue items with FK reference (distribucionId) instead of syncGroupId", async () => {
+    it("should queue items with FK reference (distribucionId)", async () => {
       mockPg.query
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [{ id: "dist-new" }] });
@@ -135,8 +135,6 @@ describe("DistribucionService", () => {
         variantId: "var-x",
         cantidadAsignada: 15,
       });
-      // syncGroupId is not present in the data object for FK-based approach
-      expect(itemEnqueueCall[0].data).not.toHaveProperty("syncGroupId");
     });
 
     it("should create distribucion without items", async () => {
@@ -173,36 +171,6 @@ describe("DistribucionService", () => {
       // Should have called createWithItems (evidenced by item-related queries if items provided)
       // Without items, only 1 sync call for distribucion
       expect(mockSyncService.enqueue).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("FK reference usage (not syncGroupId)", () => {
-    it("should NOT use syncGroupId in any queueSync call for items", async () => {
-      mockPg.query
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{ id: "dist-1" }] });
-
-      const input: CreateDistribucionInput = {
-        vendedorId: "vendedor-1",
-        puntoVenta: "Test Punto",
-        items: [{ variantId: "var-1", cantidadAsignada: 10, unidad: "kg" }],
-      };
-
-      await service.createWithItems(input);
-
-      // queueSync passes object with named properties, not positional
-      // Check all enqueue calls for items
-      const itemEnqueueCalls = mockSyncService.enqueue.mock.calls.filter(
-        (call) => call[0]?.entity_type === "distribucion_items"
-      );
-
-      expect(itemEnqueueCalls.length).toBe(1);
-      for (const call of itemEnqueueCalls) {
-        // Should have FK reference in data object
-        expect(call[0].data).toHaveProperty("distribucionId");
-        // syncGroupId is not present
-        expect(call[0].data).not.toHaveProperty("syncGroupId");
-      }
     });
   });
 });

@@ -2,7 +2,7 @@
 name: avileo-sync
 description: |
   Analyze, debug, and extend Avileo's offline-first sync engine. Use when:
-  - Finding bugs in push sync, pull sync, syncGroupId, or conflict resolution
+  - Finding bugs in push sync, pull sync, FK ordering, or conflict resolution
   - Adding new entities to the sync system (14 entities: customers, sales, sale_items, abonos,
     distribuciones, products, product_variants, tags, customer_tags, purchases, purchase_items,
     customer_groups, customer_group_members, visitas, suppliers)
@@ -11,11 +11,13 @@ description: |
   - Understanding the 3-stage pull strategy (CRITICAL → RECENT_SALES → HISTORICAL)
   - Understanding version-based conflict detection and multi-device race conditions
   - Questions about sync status fields, cursor pagination, or dead letter queue
+  - **MIGRATION**: Migrating from old syncGroupId pattern to FK-based ordering (v2)
+  - Questions about @avileo/drizzle-sync library, codecs, or generated services
 
-  Covers: push sync (SyncService), pull sync (PullService), SyncCoordinator, syncGroupId,
+  Covers: push sync (SyncService), pull sync (PullService), SyncCoordinator, FK-based
   operation sorting, entity handlers, conflict resolution (version-based), staged pull,
-  dead letter queue, exponential backoff, stale pull detection, queue fast-path, and
-  worker/runtime performance hardening. Sync hooks are disabled.
+  dead letter queue, exponential backoff, stale pull detection, queue fast-path,
+  drizzle-sync library integration, and migration from v1 to v2. Sync hooks are disabled.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -293,7 +295,9 @@ await syncService.clearDeadLetterOperations()
 ## For Detailed Information
 
 - [Architecture Overview](references/overview.md)
-- [Sync Group ID Deep Dive](references/sync-group-id.md)
+- [Drizzle-Sync Library](references/drizzle-sync-lib.md) — **NEW**: @avileo/drizzle-sync library guide
+- [Migration v2](references/migration-v2.md) — **NEW**: syncGroupId removal migration guide
+- [Sync Group ID Deep Dive](references/sync-group-id.md) — Old pattern (pending migration)
 - [Adding New Entity to Sync](references/adding-entity.md)
 - [Troubleshooting Guide](references/troubleshooting.md)
 - [Operational Checklist](references/runbook-sync-performance.md)

@@ -79,7 +79,6 @@ export interface FindDistribucionesFilters {
 /**
  * Distribucion Service
  * Extends generated DistribucionesService for local-first operations with atomic items support
- * Uses FK references (distribucionId in payload) instead of syncGroupId
  */
 export class DistribucionService extends DistribucionesService {
   constructor(engine: SyncClientEngineLike) {
@@ -116,7 +115,6 @@ export class DistribucionService extends DistribucionesService {
 
   /**
    * Create a new distribucion with items atomically
-   * Uses FK reference (distribucionId) in item payload instead of syncGroupId
    */
   async createWithItems(input: CreateDistribucionInput): Promise<Distribucion> {
     const id = this.generateId();
@@ -159,7 +157,7 @@ export class DistribucionService extends DistribucionesService {
       estado: "activo",
     });
 
-    // Insert and queue items with FK reference (distribucionId in payload, NOT syncGroupId)
+    // Insert and queue items with FK reference
     if (input.items && input.items.length > 0) {
       for (const item of input.items) {
         const itemId = this.generateId();
@@ -307,7 +305,6 @@ export class DistribucionService extends DistribucionesService {
 
   /**
    * Add an item to an existing distribucion
-   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async addItem(
     distribucionId: string,
@@ -387,7 +384,6 @@ export class DistribucionService extends DistribucionesService {
 
   /**
    * Update an item in a distribucion
-   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async updateItem(
     distribucionId: string,
@@ -475,7 +471,6 @@ export class DistribucionService extends DistribucionesService {
 
   /**
    * Remove an item from a distribucion
-   * Uses FK reference (distribucionId in payload) instead of syncGroupId
    */
   async removeItem(distribucionId: string, itemId: string): Promise<void> {
     const distribucion = await this.findById(distribucionId);

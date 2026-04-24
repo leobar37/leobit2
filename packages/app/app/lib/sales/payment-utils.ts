@@ -1,4 +1,4 @@
-import type { Customer } from "~/lib/db/schema";
+import type { Customer } from "@avileo/shared";
 import type { PaymentMode } from "~/lib/sales/types";
 
 export interface PaymentSummary {

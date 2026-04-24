@@ -2,6 +2,7 @@ import { CodeBuilder } from "./code-builder";
 
 export interface EngineFactoryInput {
   entityNames: string[];
+  hasFileFields: boolean;
 }
 
 export function generateEngineFactoryFile(input: EngineFactoryInput): string {
@@ -18,6 +19,9 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
   b.line('import { SCHEMA_SQL } from "./schema-sql";');
   b.line('import { SYNC_TABLE_REGISTRY } from "./sync-tables";');
   b.line('import { applierConfig } from "./applier";');
+  if (input.hasFileFields) {
+    b.line('import { FILE_FIELDS_CONFIG } from "./file-fields";');
+  }
   b.blank();
 
   // Import generated services
@@ -57,6 +61,13 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
       iib.line("apiUrl: params.apiUrl,");
       iib.line("httpClient: params.httpClient,");
       iib.line("applierConfig,");
+      if (input.hasFileFields) {
+        iib.line("metadata: {");
+        iib.indent((iiib) => {
+          iiib.line("fileFields: FILE_FIELDS_CONFIG,");
+        });
+        iib.line("},");
+      }
       iib.line("entities: [");
       iib.indent((iiib) => {
         for (const name of input.entityNames) {

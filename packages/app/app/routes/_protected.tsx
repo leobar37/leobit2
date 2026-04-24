@@ -25,7 +25,6 @@ import { registerAppServices } from "~/lib/sync/register-services";
 import { initDevTools } from "~/lib/debug/console";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { AppLayout } from "~/components/layout/app-layout";
-import { useAutoFileUploadProcessor } from "~/hooks/use-auto-file-upload";
 import { useBusiness } from "~/hooks/use-business";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { refreshSession } from "~/lib/auth-client";
@@ -37,7 +36,6 @@ import { createAvileoSyncEngine } from "~/lib/sync/generated/engine";
 import { useSyncInit } from "@avileo/drizzle-sync/react";
 
 function OutletWithLog() {
-  useAutoFileUploadProcessor();
   return <Outlet />;
 }
 
@@ -193,9 +191,7 @@ function ServicesProviderWrapper({
 
   const handleResetAndLogout = async () => {
     if (engine) {
-      await engine.resetAndLogout({
-        clearStorageKeys: ["avileo_pull_cursor", "avileo_schema_hash", "current_business_id", "business_user_id"],
-      });
+      await engine.resetAndLogout();
     } else {
       handleLogout();
     }

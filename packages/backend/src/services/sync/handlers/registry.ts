@@ -27,6 +27,8 @@ import {
   abonoUpdateSchema,
   distribucionItemSyncCreateSchema,
   distribucionItemSyncUpdateSchema,
+  fileCreateSchema,
+  fileUpdateSchema,
 } from "../schemas";
 import type { CustomerRepository } from "../../repository/customer.repository";
 import type { ProductRepository } from "../../repository/product.repository";
@@ -573,6 +575,36 @@ export function createAbonoSyncHandlerForTest(
     });
 
   return builder.build();
+}
+
+export function createFileHandler(deps: SyncEngineDeps): ISyncHandler {
+  return new SyncHandlerBuilder("files")
+    .withSchemas(fileCreateSchema, fileUpdateSchema)
+    .withSupportedOperations(["create", "update", "delete"])
+    .withCreateFields({
+      id: "id",
+      filename: "filename",
+      storagePath: "storagePath",
+      mimeType: "mimeType",
+      sizeBytes: "sizeBytes",
+    })
+    .withUpdateFields({
+      filename: "filename",
+      storagePath: "storagePath",
+      mimeType: "mimeType",
+      sizeBytes: "sizeBytes",
+    })
+    .withRepo({
+      create: (ctx, data, tx) =>
+        deps.fileRepo.create(toRequestContext(ctx), data as Parameters<typeof deps.fileRepo.create>[1]),
+      findById: (ctx, id) =>
+        deps.fileRepo.findById(toRequestContext(ctx), id) as Promise<unknown | undefined>,
+      update: (ctx, id, data, tx) =>
+        deps.fileRepo.update(toRequestContext(ctx), id, data as Parameters<typeof deps.fileRepo.update>[2], toDbTx(tx), undefined).then(r => !!r),
+      delete: (ctx, id, tx) => deps.fileRepo.softDelete(toRequestContext(ctx), id),
+    })
+    .withVersionConflictField("version")
+    .build();
 }
 
 // ─── Test factory functions ─────────────────────────────────────────────────────

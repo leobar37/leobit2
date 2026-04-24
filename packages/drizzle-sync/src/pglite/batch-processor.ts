@@ -3,6 +3,7 @@ import type { ISyncHttpClient, SyncOperationRecord, HandlerResult } from "../cor
 import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "../shared";
 import { SyncAutoRunner } from "./auto-runner";
 import { SyncOperationLifecycleService } from "./operation-lifecycle";
+import { getFileUploadService } from "../client/file-upload-service";
 
 export interface BatchProcessorOptions {
   /** Column name for tenant filtering (default: "tenant_id") */
@@ -142,11 +143,6 @@ export class SyncBatchProcessor {
     return { processed, failed, conflicts };
   }
 
-  async processGroup(groupId: string): Promise<GroupProcessResult> {
-    console.warn("[SYNC] processGroup is deprecated - sync_group_id no longer exists");
-    return { success: true, errors: [] };
-  }
-
   private async fetchPendingOperations(limit: number): Promise<SyncOperationRecord[]> {
     const priorityCase = buildPriorityCaseSql(this.entityPriorities);
     const orderBy = priorityCase
@@ -178,6 +174,62 @@ export class SyncBatchProcessor {
     return result.rows;
   }
 
+  private extractFileIds(payload: unknown): string[] {
+    if (!payload || typeof payload !== "object") return [];
+
+    const fileIds: string[] = [];
+    const values = Object.values(payload as Record<string, unknown>);
+
+    for (const value of values) {
+      if (typeof value === "string" && /^[a-z0-9]{20,}$/i.test(value)) {
+        // Likely a CUID2 file ID - check if it exists in temp storage
+        fileIds.push(value);
+      }
+    }
+
+    return fileIds;
+  }
+
+  private async uploadPendingFiles(operations: SyncOperationRecord[]): Promise<{ success: boolean; errors: string[] }> {
+    try {
+      const fileService = getFileUploadService();
+      const pendingUploads = await fileService.getPendingUploads();
+      if (pendingUploads.length === 0) {
+        return { success: true, errors: [] };
+      }
+
+      const errors: string[] = [];
+
+      // Extract file IDs referenced in operations
+      const referencedFileIds = new Set<string>();
+      for (const op of operations) {
+        const fileIds = this.extractFileIds(op.payload);
+        fileIds.forEach((id) => referencedFileIds.add(id));
+      }
+
+      // Upload only referenced files
+      for (const upload of pendingUploads) {
+        if (!referencedFileIds.has(upload.id)) continue;
+
+        try {
+          await fileService.upload(upload.id);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          errors.push(`Failed to upload file ${upload.id}: ${message}`);
+        }
+      }
+
+      return { success: errors.length === 0, errors };
+    } catch (error) {
+      // If file service is not available (e.g., IndexedDB not supported), skip file upload
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("indexedDB") || message.includes("IDBDatabase")) {
+        return { success: true, errors: [] };
+      }
+      return { success: false, errors: [message] };
+    }
+  }
+
   private async processBatch(
     operations: SyncOperationRecord[]
   ): Promise<ProcessPendingResult & { errors: string[] }> {
@@ -193,6 +245,17 @@ export class SyncBatchProcessor {
     try {
       for (const operation of operations) {
         await this.lifecycle.markProcessing(operation.id);
+      }
+
+      // Upload pending files before sending batch
+      const uploadResult = await this.uploadPendingFiles(operations);
+      if (!uploadResult.success) {
+        console.error("[SYNC] File upload failed:", uploadResult.errors);
+        // Mark operations with file upload errors as failed
+        for (const operation of operations) {
+          await this.lifecycle.markFailed(operation.id, `File upload failed: ${uploadResult.errors.join(", ")}`);
+        }
+        return { processed: 0, failed: operations.length, conflicts: 0, errors: uploadResult.errors };
       }
 
       console.log(

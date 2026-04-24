@@ -2,7 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
-import type { Customer } from "~/lib/db/schema";
+import type { Customer } from "@avileo/shared";
 
 export const customerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),

@@ -73,7 +73,6 @@ export class PurchaseSyncHandler extends StatefulSyncHandler<PurchaseWithItems> 
       notes: parsed.notes ?? undefined,
       receiptImageId: parsed.receiptImageId ?? null,
       invoiceNumber: parsed.invoiceNumber ?? null,
-      syncGroupId: parsed.syncGroupId ?? null,
     };
     await this.purchaseRepo.create(ctx, purchaseData, [], tx); // Empty items - will be created via PurchaseItemSyncHandler
   }

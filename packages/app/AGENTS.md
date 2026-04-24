@@ -148,7 +148,7 @@ Two aliases are configured and used interchangeably:
 // ~/* - Preferred for lib, hooks, schemas
 import { cn } from "~/lib/utils";
 import { useCustomers } from "~/hooks/use-customers";
-import type { Customer } from "~/lib/db/schema";
+import type { Customer } from "@avileo/shared";
 
 // @/* - Used for component imports
 import { Button } from "@/components/ui/button";

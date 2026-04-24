@@ -1,6 +1,6 @@
 import { useMutation, type UseMutationOptions, type UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { isOnline } from "~/lib/file-queue/utils";
+import { isOnline } from "~/lib/is-online";
 
 export interface OfflineAwareMutationOptions<TData, TError, TVariables, TContext>
   extends Omit<UseMutationOptions<TData, TError, TVariables, TContext>, "mutationFn"> {

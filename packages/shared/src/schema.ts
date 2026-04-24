@@ -179,7 +179,6 @@ export const sales = pgTable(
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: uuid("cancelled_by"),
     cancelReason: text("cancel_reason"),
@@ -233,7 +232,6 @@ export const saleItems = pgTable(
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -242,7 +240,6 @@ export const saleItems = pgTable(
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
     index("idx_sale_items_sync_status").on(table.syncStatus),
-    index("idx_sale_items_sync_group_id").on(table.syncGroupId),
   ]
 );
 
@@ -417,7 +414,6 @@ export const purchases = pgTable(
     notes: text("notes"),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -449,13 +445,11 @@ export const purchaseItems = pgTable(
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
-    syncGroupId: varchar("sync_group_id", { length: 100 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_purchase_items_business_id").on(table.businessId),
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
-    index("idx_purchase_items_sync_group_id").on(table.syncGroupId),
   ]
 );
 

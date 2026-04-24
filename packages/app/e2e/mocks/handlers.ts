@@ -649,7 +649,6 @@ export const handlers = [
         payload: Record<string, unknown>;
         localVersion: number;
         localTimestamp: string;
-        syncGroupId?: string;
       }>;
     };
 

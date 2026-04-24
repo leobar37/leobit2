@@ -24,7 +24,6 @@ export interface CreatePurchaseInput {
   notes?: string;
   receiptImageId?: string | null;
   invoiceNumber?: string | null;
-  syncGroupId?: string | null;
 }
 
 export class PurchaseRepository {
@@ -113,7 +112,6 @@ export class PurchaseRepository {
         receiptImageId: data.receiptImageId ?? null,
         invoiceNumber: data.invoiceNumber ?? null,
         businessId: ctx.businessId,
-        syncGroupId: data.syncGroupId ?? null,
       };
       try {
         const [purchase] = await dbOrTx

@@ -1,7 +1,7 @@
 /**
  * OperationSorter
  *
- * Sorts sync operations by FK-based topological order, with syncGroupId as fallback.
+ * Sorts sync operations by FK-based topological order.
  * Ensures parent entities are processed before children based on payload FK references.
  */
 
@@ -285,17 +285,14 @@ export class OperationSorter {
    * 1. Parent entities before children (based on FK references in payload)
    * 2. Entity priority (secondary)
    * 3. Local timestamp (tertiary)
-   * 4. Fall back to syncGroupId-based grouping for operations without FK dependencies
    */
   sort(operations: SyncOperationInput[]): SortResult {
     if (operations.length === 0) {
       return { operations: [], groupCount: 0 };
     }
 
-    // Build dependency graph based on FK references
     const graph = buildDependencyGraph(operations, this.parentMap);
 
-    // Check if we have any FK-based dependencies
     let hasFkDependencies = false;
     for (const [, deps] of graph) {
       if (deps.size > 0) {
@@ -305,56 +302,28 @@ export class OperationSorter {
     }
 
     if (hasFkDependencies) {
-      // Use FK-based topological sort
       const sortedIndices = topologicalSort(operations, graph);
       const sortedOperations = sortedIndices.map((i) => operations[i]);
 
-      // Count unique sync groups (for backward compatibility)
-      const groupCount = new Set(
-        sortedOperations.map((op) => op.syncGroupId).filter((g): g is string => g !== undefined)
-      ).size;
-
       return {
         operations: sortedOperations,
-        groupCount,
+        groupCount: 0,
       };
     }
 
-    // Fall back to legacy syncGroupId-based sorting when no FK dependencies exist
-    return this.sortBySyncGroupId(operations);
-  }
-
-  /**
-   * Legacy syncGroupId-based sorting (backward compatibility)
-   */
-  private sortBySyncGroupId(operations: SyncOperationInput[]): SortResult {
     const sortedOperations = [...operations].sort((a, b) => {
-      // First, sort by syncGroupId
-      const aKey = a.syncGroupId ?? "";
-      const bKey = b.syncGroupId ?? "";
-      if (aKey !== bKey) {
-        return aKey > bKey ? 1 : -1;
-      }
-
-      // Then, sort by entity priority
       const priorityA = this.getEntityPriority(a.entityType);
       const priorityB = this.getEntityPriority(b.entityType);
       if (priorityA !== priorityB) return priorityA - priorityB;
 
-      // Finally, sort by timestamp
       return (
         new Date(a.localTimestamp).getTime() - new Date(b.localTimestamp).getTime()
       );
     });
 
-    // Count unique sync groups
-    const groupCount = new Set(
-      sortedOperations.map((op) => op.syncGroupId).filter((g): g is string => g !== undefined)
-    ).size;
-
     return {
       operations: sortedOperations,
-      groupCount,
+      groupCount: 0,
     };
   }
 

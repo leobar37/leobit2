@@ -329,7 +329,6 @@ export const purchaseCreateSchema = z.object({
   totalAmount: optionalNumericStringTransform,
   notes: emptyStringToNull.optional(),
   receiptImageId: emptyStringToNull.optional(),
-  syncGroupId: z.string().optional().nullable(),
   items: z.array(purchaseItemSchema).optional(),
 });
 
@@ -367,7 +366,6 @@ export const syncOperationSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
   localVersion: z.number(),
   localTimestamp: z.string(),
-  syncGroupId: z.string().optional(),
   correlationId: z.string().optional(),
 });
 
@@ -431,3 +429,23 @@ export const supplierUpdateSchema = supplierCreateSchema.partial().extend({
 
 export type SupplierCreateInput = z.infer<typeof supplierCreateSchema>;
 export type SupplierUpdateInput = z.infer<typeof supplierUpdateSchema>;
+
+// File schemas
+export const fileCreateSchema = z.object({
+  id: z.string().min(1, "id es requerido"),
+  filename: z.string().min(1, "filename es requerido"),
+  storagePath: z.string().min(1, "storagePath es requerido"),
+  mimeType: z.string().min(1, "mimeType es requerido"),
+  sizeBytes: z.number().min(0, "sizeBytes debe ser mayor o igual a 0"),
+});
+
+export const fileUpdateSchema = z.object({
+  filename: z.string().optional(),
+  storagePath: z.string().optional(),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().min(0).optional(),
+  version: z.number().optional(),
+});
+
+export type FileCreateInput = z.infer<typeof fileCreateSchema>;
+export type FileUpdateInput = z.infer<typeof fileUpdateSchema>;

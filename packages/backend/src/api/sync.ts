@@ -177,7 +177,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
             payload: t.Record(t.String(), t.Unknown()),
             localVersion: t.Number({ minimum: 0 }),
             localTimestamp: t.String(),
-            syncGroupId: t.Optional(t.String()),
             correlationId: t.Optional(t.String()),
             deviceId: t.Optional(t.String()),
             sourceFingerprint: t.Optional(t.String()),
@@ -262,7 +261,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         ctx as RequestContext,
         since,
         limit,
-        query.syncGroupId,
         entityTypes,
         cursorOperationId
       );
@@ -273,7 +271,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       query: t.Object({
         since: t.Optional(t.String()),
         limit: t.Optional(t.String()),
-        syncGroupId: t.Optional(t.String()),
         entityTypes: t.Optional(t.String()), // Comma-separated entity types
       }),
     }

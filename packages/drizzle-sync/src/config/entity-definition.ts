@@ -2,6 +2,7 @@ import type {
   EntityConfig,
   EntityHooks,
   ConflictResolutionStrategy,
+  FileFieldConfig,
 } from './types';
 
 export interface DefineEntityInput<
@@ -19,6 +20,7 @@ export interface DefineEntityInput<
   versionField?: string;
   conflictResolver?: ConflictResolutionStrategy;
   hooks?: EntityHooks;
+  fileFields?: Record<string, FileFieldConfig>;
   metadata?: Record<string, unknown>;
 }
 
@@ -42,6 +44,7 @@ export function defineEntity<
     versionField: input.versionField,
     conflictResolver: input.conflictResolver ?? 'last-write-wins',
     hooks: input.hooks,
+    fileFields: input.fileFields,
     metadata: input.metadata,
   };
 }
@@ -103,6 +106,14 @@ export class EntityBuilder<TName extends string> {
     return this;
   }
 
+  fileField(name: string, config: FileFieldConfig): this {
+    if (!this.config.fileFields) {
+      this.config.fileFields = {};
+    }
+    this.config.fileFields[name] = config;
+    return this;
+  }
+
   build(): EntityConfig<TName> {
     if (!this.config.tableName) {
       throw new Error(`Entity ${this.config.entityType}: tableName is required`);
@@ -124,6 +135,7 @@ export class EntityBuilder<TName extends string> {
       versionField: this.config.versionField,
       conflictResolver: this.config.conflictResolver ?? 'last-write-wins',
       hooks: this.config.hooks,
+      fileFields: this.config.fileFields,
       metadata: this.config.metadata,
     } as EntityConfig<TName>;
   }
@@ -138,6 +150,7 @@ interface EntityBuilderWithFields<TName extends string, TFields extends readonly
   versionField(field: string): this;
   conflictResolver(strategy: ConflictResolutionStrategy): this;
   hooks(h: EntityHooks): this;
+  fileField(name: string, config: FileFieldConfig): this;
   build(): EntityConfig<TName, TFields[number]>;
 }
 

@@ -17,6 +17,7 @@ import {
   customerGroups,
   customerGroupMembers,
   visitas,
+  files,
 } from "./db/schema";
 
 export const syncConfig = defineSyncConfig({
@@ -34,6 +35,9 @@ export const syncConfig = defineSyncConfig({
       autoFields: true,
       excludeFields: ["cost_price"],
       conflictResolver: "version-based",
+      fileFields: {
+        image_id: { entity: "assets" },
+      },
     },
 
     product_variants: {
@@ -98,6 +102,9 @@ export const syncConfig = defineSyncConfig({
         tara: weight({ nullable: true }),
         net_weight: weight({ nullable: true }),
       },
+      fileFields: {
+        advance_proof_image_id: { entity: "files" },
+      },
       relations: {
         children: [
           {
@@ -132,6 +139,9 @@ export const syncConfig = defineSyncConfig({
       conflictResolver: "version-based",
       fieldCodecs: {
         total_amount: currency(),
+      },
+      fileFields: {
+        receipt_image_id: { entity: "files" },
       },
       relations: {
         children: [
@@ -192,6 +202,17 @@ export const syncConfig = defineSyncConfig({
       fieldCodecs: {
         amount: currency(),
       },
+      fileFields: {
+        proof_image_id: { entity: "files" },
+      },
+    },
+
+    // File attachments (private files)
+    files: {
+      table: files,
+      syncable: true,
+      autoFields: true,
+      conflictResolver: "version-based",
     },
   },
 
