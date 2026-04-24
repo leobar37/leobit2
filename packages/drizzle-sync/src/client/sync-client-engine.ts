@@ -51,6 +51,7 @@ import { initPgliteDatabase, disposeDatabase, resetDatabase } from "./database-i
 import { createStorageAdapter, StorageAdapter } from "./storage/storage";
 import type { StorageConfig } from "./storage/types";
 import { getFileUploadService } from "./file-upload-service";
+import { PgLiteAdapter } from "../pglite/pglite-adapter";
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
 
@@ -79,6 +80,7 @@ export class SyncClientEngine {
   private initPromise: Promise<void> | null = null;
   private pg: PGlite | null = null;
   private db: ReturnType<typeof drizzle> | null = null;
+  private adapter: DatabaseAdapter | null = null;
   private syncQueue: ISyncQueue | null = null;
   private syncService: PushSyncService | null = null;
   private pullService: PullSyncService | null = null;
@@ -87,11 +89,15 @@ export class SyncClientEngine {
 
   private unsubscribers: Array<() => void> = [];
 
+  /** Drizzle ORM tables exposed to services */
+  readonly tables: Record<string, unknown>;
+
   constructor(config: SyncClientEngineConfig) {
     this.config = config;
     this.eventEmitter = config.eventEmitter ?? new SyncEventEmitter();
     this.mutex = config.mutex ?? new SyncMutex();
     this.storageAdapter = config.storageAdapter ?? createStorageAdapter(config.storage);
+    this.tables = config.tables ?? {};
   }
 
   getConfig(): Readonly<SyncClientEngineConfig> {
@@ -171,8 +177,18 @@ export class SyncClientEngine {
     return result;
   }
 
+  /**
+   * Get the PGlite instance.
+   * @deprecated Use getDb() for Drizzle queries or pass a DatabaseAdapter for backend-agnostic access.
+   */
   getPg(): PGlite {
     if (!this.pg) {
+      if (this.adapter) {
+        throw new Error(
+          "getPg() is not available when running with a custom DatabaseAdapter. " +
+          "Use getDb() for Drizzle queries or provide a PGlite adapter."
+        );
+      }
       throw new Error("PGlite not initialized. Call initialize() first.");
     }
     return this.pg;
@@ -201,21 +217,25 @@ export class SyncClientEngine {
   }
 
   private async doInitialize(): Promise<void> {
-    // Auto-initialize database if databaseConfig is provided
-    if (this.config.databaseConfig) {
+    if (this.config.adapter) {
+      this.pg = null;
+      this.adapter = this.config.adapter;
+      this.db = this.config.adapter.getDb() as ReturnType<typeof drizzle>;
+    } else if (this.config.databaseConfig) {
       const result = await initPgliteDatabase({
         ...this.config.databaseConfig,
         storageAdapter: this.storageAdapter,
       });
       this.pg = result.pg;
       this.db = result.db;
+      this.adapter = new PgLiteAdapter(result.pg, result.db);
     } else if (this.config.pg && this.config.db) {
       this.pg = this.config.pg;
       this.db = this.config.db;
+      this.adapter = new PgLiteAdapter(this.config.pg, this.config.db);
     } else {
       throw new Error(
-        "SyncClientEngine requires either 'databaseConfig' or both 'pg' and 'db'. " +
-        "Provide databaseConfig for auto-init, or pg/db for manual mode."
+        "SyncClientEngine requires 'adapter', 'databaseConfig', or both 'pg' and 'db'. "
       );
     }
 
@@ -223,12 +243,11 @@ export class SyncClientEngine {
 
     // Create context for dependency injection
     const context: SyncClientEngineContext = {
-      pg: this.pg,
-      db: this.db,
+      adapter: this.adapter!,
       tenantId,
       tenantColumn: tenantColumn ?? "tenant_id",
       userId,
-      syncService: null as any, // Will be set after creation
+      syncService: null as any,
     };
 
     this.syncQueue = this.config.queue ?? new PgSyncQueue(context, { logger: this.config.logger });
@@ -650,8 +669,7 @@ export class SyncClientEngine {
     const { tenantId, userId, tenantColumn } = this.config;
 
     const context: SyncClientEngineContext = {
-      pg: this.getPg(),
-      db: this.getDb(),
+      adapter: this.adapter!,
       tenantId,
       tenantColumn: tenantColumn ?? "tenant_id",
       userId,

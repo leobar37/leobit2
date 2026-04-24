@@ -10,7 +10,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and } from "drizzle-orm";
-import { customerTags, type CustomerTag } from "@avileo/shared";
+import type { CustomerTag } from "@avileo/shared";
 
 // Import the generated CustomerTagsService and its input types
 import { 
@@ -36,8 +36,8 @@ export class CustomerTagService extends CustomerTagsService {
   async getCustomerTags(customerId: string): Promise<CustomerTag[]> {
     return this.db
       .select()
-      .from(customerTags)
-      .where(eq(customerTags.customerId, customerId));
+      .from(this.tables.customerTags)
+      .where(eq(this.tables.customerTags.customerId, customerId));
   }
 
   /**
@@ -45,9 +45,9 @@ export class CustomerTagService extends CustomerTagsService {
    */
   async getCustomersByTag(tagId: string): Promise<string[]> {
     const result = await this.db
-      .select({ customerId: customerTags.customerId })
-      .from(customerTags)
-      .where(eq(customerTags.tagId, tagId));
+      .select({ customerId: this.tables.customerTags.customerId })
+      .from(this.tables.customerTags)
+      .where(eq(this.tables.customerTags.tagId, tagId));
 
     return result.map((r) => r.customerId);
   }
@@ -58,8 +58,8 @@ export class CustomerTagService extends CustomerTagsService {
   async assignTags(customerId: string, tagIds: string[]): Promise<void> {
     // First, remove all existing tags for this customer
     await this.db
-      .delete(customerTags)
-      .where(eq(customerTags.customerId, customerId));
+      .delete(this.tables.customerTags)
+      .where(eq(this.tables.customerTags.customerId, customerId));
 
     // Then, insert new assignments if any
     if (tagIds.length > 0) {
@@ -68,7 +68,7 @@ export class CustomerTagService extends CustomerTagsService {
       for (const tagId of tagIds) {
         const id = this.generateId();
 
-        await this.db.insert(customerTags).values({
+        await this.db.insert(this.tables.customerTags).values({
           customerId,
           tagId,
         });
@@ -88,11 +88,11 @@ export class CustomerTagService extends CustomerTagsService {
     // Check if already assigned
     const existing = await this.db
       .select()
-      .from(customerTags)
+      .from(this.tables.customerTags)
       .where(
         and(
-          eq(customerTags.customerId, customerId),
-          eq(customerTags.tagId, tagId)
+          eq(this.tables.customerTags.customerId, customerId),
+          eq(this.tables.customerTags.tagId, tagId)
         )
       )
       .limit(1);
@@ -103,7 +103,7 @@ export class CustomerTagService extends CustomerTagsService {
 
     const id = this.generateId();
 
-    await this.db.insert(customerTags).values({
+    await this.db.insert(this.tables.customerTags).values({
       customerId,
       tagId,
     });
@@ -119,11 +119,11 @@ export class CustomerTagService extends CustomerTagsService {
    */
   async removeTag(customerId: string, tagId: string): Promise<void> {
     await this.db
-      .delete(customerTags)
+      .delete(this.tables.customerTags)
       .where(
         and(
-          eq(customerTags.customerId, customerId),
-          eq(customerTags.tagId, tagId)
+          eq(this.tables.customerTags.customerId, customerId),
+          eq(this.tables.customerTags.tagId, tagId)
         )
       );
 
@@ -142,14 +142,14 @@ export class CustomerTagService extends CustomerTagsService {
     for (const customerId of customerIds) {
       // Remove existing tags
       await this.db
-        .delete(customerTags)
-        .where(eq(customerTags.customerId, customerId));
+        .delete(this.tables.customerTags)
+        .where(eq(this.tables.customerTags.customerId, customerId));
 
       // Add new tags
       for (const tagId of tagIds) {
         const id = this.generateId();
 
-        await this.db.insert(customerTags).values({
+        await this.db.insert(this.tables.customerTags).values({
           customerId,
           tagId,
         });
@@ -169,11 +169,11 @@ export class CustomerTagService extends CustomerTagsService {
   async hasTag(customerId: string, tagId: string): Promise<boolean> {
     const result = await this.db
       .select()
-      .from(customerTags)
+      .from(this.tables.customerTags)
       .where(
         and(
-          eq(customerTags.customerId, customerId),
-          eq(customerTags.tagId, tagId)
+          eq(this.tables.customerTags.customerId, customerId),
+          eq(this.tables.customerTags.tagId, tagId)
         )
       )
       .limit(1);
@@ -185,6 +185,6 @@ export class CustomerTagService extends CustomerTagsService {
    * Get all customer-tag mappings for the current business
    */
   async getAllCustomerTags(): Promise<CustomerTag[]> {
-    return this.db.select().from(customerTags);
+    return this.db.select().from(this.tables.customerTags);
   }
 }

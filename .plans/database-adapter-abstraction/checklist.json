@@ -1,0 +1,62 @@
+{
+  "plan": "database-adapter-abstraction",
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "T-001",
+      "name": "Create DatabaseAdapter interface and PgLiteAdapter",
+      "status": "completed",
+      "priority": "high",
+      "files": [
+        "packages/drizzle-sync/src/core/database-adapter.ts",
+        "packages/drizzle-sync/src/pglite/pglite-adapter.ts"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "name": "Update engine context and config types for adapter",
+      "status": "completed",
+      "priority": "high",
+      "files": [
+        "packages/drizzle-sync/src/client/types.ts",
+        "packages/drizzle-sync/src/client/sync-client-engine.ts"
+      ],
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-003",
+      "name": "Migrate sync internals to DatabaseAdapter",
+      "status": "completed",
+      "priority": "high",
+      "files": [
+        "packages/drizzle-sync/src/pglite/entity-status-updater.ts",
+        "packages/drizzle-sync/src/pglite/operation-lifecycle.ts"
+      ],
+      "dependencies": ["T-002"]
+    },
+    {
+      "id": "T-004",
+      "name": "Migrate push service and executor to DatabaseAdapter",
+      "status": "completed",
+      "priority": "high",
+      "files": [
+        "packages/drizzle-sync/src/pglite/push-service.ts",
+        "packages/drizzle-sync/src/pglite/sql-executor.ts"
+      ],
+      "dependencies": ["T-003"]
+    },
+    {
+      "id": "T-005",
+      "name": "Export types and validate backward compatibility",
+      "status": "completed",
+      "priority": "medium",
+      "files": [
+        "packages/drizzle-sync/src/index.ts",
+        "packages/drizzle-sync/src/client/types.ts",
+        "packages/drizzle-sync/src/client/sync-client-engine.ts"
+      ],
+      "dependencies": ["T-004"]
+    }
+  ]
+}

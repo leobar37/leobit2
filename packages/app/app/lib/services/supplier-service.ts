@@ -10,7 +10,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, like, and, desc } from "drizzle-orm";
-import { suppliers, type Supplier } from "@avileo/shared";
+import type { Supplier } from "@avileo/shared";
 
 // Import the generated SuppliersService and its input types
 import { 
@@ -36,26 +36,26 @@ export class SupplierService extends SuppliersService {
   }
 
   /**
-   * Find all suppliers for the current business
+   * Find all this.tables.suppliers for the current business
    * Optionally filtered by search query
    * 
    * NOTE: This overrides the generated method to add search functionality
    */
   async findByBusiness(search?: string): Promise<Supplier[]> {
-    const conditions = [this.businessId ? eq(suppliers.businessId, this.businessId) : undefined];
+    const conditions = [this.businessId ? eq(this.tables.suppliers.businessId, this.businessId) : undefined];
 
     if (search) {
       const searchPattern = `%${search}%`;
-      conditions.push(like(suppliers.name, searchPattern) as never);
+      conditions.push(like(this.tables.suppliers.name, searchPattern) as never);
     }
 
     const validConditions = conditions.filter((c): c is NonNullable<typeof c> => c !== undefined);
 
     const result = await this.db
       .select()
-      .from(suppliers)
+      .from(this.tables.suppliers)
       .where(validConditions.length > 1 ? and(...validConditions) : validConditions[0])
-      .orderBy(desc(suppliers.createdAt));
+      .orderBy(desc(this.tables.suppliers.createdAt));
 
     return result as Supplier[];
   }

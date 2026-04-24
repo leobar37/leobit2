@@ -40,12 +40,11 @@ export class PushSyncService {
     if (options.lifecycleService) {
       this.lifecycleService = options.lifecycleService;
     } else {
-      // Create default lifecycle service with minimal configuration
-      const entityStatusUpdater = new SyncEntityStatusUpdater(context.pg, context.tenantId, {
+      const entityStatusUpdater = new SyncEntityStatusUpdater(context.adapter, context.tenantId, {
         tenantColumn: context.tenantColumn,
       });
       this.lifecycleService = new SyncOperationLifecycleService(
-        context.pg,
+        context.adapter,
         context.tenantId,
         this.queue,
         entityStatusUpdater,
@@ -116,7 +115,7 @@ export class PushSyncService {
 
     try {
       const batchProcessor = new SyncBatchProcessor(
-        this.context.pg,
+        this.context.adapter,
         this.context.tenantId,
         this.httpClient,
         this.lifecycleService!,

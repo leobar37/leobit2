@@ -1,4 +1,4 @@
-import type { PGlite } from "@electric-sql/pglite";
+import type { DatabaseAdapter } from "../core/database-adapter";
 import type { ISyncHttpClient, SyncOperationRecord, HandlerResult } from "../core";
 import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "../shared";
 import { SyncAutoRunner } from "./auto-runner";
@@ -86,7 +86,7 @@ export class SyncBatchProcessor {
   private readonly batchSize: number;
 
   constructor(
-    private pg: PGlite,
+    private adapter: DatabaseAdapter,
     private tenantId: string,
     private httpClient: ISyncHttpClient,
     private lifecycle: SyncOperationLifecycleService,
@@ -154,7 +154,7 @@ export class SyncBatchProcessor {
           created_at ASC`
       : `ORDER BY created_at ASC`;
 
-    const result = await this.pg.query<SyncOperationRecord>(
+    const result = await this.adapter.query<SyncOperationRecord>(
       `SELECT *
        FROM sync_operations
        WHERE "${this.tenantColumn}" = $1

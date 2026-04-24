@@ -1,4 +1,4 @@
-import type { PGlite } from "@electric-sql/pglite";
+import type { DatabaseAdapter } from "../core/database-adapter";
 import type { SyncOperationRecord } from "../core";
 import { validateEntityTableName } from "../core";
 
@@ -17,7 +17,7 @@ export class SyncEntityStatusUpdater {
   private readonly trackedTables: Set<string>;
 
   constructor(
-    private pg: PGlite,
+    private adapter: DatabaseAdapter,
     private tenantId: string,
     options: EntityStatusUpdaterOptions = {}
   ) {
@@ -35,7 +35,7 @@ export class SyncEntityStatusUpdater {
     }
 
     try {
-      await this.pg.query(
+      await this.adapter.exec(
         `UPDATE "${tableName}"
          SET sync_status = $1,
              sync_attempts = 0,

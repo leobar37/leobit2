@@ -13,8 +13,6 @@ import {
 } from "~/lib/sync/generated/services";
 import {
   SyncStatus,
-  purchases,
-  purchaseItems,
   type Purchase,
 } from "@avileo/shared";
 
@@ -85,45 +83,55 @@ export class PurchaseService extends PurchasesService {
    * Overrides parent to enrich with items joined from purchase_items table
    */
   async findById(id: string): Promise<PurchaseWithItems | null> {
-    const result = await this.pg.query<Purchase>(
-      "SELECT * FROM purchases WHERE id = $1 AND business_id = $2",
-      [id, this.businessId]
-    );
-    const purchase = result.rows[0];
+    const result = await this.db
+      .select()
+      .from(this.tables.purchases)
+      .where(
+        and(
+          eq(this.tables.purchases.id, id),
+          eq(this.tables.purchases.businessId, this.businessId)
+        )
+      )
+      .limit(1);
+    const purchase = result[0];
     if (!purchase) return null;
 
-    const itemsResult = await this.pg.query<PurchaseItemEnriched>(
-      `SELECT
-        pi.id,
-        pi.product_id as "productId",
-        pi.variant_id as "variantId",
-        pi.quantity,
-        pi.unit_cost as "unitCost",
-        pi.total_cost as "totalCost",
-        COALESCE(p.name, 'Producto') as "productName",
-        COALESCE(pv.name, '') as "variantName"
-      FROM purchase_items pi
-      LEFT JOIN products p ON pi.product_id = p.id
-      LEFT JOIN product_variants pv ON pi.variant_id = pv.id
-      WHERE pi.purchase_id = $1 AND pi.business_id = $2
-      ORDER BY pi.created_at ASC`,
-      [id, this.businessId]
-    );
+    const itemsResult = await this.db
+      .select({
+        id: this.tables.purchaseItems.id,
+        productId: this.tables.purchaseItems.productId,
+        variantId: this.tables.purchaseItems.variantId,
+        quantity: this.tables.purchaseItems.quantity,
+        unitCost: this.tables.purchaseItems.unitCost,
+        totalCost: this.tables.purchaseItems.totalCost,
+        productName: sql<string>`COALESCE(${this.tables.products.name}, 'Producto')`,
+        variantName: sql<string>`COALESCE(${this.tables.productVariants.name}, '')`,
+      })
+      .from(this.tables.purchaseItems)
+      .leftJoin(this.tables.products, eq(this.tables.purchaseItems.productId, this.tables.products.id))
+      .leftJoin(this.tables.productVariants, eq(this.tables.purchaseItems.variantId, this.tables.productVariants.id))
+      .where(
+        and(
+          eq(this.tables.purchaseItems.purchaseId, id),
+          eq(this.tables.purchaseItems.businessId, this.businessId)
+        )
+      )
+      .orderBy(this.tables.purchaseItems.createdAt);
 
-    const calculatedTotal = itemsResult.rows.reduce((sum, item) => {
+    const calculatedTotal = itemsResult.reduce((sum, item) => {
       return sum + (parseFloat(item.totalCost) || 0);
     }, 0);
     const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
     if (
-      itemsResult.rows.length > 0 &&
+      itemsResult.length > 0 &&
       Math.abs(storedTotal - calculatedTotal) > 0.009
     ) {
       await this.recalculateTotal(id);
       purchase.totalAmount = this.normalizeCurrency(calculatedTotal);
     }
 
-    const normalizedItems = itemsResult.rows.map((item) => ({
+    const normalizedItems = itemsResult.map((item) => ({
       ...item,
       quantity: this.normalizeWeight(item.quantity) ?? "0",
       unitCost: this.normalizeCurrency(item.unitCost),
@@ -138,24 +146,34 @@ export class PurchaseService extends PurchasesService {
   }
 
   /**
-   * Find all purchases for the current business (excluding drafts)
+   * Find all this.tables.purchases for the current business (excluding drafts)
    * Overrides parent to recalculate totals from items
    */
   async findByBusiness(): Promise<Purchase[]> {
-    const result = await this.pg.query<Purchase>(
-      `SELECT * FROM purchases
-       WHERE business_id = $1 AND status != 'draft'
-       ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
-      [this.businessId]
-    );
+    const result = await this.db
+      .select()
+      .from(this.tables.purchases)
+      .where(
+        and(
+          eq(this.tables.purchases.businessId, this.businessId),
+          sql`${this.tables.purchases.status} != 'draft'`
+        )
+      )
+      .orderBy(desc(this.tables.purchases.purchaseDate), desc(this.tables.purchases.createdAt));
 
-    for (const purchase of result.rows) {
-      const itemsResult = await this.pg.query<{ total: string }>(
-        `SELECT COALESCE(SUM(CAST(total_cost AS DECIMAL)), 0) as total
-         FROM purchase_items WHERE purchase_id = $1 AND business_id = $2`,
-        [purchase.id, this.businessId]
-      );
-      const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
+    for (const purchase of result) {
+      const itemsResult = await this.db
+        .select({
+          total: sql<string>`COALESCE(SUM(CAST(${this.tables.purchaseItems.totalCost} AS DECIMAL)), 0)`,
+        })
+        .from(this.tables.purchaseItems)
+        .where(
+          and(
+            eq(this.tables.purchaseItems.purchaseId, purchase.id),
+            eq(this.tables.purchaseItems.businessId, this.businessId)
+          )
+        );
+      const calculatedTotal = parseFloat(itemsResult[0]?.total || "0");
       const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
@@ -164,7 +182,7 @@ export class PurchaseService extends PurchasesService {
       }
     }
 
-    return result.rows.map((purchase) => ({
+    return result.map((purchase) => ({
       ...purchase,
       totalAmount: this.normalizeCurrency(purchase.totalAmount),
     }));
@@ -174,33 +192,48 @@ export class PurchaseService extends PurchasesService {
    * Find all drafts for the current business
    */
   async findDrafts(): Promise<Purchase[]> {
-    const result = await this.pg.query<Purchase>(
-      `SELECT * FROM purchases
-       WHERE business_id = $1 AND status = 'draft'
-       ORDER BY updated_at DESC`,
-      [this.businessId]
-    );
-    return result.rows;
+    const result = await this.db
+      .select()
+      .from(this.tables.purchases)
+      .where(
+        and(
+          eq(this.tables.purchases.businessId, this.businessId),
+          eq(this.tables.purchases.status, "draft")
+        )
+      )
+      .orderBy(desc(this.tables.purchases.updatedAt));
+    return result;
   }
 
   /**
-   * Find all purchases for a specific supplier
+   * Find all this.tables.purchases for a specific supplier
    */
   async findBySupplier(supplierId: string): Promise<Purchase[]> {
-    const result = await this.pg.query<Purchase>(
-      `SELECT * FROM purchases
-       WHERE supplier_id = $1 AND business_id = $2 AND status != 'draft'
-       ORDER BY purchase_date DESC NULLS LAST, created_at DESC`,
-      [supplierId, this.businessId]
-    );
+    const result = await this.db
+      .select()
+      .from(this.tables.purchases)
+      .where(
+        and(
+          eq(this.tables.purchases.supplierId, supplierId),
+          eq(this.tables.purchases.businessId, this.businessId),
+          sql`${this.tables.purchases.status} != 'draft'`
+        )
+      )
+      .orderBy(desc(this.tables.purchases.purchaseDate), desc(this.tables.purchases.createdAt));
 
-    for (const purchase of result.rows) {
-      const itemsResult = await this.pg.query<{ total: string }>(
-        `SELECT COALESCE(SUM(CAST(total_cost AS DECIMAL)), 0) as total
-         FROM purchase_items WHERE purchase_id = $1 AND business_id = $2`,
-        [purchase.id, this.businessId]
-      );
-      const calculatedTotal = parseFloat(itemsResult.rows[0]?.total || "0");
+    for (const purchase of result) {
+      const itemsResult = await this.db
+        .select({
+          total: sql<string>`COALESCE(SUM(CAST(${this.tables.purchaseItems.totalCost} AS DECIMAL)), 0)`,
+        })
+        .from(this.tables.purchaseItems)
+        .where(
+          and(
+            eq(this.tables.purchaseItems.purchaseId, purchase.id),
+            eq(this.tables.purchaseItems.businessId, this.businessId)
+          )
+        );
+      const calculatedTotal = parseFloat(itemsResult[0]?.total || "0");
       const storedTotal = parseFloat(purchase.totalAmount) || 0;
 
       if (Math.abs(storedTotal - calculatedTotal) > 0.009) {
@@ -209,7 +242,7 @@ export class PurchaseService extends PurchasesService {
       }
     }
 
-    return result.rows.map((purchase) => ({
+    return result.map((purchase) => ({
       ...purchase,
       totalAmount: this.normalizeCurrency(purchase.totalAmount),
     }));
@@ -228,29 +261,22 @@ export class PurchaseService extends PurchasesService {
       0
     ) ?? 0;
 
-    // Use raw query for atomic insert (parent's create uses Drizzle which may not allow specifying id)
-    await this.pg.query(
-      `INSERT INTO purchases (
-        id, business_id, supplier_id, purchase_date, total_amount,
-        status, invoice_number, receipt_image_id, notes,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [
-        id,
-        this.businessId,
-        input.supplierId ?? null,
-        input.purchaseDate ?? null,
-        this.normalizeCurrency(totalAmount),
-        "draft",
-        input.invoiceNumber ?? null,
-        input.receiptImageId ?? null,
-        input.notes ?? null,
-        "pending",
-        0,
-        now,
-        now,
-      ]
-    );
+    // Insert using Drizzle ORM
+    await this.db.insert(this.tables.purchases).values({
+      id,
+      businessId: this.businessId,
+      supplierId: input.supplierId ?? null,
+      purchaseDate: input.purchaseDate ?? null,
+      totalAmount: this.normalizeCurrency(totalAmount),
+      status: "draft",
+      invoiceNumber: input.invoiceNumber ?? null,
+      receiptImageId: input.receiptImageId ?? null,
+      notes: input.notes ?? null,
+      syncStatus: "pending",
+      syncAttempts: 0,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    });
 
     // Queue sync for the purchase first (parent will be created before items)
     await this.queueSync("create", id, {
@@ -268,28 +294,21 @@ export class PurchaseService extends PurchasesService {
     if (input.items?.length) {
       for (const item of input.items) {
         const itemId = this.generateId();
-        await this.pg.query(
-          `INSERT INTO purchase_items (
-            id, business_id, purchase_id, product_id, variant_id, unit_id,
-            quantity, unit_cost, total_cost,
-            sync_status, sync_attempts, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-          [
-            itemId,
-            this.businessId,
-            id,
-            item.productId,
-            item.variantId ?? null,
-            item.unitId ?? null,
-            String(item.quantity),
-            this.normalizeCurrency(item.unitCost),
-            this.normalizeCurrency(item.quantity * item.unitCost),
-            "pending",
-            0,
-            now,
-            now,
-          ]
-        );
+        await this.db.insert(this.tables.purchaseItems).values({
+          id: itemId,
+          businessId: this.businessId,
+          purchaseId: id,
+          productId: item.productId,
+          variantId: item.variantId ?? null,
+          unitId: item.unitId ?? null,
+          quantity: String(item.quantity),
+          unitCost: this.normalizeCurrency(item.unitCost),
+          totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
+          syncStatus: "pending",
+          syncAttempts: 0,
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        });
         itemIds.push({ id: itemId, item });
 
         // Queue item sync with FK reference
@@ -348,9 +367,9 @@ export class PurchaseService extends PurchasesService {
     if (input.notes !== undefined) updateData.notes = input.notes;
 
     await this.db
-      .update(purchases)
+      .update(this.tables.purchases)
       .set(updateData)
-      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
+      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
 
     // Queue sync with version for conflict detection
     await this.queueSync("update", id, input as Record<string, unknown>);
@@ -380,13 +399,13 @@ export class PurchaseService extends PurchasesService {
     }
 
     await this.db
-      .update(purchases)
+      .update(this.tables.purchases)
       .set({
         status,
         updatedAt: new Date(),
         syncStatus: SyncStatus.PENDING,
       })
-      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
+      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
 
     await this.queueSync("update", id, { status });
   }
@@ -412,8 +431,8 @@ export class PurchaseService extends PurchasesService {
 
     // Delete the purchase
     await this.db
-      .delete(purchases)
-      .where(and(eq(purchases.id, id), eq(purchases.businessId, this.businessId)));
+      .delete(this.tables.purchases)
+      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
 
     await this.queueSync("delete", id, {});
   }
@@ -435,28 +454,21 @@ export class PurchaseService extends PurchasesService {
     const now = this.now();
     const itemId = this.generateId();
 
-    await this.pg.query(
-      `INSERT INTO purchase_items (
-        id, business_id, purchase_id, product_id, variant_id, unit_id,
-        quantity, unit_cost, total_cost,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [
-        itemId,
-        this.businessId,
-        purchaseId,
-        item.productId,
-        item.variantId ?? null,
-        item.unitId ?? null,
-        String(item.quantity),
-        this.normalizeCurrency(item.unitCost),
-        this.normalizeCurrency(item.quantity * item.unitCost),
-        "pending",
-        0,
-        now,
-        now,
-      ]
-    );
+    await this.db.insert(this.tables.purchaseItems).values({
+      id: itemId,
+      businessId: this.businessId,
+      purchaseId,
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      unitId: item.unitId ?? null,
+      quantity: String(item.quantity),
+      unitCost: this.normalizeCurrency(item.unitCost),
+      totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
+      syncStatus: "pending",
+      syncAttempts: 0,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    });
 
     // Recalculate total
     await this.recalculateTotal(purchaseId);
@@ -512,11 +524,11 @@ export class PurchaseService extends PurchasesService {
     }
 
     await this.db
-      .update(purchaseItems)
+      .update(this.tables.purchaseItems)
       .set(updateData)
       .where(and(
-        eq(purchaseItems.id, itemId),
-        eq(purchaseItems.purchaseId, purchaseId)
+        eq(this.tables.purchaseItems.id, itemId),
+        eq(this.tables.purchaseItems.purchaseId, purchaseId)
       ));
 
     // Recalculate total
@@ -545,10 +557,10 @@ export class PurchaseService extends PurchasesService {
     }
 
     await this.db
-      .delete(purchaseItems)
+      .delete(this.tables.purchaseItems)
       .where(and(
-        eq(purchaseItems.id, itemId),
-        eq(purchaseItems.purchaseId, purchaseId)
+        eq(this.tables.purchaseItems.id, itemId),
+        eq(this.tables.purchaseItems.purchaseId, purchaseId)
       ));
 
     // Recalculate total
@@ -559,44 +571,32 @@ export class PurchaseService extends PurchasesService {
   }
 
   /**
-   * Add an item to an existing purchase (for editing confirmed purchases)
+   * Add an item to an existing purchase (for editing confirmed this.tables.purchases)
    * Does NOT check for draft status - use with caution
    */
   async addItemToPurchase(purchaseId: string, item: CreatePurchaseItemInput): Promise<void> {
     const now = this.now();
     const itemId = this.generateId();
 
-    await this.pg.exec("BEGIN");
-    try {
-      await this.pg.query(
-        `INSERT INTO purchase_items (
-          id, business_id, purchase_id, product_id, variant_id, unit_id,
-          quantity, unit_cost, total_cost,
-          sync_status, sync_attempts, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [
-          itemId,
-          this.businessId,
-          purchaseId,
-          item.productId,
-          item.variantId ?? null,
-          item.unitId ?? null,
-          String(item.quantity),
-          this.normalizeCurrency(item.unitCost),
-          this.normalizeCurrency(item.quantity * item.unitCost),
-          "pending",
-          0,
-          now,
-          now,
-        ]
-      );
+    await this.db.transaction(async (tx) => {
+      await tx.insert(this.tables.purchaseItems).values({
+        id: itemId,
+        businessId: this.businessId,
+        purchaseId,
+        productId: item.productId,
+        variantId: item.variantId ?? null,
+        unitId: item.unitId ?? null,
+        quantity: String(item.quantity),
+        unitCost: this.normalizeCurrency(item.unitCost),
+        totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
+        syncStatus: "pending",
+        syncAttempts: 0,
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
+      });
 
       await this.recalculateTotal(purchaseId);
-      await this.pg.exec("COMMIT");
-    } catch (err) {
-      await this.pg.exec("ROLLBACK");
-      throw err;
-    }
+    });
 
     // Sync with FK reference
     await this.queueSync("create", itemId, {
@@ -611,7 +611,7 @@ export class PurchaseService extends PurchasesService {
   }
 
   /**
-   * Update an item in a purchase (for editing confirmed purchases)
+   * Update an item in a purchase (for editing confirmed this.tables.purchases)
    * Does NOT check for draft status - use with caution
    */
   async updateItemInPurchase(
@@ -626,33 +626,21 @@ export class PurchaseService extends PurchasesService {
     const now = this.now();
     const totalCost = data.totalCost ?? (data.quantity && data.unitCost ? data.quantity * data.unitCost : undefined);
 
-    await this.pg.exec("BEGIN");
-    try {
-      await this.pg.query(
-        `UPDATE purchase_items SET
-          quantity = COALESCE($1, quantity),
-          unit_cost = COALESCE($2, unit_cost),
-          total_cost = COALESCE($3, total_cost),
-          updated_at = $4,
-          sync_status = $5
-        WHERE id = $6 AND purchase_id = $7`,
-        [
-          data.quantity !== undefined ? String(data.quantity) : null,
-          data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : null,
-          totalCost !== undefined ? this.normalizeCurrency(totalCost) : null,
-          now,
-          "pending",
-          itemId,
-          purchaseId,
-        ]
-      );
+    await this.db.transaction(async (tx) => {
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date(now),
+        syncStatus: "pending",
+      };
+      if (data.quantity !== undefined) updateData.quantity = String(data.quantity);
+      if (data.unitCost !== undefined) updateData.unitCost = this.normalizeCurrency(data.unitCost);
+      if (totalCost !== undefined) updateData.totalCost = this.normalizeCurrency(totalCost);
+
+      await tx.update(this.tables.purchaseItems)
+        .set(updateData)
+        .where(and(eq(this.tables.purchaseItems.id, itemId), eq(this.tables.purchaseItems.purchaseId, purchaseId)));
 
       await this.recalculateTotal(purchaseId);
-      await this.pg.exec("COMMIT");
-    } catch (err) {
-      await this.pg.exec("ROLLBACK");
-      throw err;
-    }
+    });
 
     // Sync with FK reference
     await this.queueSync("update", itemId, {
@@ -664,25 +652,19 @@ export class PurchaseService extends PurchasesService {
   }
 
   /**
-   * Delete an item from a purchase (for editing confirmed purchases)
+   * Delete an item from a purchase (for editing confirmed this.tables.purchases)
    * Does NOT check for draft status - use with caution
    */
   async deleteItemFromPurchase(purchaseId: string, itemId: string): Promise<void> {
     const now = this.now();
 
-    await this.pg.exec("BEGIN");
-    try {
-      await this.pg.query(
-        `DELETE FROM purchase_items WHERE id = $1 AND purchase_id = $2`,
-        [itemId, purchaseId]
-      );
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(this.tables.purchaseItems)
+        .where(and(eq(this.tables.purchaseItems.id, itemId), eq(this.tables.purchaseItems.purchaseId, purchaseId)));
 
       await this.recalculateTotal(purchaseId);
-      await this.pg.exec("COMMIT");
-    } catch (err) {
-      await this.pg.exec("ROLLBACK");
-      throw err;
-    }
+    });
 
     // Sync with FK reference
     await this.queueSync("delete", itemId, { purchaseId }, "purchase_items");
@@ -694,25 +676,25 @@ export class PurchaseService extends PurchasesService {
   private async recalculateTotal(purchaseId: string): Promise<void> {
     const result = await this.db
       .select({
-        total: sql<string>`COALESCE(SUM(CAST(${purchaseItems.totalCost} AS DECIMAL)), 0)`,
+        total: sql<string>`COALESCE(SUM(CAST(${this.tables.purchaseItems.totalCost} AS DECIMAL)), 0)`,
       })
-      .from(purchaseItems)
+      .from(this.tables.purchaseItems)
       .where(
         and(
-          eq(purchaseItems.purchaseId, purchaseId),
-          eq(purchaseItems.businessId, this.businessId)
+          eq(this.tables.purchaseItems.purchaseId, purchaseId),
+          eq(this.tables.purchaseItems.businessId, this.businessId)
         )
       );
 
     await this.db
-      .update(purchases)
+      .update(this.tables.purchases)
       .set({
         totalAmount: result[0]?.total ?? "0",
         updatedAt: new Date(),
         syncStatus: SyncStatus.PENDING,
       })
       .where(
-        and(eq(purchases.id, purchaseId), eq(purchases.businessId, this.businessId))
+        and(eq(this.tables.purchases.id, purchaseId), eq(this.tables.purchases.businessId, this.businessId))
       );
   }
 }

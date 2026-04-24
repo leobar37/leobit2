@@ -18,10 +18,10 @@ Guide to the `@avileo/drizzle-sync` library extracted from `packages/drizzle-syn
 | Module | Purpose |
 |--------|---------|
 | `@avileo/drizzle-sync` | Main re-exports |
-| `@avileo/drizzle-sync/core` | Types, interfaces, `classifyError()` |
+| `@avileo/drizzle-sync/core` | Types, interfaces, `DatabaseAdapter`, `classifyError()` |
 | `@avileo/drizzle-sync/shared` | Constants (`OPERATION_STATUS`, `CONFLICT_STRATEGY`, `PULL_STAGES`) |
-| `@avileo/drizzle-sync/pglite` | `PgSyncQueue`, `PushSyncService`, `PullSyncService`, `ChangeApplier`, `SyncCoordinator`, `StagedPullCoordinator` |
-| `@avileo/drizzle-sync/client` | `createSyncClientEngine` — framework-agnostic client |
+| `@avileo/drizzle-sync/pglite` | `PgSyncQueue`, `PushSyncService`, `PullSyncService`, `ChangeApplier`, `SyncCoordinator`, `StagedPullCoordinator`, `PgLiteAdapter` |
+| `@avileo/drizzle-sync/client` | `SyncClientEngine` — framework-agnostic client |
 | `@avileo/drizzle-sync/server` | `SyncEngine`, `BaseSyncHandler`, `GenericSyncHandler`, `HandlerRegistry` |
 | `@avileo/drizzle-sync/react` | `SyncProvider`, `useSyncState` |
 | `@avileo/drizzle-sync/config` | `defineSyncConfig`, `validateConfig` |
@@ -42,6 +42,71 @@ Guide to the `@avileo/drizzle-sync` library extracted from `packages/drizzle-syn
 | Configuration | `packages/drizzle-sync/docs/09-configuration.md` |
 | File Handling | `packages/drizzle-sync/docs/10-file-handling.md` |
 | **Migration v2** | `packages/drizzle-sync/docs/11-migration-v2.md` |
+
+## DatabaseAdapter Abstraction
+
+The `@avileo/drizzle-sync` library uses a `DatabaseAdapter` interface to abstract the database backend, enabling support for PGlite (browser), SQLite (React Native), or PostgreSQL (Node.js).
+
+### Interface
+
+```typescript
+// @avileo/drizzle-sync/core
+export interface DatabaseAdapter {
+  query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
+  exec(sql: string, params?: unknown[]): Promise<void>;
+  getDb(): unknown;
+}
+```
+
+### PGlite Implementation
+
+```typescript
+// @avileo/drizzle-sync/pglite
+export class PgLiteAdapter implements DatabaseAdapter {
+  constructor(pg: PGlite, db: DrizzleInstance) {}
+  query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
+  exec(sql: string, params?: unknown[]): Promise<void>
+  getDb(): DrizzleInstance
+}
+```
+
+### Engine Initialization
+
+`SyncClientEngine` supports 3 modes, all converging to `DatabaseAdapter`:
+
+| Mode | Config | Result |
+|------|--------|--------|
+| **Custom adapter** | `config.adapter` | Uses consumer-provided adapter directly |
+| **Auto-init** | `config.databaseConfig` | Creates PGlite, wraps in `PgLiteAdapter` |
+| **Legacy** | `config.pg` + `config.db` | Wraps provided instances in `PgLiteAdapter` |
+
+### Context
+
+`SyncClientEngineContext` exposes **only** `adapter` — no `pg` or `db` fields:
+
+```typescript
+export interface SyncClientEngineContext {
+  adapter: DatabaseAdapter;  // ← only DB field
+  tenantId: string;
+  tenantColumn: string;
+  userId: string;
+  syncService: SyncWritePort;
+}
+```
+
+All internal services (`SyncBatchProcessor`, `SyncOperationLifecycleService`, `SyncEntityStatusUpdater`, `PgSyncQueue`, `ChangeApplier`) consume `DatabaseAdapter` exclusively.
+
+### Future Backends
+
+Implement `DatabaseAdapter` for any SQL backend:
+
+```typescript
+class SQLiteAdapter implements DatabaseAdapter {
+  query<T>(sql, params) { /* SQLite implementation */ }
+  exec(sql, params) { /* SQLite implementation */ }
+  getDb() { return this.drizzleDb; }
+}
+```
 
 ## Key Concepts
 

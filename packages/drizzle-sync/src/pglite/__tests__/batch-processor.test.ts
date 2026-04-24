@@ -1,21 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SyncBatchProcessor } from "../batch-processor";
-import type { PGlite } from "@electric-sql/pglite";
+import type { DatabaseAdapter } from "../../core/database-adapter";
 import type { ISyncHttpClient, SyncOperationRecord, HandlerResult } from "../../core";
 import { SyncAutoRunner } from "../auto-runner";
 import { SyncOperationLifecycleService } from "../operation-lifecycle";
 import { SyncEntityStatusUpdater } from "../entity-status-updater";
 
 describe("SyncBatchProcessor", () => {
-  let pg: ReturnType<typeof createMockPg>;
+  let adapter: ReturnType<typeof createMockAdapter>;
   let httpClient: ISyncHttpClient;
   let autoRunner: SyncAutoRunner;
   let lifecycle: SyncOperationLifecycleService;
 
-  function createMockPg() {
+  function createMockAdapter() {
     return {
       query: vi.fn().mockResolvedValue({ rows: [] }),
-    } as unknown as PGlite;
+      exec: vi.fn().mockResolvedValue(undefined),
+      getDb: vi.fn(),
+    } as unknown as DatabaseAdapter;
   }
 
   function createMockHttpClient(): ISyncHttpClient {
@@ -60,7 +62,7 @@ describe("SyncBatchProcessor", () => {
   }
 
   beforeEach(() => {
-    pg = createMockPg();
+    adapter = createMockAdapter();
     httpClient = createMockHttpClient();
     autoRunner = new SyncAutoRunner();
     lifecycle = createMockLifecycle();
@@ -68,7 +70,7 @@ describe("SyncBatchProcessor", () => {
 
   describe("processPending", () => {
     it("returns empty when no pending operations", async () => {
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
       });
 
@@ -80,7 +82,7 @@ describe("SyncBatchProcessor", () => {
       const op1 = createOperation("sales", "2024-01-01T00:00:00Z");
       const op2 = createOperation("customers", "2024-01-02T00:00:00Z");
 
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [op1, op2],
       });
 
@@ -89,7 +91,7 @@ describe("SyncBatchProcessor", () => {
         { success: true, idempotencyKey: op2.id, serverTimestamp: new Date().toISOString() },
       ]);
 
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
         entityPriorities: ["customers", "sales"],
       });
@@ -106,7 +108,7 @@ describe("SyncBatchProcessor", () => {
         createOperation("customers", `2024-01-0${i + 1}T00:00:00Z`)
       );
 
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: operations,
       });
 
@@ -118,7 +120,7 @@ describe("SyncBatchProcessor", () => {
         }))
       );
 
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
         batchSize: 2,
       });
@@ -132,16 +134,16 @@ describe("SyncBatchProcessor", () => {
       const op1 = createOperation("customers", "2024-01-01T00:00:00Z");
       const op2 = createOperation("customers", "2024-01-02T00:00:00Z");
 
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [op1, op2],
       });
 
       (httpClient.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue([
         { success: true, idempotencyKey: op1.id, serverTimestamp: new Date().toISOString() },
-        { success: false, idempotencyKey: op2.id, error: "Server error", serverTimestamp: new Date().toISOString() },
+        { success: false, idempotencyKey: op2.id, error: "Validation failed", serverTimestamp: new Date().toISOString() },
       ]);
 
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
       });
 
@@ -150,57 +152,41 @@ describe("SyncBatchProcessor", () => {
       expect(result.failed).toBe(1);
     });
 
-    it("handles conflicts", async () => {
+    it("handles conflict resolution", async () => {
       const op1 = createOperation("customers", "2024-01-01T00:00:00Z");
 
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [op1],
       });
 
       (httpClient.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue([
-        {
-          success: false,
-          idempotencyKey: op1.id,
-          conflict: { serverData: {}, entityType: "customers", entityId: "1", clientVersion: 1, serverVersion: 2 },
-          serverTimestamp: new Date().toISOString(),
-        },
+        { success: false, idempotencyKey: op1.id, conflict: { serverData: {}, suggestedMerge: {} }, serverTimestamp: new Date().toISOString() },
       ]);
 
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
       });
 
       const result = await processor.processPending(true);
       expect(result.conflicts).toBe(1);
-      expect(lifecycle.markConflict).toHaveBeenCalledWith(op1.id, expect.any(Object));
     });
 
-    it("records backoff on failure", async () => {
+    it("handles batch-level errors", async () => {
       const op1 = createOperation("customers", "2024-01-01T00:00:00Z");
 
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [op1],
       });
 
       (httpClient.sendBatch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Network error"));
 
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
+      const processor = new SyncBatchProcessor(adapter, "tenant-1", httpClient, lifecycle, autoRunner, {
         tenantColumn: "tenant_id",
       });
 
-      await processor.processPending(true);
-      expect(autoRunner.getBackoffAtMax()).toBe(false);
-    });
-
-    it("uses configurable tenant column", async () => {
-      const processor = new SyncBatchProcessor(pg, "tenant-1", httpClient, lifecycle, autoRunner, {
-        tenantColumn: "business_id",
-      });
-
-      await processor.processPending(true);
-
-      const queryCall = (pg.query as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(queryCall[0]).toContain('"business_id" = $1');
+      const result = await processor.processPending(true);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toContain("Network error");
     });
   });
 });

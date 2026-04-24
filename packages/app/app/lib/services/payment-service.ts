@@ -5,8 +5,9 @@
  */
 
 import type { SyncClientEngineLike } from "./base-service";
-import { abonos } from "@avileo/shared";
-import { eq } from "drizzle-orm";
+// Tables accessed via this.tables from engine
+// // Tables are now accessed via this.tables from the engine
+import { eq, and, like, or, sql, desc, gte } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
 
 // Import generated base service
@@ -76,7 +77,7 @@ export interface AccountsReceivablePage {
 }
 
 /**
- * Payment Service for managing debt payments (abonos)
+ * Payment Service for managing debt payments (this.tables.abonos)
  * Extends AbonosService for local-first operations with sync integration
  */
 export class PaymentService extends AbonosService {
@@ -86,94 +87,117 @@ export class PaymentService extends AbonosService {
 
   async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
     const minBalance = query.minBalance ?? 0.01;
-    const params: Array<string | number> = [this.businessId, this.businessId];
-    let paramIndex = params.length;
-
-    let extraFilters = "";
-
+    
+    // Build filter conditions for this.tables.customers
+    const customerConditions = [eq(this.tables.customers.businessId, this.businessId)];
+    
     if (query.customerId) {
-      paramIndex += 1;
-      params.push(query.customerId);
-      extraFilters += ` AND c.id = $${paramIndex}`;
+      customerConditions.push(eq(this.tables.customers.id, query.customerId));
     }
-
+    
     if (query.search?.trim()) {
       const searchPattern = `%${query.search.trim()}%`;
-      paramIndex += 1;
-      params.push(searchPattern);
-      extraFilters += ` AND (c.name LIKE $${paramIndex} OR COALESCE(c.phone, '') LIKE $${paramIndex})`;
+      customerConditions.push(
+        or(
+          like(this.tables.customers.name, searchPattern),
+          like(sql`COALESCE(${this.tables.customers.phone}, '')`, searchPattern)
+        )!
+      );
     }
 
-    paramIndex += 1;
-    params.push(minBalance);
-    const minBalanceParam = paramIndex;
+    // Get all this.tables.customers matching filters
+    const customerList = await this.db
+      .select({
+        id: this.tables.customers.id,
+        name: this.tables.customers.name,
+        phone: this.tables.customers.phone,
+      })
+      .from(this.tables.customers)
+      .where(and(...customerConditions));
 
-    const baseQuery = `
-      WITH sales_by_customer AS (
-        SELECT customer_id,
-               COALESCE(SUM(total_amount), 0) AS total_sales,
-               MAX(sale_date) AS last_sale_date
-        FROM sales
-        WHERE business_id = $1
-          AND sale_type = 'credito'
-          AND status NOT IN ('draft', 'cancelled')
-          AND customer_id IS NOT NULL
-        GROUP BY customer_id
-      ),
-      payments_by_customer AS (
-        SELECT customer_id,
-               COALESCE(SUM(amount), 0) AS total_payments
-        FROM abonos
-        WHERE business_id = $2
-        GROUP BY customer_id
-      ),
-      debtors AS (
-        SELECT
-          c.id AS customer_id,
-          c.name AS customer_name,
-          c.phone AS customer_phone,
-          COALESCE(s.total_sales, 0) AS total_sales,
-          COALESCE(p.total_payments, 0) AS total_payments,
-          GREATEST(COALESCE(s.total_sales, 0) - COALESCE(p.total_payments, 0), 0) AS total_debt,
-          s.last_sale_date
-        FROM customers c
-        LEFT JOIN sales_by_customer s ON s.customer_id = c.id
-        LEFT JOIN payments_by_customer p ON p.customer_id = c.id
-        WHERE c.business_id = $1
-          ${extraFilters}
+    const customerIds = customerList.map(c => c.id);
+    
+    if (customerIds.length === 0) {
+      return { items: [], total: 0 };
+    }
+
+    // Get credit this.tables.sales grouped by customer using Drizzle
+    const this.tables.salesByCustomer = await this.db
+      .select({
+        customerId: this.tables.sales.customerId,
+        totalSales: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
+        lastSaleDate: sql<string | null>`MAX(${this.tables.sales.saleDate})`,
+      })
+      .from(this.tables.sales)
+      .where(
+        and(
+          eq(this.tables.sales.businessId, this.businessId),
+          eq(this.tables.sales.saleType, "credito"),
+          sql`${this.tables.sales.status} NOT IN ('draft', 'cancelled')`,
+          sql`${this.tables.sales.customerId} IS NOT NULL`,
+          sql`${this.tables.sales.customerId} = ANY(${sql.param(customerIds)})`
+        )
       )
-    `;
+      .groupBy(this.tables.sales.customerId);
 
-    const itemsParams = [...params, query.limit, query.offset];
-    const itemsResult = await this.pg.query<AccountsReceivableRow>(
-      `${baseQuery}
-       SELECT
-         customer_id,
-         customer_name,
-         customer_phone,
-         total_sales,
-         total_payments,
-         total_debt,
-         last_sale_date
-       FROM debtors
-       WHERE total_debt >= $${minBalanceParam}
-       ORDER BY total_debt DESC, last_sale_date DESC NULLS LAST, customer_name ASC
-       LIMIT $${minBalanceParam + 1}
-       OFFSET $${minBalanceParam + 2}`,
-      itemsParams
-    );
+    // Get payments grouped by customer using Drizzle
+    const paymentsByCustomer = await this.db
+      .select({
+        customerId: this.tables.abonos.customerId,
+        totalPayments: sql<string>`COALESCE(SUM(${this.tables.abonos.amount}), 0)`,
+      })
+      .from(this.tables.abonos)
+      .where(
+        and(
+          eq(this.tables.abonos.businessId, this.businessId),
+          sql`${this.tables.abonos.customerId} = ANY(${sql.param(customerIds)})`
+        )
+      )
+      .groupBy(this.tables.abonos.customerId);
 
-    const countResult = await this.pg.query<{ count: string }>(
-      `${baseQuery}
-       SELECT COUNT(*) AS count
-       FROM debtors
-       WHERE total_debt >= $${minBalanceParam}`,
-      params
-    );
+    // Build accounts receivable rows in memory
+    const this.tables.salesMap = new Map(this.tables.salesByCustomer.map(s => [s.customerId!, s]));
+    const paymentsMap = new Map(paymentsByCustomer.map(p => [p.customerId!, p]));
+
+    const rows: AccountsReceivableRow[] = customerList.map(customer => {
+      const saleData = this.tables.salesMap.get(customer.id);
+      const paymentData = paymentsMap.get(customer.id);
+      
+      const totalSales = parseFloat(saleData?.totalSales || "0");
+      const totalPayments = parseFloat(paymentData?.totalPayments || "0");
+      const totalDebt = Math.max(totalSales - totalPayments, 0);
+
+      return {
+        customerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        totalSales: totalSales.toFixed(2),
+        totalPayments: totalPayments.toFixed(2),
+        totalDebt: totalDebt.toFixed(2),
+        lastSaleDate: saleData?.lastSaleDate || null,
+      };
+    }).filter(row => parseFloat(row.totalDebt) >= minBalance);
+
+    // Sort by total debt desc, then last sale date desc, then name asc
+    rows.sort((a, b) => {
+      const debtDiff = parseFloat(b.totalDebt) - parseFloat(a.totalDebt);
+      if (debtDiff !== 0) return debtDiff;
+      
+      if (a.lastSaleDate && b.lastSaleDate) {
+        return new Date(b.lastSaleDate).getTime() - new Date(a.lastSaleDate).getTime();
+      }
+      if (a.lastSaleDate) return -1;
+      if (b.lastSaleDate) return 1;
+      
+      return a.customerName.localeCompare(b.customerName);
+    });
+
+    const total = rows.length;
+    const paginatedRows = rows.slice(query.offset, query.offset + query.limit);
 
     return {
-      items: itemsResult.rows.map((row) => mapToCamelCase(row) as unknown as AccountsReceivableRow),
-      total: Number(countResult.rows[0]?.count ?? 0),
+      items: paginatedRows,
+      total,
     };
   }
 
@@ -188,81 +212,52 @@ export class PaymentService extends AbonosService {
       return 0;
     }
 
-    const minBalance = filters.minBalance ?? 0.01;
-    const params: Array<string | number> = [this.businessId, this.businessId];
-    let paramIndex = params.length;
-    let extraFilters = "";
+    // Calculate total debt from all matching rows
+    const allRows = await this.findAccountsReceivablePage({
+      ...filters,
+      limit: Number.MAX_SAFE_INTEGER,
+      offset: 0,
+    });
 
-    if (filters.customerId) {
-      paramIndex += 1;
-      params.push(filters.customerId);
-      extraFilters += ` AND c.id = $${paramIndex}`;
-    }
+    return allRows.items.reduce((sum, row) => sum + parseFloat(row.totalDebt), 0);
+  }
 
-    if (filters.search?.trim()) {
-      const searchPattern = `%${filters.search.trim()}%`;
-      paramIndex += 1;
-      params.push(searchPattern);
-      extraFilters += ` AND (c.name LIKE $${paramIndex} OR COALESCE(c.phone, '') LIKE $${paramIndex})`;
-    }
-
-    paramIndex += 1;
-    params.push(minBalance);
-
-    const result = await this.pg.query<{ total: string }>(
-      `
-      WITH sales_by_customer AS (
-        SELECT customer_id,
-               COALESCE(SUM(total_amount), 0) AS total_sales
-        FROM sales
-        WHERE business_id = $1
-          AND sale_type = 'credito'
-          AND status NOT IN ('draft', 'cancelled')
-          AND customer_id IS NOT NULL
-        GROUP BY customer_id
-      ),
-      payments_by_customer AS (
-        SELECT customer_id,
-               COALESCE(SUM(amount), 0) AS total_payments
-        FROM abonos
-        WHERE business_id = $2
-        GROUP BY customer_id
-      ),
-      debtors AS (
-        SELECT GREATEST(COALESCE(s.total_sales, 0) - COALESCE(p.total_payments, 0), 0) AS total_debt
-        FROM customers c
-        LEFT JOIN sales_by_customer s ON s.customer_id = c.id
-        LEFT JOIN payments_by_customer p ON p.customer_id = c.id
-        WHERE c.business_id = $1
-          ${extraFilters}
-      )
-      SELECT COALESCE(SUM(total_debt), 0) AS total
-      FROM debtors
-      WHERE total_debt >= $${paramIndex}
-      `,
-      params
-    );
-
-    return Number(result.rows[0]?.total ?? 0);
+  /**
+   * Convert Drizzle ORM result to Abono interface (snake_case)
+   */
+  private toAbono(row: typeof this.tables.abonos.$inferSelect): Abono {
+    return {
+      id: row.id,
+      business_id: row.businessId,
+      customer_id: row.customerId,
+      seller_id: row.sellerId ?? "",
+      amount: this.normalizeCurrency(row.amount),
+      payment_method: row.paymentMethod,
+      notes: row.notes,
+      proof_image_id: row.proofImageId,
+      reference_number: row.referenceNumber,
+      related_sale_id: row.relatedSaleId,
+      sync_status: row.syncStatus as Abono["sync_status"],
+      sync_attempts: row.syncAttempts,
+      created_at: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    };
   }
 
   /**
    * Find a payment by ID with normalized amount
    * Override to return Abono type with normalized currency
    */
-  // @ts-expect-error - Return type Abono is incompatible with parent but required for consumer hooks
   async findById(id: string): Promise<Abono | null> {
     try {
-      const result = await this.pg.query<Abono>(
-        "SELECT * FROM abonos WHERE id = $1",
-        [id]
-      );
-      const row = result.rows[0];
+      const result = await this.db
+        .select()
+        .from(this.tables.abonos)
+        .where(eq(this.tables.abonos.id, id))
+        .limit(1);
+      
+      const row = result[0];
       if (!row) return null;
-      return {
-        ...row,
-        amount: this.normalizeCurrency(row.amount),
-      };
+      return this.toAbono(row);
     } catch (error) {
       console.error("[PaymentService.findById] Error:", error);
       throw new Error(`Failed to find payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -271,59 +266,69 @@ export class PaymentService extends AbonosService {
 
   /**
    * Find all payments for a specific customer
-   * Keeps custom SQL query with amount normalization
    */
   async findByCustomer(customerId: string): Promise<Abono[]> {
-    const result = await this.pg.query<Abono>(
-      `SELECT * FROM abonos
-       WHERE customer_id = $1 AND business_id = $2
-       ORDER BY created_at DESC`,
-      [customerId, this.businessId]
-    );
-    return result.rows.map((row) => ({
-      ...row,
-      amount: this.normalizeCurrency(row.amount),
-    }));
+    const result = await this.db
+      .select()
+      .from(this.tables.abonos)
+      .where(
+        and(
+          eq(this.tables.abonos.customerId, customerId),
+          eq(this.tables.abonos.businessId, this.businessId)
+        )
+      )
+      .orderBy(desc(this.tables.abonos.createdAt));
+    
+    return result.map((row) => this.toAbono(row));
   }
 
   /**
    * Find all payments for the current business
    * Override to return Abono[] type with normalized amounts
    */
-  // @ts-expect-error - Return type Abono[] is incompatible with parent but required for consumer hooks
   async findByBusiness(): Promise<Abono[]> {
-    const result = await this.pg.query<Abono>(
-      `SELECT * FROM abonos
-       WHERE business_id = $1
-       ORDER BY created_at DESC`,
-      [this.businessId]
-    );
-    return result.rows.map((row) => ({
-      ...row,
-      amount: this.normalizeCurrency(row.amount),
-    }));
+    const result = await this.db
+      .select()
+      .from(this.tables.abonos)
+      .where(eq(this.tables.abonos.businessId, this.businessId))
+      .orderBy(desc(this.tables.abonos.createdAt));
+    
+    return result.map((row) => this.toAbono(row));
   }
 
   /**
-   * Get customer debt balance (sales - payments)
-   * Only counts credit sales (sale_type = credito) that are not draft/cancelled
+   * Get customer debt balance (this.tables.sales - payments)
+   * Only counts credit this.tables.sales (sale_type = credito) that are not draft/cancelled
    */
   async getCustomerDebtBalance(customerId: string): Promise<number> {
-    const salesResult = await this.pg.query<{ total: string }>(
-      `SELECT COALESCE(SUM(total_amount), 0) as total FROM sales
-       WHERE customer_id = $1 AND business_id = $2
-       AND sale_type = 'credito' AND status NOT IN ('draft', 'cancelled')`,
-      [customerId, this.businessId]
-    );
+    const this.tables.salesResult = await this.db
+      .select({
+        total: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
+      })
+      .from(this.tables.sales)
+      .where(
+        and(
+          eq(this.tables.sales.customerId, customerId),
+          eq(this.tables.sales.businessId, this.businessId),
+          eq(this.tables.sales.saleType, "credito"),
+          sql`${this.tables.sales.status} NOT IN ('draft', 'cancelled')`
+        )
+      );
 
-    const paymentsResult = await this.pg.query<{ total: string }>(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM abonos
-       WHERE customer_id = $1 AND business_id = $2`,
-      [customerId, this.businessId]
-    );
+    const paymentsResult = await this.db
+      .select({
+        total: sql<string>`COALESCE(SUM(${this.tables.abonos.amount}), 0)`,
+      })
+      .from(this.tables.abonos)
+      .where(
+        and(
+          eq(this.tables.abonos.customerId, customerId),
+          eq(this.tables.abonos.businessId, this.businessId)
+        )
+      );
 
-    const totalSales = parseFloat(salesResult.rows[0]?.total || "0");
-    const totalPayments = parseFloat(paymentsResult.rows[0]?.total || "0");
+    const totalSales = parseFloat(this.tables.salesResult[0]?.total || "0");
+    const totalPayments = parseFloat(paymentsResult[0]?.total || "0");
 
     return Math.max(totalSales - totalPayments, 0);
   }
@@ -350,12 +355,18 @@ export class PaymentService extends AbonosService {
    * Validate that customer belongs to the same business
    */
   private async validateCustomerBusiness(customerId: string): Promise<void> {
-    const result = await this.pg.query<{ id: string }>(
-      `SELECT id FROM customers WHERE id = $1 AND business_id = $2`,
-      [customerId, this.businessId]
-    );
+    const result = await this.db
+      .select({ id: this.tables.customers.id })
+      .from(this.tables.customers)
+      .where(
+        and(
+          eq(this.tables.customers.id, customerId),
+          eq(this.tables.customers.businessId, this.businessId)
+        )
+      )
+      .limit(1);
 
-    if (!result.rows[0]) {
+    if (!result[0]) {
       throw new Error("El cliente no pertenece a este negocio");
     }
   }
@@ -380,7 +391,7 @@ export class PaymentService extends AbonosService {
       const now = this.now();
 
       // Insert using Drizzle ORM
-      await this.db.insert(abonos).values({
+      await this.db.insert(this.tables.abonos).values({
         id,
         customerId: input.customerId,
         sellerId: input.sellerId ?? null,
@@ -459,9 +470,9 @@ export class PaymentService extends AbonosService {
     }
 
     // Update using Drizzle ORM
-    await this.db.update(abonos)
+    await this.db.update(this.tables.abonos)
       .set(updateData)
-      .where(eq(abonos.id, id));
+      .where(eq(this.tables.abonos.id, id));
 
     // Queue sync operation
     await this.queueSync("update", id, {
@@ -484,7 +495,7 @@ export class PaymentService extends AbonosService {
     }
 
     // Delete from local database
-    await this.db.delete(abonos).where(eq(abonos.id, id));
+    await this.db.delete(this.tables.abonos).where(eq(this.tables.abonos.id, id));
 
     // Queue sync operation
     await this.queueSync("delete", id, {});

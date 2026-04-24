@@ -9,7 +9,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { SyncStatus, customerGroups, customerGroupMembers, customers, type CustomerGroup } from "@avileo/shared";
+import { SyncStatus, type CustomerGroup } from "@avileo/shared";
 
 import { CustomerGroupsService, type CreateCustomerGroupsInput, type UpdateCustomerGroupsInput } from "~/lib/sync/generated/services";
 
@@ -51,7 +51,7 @@ export interface CustomerGroupWithMembers extends CustomerGroup {
  * - getMemberCount(groupId): Promise<number> - Member count helper
  * - getMembers(groupId): Promise<GroupMemberWithCustomer[]> - Get members with customer info
  * - getCustomerGroups(customerId): Promise<CustomerGroupSummary[]> - Groups for a customer
- * - getCustomerGroupsForCustomers(customerIds): Promise<CustomerGroupSummaryWithCustomerId[]> - Groups for multiple customers
+ * - getCustomerGroupsForCustomers(customerIds): Promise<CustomerGroupSummaryWithCustomerId[]> - Groups for multiple this.tables.customers
    * - createWithMembers(input, customerIds): Promise<{ group: CustomerGroup }> - Atomic group + members
    * - addMembers(groupId, customerIds): Promise<void> - Add members
  * - removeMember(groupId, customerId): Promise<void> - Remove a member
@@ -69,9 +69,9 @@ export class CustomerGroupService extends CustomerGroupsService {
   async findAll(): Promise<CustomerGroupWithMemberCount[]> {
     const groups = await this.db
       .select()
-      .from(customerGroups)
-      .where(eq(customerGroups.businessId, this.businessId))
-      .orderBy(desc(customerGroups.createdAt));
+      .from(this.tables.customerGroups)
+      .where(eq(this.tables.customerGroups.businessId, this.businessId))
+      .orderBy(desc(this.tables.customerGroups.createdAt));
 
     const groupsWithCounts = await Promise.all(
       groups.map(async (group) => {
@@ -98,10 +98,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async findById(id: string): Promise<CustomerGroupWithMembers | null> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, id),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, id),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -130,10 +130,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async getMemberCount(groupId: string): Promise<number> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, groupId),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, groupId),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -143,10 +143,10 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     const result = await this.db
       .select({ count: sql<number>`count(*)` })
-      .from(customerGroupMembers)
+      .from(this.tables.customerGroupMembers)
       .where(and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.businessId, this.businessId)
+        eq(this.tables.customerGroupMembers.groupId, groupId),
+        eq(this.tables.customerGroupMembers.businessId, this.businessId)
       ));
 
     return result[0]?.count ?? 0;
@@ -159,10 +159,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async getMembers(groupId: string): Promise<GroupMemberWithCustomer[]> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, groupId),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, groupId),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -172,15 +172,15 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     const results = await this.db
       .select({
-        customerId: customerGroupMembers.customerId,
-        customerName: customers.name,
-        addedAt: customerGroupMembers.addedAt,
+        customerId: this.tables.customerGroupMembers.customerId,
+        customerName: this.tables.customers.name,
+        addedAt: this.tables.customerGroupMembers.addedAt,
       })
-      .from(customerGroupMembers)
-      .innerJoin(customers, eq(customerGroupMembers.customerId, customers.id))
+      .from(this.tables.customerGroupMembers)
+      .innerJoin(this.tables.customers, eq(this.tables.customerGroupMembers.customerId, this.tables.customers.id))
       .where(and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.businessId, this.businessId)
+        eq(this.tables.customerGroupMembers.groupId, groupId),
+        eq(this.tables.customerGroupMembers.businessId, this.businessId)
       ));
 
     return results.map(row => ({
@@ -197,25 +197,25 @@ export class CustomerGroupService extends CustomerGroupsService {
   async getCustomerGroups(customerId: string): Promise<CustomerGroupSummary[]> {
     const results = await this.db
       .select({
-        id: customerGroups.id,
-        name: customerGroups.name,
-        syncStatus: customerGroups.syncStatus,
+        id: this.tables.customerGroups.id,
+        name: this.tables.customerGroups.name,
+        syncStatus: this.tables.customerGroups.syncStatus,
       })
-      .from(customerGroupMembers)
-      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .from(this.tables.customerGroupMembers)
+      .innerJoin(this.tables.customerGroups, eq(this.tables.customerGroupMembers.groupId, this.tables.customerGroups.id))
       .where(
         and(
-          eq(customerGroupMembers.customerId, customerId),
-          eq(customerGroups.businessId, this.businessId)
+          eq(this.tables.customerGroupMembers.customerId, customerId),
+          eq(this.tables.customerGroups.businessId, this.businessId)
         )
       )
-      .orderBy(desc(customerGroups.createdAt));
+      .orderBy(desc(this.tables.customerGroups.createdAt));
 
     return results;
   }
 
   /**
-   * Get all groups for multiple customers
+   * Get all groups for multiple this.tables.customers
    * Custom query method for batch operations
    */
   async getCustomerGroupsForCustomers(customerIds: string[]): Promise<CustomerGroupSummaryWithCustomerId[]> {
@@ -225,21 +225,21 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     const results = await this.db
       .select({
-        customerId: customerGroupMembers.customerId,
-        id: customerGroups.id,
-        name: customerGroups.name,
-        syncStatus: customerGroups.syncStatus,
+        customerId: this.tables.customerGroupMembers.customerId,
+        id: this.tables.customerGroups.id,
+        name: this.tables.customerGroups.name,
+        syncStatus: this.tables.customerGroups.syncStatus,
       })
-      .from(customerGroupMembers)
-      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .from(this.tables.customerGroupMembers)
+      .innerJoin(this.tables.customerGroups, eq(this.tables.customerGroupMembers.groupId, this.tables.customerGroups.id))
       .where(
         and(
-          inArray(customerGroupMembers.customerId, customerIds),
-          eq(customerGroupMembers.businessId, this.businessId),
-          eq(customerGroups.businessId, this.businessId)
+          inArray(this.tables.customerGroupMembers.customerId, customerIds),
+          eq(this.tables.customerGroupMembers.businessId, this.businessId),
+          eq(this.tables.customerGroups.businessId, this.businessId)
         )
       )
-      .orderBy(desc(customerGroups.createdAt));
+      .orderBy(desc(this.tables.customerGroups.createdAt));
 
     return results;
   }
@@ -265,10 +265,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async delete(id: string): Promise<void> {
     const existing = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, id),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, id),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -278,9 +278,9 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     // Query all current members before deleting to sync their deletions individually
     const members = await this.db
-      .select({ id: customerGroupMembers.id })
-      .from(customerGroupMembers)
-      .where(eq(customerGroupMembers.groupId, id));
+      .select({ id: this.tables.customerGroupMembers.id })
+      .from(this.tables.customerGroupMembers)
+      .where(eq(this.tables.customerGroupMembers.groupId, id));
 
     // Queue individual delete sync operations for each member
     for (const member of members) {
@@ -288,12 +288,12 @@ export class CustomerGroupService extends CustomerGroupsService {
     }
 
     await this.db
-      .delete(customerGroupMembers)
-      .where(eq(customerGroupMembers.groupId, id));
+      .delete(this.tables.customerGroupMembers)
+      .where(eq(this.tables.customerGroupMembers.groupId, id));
 
     await this.db
-      .delete(customerGroups)
-      .where(eq(customerGroups.id, id));
+      .delete(this.tables.customerGroups)
+      .where(eq(this.tables.customerGroups.id, id));
 
     await this.queueSync("delete", id, {});
   }
@@ -305,10 +305,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async addMembers(groupId: string, customerIds: string[]): Promise<void> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, groupId),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, groupId),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -317,9 +317,9 @@ export class CustomerGroupService extends CustomerGroupsService {
     }
 
     const existingMembers = await this.db
-      .select({ customerId: customerGroupMembers.customerId })
-      .from(customerGroupMembers)
-      .where(eq(customerGroupMembers.groupId, groupId));
+      .select({ customerId: this.tables.customerGroupMembers.customerId })
+      .from(this.tables.customerGroupMembers)
+      .where(eq(this.tables.customerGroupMembers.groupId, groupId));
 
     const existingCustomerIds = new Set(existingMembers.map(m => m.customerId));
     const newCustomerIds = customerIds.filter(id => !existingCustomerIds.has(id));
@@ -345,7 +345,7 @@ export class CustomerGroupService extends CustomerGroupsService {
       };
     });
 
-    await this.db.insert(customerGroupMembers).values(members as never[]);
+    await this.db.insert(this.tables.customerGroupMembers).values(members as never[]);
 
     // Queue sync operations with FK reference (groupId in payload) for topological ordering
     for (let i = 0; i < newCustomerIds.length; i++) {
@@ -363,10 +363,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async removeMember(groupId: string, customerId: string): Promise<void> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, groupId),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, groupId),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -377,10 +377,10 @@ export class CustomerGroupService extends CustomerGroupsService {
     // Look up the member to get its actual UUID
     const member = await this.db
       .select()
-      .from(customerGroupMembers)
+      .from(this.tables.customerGroupMembers)
       .where(and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.customerId, customerId)
+        eq(this.tables.customerGroupMembers.groupId, groupId),
+        eq(this.tables.customerGroupMembers.customerId, customerId)
       ))
       .limit(1);
 
@@ -391,10 +391,10 @@ export class CustomerGroupService extends CustomerGroupsService {
     const memberId = member[0].id;
 
     await this.db
-      .delete(customerGroupMembers)
+      .delete(this.tables.customerGroupMembers)
       .where(and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.customerId, customerId)
+        eq(this.tables.customerGroupMembers.groupId, groupId),
+        eq(this.tables.customerGroupMembers.customerId, customerId)
       ));
 
     await this.queueSync("delete", memberId, {
@@ -410,10 +410,10 @@ export class CustomerGroupService extends CustomerGroupsService {
   async isMember(groupId: string, customerId: string): Promise<boolean> {
     const group = await this.db
       .select()
-      .from(customerGroups)
+      .from(this.tables.customerGroups)
       .where(and(
-        eq(customerGroups.id, groupId),
-        eq(customerGroups.businessId, this.businessId)
+        eq(this.tables.customerGroups.id, groupId),
+        eq(this.tables.customerGroups.businessId, this.businessId)
       ))
       .limit(1);
 
@@ -423,10 +423,10 @@ export class CustomerGroupService extends CustomerGroupsService {
 
     const result = await this.db
       .select()
-      .from(customerGroupMembers)
+      .from(this.tables.customerGroupMembers)
       .where(and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.customerId, customerId)
+        eq(this.tables.customerGroupMembers.groupId, groupId),
+        eq(this.tables.customerGroupMembers.customerId, customerId)
       ))
       .limit(1);
 

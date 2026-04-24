@@ -5,13 +5,13 @@
  */
 
 import type { SyncClientEngineLike } from "./base-service";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import {
   DistribucionesService,
   type CreateDistribucionesInput,
   type UpdateDistribucionesInput,
 } from "~/lib/sync/generated/services";
-import { distribuciones, distribucionItems, type Distribucion } from "@avileo/shared";
+import { type Distribucion } from "@avileo/shared";
 import { mapToCamelCase } from "../mappers/entity-mapper";
 
 // Re-export Distribucion for backward compatibility
@@ -68,7 +68,7 @@ export interface CreateDistribucionInput {
 }
 
 /**
- * Filters for finding distribuciones
+ * Filters for finding this.tables.distribuciones
  */
 export interface FindDistribucionesFilters {
   fecha?: string;
@@ -86,29 +86,29 @@ export class DistribucionService extends DistribucionesService {
   }
 
   /**
-   * Find all distribuciones for the current business with optional filters
+   * Find all this.tables.distribuciones for the current business with optional filters
    * Overrides parent to add filtering support
    */
   async findByBusiness(filters?: FindDistribucionesFilters): Promise<Distribucion[]> {
-    const conditions = [eq(distribuciones.businessId, this.businessId)];
+    const conditions = [eq(this.tables.distribuciones.businessId, this.businessId)];
 
     if (filters?.fecha) {
-      conditions.push(eq(distribuciones.fecha, filters.fecha));
+      conditions.push(eq(this.tables.distribuciones.fecha, filters.fecha));
     }
 
     if (filters?.vendedorId) {
-      conditions.push(eq(distribuciones.vendedorId, filters.vendedorId));
+      conditions.push(eq(this.tables.distribuciones.vendedorId, filters.vendedorId));
     }
 
     if (filters?.estado) {
-      conditions.push(eq(distribuciones.estado, filters.estado));
+      conditions.push(eq(this.tables.distribuciones.estado, filters.estado));
     }
 
     const result = await this.db
       .select()
-      .from(distribuciones)
+      .from(this.tables.distribuciones)
       .where(and(...conditions))
-      .orderBy(desc(distribuciones.fecha), desc(distribuciones.createdAt));
+      .orderBy(desc(this.tables.distribuciones.fecha), desc(this.tables.distribuciones.createdAt));
 
     return result as Distribucion[];
   }
@@ -121,31 +121,24 @@ export class DistribucionService extends DistribucionesService {
     const now = this.now();
     const fecha = input.fecha || new Date().toISOString().split("T")[0];
 
-    // Insert distribucion using raw query for atomic operation
-    await this.pg.query(
-      `INSERT INTO distribuciones (
-        id, business_id, vendedor_id, punto_venta, punto_venta_id,
-        monto_recaudado, nota_creacion, nota_cierre, fecha, estado, modo,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-      [
-        id,
-        this.businessId,
-        input.vendedorId,
-        input.puntoVenta,
-        input.puntoVentaId ?? null,
-        "0.00",
-        input.notaCreacion ?? null,
-        null,
-        fecha,
-        "activo",
-        "libre",
-        "pending",
-        0,
-        now,
-        now,
-      ]
-    );
+    // Insert distribucion using Drizzle ORM
+    await this.db.insert(this.tables.distribuciones).values({
+      id,
+      businessId: this.businessId,
+      vendedorId: input.vendedorId,
+      puntoVenta: input.puntoVenta,
+      puntoVentaId: input.puntoVentaId ?? null,
+      montoRecaudado: "0.00",
+      notaCreacion: input.notaCreacion ?? null,
+      notaCierre: null,
+      fecha,
+      estado: "activo",
+      modo: "libre",
+      syncStatus: "pending",
+      syncAttempts: 0,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    });
 
     // Queue sync for the distribucion (parent before children)
     await this.queueSync("create", id, {
@@ -162,26 +155,19 @@ export class DistribucionService extends DistribucionesService {
       for (const item of input.items) {
         const itemId = this.generateId();
 
-        await this.pg.query(
-          `INSERT INTO distribucion_items (
-            id, business_id, distribucion_id, variant_id,
-            cantidad_asignada, cantidad_vendida, unidad,
-            sync_status, sync_attempts, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-          [
-            itemId,
-            this.businessId,
-            id,
-            item.variantId,
-            this.normalizeWeightRequired(item.cantidadAsignada),
-            "0",
-            item.unidad,
-            "pending",
-            0,
-            now,
-            now,
-          ]
-        );
+        await this.db.insert(this.tables.distribucionItems).values({
+          id: itemId,
+          businessId: this.businessId,
+          distribucionId: id,
+          variantId: item.variantId,
+          cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
+          cantidadVendida: "0",
+          unidad: item.unidad,
+          syncStatus: "pending",
+          syncAttempts: 0,
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        });
 
         // Queue item sync with FK reference (distribucionId in payload)
         await this.queueSync("create", itemId, {
@@ -195,11 +181,12 @@ export class DistribucionService extends DistribucionesService {
     }
 
     // Return the created distribucion
-    const result = await this.pg.query<Distribucion>(
-      "SELECT * FROM distribuciones WHERE id = $1",
-      [id]
-    );
-    return result.rows[0];
+    const result = await this.db
+      .select()
+      .from(this.tables.distribuciones)
+      .where(eq(this.tables.distribuciones.id, id))
+      .limit(1);
+    return result[0];
   }
 
   /**
@@ -208,8 +195,8 @@ export class DistribucionService extends DistribucionesService {
   async create(input: CreateDistribucionesInput): Promise<Distribucion> {
     // Delegate to createWithItems for atomic operations with items
     return this.createWithItems({
-      vendedorId: input.vendedorId,
-      puntoVenta: input.puntoVenta,
+      vendedorId: input.vendedorId!,
+      puntoVenta: input.puntoVenta!,
       puntoVentaId: input.puntoVentaId,
       notaCreacion: input.notaCreacion,
       fecha: input.fecha,
@@ -244,9 +231,9 @@ export class DistribucionService extends DistribucionesService {
     if (input.closedBy !== undefined) updateData.closedBy = input.closedBy;
 
     await this.db
-      .update(distribuciones)
+      .update(this.tables.distribuciones)
       .set(updateData)
-      .where(and(eq(distribuciones.id, id), eq(distribuciones.businessId, this.businessId)));
+      .where(and(eq(this.tables.distribuciones.id, id), eq(this.tables.distribuciones.businessId, this.businessId)));
 
     // Queue sync
     await this.queueSync("update", id, input as Record<string, unknown>);
@@ -271,36 +258,37 @@ export class DistribucionService extends DistribucionesService {
    * Get items for a distribucion with product and variant names
    */
   async getItemsWithNames(distribucionId: string): Promise<DistribucionItemEnriched[]> {
-    const result = await this.pg.query<Record<string, unknown>>(
-      `SELECT
-        di.id,
-        di.distribucion_id as "distribucionId",
-        di.variant_id as "variantId",
-        di.cantidad_asignada as "cantidadAsignada",
-        di.cantidad_vendida as "cantidadVendida",
-        di.unidad,
-        p.name as "productName",
-        pv.name as "variantName"
-      FROM distribucion_items di
-      JOIN product_variants pv ON di.variant_id = pv.id
-      JOIN products p ON pv.product_id = p.id
-      WHERE di.distribucion_id = $1 AND di.business_id = $2`,
-      [distribucionId, this.businessId]
-    );
+    const result = await this.db
+      .select({
+        id: this.tables.distribucionItems.id,
+        distribucionId: this.tables.distribucionItems.distribucionId,
+        variantId: this.tables.distribucionItems.variantId,
+        cantidadAsignada: this.tables.distribucionItems.cantidadAsignada,
+        cantidadVendida: this.tables.distribucionItems.cantidadVendida,
+        unidad: this.tables.distribucionItems.unidad,
+        productName: this.tables.products.name,
+        variantName: this.tables.productVariants.name,
+      })
+      .from(this.tables.distribucionItems)
+      .innerJoin(this.tables.productVariants, eq(this.tables.distribucionItems.variantId, this.tables.productVariants.id))
+      .innerJoin(this.tables.products, eq(this.tables.productVariants.productId, this.tables.products.id))
+      .where(
+        and(
+          eq(this.tables.distribucionItems.distribucionId, distribucionId),
+          eq(this.tables.distribucionItems.businessId, this.businessId)
+        )
+      );
 
-    return result.rows.map((row) => {
-      const mapped = mapToCamelCase(row) as Record<string, unknown>;
-      return {
-        id: mapped.id as string,
-        distribucionId: mapped.distribucionId as string,
-        variantId: mapped.variantId as string,
-        cantidadAsignada: this.normalizeWeightRequired(mapped.cantidadAsignada as string | number),
-        cantidadVendida: this.normalizeWeight(mapped.cantidadVendida as string | number | null),
-        unidad: mapped.unidad as string,
-        productName: mapped.productName as string | undefined,
-        variantName: mapped.variantName as string | undefined,
-      };
-    });
+    return result.map((row) => ({
+      id: row.id,
+      distribucionId: row.distribucionId,
+      variantId: row.variantId,
+      cantidadAsignada: this.normalizeWeightRequired(row.cantidadAsignada),
+      cantidadVendida: this.normalizeWeight(row.cantidadVendida),
+      unidad: row.unidad,
+      productName: row.productName ?? undefined,
+      variantName: row.variantName ?? undefined,
+    }));
   }
 
   /**
@@ -317,42 +305,42 @@ export class DistribucionService extends DistribucionesService {
     }
 
     if (distribucion.estado !== "activo" && distribucion.estado !== "en_ruta") {
-      throw new Error("Can only add items to active or en_ruta distribuciones");
+      throw new Error("Can only add items to active or en_ruta this.tables.distribuciones");
     }
 
     // Check for existing item with same variant
-    const existingResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM distribucion_items WHERE distribucion_id = $1 AND variant_id = $2 AND business_id = $3`,
-      [distribucionId, item.variantId, this.businessId]
-    );
+    const existingResult = await this.db
+      .select()
+      .from(this.tables.distribucionItems)
+      .where(
+        and(
+          eq(this.tables.distribucionItems.distribucionId, distribucionId),
+          eq(this.tables.distribucionItems.variantId, item.variantId),
+          eq(this.tables.distribucionItems.businessId, this.businessId)
+        )
+      )
+      .limit(1);
 
-    if (existingResult.rows.length > 0) {
+    if (existingResult.length > 0) {
       throw new Error("El producto ya está en la distribución");
     }
 
     const now = this.now();
     const itemId = this.generateId();
 
-    await this.pg.query(
-      `INSERT INTO distribucion_items (
-        id, business_id, distribucion_id, variant_id,
-        cantidad_asignada, cantidad_vendida, unidad,
-        sync_status, sync_attempts, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        itemId,
-        this.businessId,
-        distribucionId,
-        item.variantId,
-        this.normalizeWeightRequired(item.cantidadAsignada),
-        "0",
-        item.unidad,
-        "pending",
-        0,
-        now,
-        now,
-      ]
-    );
+    await this.db.insert(this.tables.distribucionItems).values({
+      id: itemId,
+      businessId: this.businessId,
+      distribucionId,
+      variantId: item.variantId,
+      cantidadAsignada: this.normalizeWeightRequired(item.cantidadAsignada),
+      cantidadVendida: "0",
+      unidad: item.unidad,
+      syncStatus: "pending",
+      syncAttempts: 0,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    });
 
     // Queue sync for the new item with FK reference (distribucionId in payload)
     await this.queueSync(
@@ -369,12 +357,13 @@ export class DistribucionService extends DistribucionesService {
     );
 
     // Return the created item
-    const itemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM distribucion_items WHERE id = $1`,
-      [itemId]
-    );
+    const itemResult = await this.db
+      .select()
+      .from(this.tables.distribucionItems)
+      .where(eq(this.tables.distribucionItems.id, itemId))
+      .limit(1);
 
-    const mappedItem = mapToCamelCase(itemResult.rows[0]) as unknown as DistribucionItem;
+    const mappedItem = itemResult[0] as unknown as DistribucionItem;
     return {
       ...mappedItem,
       cantidadAsignada: this.normalizeWeightRequired(mappedItem.cantidadAsignada),
@@ -400,48 +389,46 @@ export class DistribucionService extends DistribucionesService {
     }
 
     if (distribucion.estado !== "activo" && distribucion.estado !== "en_ruta") {
-      throw new Error("Can only update items in active or en_ruta distribuciones");
+      throw new Error("Can only update items in active or en_ruta this.tables.distribuciones");
     }
 
     // Get existing item
-    const itemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM distribucion_items WHERE id = $1 AND distribucion_id = $2`,
-      [itemId, distribucionId]
-    );
+    const itemResult = await this.db
+      .select()
+      .from(this.tables.distribucionItems)
+      .where(
+        and(
+          eq(this.tables.distribucionItems.id, itemId),
+          eq(this.tables.distribucionItems.distribucionId, distribucionId)
+        )
+      )
+      .limit(1);
 
-    if (itemResult.rows.length === 0) {
+    if (itemResult.length === 0) {
       throw new Error("Item not found in distribucion");
     }
 
-    const existingItem = mapToCamelCase(itemResult.rows[0]) as unknown as DistribucionItem;
+    const existingItem = itemResult[0] as unknown as DistribucionItem;
 
-    // Build update fields
-    const updates: string[] = [];
-    const params: (string | number | null)[] = [];
-    let paramIndex = 1;
+    // Build update data
+    const updateData: Record<string, unknown> = {};
 
     if (data.cantidadAsignada !== undefined) {
-      updates.push(`cantidad_asignada = $${paramIndex}`);
-      params.push(this.normalizeWeightRequired(data.cantidadAsignada));
-      paramIndex++;
+      updateData.cantidadAsignada = this.normalizeWeightRequired(data.cantidadAsignada);
     }
 
     if (data.cantidadVendida !== undefined) {
-      updates.push(`cantidad_vendida = $${paramIndex}`);
-      params.push(this.normalizeWeight(data.cantidadVendida));
-      paramIndex++;
+      updateData.cantidadVendida = this.normalizeWeight(data.cantidadVendida);
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return existingItem;
     }
 
-    params.push(itemId);
-
-    await this.pg.query(
-      `UPDATE distribucion_items SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
-      params
-    );
+    await this.db
+      .update(this.tables.distribucionItems)
+      .set(updateData)
+      .where(eq(this.tables.distribucionItems.id, itemId));
 
     // Queue sync for the updated item with FK reference
     await this.queueSync(
@@ -456,12 +443,13 @@ export class DistribucionService extends DistribucionesService {
     );
 
     // Return updated item
-    const updatedResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM distribucion_items WHERE id = $1`,
-      [itemId]
-    );
+    const updatedResult = await this.db
+      .select()
+      .from(this.tables.distribucionItems)
+      .where(eq(this.tables.distribucionItems.id, itemId))
+      .limit(1);
 
-    const mappedItem = mapToCamelCase(updatedResult.rows[0]) as unknown as DistribucionItem;
+    const mappedItem = updatedResult[0] as unknown as DistribucionItem;
     return {
       ...mappedItem,
       cantidadAsignada: this.normalizeWeightRequired(mappedItem.cantidadAsignada),
@@ -480,21 +468,27 @@ export class DistribucionService extends DistribucionesService {
     }
 
     if (distribucion.estado !== "activo" && distribucion.estado !== "en_ruta") {
-      throw new Error("Can only remove items from active or en_ruta distribuciones");
+      throw new Error("Can only remove items from active or en_ruta this.tables.distribuciones");
     }
 
     // Verify item exists
-    const itemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM distribucion_items WHERE id = $1 AND distribucion_id = $2`,
-      [itemId, distribucionId]
-    );
+    const itemResult = await this.db
+      .select()
+      .from(this.tables.distribucionItems)
+      .where(
+        and(
+          eq(this.tables.distribucionItems.id, itemId),
+          eq(this.tables.distribucionItems.distribucionId, distribucionId)
+        )
+      )
+      .limit(1);
 
-    if (itemResult.rows.length === 0) {
+    if (itemResult.length === 0) {
       throw new Error("Item not found in distribucion");
     }
 
     // Delete the item
-    await this.db.delete(distribucionItems).where(eq(distribucionItems.id, itemId));
+    await this.db.delete(this.tables.distribucionItems).where(eq(this.tables.distribucionItems.id, itemId));
 
     // Queue sync for the deleted item with FK reference
     await this.queueSync(

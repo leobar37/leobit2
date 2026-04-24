@@ -13,6 +13,8 @@ description: |
   - Questions about sync status fields, cursor pagination, or dead letter queue
   - **MIGRATION**: Migrating from old syncGroupId pattern to FK-based ordering (v2)
   - Questions about @avileo/drizzle-sync library, codecs, or generated services
+  - Identifying direct SQL in app code (anti-pattern)
+  - Code review, audit, or architecture check
 
   Covers: push sync (SyncService), pull sync (PullService), SyncCoordinator, FK-based
   operation sorting, entity handlers, conflict resolution (version-based), staged pull,
@@ -24,6 +26,119 @@ allowed-tools: Read, Grep, Glob, Bash
 # Avileo Sync Engine Skill
 
 This skill provides comprehensive knowledge about Avileo's offline-first synchronization system.
+
+## DatabaseAdapter Abstraction
+
+The sync engine uses a `DatabaseAdapter` interface to abstract the database backend. This enables the engine to run on PGlite (browser), SQLite (React Native), or PostgreSQL (Node.js) without code changes.
+
+### Interface
+
+```typescript
+// packages/drizzle-sync/src/core/database-adapter.ts
+export interface DatabaseAdapter {
+  query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
+  exec(sql: string, params?: unknown[]): Promise<void>;
+  getDb(): unknown;
+}
+```
+
+### PGlite Implementation
+
+```typescript
+// packages/drizzle-sync/src/pglite/pglite-adapter.ts
+export class PgLiteAdapter implements DatabaseAdapter {
+  constructor(
+    private readonly pg: PGlite,
+    private readonly db: ReturnType<typeof drizzle>
+  ) {}
+
+  async query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+    return this.pg.query<T>(sql, params);
+  }
+
+  async exec(sql: string, params?: unknown[]): Promise<void> {
+    if (params) {
+      await this.pg.query(sql, params);
+    } else {
+      await this.pg.exec(sql);
+    }
+  }
+
+  getDb(): ReturnType<typeof drizzle> {
+    return this.db;
+  }
+}
+```
+
+### Engine Initialization Modes
+
+The `SyncClientEngine` supports 3 initialization modes, all converging to a `DatabaseAdapter` in the context:
+
+| Mode | Config | What Happens | `context.adapter` |
+|------|--------|-------------|-------------------|
+| **Adapter mode** | `config.adapter` | Consumer provides custom adapter | `config.adapter` |
+| **Auto-init** | `config.databaseConfig` | Engine creates PGlite + wraps in `PgLiteAdapter` | `new PgLiteAdapter(pg, db)` |
+| **Legacy** | `config.pg` + `config.db` | Engine wraps provided instances | `new PgLiteAdapter(pg, db)` |
+
+### Engine Context (Only `adapter`, No `pg`/`db`)
+
+```typescript
+// packages/drizzle-sync/src/client/types.ts
+export interface SyncClientEngineContext {
+  adapter: DatabaseAdapter;  // ← only DB field, always present
+  tenantId: string;
+  tenantColumn: string;
+  userId: string;
+  syncService: SyncWritePort;
+}
+```
+
+**All internal services consume `DatabaseAdapter` only:**
+- `SyncEntityStatusUpdater` — `adapter.exec()`
+- `SyncOperationLifecycleService` — `adapter.query()` / `adapter.exec()`
+- `SyncBatchProcessor` — `adapter.query()`
+- `PushSyncService` — passes `context.adapter` to batch processor
+
+### Internal Services Using Adapter
+
+All sync internals have been migrated from direct `PGlite` to `DatabaseAdapter`:
+
+| Service | File | Uses |
+|---------|------|------|
+| `SyncEntityStatusUpdater` | `pglite/entity-status-updater.ts` | `adapter.exec()` |
+| `SyncOperationLifecycleService` | `pglite/operation-lifecycle.ts` | `adapter.query()` + `adapter.exec()` |
+| `SyncBatchProcessor` | `pglite/batch-processor.ts` | `adapter.query()` |
+| `PushSyncService` | `pglite/push-service.ts` | passes `context.adapter` |
+| `PgSyncQueue` | `pglite/queue-queue.ts` | via `createSqlExecutor(context)` |
+| `ChangeApplier` | `pglite/change-applier.ts` | via `createSqlExecutor(context)` |
+
+### Future: SQLite/React Native Adapter
+
+```typescript
+// Hypothetical SQLiteAdapter for React Native
+class SQLiteAdapter implements DatabaseAdapter {
+  constructor(private sqlite: SQLiteDatabase, private db: DrizzleSQLite) {}
+
+  async query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+    const result = await this.sqlite.getAllAsync(sql, params);
+    return { rows: result as T[] };
+  }
+
+  async exec(sql: string, params?: unknown[]): Promise<void> {
+    await this.sqlite.runAsync(sql, params);
+  }
+
+  getDb() { return this.db; }
+}
+```
+
+### Key Points
+
+- **`SyncClientEngineContext` has no `pg` or `db` fields** — only `adapter: DatabaseAdapter`
+- **Legacy `getPg()` still exists** on `SyncClientEngine` for external backward compat, but throws in adapter mode
+- **`database-init.ts` stays PGlite-specific** — React Native would provide its own init + `SQLiteAdapter`
+- **`PgLiteAdapter` exported** from both `@avileo/drizzle-sync` (main) and `@avileo/drizzle-sync/pglite`
+- **`SqlExecutor` and `DatabaseAdapter` coexist** — `SqlExecutor` is a narrower interface (query+exec), `DatabaseAdapter` adds `getDb()`. Both are valid; new code should prefer `DatabaseAdapter`
 
 ## Quick Reference
 
@@ -95,6 +210,16 @@ These are now part of the expected sync architecture for hot sales flows:
    - `[Perf][SaleService] ...` for hot sale operations
 
 ### Required Fields for Sync
+
+#### Architecture Rules
+
+**NO direct SQL in `packages/app`**
+- All database access in the frontend app MUST go through services (abstractions)
+- Never write raw SQL strings like `await this.pg.query(\`SELECT * FROM ...\`)` directly in components or services
+- Use generated services from `@avileo/drizzle-sync` or existing service classes (e.g., `SaleService`, `CustomerService`)
+- This ensures proper sync queue integration, conflict detection, and maintainability
+
+**Why**: Direct SQL bypasses the sync queue, making operations invisible to the server and breaking offline-first functionality.
 
 #### 1. All Sync-Capable Tables Need
 | Field | Type | Purpose |
@@ -292,8 +417,116 @@ await syncService.getDeadLetterOperations()
 await syncService.clearDeadLetterOperations()
 ```
 
+## Architecture Patterns (Learned from Refactors)
+
+### 1. Sync Library is Separated (@avileo/drizzle-sync)
+
+The sync engine lives in its own workspace package (`packages/drizzle-sync/`), NOT in `@avileo/shared`.
+
+**Rule**: Never modify `@avileo/shared` for sync logic changes. The sync library is the source of truth for:
+- `SyncClientEngine` and its lifecycle
+- `DatabaseAdapter` abstraction
+- Push/pull sync services
+- Code generation for frontend services
+
+### 2. Code Generator Produces Frontend Artifacts
+
+**Location**: `packages/drizzle-sync/src/config/generator.ts`
+
+The generator produces files in `packages/app/app/lib/sync/generated/`:
+- `services.ts` — BaseService subclasses for each entity
+- `engine.ts` — Factory function `createAvileoSyncEngine()`
+- `hooks.ts` — TanStack Query hooks
+- `drizzle-schema.ts` — Centralized Drizzle table exports **(NEW)**
+- `sync-tables.ts` — Table registry for pending data export/import
+- `applier.ts` — Change applier config
+- `schema-sql.ts` — PGlite DDL as TypeScript string
+
+**Rule**: These files are AUTO-GENERATED. Never edit them manually. Regenerate via the code generator when schema changes.
+
+### 3. Engine Exposes Tables via `engine.tables`
+
+**Pattern introduced**: `SyncClientEngine` now exposes all Drizzle tables through a `tables` property:
+
+```typescript
+// In SyncClientEngine
+readonly tables: Record<string, unknown>;
+
+// Initialized from config
+tables = config.tables ?? {};
+
+// In engine factory (engine.ts)
+import * as schemaTables from "./drizzle-schema";
+// ...
+tables: schemaTables,
+```
+
+**Usage in services**:
+```typescript
+// OLD (tight coupling to @avileo/shared)
+import { customers, sales } from "@avileo/shared";
+await this.db.select().from(customers).where(eq(customers.id, id));
+
+// NEW (via engine, decoupled)
+await this.db.select().from(this.tables.customers).where(eq(this.tables.customers.id, id));
+```
+
+**Benefits**:
+- Services are decoupled from `@avileo/shared` schema imports
+- Single source of truth for schema access
+- Easier to mock tables for testing
+
+### 4. Custom Service Pattern
+
+All frontend services follow one of these patterns:
+
+**Pattern A: Extend generated service**
+```typescript
+import { AbonosService } from "~/lib/sync/generated/services";
+
+export class PaymentService extends AbonosService {
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
+  }
+  // Add business logic methods
+}
+```
+
+**Pattern B: Extend BaseService directly (for multi-entity atomic operations)**
+```typescript
+import { BaseService } from "~/lib/services/base-service";
+
+export class SaleService extends BaseService {
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
+  }
+  // Manage sales + sale_items atomically
+}
+```
+
+**Pattern C: Compose generated services**
+```typescript
+export class SaleService extends BaseService {
+  private generatedSalesService: GeneratedSalesService;
+  private generatedItemsService: GeneratedItemsService;
+  
+  constructor(engine: SyncClientEngineLike) {
+    super(engine);
+    this.generatedSalesService = new GeneratedSalesService(engine);
+    this.generatedItemsService = new GeneratedItemsService(engine);
+  }
+}
+```
+
+**Key rules**:
+- All services receive `engine: SyncClientEngineLike` in constructor
+- Access DB via `this.db` (Drizzle instance from engine)
+- Access tables via `this.tables` (schema from engine)
+- Never import table objects directly from `@avileo/shared`
+
 ## For Detailed Information
 
+- [Code Review Checklist](references/code-review-checklist.md) — **NEW**: Audit rules, grep patterns, known violations
 - [Architecture Overview](references/overview.md)
 - [Drizzle-Sync Library](references/drizzle-sync-lib.md) — **NEW**: @avileo/drizzle-sync library guide
 - [Migration v2](references/migration-v2.md) — **NEW**: syncGroupId removal migration guide

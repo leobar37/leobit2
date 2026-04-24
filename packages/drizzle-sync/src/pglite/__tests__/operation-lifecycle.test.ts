@@ -1,21 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SyncOperationLifecycleService } from "../operation-lifecycle";
-import type { PGlite } from "@electric-sql/pglite";
+import type { DatabaseAdapter } from "../../core/database-adapter";
 import type { ISyncQueue, SyncOperationRecord } from "../../core";
 import { SyncErrorCode } from "../../core";
 import { SyncEntityStatusUpdater } from "../entity-status-updater";
 import { OPERATION_STATUS } from "../queue-types";
 
 describe("SyncOperationLifecycleService", () => {
-  let pg: ReturnType<typeof createMockPg>;
+  let adapter: ReturnType<typeof createMockAdapter>;
   let queue: ISyncQueue;
   let updater: SyncEntityStatusUpdater;
   let service: SyncOperationLifecycleService;
 
-  function createMockPg() {
+  function createMockAdapter() {
     return {
       query: vi.fn().mockResolvedValue({ rows: [] }),
-    } as unknown as PGlite;
+      exec: vi.fn().mockResolvedValue(undefined),
+      getDb: vi.fn(),
+    } as unknown as DatabaseAdapter;
   }
 
   function createMockQueue(): ISyncQueue {
@@ -62,13 +64,13 @@ describe("SyncOperationLifecycleService", () => {
   }
 
   beforeEach(() => {
-    pg = createMockPg();
+    adapter = createMockAdapter();
     queue = createMockQueue();
-    updater = new SyncEntityStatusUpdater(pg, "tenant-1", {
+    updater = new SyncEntityStatusUpdater(adapter, "tenant-1", {
       tenantColumn: "tenant_id",
       trackedTables: new Set(["customers"]),
     });
-    service = new SyncOperationLifecycleService(pg, "tenant-1", queue, updater, {
+    service = new SyncOperationLifecycleService(adapter, "tenant-1", queue, updater, {
       tenantColumn: "tenant_id",
       selfHealRules: new Set(["customers"]),
     });
@@ -84,7 +86,7 @@ describe("SyncOperationLifecycleService", () => {
   describe("markCompleted", () => {
     it("marks operation completed and updates entity status", async () => {
       const op = createOperation();
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
 
       await service.markCompleted("op-1");
 
@@ -92,7 +94,7 @@ describe("SyncOperationLifecycleService", () => {
     });
 
     it("handles missing operation gracefully", async () => {
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [] });
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [] });
 
       await service.markCompleted("op-1");
 
@@ -103,7 +105,7 @@ describe("SyncOperationLifecycleService", () => {
   describe("markFailed", () => {
     it("self-heals update→create for configured entities when record not found", async () => {
       const op = createOperation({ operation: "update", sync_attempts: 0 });
-      (pg.query as ReturnType<typeof vi.fn>)
+      (adapter.query as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ rows: [op] }) // getOperation
         .mockResolvedValueOnce({ rows: [] }); // self-heal update
 
@@ -115,7 +117,7 @@ describe("SyncOperationLifecycleService", () => {
 
     it("moves to dead letter when max retries exceeded", async () => {
       const op = createOperation({ sync_attempts: 4 });
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
 
       await service.markFailed("op-1", "Some error");
 
@@ -124,7 +126,7 @@ describe("SyncOperationLifecycleService", () => {
 
     it("marks failed when retryable and under max retries", async () => {
       const op = createOperation({ sync_attempts: 1 });
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
 
       await service.markFailed("op-1", "Network timeout");
 
@@ -133,7 +135,7 @@ describe("SyncOperationLifecycleService", () => {
 
     it("does not self-heal for non-configured entities", async () => {
       const op = createOperation({ entity_type: "products", operation: "update" });
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rows: [op] });
 
       await service.markFailed("op-1", "Record not found");
 
@@ -165,7 +167,7 @@ describe("SyncOperationLifecycleService", () => {
         created_at: new Date().toISOString(),
       };
 
-      (pg.query as ReturnType<typeof vi.fn>)
+      (adapter.query as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ rows: [dlRecord] }) // getDeadLetterOperation
         .mockResolvedValueOnce({ rows: [{ id: "op-1" }] }) // update sync_operations
         .mockResolvedValueOnce({ rows: [{ id: "dl-1" }] }); // delete dead letter
@@ -175,7 +177,7 @@ describe("SyncOperationLifecycleService", () => {
     });
 
     it("deletes dead letter operation", async () => {
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [{ id: "dl-1" }],
       });
 
@@ -184,7 +186,7 @@ describe("SyncOperationLifecycleService", () => {
     });
 
     it("clears all dead letter operations", async () => {
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [{ id: "dl-1" }, { id: "dl-2" }],
       });
 
@@ -201,7 +203,7 @@ describe("SyncOperationLifecycleService", () => {
     });
 
     it("deletes multiple operations via SQL", async () => {
-      (pg.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      (adapter.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         rows: [{ id: "op-1" }, { id: "op-2" }],
       });
 
@@ -225,7 +227,7 @@ describe("SyncOperationLifecycleService", () => {
       });
 
       const customService = new SyncOperationLifecycleService(
-        pg, "tenant-1", queue, updater,
+        adapter, "tenant-1", queue, updater,
         {
           selfHealRules: new Set(["customers"]),
           errorClassifier: customClassifier,
@@ -233,7 +235,7 @@ describe("SyncOperationLifecycleService", () => {
       );
 
       const op = createOperation({ operation: "update" });
-      (pg.query as ReturnType<typeof vi.fn>)
+      (adapter.query as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ rows: [op] })
         .mockResolvedValueOnce({ rows: [] });
 

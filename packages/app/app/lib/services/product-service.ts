@@ -10,7 +10,7 @@
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc } from "drizzle-orm";
 import { ProductsService, ProductVariantsService } from "~/lib/sync/generated/services";
-import { SyncStatus, products, productVariants, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
+import { SyncStatus, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
 
 // Re-export types from @avileo/shared for backward compatibility
 export type Product = SharedProduct;
@@ -67,7 +67,7 @@ export interface UpdateVariantInput {
 
 /**
  * Product Service
- * Provides read-only access to products for vendors
+ * Provides read-only access to this.tables.products for vendors
  * Admin operations queue sync to server
  * 
  * Extends ProductsService (generated) for CRUD operations.
@@ -84,30 +84,30 @@ export class ProductService extends ProductsService {
   // ==================== ADDITIONAL READ METHODS ====================
 
   /**
-   * Get products filtered by type
+   * Get this.tables.products filtered by type
    * @param type - Product type filter
-   * @returns Array of products matching the type
+   * @returns Array of this.tables.products matching the type
    */
   async findByType(type: "pollo" | "huevo" | "otro"): Promise<Product[]> {
     const result = await this.db
       .select()
-      .from(products)
-      .where(and(eq(products.businessId, this.businessId), eq(products.type, type)))
-      .orderBy(products.name);
+      .from(this.tables.products)
+      .where(and(eq(this.tables.products.businessId, this.businessId), eq(this.tables.products.type, type)))
+      .orderBy(this.tables.products.name);
 
     return result as Product[];
   }
 
   /**
-   * Get only active products
-   * @returns Array of active products
+   * Get only active this.tables.products
+   * @returns Array of active this.tables.products
    */
   async findActive(): Promise<Product[]> {
     const result = await this.db
       .select()
-      .from(products)
-      .where(and(eq(products.businessId, this.businessId), eq(products.isActive, true)))
-      .orderBy(products.name);
+      .from(this.tables.products)
+      .where(and(eq(this.tables.products.businessId, this.businessId), eq(this.tables.products.isActive, true)))
+      .orderBy(this.tables.products.name);
 
     return result as Product[];
   }
@@ -122,9 +122,9 @@ export class ProductService extends ProductsService {
   async getVariants(productId: string): Promise<ProductVariant[]> {
     const result = await this.db
       .select()
-      .from(productVariants)
-      .where(and(eq(productVariants.productId, productId), eq(productVariants.isActive, true)))
-      .orderBy(productVariants.sortOrder, productVariants.name);
+      .from(this.tables.productVariants)
+      .where(and(eq(this.tables.productVariants.productId, productId), eq(this.tables.productVariants.isActive, true)))
+      .orderBy(this.tables.productVariants.sortOrder, this.tables.productVariants.name);
 
     return result as ProductVariant[];
   }
@@ -137,8 +137,8 @@ export class ProductService extends ProductsService {
   async findVariantById(variantId: string): Promise<ProductVariant | null> {
     const result = await this.db
       .select()
-      .from(productVariants)
-      .where(eq(productVariants.id, variantId))
+      .from(this.tables.productVariants)
+      .where(eq(this.tables.productVariants.id, variantId))
       .limit(1);
 
     return (result[0] as ProductVariant) || null;
@@ -224,7 +224,7 @@ export class ProductService extends ProductsService {
       updatedAt: now,
     };
 
-    await this.db.insert(products).values(entity);
+    await this.db.insert(this.tables.products).values(entity);
 
     // Queue for server sync
     await this.queueSync("create", id, {

@@ -10,6 +10,7 @@ import type { SyncClientEngineContext } from "../client";
 import type { PullChange } from "./types";
 import type { ISyncLogger, SyncLogEntry } from "../core";
 import { ChangeApplier } from "./change-applier";
+import { PgLiteAdapter } from "./pglite-adapter";
 import type { ApplyResult, ApplierOptions } from "./change-types";
 
 // ---------------------------------------------------------------------------
@@ -83,10 +84,9 @@ export interface LegacyApplyOptions {
 
 function buildContext(pg: PGlite, tenantId: string, tenantColumn?: string): SyncClientEngineContext {
   return {
-    pg,
+    adapter: new PgLiteAdapter(pg, null as any),
     tenantId,
     tenantColumn: tenantColumn ?? "tenant_id",
-    db: undefined as any,
     userId: "",
     syncService: {} as any,
   };

@@ -12,7 +12,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { BaseService, type EntityType } from "./base-service";
-import { SyncStatus, sales as salesTable, saleItems as saleItemsTable } from "@avileo/shared";
+import { SyncStatus } from "@avileo/shared";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
@@ -245,56 +245,56 @@ export class SaleService extends BaseService {
   }
 
   private buildPagedSalesWhere(query: SalePageQuery) {
-    const conditions = [eq(salesTable.businessId, this.businessId)];
+    const conditions = [eq(this.tables.sales.businessId, this.businessId)];
 
     if (query.distribucionId && query.distribucionId !== "all") {
       if (query.distribucionId === "none") {
-        conditions.push(isNull(salesTable.distribucionId));
+        conditions.push(isNull(this.tables.sales.distribucionId));
       } else {
-        conditions.push(eq(salesTable.distribucionId, query.distribucionId));
+        conditions.push(eq(this.tables.sales.distribucionId, query.distribucionId));
       }
     }
 
     if (query.customerId) {
-      conditions.push(eq(salesTable.customerId, query.customerId));
+      conditions.push(eq(this.tables.sales.customerId, query.customerId));
     }
 
     if (query.status) {
-      conditions.push(eq(salesTable.status, query.status));
+      conditions.push(eq(this.tables.sales.status, query.status));
     }
 
     if (query.type) {
-      conditions.push(eq(salesTable.type, query.type));
+      conditions.push(eq(this.tables.sales.type, query.type));
     }
 
     if (query.saleType) {
-      conditions.push(eq(salesTable.saleType, query.saleType));
+      conditions.push(eq(this.tables.sales.saleType, query.saleType));
     }
 
     if (query.startDate) {
-      conditions.push(sql`${salesTable.saleDate} >= ${query.startDate}`);
+      conditions.push(sql`${this.tables.sales.saleDate} >= ${query.startDate}`);
     }
 
     if (query.endDate) {
-      conditions.push(sql`${salesTable.saleDate} <= ${query.endDate}`);
+      conditions.push(sql`${this.tables.sales.saleDate} <= ${query.endDate}`);
     }
 
     if (query.hasBalanceDue) {
-      conditions.push(sql`CAST(${salesTable.balanceDue} AS NUMERIC) > 0`);
+      conditions.push(sql`CAST(${this.tables.sales.balanceDue} AS NUMERIC) > 0`);
     }
 
     if (query.search?.trim()) {
       const searchPattern = `%${query.search.trim()}%`;
       conditions.push(
         sql`(
-          ${salesTable.id} LIKE ${searchPattern}
+          ${this.tables.sales.id} LIKE ${searchPattern}
           OR EXISTS (
             SELECT 1
-            FROM customers c
-            WHERE c.id = ${salesTable.customerId}
+            FROM this.tables.customers c
+            WHERE c.id = ${this.tables.sales.customerId}
               AND c.name LIKE ${searchPattern}
           )
-          OR ${salesTable.saleType} LIKE ${searchPattern}
+          OR ${this.tables.sales.saleType} LIKE ${searchPattern}
         )`
       );
     }
@@ -307,35 +307,47 @@ export class SaleService extends BaseService {
    * Overrides the generated SalesService.findById to include related data
    */
   async findById(id: string): Promise<SaleWithItems | null> {
-    const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sales WHERE id = $1`,
-      [id]
-    );
+    const saleResult = await this.db
+      .select()
+      .from(this.tables.sales)
+      .where(eq(this.tables.sales.id, id))
+      .limit(1);
 
-    if (saleResult.rows.length === 0) {
+    if (saleResult.length === 0) {
       return null;
     }
 
-    const sale = this.normalizeSale(mapToCamelCaseWithDates(saleResult.rows[0]) as unknown as Sale);
+    const sale = this.normalizeSale(mapToCamelCaseWithDates(saleResult[0]) as unknown as Sale);
 
     // Fetch customer data if customerId exists
     let customer: SaleCustomer | null = null;
     if (sale.customerId) {
-      const customerResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT id, name, dni, phone FROM customers WHERE id = $1`,
-        [sale.customerId]
-      );
-      if (customerResult.rows.length > 0) {
-        customer = mapToCamelCase(customerResult.rows[0]) as unknown as SaleCustomer;
+      const customerResult = await this.db
+        .select({
+          id: this.tables.customers.id,
+          name: this.tables.customers.name,
+          dni: this.tables.customers.dni,
+          phone: this.tables.customers.phone,
+        })
+        .from(this.tables.customers)
+        .where(eq(this.tables.customers.id, sale.customerId))
+        .limit(1);
+      if (customerResult.length > 0) {
+        customer = customerResult[0] as unknown as SaleCustomer;
       }
     }
 
-    const itemsResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE sale_id = $1 AND business_id = $2`,
-      [id, this.businessId]
-    );
+    const itemsResult = await this.db
+      .select()
+      .from(this.tables.saleItems)
+      .where(
+        and(
+          eq(this.tables.saleItems.saleId, id),
+          eq(this.tables.saleItems.businessId, this.businessId)
+        )
+      );
 
-    const items = itemsResult.rows.map((row) => this.normalizeSaleItem(mapToCamelCase(row) as unknown as SaleItem));
+    const items = itemsResult.map((row) => this.normalizeSaleItem(mapToCamelCase(row) as unknown as SaleItem));
 
     return {
       ...sale,
@@ -345,7 +357,7 @@ export class SaleService extends BaseService {
   }
 
   /**
-   * Batch-load customers and sale items for an array of sales.
+   * Batch-load this.tables.customers and sale items for an array of sales.
    * Replaces N+1 pattern (2 queries per sale) with 2 fixed queries total.
    */
   private async enrichSalesBatch(sales: Sale[]): Promise<SaleWithItems[]> {
@@ -357,24 +369,33 @@ export class SaleService extends BaseService {
 
     const customerMap = new Map<string, SaleCustomer>();
     if (customerIds.length > 0) {
-      const customerResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT id, name, dni, phone FROM customers WHERE id = ANY($1)`,
-        [customerIds]
-      );
-      for (const row of customerResult.rows) {
-        const customer = mapToCamelCase(row) as unknown as SaleCustomer;
-        customerMap.set(customer.id, customer);
+      const customerResult = await this.db
+        .select({
+          id: this.tables.customers.id,
+          name: this.tables.customers.name,
+          dni: this.tables.customers.dni,
+          phone: this.tables.customers.phone,
+        })
+        .from(this.tables.customers)
+        .where(inArray(this.tables.customers.id, customerIds));
+      for (const row of customerResult) {
+        customerMap.set(row.id, row as unknown as SaleCustomer);
       }
     }
 
     const saleIds = sales.map(s => s.id);
     const itemsMap = new Map<string, SaleItem[]>();
     if (saleIds.length > 0) {
-      const itemsResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT * FROM sale_items WHERE sale_id = ANY($1) AND business_id = $2`,
-        [saleIds, this.businessId]
-      );
-      for (const row of itemsResult.rows) {
+      const itemsResult = await this.db
+        .select()
+        .from(this.tables.saleItems)
+        .where(
+          and(
+            inArray(this.tables.saleItems.saleId, saleIds),
+            eq(this.tables.saleItems.businessId, this.businessId)
+          )
+        );
+      for (const row of itemsResult) {
         const item = this.normalizeSaleItem(mapToCamelCase(row) as unknown as SaleItem);
         const list = itemsMap.get(item.saleId) || [];
         list.push(item);
@@ -396,9 +417,9 @@ export class SaleService extends BaseService {
   async findByBusiness(): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(salesTable)
-      .where(eq(salesTable.businessId, this.businessId))
-      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
+      .from(this.tables.sales)
+      .where(eq(this.tables.sales.businessId, this.businessId))
+      .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`);
 
     const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
@@ -409,7 +430,7 @@ export class SaleService extends BaseService {
     const where = this.buildPagedSalesWhere({ limit: 0, offset: 0, ...query });
     const result = await this.db
       .select({ count: sql<number>`count(*)` })
-      .from(salesTable)
+      .from(this.tables.sales)
       .where(where);
 
     return result[0]?.count ?? 0;
@@ -422,14 +443,14 @@ export class SaleService extends BaseService {
     const [rows, totalResult] = await Promise.all([
       this.db
         .select()
-        .from(salesTable)
+        .from(this.tables.sales)
         .where(where)
-        .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`)
+        .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`)
         .limit(query.limit)
         .offset(query.offset),
       this.db
         .select({ count: sql<number>`count(*)` })
-        .from(salesTable)
+        .from(this.tables.sales)
         .where(where),
     ]);
 
@@ -444,14 +465,18 @@ export class SaleService extends BaseService {
 
     const customerMap = new Map<string, SaleCustomer>();
     if (customerIds.length > 0) {
-      const customerResult = await this.pg.query<Record<string, unknown>>(
-        `SELECT id, name, dni, phone FROM customers WHERE id = ANY($1)`,
-        [customerIds]
-      );
+      const customerResult = await this.db
+        .select({
+          id: this.tables.customers.id,
+          name: this.tables.customers.name,
+          dni: this.tables.customers.dni,
+          phone: this.tables.customers.phone,
+        })
+        .from(this.tables.customers)
+        .where(inArray(this.tables.customers.id, customerIds));
 
-      for (const row of customerResult.rows) {
-        const customer = mapToCamelCase(row) as unknown as SaleCustomer;
-        customerMap.set(customer.id, customer);
+      for (const row of customerResult) {
+        customerMap.set(row.id, row as unknown as SaleCustomer);
       }
     }
 
@@ -480,9 +505,9 @@ export class SaleService extends BaseService {
   async findByCustomerId(customerId: string): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(salesTable)
-      .where(and(eq(salesTable.customerId, customerId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
+      .from(this.tables.sales)
+      .where(and(eq(this.tables.sales.customerId, customerId), eq(this.tables.sales.businessId, this.businessId)))
+      .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`);
 
     const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
@@ -495,9 +520,9 @@ export class SaleService extends BaseService {
   async findByStatus(status: SaleStatus): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(salesTable)
-      .where(and(eq(salesTable.status, status), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
+      .from(this.tables.sales)
+      .where(and(eq(this.tables.sales.status, status), eq(this.tables.sales.businessId, this.businessId)))
+      .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`);
 
     const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
@@ -510,9 +535,9 @@ export class SaleService extends BaseService {
   async findByDistribucionId(distribucionId: string): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(salesTable)
-      .where(and(eq(salesTable.distribucionId, distribucionId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
+      .from(this.tables.sales)
+      .where(and(eq(this.tables.sales.distribucionId, distribucionId), eq(this.tables.sales.businessId, this.businessId)))
+      .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`);
 
     const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
@@ -525,9 +550,9 @@ export class SaleService extends BaseService {
   async findByDistribucionIdIsNull(): Promise<SaleWithItems[]> {
     const salesResult = await this.db
       .select()
-      .from(salesTable)
-      .where(and(isNull(salesTable.distribucionId), eq(salesTable.businessId, this.businessId)))
-      .orderBy(sql`${salesTable.saleDate} DESC`, sql`${salesTable.createdAt} DESC`);
+      .from(this.tables.sales)
+      .where(and(isNull(this.tables.sales.distribucionId), eq(this.tables.sales.businessId, this.businessId)))
+      .orderBy(sql`${this.tables.sales.saleDate} DESC`, sql`${this.tables.sales.createdAt} DESC`);
 
     const sales = salesResult.map(row => this.normalizeSale(mapToCamelCaseWithDates(row) as unknown as Sale));
 
@@ -957,8 +982,16 @@ export class SaleService extends BaseService {
       throw new Error("Only draft sales can be deleted");
     }
 
-    const items = await this.pg.query(`SELECT id FROM sale_items WHERE sale_id = $1 AND business_id = $2`, [id, this.businessId]);
-    for (const item of items.rows) {
+    const items = await this.db
+      .select({ id: this.tables.saleItems.id })
+      .from(this.tables.saleItems)
+      .where(
+        and(
+          eq(this.tables.saleItems.saleId, id),
+          eq(this.tables.saleItems.businessId, this.businessId)
+        )
+      );
+    for (const item of items) {
       await this.generatedItemsService.delete(item.id);
     }
     await this.generatedSalesService.delete(id);
@@ -969,35 +1002,46 @@ export class SaleService extends BaseService {
    */
   async addItem(saleId: string, item: CreateSaleItemInput): Promise<SaleItem> {
     const perfStart = performance.now();
-    const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
-      [saleId, this.businessId]
-    );
+    const saleResult = await this.db
+      .select({
+        id: this.tables.sales.id,
+        type: this.tables.sales.type,
+        status: this.tables.sales.status,
+      })
+      .from(this.tables.sales)
+      .where(
+        and(
+          eq(this.tables.sales.id, saleId),
+          eq(this.tables.sales.businessId, this.businessId)
+        )
+      )
+      .limit(1);
 
-    if (saleResult.rows.length === 0) {
+    if (saleResult.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
-      id: string;
-      type: SaleType;
-      status: SaleStatus;
-    };
+    const saleMeta = saleResult[0] as { id: string; type: SaleType; status: SaleStatus };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
     if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items added");
     }
 
-    const existingItemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id
-       FROM sale_items
-       WHERE sale_id = $1 AND business_id = $2 AND product_id = $3 AND variant_id = $4
-       LIMIT 1`,
-      [saleId, this.businessId, item.productId, item.variantId]
-    );
+    const existingItemResult = await this.db
+      .select({ id: this.tables.saleItems.id })
+      .from(this.tables.saleItems)
+      .where(
+        and(
+          eq(this.tables.saleItems.saleId, saleId),
+          eq(this.tables.saleItems.businessId, this.businessId),
+          eq(this.tables.saleItems.productId, item.productId),
+          eq(this.tables.saleItems.variantId, item.variantId)
+        )
+      )
+      .limit(1);
     
-    if (existingItemResult.rows.length > 0) {
+    if (existingItemResult.length > 0) {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
 
@@ -1051,36 +1095,48 @@ export class SaleService extends BaseService {
     }
   ): Promise<SaleItem> {
     const perfStart = performance.now();
-    const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
-      [saleId, this.businessId]
-    );
+    const saleResult = await this.db
+      .select({
+        id: this.tables.sales.id,
+        type: this.tables.sales.type,
+        status: this.tables.sales.status,
+      })
+      .from(this.tables.sales)
+      .where(
+        and(
+          eq(this.tables.sales.id, saleId),
+          eq(this.tables.sales.businessId, this.businessId)
+        )
+      )
+      .limit(1);
 
-    if (saleResult.rows.length === 0) {
+    if (saleResult.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
-      id: string;
-      type: SaleType;
-      status: SaleStatus;
-    };
+    const saleMeta = saleResult[0] as { id: string; type: SaleType; status: SaleStatus };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
     if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items updated");
     }
 
-    const itemResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT * FROM sale_items WHERE id = $1 AND sale_id = $2`,
-      [itemId, saleId]
-    );
+    const itemResult = await this.db
+      .select()
+      .from(this.tables.saleItems)
+      .where(
+        and(
+          eq(this.tables.saleItems.id, itemId),
+          eq(this.tables.saleItems.saleId, saleId)
+        )
+      )
+      .limit(1);
 
-    if (itemResult.rows.length === 0) {
+    if (itemResult.length === 0) {
       throw new Error("Item not found in sale");
     }
 
-    const existingItem = mapToCamelCase(itemResult.rows[0]) as unknown as SaleItem;
+    const existingItem = mapToCamelCase(itemResult[0]) as unknown as SaleItem;
     const oldSubtotal = parseFloat(existingItem.subtotal || "0");
     const newSubtotal = data.subtotal ?? oldSubtotal;
     const subtotalDiff = newSubtotal - oldSubtotal;
@@ -1122,36 +1178,48 @@ export class SaleService extends BaseService {
    */
   async removeItem(saleId: string, itemId: string): Promise<void> {
     const perfStart = performance.now();
-    const saleResult = await this.pg.query<Record<string, unknown>>(
-      `SELECT id, type, status FROM sales WHERE id = $1 AND business_id = $2 LIMIT 1`,
-      [saleId, this.businessId]
-    );
+    const saleResult = await this.db
+      .select({
+        id: this.tables.sales.id,
+        type: this.tables.sales.type,
+        status: this.tables.sales.status,
+      })
+      .from(this.tables.sales)
+      .where(
+        and(
+          eq(this.tables.sales.id, saleId),
+          eq(this.tables.sales.businessId, this.businessId)
+        )
+      )
+      .limit(1);
 
-    if (saleResult.rows.length === 0) {
+    if (saleResult.length === 0) {
       throw new Error("Sale not found");
     }
 
-    const saleMeta = mapToCamelCase(saleResult.rows[0]) as {
-      id: string;
-      type: SaleType;
-      status: SaleStatus;
-    };
+    const saleMeta = saleResult[0] as { id: string; type: SaleType; status: SaleStatus };
 
     const isConfirmedPreOrder = saleMeta.type === "pre_order" && saleMeta.status === "confirmed";
     if (saleMeta.status !== "draft" && !isConfirmedPreOrder) {
       throw new Error("Only draft or confirmed pre_order sales can have items removed");
     }
 
-    const itemResult = await this.pg.query<{ subtotal: string }>(
-      `SELECT subtotal FROM sale_items WHERE id = $1 AND sale_id = $2`,
-      [itemId, saleId]
-    );
+    const itemResult = await this.db
+      .select({ subtotal: this.tables.saleItems.subtotal })
+      .from(this.tables.saleItems)
+      .where(
+        and(
+          eq(this.tables.saleItems.id, itemId),
+          eq(this.tables.saleItems.saleId, saleId)
+        )
+      )
+      .limit(1);
 
-    if (itemResult.rows.length === 0) {
+    if (itemResult.length === 0) {
       throw new Error("Item not found in sale");
     }
 
-    const subtotal = parseFloat(itemResult.rows[0].subtotal);
+    const subtotal = parseFloat(itemResult[0].subtotal);
 
     await this.generatedItemsService.delete(itemId);
 
@@ -1244,22 +1312,22 @@ export class SaleService extends BaseService {
 
     // Build where conditions
     const conditions = [
-      eq(salesTable.businessId, this.businessId),
-      inArray(salesTable.status, ["active", "delivered"]),
-      gte(salesTable.saleDate, startDate),
+      eq(this.tables.sales.businessId, this.businessId),
+      inArray(this.tables.sales.status, ["active", "delivered"]),
+      gte(this.tables.sales.saleDate, startDate),
     ];
 
     if (period.endDate) {
-      conditions.push(lte(salesTable.saleDate, new Date(period.endDate)));
+      conditions.push(lte(this.tables.sales.saleDate, new Date(period.endDate)));
     }
 
     const result = await this.db
       .select({
-        amount: sql<string>`COALESCE(SUM(${salesTable.totalAmount}), 0)`,
-        kilos: sql<string>`COALESCE(SUM(${salesTable.netWeight}), 0)`,
+        amount: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
+        kilos: sql<string>`COALESCE(SUM(${this.tables.sales.netWeight}), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(salesTable)
+      .from(this.tables.sales)
       .where(and(...conditions));
 
     const row = result[0];
@@ -1279,16 +1347,16 @@ export class SaleService extends BaseService {
   }> {
     const result = await this.db
       .select({
-        totalDebt: sql<string>`COALESCE(SUM(${salesTable.balanceDue}), 0)`,
-        debtorsCount: sql<number>`COUNT(DISTINCT ${salesTable.customerId})`,
+        totalDebt: sql<string>`COALESCE(SUM(${this.tables.sales.balanceDue}), 0)`,
+        debtorsCount: sql<number>`COUNT(DISTINCT ${this.tables.sales.customerId})`,
       })
-      .from(salesTable)
+      .from(this.tables.sales)
       .where(
         and(
-          eq(salesTable.businessId, this.businessId),
-          sql`${salesTable.balanceDue} > 0`,
-          sql`${salesTable.status} NOT IN ('cancelled', 'draft')`,
-          sql`${salesTable.customerId} IS NOT NULL`
+          eq(this.tables.sales.businessId, this.businessId),
+          sql`${this.tables.sales.balanceDue} > 0`,
+          sql`${this.tables.sales.status} NOT IN ('cancelled', 'draft')`,
+          sql`${this.tables.sales.customerId} IS NOT NULL`
         )
       );
 
@@ -1310,25 +1378,25 @@ export class SaleService extends BaseService {
 
     // Build where conditions
     const conditions = [
-      eq(salesTable.businessId, this.businessId),
-      inArray(salesTable.status, ["active", "delivered"]),
-      gte(salesTable.saleDate, startDate),
+      eq(this.tables.sales.businessId, this.businessId),
+      inArray(this.tables.sales.status, ["active", "delivered"]),
+      gte(this.tables.sales.saleDate, startDate),
     ];
 
     if (period.endDate) {
-      conditions.push(lte(salesTable.saleDate, new Date(period.endDate)));
+      conditions.push(lte(this.tables.sales.saleDate, new Date(period.endDate)));
     }
 
     // Get daily sales totals using Drizzle
     const result = await this.db
       .select({
-        date: sql<string>`DATE(${salesTable.saleDate})`,
-        total: sql<string>`COALESCE(SUM(${salesTable.totalAmount}), 0)`,
+        date: sql<string>`DATE(${this.tables.sales.saleDate})`,
+        total: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
       })
-      .from(salesTable)
+      .from(this.tables.sales)
       .where(and(...conditions))
-      .groupBy(sql`DATE(${salesTable.saleDate})`)
-      .orderBy(sql`DATE(${salesTable.saleDate})`);
+      .groupBy(sql`DATE(${this.tables.sales.saleDate})`)
+      .orderBy(sql`DATE(${this.tables.sales.saleDate})`);
 
     const labels: string[] = [];
     const data: number[] = [];

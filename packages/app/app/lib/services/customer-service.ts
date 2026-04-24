@@ -6,13 +6,13 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { CustomersService, type CreateCustomersInput, type UpdateCustomersInput } from "~/lib/sync/generated/services";
-import { SyncStatus, customers, customerTags, customerGroupMembers, tags, type Customer } from "@avileo/shared";
+import { SyncStatus, type Customer } from "@avileo/shared";
 import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
 
 // Re-export types for backward compatibility
 export type { CreateCustomersInput as CreateCustomerInput, UpdateCustomersInput as UpdateCustomerInput } from "~/lib/sync/generated/services";
 
-/** Search filters for finding customers */
+/** Search filters for finding this.tables.customers */
 export interface CustomerSearchFilters {
   search?: string;
   hasDni?: boolean;
@@ -49,25 +49,25 @@ export class CustomerService extends CustomersService {
   }
 
   private buildFilterConditions(filters?: CustomerSearchFilters) {
-    const conditions = [eq(customers.businessId, this.businessId)];
+    const conditions = [eq(this.tables.customers.businessId, this.businessId)];
 
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
       conditions.push(
         or(
-          like(customers.name, searchPattern),
-          like(customers.dni, searchPattern),
-          like(customers.phone, searchPattern)
+          like(this.tables.customers.name, searchPattern),
+          like(this.tables.customers.dni, searchPattern),
+          like(this.tables.customers.phone, searchPattern)
         ) as never
       );
     }
 
     if (filters?.hasDni === true) {
-      conditions.push(isNotNull(customers.dni) as never);
+      conditions.push(isNotNull(this.tables.customers.dni) as never);
     }
 
     if (filters?.hasPhone === true) {
-      conditions.push(isNotNull(customers.phone) as never);
+      conditions.push(isNotNull(this.tables.customers.phone) as never);
     }
 
     return conditions;
@@ -79,17 +79,17 @@ export class CustomerService extends CustomersService {
     }
 
     const rows = await this.db
-      .select({ customerId: customerTags.customerId })
-      .from(customerTags)
-      .innerJoin(customers, eq(customerTags.customerId, customers.id))
+      .select({ customerId: this.tables.customerTags.customerId })
+      .from(this.tables.customerTags)
+      .innerJoin(this.tables.customers, eq(this.tables.customerTags.customerId, this.tables.customers.id))
       .where(
         and(
-          eq(customers.businessId, this.businessId),
-          inArray(customerTags.tagId, tagIds)
+          eq(this.tables.customers.businessId, this.businessId),
+          inArray(this.tables.customerTags.tagId, tagIds)
         )
       )
-      .groupBy(customerTags.customerId)
-      .having(sql`count(distinct ${customerTags.tagId}) = ${tagIds.length}`);
+      .groupBy(this.tables.customerTags.customerId)
+      .having(sql`count(distinct ${this.tables.customerTags.tagId}) = ${tagIds.length}`);
 
     return rows.map((row) => row.customerId);
   }
@@ -100,14 +100,14 @@ export class CustomerService extends CustomersService {
     }
 
     const rows = await this.db
-      .selectDistinct({ customerId: customerGroupMembers.customerId })
-      .from(customerGroupMembers)
-      .innerJoin(customers, eq(customerGroupMembers.customerId, customers.id))
+      .selectDistinct({ customerId: this.tables.customerGroupMembers.customerId })
+      .from(this.tables.customerGroupMembers)
+      .innerJoin(this.tables.customers, eq(this.tables.customerGroupMembers.customerId, this.tables.customers.id))
       .where(
         and(
-          eq(customers.businessId, this.businessId),
-          eq(customerGroupMembers.businessId, this.businessId),
-          inArray(customerGroupMembers.groupId, groupIds)
+          eq(this.tables.customers.businessId, this.businessId),
+          eq(this.tables.customerGroupMembers.businessId, this.businessId),
+          inArray(this.tables.customerGroupMembers.groupId, groupIds)
         )
       );
 
@@ -147,8 +147,8 @@ export class CustomerService extends CustomersService {
   async findById(id: string): Promise<Customer | null> {
     const result = await this.db
       .select()
-      .from(customers)
-      .where(eq(customers.id, id))
+      .from(this.tables.customers)
+      .where(eq(this.tables.customers.id, id))
       .limit(1);
 
     if (result.length === 0) {
@@ -159,7 +159,7 @@ export class CustomerService extends CustomersService {
   }
 
   /**
-   * Find all customers for the current business with optional filters
+   * Find all this.tables.customers for the current business with optional filters
    * Overrides parent to add tag/group filtering and search
    */
   async findByBusiness(filters?: CustomerSearchFilters): Promise<Customer[]> {
@@ -171,14 +171,14 @@ export class CustomerService extends CustomersService {
     const conditions = this.buildFilterConditions(filters);
 
     if (filteredIds) {
-      conditions.push(inArray(customers.id, filteredIds) as never);
+      conditions.push(inArray(this.tables.customers.id, filteredIds) as never);
     }
 
     const result = await this.db
       .select()
-      .from(customers)
+      .from(this.tables.customers)
       .where(and(...conditions))
-      .orderBy(desc(customers.createdAt));
+      .orderBy(desc(this.tables.customers.createdAt));
 
     return result as Customer[];
   }
@@ -192,12 +192,12 @@ export class CustomerService extends CustomersService {
     const conditions = this.buildFilterConditions(filters);
 
     if (filteredIds) {
-      conditions.push(inArray(customers.id, filteredIds) as never);
+      conditions.push(inArray(this.tables.customers.id, filteredIds) as never);
     }
 
     const result = await this.db
       .select({ count: sql<number>`count(*)` })
-      .from(customers)
+      .from(this.tables.customers)
       .where(and(...conditions));
 
     return result[0]?.count ?? 0;
@@ -212,20 +212,20 @@ export class CustomerService extends CustomersService {
     const conditions = this.buildFilterConditions(query);
 
     if (filteredIds) {
-      conditions.push(inArray(customers.id, filteredIds) as never);
+      conditions.push(inArray(this.tables.customers.id, filteredIds) as never);
     }
 
     const [items, totalResult] = await Promise.all([
       this.db
         .select()
-        .from(customers)
+        .from(this.tables.customers)
         .where(and(...conditions))
-        .orderBy(desc(customers.createdAt))
+        .orderBy(desc(this.tables.customers.createdAt))
         .limit(query.limit)
         .offset(query.offset),
       this.db
         .select({ count: sql<number>`count(*)` })
-        .from(customers)
+        .from(this.tables.customers)
         .where(and(...conditions)),
     ]);
 
@@ -242,14 +242,14 @@ export class CustomerService extends CustomersService {
 
     const result = await this.db
       .select({
-        customerId: customerTags.customerId,
-        tagId: customerTags.tagId,
-        tagName: tags.name,
-        tagColor: tags.color,
+        customerId: this.tables.customerTags.customerId,
+        tagId: this.tables.customerTags.tagId,
+        tagName: this.tables.tags.name,
+        tagColor: this.tables.tags.color,
       })
-      .from(customerTags)
-      .innerJoin(tags, eq(customerTags.tagId, tags.id))
-      .where(inArray(customerTags.customerId, customerIds));
+      .from(this.tables.customerTags)
+      .innerJoin(this.tables.tags, eq(this.tables.customerTags.tagId, this.tables.tags.id))
+      .where(inArray(this.tables.customerTags.customerId, customerIds));
 
     return result;
   }
@@ -262,7 +262,7 @@ export class CustomerService extends CustomersService {
     const id = this.generateId();
     const now = this.now();
 
-    const entity: typeof customers.$inferInsert = {
+    const entity: typeof this.tables.customers.$inferInsert = {
       id,
       name: input.name,
       dni: input.dni ?? null,
@@ -277,7 +277,7 @@ export class CustomerService extends CustomersService {
       updatedAt: new Date(now),
     };
 
-    await this.db.insert(customers).values(entity);
+    await this.db.insert(this.tables.customers).values(entity);
 
     await this.queueSync("create", id, {
       name: input.name,

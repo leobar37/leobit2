@@ -44,6 +44,13 @@ export * from "./codecs/index";
 export * from "./core/index";
 
 // ============================================================================
+// Database Adapter (supports multiple backends)
+// ============================================================================
+
+export type { DatabaseAdapter } from "./core/database-adapter";
+export { PgLiteAdapter } from "./pglite/pglite-adapter";
+
+// ============================================================================
 // Re-export shared module
 // ============================================================================
 

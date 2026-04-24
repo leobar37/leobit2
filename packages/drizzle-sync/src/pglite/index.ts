@@ -114,6 +114,9 @@ export {
   type ChangeApplierConfig,
 } from "./schema-mapper";
 
+// Database Adapter
+export { PgLiteAdapter } from "./pglite-adapter";
+
 // Backward compatibility exports used by app integrations
 export {
   syncLogger,

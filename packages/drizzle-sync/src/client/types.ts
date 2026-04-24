@@ -7,6 +7,7 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
+import type { DatabaseAdapter } from "../core/database-adapter";
 import type { ISyncEventEmitter } from "../core";
 import type {
   EnqueueParams,
@@ -72,10 +73,8 @@ export interface SyncClientServicePort
  * Provides all dependencies a domain service needs to operate.
  */
 export interface SyncClientEngineContext {
-  /** PGlite instance for raw SQL queries */
-  pg: PGlite;
-  /** Drizzle ORM instance for type-safe queries */
-  db: ReturnType<typeof drizzle>;
+  /** Database adapter for backend-agnostic SQL operations */
+  adapter: DatabaseAdapter;
   /** Business/tenant ID for multi-tenancy */
   tenantId: string;
   /** Tenant partition column for scoped entities */
@@ -271,17 +270,24 @@ export interface IClientCursorStorage {
  */
 export interface SyncClientEngineConfig<TStage extends string = string> {
   /**
-   * PGlite database instance (legacy mode — provide this OR databaseConfig).
+   * Database adapter (new mode — provide this OR pg/db/databaseConfig).
+   * When provided, the engine uses this adapter directly without PGlite-specific initialization.
+   */
+  adapter?: DatabaseAdapter;
+  /**
+   * PGlite database instance (legacy mode — provide this OR adapter/databaseConfig).
    * If omitted, the engine will auto-initialize PGlite using databaseConfig.
+   * @deprecated Provide `adapter` instead for backend portability.
    */
   pg?: PGlite;
   /**
-   * Drizzle ORM instance (legacy mode — provide this OR databaseConfig).
+   * Drizzle ORM instance (legacy mode — provide this OR adapter/databaseConfig).
    * Must match the pg instance if both are provided.
+   * @deprecated Provide `adapter` instead for backend portability.
    */
   db?: ReturnType<typeof drizzle>;
   /**
-   * Database initialization config (auto-init mode — provide this OR pg/db).
+   * Database initialization config (auto-init mode — provide this OR adapter/pg/db).
    * When provided, the engine creates and manages its own PGlite instance.
    */
   databaseConfig?: DatabaseInitConfig;
@@ -348,4 +354,10 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
    * Optional metadata injected by code generation (e.g., file field configuration).
    */
   metadata?: Record<string, unknown>;
+
+  /**
+   * Drizzle ORM tables exposed to services via engine.tables.
+   * Allows services to access schema tables without importing from @avileo/shared.
+   */
+  tables?: Record<string, unknown>;
 }

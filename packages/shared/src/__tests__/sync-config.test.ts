@@ -31,6 +31,10 @@ describe("sync-config", () => {
 
     expect(ENTITY_PRIORITIES.tags).toBe(1);
     expect(ENTITY_PRIORITIES.customer_tags).toBe(2);
+
+    expect(ENTITY_PRIORITIES.files).toBe(1);
+    expect(ENTITY_PRIORITIES.visitas).toBe(2);
+    expect(ENTITY_PRIORITIES.abonos).toBe(2);
   });
 
   it("should not have drift between entity lists", () => {
@@ -49,6 +53,9 @@ describe("sync-config", () => {
       ["customer_groups", "customer_group_members"],
       ["products", "product_variants"],
       ["tags", "customer_tags"],
+      ["customers", "visitas"],
+      ["distribuciones", "visitas"],
+      ["customers", "abonos"],
     ] as const;
 
     for (const [parent, child] of parentChildPairs) {

@@ -1,4 +1,4 @@
-import type { PGlite } from "@electric-sql/pglite";
+import type { DatabaseAdapter } from "../core/database-adapter";
 import type { ISyncQueue, SyncOperationRecord, DeadLetterOperationRecord, ClassifiedError } from "../core";
 import { SyncErrorCode, classifyError, parsePayload, buildPlaceholders } from "../core";
 import { MAX_RETRIES, OPERATION_STATUS } from "../shared";
@@ -24,7 +24,7 @@ export class SyncOperationLifecycleService {
   private readonly errorClassifier: (error: string) => ClassifiedError;
 
   constructor(
-    private pg: PGlite,
+    private adapter: DatabaseAdapter,
     private tenantId: string,
     private queue: ISyncQueue,
     private entityStatusUpdater: SyncEntityStatusUpdater,
@@ -36,7 +36,7 @@ export class SyncOperationLifecycleService {
   }
 
   async getOperation(id: string): Promise<SyncOperationRecord | null> {
-    const result = await this.pg.query<SyncOperationRecord>(
+    const result = await this.adapter.query<SyncOperationRecord>(
       `SELECT *
        FROM sync_operations
        WHERE id = $1
@@ -114,7 +114,7 @@ export class SyncOperationLifecycleService {
       return false;
     }
 
-    const updated = await this.pg.query<{ id: string }>(
+    const updated = await this.adapter.query<{ id: string }>(
       `UPDATE sync_operations
        SET status = $1,
            sync_attempts = 0,
@@ -130,7 +130,7 @@ export class SyncOperationLifecycleService {
       return false;
     }
 
-    const deleted = await this.pg.query<{ id: string }>(
+    const deleted = await this.adapter.query<{ id: string }>(
       `DELETE FROM sync_dead_letter
        WHERE id = $1
          AND "${this.tenantColumn}" = $2
@@ -142,7 +142,7 @@ export class SyncOperationLifecycleService {
   }
 
   async deleteDeadLetterOperation(deadLetterId: string): Promise<boolean> {
-    const deleted = await this.pg.query<{ id: string }>(
+    const deleted = await this.adapter.query<{ id: string }>(
       `DELETE FROM sync_dead_letter
        WHERE id = $1
          AND "${this.tenantColumn}" = $2
@@ -154,7 +154,7 @@ export class SyncOperationLifecycleService {
   }
 
   async clearDeadLetterOperations(): Promise<number> {
-    const deleted = await this.pg.query<{ id: string }>(
+    const deleted = await this.adapter.query<{ id: string }>(
       `DELETE FROM sync_dead_letter
        WHERE "${this.tenantColumn}" = $1
        RETURNING id`,
@@ -180,7 +180,7 @@ export class SyncOperationLifecycleService {
 
     try {
       const placeholders = buildPlaceholders(operationIds.length, 2);
-      const deleted = await this.pg.query<{ id: string }>(
+      const deleted = await this.adapter.query<{ id: string }>(
         `DELETE FROM sync_operations
          WHERE "${this.tenantColumn}" = $1
            AND id IN (${placeholders})
@@ -203,7 +203,7 @@ export class SyncOperationLifecycleService {
     const status = await this.queue.getStatus();
     console.log("[SYNC] Summary:", status);
 
-    const byEntity = await this.pg.query<{
+    const byEntity = await this.adapter.query<{
       entity_type: string;
       status: string;
       count: string;
@@ -223,7 +223,7 @@ export class SyncOperationLifecycleService {
     }
     console.log("[SYNC] By Entity:", entityStatus);
 
-    const recentOps = await this.pg.query<SyncOperationRecord>(
+    const recentOps = await this.adapter.query<SyncOperationRecord>(
       `SELECT *
        FROM sync_operations
        WHERE "${this.tenantColumn}" = $1
@@ -262,7 +262,7 @@ export class SyncOperationLifecycleService {
       `[SYNC] Self-healing: converting ${operation.entity_type} update to create for ${operation.entity_id} (${classifiedError.code})`
     );
 
-    await this.pg.query(
+    await this.adapter.exec(
       `UPDATE sync_operations
        SET operation = $1,
            status = $2,
@@ -280,7 +280,7 @@ export class SyncOperationLifecycleService {
   private async getDeadLetterOperation(
     deadLetterId: string
   ): Promise<DeadLetterOperationRecord | null> {
-    const result = await this.pg.query<DeadLetterOperationRecord>(
+    const result = await this.adapter.query<DeadLetterOperationRecord>(
       `SELECT *
        FROM sync_dead_letter
        WHERE id = $1

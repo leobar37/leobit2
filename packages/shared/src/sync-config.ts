@@ -22,6 +22,7 @@ export const SYNC_ENTITIES = [
   "customer_group_members",
   "visitas",
   "suppliers",
+  "files",
 ] as const;
 
 /** Type derived from canonical entities */
@@ -41,8 +42,7 @@ export const ENTITY_PRIORITIES: Partial<Record<SyncEntity, number>> = {
   customer_groups: 1,
   distribuciones: 1,
   tags: 1,
-  visitas: 1,
-  abonos: 1,
+  files: 1,
 
   // Tier 2: Child entities
   sale_items: 2,
@@ -51,6 +51,8 @@ export const ENTITY_PRIORITIES: Partial<Record<SyncEntity, number>> = {
   customer_group_members: 2,
   customer_tags: 2,
   distribucion_items: 2,
+  visitas: 2,
+  abonos: 2,
 };
 
 /** Entities that track sync_status column */

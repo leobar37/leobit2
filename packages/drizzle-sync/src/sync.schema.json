@@ -1467,7 +1467,7 @@
       "graph": {
         "parents": [
           "customers",
-          "sales"
+          "distribuciones"
         ],
         "children": [],
         "priority": 2

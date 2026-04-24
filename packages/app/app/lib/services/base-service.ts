@@ -18,6 +18,8 @@ export interface SyncClientEngineLike {
   getDb(): ReturnType<typeof drizzle>;
   getSyncOperations(): SyncWritePort | null;
   getConfig(): { tenantId: string; userId: string };
+  /** Drizzle ORM tables exposed by the engine */
+  tables: Record<string, unknown>;
 }
 
 /**
@@ -123,9 +125,22 @@ export abstract class BaseService {
   }
 
   /**
-   * Returns the entity type for this service
-   * Must be implemented by subclasses
-   */
+    * Drizzle ORM tables exposed by the engine.
+    * Use this to access schema tables without importing from @avileo/shared.
+    *
+    * @example
+    * ```typescript
+    * const result = await this.db.select().from(this.tables.customers).where(eq(this.tables.customers.id, id));
+    * ```
+    */
+  protected get tables(): Record<string, unknown> {
+    return this.engine.tables;
+  }
+
+  /**
+    * Returns the entity type for this service
+    * Must be implemented by subclasses
+    */
   abstract getEntityType(): EntityType;
 
   /**

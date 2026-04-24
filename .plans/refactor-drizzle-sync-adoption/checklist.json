@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "plan": "refactor-drizzle-sync-adoption",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Fix sync configuration inconsistencies",
+      "file": "tasks/01-fix-sync-config.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Refactor payment service SQL to Drizzle ORM",
+      "file": "tasks/02-refactor-payment-service.md",
+      "status": "completed",
+      "phase": "refactor",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Refactor sale service SQL to Drizzle ORM",
+      "file": "tasks/03-refactor-sale-service.md",
+      "status": "completed",
+      "phase": "refactor",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-005",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Refactor purchase and distribucion services SQL to Drizzle ORM",
+      "file": "tasks/04-refactor-purchase-distribucion-services.md",
+      "status": "completed",
+      "phase": "refactor",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-005",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Validation and integration testing",
+      "file": "tasks/05-validation-testing.md",
+      "status": "completed",
+      "phase": "validation",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-006",
+        "NFR-001",
+        "NFR-003"
+      ]
+    }
+  ]
+}

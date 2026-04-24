@@ -10,7 +10,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, sql } from "drizzle-orm";
-import { customerTags } from "@avileo/shared";
+// this.tables.customerTags is now accessed via this.tables
 
 // Import the generated TagsService and its input types
 import { 
@@ -42,8 +42,8 @@ export class TagService extends TagsService {
   async getCustomerCount(tagId: string): Promise<number> {
     const result = await this.db
       .select({ count: sql<number>`count(*)` })
-      .from(customerTags)
-      .where(eq(customerTags.tagId, tagId));
+      .from(this.tables.customerTags)
+      .where(eq(this.tables.customerTags.tagId, tagId));
 
     return result[0]?.count ?? 0;
   }
