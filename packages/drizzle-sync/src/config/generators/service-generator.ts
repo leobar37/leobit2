@@ -16,7 +16,7 @@ export interface ServiceOutput {
   serviceCode: string;
 }
 
-const DRIZZLE_SCHEMA_IMPORT_PATH = "~/lib/sync/drizzle-schema";
+const DRIZZLE_SCHEMA_IMPORT_PATH = "./schema";
 
 function getAutoManagedColumns(tenantColumn: string): Set<string> {
   return new Set([

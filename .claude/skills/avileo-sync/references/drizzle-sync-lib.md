@@ -195,6 +195,107 @@ tenancy: {
 }
 ```
 
+## Schema Generation
+
+`@avileo/drizzle-sync` automatically generates a PGlite-compatible Drizzle schema from the backend PostgreSQL schema:
+
+### Generated Artifacts
+
+Located in `packages/app/app/lib/sync/generated/`:
+
+| File | Purpose | Source |
+|------|---------|--------|
+| `schema.ts` | **Drizzle ORM tables, enums, types** | Auto-generated from `sync.schema.json` |
+| `services.ts` | BaseService subclasses | Auto-generated |
+| `hooks.ts` | TanStack Query hooks | Auto-generated |
+| `engine.ts` | `createAvileoSyncEngine()` factory | Auto-generated |
+| `init.sql` | PGlite DDL | Auto-generated |
+| `schemas.ts` | Zod validation schemas | Auto-generated |
+
+### Schema Architecture
+
+```
+Backend Schema (pgEnum, FKs, indexes) ← Source of truth
+         │
+         ▼
+   drizzle-sync build-schema
+         │
+         ▼
+   sync.schema.json (serialized)
+         │
+         ▼
+   drizzle-sync generate
+         │
+         └── packages/app/app/lib/sync/generated/
+                  ├── schema.ts (pgTable + enums + types)
+                  ├── engine.ts (imports schema, exposes via engine.tables)
+                  └── ...
+```
+
+### Usage in Services
+
+**OLD (deprecated)**:
+```typescript
+// ❌ Don't import from @avileo/shared
+import { customers, SyncStatus } from "@avileo/shared";
+```
+
+**NEW (generated)**:
+```typescript
+// ✅ Import from generated schema
+import { customers, SyncStatus } from "~/lib/sync/generated/schema";
+
+// Or access via engine.tables (preferred for services)
+export class CustomerService extends BaseService {
+  async findById(id: string) {
+    return this.db.select()
+      .from(this.tables.customers)  // ← via engine.tables
+      .where(eq(this.tables.customers.id, id));
+  }
+}
+```
+
+### Enum Generation
+
+PostgreSQL `pgEnum` columns are automatically converted to `const` objects:
+
+```typescript
+// Generated in schema.ts
+export const SyncStatus = {
+  PENDING: "pending",
+  SYNCED: "synced",
+  ERROR: "error",
+} as const;
+
+// Used in table definition
+export const customers = pgTable("customers", {
+  syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
+  // ...
+});
+```
+
+### Type Generation
+
+Types are inferred from Drizzle `$inferSelect`/`$inferInsert`:
+
+```typescript
+// Generated in schema.ts
+export type Customers = typeof customers.$inferSelect;
+export type NewCustomers = typeof customers.$inferInsert;
+```
+
+### Regeneration
+
+```bash
+# From packages/backend/
+bun run sync:generate
+
+# Or manually:
+cd ../drizzle-sync && bun run build && bun ./dist/cli.js generate \
+  --schema ../backend/src/sync.schema.json \
+  --output ../app/app/lib/sync/generated
+```
+
 ## Next Steps
 
 - [Quick Start](../packages/drizzle-sync/docs/01-quickstart.md) - Get running in 5 minutes

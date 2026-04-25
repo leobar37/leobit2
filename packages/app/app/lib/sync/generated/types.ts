@@ -18,4 +18,3 @@ export type { Purchase_items, Purchase_itemsInput } from "./schemas";
 export type { Distribuciones, DistribucionesInput } from "./schemas";
 export type { Distribucion_items, Distribucion_itemsInput } from "./schemas";
 export type { Abonos, AbonosInput } from "./schemas";
-export type { Files, FilesInput } from "./schemas";

@@ -10,7 +10,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and } from "drizzle-orm";
-import type { CustomerTag } from "@avileo/shared";
+import type { CustomerTags as CustomerTag } from "~/lib/sync/generated/schema";
 
 // Import the generated CustomerTagsService and its input types
 import { 

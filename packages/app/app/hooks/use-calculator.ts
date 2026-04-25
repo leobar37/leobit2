@@ -2,7 +2,7 @@ import { useCallback, useMemo, useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Product } from "@avileo/shared";
+import type { Products as Product } from "~/lib/sync/generated/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import {
 	type KgCalculatorFields,

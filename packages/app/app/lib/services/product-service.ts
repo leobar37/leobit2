@@ -10,11 +10,11 @@
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc } from "drizzle-orm";
 import { ProductsService, ProductVariantsService } from "~/lib/sync/generated/services";
-import { SyncStatus, type Product as SharedProduct, type ProductVariant as SharedProductVariant } from "@avileo/shared";
+import { SyncStatus } from "~/lib/sync/generated/schema";
+import type { Products as Product, ProductVariants as ProductVariant } from "~/lib/sync/generated/schema";
 
-// Re-export types from @avileo/shared for backward compatibility
-export type Product = SharedProduct;
-export type ProductVariant = SharedProductVariant;
+// Re-export types for backward compatibility
+export type { Product, ProductVariant };
 
 /** Input for creating a product (admin only) */
 export interface CreateProductInput {

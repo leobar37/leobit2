@@ -11,11 +11,10 @@ import {
   type CreateDistribucionesInput,
   type UpdateDistribucionesInput,
 } from "~/lib/sync/generated/services";
-import { type Distribucion } from "@avileo/shared";
+import type { Distribuciones as Distribucion } from "~/lib/sync/generated/schema";
 import { mapToCamelCase } from "../mappers/entity-mapper";
 
-// Re-export Distribucion for backward compatibility
-export { type Distribucion } from "@avileo/shared";
+export type { Distribucion };
 
 /**
  * Distribucion item from database

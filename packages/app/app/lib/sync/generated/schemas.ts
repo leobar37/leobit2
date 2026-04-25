@@ -616,37 +616,3 @@ export interface AbonosInput {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export const filesSchema = z.object({
-  id: z.string(),
-  businessId: z.string().nullable(),
-  filename: z.string(),
-  storagePath: z.string(),
-  mimeType: z.string(),
-  sizeBytes: z.number(),
-  createdAt: z.coerce.date(),
-  deletedAt: z.coerce.date().nullable(),
-  deletedBy: z.string().nullable(),
-  syncStatus: z.enum(["pending", "synced", "error"]),
-  syncAttempts: z.number(),
-  version: z.number(),
-  updatedAt: z.coerce.date(),
-});
-
-export type Files = z.infer<typeof filesSchema>;
-
-export interface FilesInput {
-  id: string;
-  businessId?: string;
-  filename: string;
-  storagePath: string;
-  mimeType: string;
-  sizeBytes: number;
-  createdAt: Date;
-  deletedAt?: Date;
-  deletedBy?: string;
-  syncStatus: "pending" | "synced" | "error";
-  syncAttempts: number;
-  version: number;
-  updatedAt: Date;
-}

@@ -6,7 +6,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { VisitasService } from "~/lib/sync/generated/services";
-import { SyncStatus, type Visita } from "@avileo/shared";
+import { SyncStatus, type Visitas as Visita } from "~/lib/sync/generated/schema";
 import { eq, desc } from "drizzle-orm";
 
 // Re-export types for backward compatibility

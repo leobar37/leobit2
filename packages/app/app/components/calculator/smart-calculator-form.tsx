@@ -2,7 +2,7 @@ import { useFormContext, FormProvider } from "react-hook-form";
 import { CalculatorInput } from "./calculator-input";
 import { useSmartCalculator } from "~/hooks/use-smart-calculator";
 import type { CalculatorField } from "~/hooks/use-smart-calculator";
-import type { Product } from "@avileo/shared";
+import type { Products as Product } from "~/lib/sync/generated/schema";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import { formatWeight, formatCurrency } from "~/lib/utils";
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { filterBySearch, useDebounce, type SearchableField } from "~/lib/search";
-import type { Customer } from "@avileo/shared";
+import type { Customers as Customer } from "~/lib/sync/generated/schema";
 
 interface CustomerWithTagIds extends Customer {
   tagIds: string[];

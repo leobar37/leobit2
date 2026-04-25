@@ -20,7 +20,6 @@ export const VALID_TABLES = new Set([
   "distribuciones",
   "distribucion_items",
   "abonos",
-  "files",
 ]);
 
 export const TABLE_COLUMNS: Record<string, Set<string>> = {
@@ -299,21 +298,6 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "created_at",
     "updated_at",
   ]),
-  files: new Set([
-    "id",
-    "business_id",
-    "filename",
-    "storage_path",
-    "mime_type",
-    "size_bytes",
-    "created_at",
-    "deleted_at",
-    "deleted_by",
-    "sync_status",
-    "sync_attempts",
-    "version",
-    "updated_at",
-  ]),
 };
 
 export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> = {
@@ -381,10 +365,6 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
-  files: {
-    sync_status: "synced",
-    sync_attempts: 0,
-  },
 };
 
 export const APPLY_ORDER = [
@@ -393,18 +373,17 @@ export const APPLY_ORDER = [
   "suppliers",
   "tags",
   "customer_groups",
-  "sales",
-  "purchases",
   "distribuciones",
-  "files",
   "product_variants",
   "customer_tags",
   "customer_group_members",
+  "sales",
+  "purchases",
+  "abonos",
   "visitas",
   "sale_items",
   "purchase_items",
   "distribucion_items",
-  "abonos",
 ];
 
 export const applierConfig: ChangeApplierConfig = {

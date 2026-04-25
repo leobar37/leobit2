@@ -4,14 +4,11 @@
  */
 
 import type { SyncClientEngineContext } from "../client/types";
-import type { ISyncQueue, SyncOperationRecord, SyncStatus, EnqueueParams, DeadLetterOperationRecord } from "../core";
-import type { ISyncLogger } from "../core";
-import type { QueueOptions } from "./queue-types";
-import { createSqlExecutor } from "./sql-executor";
-import { normalizeDatesToISO, parsePayload } from "../core";
+import type { DeadLetterOperationRecord, EnqueueParams, ISyncLogger, ISyncQueue, SyncOperationRecord, SyncStatus } from "../core";
 import { QueueRepository } from "./queue-repository";
+import type { QueueOptions } from "./queue-types";
 import { OPERATION_STATUS } from "./queue-types";
-import { getCoalescePlan } from "./queue-coalescer";
+import { createSqlExecutor } from "./sql-executor";
 
 export class PgSyncQueue implements ISyncQueue {
   private readonly context: SyncClientEngineContext;

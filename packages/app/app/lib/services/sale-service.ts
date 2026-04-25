@@ -12,7 +12,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { BaseService, type EntityType } from "./base-service";
-import { SyncStatus } from "@avileo/shared";
+import { SyncStatus } from "~/lib/sync/generated/schema";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";

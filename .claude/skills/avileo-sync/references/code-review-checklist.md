@@ -33,7 +33,41 @@ await.*\.query\(` — finds direct SQL queries
 
 ---
 
-### Rule 2: Generated Services First
+### Rule 2: NO Schema Imports from `@avileo/shared`
+
+**Anti-pattern** — importing schema types/tables from `@avileo/shared`:
+```typescript
+// ❌ BAD: Importing schema from @avileo/shared (deprecated)
+import { customers, SyncStatus, type Customer } from "@avileo/shared";
+```
+
+**Correct pattern** — import from generated schema:
+```typescript
+// ✅ GOOD: Import from generated schema
+import { customers, SyncStatus, type Customers } from "~/lib/sync/generated/schema";
+
+// ✅ GOOD: Access tables via engine (services)
+export class CustomerService extends BaseService {
+  async findById(id: string) {
+    return this.db.select()
+      .from(this.tables.customers)
+      .where(eq(this.tables.customers.id, id));
+  }
+}
+```
+
+**Why**: `@avileo/shared` no longer exports schema definitions. All schema (tables, enums, types) is auto-generated in `packages/app/app/lib/sync/generated/schema.ts` from the backend source of truth.
+
+**Grep patterns to find violations**:
+```bash
+grep -r "from \"@avileo/shared\"" packages/app/app/lib/services/ | grep -E "Customer|Product|Sale|SyncStatus"
+grep -r "from \"@avileo/shared\"" packages/app/app/hooks/ | grep -E "Customer|Product|Sale|SyncStatus"
+grep -r "from \"@avileo/shared\"" packages/app/app/components/ | grep -E "Customer|Product|Sale|SyncStatus"
+```
+
+---
+
+### Rule 3: Generated Services First
 
 **Anti-pattern** — reimplementing CRUD manually:
 ```typescript
@@ -75,7 +109,7 @@ export class SaleService {
 
 ---
 
-### Rule 3: Business Logic in Services, Not Hooks
+### Rule 4: Business Logic in Services, Not Hooks
 
 **Anti-pattern** — business logic in hooks:
 ```typescript
@@ -119,7 +153,7 @@ export function useCreateSale() {
 
 ---
 
-### Rule 4: All Mutations Go Through Sync
+### Rule 5: All Mutations Go Through Sync
 
 **Anti-pattern** — direct DB write bypassing sync:
 ```typescript
@@ -139,7 +173,7 @@ await this.queueSync("update", id, { status });
 
 ---
 
-### Rule 5: Service Composition Over Complex Inheritance
+### Rule 6: Service Composition Over Complex Inheritance
 
 **Anti-pattern** — extending BaseService for all CRUD:
 ```typescript
@@ -167,7 +201,7 @@ export class ProductService extends ProductsService {
 
 ---
 
-### Rule 6: Structured Logging Only
+### Rule 7: Structured Logging Only
 
 **Anti-pattern** — raw console.log/error:
 ```typescript
@@ -193,7 +227,7 @@ console.error("[SaleService] createDraft failed", { error: error.message });
 
 ---
 
-### Rule 7: Domain Errors via throw, Hooks Handle
+### Rule 8: Domain Errors via throw, Hooks Handle
 
 **Anti-pattern** — catching and re-throwing in service:
 ```typescript

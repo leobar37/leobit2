@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, ilike } from "drizzle-orm";
 import { getDatabase } from "@avileo/drizzle-sync/client";
-import { suppliers, type Supplier } from "@avileo/shared";
+import { suppliers, type Suppliers as Supplier } from "~/lib/sync/generated/schema";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { SupplierService } from "~/lib/services/supplier-service";
 

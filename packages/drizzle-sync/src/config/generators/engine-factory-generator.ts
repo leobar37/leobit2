@@ -22,6 +22,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
   if (input.hasFileFields) {
     b.line('import { FILE_FIELDS_CONFIG } from "./file-fields";');
   }
+  b.line('import * as schema from "./schema";');
   b.blank();
 
   // Import generated services
@@ -68,6 +69,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
         });
         iib.line("},");
       }
+      iib.line("tables: schema,");
       iib.line("entities: [");
       iib.indent((iiib) => {
         for (const name of input.entityNames) {

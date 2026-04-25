@@ -11,13 +11,10 @@ import {
   type CreatePurchasesInput,
   type UpdatePurchasesInput,
 } from "~/lib/sync/generated/services";
-import {
-  SyncStatus,
-  type Purchase,
-} from "@avileo/shared";
+import { SyncStatus } from "~/lib/sync/generated/schema";
+import type { Purchases as Purchase } from "~/lib/sync/generated/schema";
 
-// Re-export Purchase for backward compatibility
-export { type Purchase } from "@avileo/shared";
+export type { Purchase };
 
 /** Purchase status type */
 export type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";

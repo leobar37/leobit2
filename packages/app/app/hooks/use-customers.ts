@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { CustomerService } from "~/lib/services/customer-service";
-import type { Customer } from "@avileo/shared";
+import type { Customers as Customer } from "~/lib/sync/generated/schema";
 import type {
   CreateCustomerInput,
   UpdateCustomerInput,

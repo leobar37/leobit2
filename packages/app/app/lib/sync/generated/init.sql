@@ -391,26 +391,6 @@ CREATE INDEX IF NOT EXISTS "idx_abonos_seller_id" ON "abonos"("seller_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");
 
-CREATE TABLE IF NOT EXISTS "files" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID DEFAULT NULL,
-  "filename" VARCHAR(255) NOT NULL DEFAULT NULL,
-  "storage_path" VARCHAR(500) NOT NULL DEFAULT NULL,
-  "mime_type" VARCHAR(100) NOT NULL DEFAULT NULL,
-  "size_bytes" INTEGER NOT NULL DEFAULT NULL,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "deleted_at" TIMESTAMP DEFAULT NULL,
-  "deleted_by" TEXT DEFAULT NULL,
-  "sync_status" TEXT NOT NULL DEFAULT 'synced',
-  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "version" INTEGER NOT NULL DEFAULT 1,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  PRIMARY KEY ("id")
-);
-
-CREATE INDEX IF NOT EXISTS "idx_files_sync_status" ON "files"(sync_status);
-CREATE INDEX IF NOT EXISTS "idx_files_business_id" ON "files"(business_id);
-
 -- Sync infrastructure tables
 
 CREATE TABLE IF NOT EXISTS sync_operations (

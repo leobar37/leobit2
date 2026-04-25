@@ -4,17 +4,16 @@
  */
 
 import type { SyncClientEngineContext } from "../client/types";
-import type { ISyncQueue, ISyncHttpClient, ISyncLogger, SyncOperationRecord, SyncStatus, EnqueueParams } from "../core";
-import type { ISyncMutex } from "./sync-mutex";
-import type { PushServiceOptions, PushResult, ConflictStrategy } from "./push-types";
-import { PgSyncQueue } from "./queue-queue";
-import { createSqlExecutor } from "./sql-executor";
-import { NoOpLogger } from "./change-noop-logger";
-import { SyncMutex } from "./sync-mutex";
+import type { EnqueueParams, ISyncHttpClient, ISyncLogger, ISyncQueue, SyncOperationRecord, SyncStatus } from "../core";
 import { SyncAutoRunner } from "./auto-runner";
+import { SyncBatchProcessor } from "./batch-processor";
+import { NoOpLogger } from "./change-noop-logger";
 import { SyncEntityStatusUpdater } from "./entity-status-updater";
 import { SyncOperationLifecycleService } from "./operation-lifecycle";
-import { SyncBatchProcessor } from "./batch-processor";
+import type { ConflictStrategy, PushResult, PushServiceOptions } from "./push-types";
+import { PgSyncQueue } from "./queue-queue";
+import type { ISyncMutex } from "./sync-mutex";
+import { SyncMutex } from "./sync-mutex";
 
 export class PushSyncService {
   private readonly queue: ISyncQueue;

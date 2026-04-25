@@ -10,7 +10,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, like, and, desc } from "drizzle-orm";
-import type { Supplier } from "@avileo/shared";
+import type { Suppliers as Supplier } from "~/lib/sync/generated/schema";
 
 // Import the generated SuppliersService and its input types
 import { 

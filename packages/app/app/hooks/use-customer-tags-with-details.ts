@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { TagService } from "~/lib/services/tag-service";
-import type { CustomerTag, Tag } from "@avileo/shared";
+import type { CustomerTags as CustomerTag, Tags as Tag } from "~/lib/sync/generated/schema";
 
 export interface CustomerTagWithDetails extends CustomerTag {
   tagName: string;

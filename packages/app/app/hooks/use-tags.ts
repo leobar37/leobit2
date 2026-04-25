@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { TagService } from "~/lib/services/tag-service";
-import type { Tag } from "@avileo/shared";
+import type { Tags as Tag } from "~/lib/sync/generated/schema";
 import type { CreateTagInput, UpdateTagInput } from "~/lib/services/tag-service";
 
 // Re-export Tag type for backward compatibility

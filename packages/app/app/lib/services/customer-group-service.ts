@@ -9,7 +9,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { SyncStatus, type CustomerGroup } from "@avileo/shared";
+import { SyncStatus, type CustomerGroups as CustomerGroup } from "~/lib/sync/generated/schema";
 
 import { CustomerGroupsService, type CreateCustomerGroupsInput, type UpdateCustomerGroupsInput } from "~/lib/sync/generated/services";
 

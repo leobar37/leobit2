@@ -11,9 +11,9 @@ import {
   distribuciones,
   distribucionItems,
   DistribucionStatus,
-  type Distribucion,
-  type DistribucionItem,
-} from "@avileo/shared";
+  type Distribuciones as Distribucion,
+  type DistribucionItems as DistribucionItem,
+} from "~/lib/sync/generated/schema";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";

@@ -6,7 +6,7 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { CustomersService, type CreateCustomersInput, type UpdateCustomersInput } from "~/lib/sync/generated/services";
-import { SyncStatus, type Customer } from "@avileo/shared";
+import { SyncStatus, type Customers as Customer } from "~/lib/sync/generated/schema";
 import { eq, like, and, or, desc, isNotNull, inArray, sql } from "drizzle-orm";
 
 // Re-export types for backward compatibility

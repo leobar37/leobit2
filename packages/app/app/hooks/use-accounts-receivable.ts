@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import { PaymentService } from "~/lib/services/payment-service";
-import type { Customer } from "@avileo/shared";
+import type { Customers as Customer } from "~/lib/sync/generated/schema";
 
 export interface AccountsReceivableItem {
   customer: Customer;

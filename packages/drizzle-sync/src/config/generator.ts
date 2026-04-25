@@ -11,7 +11,7 @@ import { generateTableRegistry, generateTableRegistryFile } from "./generators/t
 import { generateQueryKeysFile } from "./generators/query-keys-generator";
 import { generateEngineFactoryFile } from "./generators/engine-factory-generator";
 import { generateFileFieldsConfig, generateFileFieldsFile } from "./generators/file-fields-generator";
-import { generateDrizzleSchemaFile } from "./generators/schema-export-generator";
+import { generateDrizzleSchemaFile } from "./generators/drizzle-schema-generator";
 import type { SerializedEntity, SyncSchema } from "./schema-types";
 import { CodeBuilder, formatGeneratedCode } from "./generators/code-builder";
 
@@ -135,11 +135,11 @@ export async function generateAll(
   writeFileSync(servicesPath, await formatGeneratedCode(servicesFile, servicesPath));
   files.push(`${outputDir}/services.ts`);
 
-  // 5b. Generate drizzle schema exports (centralized table access)
-  const drizzleSchemaPath = `${outputDir}/drizzle-schema.ts`;
-  const drizzleSchemaFile = generateDrizzleSchemaFile(entityNames, entities as Record<string, SerializedEntity>);
-  writeFileSync(drizzleSchemaPath, await formatGeneratedCode(drizzleSchemaFile, drizzleSchemaPath));
-  files.push(`${outputDir}/drizzle-schema.ts`);
+  // 5b. Generate Drizzle schema (pgTable definitions for PGlite)
+  const schemaPath = `${outputDir}/schema.ts`;
+  const schemaFile = generateDrizzleSchemaFile(entityNames, entities as Record<string, SerializedEntity>);
+  writeFileSync(schemaPath, await formatGeneratedCode(schemaFile, schemaPath));
+  files.push(`${outputDir}/schema.ts`);
 
   // 6. Generate types (exports from schemas)
   const typesPath = `${outputDir}/types.ts`;

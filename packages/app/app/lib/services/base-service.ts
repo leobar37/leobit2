@@ -6,7 +6,8 @@
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
-import { isSyncEntity, SyncStatus } from "@avileo/shared";
+import { isSyncEntity } from "@avileo/shared";
+import { SyncStatus } from "~/lib/sync/generated/schema";
 import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
 import { VALID_TABLES } from "@avileo/drizzle-sync/pglite";
 import { generateId } from "~/lib/utils/id-generator";
