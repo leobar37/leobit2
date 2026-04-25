@@ -26,10 +26,6 @@ export type CreateCustomerTagInput = CreateCustomerTagsInput;
  * Extends the generated CustomerTagsService with custom tag assignment methods.
  */
 export class CustomerTagService extends CustomerTagsService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Get all tags for a customer
    */

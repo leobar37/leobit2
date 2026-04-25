@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerGroupService } from "~/lib/services/customer-group-service";
 
 export interface BulkAssignGroupsInput {
@@ -9,11 +9,7 @@ export interface BulkAssignGroupsInput {
 
 export function useBulkAssignGroups() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use(
-    "customerGroups",
-    () => new CustomerGroupService(engine)
-  );
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async ({ customerIds, groupIds }: BulkAssignGroupsInput) => {

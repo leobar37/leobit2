@@ -31,6 +31,7 @@ import type {
   HandlerResult,
   ISyncHttpClient,
   ISyncQueue,
+  DatabaseAdapter,
 } from "../core";
 import { PgSyncQueue } from "../pglite/queue-queue";
 import { PushSyncService } from "../pglite/push-service";
@@ -126,7 +127,7 @@ export class SyncClientEngine {
    * generated CUID2 IDs ready for sync.
    *
    * Use this in custom hooks when you need more control than the
-   * auto-generated useCreate*/useUpdate* hooks provide.
+   * auto-generated useCreate / useUpdate hooks provide.
    *
    * @example
    * ```typescript
@@ -666,18 +667,8 @@ export class SyncClientEngine {
   }
 
   private instantiateServices(): void {
-    const { tenantId, userId, tenantColumn } = this.config;
-
-    const context: SyncClientEngineContext = {
-      adapter: this.adapter!,
-      tenantId,
-      tenantColumn: tenantColumn ?? "tenant_id",
-      userId,
-      syncService: this.syncService!,
-    };
-
     for (const definition of this.config.entities) {
-      const instance = definition.factory(context);
+      const instance = definition.factory(this);
       this.services.set(definition.name, instance);
     }
   }

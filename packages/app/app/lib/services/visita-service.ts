@@ -43,10 +43,6 @@ export interface VisitaWithCustomer extends Omit<Visita, "customerId"> {
  * Extends generated VisitasService to provide enriched return types with customer data
  */
 export class VisitaService extends VisitasService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Find a visita by ID with enriched customer data
    */

@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { TagService } from "~/lib/services/tag-service";
 import type { CustomerTags as CustomerTag, Tags as Tag } from "~/lib/sync/generated/schema";
@@ -22,9 +22,8 @@ const QUERY_KEYS = {
  * Get all tags for a specific customer with tag details (name, color)
  */
 export function useCustomerTagsWithDetails(customerId: string | null) {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
-  const tagService = engine.use("tags", () => new TagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
+  const tagService = useEngineService<TagService>("tags");
 
   return useQuery({
     queryKey: customerId ? QUERY_KEYS.customerTagsWithDetails(customerId) : ["customer-tags-with-details", "none"],

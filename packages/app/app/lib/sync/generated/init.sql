@@ -207,7 +207,6 @@ CREATE TABLE IF NOT EXISTS "sales" (
   "allow_customer_edit" BOOLEAN NOT NULL DEFAULT TRUE,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "sync_group_id" VARCHAR(100) DEFAULT NULL,
   "cancelled_at" TIMESTAMP DEFAULT NULL,
   "cancelled_by" UUID DEFAULT NULL,
   "cancel_reason" TEXT DEFAULT NULL,
@@ -230,7 +229,6 @@ CREATE INDEX IF NOT EXISTS "idx_sales_customer_id" ON "sales"("customer_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_seller_id" ON "sales"("seller_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_distribucion_id" ON "sales"("distribucion_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_visita_id" ON "sales"("visita_id");
-CREATE INDEX IF NOT EXISTS "idx_sales_sync_group_id" ON "sales"("sync_group_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_advance_proof_image_id" ON "sales"("advance_proof_image_id");
 
 CREATE TABLE IF NOT EXISTS "sale_items" (
@@ -253,7 +251,6 @@ CREATE TABLE IF NOT EXISTS "sale_items" (
   "original_quantity" DECIMAL(10, 3) DEFAULT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "sync_group_id" VARCHAR(100) DEFAULT NULL,
   "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
   "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
   PRIMARY KEY ("id")
@@ -264,7 +261,6 @@ CREATE INDEX IF NOT EXISTS "idx_sale_items_business_id" ON "sale_items"(business
 CREATE INDEX IF NOT EXISTS "idx_sale_items_sale_id" ON "sale_items"("sale_id");
 CREATE INDEX IF NOT EXISTS "idx_sale_items_product_id" ON "sale_items"("product_id");
 CREATE INDEX IF NOT EXISTS "idx_sale_items_variant_id" ON "sale_items"("variant_id");
-CREATE INDEX IF NOT EXISTS "idx_sale_items_sync_group_id" ON "sale_items"("sync_group_id");
 
 CREATE TABLE IF NOT EXISTS "purchases" (
   "id" UUID NOT NULL DEFAULT NULL,
@@ -278,7 +274,6 @@ CREATE TABLE IF NOT EXISTS "purchases" (
   "notes" TEXT DEFAULT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "sync_group_id" VARCHAR(100) DEFAULT NULL,
   "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
   "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
@@ -289,7 +284,6 @@ CREATE INDEX IF NOT EXISTS "idx_purchases_sync_status" ON "purchases"(sync_statu
 CREATE INDEX IF NOT EXISTS "idx_purchases_business_id" ON "purchases"(business_id);
 CREATE INDEX IF NOT EXISTS "idx_purchases_supplier_id" ON "purchases"("supplier_id");
 CREATE INDEX IF NOT EXISTS "idx_purchases_receipt_image_id" ON "purchases"("receipt_image_id");
-CREATE INDEX IF NOT EXISTS "idx_purchases_sync_group_id" ON "purchases"("sync_group_id");
 
 CREATE TABLE IF NOT EXISTS "purchase_items" (
   "id" UUID NOT NULL DEFAULT NULL,
@@ -303,7 +297,6 @@ CREATE TABLE IF NOT EXISTS "purchase_items" (
   "total_cost" DECIMAL(12, 2) NOT NULL DEFAULT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "sync_group_id" VARCHAR(100) DEFAULT NULL,
   "version" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
   "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
@@ -316,7 +309,6 @@ CREATE INDEX IF NOT EXISTS "idx_purchase_items_purchase_id" ON "purchase_items"(
 CREATE INDEX IF NOT EXISTS "idx_purchase_items_product_id" ON "purchase_items"("product_id");
 CREATE INDEX IF NOT EXISTS "idx_purchase_items_variant_id" ON "purchase_items"("variant_id");
 CREATE INDEX IF NOT EXISTS "idx_purchase_items_unit_id" ON "purchase_items"("unit_id");
-CREATE INDEX IF NOT EXISTS "idx_purchase_items_sync_group_id" ON "purchase_items"("sync_group_id");
 
 CREATE TABLE IF NOT EXISTS "distribuciones" (
   "id" UUID NOT NULL DEFAULT NULL,
@@ -390,6 +382,26 @@ CREATE INDEX IF NOT EXISTS "idx_abonos_customer_id" ON "abonos"("customer_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_seller_id" ON "abonos"("seller_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_id");
 CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");
+
+CREATE TABLE IF NOT EXISTS "files" (
+  "id" UUID NOT NULL DEFAULT NULL,
+  "business_id" UUID DEFAULT NULL,
+  "filename" VARCHAR(255) NOT NULL DEFAULT NULL,
+  "storage_path" VARCHAR(500) NOT NULL DEFAULT NULL,
+  "mime_type" VARCHAR(100) NOT NULL DEFAULT NULL,
+  "size_bytes" INTEGER NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "deleted_at" TIMESTAMP DEFAULT NULL,
+  "deleted_by" TEXT DEFAULT NULL,
+  "sync_status" TEXT NOT NULL DEFAULT 'synced',
+  "sync_attempts" INTEGER NOT NULL DEFAULT 0,
+  "version" INTEGER NOT NULL DEFAULT 1,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "idx_files_sync_status" ON "files"(sync_status);
+CREATE INDEX IF NOT EXISTS "idx_files_business_id" ON "files"(business_id);
 
 -- Sync infrastructure tables
 

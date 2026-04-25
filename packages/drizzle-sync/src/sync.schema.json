@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-23T18:53:35.705Z",
+  "generatedAt": "2026-04-25T06:16:45.411Z",
   "tenancy": {
     "tenantColumn": "business_id",
     "tenantField": "businessId"
@@ -1467,7 +1467,7 @@
       "graph": {
         "parents": [
           "customers",
-          "distribuciones"
+          "sales"
         ],
         "children": [],
         "priority": 2
@@ -1758,17 +1758,6 @@
           "default": 0,
           "primary": false,
           "isEnum": false
-        },
-        {
-          "name": "sync_group_id",
-          "dataType": "string",
-          "drizzleType": "PgVarchar",
-          "notNull": false,
-          "hasDefault": false,
-          "default": null,
-          "primary": false,
-          "isEnum": false,
-          "length": 100
         },
         {
           "name": "cancelled_at",
@@ -2192,17 +2181,6 @@
           "isEnum": false
         },
         {
-          "name": "sync_group_id",
-          "dataType": "string",
-          "drizzleType": "PgVarchar",
-          "notNull": false,
-          "hasDefault": false,
-          "default": null,
-          "primary": false,
-          "isEnum": false,
-          "length": 100
-        },
-        {
           "name": "created_at",
           "dataType": "date",
           "drizzleType": "PgTimestamp",
@@ -2414,17 +2392,6 @@
           "isEnum": false
         },
         {
-          "name": "sync_group_id",
-          "dataType": "string",
-          "drizzleType": "PgVarchar",
-          "notNull": false,
-          "hasDefault": false,
-          "default": null,
-          "primary": false,
-          "isEnum": false,
-          "length": 100
-        },
-        {
           "name": "version",
           "dataType": "number",
           "drizzleType": "PgInteger",
@@ -2621,17 +2588,6 @@
           "default": 0,
           "primary": false,
           "isEnum": false
-        },
-        {
-          "name": "sync_group_id",
-          "dataType": "string",
-          "drizzleType": "PgVarchar",
-          "notNull": false,
-          "hasDefault": false,
-          "default": null,
-          "primary": false,
-          "isEnum": false,
-          "length": 100
         },
         {
           "name": "version",

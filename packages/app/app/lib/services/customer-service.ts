@@ -44,10 +44,6 @@ export interface CustomerTagSummary {
  * including tag filtering, group filtering, and pagination
  */
 export class CustomerService extends CustomersService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   private buildFilterConditions(filters?: CustomerSearchFilters) {
     const conditions = [eq(this.tables.customers.businessId, this.businessId)];
 
@@ -138,24 +134,6 @@ export class CustomerService extends CustomersService {
     }
 
     return tagFilteredIds ?? groupFilteredIds;
-  }
-
-  /**
-   * Find a customer by ID
-   * Inherited from CustomersService
-   */
-  async findById(id: string): Promise<Customer | null> {
-    const result = await this.db
-      .select()
-      .from(this.tables.customers)
-      .where(eq(this.tables.customers.id, id))
-      .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    return result[0] as Customer;
   }
 
   /**

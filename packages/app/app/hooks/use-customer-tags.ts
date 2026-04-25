@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import type { CustomerTags as CustomerTag, Tags as Tag } from "~/lib/sync/generated/schema";
 
@@ -17,8 +17,7 @@ export const customerTagsKeys = {
  * Get all tags for a specific customer
  */
 export function useCustomerTags(customerId: string | null) {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
 
   return useQuery({
     queryKey: customerId ? customerTagsKeys.customerTags(customerId) : ["customer-tags", "none"],
@@ -43,8 +42,7 @@ export function useCustomerTagIds(customerId: string | null) {
  * Add a tag to a customer
  */
 export function useAddCustomerTag() {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -62,8 +60,7 @@ export function useAddCustomerTag() {
  * Remove a tag from a customer
  */
 export function useRemoveCustomerTag() {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -81,8 +78,7 @@ export function useRemoveCustomerTag() {
  * Assign tags to a customer (replaces all existing tags)
  */
 export function useAssignCustomerTags() {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({

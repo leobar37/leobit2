@@ -31,10 +31,6 @@ export type SupplierType = "generic" | "regular" | "internal";
  * Extends the generated SuppliersService with custom search functionality.
  */
 export class SupplierService extends SuppliersService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Find all this.tables.suppliers for the current business
    * Optionally filtered by search query

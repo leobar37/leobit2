@@ -14,6 +14,7 @@ import { generateFileFieldsConfig, generateFileFieldsFile } from "./generators/f
 import { generateDrizzleSchemaFile } from "./generators/drizzle-schema-generator";
 import type { SerializedEntity, SyncSchema } from "./schema-types";
 import { CodeBuilder, formatGeneratedCode } from "./generators/code-builder";
+import { pascalCase } from "../utils/string-utils";
 
 export interface GenerationResult {
   files: string[];
@@ -200,7 +201,7 @@ function generateTypesFile(entityNames: string[]): string {
   b.line('export type { z } from "zod";');
 
   for (const name of entityNames) {
-    const pascal = name.charAt(0).toUpperCase() + name.slice(1);
+    const pascal = pascalCase(name);
     b.line(`export type { ${pascal}, ${pascal}Input } from "./schemas";`);
   }
 

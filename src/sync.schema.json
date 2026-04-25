@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-23T22:12:10.239Z",
+  "generatedAt": "2026-04-25T05:35:31.556Z",
   "tenancy": {
     "tenantColumn": "business_id",
     "tenantField": "businessId"
@@ -366,7 +366,12 @@
           "cost_price"
         ],
         "conflictResolver": "version-based",
-        "relations": {}
+        "relations": {},
+        "fileFields": {
+          "image_id": {
+            "entity": "assets"
+          }
+        }
       },
       "graph": {
         "parents": [],
@@ -1936,6 +1941,11 @@
               "cascade": true
             }
           ]
+        },
+        "fileFields": {
+          "advance_proof_image_id": {
+            "entity": "files"
+          }
         }
       },
       "graph": {
@@ -2435,6 +2445,11 @@
               "cascade": true
             }
           ]
+        },
+        "fileFields": {
+          "receipt_image_id": {
+            "entity": "files"
+          }
         }
       },
       "graph": {
@@ -3223,7 +3238,12 @@
             "nullable": false
           }
         },
-        "relations": {}
+        "relations": {},
+        "fileFields": {
+          "proof_image_id": {
+            "entity": "files"
+          }
+        }
       },
       "graph": {
         "parents": [

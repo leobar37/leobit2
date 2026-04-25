@@ -27,6 +27,7 @@ import type { PushSyncService } from "../pglite/push-service";
 import type { ISyncMutex } from "../pglite/sync-mutex";
 import type { PullStatus } from "../pglite/pull-types";
 import type { ChangeApplierConfig } from "../pglite/schema-mapper";
+import type { SyncClientEngine } from "./sync-client-engine";
 
 export interface SyncClientStatusOperations {
   getStatus(): Promise<SyncStatus>;
@@ -87,15 +88,15 @@ export interface SyncClientEngineContext {
 
 /**
  * Definition for a single entity service to be registered with the engine.
- * The factory receives a SyncClientEngineContext and returns the service instance.
+ * The factory receives the full SyncClientEngine instance and returns the service instance.
  */
 export interface EntityServiceDefinition<T = unknown> {
   /** Unique name for the service (e.g., 'customers', 'sales') */
   name: string;
   /** Sync entity type string (e.g., 'customers', 'sale_items') */
   entityType: string;
-  /** Factory function that creates the service given engine context */
-  factory: (context: SyncClientEngineContext) => T;
+  /** Factory function that creates the service given the engine instance */
+  factory: (engine: SyncClientEngine) => T;
   /** Optional extra configuration for this service */
   options?: Record<string, unknown>;
 }
@@ -256,7 +257,7 @@ export interface IClientCursorStorage {
  *     {
  *       name: 'customers',
  *       entityType: 'customers',
- *       factory: (ctx) => new CustomerService(ctx.pg, ctx.db, ctx.syncService, ctx.tenantId, ctx.userId),
+ *       factory: (engine) => new CustomerService(engine),
  *     },
  *   ],
  *   sync: { pushIntervalMs: 5000, pullIntervalMs: 10000 },

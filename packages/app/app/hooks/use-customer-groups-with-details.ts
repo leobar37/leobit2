@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerGroupService } from "~/lib/services/customer-group-service";
 
 export interface CustomerGroupBadgeItem {
@@ -17,8 +17,7 @@ const QUERY_KEYS = {
  * Get groups that a customer belongs to (local-first, offline-ready)
  */
 export function useCustomerGroupsWithDetails(customerId: string | null) {
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useQuery({
     queryKey: customerId
@@ -34,8 +33,7 @@ export function useCustomerGroupsWithDetails(customerId: string | null) {
 }
 
 export function useCustomerGroupsSummary(customerIds: string[]) {
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useQuery({
     queryKey: ["customer-groups-summary", customerIds],

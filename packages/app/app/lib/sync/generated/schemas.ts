@@ -318,7 +318,6 @@ export const salesSchema = z.object({
   allowCustomerEdit: z.boolean(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
-  syncGroupId: z.string().nullable(),
   cancelledAt: z.coerce.date().nullable(),
   cancelledBy: z.string().nullable(),
   cancelReason: z.string().nullable(),
@@ -361,7 +360,6 @@ export interface SalesInput {
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId?: string;
   cancelledAt?: Date;
   cancelledBy?: string;
   cancelReason?: string;
@@ -397,7 +395,6 @@ export const sale_itemsSchema = z.object({
   originalQuantity: z.union([z.string(), z.number()]).nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
-  syncGroupId: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -424,7 +421,6 @@ export interface SaleItemsInput {
   originalQuantity?: string | number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -441,7 +437,6 @@ export const purchasesSchema = z.object({
   notes: z.string().nullable(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
-  syncGroupId: z.string().nullable(),
   version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -461,7 +456,6 @@ export interface PurchasesInput {
   notes?: string;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId?: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -479,7 +473,6 @@ export const purchase_itemsSchema = z.object({
   totalCost: z.union([z.string(), z.number()]),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
-  syncGroupId: z.string().nullable(),
   version: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -499,7 +492,6 @@ export interface PurchaseItemsInput {
   totalCost: string | number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
-  syncGroupId?: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -614,5 +606,39 @@ export interface AbonosInput {
   syncAttempts: number;
   version: number;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+export const filesSchema = z.object({
+  id: z.string(),
+  businessId: z.string().nullable(),
+  filename: z.string(),
+  storagePath: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  createdAt: z.coerce.date(),
+  deletedAt: z.coerce.date().nullable(),
+  deletedBy: z.string().nullable(),
+  syncStatus: z.enum(["pending", "synced", "error"]),
+  syncAttempts: z.number(),
+  version: z.number(),
+  updatedAt: z.coerce.date(),
+});
+
+export type Files = z.infer<typeof filesSchema>;
+
+export interface FilesInput {
+  id: string;
+  businessId?: string;
+  filename: string;
+  storagePath: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: Date;
+  deletedAt?: Date;
+  deletedBy?: string;
+  syncStatus: "pending" | "synced" | "error";
+  syncAttempts: number;
+  version: number;
   updatedAt: Date;
 }

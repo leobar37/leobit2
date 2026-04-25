@@ -1,0 +1,82 @@
+{
+  "planSlug": "migrate-to-generated-services",
+  "version": "1.0.0",
+  "createdAt": "2026-04-25",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Fix drizzle-sync Type Contract",
+      "status": "completed",
+      "file": "tasks/01-fix-drizzle-sync-types.md",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "Update drizzle-sync Tests",
+      "status": "completed",
+      "file": "tasks/02-update-drizzle-sync-tests.md",
+      "dependencies": [
+        "T-001"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Extend Core Services",
+      "status": "completed",
+      "file": "tasks/03-extend-core-services.md",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Extend Remaining Services",
+      "status": "completed",
+      "file": "tasks/04-extend-remaining-services.md",
+      "dependencies": [
+        "T-001",
+        "T-003"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Update Engine and Cleanup",
+      "status": "completed",
+      "file": "tasks/05-update-engine-and-cleanup.md",
+      "dependencies": [
+        "T-003",
+        "T-004"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Migrate Hooks to useEngineService",
+      "status": "completed",
+      "file": "tasks/06-migrate-hooks-to-useengineservice.md",
+      "dependencies": [
+        "T-005"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Update Non-Hook Consumers",
+      "status": "completed",
+      "file": "tasks/07-update-non-hook-consumers.md",
+      "dependencies": [
+        "T-006"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "TypeScript Validation",
+      "status": "completed",
+      "file": "tasks/08-typescript-validation.md",
+      "dependencies": [
+        "T-005",
+        "T-006",
+        "T-007"
+      ]
+    }
+  ]
+}

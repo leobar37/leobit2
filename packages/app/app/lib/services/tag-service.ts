@@ -31,10 +31,6 @@ export type UpdateTagInput = UpdateTagsInput;
  * - getCustomerCount(tagId: string): Promise<number> - Get number of customers with this tag
  */
 export class TagService extends TagsService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Get customer count for a tag
    * Custom method not generated - preserved from original implementation

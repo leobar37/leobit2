@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { PaymentService } from "~/lib/services/payment-service";
 import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/payment-service";
 import { useBusiness } from "~/hooks/use-business";
@@ -11,8 +11,7 @@ const QUERY_KEYS = {
 } as const;
 
 export function usePayments() {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
 
   return useQuery({
     queryKey: QUERY_KEYS.businessPayments,
@@ -23,8 +22,7 @@ export function usePayments() {
 }
 
 export function useCustomerPayments(customerId: string | null) {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
 
   return useQuery({
     queryKey: customerId
@@ -39,8 +37,7 @@ export function useCustomerPayments(customerId: string | null) {
 }
 
 export function usePayment(id: string | null) {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
 
   return useQuery({
     queryKey: ["payments-new", "detail", id],
@@ -57,8 +54,7 @@ export function usePayment(id: string | null) {
  * Returns an async function that creates a payment and returns the payment ID
  */
 export function useCreatePayment() {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
   const queryClient = useQueryClient();
   const { data: business } = useBusiness();
 
@@ -100,8 +96,7 @@ export function useCreatePayment() {
 }
 
 export function useDeletePayment() {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -124,8 +119,7 @@ export function useDeletePayment() {
  * Returns an async function that takes paymentId and data
  */
 export function useUpdatePayment() {
-  const engine = useSyncEngine();
-  const paymentService = engine.use("payments", () => new PaymentService(engine));
+  const paymentService = useEngineService<PaymentService>("payments");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({

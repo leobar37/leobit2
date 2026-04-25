@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { PurchaseService } from "~/lib/services/purchase-service";
 import type {
   Purchase,
@@ -25,8 +25,7 @@ const QUERY_KEYS = {
  * Get all purchases for the current business
  */
 export function usePurchases() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   return useQuery({
     queryKey: QUERY_KEYS.purchases,
@@ -40,8 +39,7 @@ export function usePurchases() {
  * Get a single purchase by ID
  */
 export function usePurchase(id: string | null) {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.purchase(id) : ["purchases-new", "detail"],
@@ -57,8 +55,7 @@ export function usePurchase(id: string | null) {
  * Get purchases by supplier
  */
 export function usePurchasesBySupplier(supplierId: string) {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   return useQuery({
     queryKey: QUERY_KEYS.bySupplier(supplierId),
@@ -73,8 +70,7 @@ export function usePurchasesBySupplier(supplierId: string) {
  * Get purchases by status
  */
 export function usePurchasesByStatus(status: PurchaseStatus) {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   return useQuery({
     queryKey: QUERY_KEYS.byStatus(status),
@@ -89,8 +85,7 @@ export function usePurchasesByStatus(status: PurchaseStatus) {
  * Create a new purchase
  */
 export function useCreatePurchase() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -108,8 +103,7 @@ export function useCreatePurchase() {
  * Create a draft purchase (for immediate editing)
  */
 export function useCreateDraftPurchase() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -127,8 +121,7 @@ export function useCreateDraftPurchase() {
  * Update purchase status
  */
 export function useUpdatePurchaseStatus() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -157,8 +150,7 @@ export function useUpdatePurchaseStatus() {
  * Delete a purchase
  */
 export function useDeletePurchase() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -182,8 +174,7 @@ export function useDeletePurchase() {
  * Update a purchase item (for editing confirmed purchases)
  */
 export function useUpdatePurchaseItem() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -217,8 +208,7 @@ export function useUpdatePurchaseItem() {
  * Add an item to an existing purchase (for editing confirmed purchases)
  */
 export function useAddPurchaseItem() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -244,8 +234,7 @@ export function useAddPurchaseItem() {
  * Remove an item from a purchase (for editing confirmed purchases)
  */
 export function useRemovePurchaseItem() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -271,8 +260,7 @@ export function useRemovePurchaseItem() {
  * Get all drafts for the current business
  */
 export function usePurchaseDrafts() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   return useQuery({
     queryKey: ["purchases-new", "drafts"],
@@ -286,8 +274,7 @@ export function usePurchaseDrafts() {
  * Update a purchase (any field)
  */
 export function useUpdatePurchase() {
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({

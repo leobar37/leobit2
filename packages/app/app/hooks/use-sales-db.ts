@@ -10,7 +10,7 @@ import {
   useDeliverSale,
 } from "./use-sales";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { SaleService } from "~/lib/services/sale-service";
 import { ProductService } from "~/lib/services/product-service";
 import type { SaleWithItems, SaleItem } from "~/lib/services/sale-service";
@@ -45,8 +45,7 @@ export function useSaleItems(saleId: string | null) {
 
 export function useCreateSale() {
   const baseMutation = useCreateSaleBase();
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
 
   return {
     ...baseMutation,
@@ -104,8 +103,7 @@ export function useCreateSale() {
 }
 
 export function useFinalizeSale() {
-  const engine = useSyncEngine();
-  const saleService = engine.use("sales", () => new SaleService(engine));
+  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -167,9 +165,8 @@ export function useFinalizeSale() {
 }
 
 export function useAddSaleItem() {
-  const engine = useSyncEngine();
-  const saleService = engine.use("sales", () => new SaleService(engine));
-  const productService = engine.use("products", () => new ProductService(engine));
+  const saleService = useEngineService<SaleService>("sales");
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -227,8 +224,7 @@ export function useAddSaleItem() {
 }
 
 export function useRemoveSaleItem() {
-  const engine = useSyncEngine();
-  const saleService = engine.use("sales", () => new SaleService(engine));
+  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -264,8 +260,7 @@ export function useRemoveSaleItem() {
 }
 
 export function useUpdateSaleItem() {
-  const engine = useSyncEngine();
-  const saleService = engine.use("sales", () => new SaleService(engine));
+  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({

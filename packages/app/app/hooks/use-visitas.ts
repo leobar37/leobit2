@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { VisitaService } from "~/lib/services/visita-service";
 import { CustomerGroupService } from "~/lib/services/customer-group-service";
 import { toast } from "sonner";
@@ -43,8 +43,7 @@ function toIsoString(date: Date): string {
  * Get visitas by distribucion
  */
 export function useVisitas(distribucionId: string | undefined) {
-  const engine = useSyncEngine();
-  const visitaService = engine.use("visitas", () => new VisitaService(engine));
+  const visitaService = useEngineService<VisitaService>("visitas");
 
   return useQuery({
     queryKey: QUERY_KEYS.visitas(distribucionId || ""),
@@ -67,8 +66,7 @@ export function useVisitas(distribucionId: string | undefined) {
  */
 export function useUpdateVisita() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const visitaService = engine.use("visitas", () => new VisitaService(engine));
+  const visitaService = useEngineService<VisitaService>("visitas");
 
   return useMutation<Visita, Error, UpdateVisitaInput & { id: string }>({
     mutationFn: async ({ id, ...input }) => {
@@ -102,8 +100,7 @@ export function useUpdateVisita() {
  */
 export function useCreateVisita() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const visitaService = engine.use("visitas", () => new VisitaService(engine));
+  const visitaService = useEngineService<VisitaService>("visitas");
 
   return useMutation<Visita, Error, CreateVisitaInput>({
     mutationFn: async (input) => {
@@ -143,9 +140,8 @@ export function useCreateVisita() {
  */
 export function useCreateVisitasFromGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const visitaService = engine.use("visitas", () => new VisitaService(engine));
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const visitaService = useEngineService<VisitaService>("visitas");
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation<Visita[], Error, { distribucionId: string; groupId: string }>({
     mutationFn: async ({ distribucionId, groupId }) => {

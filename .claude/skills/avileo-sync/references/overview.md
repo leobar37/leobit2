@@ -89,7 +89,7 @@
 | **Backoff** | `packages/app/app/lib/sync/backoff.ts` | ExponentialBackoff for retries |
 | **SyncEvents** | `packages/app/app/lib/sync/sync-events.ts` | Event emitter for sync state changes |
 | **SyncLogger** | `packages/app/app/lib/sync/sync-logger.ts` | Centralized sync logging |
-| **DeviceFingerprint** | `packages/app/app/lib/sync/device-fingerprint.ts` | Device tracking for multi-device sync |
+| **DeviceFingerprint** | `@avileo/drizzle-sync/client` | Device tracking for multi-device sync |
 | **SchemaMapper** | `packages/app/app/lib/sync/schema-mapper.ts` | camelCase↔snake_case for PGlite |
 | **StagedPullCoordinator** | `packages/app/app/lib/sync/staged-pull-coordinator.ts` | 3-stage pull orchestration |
 

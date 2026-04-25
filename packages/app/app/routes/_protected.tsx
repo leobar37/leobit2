@@ -21,7 +21,6 @@ import {
   type ConflictData,
   type ConflictResolution,
 } from "~/components/sync/conflict-resolver";
-import { registerAppServices } from "~/lib/sync/register-services";
 import { initDevTools } from "~/lib/debug/console";
 import { addServiceDebugHelpers } from "~/lib/debug";
 import { AppLayout } from "~/components/layout/app-layout";
@@ -29,8 +28,7 @@ import { useBusiness } from "~/hooks/use-business";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
-import { createFetchHttpClient } from "@avileo/drizzle-sync/client";
-import { getDeviceId, getDeviceFingerprint } from "~/lib/sync";
+import { createFetchHttpClient, getDeviceId, getDeviceFingerprint } from "@avileo/drizzle-sync/client";
 import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
 import { createAvileoSyncEngine } from "~/lib/sync/generated/engine";
 import { useSyncInit } from "@avileo/drizzle-sync/react";
@@ -71,7 +69,6 @@ function ServicesProviderWrapper({
           getFingerprint: () => getDeviceFingerprint(),
         }),
       });
-      registerAppServices(eng);
       return eng;
     } catch (err) {
       console.error("[ServicesProviderWrapper] Failed to create SyncClientEngine:", err);
@@ -96,12 +93,12 @@ function ServicesProviderWrapper({
     }
 
     addServiceDebugHelpers({
-      purchaseService: engine.getInstance("purchases"),
-      supplierService: engine.getInstance("suppliers"),
+      purchaseService: engine.getService("purchases"),
+      supplierService: engine.getService("suppliers"),
       syncService,
-      productService: engine.getInstance("products"),
-      customerService: engine.getInstance("customers"),
-      saleService: engine.getInstance("sales"),
+      productService: engine.getService("products"),
+      customerService: engine.getService("customers"),
+      saleService: engine.getService("sales"),
     });
   }, [engine, isReady]);
 

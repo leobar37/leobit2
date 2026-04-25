@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { ProductService } from "~/lib/services/product-service";
 import type {
   ProductVariant,
@@ -27,8 +27,7 @@ export interface VariantFilters {
  * Get all variants for a specific product
  */
 export function useVariantsByProduct(productId: string, filters?: VariantFilters) {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
 
   return useQuery({
     queryKey: [...QUERY_KEYS.variants(productId), filters],
@@ -47,8 +46,7 @@ export function useVariantsByProduct(productId: string, filters?: VariantFilters
  * Get a single variant by ID
  */
 export function useVariant(id: string | null) {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.variant(id) : ["variants", "detail"],
@@ -65,8 +63,7 @@ export function useVariant(id: string | null) {
  * Queues sync operation when offline
  */
 export function useCreateVariant() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -92,8 +89,7 @@ export function useCreateVariant() {
  * Queues sync operation when offline
  */
 export function useUpdateVariant() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -118,8 +114,7 @@ export function useUpdateVariant() {
  * Sets isActive to false
  */
 export function useDeactivateVariant() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -137,8 +132,7 @@ export function useDeactivateVariant() {
  * Reorder variants by updating sortOrder
  */
 export function useReorderVariants() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({

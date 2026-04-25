@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerGroupService } from "~/lib/services/customer-group-service";
 import { toast } from "sonner";
 
@@ -35,8 +35,7 @@ const QUERY_KEYS = {
  * Get all customer groups for the current business
  */
 export function useCustomerGroups() {
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useQuery({
     queryKey: QUERY_KEYS.groups,
@@ -49,8 +48,7 @@ export function useCustomerGroups() {
  * Get a single customer group by ID with members
  */
 export function useCustomerGroup(id: string | null) {
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useQuery({
     queryKey: QUERY_KEYS.group(id || ""),
@@ -69,8 +67,7 @@ export function useCustomerGroup(id: string | null) {
  */
 export function useCreateCustomerGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { name: string; customerIds?: string[] }) => {
@@ -94,8 +91,7 @@ export function useCreateCustomerGroup() {
  */
 export function useUpdateCustomerGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { id: string; name: string }) => {
@@ -117,8 +113,7 @@ export function useUpdateCustomerGroup() {
  */
 export function useDeleteCustomerGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { id: string }) => {
@@ -139,8 +134,7 @@ export function useDeleteCustomerGroup() {
  */
 export function useAddMembersToGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { groupId: string; customerIds: string[] }) => {
@@ -166,8 +160,7 @@ export function useAddMembersToGroup() {
  */
 export function useRemoveMemberFromGroup() {
   const queryClient = useQueryClient();
-  const engine = useSyncEngine();
-  const customerGroupService = engine.use("customerGroups", () => new CustomerGroupService(engine));
+  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { groupId: string; customerId: string }) => {

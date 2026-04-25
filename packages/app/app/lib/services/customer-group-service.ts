@@ -58,10 +58,6 @@ export interface CustomerGroupWithMembers extends CustomerGroup {
  * - isMember(groupId, customerId): Promise<boolean> - Check membership
  */
 export class CustomerGroupService extends CustomerGroupsService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Find all groups with member counts
    * Overrides to return enriched type with member count

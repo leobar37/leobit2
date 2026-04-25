@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { useUploadFile } from "~/hooks/use-files";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { PurchaseService } from "~/lib/services/purchase-service";
 import type { PurchaseWithItems } from "~/lib/services/purchase-service";
 
@@ -84,8 +84,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   
   const { data: business } = useBusiness();
   const { data: suppliers } = useSuppliers(business?.id || "");
-  const engine = useSyncEngine();
-  const purchaseService = engine.use("purchases", () => new PurchaseService(engine));
+  const purchaseService = useEngineService<PurchaseService>("purchases");
 
   // Load purchase if editing, or null if creating new
   const { data: purchaseData, isLoading } = useQuery({

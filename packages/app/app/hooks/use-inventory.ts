@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { InventoryService } from "~/lib/services/inventory-service";
 import type {
   VariantInventoryItem,
@@ -20,8 +20,7 @@ const QUERY_KEYS = {
  * Get all variant inventory items for the business
  */
 export function useVariantInventory() {
-  const engine = useSyncEngine();
-  const inventoryService = engine.use("inventory", () => new InventoryService(engine));
+  const inventoryService = useEngineService<InventoryService>("inventory");
 
   return useQuery({
     queryKey: QUERY_KEYS.allVariantInventory,
@@ -35,8 +34,7 @@ export function useVariantInventory() {
  * Get inventory for a specific variant
  */
 export function useVariantInventoryItem(variantId: string | null) {
-  const engine = useSyncEngine();
-  const inventoryService = engine.use("inventory", () => new InventoryService(engine));
+  const inventoryService = useEngineService<InventoryService>("inventory");
 
   return useQuery({
     queryKey: variantId ? QUERY_KEYS.variantInventory(variantId) : ["variant-inventory", "detail"],
@@ -52,8 +50,7 @@ export function useVariantInventoryItem(variantId: string | null) {
  * Validate stock availability for a variant (for sales)
  */
 export function useValidateVariantStock() {
-  const engine = useSyncEngine();
-  const inventoryService = engine.use("inventory", () => new InventoryService(engine));
+  const inventoryService = useEngineService<InventoryService>("inventory");
 
   return useMutation({
     mutationFn: async ({
@@ -72,8 +69,7 @@ export function useValidateVariantStock() {
  * Batch validate stock for multiple items (cart validation)
  */
 export function useValidateBatchStock() {
-  const engine = useSyncEngine();
-  const inventoryService = engine.use("inventory", () => new InventoryService(engine));
+  const inventoryService = useEngineService<InventoryService>("inventory");
 
   return useMutation({
     mutationFn: async (

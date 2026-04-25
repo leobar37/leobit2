@@ -80,10 +80,6 @@ export interface FindDistribucionesFilters {
  * Extends generated DistribucionesService for local-first operations with atomic items support
  */
 export class DistribucionService extends DistribucionesService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Find all this.tables.distribuciones for the current business with optional filters
    * Overrides parent to add filtering support

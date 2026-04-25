@@ -188,14 +188,14 @@ describe("SyncClientEngine service registry", () => {
     expect(engine.getService("sales")).toEqual({ name: "SaleService" });
   });
 
-  it("factory receives correct context", async () => {
-    let receivedContext: any = null;
+  it("factory receives the engine instance", async () => {
+    let receivedEngine: any = null;
 
     const entityDef: EntityServiceDefinition = {
       name: "test",
       entityType: "test",
-      factory: (ctx) => {
-        receivedContext = ctx;
+      factory: (engine) => {
+        receivedEngine = engine;
         return {};
       },
     };
@@ -205,12 +205,12 @@ describe("SyncClientEngine service registry", () => {
 
     await engine.initialize();
 
-    expect(receivedContext).toBeDefined();
-    expect(receivedContext.tenantId).toBe("biz-001");
-    expect(receivedContext.userId).toBe("user-001");
-    expect(receivedContext.pg).toBeDefined();
-    expect(receivedContext.db).toBeDefined();
-    expect(receivedContext.syncService).toBeDefined();
+    expect(receivedEngine).toBeDefined();
+    expect(receivedEngine.getConfig().tenantId).toBe("biz-001");
+    expect(receivedEngine.getConfig().userId).toBe("user-001");
+    expect(receivedEngine.getPg).toBeDefined();
+    expect(receivedEngine.getDb).toBeDefined();
+    expect(receivedEngine.getSyncOperations).toBeDefined();
   });
 
   it("initialize is idempotent", async () => {

@@ -81,10 +81,6 @@ export interface AccountsReceivablePage {
  * Extends AbonosService for local-first operations with sync integration
  */
 export class PaymentService extends AbonosService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
     const minBalance = query.minBalance ?? 0.01;
     
@@ -121,8 +117,8 @@ export class PaymentService extends AbonosService {
       return { items: [], total: 0 };
     }
 
-    // Get credit this.tables.sales grouped by customer using Drizzle
-    const this.tables.salesByCustomer = await this.db
+    // Get credit sales grouped by customer using Drizzle
+    const salesByCustomer = await this.db
       .select({
         customerId: this.tables.sales.customerId,
         totalSales: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
@@ -156,11 +152,11 @@ export class PaymentService extends AbonosService {
       .groupBy(this.tables.abonos.customerId);
 
     // Build accounts receivable rows in memory
-    const this.tables.salesMap = new Map(this.tables.salesByCustomer.map(s => [s.customerId!, s]));
+    const salesMap = new Map(salesByCustomer.map(s => [s.customerId!, s]));
     const paymentsMap = new Map(paymentsByCustomer.map(p => [p.customerId!, p]));
 
     const rows: AccountsReceivableRow[] = customerList.map(customer => {
-      const saleData = this.tables.salesMap.get(customer.id);
+      const saleData = salesMap.get(customer.id);
       const paymentData = paymentsMap.get(customer.id);
       
       const totalSales = parseFloat(saleData?.totalSales || "0");
@@ -301,7 +297,7 @@ export class PaymentService extends AbonosService {
    * Only counts credit this.tables.sales (sale_type = credito) that are not draft/cancelled
    */
   async getCustomerDebtBalance(customerId: string): Promise<number> {
-    const this.tables.salesResult = await this.db
+    const salesResult = await this.db
       .select({
         total: sql<string>`COALESCE(SUM(${this.tables.sales.totalAmount}), 0)`,
       })
@@ -327,7 +323,7 @@ export class PaymentService extends AbonosService {
         )
       );
 
-    const totalSales = parseFloat(this.tables.salesResult[0]?.total || "0");
+    const totalSales = parseFloat(salesResult[0]?.total || "0");
     const totalPayments = parseFloat(paymentsResult[0]?.total || "0");
 
     return Math.max(totalSales - totalPayments, 0);

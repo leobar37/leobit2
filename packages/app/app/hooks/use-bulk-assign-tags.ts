@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { customerTagsKeys } from "./use-customer-tags";
 
@@ -17,8 +17,7 @@ export interface BulkAssignTagsInput {
  * Hook to assign tags to multiple customers at once
  */
 export function useBulkAssignTags() {
-  const engine = useSyncEngine();
-  const customerTagService = engine.use("customerTags", () => new CustomerTagService(engine));
+  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({

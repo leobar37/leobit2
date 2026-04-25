@@ -20,6 +20,7 @@ export const VALID_TABLES = new Set([
   "distribuciones",
   "distribucion_items",
   "abonos",
+  "files",
 ]);
 
 export const TABLE_COLUMNS: Record<string, Set<string>> = {
@@ -175,7 +176,6 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "allow_customer_edit",
     "sync_status",
     "sync_attempts",
-    "sync_group_id",
     "cancelled_at",
     "cancelled_by",
     "cancel_reason",
@@ -210,7 +210,6 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "original_quantity",
     "sync_status",
     "sync_attempts",
-    "sync_group_id",
     "created_at",
     "updated_at",
   ]),
@@ -226,7 +225,6 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "notes",
     "sync_status",
     "sync_attempts",
-    "sync_group_id",
     "version",
     "created_at",
     "updated_at",
@@ -243,7 +241,6 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "total_cost",
     "sync_status",
     "sync_attempts",
-    "sync_group_id",
     "version",
     "created_at",
     "updated_at",
@@ -296,6 +293,21 @@ export const TABLE_COLUMNS: Record<string, Set<string>> = {
     "sync_attempts",
     "version",
     "created_at",
+    "updated_at",
+  ]),
+  files: new Set([
+    "id",
+    "business_id",
+    "filename",
+    "storage_path",
+    "mime_type",
+    "size_bytes",
+    "created_at",
+    "deleted_at",
+    "deleted_by",
+    "sync_status",
+    "sync_attempts",
+    "version",
     "updated_at",
   ]),
 };
@@ -365,6 +377,10 @@ export const REQUIRED_COLUMN_DEFAULTS: Record<string, Record<string, unknown>> =
     sync_status: "synced",
     sync_attempts: 0,
   },
+  files: {
+    sync_status: "synced",
+    sync_attempts: 0,
+  },
 };
 
 export const APPLY_ORDER = [
@@ -373,17 +389,18 @@ export const APPLY_ORDER = [
   "suppliers",
   "tags",
   "customer_groups",
+  "sales",
+  "purchases",
   "distribuciones",
+  "files",
   "product_variants",
   "customer_tags",
   "customer_group_members",
-  "sales",
-  "purchases",
-  "abonos",
   "visitas",
   "sale_items",
   "purchase_items",
   "distribucion_items",
+  "abonos",
 ];
 
 export const applierConfig: ChangeApplierConfig = {

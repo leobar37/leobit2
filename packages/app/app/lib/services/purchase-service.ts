@@ -71,10 +71,6 @@ export interface UpdatePurchaseInput {
  * Extends generated PurchasesService for local-first operations with sync integration
  */
 export class PurchaseService extends PurchasesService {
-  constructor(engine: SyncClientEngineLike) {
-    super(engine);
-  }
-
   /**
    * Find a purchase by ID with its items
    * Overrides parent to enrich with items joined from purchase_items table

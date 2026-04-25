@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
+import { useEngineService } from "@avileo/drizzle-sync/react";
 import { ProductService } from "~/lib/services/product-service";
 import type { Product, CreateProductInput, UpdateProductInput } from "~/lib/services/product-service";
 
@@ -17,8 +17,7 @@ const QUERY_KEYS = {
  * Get all products for the current business
  */
 export function useProducts() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
 
   return useQuery({
     queryKey: QUERY_KEYS.products,
@@ -32,8 +31,7 @@ export function useProducts() {
  * Get a single product by ID
  */
 export function useProduct(id: string | null) {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.product(id) : ["products", "detail"],
@@ -50,8 +48,7 @@ export function useProduct(id: string | null) {
  * Queues sync operation when offline
  */
 export function useCreateProduct() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -69,8 +66,7 @@ export function useCreateProduct() {
  * Queues sync operation when offline
  */
 export function useUpdateProduct() {
-  const engine = useSyncEngine();
-  const productService = engine.use("products", () => new ProductService(engine));
+  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -1,4 +1,5 @@
 import { CodeBuilder } from "./code-builder";
+import { pascalCase } from "../../utils/string-utils";
 
 export interface EngineFactoryInput {
   entityNames: string[];
@@ -14,8 +15,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
 
   b.line('import { createSyncClientEngine } from "@avileo/drizzle-sync/client";');
   b.line('import { buildPendingDataFromRegistry } from "@avileo/drizzle-sync/client";');
-  b.line('import type { SyncClientEngine } from "@avileo/drizzle-sync/client";');
-  b.line('import type { ISyncHttpClient } from "@avileo/drizzle-sync/core";');
+  b.line('import type { SyncClientEngine, ISyncClientHttpClient } from "@avileo/drizzle-sync/client";');
   b.line('import { SCHEMA_SQL } from "./schema-sql";');
   b.line('import { SYNC_TABLE_REGISTRY } from "./sync-tables";');
   b.line('import { applierConfig } from "./applier";');
@@ -27,7 +27,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
 
   // Import generated services
   for (const name of input.entityNames) {
-    const pascal = name.charAt(0).toUpperCase() + name.slice(1);
+    const pascal = pascalCase(name);
     b.line(`import { ${pascal}Service } from "./services";`);
   }
   b.blank();
@@ -38,7 +38,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
     ib.line("userId: string;");
     ib.line("authToken: string;");
     ib.line("apiUrl: string;");
-    ib.line("httpClient: ISyncHttpClient;");
+    ib.line("httpClient: ISyncClientHttpClient;");
     ib.line("dataDir?: string;");
     ib.line("versionKey?: string;");
   });
@@ -51,7 +51,9 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
     ib.indent((iib) => {
       iib.line("databaseConfig: {");
       iib.indent((iiib) => {
+        iiib.line("dataDir: params.dataDir ?? 'idb://avileo',");
         iiib.line("schemaSql: SCHEMA_SQL,");
+        iiib.line("drizzleSchema: schema,");
         iiib.line("pendingDataConfig: buildPendingDataFromRegistry(SYNC_TABLE_REGISTRY),");
       });
       iib.line("},");
@@ -73,8 +75,8 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
       iib.line("entities: [");
       iib.indent((iiib) => {
         for (const name of input.entityNames) {
-          const pascal = name.charAt(0).toUpperCase() + name.slice(1);
-          iiib.line(`{ name: "${name}", entityType: "${name}", factory: (ctx) => new ${pascal}Service(ctx) },`);
+          const pascal = pascalCase(name);
+          iiib.line(`{ name: "${name}", entityType: "${name}", factory: (engine) => new ${pascal}Service(engine) },`);
         }
       });
       iib.line("],");

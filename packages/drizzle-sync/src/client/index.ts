@@ -108,6 +108,14 @@ export {
   type FetchHttpClientConfig,
 } from "./fetch-http-client";
 
+// Device fingerprinting
+export {
+  getDeviceId,
+  getDeviceFingerprint,
+  clearDeviceIdentifiers,
+  regenerateDeviceIdentifiers,
+} from "./device-fingerprint";
+
 // Re-export event types from core for convenience
 export type {
   ISyncEventEmitter,
