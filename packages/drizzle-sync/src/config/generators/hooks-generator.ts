@@ -245,14 +245,15 @@ function generateFileProcessingCode(
 
   for (const [fieldName, config] of Object.entries(fileFields)) {
     const camelField = camelCase(fieldName);
-    lines.push(`      if (${inputVar}.${camelField} instanceof File) {`);
+    lines.push(`      if ((${inputVar}.${camelField} as any) instanceof File) {`);
     lines.push(`        const fileId = createId();`);
-    lines.push(`        await fileService.saveTemp(fileId, ${inputVar}.${camelField}, {`);
+    lines.push(`        const file = ${inputVar}.${camelField} as unknown as File;`);
+    lines.push(`        await fileService.saveTemp(fileId, file, {`);
     lines.push(`          entityType: "${config.entity}",`);
     lines.push(`          fieldName: "${camelField}",`);
-    lines.push(`          filename: ${inputVar}.${camelField}.name,`);
-    lines.push(`          mimeType: ${inputVar}.${camelField}.type,`);
-    lines.push(`          sizeBytes: ${inputVar}.${camelField}.size,`);
+    lines.push(`          filename: file.name,`);
+    lines.push(`          mimeType: file.type,`);
+    lines.push(`          sizeBytes: file.size,`);
     lines.push(`        });`);
     lines.push(`        processedInput.${camelField} = fileId;`);
     lines.push(`      }`);

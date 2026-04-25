@@ -49,7 +49,8 @@ export type EntityType =
   | "variant_inventory" // LEGACY: deprecated frontend entity, not in shared SYNC_ENTITIES
   | "visitas"
   | "customer_groups"
-  | "customer_group_members";
+  | "customer_group_members"
+  | "files";
 
 /**
  * SQL table-name safety allowlist for frontend services.

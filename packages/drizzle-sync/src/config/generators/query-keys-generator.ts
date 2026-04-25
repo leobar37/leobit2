@@ -10,13 +10,12 @@ export function generateQueryKeysFile(entityNames: string[]): string {
   b.line("export const SYNC_TO_QUERY_KEYS: Record<string, string[][]> = {");
   b.indent((ib) => {
     for (const name of entityNames) {
-      const pascal = name.charAt(0).toUpperCase() + name.slice(1);
-      ib.line(`${name}: [[`);
+      ib.line(`${name}: [`);
       ib.indent((iib) => {
         iib.line(`["${name}-new"],`);
         iib.line(`["${name}-new", "list"],`);
       });
-      ib.line(`]],`);
+      ib.line(`],`);
     }
   });
   b.line("};");

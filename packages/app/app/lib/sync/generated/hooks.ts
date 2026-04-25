@@ -173,14 +173,15 @@ export function useCreateProducts() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.imageId instanceof File) {
+      if ((input.imageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.imageId, {
+        const file = input.imageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "assets",
           fieldName: "imageId",
-          filename: input.imageId.name,
-          mimeType: input.imageId.type,
-          sizeBytes: input.imageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.imageId = fileId;
       }
@@ -209,14 +210,15 @@ export function useUpdateProducts() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.imageId instanceof File) {
+      if ((input.imageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.imageId, {
+        const file = input.imageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "assets",
           fieldName: "imageId",
-          filename: input.imageId.name,
-          mimeType: input.imageId.type,
-          sizeBytes: input.imageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.imageId = fileId;
       }
@@ -700,14 +702,15 @@ export function useCreateSales() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.advanceProofImageId instanceof File) {
+      if ((input.advanceProofImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.advanceProofImageId, {
+        const file = input.advanceProofImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "advanceProofImageId",
-          filename: input.advanceProofImageId.name,
-          mimeType: input.advanceProofImageId.type,
-          sizeBytes: input.advanceProofImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.advanceProofImageId = fileId;
       }
@@ -736,14 +739,15 @@ export function useUpdateSales() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.advanceProofImageId instanceof File) {
+      if ((input.advanceProofImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.advanceProofImageId, {
+        const file = input.advanceProofImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "advanceProofImageId",
-          filename: input.advanceProofImageId.name,
-          mimeType: input.advanceProofImageId.type,
-          sizeBytes: input.advanceProofImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.advanceProofImageId = fileId;
       }
@@ -818,14 +822,15 @@ export function useCreatePurchases() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.receiptImageId instanceof File) {
+      if ((input.receiptImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.receiptImageId, {
+        const file = input.receiptImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "receiptImageId",
-          filename: input.receiptImageId.name,
-          mimeType: input.receiptImageId.type,
-          sizeBytes: input.receiptImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.receiptImageId = fileId;
       }
@@ -854,14 +859,15 @@ export function useUpdatePurchases() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.receiptImageId instanceof File) {
+      if ((input.receiptImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.receiptImageId, {
+        const file = input.receiptImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "receiptImageId",
-          filename: input.receiptImageId.name,
-          mimeType: input.receiptImageId.type,
-          sizeBytes: input.receiptImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.receiptImageId = fileId;
       }
@@ -1020,14 +1026,15 @@ export function useCreateAbonos() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.proofImageId instanceof File) {
+      if ((input.proofImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.proofImageId, {
+        const file = input.proofImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "proofImageId",
-          filename: input.proofImageId.name,
-          mimeType: input.proofImageId.type,
-          sizeBytes: input.proofImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.proofImageId = fileId;
       }
@@ -1056,14 +1063,15 @@ export function useUpdateAbonos() {
       // Process file fields
       const fileService = getFileUploadService();
       let processedInput = { ...input };
-      if (input.proofImageId instanceof File) {
+      if ((input.proofImageId as any) instanceof File) {
         const fileId = createId();
-        await fileService.saveTemp(fileId, input.proofImageId, {
+        const file = input.proofImageId as unknown as File;
+        await fileService.saveTemp(fileId, file, {
           entityType: "files",
           fieldName: "proofImageId",
-          filename: input.proofImageId.name,
-          mimeType: input.proofImageId.type,
-          sizeBytes: input.proofImageId.size,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
         });
         processedInput.proofImageId = fileId;
       }

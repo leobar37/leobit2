@@ -41,7 +41,7 @@ function mapDrizzleType(col: SerializedColumn): string {
     case "PgUUID":
       return "uuid";
     case "PgVarchar":
-      return col.length ? `varchar({ length: ${col.length} })` : "varchar";
+      return "varchar";
     case "PgText":
       return "text";
     case "PgInteger":
@@ -58,9 +58,6 @@ function mapDrizzleType(col: SerializedColumn): string {
     case "PgJsonb":
       return "jsonb";
     case "PgNumeric":
-      if (col.precision !== undefined && col.scale !== undefined) {
-        return `decimal({ precision: ${col.precision}, scale: ${col.scale} })`;
-      }
       return "decimal";
     case "PgEnumColumn":
       return "text";
@@ -124,7 +121,8 @@ function formatDefaultValue(
     if (enumName && col.enumValues.includes(defaultValue)) {
       return `.default(${enumName}.${enumKey})`;
     }
-    return `.default("${defaultValue}")`;
+    // Enum value doesn't exist in extracted enum - skip default to avoid invalid code
+    return null;
   }
 
   // Handle string defaults
@@ -145,10 +143,37 @@ function formatDefaultValue(
   return null;
 }
 
-function generateColumnDefinition(col: SerializedColumn): string {
+function generateColumnDefinition(
+  entityName: string,
+  col: SerializedColumn,
+  enumNameMap?: Map<string, string>
+): string {
   const typeFn = mapDrizzleType(col);
-  const enumName = col.isEnum ? pascalCase(col.name) : undefined;
-  
+  // Get scoped enum name from map if available
+  const enumName = col.isEnum
+    ? enumNameMap?.get(`${entityName}:${pascalCase(col.name)}`) ?? pascalCase(col.name)
+    : undefined;
+
+  // Handle varchar with length config — drizzle API is varchar("name", { length })
+  if (typeFn === "varchar" && col.length) {
+    let chain = `varchar("${col.name}", { length: ${col.length} })`;
+    if (col.primary) chain += ".primaryKey()";
+    if (col.notNull) chain += ".notNull()";
+    const defaultValue = formatDefaultValue(col, enumName);
+    if (defaultValue) chain += defaultValue;
+    return chain;
+  }
+
+  // Handle decimal with precision/scale — drizzle API is decimal("name", { precision, scale })
+  if (typeFn === "decimal" && col.precision !== undefined && col.scale !== undefined) {
+    let chain = `decimal("${col.name}", { precision: ${col.precision}, scale: ${col.scale} })`;
+    if (col.primary) chain += ".primaryKey()";
+    if (col.notNull) chain += ".notNull()";
+    const defaultValue = formatDefaultValue(col, enumName);
+    if (defaultValue) chain += defaultValue;
+    return chain;
+  }
+
   let chain = `${typeFn}("${col.name}")`;
 
   // Add primary key
@@ -170,7 +195,11 @@ function generateColumnDefinition(col: SerializedColumn): string {
   return chain;
 }
 
-function generateTableDefinition(entity: SerializedEntity): string {
+function generateTableDefinition(
+  entityName: string,
+  entity: SerializedEntity,
+  enumNameMap?: Map<string, string>
+): string {
   const b = new CodeBuilder();
   const tableName = entity.tableName;
   const camelName = camelCase(tableName);
@@ -181,7 +210,7 @@ function generateTableDefinition(entity: SerializedEntity): string {
     ib.line("{");
     ib.indent((iib) => {
       for (const col of entity.columns) {
-        const colDef = generateColumnDefinition(col);
+        const colDef = generateColumnDefinition(entityName, col, enumNameMap);
         iib.line(`${camelCase(col.name)}: ${colDef},`);
       }
     });
@@ -226,8 +255,8 @@ export function generateDrizzleSchema(
     throw new Error("generateDrizzleSchema requires a SerializedEntity");
   }
 
-  const enums = extractEnums(entity);
-  const tableCode = generateTableDefinition(entity);
+  const enums = extractEnums(entityName, entity);
+  const tableCode = generateTableDefinition(entityName, entity);
   
   // Generate types
   const camelName = camelCase(entity.tableName);
@@ -267,24 +296,73 @@ export function generateDrizzleSchemaFile(
   b.line('} from "drizzle-orm/pg-core";');
   b.blank();
 
-  // Collect all enums first to avoid duplicates
-  const allEnums = new Map<string, GeneratedEnum>();
+  // Collect all enums with entity context to detect name collisions
+  // Map: baseName -> { entityName, values }
+  const enumByBaseName = new Map<string, { entityName: string; values: string[] }[]>();
+
   for (const name of entityNames) {
     const entity = entities[name];
     if (!entity) continue;
-    const { enums } = generateDrizzleSchema(name, entity);
-    for (const enumDef of enums) {
-      if (!allEnums.has(enumDef.name)) {
-        allEnums.set(enumDef.name, enumDef);
+    const columns = getColumnsToInclude(entity);
+
+    for (const col of columns) {
+      if (col.isEnum && col.enumValues && col.enumValues.length > 0) {
+        const baseName = pascalCase(col.name);
+        if (!enumByBaseName.has(baseName)) {
+          enumByBaseName.set(baseName, []);
+        }
+        enumByBaseName.get(baseName)!.push({
+          entityName: name,
+          values: col.enumValues,
+        });
+      }
+    }
+  }
+
+  // Build final enum list with scoping logic:
+  // - If enum appears with same values everywhere → use simple name (e.g., SyncStatus)
+  // - If enum appears with different values per entity → scope with entity name (e.g., ProductType)
+  const finalEnums = new Map<string, { name: string; values: string[] }>();
+
+  for (const [baseName, occurrences] of enumByBaseName) {
+    // Check if all occurrences have the same values
+    const firstValues = JSON.stringify([...occurrences[0].values].sort());
+    const allSame = occurrences.every(
+      (o) => JSON.stringify([...o.values].sort()) === firstValues
+    );
+
+    if (allSame && occurrences.length === 1) {
+      // Single occurrence - use simple name
+      finalEnums.set(baseName, { name: baseName, values: occurrences[0].values });
+    } else if (allSame) {
+      // Multiple occurrences with same values - use simple name (shared enum)
+      finalEnums.set(baseName, { name: baseName, values: occurrences[0].values });
+    } else {
+      // Multiple occurrences with different values - scope with entity name
+      for (const occ of occurrences) {
+        const scopedName = pascalCase(occ.entityName) + baseName;
+        finalEnums.set(scopedName, { name: scopedName, values: occ.values });
+      }
+    }
+  }
+
+  // Build enumNameMap: entityName:colName -> scoped enum name
+  const enumNameMap = new Map<string, string>();
+  for (const [scopedName, { values }] of finalEnums) {
+    for (const [baseName, occurrences] of enumByBaseName) {
+      for (const occ of occurrences) {
+        if (JSON.stringify([...occ.values].sort()) === JSON.stringify([...values].sort())) {
+          enumNameMap.set(`${occ.entityName}:${baseName}`, scopedName);
+        }
       }
     }
   }
 
   // Generate enums
-  if (allEnums.size > 0) {
+  if (finalEnums.size > 0) {
     b.line("// Enums");
-    for (const [enumName, enumDef] of allEnums) {
-      b.line(`export const ${enumName} = {`);
+    for (const [, enumDef] of finalEnums) {
+      b.line(`export const ${enumDef.name} = {`);
       b.indent((ib) => {
         for (const value of enumDef.values) {
           const key = snakeToUpperSnake(value);
@@ -303,7 +381,7 @@ export function generateDrizzleSchemaFile(
   for (const name of entityNames) {
     const entity = entities[name];
     if (!entity) continue;
-    const { tableCode } = generateDrizzleSchema(name, entity);
+    const tableCode = generateTableDefinition(name, entity, enumNameMap);
     b.linesFrom(tableCode.split("\n"));
     b.blank();
   }

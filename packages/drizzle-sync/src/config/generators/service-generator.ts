@@ -197,7 +197,7 @@ export class ${pascalCase(entityName)}Service extends BaseService {
    */
   async create(input: Create${pascalCase(entityName)}Input): Promise<typeof ${tableRef}.$inferSelect> {
     const id = this.generateId();
-    const now = this.now();
+${includeTimestamps && !junctionTable ? "    const now = this.now();" : ""}
 
     const entity: typeof ${tableRef}.$inferInsert = {
 ${junctionTable ? generateInsertFieldsJunction(userColumns, config.fieldCodecs) : `      id,\n${generateInsertFields(userColumns, config.fieldCodecs)}`}
@@ -278,6 +278,28 @@ function generateInsertFieldsJunction(columns: ColumnMetadata[], fieldCodecs?: F
     const fieldName = camelCase(col.name);
     const codec = fieldCodecs?.[col.name];
     const sourceExpr = `input.${fieldName}`;
+
+    // Check for SQL defaults first - these are provided by the DB, skip in insert
+    if (col.hasDefault && col.default !== null) {
+      const defaultVal = formatDefaultValue(col.default);
+      if (defaultVal === null) {
+        // SQL default (now(), gen_random_uuid()) - don't include, DB provides value
+        continue;
+      }
+    }
+
+    // Handle date columns specially - convert string to Date for PGlite
+    if (col.dataType === "date" && !codec) {
+      if (col.notNull) {
+        // NOT NULL date columns - assert string since caller must provide value
+        lines.push(`      ${fieldName}: new Date(input.${fieldName} as string),`);
+      } else {
+        // Nullable date columns - convert only if truthy
+        lines.push(`      ${fieldName}: input.${fieldName} ? new Date(input.${fieldName}) : null,`);
+      }
+      continue;
+    }
+
     const transformedExpr = codec
       ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
       : sourceExpr;
@@ -287,13 +309,15 @@ function generateInsertFieldsJunction(columns: ColumnMetadata[], fieldCodecs?: F
       continue;
     }
 
-    // For nullable columns (not required), use ?? null to handle missing input
+    // For nullable columns, use ?? null to handle missing input
     if (!col.notNull) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
-    } else if (col.default !== undefined) {
+    } else if (col.hasDefault && col.default !== null) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
     } else {
-      lines.push(`      ${fieldName}: input.${fieldName},`);
+      // NOT NULL columns without real defaults - assert string since caller must provide value
+      // Database will enforce NOT NULL constraint at runtime
+      lines.push(`      ${fieldName}: input.${fieldName} as string,`);
     }
   }
 
@@ -310,6 +334,28 @@ function generateInsertFields(columns: ColumnMetadata[], fieldCodecs?: FieldCode
     const fieldName = camelCase(col.name);
     const codec = fieldCodecs?.[col.name];
     const sourceExpr = `input.${fieldName}`;
+
+    // Check for SQL defaults first - these are provided by the DB, skip in insert
+    if (col.hasDefault && col.default !== null) {
+      const defaultVal = formatDefaultValue(col.default);
+      if (defaultVal === null) {
+        // SQL default (now(), gen_random_uuid()) - don't include, DB provides value
+        continue;
+      }
+    }
+
+    // Handle date columns specially - convert string to Date for PGlite
+    if (col.dataType === "date" && !codec) {
+      if (col.notNull) {
+        // NOT NULL date columns - assert string since caller must provide value
+        lines.push(`      ${fieldName}: new Date(input.${fieldName} as string),`);
+      } else {
+        // Nullable date columns - convert only if truthy
+        lines.push(`      ${fieldName}: input.${fieldName} ? new Date(input.${fieldName}) : null,`);
+      }
+      continue;
+    }
+
     const transformedExpr = codec
       ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
       : sourceExpr;
@@ -319,13 +365,18 @@ function generateInsertFields(columns: ColumnMetadata[], fieldCodecs?: FieldCode
       continue;
     }
 
-    // For nullable columns (not required), use ?? null to handle missing input
+    // For nullable columns, use ?? null to handle missing input
     if (!col.notNull) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? null,`);
-    } else if (col.default !== undefined) {
+    } else if (col.hasDefault && col.default !== null) {
       lines.push(`      ${fieldName}: input.${fieldName} ?? ${formatDefaultValue(col.default)},`);
+    } else if (col.dataType === "number") {
+      // Number columns - parse string input to number
+      lines.push(`      ${fieldName}: Number(input.${fieldName}),`);
     } else {
-      lines.push(`      ${fieldName}: input.${fieldName},`);
+      // NOT NULL columns without real defaults - assert string since caller must provide value
+      // Database will enforce NOT NULL constraint at runtime
+      lines.push(`      ${fieldName}: input.${fieldName} as string,`);
     }
   }
 
@@ -342,6 +393,15 @@ function generatePayloadFields(columns: ColumnMetadata[], fieldCodecs?: FieldCod
     const fieldName = camelCase(col.name);
     const codec = fieldCodecs?.[col.name];
     const sourceExpr = `input.${fieldName}`;
+
+    // For date columns in syncPayload, keep as string (JSON serialization)
+    // The entity uses new Date() conversion for Drizzle
+    if (col.dataType === "date" && !codec) {
+      // Keep string format for syncPayload - it's JSON serialized anyway
+      lines.push(`      ${fieldName}: input.${fieldName},`);
+      continue;
+    }
+
     const transformedExpr = codec
       ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
       : sourceExpr;
@@ -361,13 +421,28 @@ function generateUpdateFields(columns: ColumnMetadata[], fieldCodecs?: FieldCode
     const fieldName = camelCase(col.name);
     const codec = fieldCodecs?.[col.name];
     const sourceExpr = `input.${fieldName}`;
-    const transformedExpr = codec
-      ? getCodecTransformExpression(codec, sourceExpr, col.notNull)
-      : sourceExpr;
+
+    let updateExpr: string;
+    let payloadExpr: string;
+
+    if (codec) {
+      updateExpr = getCodecTransformExpression(codec, sourceExpr, col.notNull);
+      payloadExpr = sourceExpr;
+    } else if (col.dataType === "date") {
+      // For updateData: convert string to Date for Drizzle
+      // For syncPayload: keep as string (JSON serialization)
+      updateExpr = col.notNull
+        ? `new Date(${sourceExpr} as string)`
+        : `(${sourceExpr} ? new Date(${sourceExpr}) : null)`;
+      payloadExpr = sourceExpr;
+    } else {
+      updateExpr = sourceExpr;
+      payloadExpr = sourceExpr;
+    }
 
     lines.push(`    if (input.${fieldName} !== undefined) {`);
-    lines.push(`      updateData.${fieldName} = ${transformedExpr};`);
-    lines.push(`      syncPayload.${fieldName} = ${transformedExpr};`);
+    lines.push(`      updateData.${fieldName} = ${updateExpr};`);
+    lines.push(`      syncPayload.${fieldName} = ${payloadExpr};`);
     lines.push(`    }`);
     lines.push("");
   }
@@ -376,7 +451,7 @@ function generateUpdateFields(columns: ColumnMetadata[], fieldCodecs?: FieldCode
 }
 
 function getCodecTransformExpression(codec: { kind: string; isNullable?: boolean }, sourceExpr: string, required: boolean): string {
-  const nullable = codec.isNullable === true || !required;
+  const nullable = !required;
 
   switch (codec.kind) {
     case "currency":
@@ -429,8 +504,9 @@ function getTypeScriptType(col: ColumnMetadata): string {
 
 /**
  * Format a default value for use in generated code
+ * Returns null string for SQL defaults (should not be included in entity)
  */
-function formatDefaultValue(value: unknown): string {
+function formatDefaultValue(value: unknown): string | null {
   if (value === null) return "null";
   if (typeof value === "boolean") return value ? "true" : "false";
   if (typeof value === "number") return String(value);
@@ -439,8 +515,14 @@ function formatDefaultValue(value: unknown): string {
   // Handle Drizzle SQL functions like gen_random_uuid() and now()
   if (value && typeof value === "object" && "queryChunks" in value) {
     // This is a Drizzle SQL function - for frontend, we don't use these
-    // so we return a sensible default
-    return "null";
+    // so we return null to signal "don't include in entity"
+    return null;
+  }
+
+  // Handle { __type: "sql", value: "now()" } format
+  if (value && typeof value === "object" && "__type" in value && (value as any).__type === "sql") {
+    // SQL function default - don't include in entity, DB provides the value
+    return null;
   }
 
   return "null";
