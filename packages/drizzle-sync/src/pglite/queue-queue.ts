@@ -31,7 +31,14 @@ export class PgSyncQueue implements ISyncQueue {
     this.logger = opts?.logger;
   }
 
-  async enqueue(params: EnqueueParams): Promise<string> {
+  async enqueue(params: EnqueueParams | EnqueueParams[]): Promise<string> {
+    if (Array.isArray(params)) {
+      return this.enqueueBatch(params);
+    }
+    return this.enqueueSingle(params);
+  }
+
+  private async enqueueSingle(params: EnqueueParams): Promise<string> {
     const id = crypto.randomUUID();
     const operation: SyncOperationRecord = {
       id,
@@ -45,6 +52,40 @@ export class PgSyncQueue implements ISyncQueue {
       version: 1,
       sync_attempts: 0,
       idempotency_key: params.idempotencyKey || crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_error: null,
+      last_attempt_at: null,
+    };
+
+    await this.repository.insert(operation);
+    return id;
+  }
+
+  private async enqueueBatch(params: EnqueueParams[]): Promise<string> {
+    const id = crypto.randomUUID();
+    const batchPayload = {
+      kind: "batch",
+      operations: params.map(p => ({
+        entity_type: p.entity_type,
+        operation: p.operation,
+        entityId: p.entityId,
+        data: p.data,
+        idempotencyKey: p.idempotencyKey,
+      })),
+    };
+    const operation: SyncOperationRecord = {
+      id,
+      tenant_id: this.context.tenantId,
+      [this.context.tenantColumn]: this.context.tenantId,
+      entity_type: "__batch__",
+      operation: "batch",
+      entity_id: id,
+      payload: JSON.stringify(batchPayload),
+      status: OPERATION_STATUS.PENDING,
+      version: 1,
+      sync_attempts: 0,
+      idempotency_key: params[0]?.idempotencyKey || crypto.randomUUID(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_error: null,

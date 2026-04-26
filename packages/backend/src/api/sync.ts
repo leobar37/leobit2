@@ -9,6 +9,7 @@ import { SyncConflictRepository } from "../services/sync/framework/SyncConflictR
 import { SyncDeadLetterRepository } from "../services/sync/framework/SyncDeadLetterRepository";
 import { SyncMetricsService } from "../services/sync/framework/SyncMetricsService";
 import type { SyncOperationInput } from "../services/sync/types";
+import type { SyncBatchEntry } from "../services/sync/sync.service";
 import { parseCursor } from "./sync-cursor";
 
 const logger = createLogger("SyncRoute");
@@ -56,80 +57,106 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   .post(
     "/batch",
     async ({ syncService, ctx, body, set }) => {
-      const operations = (
-        body.operations as (SyncOperationInput & {
-          entityType: SyncEntity | LegacyEntityType;
-        })[]
-      ).map((operation) => ({
-        ...operation,
-        entityType: normalizeEntityType(operation.entityType),
-      }));
+      const entries = body.entries;
 
-      // Enforce batch size limit
-      if (operations.length > MAX_BATCH_SIZE) {
+      // Normalize entity types inside each operation
+      const normalizedEntries: SyncBatchEntry[] = entries.map((entry) => {
+        if (entry.kind === "single") {
+          return {
+            kind: "single" as const,
+            operation: {
+              ...entry.operation,
+              entityType: normalizeEntityType(entry.operation.entityType as any),
+            },
+          };
+        }
+        return {
+          kind: "batch" as const,
+          operations: entry.operations.map((op: any) => ({
+            ...op,
+            entityType: normalizeEntityType(op.entityType as any),
+          })),
+        };
+      });
+
+      // Count total operations for limit enforcement
+      const totalOperations = normalizedEntries.reduce(
+        (count, entry) =>
+          count + (entry.kind === "batch" ? entry.operations.length : 1),
+        0
+      );
+
+      if (totalOperations > MAX_BATCH_SIZE) {
         set.status = 400;
         return {
           success: false,
           error: {
             code: "BATCH_TOO_LARGE",
-            message: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} operations. Received: ${operations.length}`,
+            message: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} operations. Received: ${totalOperations}`,
             maxBatchSize: MAX_BATCH_SIZE,
           },
         };
       }
 
-      // Validate each operation has required fields
-      for (let i = 0; i < operations.length; i++) {
-        const op = operations[i];
-        if (!op.idempotencyKey || typeof op.idempotencyKey !== "string") {
-          set.status = 400;
-          return {
-            success: false,
-            error: {
-              code: "INVALID_OPERATION",
-              message: `Operation at index ${i} missing valid idempotencyKey`,
-              index: i,
-            },
-          };
-        }
-        if (!op.entityId || typeof op.entityId !== "string") {
-          set.status = 400;
-          return {
-            success: false,
-            error: {
-              code: "INVALID_OPERATION",
-              message: `Operation at index ${i} missing valid entityId`,
-              index: i,
-            },
-          };
-        }
-        // Validate timestamp is parseable
-        if (op.localTimestamp) {
-          const ts = new Date(op.localTimestamp);
-          if (isNaN(ts.getTime())) {
+      // Validate each operation
+      let opIndex = 0;
+      for (const entry of normalizedEntries) {
+        const ops = entry.kind === "batch" ? entry.operations : [entry.operation];
+        for (const op of ops) {
+          if (!op.idempotencyKey || typeof op.idempotencyKey !== "string") {
             set.status = 400;
             return {
               success: false,
               error: {
                 code: "INVALID_OPERATION",
-                message: `Operation at index ${i} has invalid localTimestamp`,
-                index: i,
+                message: `Operation at index ${opIndex} missing valid idempotencyKey`,
+                index: opIndex,
               },
             };
           }
+          if (!op.entityId || typeof op.entityId !== "string") {
+            set.status = 400;
+            return {
+              success: false,
+              error: {
+                code: "INVALID_OPERATION",
+                message: `Operation at index ${opIndex} missing valid entityId`,
+                index: opIndex,
+              },
+            };
+          }
+          if (op.localTimestamp) {
+            const ts = new Date(op.localTimestamp);
+            if (isNaN(ts.getTime())) {
+              set.status = 400;
+              return {
+                success: false,
+                error: {
+                  code: "INVALID_OPERATION",
+                  message: `Operation at index ${opIndex} has invalid localTimestamp`,
+                  index: opIndex,
+                },
+              };
+            }
+          }
+          opIndex++;
         }
       }
 
       // Log incoming sync batch request
-      const salesOps = operations.filter((op) => op.entityType === "sales");
+      const allOps = normalizedEntries.flatMap((entry) =>
+        entry.kind === "batch" ? entry.operations : [entry.operation]
+      );
+      const salesOps = allOps.filter((op) => op.entityType === "sales");
       const updateOps = salesOps.filter((op) => op.operation === "update");
 
       logger.info({
         msg: "📥 SYNC BATCH REQUEST",
         businessId: ctx.businessId,
         userId: ctx.businessUserId,
-        totalOperations: operations.length,
-        operationsByEntity: operations.reduce((acc: Record<string, number>, op) => {
+        entries: entries.length,
+        totalOperations: allOps.length,
+        operationsByEntity: allOps.reduce((acc: Record<string, number>, op) => {
           acc[op.entityType] = (acc[op.entityType] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
@@ -139,9 +166,9 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       });
 
       const startTime = Date.now();
-      const result = await syncService.processBatch(
+      const result = await syncService.processEntries(
         ctx as RequestContext,
-        operations
+        normalizedEntries
       );
       const duration = Date.now() - startTime;
 
@@ -164,24 +191,51 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
     },
     {
       body: t.Object({
-        operations: t.Array(
-          t.Object({
-            idempotencyKey: t.String({ minLength: 1 }),
-            entityType: entityTypeSchema,
-            entityId: t.String({ minLength: 1 }),
-            operation: t.Union([
-              t.Literal("create"),
-              t.Literal("update"),
-              t.Literal("delete"),
-            ]),
-            payload: t.Record(t.String(), t.Unknown()),
-            localVersion: t.Number({ minimum: 0 }),
-            localTimestamp: t.String(),
-            correlationId: t.Optional(t.String()),
-            deviceId: t.Optional(t.String()),
-            sourceFingerprint: t.Optional(t.String()),
-          }),
-          { minItems: 1, maxItems: MAX_BATCH_SIZE }
+        entries: t.Array(
+          t.Union([
+            t.Object({
+              kind: t.Literal("single"),
+              operation: t.Object({
+                idempotencyKey: t.String({ minLength: 1 }),
+                entityType: entityTypeSchema,
+                entityId: t.String({ minLength: 1 }),
+                operation: t.Union([
+                  t.Literal("create"),
+                  t.Literal("update"),
+                  t.Literal("delete"),
+                ]),
+                payload: t.Record(t.String(), t.Unknown()),
+                localVersion: t.Number({ minimum: 0 }),
+                localTimestamp: t.String(),
+                correlationId: t.Optional(t.String()),
+                deviceId: t.Optional(t.String()),
+                sourceFingerprint: t.Optional(t.String()),
+              }),
+            }),
+            t.Object({
+              kind: t.Literal("batch"),
+              operations: t.Array(
+                t.Object({
+                  idempotencyKey: t.String({ minLength: 1 }),
+                  entityType: entityTypeSchema,
+                  entityId: t.String({ minLength: 1 }),
+                  operation: t.Union([
+                    t.Literal("create"),
+                    t.Literal("update"),
+                    t.Literal("delete"),
+                  ]),
+                  payload: t.Record(t.String(), t.Unknown()),
+                  localVersion: t.Number({ minimum: 0 }),
+                  localTimestamp: t.String(),
+                  correlationId: t.Optional(t.String()),
+                  deviceId: t.Optional(t.String()),
+                  sourceFingerprint: t.Optional(t.String()),
+                }),
+                { minItems: 1, maxItems: MAX_BATCH_SIZE }
+              ),
+            }),
+          ]),
+          { minItems: 1 }
         ),
       }),
     }

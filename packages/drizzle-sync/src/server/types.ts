@@ -75,6 +75,23 @@ export interface SyncBatchResult {
 }
 
 /**
+ * A single entry in a sync batch request.
+ * The client sends entries, where each entry is either a standalone operation
+ * or an atomic group of operations.
+ */
+export interface SyncBatchSingleEntry {
+  kind: "single";
+  operation: SyncOperationInput;
+}
+
+export interface SyncBatchAtomicEntry {
+  kind: "batch";
+  operations: SyncOperationInput[];
+}
+
+export type SyncBatchEntry = SyncBatchSingleEntry | SyncBatchAtomicEntry;
+
+/**
  * Sync execution context
  *
  * Provides request-scoped context for sync operations.

@@ -36,7 +36,7 @@ export function useDatabaseData(isOpen: boolean, isInitialized: boolean) {
   });
 
   const fetchDbInfo = useCallback(async () => {
-    const pg = engine.getService<{ query: (sql: string) => Promise<{ rows: unknown[] }> }>("pg");
+    const pg = engine.getPg() as { query: (sql: string) => Promise<{ rows: unknown[] }> };
     if (!pg || !isInitialized) return;
 
     try {

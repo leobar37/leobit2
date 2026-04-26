@@ -195,7 +195,12 @@ export function useSyncEngine(): SyncClientEngine {
 
 export function useEngineService<T = unknown>(name: string): T {
   const engine = useSyncEngine();
-  return engine.getService<T>(name);
+  return (engine as any).getService(name) as T;
+}
+
+export function useServices<T extends Record<string, any> = Record<string, any>>(): T {
+  const engine = useSyncEngine() as SyncClientEngine<T>;
+  return engine.getServices();
 }
 
 export function useSyncOperations() {

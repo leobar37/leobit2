@@ -32,6 +32,7 @@ import type {
   ISyncHttpClient,
   ISyncQueue,
   DatabaseAdapter,
+  EnqueueParams,
 } from "../core";
 import { PgSyncQueue } from "../pglite/queue-queue";
 import { PushSyncService } from "../pglite/push-service";
@@ -56,6 +57,11 @@ import { PgLiteAdapter } from "../pglite/pglite-adapter";
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
 
+export interface BatchContext {
+  enqueue: (params: EnqueueParams) => Promise<string>;
+  enqueueMany: (params: EnqueueParams[]) => Promise<string>;
+}
+
 export interface InitialSyncProgress {
   stage: string;
   status: "pending" | "loading" | "complete" | "error";
@@ -69,7 +75,7 @@ export interface InitialSyncResult {
   stages: Record<string, { status: string; changesApplied: number; error?: string }>;
 }
 
-export class SyncClientEngine {
+export class SyncClientEngine<TServices extends Record<string, unknown> = Record<string, unknown>> {
   private readonly config: SyncClientEngineConfig;
   private readonly eventEmitter: ISyncEventEmitter;
   private readonly mutex: ISyncMutex;
@@ -254,8 +260,8 @@ export class SyncClientEngine {
     this.syncQueue = this.config.queue ?? new PgSyncQueue(context, { logger: this.config.logger });
 
     const adaptedHttpClient: ISyncHttpClient = {
-      sendBatch: async (operations: SyncOperationRecord[]): Promise<HandlerResult[]> => {
-        const result = await httpClient.postBatch(operations);
+      sendBatch: async (entries: unknown[]): Promise<HandlerResult[]> => {
+        const result = await httpClient.postBatch(entries);
         if (!result.success) return [];
         return (result.results as Array<{ idempotencyKey: string; success: boolean; error?: string; conflict?: { serverVersion: number; serverData: Record<string, unknown> } }>).map((r) => ({
           success: r.success,
@@ -553,11 +559,19 @@ export class SyncClientEngine {
     return this.eventEmitter;
   }
 
-  getService<T = unknown>(name: string): T {
-    if (!this.services.has(name)) {
-      throw new Error(`Service '${name}' not found. Available services: ${this.getAllServiceNames().join(", ")}`);
+  getService<K extends keyof TServices>(name: K): TServices[K] {
+    if (!this.services.has(name as string)) {
+      throw new Error(`Service '${String(name)}' not found. Available services: ${this.getAllServiceNames().join(", ")}`);
     }
-    return this.services.get(name) as T;
+    return this.services.get(name as string) as TServices[K];
+  }
+
+  getServices(): TServices {
+    const result = {} as TServices;
+    for (const [name, service] of this.services.entries()) {
+      (result as Record<string, unknown>)[name] = service;
+    }
+    return result;
   }
 
   hasService(name: string): boolean {
@@ -566,6 +580,63 @@ export class SyncClientEngine {
 
   getAllServiceNames(): string[] {
     return Array.from(this.services.keys());
+  }
+
+  /**
+   * Execute a callback within a database transaction if the adapter supports it.
+   * Falls back to non-transactional execution if transactions are not available.
+   */
+  async withTransaction<T>(callback: () => Promise<T>): Promise<T> {
+    this.ensureInitialized();
+    const db = this.getDb() as any;
+    if (typeof db.transaction === "function") {
+      return db.transaction(callback);
+    }
+    return callback();
+  }
+
+  /**
+   * Execute a batch of operations atomically.
+   *
+   * The callback receives a context with an `enqueue` function that accumulates
+   * sync operations. After the callback succeeds, all accumulated operations are
+   * enqueued as a single atomic batch entry.
+   *
+   * If the adapter supports transactions, the callback runs inside a transaction.
+   * If the callback throws, the transaction is rolled back and no sync operations
+   * are enqueued.
+   */
+  async batch<T>(callback: (ctx: BatchContext) => Promise<T>): Promise<T> {
+    this.ensureInitialized();
+
+    const operations: EnqueueParams[] = [];
+
+    const ctx: BatchContext = {
+      enqueue: (op: EnqueueParams) => {
+        operations.push(op);
+        return Promise.resolve("");
+      },
+      enqueueMany: (ops: EnqueueParams[]) => {
+        operations.push(...ops);
+        return Promise.resolve("");
+      },
+    };
+
+    const runCallback = async () => callback(ctx);
+
+    let result: T;
+    try {
+      result = await this.withTransaction(runCallback);
+    } catch (error) {
+      // Transaction rolled back (if supported), no sync operations enqueued
+      throw error;
+    }
+
+    if (operations.length > 0) {
+      await this.syncService!.enqueue(operations);
+    }
+
+    return result;
   }
 
   use<T>(name: string, factory: () => T): T {

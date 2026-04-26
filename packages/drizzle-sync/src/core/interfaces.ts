@@ -34,7 +34,7 @@ export interface ISyncQueue {
   /**
    * Add an operation to the queue
    */
-  enqueue(params: EnqueueParams): Promise<string>;
+  enqueue(params: EnqueueParams | EnqueueParams[]): Promise<string>;
 
   /**
    * Get pending operations (status = pending or failed)
@@ -265,11 +265,11 @@ export interface ISyncLogger {
  */
 export interface ISyncHttpClient {
   /**
-   * Send a batch of operations to the server
-   * @param operations Operations to send
+   * Send a batch of entries to the server.
+   * @param entries Sync batch entries (single or atomic batch)
    * @returns Batch result
    */
-  sendBatch(operations: SyncOperationRecord[]): Promise<HandlerResult[]>;
+  sendBatch(entries: unknown[]): Promise<HandlerResult[]>;
 
   /**
    * Fetch changes from the server (pull sync)

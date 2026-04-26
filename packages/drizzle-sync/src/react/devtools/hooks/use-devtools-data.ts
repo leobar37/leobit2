@@ -47,7 +47,7 @@ export function useDevToolsData(isOpen: boolean, isInitialized: boolean): UseDev
         setDeadLetterOperations(deadLetterOps as unknown as DeadLetterOperation[]);
       }
 
-      const db = engine.getService<{ execute: (sql: string) => Promise<{ rows: unknown[] }> }>("db");
+      const db = engine.getDb() as { execute: (sql: string) => Promise<{ rows: unknown[] }> };
       if (db) {
         const summaryResults = await Promise.all(
           DEFAULT_TABLES.map(async (table) => {

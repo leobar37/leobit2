@@ -32,7 +32,34 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
   }
   b.blank();
 
-  b.line("export interface CreateEngineParams {");
+  // Generate AvileoGeneratedServices interface
+  b.line("export interface AvileoGeneratedServices {");
+  b.indent((ib) => {
+    for (const name of input.entityNames) {
+      const pascal = pascalCase(name);
+      ib.line(`${name}: ${pascal}Service;`);
+    }
+  });
+  b.line("}");
+  b.blank();
+
+  // Generate utility types
+  b.line("export type AvileoServices<TOverrides extends Partial<AvileoGeneratedServices> = {}> = Omit<AvileoGeneratedServices, keyof TOverrides> & TOverrides;");
+  b.blank();
+
+  b.line("export type AvileoSyncEngine<TOverrides extends Partial<AvileoGeneratedServices> = {}> = SyncClientEngine<AvileoServices<TOverrides>>;");
+  b.blank();
+
+  // Generate service override factory type
+  b.line("export type ServiceOverrides<TOverrides extends Partial<AvileoGeneratedServices>> = {");
+  b.indent((ib) => {
+    ib.line("[K in keyof TOverrides]: (engine: AvileoSyncEngine<TOverrides>) => TOverrides[K];");
+  });
+  b.line("};");
+  b.blank();
+
+  // Generate CreateEngineParams
+  b.line("export interface CreateEngineParams<TOverrides extends Partial<AvileoGeneratedServices> = {}> {");
   b.indent((ib) => {
     ib.line("tenantId: string;");
     ib.line("userId: string;");
@@ -41,11 +68,50 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
     ib.line("httpClient: ISyncClientHttpClient;");
     ib.line("dataDir?: string;");
     ib.line("versionKey?: string;");
+    ib.line("/**");
+    ib.line(" * App-level service overrides. Each key replaces the generated service");
+    ib.line(" * with a custom implementation.");
+    ib.line(" */");
+    ib.line("serviceOverrides?: ServiceOverrides<TOverrides>;");
   });
   b.line("}");
   b.blank();
 
-  b.line("export function createAvileoSyncEngine(params: CreateEngineParams): SyncClientEngine {");
+  // Helper function to build entity definitions with overrides
+  b.line("function buildEntityDefinitions<TOverrides extends Partial<AvileoGeneratedServices>>(");
+  b.indent((ib) => {
+    ib.line("overrides?: ServiceOverrides<TOverrides>,");
+  });
+  b.line("): Array<{ name: string; entityType: string; factory: (engine: SyncClientEngine) => unknown }> {");
+  b.indent((ib) => {
+    ib.line("const definitions = [];");
+    b.blank();
+
+    for (const name of input.entityNames) {
+      const pascal = pascalCase(name);
+      ib.line(`if (overrides?.${name}) {`);
+      ib.indent((iib) => {
+        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine) => overrides.${name}(engine as AvileoSyncEngine<TOverrides>) });`);
+      });
+      ib.line("} else {");
+      ib.indent((iib) => {
+        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine) => new ${pascal}Service(engine) });`);
+      });
+      ib.line("}");
+    }
+
+    b.blank();
+    ib.line("return definitions;");
+  });
+  b.line("}");
+  b.blank();
+
+  // Generate createAvileoSyncEngine function
+  b.line("export function createAvileoSyncEngine<TOverrides extends Partial<AvileoGeneratedServices> = {}>(");
+  b.indent((ib) => {
+    ib.line("params: CreateEngineParams<TOverrides>,");
+  });
+  b.line("): AvileoSyncEngine<TOverrides> {");
   b.indent((ib) => {
     ib.line("return createSyncClientEngine({");
     ib.indent((iib) => {
@@ -72,16 +138,9 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
         iib.line("},");
       }
       iib.line("tables: schema,");
-      iib.line("entities: [");
-      iib.indent((iiib) => {
-        for (const name of input.entityNames) {
-          const pascal = pascalCase(name);
-          iiib.line(`{ name: "${name}", entityType: "${name}", factory: (engine) => new ${pascal}Service(engine) },`);
-        }
-      });
-      iib.line("],");
+      iib.line("entities: buildEntityDefinitions(params.serviceOverrides),");
     });
-    ib.line("});");
+    ib.line("}) as AvileoSyncEngine<TOverrides>;");
   });
   b.line("}");
   b.blank();

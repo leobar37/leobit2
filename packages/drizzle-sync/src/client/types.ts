@@ -201,8 +201,8 @@ export interface SyncClientEngineStatus {
  * requests and communicates with the backend API.
  */
 export interface ISyncClientHttpClient {
-  /** Post a batch of sync operations to the server */
-  postBatch(operations: unknown[]): Promise<{ success: boolean; results: unknown[] }>;
+  /** Post a batch of sync entries to the server */
+  postBatch(entries: unknown[]): Promise<{ success: boolean; results: unknown[] }>;
   /** Fetch changes from the server since a given cursor */
   getChanges(params: {
     tenantId: string;

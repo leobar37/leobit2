@@ -53,6 +53,7 @@ export {
   useSyncEngineReady,
   useSyncInit,
   useEngineService,
+  useServices,
   useSyncOperations,
   useSyncLifecycle,
   useSyncEvent,

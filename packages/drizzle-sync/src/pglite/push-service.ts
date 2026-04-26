@@ -91,8 +91,11 @@ export class PushSyncService {
     return retried;
   }
 
-  async enqueue(params: EnqueueParams): Promise<string> {
+  async enqueue(params: EnqueueParams | EnqueueParams[]): Promise<string> {
     this.ensureInitialized();
+    if (Array.isArray(params)) {
+      return this.queue.enqueue(params);
+    }
     return this.queue.enqueue(params);
   }
 

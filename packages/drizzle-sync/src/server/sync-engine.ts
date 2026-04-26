@@ -9,6 +9,7 @@ import type {
   SyncOperationInput,
   SyncOperationResult,
   SyncBatchResult,
+  SyncBatchEntry,
   SyncEngineDeps,
   SyncContext,
   ISyncHandler,
@@ -175,32 +176,46 @@ export class SyncEngine<
   }
 
   /**
-   * Process a batch of sync operations
+   * Process a batch of sync operations (legacy wrapper).
+   * Converts operations to single entries and delegates to processEntries.
    */
   async processBatch(
     ctx: TRequestContext,
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
+    const entries: SyncBatchEntry[] = operations.map((op) => ({
+      kind: "single",
+      operation: op,
+    }));
+    return this.processEntries(ctx, entries);
+  }
+
+  /**
+   * Process sync batch entries with atomic batch support.
+   *
+   * - Single entries are processed individually with per-operation savepoints.
+   * - Batch entries are processed atomically: all operations succeed or all fail.
+   */
+  async processEntries(
+    ctx: TRequestContext,
+    entries: SyncBatchEntry[]
+  ): Promise<SyncBatchResult> {
     const batchCorrelationId = syncLogger.generateCorrelationId();
     const nowIso = this.config.now();
 
+    const totalOperations = entries.reduce(
+      (count, entry) =>
+        count + (entry.kind === "batch" ? entry.operations.length : 1),
+      0
+    );
+
     this.log("info", {
-      msg: "📥 Sync batch received",
+      msg: "📥 Sync entries received",
       correlationId: batchCorrelationId,
-      operations: operations.length,
+      entries: entries.length,
+      operations: totalOperations,
       tenantId: ctx.tenantId,
       userId: ctx.userId,
-    });
-
-    const { operations: sortedOperations, groupCount } =
-      this.operationSorter.sort(operations);
-
-    this.log("info", {
-      msg: "📥 Sync batch sorted",
-      correlationId: batchCorrelationId,
-      totalOperations: sortedOperations.length,
-      uniqueGroups: groupCount,
-      priorityMap: this.operationSorter.getPriorityMap(),
     });
 
     const results: SyncOperationResult[] = [];
@@ -208,66 +223,30 @@ export class SyncEngine<
 
     try {
       await this.config.db.transaction(async (tx) => {
-        for (let i = 0; i < sortedOperations.length; i++) {
-          const operation = sortedOperations[i];
-          const correlationId =
-            operation.correlationId || syncLogger.generateCorrelationId();
-          const savepointName = `sp_op_${i}`;
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
 
-          this.log("info", {
-            msg: "📋 Processing operation",
-            correlationId,
-            batchCorrelationId,
-            idempotencyKey: operation.idempotencyKey,
-            entityType: operation.entityType,
-            operation: operation.operation,
-            entityId: operation.entityId,
-          });
-
-          try {
-            await this.config.db.execute(
-              this.config.savepointSql(savepointName)
-            );
-            const result = await this.processOperation(
+          if (entry.kind === "single") {
+            await this.processSingleEntry(
               ctx,
-              operation,
-              correlationId,
+              entry.operation,
               batchCorrelationId,
               tx,
               nowIso,
-              registry
+              registry,
+              results,
+              i
             );
-            await this.config.db.execute(
-              this.config.releaseSavepointSql(savepointName)
+          } else {
+            await this.processAtomicEntry(
+              ctx,
+              entry.operations,
+              batchCorrelationId,
+              tx,
+              nowIso,
+              registry,
+              results
             );
-            results.push(result);
-
-            // Register successful operation in entity registry
-            if (result.success) {
-              registry.register(operation.operation, operation.entityId);
-            }
-          } catch (opError) {
-            await this.rollbackSavepoint(savepointName);
-
-            const errorMessage =
-              opError instanceof Error ? opError.message : String(opError);
-
-            this.log("error", {
-              msg: "Operation failed in batch (rolled back via savepoint)",
-              correlationId,
-              savepointName,
-              operation: operation.operation,
-              entityType: operation.entityType,
-              entityId: operation.entityId,
-              error: errorMessage,
-            });
-
-            results.push({
-              idempotencyKey: operation.idempotencyKey,
-              success: false,
-              error: errorMessage,
-              serverTimestamp: nowIso,
-            });
           }
         }
       });
@@ -277,18 +256,23 @@ export class SyncEngine<
         error: txError instanceof Error ? txError.message : String(txError),
       });
 
+      // Mark any unprocessed operations as failed
       const processedKeys = new Set(results.map((r) => r.idempotencyKey));
-      for (const op of sortedOperations) {
-        if (!processedKeys.has(op.idempotencyKey)) {
-          results.push({
-            idempotencyKey: op.idempotencyKey,
-            success: false,
-            error:
-              txError instanceof Error
-                ? txError.message
-                : "Transaction failed",
-            serverTimestamp: nowIso,
-          });
+      for (const entry of entries) {
+        const ops =
+          entry.kind === "batch" ? entry.operations : [entry.operation];
+        for (const op of ops) {
+          if (!processedKeys.has(op.idempotencyKey)) {
+            results.push({
+              idempotencyKey: op.idempotencyKey,
+              success: false,
+              error:
+                txError instanceof Error
+                  ? txError.message
+                  : "Transaction failed",
+              serverTimestamp: nowIso,
+            });
+          }
         }
       }
     }
@@ -300,7 +284,7 @@ export class SyncEngine<
     const failed = results.length - succeeded - conflicts;
 
     this.log("info", {
-      msg: "📤 Sync batch completed",
+      msg: "📤 Sync entries completed",
       summary: { total: results.length, succeeded, failed, conflicts },
     });
 
@@ -323,6 +307,154 @@ export class SyncEngine<
         conflicts,
       },
     };
+  }
+
+  /**
+   * Process a single entry with per-operation savepoint.
+   */
+  private async processSingleEntry(
+    ctx: TRequestContext,
+    operation: SyncOperationInput,
+    batchCorrelationId: string,
+    tx: TTransaction,
+    nowIso: string,
+    registry: EntityRegistry,
+    results: SyncOperationResult[],
+    index: number
+  ): Promise<void> {
+    const correlationId =
+      operation.correlationId || syncLogger.generateCorrelationId();
+    const savepointName = `sp_entry_${index}`;
+
+    this.log("info", {
+      msg: "📋 Processing single entry",
+      correlationId,
+      batchCorrelationId,
+      idempotencyKey: operation.idempotencyKey,
+      entityType: operation.entityType,
+      operation: operation.operation,
+      entityId: operation.entityId,
+    });
+
+    try {
+      await this.config.db.execute(this.config.savepointSql(savepointName));
+      const result = await this.processOperation(
+        ctx,
+        operation,
+        correlationId,
+        batchCorrelationId,
+        tx,
+        nowIso,
+        registry
+      );
+      await this.config.db.execute(
+        this.config.releaseSavepointSql(savepointName)
+      );
+      results.push(result);
+
+      if (result.success) {
+        registry.register(operation.operation, operation.entityId);
+      }
+    } catch (opError) {
+      await this.rollbackSavepoint(savepointName);
+
+      const errorMessage =
+        opError instanceof Error ? opError.message : String(opError);
+
+      this.log("error", {
+        msg: "Single entry failed (rolled back via savepoint)",
+        correlationId,
+        savepointName,
+        operation: operation.operation,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        error: errorMessage,
+      });
+
+      results.push({
+        idempotencyKey: operation.idempotencyKey,
+        success: false,
+        error: errorMessage,
+        serverTimestamp: nowIso,
+      });
+    }
+  }
+
+  /**
+   * Process an atomic batch entry.
+   * All operations succeed or all fail together (no per-op savepoints).
+   */
+  private async processAtomicEntry(
+    ctx: TRequestContext,
+    operations: SyncOperationInput[],
+    batchCorrelationId: string,
+    tx: TTransaction,
+    nowIso: string,
+    registry: EntityRegistry,
+    results: SyncOperationResult[]
+  ): Promise<void> {
+    const entryCorrelationId = syncLogger.generateCorrelationId();
+
+    this.log("info", {
+      msg: "📋 Processing atomic batch entry",
+      correlationId: entryCorrelationId,
+      batchCorrelationId,
+      operations: operations.length,
+    });
+
+    const entryResults: SyncOperationResult[] = [];
+
+    try {
+      // Sort operations within the batch for FK ordering
+      const { operations: sortedOps } = this.operationSorter.sort(operations);
+
+      for (const operation of sortedOps) {
+        const correlationId =
+          operation.correlationId || syncLogger.generateCorrelationId();
+
+        const result = await this.processOperation(
+          ctx,
+          operation,
+          correlationId,
+          batchCorrelationId,
+          tx,
+          nowIso,
+          registry
+        );
+        entryResults.push(result);
+
+        if (result.success) {
+          registry.register(operation.operation, operation.entityId);
+        }
+      }
+
+      // All operations succeeded
+      results.push(...entryResults);
+    } catch (opError) {
+      // Atomic batch failed - rollback entire entry
+      const errorMessage =
+        opError instanceof Error ? opError.message : String(opError);
+
+      this.log("error", {
+        msg: "Atomic batch entry failed - rolling back entire entry",
+        correlationId: entryCorrelationId,
+        error: errorMessage,
+        processedCount: entryResults.length,
+      });
+
+      // Mark all operations in this batch as failed
+      for (const operation of operations) {
+        results.push({
+          idempotencyKey: operation.idempotencyKey,
+          success: false,
+          error: `Batch failed: ${errorMessage}`,
+          serverTimestamp: nowIso,
+        });
+      }
+
+      // Re-throw to trigger rollback of the entire batch
+      throw opError;
+    }
   }
 
   /**

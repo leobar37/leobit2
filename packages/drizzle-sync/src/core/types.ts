@@ -90,7 +90,7 @@ export function entitySupportsSelfHeal<TEntity extends string>(
 /**
  * Operation types supported by the sync system
  */
-export type SyncOperationType = "create" | "update" | "delete";
+export type SyncOperationType = "create" | "update" | "delete" | "batch";
 
 /**
  * Status values for sync operations
@@ -129,6 +129,7 @@ export interface EnqueueParams {
  */
 export interface SyncWritePort {
   enqueue(params: EnqueueParams): Promise<string>;
+  enqueue(params: EnqueueParams[]): Promise<string>;
 }
 
 /**

@@ -4,6 +4,7 @@ import { BATCH_SIZE, MAX_RETRIES, OPERATION_STATUS } from "../shared";
 import { SyncAutoRunner } from "./auto-runner";
 import { SyncOperationLifecycleService } from "./operation-lifecycle";
 import { getFileUploadService } from "../client/file-upload-service";
+import type { SyncBatchEntry } from "../server";
 
 export interface BatchProcessorOptions {
   /** Column name for tenant filtering (default: "tenant_id") */
@@ -74,6 +75,60 @@ function chunkOperations(
   }
 
   return chunks;
+}
+
+function parsePayload(payload: unknown): Record<string, unknown> {
+  if (!payload) return {};
+  if (typeof payload === "string") {
+    try {
+      return JSON.parse(payload) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  if (typeof payload === "object") {
+    return payload as Record<string, unknown>;
+  }
+  return {};
+}
+
+function recordToEntry(record: SyncOperationRecord): SyncBatchEntry {
+  if (record.entity_type === "__batch__") {
+    const payload = parsePayload(record.payload);
+    const ops = (payload.operations as Array<{
+      entity_type: string;
+      operation: string;
+      entityId: string;
+      data: Record<string, unknown>;
+      idempotencyKey?: string;
+    }>) ?? [];
+
+    return {
+      kind: "batch",
+      operations: ops.map((op) => ({
+        idempotencyKey: op.idempotencyKey ?? record.idempotency_key ?? record.id,
+        entityType: op.entity_type,
+        entityId: op.entityId,
+        operation: op.operation as "create" | "update" | "delete",
+        payload: op.data,
+        localVersion: record.version,
+        localTimestamp: record.created_at,
+      })),
+    };
+  }
+
+  return {
+    kind: "single",
+    operation: {
+      idempotencyKey: record.idempotency_key ?? record.id,
+      entityType: record.entity_type,
+      entityId: record.entity_id,
+      operation: record.operation as "create" | "update" | "delete",
+      payload: parsePayload(record.payload),
+      localVersion: record.version,
+      localTimestamp: record.created_at,
+    },
+  };
 }
 
 /**
@@ -231,9 +286,9 @@ export class SyncBatchProcessor {
   }
 
   private async processBatch(
-    operations: SyncOperationRecord[]
+    rows: SyncOperationRecord[]
   ): Promise<ProcessPendingResult & { errors: string[] }> {
-    if (operations.length === 0) {
+    if (rows.length === 0) {
       return { processed: 0, failed: 0, conflicts: 0, errors: [] };
     }
 
@@ -243,65 +298,112 @@ export class SyncBatchProcessor {
     let conflicts = 0;
 
     try {
-      for (const operation of operations) {
-        await this.lifecycle.markProcessing(operation.id);
+      for (const row of rows) {
+        await this.lifecycle.markProcessing(row.id);
       }
 
       // Upload pending files before sending batch
-      const uploadResult = await this.uploadPendingFiles(operations);
+      const uploadResult = await this.uploadPendingFiles(rows);
       if (!uploadResult.success) {
         console.error("[SYNC] File upload failed:", uploadResult.errors);
-        // Mark operations with file upload errors as failed
-        for (const operation of operations) {
-          await this.lifecycle.markFailed(operation.id, `File upload failed: ${uploadResult.errors.join(", ")}`);
+        for (const row of rows) {
+          await this.lifecycle.markFailed(row.id, `File upload failed: ${uploadResult.errors.join(", ")}`);
         }
-        return { processed: 0, failed: operations.length, conflicts: 0, errors: uploadResult.errors };
+        return { processed: 0, failed: rows.length, conflicts: 0, errors: uploadResult.errors };
       }
 
-      console.log(
-        `[SYNC] Sending batch (count=${operations.length})`
+      const entries = rows.map((row) => recordToEntry(row));
+      const operationCount = entries.reduce(
+        (count, entry) => count + (entry.kind === "batch" ? entry.operations.length : 1),
+        0
       );
 
-      const response = await this.httpClient.sendBatch(operations);
+      console.log(
+        `[SYNC] Sending batch (entries=${entries.length}, operations=${operationCount})`
+      );
 
-      for (const operation of operations) {
-        const result = response.find(
-          (item: HandlerResult) => item.idempotencyKey === (operation.idempotency_key ?? operation.id)
-        );
+      const response = await this.httpClient.sendBatch(entries);
 
-        if (!result) {
-          const error = "Batch sync returned no result for operation";
-          await this.lifecycle.markFailed(operation.id, error);
+      // Map results by idempotency key for fast lookup
+      const resultMap = new Map<string, HandlerResult>();
+      for (const result of response) {
+        resultMap.set(result.idempotencyKey, result);
+      }
+
+      for (const row of rows) {
+        const entry = recordToEntry(row);
+
+        if (entry.kind === "single") {
+          const result = resultMap.get(entry.operation.idempotencyKey);
+
+          if (!result) {
+            const error = "Batch sync returned no result for operation";
+            await this.lifecycle.markFailed(row.id, error);
+            failed += 1;
+            errors.push(error);
+            continue;
+          }
+
+          if (result.conflict) {
+            await this.lifecycle.markConflict(row.id, result.conflict);
+            conflicts += 1;
+            continue;
+          }
+
+          if (result.success) {
+            await this.lifecycle.markCompleted(row.id);
+            processed += 1;
+            continue;
+          }
+
+          const error = result.error || "Unknown error";
+          await this.lifecycle.markFailed(row.id, error);
           failed += 1;
           errors.push(error);
-          continue;
-        }
+        } else {
+          // Batch entry: check all operations
+          const entryResults = entry.operations.map((op) => resultMap.get(op.idempotencyKey));
+          const hasMissing = entryResults.some((r) => !r);
+          const hasConflict = entryResults.some((r) => r?.conflict);
+          const hasFailure = entryResults.some((r) => r && !r.success && !r.conflict);
 
-        if (result.conflict) {
-          await this.lifecycle.markConflict(operation.id, result.conflict);
-          conflicts += 1;
-          continue;
-        }
+          if (hasMissing) {
+            const error = "Batch sync returned incomplete results for batch entry";
+            await this.lifecycle.markFailed(row.id, error);
+            failed += 1;
+            errors.push(error);
+            continue;
+          }
 
-        if (result.success) {
-          await this.lifecycle.markCompleted(operation.id);
+          if (hasConflict) {
+            // Use first conflict data
+            const conflictResult = entryResults.find((r) => r?.conflict);
+            await this.lifecycle.markConflict(row.id, conflictResult!.conflict);
+            conflicts += 1;
+            continue;
+          }
+
+          if (hasFailure) {
+            const firstError = entryResults.find((r) => r && !r.success)?.error || "Batch operation failed";
+            await this.lifecycle.markFailed(row.id, firstError);
+            failed += 1;
+            errors.push(firstError);
+            continue;
+          }
+
+          // All operations succeeded
+          await this.lifecycle.markCompleted(row.id);
           processed += 1;
-          continue;
         }
-
-        const error = result.error || "Unknown error";
-        await this.lifecycle.markFailed(operation.id, error);
-        failed += 1;
-        errors.push(error);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      for (const operation of operations) {
-        await this.lifecycle.markFailed(operation.id, message);
+      for (const row of rows) {
+        await this.lifecycle.markFailed(row.id, message);
       }
 
-      failed += operations.length;
+      failed += rows.length;
       errors.push(message);
     }
 

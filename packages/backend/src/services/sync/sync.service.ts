@@ -13,6 +13,11 @@ import {
   type DbClient,
   HandlerRegistry as LibHandlerRegistry,
 } from "@avileo/drizzle-sync/server";
+
+// Local compatible type to avoid cross-package type conflicts
+export type SyncBatchEntry =
+  | { kind: "single"; operation: SyncOperationInput }
+  | { kind: "batch"; operations: SyncOperationInput[] };
 import { SyncOperationRepository } from "./framework/SyncOperationRepository";
 import { SyncConflictRepository } from "./framework/SyncConflictRepository";
 import { syncPipeline } from "./framework/SyncPipeline";
@@ -186,6 +191,13 @@ export class SyncService {
     operations: SyncOperationInput[]
   ): Promise<SyncBatchResult> {
     return this.engine.processBatch(ctx, operations);
+  }
+
+  async processEntries(
+    ctx: RequestContext,
+    entries: SyncBatchEntry[]
+  ): Promise<SyncBatchResult> {
+    return this.engine.processEntries(ctx, entries);
   }
 
   async getChanges(

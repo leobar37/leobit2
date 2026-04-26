@@ -56,6 +56,7 @@ function ServicesProviderWrapper({
     const businessUserId = getStoredBusinessUserId() || "";
 
     try {
+      const { appServiceOverrides } = await import("~/lib/sync/service-overrides");
       const eng = createAvileoSyncEngine({
         tenantId: businessId,
         userId: businessUserId,
@@ -68,6 +69,7 @@ function ServicesProviderWrapper({
           getDeviceId: () => getDeviceId(),
           getFingerprint: () => getDeviceFingerprint(),
         }),
+        serviceOverrides: appServiceOverrides,
       });
       return eng;
     } catch (err) {

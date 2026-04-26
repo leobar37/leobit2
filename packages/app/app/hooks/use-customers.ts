@@ -4,8 +4,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerService } from "~/lib/services/customer-service";
+import { useServices } from "@avileo/drizzle-sync/react";
+import type { AvileoAppOverrides } from "~/lib/sync/service-overrides";
 import type { Customers as Customer } from "~/lib/sync/generated/schema";
 import type {
   CreateCustomerInput,
@@ -30,8 +30,13 @@ export interface PaginatedCustomersResult {
 /**
  * Get all customers for the current business
  */
+function useCustomerService() {
+  const services = useServices<AvileoAppOverrides>();
+  return services.customers;
+}
+
 export function useCustomers(filters?: CustomerSearchFilters) {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
 
   return useQuery({
     queryKey: filters ? QUERY_KEYS.search(filters) : QUERY_KEYS.customers,
@@ -42,7 +47,7 @@ export function useCustomers(filters?: CustomerSearchFilters) {
 }
 
 export function usePaginatedCustomers(query: CustomerPageQuery) {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
 
   return useQuery({
     queryKey: QUERY_KEYS.page(query),
@@ -53,7 +58,7 @@ export function usePaginatedCustomers(query: CustomerPageQuery) {
 }
 
 export function useCustomerTagsSummary(customerIds: string[]) {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
 
   return useQuery({
     queryKey: QUERY_KEYS.tags(customerIds),
@@ -66,7 +71,7 @@ export function useCustomerTagsSummary(customerIds: string[]) {
  * Get a single customer by ID
  */
 export function useCustomer(id: string | null) {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
 
   return useQuery({
     queryKey: id ? QUERY_KEYS.customer(id) : ["customers-new", "detail"],
@@ -82,7 +87,7 @@ export function useCustomer(id: string | null) {
  * Search customers by name, DNI, or phone
  */
 export function useSearchCustomers(searchTerm: string | null) {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
 
   return useQuery({
     queryKey: ["customers-new", "search", searchTerm],
@@ -99,7 +104,7 @@ export function useSearchCustomers(searchTerm: string | null) {
  * Create a new customer
  */
 export function useCreateCustomer() {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -117,7 +122,7 @@ export function useCreateCustomer() {
  * Update an existing customer
  */
 export function useUpdateCustomer() {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -144,7 +149,7 @@ export function useUpdateCustomer() {
  * Delete a customer
  */
 export function useDeleteCustomer() {
-  const customerService = useEngineService<CustomerService>("customers");
+  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
