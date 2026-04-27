@@ -57,7 +57,7 @@ export interface CustomersListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useCustomerss(options?: CustomersListOptions) {
+export function useCustomersList(options?: CustomersListOptions) {
   const service = useEngineService<CustomersService>("customers");
 
   return useQuery({
@@ -135,7 +135,7 @@ export interface ProductsListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useProductss(options?: ProductsListOptions) {
+export function useProductsList(options?: ProductsListOptions) {
   const service = useEngineService<ProductsService>("products");
 
   return useQuery({
@@ -255,7 +255,7 @@ export interface ProductVariantsListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useProductVariantss(options?: ProductVariantsListOptions) {
+export function useProductVariantsList(options?: ProductVariantsListOptions) {
   const service = useEngineService<ProductVariantsService>("product_variants");
 
   return useQuery({
@@ -339,7 +339,7 @@ export interface SuppliersListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useSupplierss(options?: SuppliersListOptions) {
+export function useSuppliersList(options?: SuppliersListOptions) {
   const service = useEngineService<SuppliersService>("suppliers");
 
   return useQuery({
@@ -417,7 +417,7 @@ export interface TagsListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useTagss(options?: TagsListOptions) {
+export function useTagsList(options?: TagsListOptions) {
   const service = useEngineService<TagsService>("tags");
 
   return useQuery({
@@ -495,7 +495,7 @@ export interface CustomerGroupsListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useCustomerGroupss(options?: CustomerGroupsListOptions) {
+export function useCustomerGroupsList(options?: CustomerGroupsListOptions) {
   const service = useEngineService<CustomerGroupsService>("customer_groups");
 
   return useQuery({
@@ -579,7 +579,7 @@ export interface VisitasListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useVisitass(options?: VisitasListOptions) {
+export function useVisitasList(options?: VisitasListOptions) {
   const service = useEngineService<VisitasService>("visitas");
 
   return useQuery({
@@ -664,7 +664,7 @@ export interface SalesListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useSaless(options?: SalesListOptions) {
+export function useSalesList(options?: SalesListOptions) {
   const service = useEngineService<SalesService>("sales");
 
   return useQuery({
@@ -784,7 +784,7 @@ export interface PurchasesListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function usePurchasess(options?: PurchasesListOptions) {
+export function usePurchasesList(options?: PurchasesListOptions) {
   const service = useEngineService<PurchasesService>("purchases");
 
   return useQuery({
@@ -904,7 +904,7 @@ export interface DistribucionesListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useDistribucioness(options?: DistribucionesListOptions) {
+export function useDistribucionesList(options?: DistribucionesListOptions) {
   const service = useEngineService<DistribucionesService>("distribuciones");
 
   return useQuery({
@@ -988,7 +988,7 @@ export interface AbonosListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useAbonoss(options?: AbonosListOptions) {
+export function useAbonosList(options?: AbonosListOptions) {
   const service = useEngineService<AbonosService>("abonos");
 
   return useQuery({
@@ -1108,7 +1108,7 @@ export interface FilesListOptions {
   sortOrder?: "asc" | "desc";
 }
 
-export function useFiless(options?: FilesListOptions) {
+export function useFilesList(options?: FilesListOptions) {
   const service = useEngineService<FilesService>("files");
 
   return useQuery({

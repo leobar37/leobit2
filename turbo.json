@@ -13,11 +13,11 @@
       "cache": true
     },
     "@avileo/app#build": {
-      "dependsOn": ["@avileo/shared#build"],
+      "dependsOn": ["^build", "@avileo/shared#build"],
       "outputs": ["build/**"]
     },
     "@avileo/backend#build": {
-      "dependsOn": ["@avileo/shared#build"],
+      "dependsOn": ["^build", "@avileo/shared#build"],
       "outputs": ["dist/**"]
     },
     "@avileo/shared#build": {

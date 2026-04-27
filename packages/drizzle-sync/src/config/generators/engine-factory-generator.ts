@@ -89,13 +89,14 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
 
     for (const name of input.entityNames) {
       const pascal = pascalCase(name);
-      ib.line(`if (overrides?.${name}) {`);
+      ib.line(`const ${name}Factory = overrides?.${name};`);
+      ib.line(`if (${name}Factory) {`);
       ib.indent((iib) => {
-        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine) => overrides.${name}(engine as AvileoSyncEngine<TOverrides>) });`);
+        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine: SyncClientEngine) => ${name}Factory(engine as AvileoSyncEngine<TOverrides>) });`);
       });
       ib.line("} else {");
       ib.indent((iib) => {
-        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine) => new ${pascal}Service(engine) });`);
+        ib.line(`definitions.push({ name: "${name}", entityType: "${name}", factory: (engine: SyncClientEngine) => new ${pascal}Service(engine) });`);
       });
       ib.line("}");
     }

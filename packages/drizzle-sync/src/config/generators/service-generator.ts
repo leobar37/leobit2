@@ -192,6 +192,13 @@ export class ${pascalCase(entityName)}Service extends BaseService {
   }
 
   /**
+   * Alias for list() - find all ${entityName} for current business
+   */
+  async findByBusiness(options?: { search?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<typeof ${tableRef}.$inferSelect[]> {
+    return this.list(options);
+  }
+
+  /**
    * Create a new ${entityName}
    * Stores locally and queues for server sync
    */

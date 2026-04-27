@@ -1,19 +1,9 @@
-// @ts-nocheck - Route file with complex type errors
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
 import { SyncProvider } from "~/components/sync/sync-status";
-
-function DevToolsWithConfig({ children }: { children: React.ReactNode }) {
-  const clearSync = useClearSyncStorage();
-  return (
-    <SyncDevToolsProvider config={{ onClearStorage: () => clearSync.mutateAsync({ preserveSession: false }) }}>
-      {children}
-    </SyncDevToolsProvider>
-  );
-}
 import { SyncDevTools, SyncDevToolsProvider } from "@avileo/drizzle-sync/react/devtools";
 import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
 import {
@@ -30,14 +20,30 @@ import { refreshSession } from "~/lib/auth-client";
 import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clearStoredAuthState } from "~/lib/session-storage";
 import { createFetchHttpClient, getDeviceId, getDeviceFingerprint } from "@avileo/drizzle-sync/client";
 import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
-import { createAvileoSyncEngine } from "~/lib/sync/generated/engine";
+import { createAvileoSyncEngine, type AvileoSyncEngine } from "~/lib/sync/generated/engine";
+// Local alias to align TypeScript's module-level type references
+type LocalEngineState = SyncClientEngine<Record<string, unknown>> | null;
 import { useSyncInit } from "@avileo/drizzle-sync/react";
+import type { PurchaseService } from "~/lib/services/purchase-service";
+import type { SupplierService } from "~/lib/services/supplier-service";
+import type { ProductService } from "~/lib/services/product-service";
+import type { CustomerService } from "~/lib/services/customer-service";
+import type { SaleService } from "~/lib/services/sale-service";
 
 function OutletWithLog() {
   return <Outlet />;
 }
 
 const BUSINESS_LOADING_TIMEOUT = 15000;
+
+function DevToolsWithConfig({ children }: { children: React.ReactNode }) {
+  const clearSync = useClearSyncStorage();
+  return (
+    <SyncDevToolsProvider config={{ onClearStorage: async () => { await clearSync.mutateAsync({ preserveSession: false }); } }}>
+      {children}
+    </SyncDevToolsProvider>
+  );
+}
 
 function ServicesProviderWrapper({
   businessId,
@@ -50,61 +56,79 @@ function ServicesProviderWrapper({
 }) {
   const queryClient = useQueryClient();
 
-  // Create SyncClientEngine with auto-init database config
-  const engine = useMemo<SyncClientEngine | null>(() => {
-    if (!businessId || !token) return null;
+  // Engine state — useState (not useMemo) so we can initialize asynchronously
+  const [engine, setEngine] = useState<LocalEngineState>(null);
+  const [isEngineLoading, setIsEngineLoading] = useState(true);
+
+  // Async engine creation — must be in useEffect, not useMemo (useMemo does not await async factories)
+  useEffect(() => {
+    if (!businessId || !token) {
+      setEngine(null);
+      setIsEngineLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     const businessUserId = getStoredBusinessUserId() || "";
 
-    try {
-      const { appServiceOverrides } = await import("~/lib/sync/service-overrides");
-      const eng = createAvileoSyncEngine({
-        tenantId: businessId,
-        userId: businessUserId,
-        authToken: token,
-        apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
-        httpClient: createFetchHttpClient({
-          baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
-          getAuthToken: () => token,
-          tenantHeader: { key: "x-business-id", value: () => businessId },
-          getDeviceId: () => getDeviceId(),
-          getFingerprint: () => getDeviceFingerprint(),
-        }),
-        serviceOverrides: appServiceOverrides,
-      });
-      return eng;
-    } catch (err) {
-      console.error("[ServicesProviderWrapper] Failed to create SyncClientEngine:", err);
-      return null;
-    }
+    (async () => {
+      try {
+        const { appServiceOverrides } = await import("~/lib/sync/service-overrides");
+        if (cancelled) return;
+        const eng = createAvileoSyncEngine({
+          tenantId: businessId,
+          userId: businessUserId,
+          authToken: token,
+          apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
+          httpClient: createFetchHttpClient({
+            baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5201",
+            getAuthToken: () => token,
+            tenantHeader: { key: "x-business-id", value: () => businessId },
+            getDeviceId: () => getDeviceId(),
+            getFingerprint: () => getDeviceFingerprint(),
+          }),
+          serviceOverrides: appServiceOverrides,
+        });
+        if (cancelled) return;
+        setEngine(eng as unknown as LocalEngineState);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[ServicesProviderWrapper] Failed to create SyncClientEngine:", err);
+        setEngine(null);
+      } finally {
+        if (!cancelled) {
+          setIsEngineLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [businessId, token]);
 
-  const { isReady, isLoading: isEngineLoading, error, schemaError, hasInitTimeout, progress, totalChanges } = useSyncInit(engine, { timeoutMs: 30000 });
+  const { isReady, isLoading: isSyncLoading, error, schemaError, hasInitTimeout, progress, totalChanges } = useSyncInit(engine as unknown as Parameters<typeof useSyncInit>[0], { timeoutMs: 30000 });
 
+  // Initialize dev tools and service debug helpers once engine is ready
   useEffect(() => {
-    if (!engine || !isReady) {
-      return;
-    }
+    if (!engine || !isReady) return;
 
-    initDevTools({
-      pg: engine.getPg(),
-    });
+    initDevTools({ pg: engine.getPg() });
 
     const syncService = engine.getSyncService();
-    if (!syncService) {
-      return;
-    }
+    if (!syncService) return;
 
     addServiceDebugHelpers({
-      purchaseService: engine.getService("purchases"),
-      supplierService: engine.getService("suppliers"),
+      purchaseService: (engine as AvileoSyncEngine).getService("purchases") as PurchaseService,
+      supplierService: (engine as AvileoSyncEngine).getService("suppliers") as SupplierService,
       syncService,
-      productService: engine.getService("products"),
-      customerService: engine.getService("customers"),
-      saleService: engine.getService("sales"),
+      productService: (engine as AvileoSyncEngine).getService("products") as ProductService,
+      customerService: (engine as AvileoSyncEngine).getService("customers") as CustomerService,
+      saleService: (engine as AvileoSyncEngine).getService("sales") as unknown as SaleService,
     });
   }, [engine, isReady]);
 
-  // ALL hooks must be called before any conditional returns (Rules of Hooks)
+  // ALL hooks must be called before any conditional returns
   const { data: business, isLoading: isBusinessLoading, error: businessError, refetch: refetchBusiness, isFetching } = useBusiness();
 
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -113,68 +137,51 @@ function ServicesProviderWrapper({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Consistency check: validate persisted cache matches localStorage businessId
+  // Detect business ID cache mismatch
   useEffect(() => {
     if (business && business.id) {
       const storedBusinessId = getStoredBusinessId();
       if (storedBusinessId && storedBusinessId !== business.id) {
         console.warn(`[ServicesProviderWrapper] Business ID mismatch: cached=${business.id}, localStorage=${storedBusinessId}. Invalidating cache.`);
-        // Invalidate the business query to force refetch
         queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
-        // Also remove the stale cached data immediately
         queryClient.removeQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
       }
     }
   }, [business, queryClient]);
 
-  // Detect offline mode: we have cached data but query is stale/fetching with error or offline
+  // Detect offline mode
   const isOfflineMode = business && (businessError || (!navigator.onLine && isFetching));
 
+  // Track elapsed time during business loading
   useEffect(() => {
     if (isBusinessLoading && !business) {
       if (startTimeRef.current === null) {
         startTimeRef.current = Date.now();
-
         intervalRef.current = setInterval(() => {
-          if (startTimeRef.current) {
+          if (startTimeRef.current !== null) {
             const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
             setElapsedTime(elapsed);
           }
         }, 1000);
-
-        timeoutRef.current = setTimeout(() => {
-          setHasTimedOut(true);
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
-        }, BUSINESS_LOADING_TIMEOUT);
+        timeoutRef.current = setTimeout(() => setHasTimedOut(true), BUSINESS_LOADING_TIMEOUT);
       }
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      intervalRef.current = null;
+      timeoutRef.current = null;
       startTimeRef.current = null;
       setElapsedTime(0);
       setHasTimedOut(false);
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isBusinessLoading, business]);
 
-  // ============= ALL HOOKS ABOVE THIS LINE =============
-  // NO hooks can be called after this point - only conditional returns
+  // ─── Conditional returns (all hooks called above) ───────────────────────────
 
   const handleRetry = async () => {
     setHasTimedOut(false);
@@ -199,7 +206,6 @@ function ServicesProviderWrapper({
   // Engine initializing (database creation + staged sync in progress)
   if (!engine || isEngineLoading) {
     const progressMessage = progress?.message || "Inicializando base de datos local...";
-    const progressStage = progress?.stage || "";
     const changesCount = totalChanges > 0 ? `(${totalChanges} registros)` : "";
 
     return (
@@ -320,7 +326,6 @@ function ServicesProviderWrapper({
 
   // Timeout with cached data - use persisted data from TanStack Query
   if (hasTimedOut && (isBusinessLoading || !business)) {
-    // If we have business data from persister, use it even on timeout
     if (business) {
       return (
         <>
@@ -373,7 +378,6 @@ function ServicesProviderWrapper({
   }
 
   if (businessError) {
-    // API error and no cached data - show error UI
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
@@ -438,17 +442,13 @@ function ServicesProviderWrapper({
 export default function ProtectedLayout() {
   const { user, isLoading } = useAuth();
   const location = useLocation();
-  const [activeConflict, setActiveConflict] = useState<ConflictData | null>(
-    null,
-  );
+  const [activeConflict, setActiveConflict] = useState<ConflictData | null>(null);
 
   // Keep session alive by refreshing every 15 minutes
   useEffect(() => {
     const checkSession = async () => {
       const session = await refreshSession();
-      if (session) {
-        return;
-      }
+      if (session) return;
 
       const token = getStoredAuthToken();
       if (!token) {
@@ -463,7 +463,6 @@ export default function ProtectedLayout() {
     };
 
     const interval = setInterval(checkSession, 15 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -522,7 +521,6 @@ export default function ProtectedLayout() {
   const businessId = getStoredBusinessId() || "";
   const token = getStoredAuthToken() || "";
 
-  // Redirect to /business/create if no businessId (new user onboarding)
   if (!businessId && location.pathname !== "/business/create") {
     return <Navigate to="/business/create" replace />;
   }

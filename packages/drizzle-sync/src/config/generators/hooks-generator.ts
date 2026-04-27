@@ -171,7 +171,7 @@ function generateListHook(
   return `
 ${listOptionsType}
 
-export function use${pascalName}s(options?: ${pascalName}ListOptions) {
+export function use${pascalName}List(options?: ${pascalName}ListOptions) {
   const service = useEngineService<${serviceClassName}>("${serviceName}");
 
   return useQuery({

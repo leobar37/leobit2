@@ -87,7 +87,7 @@ function columnToZod(col: ColumnMetadata, codec?: FieldCodec): string {
       }
       break;
     case "json":
-      base = "z.record(z.unknown())";
+      base = "z.record(z.string(), z.unknown())";
       break;
     default:
       base = "z.unknown()";
