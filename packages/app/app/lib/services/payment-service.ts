@@ -7,7 +7,7 @@
 import type { SyncClientEngineLike } from "./base-service";
 // Tables accessed via this.tables from engine
 // // Tables are now accessed via this.tables from the engine
-import { eq, and, like, or, sql, desc, gte } from "drizzle-orm";
+import { eq, and, like, or, sql, desc, gte, not, inArray, isNotNull } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
 
 // Import generated base service
@@ -129,9 +129,9 @@ export class PaymentService extends AbonosService {
         and(
           eq(this.tables.sales.businessId, this.businessId),
           eq(this.tables.sales.saleType, "credito"),
-          sql`${this.tables.sales.status} NOT IN ('draft', 'cancelled')`,
-          sql`${this.tables.sales.customerId} IS NOT NULL`,
-          sql`${this.tables.sales.customerId} = ANY(${sql.param(customerIds)})`
+          not(inArray(this.tables.sales.status, ['draft', 'cancelled'])),
+          isNotNull(this.tables.sales.customerId),
+          inArray(this.tables.sales.customerId, customerIds)
         )
       )
       .groupBy(this.tables.sales.customerId);
@@ -146,7 +146,7 @@ export class PaymentService extends AbonosService {
       .where(
         and(
           eq(this.tables.abonos.businessId, this.businessId),
-          sql`${this.tables.abonos.customerId} = ANY(${sql.param(customerIds)})`
+          inArray(this.tables.abonos.customerId, customerIds)
         )
       )
       .groupBy(this.tables.abonos.customerId);
@@ -307,7 +307,7 @@ export class PaymentService extends AbonosService {
           eq(this.tables.sales.customerId, customerId),
           eq(this.tables.sales.businessId, this.businessId),
           eq(this.tables.sales.saleType, "credito"),
-          sql`${this.tables.sales.status} NOT IN ('draft', 'cancelled')`
+          not(inArray(this.tables.sales.status, ['draft', 'cancelled']))
         )
       );
 

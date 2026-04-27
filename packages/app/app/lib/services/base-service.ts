@@ -9,6 +9,7 @@ import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity } from "@avileo/shared";
 import { SyncStatus } from "~/lib/sync/generated/schema";
 import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
+import type { DatabaseAdapter } from "@avileo/drizzle-sync/core";
 import { VALID_TABLES } from "@avileo/drizzle-sync/pglite";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
@@ -17,6 +18,7 @@ import { formatCurrency, formatWeight } from "~/lib/utils";
 export interface SyncClientEngineLike {
   getPg(): PGlite;
   getDb(): ReturnType<typeof drizzle>;
+  getAdapter(): DatabaseAdapter;
   getSyncOperations(): SyncWritePort | null;
   getConfig(): { tenantId: string; userId: string };
   /** Drizzle ORM tables exposed by the engine */
@@ -104,6 +106,10 @@ export abstract class BaseService {
 
   protected get db(): ReturnType<typeof drizzle> {
     return this.engine.getDb();
+  }
+
+  protected get adapter(): DatabaseAdapter {
+    return this.engine.getAdapter();
   }
 
   protected get syncService(): SyncWritePort {
@@ -215,7 +221,7 @@ export abstract class BaseService {
   ): Promise<void> {
     const validatedTableName = validateTableName(tableName);
     const now = this.now();
-    await this.pg.query(
+    await this.adapter.exec(
       `UPDATE ${validatedTableName} SET sync_status = $1, updated_at = $2 WHERE id = $3`,
       [status, now, id]
     );
@@ -231,7 +237,7 @@ export abstract class BaseService {
   ): Promise<number> {
     const validatedTableName = validateTableName(tableName);
 
-    const result = await this.pg.query<{ version: string }>(
+    const result = await this.adapter.query<{ version: string }>(
       `SELECT version FROM ${validatedTableName} WHERE id = $1`,
       [id]
     );
@@ -242,7 +248,7 @@ export abstract class BaseService {
     const newVersion = currentVersion + 1;
 
     const now = this.now();
-    await this.pg.query(
+    await this.adapter.exec(
       `UPDATE ${validatedTableName} SET version = $1, sync_status = $2, updated_at = $3 WHERE id = $4`,
       [newVersion, SyncStatus.PENDING, now, id]
     );

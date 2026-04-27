@@ -5,7 +5,7 @@
  */
 
 import type { SyncClientEngineLike } from "./base-service";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, ne, sql } from "drizzle-orm";
 import {
   PurchasesService,
   type CreatePurchasesInput,
@@ -149,7 +149,7 @@ export class PurchaseService extends PurchasesService {
       .where(
         and(
           eq(this.tables.purchases.businessId, this.businessId),
-          sql`${this.tables.purchases.status} != 'draft'`
+          ne(this.tables.purchases.status, 'draft')
         )
       )
       .orderBy(desc(this.tables.purchases.purchaseDate), desc(this.tables.purchases.createdAt));
@@ -209,7 +209,7 @@ export class PurchaseService extends PurchasesService {
         and(
           eq(this.tables.purchases.supplierId, supplierId),
           eq(this.tables.purchases.businessId, this.businessId),
-          sql`${this.tables.purchases.status} != 'draft'`
+          ne(this.tables.purchases.status, 'draft')
         )
       )
       .orderBy(desc(this.tables.purchases.purchaseDate), desc(this.tables.purchases.createdAt));

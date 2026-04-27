@@ -272,11 +272,11 @@ export class SaleService extends BaseService {
     }
 
     if (query.startDate) {
-      conditions.push(sql`${this.tables.sales.saleDate} >= ${query.startDate}`);
+      conditions.push(gte(this.tables.sales.saleDate, query.startDate));
     }
 
     if (query.endDate) {
-      conditions.push(sql`${this.tables.sales.saleDate} <= ${query.endDate}`);
+      conditions.push(lte(this.tables.sales.saleDate, query.endDate));
     }
 
     if (query.hasBalanceDue) {
