@@ -142,7 +142,7 @@ interface SyncOptions {
 
 ## SchemaConfig
 
-Schema generation settings.
+Optional schema generation settings for package-local configs. In a monorepo, prefer the root `drizzle-sync.config.ts` project config for paths.
 
 ```typescript
 interface SchemaConfig {
@@ -150,6 +150,21 @@ interface SchemaConfig {
   autoBuild?: boolean;     // Build on config change
   watch?: boolean;         // Watch mode
   watchPath?: string;      // File to watch
+}
+```
+
+---
+
+## DrizzleSyncProjectConfig
+
+Workspace-level paths for code generation.
+
+```typescript
+interface DrizzleSyncProjectConfig {
+  schemaConfig: string;  // Backend sync config path
+  schemaOutput?: string; // Generated sync.schema.json path
+  clientOutput: string;  // Frontend generated code path
+  serverOutput?: string; // Backend generated code path
 }
 ```
 

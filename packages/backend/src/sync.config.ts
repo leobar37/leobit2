@@ -226,13 +226,6 @@ export const syncConfig = defineSyncConfig({
     maxRetries: 3,
     syncInterval: 30000,
   },
-
-  schema: {
-    output: "./src/sync.schema.json",
-    autoBuild: true,
-    watch: process.env.NODE_ENV === "development",
-    watchPath: "./src/sync.config.ts",
-  },
 });
 
 export default syncConfig;

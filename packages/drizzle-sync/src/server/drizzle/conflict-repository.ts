@@ -13,7 +13,7 @@ import {
   type ConflictResolutionData,
   type ISyncConflictRepository,
 } from "../conflict-repository";
-import type { RepositoryRequestContext } from "../types";
+import type { RepositoryRequestContext } from "../conflict-repository";
 
 export interface DrizzleConflictRepoConfig {
   table: PgTable;

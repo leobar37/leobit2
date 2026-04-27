@@ -32,7 +32,10 @@ export class SyncConfigBuilder<
         this.startWatch();
       }
 
-      if (input.schema.autoBuild !== false) {
+      if (
+        input.schema.autoBuild !== false &&
+        process.env.DRIZZLE_SYNC_DISABLE_AUTO_BUILD !== "1"
+      ) {
         queueMicrotask(() => {
           void this.buildSchema().catch((error) => {
             console.error("[drizzle-sync] auto schema build failed:", error);
@@ -42,8 +45,17 @@ export class SyncConfigBuilder<
     }
   }
 
-  async buildSchema(): Promise<SyncSchema> {
-    if (!this._schemaManager) {
+  async buildSchema(options?: { output?: string }): Promise<SyncSchema> {
+    const schemaManager = options?.output
+      ? new SchemaManager({
+          ...(this.input.schema ?? {}),
+          output: options.output,
+          autoBuild: false,
+          watch: false,
+        })
+      : this._schemaManager;
+
+    if (!schemaManager) {
       throw new Error("SchemaManager not initialized. Add 'schema' config to defineSyncConfig.");
     }
 
@@ -56,7 +68,7 @@ export class SyncConfigBuilder<
     }
 
     const graph = buildRelationGraph(this.input.entities);
-    return this._schemaManager.build(this.input.entities, graph, this.input.tenancy);
+    return schemaManager.build(this.input.entities, graph, this.input.tenancy);
   }
 
   getSchema(): SyncSchema | undefined {

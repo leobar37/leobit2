@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { SyncConfigBuilder } from "./builder";
-import type { SyncConfigInput, EntitySyncConfig } from "./types";
+import type { DrizzleSyncProjectConfig, SyncConfigInput, EntitySyncConfig } from "./types";
 
 /**
  * Create a type-safe sync configuration
@@ -10,6 +10,12 @@ export function defineSyncConfig<TEntities extends Record<string, EntitySyncConf
   config: SyncConfigInput<TEntities>
 ): SyncConfigBuilder<TEntities> {
   return new SyncConfigBuilder(config);
+}
+
+export function defineDrizzleSyncProject(
+  config: DrizzleSyncProjectConfig
+): DrizzleSyncProjectConfig {
+  return config;
 }
 
 /**

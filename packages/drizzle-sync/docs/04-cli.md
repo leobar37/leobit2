@@ -58,7 +58,7 @@ Schema generated at ./src/sync.schema.json
 
 ### generate
 
-Generate all frontend code from `sync.schema.json`.
+Generate frontend code from `sync.schema.json`.
 
 ```bash
 drizzle-sync generate [options]
@@ -68,18 +68,20 @@ drizzle-sync generate [options]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-c, --config <path>` | `./src/sync.config.ts` | Path to sync config |
-| `-o, --output <path>` | `./generated` | Output directory |
+| `-c, --config <path>` | `./src/sync.config.ts` | Path to `drizzle-sync.config.ts` or `sync.config.ts` |
+| `-o, --output <path>` | root config `clientOutput` | Frontend output directory |
+| `--client-output <path>` | - | Frontend output directory (overrides `--output`) |
+| `--server-output <path>` | - | Reserved for backend-only generated files |
 | `--dry-run` | `false` | Show what would be generated |
 
 **Example:**
 
 ```bash
-# Generate to default location
-drizzle-sync generate
+# Generate using workspace paths
+drizzle-sync generate --config ../../drizzle-sync.config.ts
 
-# Generate to custom location
-drizzle-sync generate -o ./src/generated
+# Generate to custom frontend location
+drizzle-sync generate --config ../../drizzle-sync.config.ts --client-output ./src/generated
 
 # Dry run (see what would be generated)
 drizzle-sync generate --dry-run
@@ -153,7 +155,10 @@ drizzle-sync clean [options]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-o, --output <path>` | `./generated` | Output directory |
+| `-c, --config <path>` | `./src/sync.config.ts` | Path to `drizzle-sync.config.ts` or `sync.config.ts` |
+| `-o, --output <path>` | root config `clientOutput` | Frontend output directory |
+| `--client-output <path>` | - | Frontend output directory (overrides `--output`) |
+| `--server-output <path>` | - | Reserved for backend-only generated files |
 
 **Example:**
 

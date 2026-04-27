@@ -12,7 +12,8 @@ import {
   type DeadLetterRecord,
   type ISyncDeadLetterRepository,
 } from "../dead-letter-repository";
-import type { SyncOperationInput, RepositoryRequestContext } from "../types";
+import type { SyncOperationInput } from "../types";
+import type { RepositoryRequestContext } from "../dead-letter-repository";
 
 export interface DrizzleDeadLetterRepoConfig {
   table: PgTable;

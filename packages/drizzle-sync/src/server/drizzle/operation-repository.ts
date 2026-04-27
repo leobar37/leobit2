@@ -14,7 +14,8 @@ import {
   type SyncOperationRepositoryOptions,
   type ISyncOperationRepository,
 } from "../operation-repository";
-import type { SyncOperationInput, RepositoryRequestContext } from "../types";
+import type { SyncOperationInput } from "../types";
+import type { RepositoryRequestContext } from "../operation-repository";
 
 export interface DrizzleOperationRepoConfig {
   /** Drizzle table instance */

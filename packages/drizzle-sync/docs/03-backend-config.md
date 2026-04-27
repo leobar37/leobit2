@@ -181,17 +181,16 @@ export const syncConfig = defineSyncConfig({
 ## Schema Output
 
 ```typescript
-export const syncConfig = defineSyncConfig({
-  // ... config
-
-  schema: {
-    output: "./src/sync.schema.json",  // Generated schema path
-    autoBuild: true,                    // Build on config change
-    watch: process.env.NODE_ENV === "development",  // Watch mode
-    watchPath: "./src/sync.config.ts", // Config file to watch
-  },
+// drizzle-sync.config.ts at the workspace root
+export default defineDrizzleSyncProject({
+  schemaConfig: "packages/backend/src/sync.config.ts",
+  schemaOutput: "packages/drizzle-sync/src/sync.schema.json",
+  clientOutput: "packages/app/app/lib/sync/generated",
+  serverOutput: "packages/backend/src/sync/generated",
 });
 ```
+
+The backend `sync.config.ts` should define entities and sync behavior; workspace paths live in the root project config.
 
 ## Complete Example
 

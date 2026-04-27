@@ -6,7 +6,6 @@
  */
 
 import type { ISyncLogger } from "../core";
-import type { SyncOperationInput } from "./types";
 
 /**
  * Sync metrics tracking

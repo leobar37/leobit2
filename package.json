@@ -9,6 +9,10 @@
     "db:migrate": "turbo run db:migrate",
     "db:generate": "turbo run db:generate",
     "db:backup": "cd packages/backend && bun run db:backup",
+    "sync:build-schema": "bun run --cwd packages/drizzle-sync build && bun packages/drizzle-sync/dist/cli.js build-schema --config ./drizzle-sync.config.ts",
+    "sync:generate": "bun run sync:build-schema && bun packages/drizzle-sync/dist/cli.js generate --config ./drizzle-sync.config.ts",
+    "sync:validate": "bun run --cwd packages/drizzle-sync build && bun packages/drizzle-sync/dist/cli.js validate --config ./drizzle-sync.config.ts",
+    "sync:clean": "bun packages/drizzle-sync/dist/cli.js clean --config ./drizzle-sync.config.ts",
     "test:e2e": "./scripts/test-e2e.sh"
   },
   "devDependencies": {

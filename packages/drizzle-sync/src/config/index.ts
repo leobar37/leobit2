@@ -25,6 +25,7 @@ export type {
   SyncTenancyConfig,
   EntityTenancyConfig,
   SchemaConfig,
+  DrizzleSyncProjectConfig,
   SyncConfigInput,
 } from "./types";
 
@@ -59,7 +60,13 @@ export {
 } from "./validator";
 
 // Nuevos exports para codegen
-export { defineSyncConfig, createId, generateSyncGroupId, generateIdempotencyKey } from "./define-config";
+export {
+  defineSyncConfig,
+  defineDrizzleSyncProject,
+  createId,
+  generateSyncGroupId,
+  generateIdempotencyKey,
+} from "./define-config";
 export { introspectTable, detectRelations, buildRelationGraph, resolveColumns } from "./introspect";
 export { loadConfig } from "./loader";
 export { generateAll } from "./generator";

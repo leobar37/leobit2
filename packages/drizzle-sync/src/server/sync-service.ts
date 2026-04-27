@@ -5,26 +5,24 @@
  * hooks for business-specific customization.
  */
 
+import type { ISyncEventEmitter } from "../core";
 import type {
-  SyncOperationInput,
-  SyncBatchResult,
-  SyncBatchEntry,
-  SyncHandlerResult,
-} from "./types";
-import type {
-  ISyncOperationRepository,
-  SyncOperationRecord,
-  RepositoryRequestContext,
-} from "./operation-repository";
-import type {
+  ConflictResolutionData,
   ISyncConflictRepository,
   SyncConflict,
-  ConflictResolutionData,
 } from "./conflict-repository";
-import type { ISyncDeadLetterRepository, DeadLetterRecord } from "./dead-letter-repository";
-import type { SyncEngine, SyncEngineConfig, SyncRequestContext } from "./sync-engine";
 import type { GenericConflictResolverRegistry } from "./conflict-resolver";
-import type { ISyncEventEmitter } from "../core";
+import type { DeadLetterRecord, ISyncDeadLetterRepository } from "./dead-letter-repository";
+import type {
+  ISyncOperationRepository
+} from "./operation-repository";
+import type { SyncEngine, SyncRequestContext } from "./sync-engine";
+import type {
+  SyncBatchEntry,
+  SyncBatchResult,
+  SyncHandlerResult,
+  SyncOperationInput,
+} from "./types";
 
 // ============================================================================
 // Hooks

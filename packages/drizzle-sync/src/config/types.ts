@@ -145,6 +145,13 @@ export interface SchemaConfig {
   watchPath?: string;
 }
 
+export interface DrizzleSyncProjectConfig {
+  schemaConfig: string;
+  schemaOutput?: string;
+  clientOutput: string;
+  serverOutput?: string;
+}
+
 export interface SyncConfigInput<
   TEntities extends Record<string, EntitySyncConfig> = Record<string, EntitySyncConfig>
 > extends SyncConfig<TEntities> {
