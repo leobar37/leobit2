@@ -51,34 +51,8 @@ export type {
   BackendConflictResponse,
 } from "../core";
 
-// Database initialization
-export {
-  initPgliteDatabase,
-  getDatabase,
-  disposeDatabase,
-  resetDatabase,
-  type DatabaseInitConfig,
-  type DatabaseInitResult,
-} from "./database-init";
-
-// Schema hash
-export {
-  computeSchemaHash,
-  hasSchemaChanged,
-  saveSchemaHash,
-  clearSchemaHash,
-} from "./schema-hash";
-
-// Pending data export/import
-export {
-  exportPendingData,
-  importPendingData,
-  buildPendingDataConfig,
-  buildPendingDataFromRegistry,
-  type PendingTableConfig,
-  type PendingTableData,
-  type PendingDataConfig,
-} from "./pending-data";
+// Re-export DatabaseInitConfig from database-init for engine configuration
+export type { DatabaseInitConfig } from "./database-init";
 
 // Cursor storage
 /** @deprecated Use createStorageAdapter() from ./storage instead */

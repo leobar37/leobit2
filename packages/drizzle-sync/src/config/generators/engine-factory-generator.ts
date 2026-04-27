@@ -14,7 +14,7 @@ export function generateEngineFactoryFile(input: EngineFactoryInput): string {
   b.blank();
 
   b.line('import { createSyncClientEngine } from "@avileo/drizzle-sync/client";');
-  b.line('import { buildPendingDataFromRegistry } from "@avileo/drizzle-sync/client";');
+  b.line('import { buildPendingDataFromRegistry } from "@avileo/drizzle-sync/pglite";');
   b.line('import type { SyncClientEngine, ISyncClientHttpClient } from "@avileo/drizzle-sync/client";');
   b.line('import { SCHEMA_SQL } from "./schema-sql";');
   b.line('import { SYNC_TABLE_REGISTRY } from "./sync-tables";');

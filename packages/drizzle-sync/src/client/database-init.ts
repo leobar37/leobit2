@@ -39,14 +39,8 @@ export interface DatabaseInitConfig {
   workerDisabled?: boolean;
   /** Optional: Pending data config for schema reset preservation */
   pendingDataConfig?: PendingDataConfig;
-  /** Optional: Schema version key for localStorage */
-  versionKey?: string;
-  /** Optional: Storage implementation (default: localStorage) */
-  storage?: Storage;
-  /** Optional: StorageAdapter for unified key management (takes precedence over storage/versionKey) */
+  /** Optional: StorageAdapter for unified key management */
   storageAdapter?: StorageAdapter;
-  /** Optional: Force reset flag key in storage */
-  forceResetKey?: string;
   /** Optional: Callback before database reset */
   onBeforeReset?: () => Promise<void> | void;
   /** Optional: Callback after database initialized */
@@ -167,53 +161,18 @@ async function doInit(config: DatabaseInitConfig): Promise<DatabaseInitResult> {
     drizzleSchema,
     locateFile,
     pendingDataConfig,
-    versionKey = "drizzle_sync_schema_hash",
-    storage = typeof localStorage !== "undefined" ? localStorage : undefined,
     storageAdapter,
-    forceResetKey = "DRIZZLE_SYNC_FORCE_RESET",
   } = config;
 
-  // Use StorageAdapter for key resolution when available
-  const getStorageValue = (kind: "schemaHash" | "forceReset"): string | null => {
-    if (storageAdapter) {
-      if (kind === "schemaHash") return storageAdapter.getByKind("schemaHash");
-      if (kind === "forceReset") return storageAdapter.getByKind("forceReset");
-    }
-    // Legacy fallback
-    if (kind === "schemaHash") return storage?.getItem(versionKey) ?? null;
-    if (kind === "forceReset") return storage?.getItem(forceResetKey) ?? null;
-    return null;
-  };
-
-  const setStorageValue = (kind: "schemaHash" | "forceReset", value: string): void => {
-    if (storageAdapter) {
-      if (kind === "schemaHash") { storageAdapter.setByKind("schemaHash", value); return; }
-      if (kind === "forceReset") { storageAdapter.setByKind("forceReset", value); return; }
-    }
-    // Legacy fallback
-    if (kind === "schemaHash") { storage?.setItem(versionKey, value); return; }
-    if (kind === "forceReset") { storage?.setItem(forceResetKey, value); return; }
-  };
-
-  const removeStorageValue = (kind: "schemaHash" | "forceReset"): void => {
-    if (storageAdapter) {
-      if (kind === "schemaHash") { storageAdapter.removeByKind("schemaHash"); return; }
-      if (kind === "forceReset") { storageAdapter.removeByKind("forceReset"); return; }
-    }
-    // Legacy fallback
-    if (kind === "schemaHash") { storage?.removeItem(versionKey); return; }
-    if (kind === "forceReset") { storage?.removeItem(forceResetKey); return; }
-  };
-
   // Check for force reset
-  const forceReset = getStorageValue("forceReset") === "true";
+  const forceReset = storageAdapter?.getByKind("forceReset") === "true";
   if (forceReset) {
-    removeStorageValue("forceReset");
+    storageAdapter?.removeByKind("forceReset");
   }
 
   // Compute schema hash
   const currentHash = await computeSchemaHash(schemaSql);
-  const storedHash = getStorageValue("schemaHash") ?? "";
+  const storedHash = storageAdapter?.getByKind("schemaHash") ?? "";
   const needsReset = forceReset || storedHash !== currentHash;
 
   let pendingData: PendingTableData[] | null = null;
@@ -224,9 +183,11 @@ async function doInit(config: DatabaseInitConfig): Promise<DatabaseInitResult> {
       const tempPg = await createPgliteInstance(dataDir, { locateFile });
       try {
         pendingData = await exportPendingData(tempPg, pendingDataConfig);
-        console.log(
-          `[DB] Exported pending data: ${pendingData.map((d) => `${d.table}(${d.rows.length})`).join(", ")}`
-        );
+        if (pendingData && pendingData.length > 0) {
+          console.log(
+            `[DB] Exported pending data: ${pendingData.map((d) => `${d.table}(${d.rows.length})`).join(", ")}`
+          );
+        }
       } finally {
         await tempPg.close();
       }
@@ -251,7 +212,9 @@ async function doInit(config: DatabaseInitConfig): Promise<DatabaseInitResult> {
   }
 
   // Save hash before init to prevent infinite loops
-  setStorageValue("schemaHash", currentHash);
+  if (storageAdapter) {
+    saveSchemaHash(currentHash, storageAdapter);
+  }
 
   // Create fresh instance
   const pg = await createPgliteInstance(dataDir, { locateFile });
@@ -313,14 +276,12 @@ export async function disposeDatabase(): Promise<void> {
  * Reset database (clears schema hash and disposes)
  */
 export async function resetDatabase(options?: {
-  versionKey?: string;
-  storage?: Storage;
+  storageAdapter?: StorageAdapter;
 }): Promise<void> {
   if (!isBrowser) return;
 
-  const versionKey = options?.versionKey ?? "drizzle_sync_schema_hash";
-  const storage = options?.storage ?? (typeof localStorage !== "undefined" ? localStorage : undefined);
-
-  storage?.removeItem(versionKey);
+  if (options?.storageAdapter) {
+    options.storageAdapter.removeByKind("schemaHash");
+  }
   await disposeDatabase();
 }

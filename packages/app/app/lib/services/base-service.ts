@@ -20,7 +20,7 @@ export interface SyncClientEngineLike {
   getSyncOperations(): SyncWritePort | null;
   getConfig(): { tenantId: string; userId: string };
   /** Drizzle ORM tables exposed by the engine */
-  tables: Record<string, unknown>;
+  tables: Record<string, any>;
 }
 
 /**
@@ -135,7 +135,7 @@ export abstract class BaseService {
     * const result = await this.db.select().from(this.tables.customers).where(eq(this.tables.customers.id, id));
     * ```
     */
-  protected get tables(): Record<string, unknown> {
+  protected get tables(): Record<string, any> {
     return this.engine.tables;
   }
 

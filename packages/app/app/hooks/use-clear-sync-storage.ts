@@ -4,7 +4,7 @@
  */
 import { useMutation } from "@tanstack/react-query";
 import { clearSyncStorage } from "~/lib/session-storage";
-import { resetDatabase } from "@avileo/drizzle-sync/client";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
 
 export interface ClearSyncStorageInput {
   /** Whether to reload the page after clearing (default: true) */
@@ -16,6 +16,8 @@ export interface ClearSyncStorageInput {
 }
 
 export function useClearSyncStorage() {
+  const engine = useSyncEngine();
+
   return useMutation({
     mutationFn: async (input: ClearSyncStorageInput = {}) => {
       const {
@@ -33,7 +35,10 @@ export function useClearSyncStorage() {
 
         // First close PGlite properly to avoid connection issues
         console.log("[ClearSync] Closing PGlite database...");
-        await resetDatabase();
+        const adapter = engine.getAdapter();
+        if (adapter && 'dispose' in adapter && typeof adapter.dispose === 'function') {
+          await (adapter as any).dispose();
+        }
         console.log("[ClearSync] PGlite database closed");
 
         // Then clear session storage and IndexedDB

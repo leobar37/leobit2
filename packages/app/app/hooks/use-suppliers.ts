@@ -5,9 +5,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { eq, and, ilike } from "drizzle-orm";
-import { getDatabase } from "@avileo/drizzle-sync/client";
 import { suppliers, type Suppliers as Supplier } from "~/lib/sync/generated/schema";
-import { useEngineService } from "@avileo/drizzle-sync/react";
+import { useEngineService, useSyncEngine } from "@avileo/drizzle-sync/react";
 import { SupplierService } from "~/lib/services/supplier-service";
 
 export type { Supplier };
@@ -41,10 +40,11 @@ const SUPPLIERS_QUERY_KEY = "suppliers";
  * Get all suppliers for a business
  */
 export function useSuppliers(businessId: string) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [SUPPLIERS_QUERY_KEY, businessId],
     queryFn: async () => {
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
       return db
         .select()
         .from(suppliers)
@@ -62,10 +62,11 @@ export function useSearchSuppliers(
   businessId: string,
   searchTerm: string | null
 ) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [SUPPLIERS_QUERY_KEY, "search", businessId, searchTerm],
     queryFn: async () => {
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
 
       if (!searchTerm || searchTerm.length < 2) {
         return db
@@ -97,11 +98,12 @@ export function useSearchSuppliers(
  * Get a single supplier
  */
 export function useSupplier(id: string | null) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [SUPPLIERS_QUERY_KEY, id],
     queryFn: async () => {
       if (!id) return null;
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
       const result = await db
         .select()
         .from(suppliers)

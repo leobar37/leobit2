@@ -48,14 +48,23 @@ import type {
   SyncClientEngineConfig,
   SyncClientEngineContext,
   SyncClientEngineStatus,
+  INavigator,
 } from "./types";
-import { initPgliteDatabase, disposeDatabase, resetDatabase } from "./database-init";
 import { createStorageAdapter, StorageAdapter } from "./storage/storage";
 import type { StorageConfig } from "./storage/types";
 import { getFileUploadService } from "./file-upload-service";
 import { PgLiteAdapter } from "../pglite/pglite-adapter";
+import { resetDatabase } from "./database-init";
+import { createDeviceIdentity, type IDeviceIdentity } from "./device-identity";
 
 type EngineState = "uninitialized" | "initialized" | "running" | "stopped";
+
+function createBrowserNavigator(): INavigator {
+  return {
+    reload: () => window.location.reload(),
+    redirect: (url: string) => { window.location.href = url; },
+  };
+}
 
 export interface BatchContext {
   enqueue: (params: EnqueueParams) => Promise<string>;
@@ -85,8 +94,6 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
 
   private state: EngineState = "uninitialized";
   private initPromise: Promise<void> | null = null;
-  private pg: PGlite | null = null;
-  private db: ReturnType<typeof drizzle> | null = null;
   private adapter: DatabaseAdapter | null = null;
   private syncQueue: ISyncQueue | null = null;
   private syncService: PushSyncService | null = null;
@@ -98,12 +105,19 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
 
   /** Drizzle ORM tables exposed to services */
   readonly tables: Record<string, unknown>;
+  private readonly deviceIdentity: IDeviceIdentity;
+  private readonly navigator: INavigator;
 
   constructor(config: SyncClientEngineConfig) {
     this.config = config;
     this.eventEmitter = config.eventEmitter ?? new SyncEventEmitter();
     this.mutex = config.mutex ?? new SyncMutex();
     this.storageAdapter = config.storageAdapter ?? createStorageAdapter(config.storage);
+    this.deviceIdentity = config.deviceIdentity ?? createDeviceIdentity(
+      this.storageAdapter.getBackend(),
+      { prefix: config.storage?.keys?.prefix, namespace: config.storage?.keys?.namespace }
+    );
+    this.navigator = config.navigator ?? createBrowserNavigator();
     this.tables = config.tables ?? {};
   }
 
@@ -185,27 +199,42 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
   }
 
   /**
+   * Get the raw PGlite + Drizzle instance pair.
+   * Use this when you need direct database access outside the sync engine.
+   */
+  getDatabaseInstance(): { pg: PGlite; db: ReturnType<typeof drizzle> } {
+    this.ensureInitialized();
+    if (!this.adapter || !(this.adapter instanceof PgLiteAdapter)) {
+      throw new Error("Database instance not available. Call initialize() first.");
+    }
+    return this.adapter.getInstance();
+  }
+
+  /**
+   * Get the database adapter.
+   */
+  getAdapter(): DatabaseAdapter {
+    this.ensureInitialized();
+    if (!this.adapter) {
+      throw new Error("Adapter not initialized. Call initialize() first.");
+    }
+    return this.adapter;
+  }
+
+  /**
    * Get the PGlite instance.
-   * @deprecated Use getDb() for Drizzle queries or pass a DatabaseAdapter for backend-agnostic access.
+   * @deprecated Use getDatabaseInstance() instead.
    */
   getPg(): PGlite {
-    if (!this.pg) {
-      if (this.adapter) {
-        throw new Error(
-          "getPg() is not available when running with a custom DatabaseAdapter. " +
-          "Use getDb() for Drizzle queries or provide a PGlite adapter."
-        );
-      }
-      throw new Error("PGlite not initialized. Call initialize() first.");
-    }
-    return this.pg;
+    return this.getDatabaseInstance().pg;
   }
 
   getDb(): ReturnType<typeof drizzle> {
-    if (!this.db) {
+    this.ensureInitialized();
+    if (!this.adapter) {
       throw new Error("Drizzle not initialized. Call initialize() first.");
     }
-    return this.db;
+    return this.adapter.getDb() as ReturnType<typeof drizzle>;
   }
 
   async initialize(): Promise<void> {
@@ -225,21 +254,14 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
 
   private async doInitialize(): Promise<void> {
     if (this.config.adapter) {
-      this.pg = null;
       this.adapter = this.config.adapter;
-      this.db = this.config.adapter.getDb() as ReturnType<typeof drizzle>;
     } else if (this.config.databaseConfig) {
-      const result = await initPgliteDatabase({
+      this.adapter = await PgLiteAdapter.create({
         ...this.config.databaseConfig,
         storageAdapter: this.storageAdapter,
       });
-      this.pg = result.pg;
-      this.db = result.db;
-      this.adapter = new PgLiteAdapter(result.pg, result.db);
     } else if (this.config.pg && this.config.db) {
-      this.pg = this.config.pg;
-      this.db = this.config.db;
-      this.adapter = new PgLiteAdapter(this.config.pg, this.config.db);
+      this.adapter = PgLiteAdapter.fromInstance({ pg: this.config.pg, db: this.config.db });
     } else {
       throw new Error(
         "SyncClientEngine requires 'adapter', 'databaseConfig', or both 'pg' and 'db'. "
@@ -680,17 +702,40 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
     return this.storageAdapter;
   }
 
+  /**
+   * Get the device identity provider.
+   * Used for multi-device sync tracking.
+   */
+  getDeviceIdentity(): IDeviceIdentity {
+    return this.deviceIdentity;
+  }
+
+  /**
+   * Get the device ID for this device.
+   * Convenience method delegating to getDeviceIdentity().getDeviceId().
+   */
+  getDeviceId(): string {
+    return this.deviceIdentity.getDeviceId();
+  }
+
+  /**
+   * Get the device fingerprint.
+   * Convenience method delegating to getDeviceIdentity().getFingerprint().
+   */
+  getDeviceFingerprint(): string {
+    return this.deviceIdentity.getFingerprint();
+  }
+
   async dispose(): Promise<void> {
     await this.stop();
-    if (this.pg) {
+    if (this.adapter && this.adapter instanceof PgLiteAdapter) {
       try {
-        await this.pg.close();
+        await this.adapter.dispose();
       } catch (error) {
         console.warn("[SyncClientEngine] Failed to close PGlite:", error);
       }
     }
-    this.pg = null;
-    this.db = null;
+    this.adapter = null;
     this.state = "uninitialized";
   }
 
@@ -708,15 +753,6 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
 
     await this.dispose();
 
-    // Clear IndexedDB databases
-    const dataDir = this.config.databaseConfig?.dataDir;
-    if (dataDir) {
-      await resetDatabase({
-        versionKey: this.config.databaseConfig?.versionKey,
-        storage: this.config.databaseConfig?.storage,
-      });
-    }
-
     // Clear sync-related keys via StorageAdapter
     this.storageAdapter.clearSyncKeys();
 
@@ -725,9 +761,9 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
     this.storageAdapter.removeKeys([...authKeys, ...clearStorageKeys]);
 
     if (reloadPage) {
-      window.location.reload();
+      this.navigator.reload();
     } else {
-      window.location.href = redirectUrl;
+      this.navigator.redirect(redirectUrl);
     }
   }
 

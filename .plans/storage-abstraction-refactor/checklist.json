@@ -1,0 +1,50 @@
+{
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Device Identity Abstraction",
+      "file": "tasks/t-001-device-identity-abstraction.md",
+      "status": "completed",
+      "dependencies": [],
+      "requirements": [
+        "R-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Eliminar Legacy localStorage Fallback",
+      "file": "tasks/t-002-eliminar-legacy-localstorage-fallback.md",
+      "status": "completed",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "R-002"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Abstraer window.location Navegación",
+      "file": "tasks/t-003-abstraer-window-location-navegacion.md",
+      "status": "completed",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "R-003"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Abstraer Online/Offline Detection",
+      "file": "tasks/t-004-abstraer-online-offline-detection.md",
+      "status": "completed",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "R-004"
+      ]
+    }
+  ]
+}

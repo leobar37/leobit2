@@ -23,21 +23,8 @@ async function ensureTable(pg: PGlite): Promise<void> {
   }
 }
 
-async function getPgAsync(): Promise<PGlite | null> {
-  try {
-    const { getDatabase } = await import("@avileo/drizzle-sync/client");
-    const result = getDatabase();
-    return result?.pg ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export const offlineCache = {
-  async get<T>(key: string): Promise<T | null> {
-    const pg = await getPgAsync();
-    if (!pg) return null;
-
+  async get<T>(pg: PGlite, key: string): Promise<T | null> {
     try {
       await ensureTable(pg);
 
@@ -52,7 +39,7 @@ export const offlineCache = {
       const expiresAt = row.expires_at ? parseInt(row.expires_at, 10) : null;
 
       if (expiresAt && Date.now() > expiresAt) {
-        await this.remove(key);
+        await this.remove(pg, key);
         return null;
       }
 
@@ -63,13 +50,7 @@ export const offlineCache = {
     }
   },
 
-  async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
-    const pg = await getPgAsync();
-    if (!pg) {
-      console.warn("[Cache] PGlite not available, skipping cache");
-      return;
-    }
-
+  async set<T>(pg: PGlite, key: string, value: T, ttlMs?: number): Promise<void> {
     try {
       await ensureTable(pg);
 
@@ -91,10 +72,7 @@ export const offlineCache = {
     }
   },
 
-  async remove(key: string): Promise<void> {
-    const pg = await getPgAsync();
-    if (!pg) return;
-
+  async remove(pg: PGlite, key: string): Promise<void> {
     try {
       await pg.query(`DELETE FROM app_cache WHERE key = $1`, [key]);
     } catch (error) {
@@ -102,10 +80,7 @@ export const offlineCache = {
     }
   },
 
-  async clear(): Promise<void> {
-    const pg = await getPgAsync();
-    if (!pg) return;
-
+  async clear(pg: PGlite): Promise<void> {
     try {
       await pg.exec(`DELETE FROM app_cache`);
     } catch (error) {

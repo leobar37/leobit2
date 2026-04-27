@@ -84,7 +84,7 @@ export interface LegacyApplyOptions {
 
 function buildContext(pg: PGlite, tenantId: string, tenantColumn?: string): SyncClientEngineContext {
   return {
-    adapter: new PgLiteAdapter(pg, null as any),
+    adapter: PgLiteAdapter.fromInstance({ pg, db: null as any }),
     tenantId,
     tenantColumn: tenantColumn ?? "tenant_id",
     userId: "",

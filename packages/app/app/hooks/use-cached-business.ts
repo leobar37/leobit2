@@ -17,7 +17,7 @@ export function useCachedBusiness(pg: PGlite | null) {
     queryFn: async () => {
       if (!pg) return undefined;
 
-      const cached = await offlineCache.get<Business | CachedBusinessData>(CACHE_KEY);
+      const cached = await offlineCache.get<Business | CachedBusinessData>(pg, CACHE_KEY);
       if (!cached) return undefined;
 
       const businessUserId =
@@ -38,10 +38,10 @@ export function useCachedBusiness(pg: PGlite | null) {
   });
 }
 
-export async function setCachedBusiness(data: CachedBusinessData): Promise<void> {
-  await offlineCache.set(CACHE_KEY, data, CACHE_TTL_MS);
+export async function setCachedBusiness(pg: PGlite, data: CachedBusinessData): Promise<void> {
+  await offlineCache.set(pg, CACHE_KEY, data, CACHE_TTL_MS);
 }
 
-export async function clearCachedBusiness(): Promise<void> {
-  await offlineCache.remove(CACHE_KEY);
+export async function clearCachedBusiness(pg: PGlite): Promise<void> {
+  await offlineCache.remove(pg, CACHE_KEY);
 }

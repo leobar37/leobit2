@@ -117,6 +117,25 @@ export {
 // Database Adapter
 export { PgLiteAdapter } from "./pglite-adapter";
 
+// Schema hash utilities
+export {
+  computeSchemaHash,
+  hasSchemaChanged,
+  saveSchemaHash,
+  clearSchemaHash,
+} from "./schema-hash";
+
+// Pending data export/import
+export {
+  exportPendingData,
+  importPendingData,
+  buildPendingDataConfig,
+  buildPendingDataFromRegistry,
+  type PendingTableConfig,
+  type PendingTableData,
+  type PendingDataConfig,
+} from "./pending-data";
+
 // Backward compatibility exports used by app integrations
 export {
   syncLogger,

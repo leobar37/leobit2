@@ -405,7 +405,7 @@ export class SaleService extends BaseService {
 
     return sales.map(sale => ({
       ...sale,
-      customer: sale.customerId ? customerMap.get(sale.customerId) ?? null : null,
+      customer: sale.customerId ? customerMap.get(sale.customerId) ?? undefined : undefined,
       items: itemsMap.get(sale.id) || [],
     }));
   }
@@ -483,7 +483,7 @@ export class SaleService extends BaseService {
     const result = {
       items: sales.map((sale) => ({
         ...sale,
-        customer: sale.customerId ? customerMap.get(sale.customerId) ?? null : null,
+        customer: sale.customerId ? customerMap.get(sale.customerId) ?? undefined : undefined,
       })),
       total: totalResult[0]?.count ?? 0,
     };
@@ -573,34 +573,34 @@ export class SaleService extends BaseService {
     const saleType = saleInput.saleType || "contado";
 
     const result = await this.generatedSalesService.create({
-      customerId: saleInput.customerId ?? null,
+      customerId: saleInput.customerId ?? undefined,
       sellerId,
-      distribucionId: saleInput.distribucionId ?? null,
-      visitaId: saleInput.visitaId ?? null,
+      distribucionId: saleInput.distribucionId ?? undefined,
+      visitaId: saleInput.visitaId ?? undefined,
       type: type as string,
       saleType: saleType as string,
-      paymentMode: saleInput.paymentMode ?? null,
+      paymentMode: saleInput.paymentMode ?? undefined,
       totalAmount: this.normalizeCurrency(totalAmount),
       amountPaid: this.normalizeCurrency(0),
       balanceDue: this.normalizeCurrency(totalAmount),
       tara: this.normalizeWeight(saleInput.tara),
       netWeight: this.normalizeWeight(saleInput.netWeight),
       saleDate,
-      deliveryDate: saleInput.deliveryDate ?? null,
-      orderDate: saleInput.orderDate ?? null,
+      deliveryDate: saleInput.deliveryDate ?? undefined,
+      orderDate: saleInput.orderDate ?? undefined,
       status: "draft",
       allowCustomerEdit: true,
-      advancePaymentMethod: null,
-      advanceReferenceNumber: null,
-      advanceProofImageId: null,
-      cancelledAt: null,
-      cancelledBy: null,
-      cancelReason: null,
-      refundAmount: null,
-      refundDate: null,
-      refundMethod: null,
-      refundReference: null,
-      refundNotes: null,
+      advancePaymentMethod: undefined,
+      advanceReferenceNumber: undefined,
+      advanceProofImageId: undefined,
+      cancelledAt: undefined,
+      cancelledBy: undefined,
+      cancelReason: undefined,
+      refundAmount: undefined,
+      refundDate: undefined,
+      refundMethod: undefined,
+      refundReference: undefined,
+      refundNotes: undefined,
     });
 
     const totalMs = performance.now() - perfStart;
@@ -633,34 +633,34 @@ export class SaleService extends BaseService {
     const balanceDue = totalAmount - amountPaid;
 
     const sale = await this.generatedSalesService.create({
-      customerId: saleInput.customerId ?? null,
+      customerId: saleInput.customerId ?? undefined,
       sellerId,
-      distribucionId: saleInput.distribucionId ?? null,
-      visitaId: saleInput.visitaId ?? null,
+      distribucionId: saleInput.distribucionId ?? undefined,
+      visitaId: saleInput.visitaId ?? undefined,
       type: saleInput.type || "instant_sale",
       saleType: saleInput.saleType || "contado",
-      paymentMode: saleInput.paymentMode ?? null,
+      paymentMode: saleInput.paymentMode ?? undefined,
       totalAmount: this.normalizeCurrency(totalAmount),
       amountPaid: this.normalizeCurrency(amountPaid),
       balanceDue: this.normalizeCurrency(balanceDue),
       tara: this.normalizeWeight(saleInput.tara),
       netWeight: this.normalizeWeight(saleInput.netWeight),
       saleDate,
-      deliveryDate: saleInput.deliveryDate ?? null,
-      orderDate: saleInput.orderDate ?? null,
+      deliveryDate: saleInput.deliveryDate ?? undefined,
+      orderDate: saleInput.orderDate ?? undefined,
       status: "draft",
       allowCustomerEdit: true,
-      advancePaymentMethod: null,
-      advanceReferenceNumber: null,
-      advanceProofImageId: null,
-      cancelledAt: null,
-      cancelledBy: null,
-      cancelReason: null,
-      refundAmount: null,
-      refundDate: null,
-      refundMethod: null,
-      refundReference: null,
-      refundNotes: null,
+      advancePaymentMethod: undefined,
+      advanceReferenceNumber: undefined,
+      advanceProofImageId: undefined,
+      cancelledAt: undefined,
+      cancelledBy: undefined,
+      cancelReason: undefined,
+      refundAmount: undefined,
+      refundDate: undefined,
+      refundMethod: undefined,
+      refundReference: undefined,
+      refundNotes: undefined,
     });
 
     for (const item of items) {
@@ -875,7 +875,7 @@ export class SaleService extends BaseService {
       status: "delivered",
       totalAmount: this.normalizeCurrency(totalAmount),
       balanceDue: this.normalizeCurrency(newBalance),
-      paymentMode: options.paymentMode ?? sale.paymentMode ?? null,
+      paymentMode: options.paymentMode ?? sale.paymentMode ?? undefined,
     });
   }
 
@@ -897,7 +897,7 @@ export class SaleService extends BaseService {
       status: "cancelled",
       cancelledAt: new Date().toISOString(),
       cancelledBy: this.engine.getConfig().userId,
-      cancelReason: reason ?? null,
+      cancelReason: reason ?? undefined,
     });
   }
 

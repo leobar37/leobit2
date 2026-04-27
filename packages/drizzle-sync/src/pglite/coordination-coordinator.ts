@@ -172,8 +172,6 @@ export class SyncCoordinator {
   private readonly FORCE_SYNC_DEBOUNCE_MS = 1000;
 
   // Subscriptions
-  private handleOnline: (() => void) | null = null;
-  private handleOffline: (() => void) | null = null;
   private handlePullStaleUnsubscribe: (() => void) | null = null;
   private handleVisibilityChange: (() => void) | null = null;
 
@@ -205,15 +203,6 @@ export class SyncCoordinator {
     if (this.config.enableAutoSync) {
       this.syncService.startAutoSync();
       this.pullService.startAutoPull();
-    }
-
-    // Set up online/offline handlers
-    this.handleOnline = this.onOnline.bind(this);
-    this.handleOffline = this.onOffline.bind(this);
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("online", this.handleOnline);
-      window.addEventListener("offline", this.handleOffline);
     }
 
     // Listen for stale pull events
@@ -253,16 +242,6 @@ export class SyncCoordinator {
 
     this.syncService.stopAutoSync();
     this.pullService.stopAutoPull();
-
-    // Remove online/offline handlers
-    if (typeof window !== "undefined") {
-      if (this.handleOnline) {
-        window.removeEventListener("online", this.handleOnline);
-      }
-      if (this.handleOffline) {
-        window.removeEventListener("offline", this.handleOffline);
-      }
-    }
 
     // Remove pull:stale subscription
     if (this.handlePullStaleUnsubscribe) {

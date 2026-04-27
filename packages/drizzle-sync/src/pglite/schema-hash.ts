@@ -5,7 +5,7 @@
  * and trigger database resets when the schema evolves.
  */
 
-import type { StorageAdapter } from "./storage/storage";
+import type { StorageAdapter } from "../client/storage/storage";
 
 /**
  * Compute SHA-256 hash of a string
@@ -48,6 +48,8 @@ export function saveSchemaHash(
 /**
  * Clear stored schema hash to force reset on next init.
  */
-export function clearSchemaHash(adapter: StorageAdapter): void {
+export function clearSchemaHash(
+  adapter: StorageAdapter
+): void {
   adapter.removeByKind("schemaHash");
 }

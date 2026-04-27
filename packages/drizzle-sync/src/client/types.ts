@@ -22,6 +22,7 @@ import type {
 } from "../core";
 import type { DatabaseInitConfig } from "./database-init";
 import type { StorageConfig, StorageAdapter } from "./storage";
+import type { IDeviceIdentity } from "./device-identity";
 import type { ConflictStrategy } from "../shared";
 import type { PushSyncService } from "../pglite/push-service";
 import type { ISyncMutex } from "../pglite/sync-mutex";
@@ -352,6 +353,18 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
   storageAdapter?: StorageAdapter;
 
   /**
+   * Device identity provider for multi-device sync tracking.
+   * If not provided, a LocalStorage-backed implementation is used.
+   */
+  deviceIdentity?: IDeviceIdentity;
+
+  /**
+   * Navigator abstraction for page navigation and reload.
+   * Allows the library to work in non-browser environments (React Native, tests).
+   */
+  navigator?: INavigator;
+
+  /**
    * Optional metadata injected by code generation (e.g., file field configuration).
    */
   metadata?: Record<string, unknown>;
@@ -361,4 +374,13 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
    * Allows services to access schema tables without importing from @avileo/shared.
    */
   tables?: Record<string, unknown>;
+}
+
+/**
+ * Navigator abstraction for page navigation and reload.
+ * Allows the library to work in non-browser environments (React Native, tests).
+ */
+export interface INavigator {
+  reload(): void;
+  redirect(url: string): void;
 }

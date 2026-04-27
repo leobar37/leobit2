@@ -390,14 +390,14 @@ export class PaymentService extends AbonosService {
       await this.db.insert(this.tables.abonos).values({
         id,
         customerId: input.customerId,
-        sellerId: input.sellerId ?? null,
+        sellerId: input.sellerId ?? undefined,
         businessId: this.businessId,
-        relatedSaleId: input.relatedSaleId ?? null,
+        relatedSaleId: input.relatedSaleId ?? undefined,
         amount,
         paymentMethod: input.paymentMethod ?? "efectivo",
-        referenceNumber: input.referenceNumber ?? null,
-        proofImageId: input.proofImageId ?? null,
-        notes: input.notes ?? null,
+        referenceNumber: input.referenceNumber ?? undefined,
+        proofImageId: input.proofImageId ?? undefined,
+        notes: input.notes ?? undefined,
         syncStatus: "pending",
         syncAttempts: 0,
         createdAt: new Date(now),
@@ -454,15 +454,15 @@ export class PaymentService extends AbonosService {
     };
 
     if (input.notes !== undefined) {
-      updateData.notes = input.notes ?? null;
+      updateData.notes = input.notes ?? undefined;
     }
 
     if (input.proofImageId !== undefined) {
-      updateData.proofImageId = input.proofImageId ?? null;
+      updateData.proofImageId = input.proofImageId ?? undefined;
     }
 
     if (input.referenceNumber !== undefined) {
-      updateData.referenceNumber = input.referenceNumber ?? null;
+      updateData.referenceNumber = input.referenceNumber ?? undefined;
     }
 
     // Update using Drizzle ORM

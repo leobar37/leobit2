@@ -216,7 +216,7 @@ export class ProductService extends ProductsService {
       basePrice: input.basePrice,
       costPrice: input.costPrice ?? "0",
       isActive: input.isActive ?? true,
-      imageId: input.imageId ?? null,
+      imageId: input.imageId ?? undefined,
       hasVariants: input.hasVariants ?? false,
       syncStatus: SyncStatus.PENDING,
       syncAttempts: 0,

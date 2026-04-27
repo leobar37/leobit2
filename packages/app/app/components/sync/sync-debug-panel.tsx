@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSyncOperations } from "@avileo/drizzle-sync/react";
+import { useSyncEngine, useSyncOperations } from "@avileo/drizzle-sync/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 export function SyncDebugPanel() {
   const syncService = useSyncOperations();
+  const engine = useSyncEngine();
   
   // Early return if sync service is not available
   if (!syncService) {
@@ -59,8 +60,7 @@ export function SyncDebugPanel() {
   };
 
   const querySyncTable = async () => {
-    const { getDatabase } = await import("@avileo/drizzle-sync/client");
-    const { db } = getDatabase();
+    const { db } = engine.getDatabaseInstance();
     const result = await db.execute(`
       SELECT status, entity, operation, COUNT(*) as count
       FROM sync_operations

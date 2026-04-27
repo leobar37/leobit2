@@ -6,7 +6,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { eq, and, gte, desc, like, or } from "drizzle-orm";
-import { getDatabase } from "@avileo/drizzle-sync/client";
+import { useSyncEngine } from "@avileo/drizzle-sync/react";
 import {
   distribuciones,
   distribucionItems,
@@ -61,6 +61,7 @@ export function useDistribuciones(params?: {
   const { data: business } = useBusiness();
   const storedBusinessId = getStoredBusinessId();
   const businessId = business?.id || storedBusinessId;
+  const engine = useSyncEngine();
 
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, businessId, params],
@@ -71,7 +72,7 @@ export function useDistribuciones(params?: {
         return [];
       }
       
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
       
       let conditions = [eq(distribuciones.businessId, businessId)];
       
@@ -107,10 +108,11 @@ export function useSellerDistribuciones(
   businessId: string,
   vendedorId: string
 ) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, "seller", vendedorId],
     queryFn: async () => {
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
       return db
         .select()
         .from(distribuciones)
@@ -133,10 +135,11 @@ export function useActiveDistribucion(
   businessId: string,
   vendedorId: string
 ) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, "active", vendedorId],
     queryFn: async () => {
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
       const result = await db
         .select()
         .from(distribuciones)
@@ -177,12 +180,13 @@ export function useMiDistribucion(fecha?: string) {
  * Get a single distribucion with items
  */
 export function useDistribucion(id: string | null) {
+  const engine = useSyncEngine();
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
     queryFn: async () => {
       if (!id) return null;
 
-      const { db } = getDatabase();
+      const { db } = engine.getDatabaseInstance();
 
       const [distResult, itemsResult] = await Promise.all([
         db
