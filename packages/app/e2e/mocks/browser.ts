@@ -45,10 +45,8 @@ export function stopMSW() {
 export async function resetMSW() {
   // If handlers have reset functions, call them
   const { resetVolumeData } = await import("./volume-handlers");
-  const { resetSyncStore } = await import("./sync-handlers");
   const { resetE2EData } = await import("./handlers");
   
   resetVolumeData();
-  resetSyncStore();
   resetE2EData();
 }

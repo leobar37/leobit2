@@ -1,7 +1,7 @@
 /**
  * Shared Drizzle Schema
- * Schema compartido entre frontend (PGlite) y backend (PostgreSQL)
- * Usa text en lugar de enum para compatibilidad con PGlite
+ * Schema compartido entre frontend y backend para el contrato de API
+ * Usa text en lugar de enum para compatibilidad universal
  */
 
 import {

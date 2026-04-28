@@ -22,7 +22,7 @@ export interface PeriodParams {
 export const queryKeys = {
   sales: {
     all: ["sales"] as const,
-    lists: (filters: Record<string, unknown>) => ["sales", "list", filters] as const,
+    lists: (filters: object) => ["sales", "list", filters] as const,
     detail: (id: string) => ["sales", id] as const,
     byCustomer: (customerId: string) => ["sales", "customer", customerId] as const,
     byStatus: (status: string) => ["sales", "status", status] as const,
@@ -30,8 +30,8 @@ export const queryKeys = {
   customers: {
     all: ["customers"] as const,
     detail: (id: string) => ["customers", id] as const,
-    search: (filters: Record<string, unknown>) => ["customers", "search", filters] as const,
-    page: (query: Record<string, unknown>) => ["customers", "page", query] as const,
+    search: (filters: object) => ["customers", "search", filters] as const,
+    page: (query: object) => ["customers", "page", query] as const,
     tags: (customerIds: string[]) => ["customers", "tags", customerIds] as const,
   },
   products: {
@@ -90,9 +90,9 @@ export const queryKeys = {
     chart: (period: PeriodParams) => ["dashboard", "chart", period] as const,
   },
   reports: {
-    accountsReceivable: (filters: Record<string, unknown>) =>
+    accountsReceivable: (filters: object) =>
       ["reports", "accounts-receivable", filters] as const,
-    accountsReceivableTotal: (filters: Record<string, unknown>) =>
+    accountsReceivableTotal: (filters: object) =>
       ["reports", "accounts-receivable", "total", filters] as const,
   },
 } as const;

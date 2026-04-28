@@ -69,9 +69,6 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
  * 3. Contiene businessId para filtrado multi-tenant
  */
 export class RequestContext {
-  // Index signature for compatibility with SyncRequestContext from drizzle-sync library
-  [key: string]: unknown;
-
   constructor(
     public readonly userId: string,
     public readonly email: string,
@@ -87,10 +84,6 @@ export class RequestContext {
     public readonly sessionId?: string
   ) {}
 
-  /**
-   * Tenant ID for compatibility with drizzle-sync framework.
-   * Alias for businessId.
-   */
   get tenantId(): string {
     return this.businessId;
   }

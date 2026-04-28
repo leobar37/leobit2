@@ -6,7 +6,6 @@ import { queryKeys } from "~/lib/query-keys";
 export interface CustomerGroupBadgeItem {
   id: string;
   name: string;
-  syncStatus: string;
 }
 
 const QUERY_KEYS = {
@@ -26,13 +25,15 @@ export function useCustomerGroupsWithDetails(customerId: string | null) {
       if (!customerId) return [];
       const response = await api.customers({ id: customerId }).groups.get();
       const groups = extractData(response) as Array<{ id: string; name: string }>;
-      return groups.map((g) => ({ ...g, syncStatus: "synced" })) as CustomerGroupBadgeItem[];
+      return groups as CustomerGroupBadgeItem[];
     },
     enabled: !!customerId,
   });
 }
 
-export interface CustomerGroupSummaryItem extends CustomerGroupBadgeItem {
+export interface CustomerGroupSummaryItem {
+  id: string;
+  name: string;
   customerId: string;
 }
 
@@ -49,7 +50,6 @@ export function useCustomerGroupsSummary(customerIds: string[]) {
             customerId,
             id: g.id,
             name: g.name,
-            syncStatus: "synced",
           })) as CustomerGroupSummaryItem[];
         })
       );

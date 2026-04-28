@@ -69,12 +69,12 @@ export function useCreateSale() {
       const itemsWithNames = await Promise.all(
         params.items.map(async (item) => {
           const productResponse = await api.products({ id: item.productId }).get();
-          const product = extractData(productResponse) as { name: string } | null;
+          const product = extractData<{ name: string } | null>(productResponse);
 
           let variant: { name: string } | null = null;
           if (item.variantId) {
             const variantResponse = await api.variants({ id: item.variantId }).get();
-            variant = extractData(variantResponse) as { name: string } | null;
+            variant = extractData<{ name: string } | null>(variantResponse);
           }
 
           return {
@@ -186,8 +186,8 @@ export function useAddSaleItem() {
         item.variantId ? api.variants({ id: item.variantId }).get() : Promise.resolve(null),
       ]);
 
-      const product = extractData(productResponse) as { name: string } | null;
-      const variant = variantResponse ? extractData(variantResponse) as { name: string } | null : null;
+      const product = extractData<{ name: string } | null>(productResponse);
+      const variant = variantResponse ? extractData<{ name: string } | null>(variantResponse) : null;
 
       if (!product) throw new Error("Product not found");
 
@@ -199,9 +199,9 @@ export function useAddSaleItem() {
         quantity: item.quantity,
         unitPrice: item.price,
         subtotal: item.subtotal,
-      } as any);
+      });
 
-      const createdItem = extractData(response) as unknown as SaleItem;
+      const createdItem = extractData<SaleItem>(response);
       return { saleId, createdItem };
     },
     onSuccess: ({ saleId, createdItem }) => {
@@ -280,7 +280,7 @@ export function useUpdateSaleItem() {
         unitPrice: data.unitPrice,
         subtotal: data.subtotal,
       });
-      const updatedItem = extractData(response) as unknown as SaleItem;
+      const updatedItem = extractData<SaleItem>(response);
       return { saleId, itemId, updatedItem };
     },
     onSuccess: (result) => {

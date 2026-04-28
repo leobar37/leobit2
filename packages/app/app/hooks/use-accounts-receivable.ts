@@ -39,7 +39,7 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
       ...filters,
       limit,
       offset,
-    } as Record<string, unknown>),
+    }),
     queryFn: async (): Promise<AccountsReceivablePage> => {
       const response = await api.reports["accounts-receivable"].get({
         query: {
@@ -50,13 +50,13 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
         },
       });
 
-      const items = extractData(response) as Array<{
+      const items = extractData<Array<{
         customer: AccountsReceivableCustomer;
         totalDebt: number;
         totalSales: number;
         totalPayments: number;
         lastSaleDate: string | null;
-      }>;
+      }>>(response);
 
       return {
         items: items.map((item) => ({
@@ -82,10 +82,10 @@ export function useTotalAccountsReceivable(
   filters: AccountsReceivableFilters = {}
 ) {
   const { data: totalDebt = 0, isLoading } = useQuery({
-    queryKey: queryKeys.reports.accountsReceivableTotal(filters as Record<string, unknown>),
+    queryKey: queryKeys.reports.accountsReceivableTotal(filters),
     queryFn: async () => {
       const response = await api.reports["accounts-receivable"].total.get();
-      const data = extractData(response) as { total: number };
+      const data = extractData<{ total: number }>(response);
       return data.total;
     },
   });

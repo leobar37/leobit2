@@ -53,13 +53,13 @@ export function useCustomerGroups() {
     queryKey: queryKeys.customerGroups.all,
     queryFn: async () => {
       const response = await api.groups.get();
-      const data = extractData(response) as unknown as Array<{
+      const data = extractData<Array<{
         id: string;
         name: string;
         createdAt: string;
         updatedAt: string;
         memberCount: number;
-      }>;
+      }>>(response);
       return data.map(mapApiGroup);
     },
     staleTime: 1000 * 60,
@@ -75,7 +75,7 @@ export function useCustomerGroup(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.groups({ id }).get();
-      const data = extractData(response) as unknown as {
+      const data = extractData<{
         id: string;
         name: string;
         createdAt: string;
@@ -86,7 +86,7 @@ export function useCustomerGroup(id: string | null) {
           customerName: string;
           addedAt: string;
         }>;
-      };
+      }>(response);
       return mapApiGroup(data);
     },
     enabled: !!id,
@@ -104,13 +104,13 @@ export function useCreateCustomerGroup() {
   return useMutation({
     mutationFn: async (input: { name: string; customerIds?: string[] }) => {
       const createResponse = await api.groups.post({ name: input.name });
-      const data = extractData(createResponse) as unknown as {
+      const data = extractData<{
         id: string;
         name: string;
         createdAt: string;
         updatedAt: string;
         memberCount: number;
-      };
+      }>(createResponse);
       const group = mapApiGroup(data);
 
       if (input.customerIds && input.customerIds.length > 0) {
@@ -145,13 +145,13 @@ export function useUpdateCustomerGroup() {
       const response = await api
         .groups({ id: input.id })
         .put({ name: input.name });
-      const data = extractData(response) as unknown as {
+      const data = extractData<{
         id: string;
         name: string;
         createdAt: string;
         updatedAt: string;
         memberCount: number;
-      };
+      }>(response);
       return mapApiGroup(data);
     },
     onSuccess: (_, variables) => {

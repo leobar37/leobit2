@@ -82,7 +82,6 @@ export default function CustomersPage() {
       existing.push({
         id: group.id,
         name: group.name,
-        syncStatus: group.syncStatus,
       });
       map.set(group.customerId, existing);
     }

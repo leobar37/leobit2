@@ -25,7 +25,7 @@ export default defineConfig({
   /* Reporter to use */
   reporter: [["list"], ["html", { open: "never" }]],
 
-  /* Timeout for all tests - increased for PGlite initialization */
+  /* Timeout for all tests */
   timeout: 300000, // 5 minutes
 
   /* Shared settings for all the projects below */

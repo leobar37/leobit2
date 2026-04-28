@@ -4,7 +4,7 @@
 
 ## ¿Qué es Avileo?
 
-Avileo es un **sistema de gestión de ventas offline-first** pensado especialmente para:
+Avileo es un **sistema de gestión de ventas online-first** pensado especialmente para:
 
 - **Vendedores ambulantes** de pollos y productos avícolas
 - **Negocios de venta al por mayor y menor**
@@ -12,8 +12,8 @@ Avileo es un **sistema de gestión de ventas offline-first** pensado especialmen
 
 ## Principales beneficios
 
-### 🌐 Funciona sin internet
-El sistema está diseñado para trabajar **100% offline**. Puedes registrar ventas, clientes y cobros incluso cuando no tengas conexión. Los datos se sincronizan automáticamente cuando recuperas la señal.
+### 🌐 Conectividad flexible
+El sistema está optimizado para trabajar con conexión a internet. Algunas funciones como WhatsApp requieren conexión activa.
 
 ### 📱 Diseño móvil primero
 Avileo está optimizado para funcionar en celulares, con una interfaz táctil y fácil de usar mientras atiendes a tus clientes.

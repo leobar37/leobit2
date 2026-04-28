@@ -9,17 +9,8 @@ This directory contains End-to-End tests for the Avileo POS system.
 - ✅ Page objects created (`e2e/page-objects/`)
 - ✅ Test utilities created (`e2e/utils/`)
 - ✅ Volume test configuration (`playwright.volume.config.ts`)
-- ⚠️ E2E tests marked as skipped (require PGlite)
 
-### Why E2E Tests Are Skipped
-
-The E2E tests for sales and orders flows are currently **skipped** because:
-
-1. **PGlite initialization**: The browser-based PostgreSQL (PGlite) takes 2-5 minutes to initialize in headless mode
-2. **Build time**: The dev server takes significant time to start
-3. **Test reliability**: Tests timeout before PGlite finishes initializing
-
-### Test Coverage (70+ Test Cases)
+### Test Coverage (60+ Test Cases)
 
 The following test cases are defined in `e2e/tests/`:
 
@@ -32,9 +23,8 @@ The following test cases are defined in `e2e/tests/`:
 | `orders-creation.spec.ts` | 11 | Pre-order creation tests |
 | `orders-lifecycle.spec.ts` | 20 | Order lifecycle tests |
 | `volume-performance.spec.ts` | 12 | Performance with 1000+ records |
-| `sync-tests.spec.ts` | 6 | Sync operation tests |
 | `e2e-flows.spec.ts` | 8 | Full E2E integration flows |
-| **Total** | **81** | |
+| **Total** | **75** | |
 
 ## Running Tests
 
@@ -50,29 +40,16 @@ The following test cases are defined in `e2e/tests/`:
    cd packages/app && bun run dev
    ```
 
-3. Wait for PGlite to initialize (watch for "Database ready" in console)
-
-### Run Integration Tests (Fast, No PGlite)
+### Run Tests
 
 ```bash
 cd packages/app
 bun run test:e2e integration-msw.spec.ts --config=playwright.dev.config.ts
 ```
 
-These tests use MSW to mock all API calls and don't require PGlite.
-
-### Run E2E Tests (Slow, Requires PGlite)
-
-```bash
-cd packages/app
-bun run test:e2e sales-cash.spec.ts --config=playwright.dev.config.ts
-```
-
-> ⚠️ **Warning**: These tests take 5-10 minutes to run due to PGlite initialization.
+These tests use MSW to mock all API calls.
 
 ## Manual Testing Checklist
-
-Since E2E tests are slow, use this checklist for manual testing:
 
 ### Login Flow
 - [ ] Login with demo credentials (`demo@avileo.com` / `demo123456`)
@@ -109,10 +86,9 @@ Since E2E tests are slow, use this checklist for manual testing:
 
 ## Future Improvements
 
-1. **Faster local database**: Consider using IndexedDB or a faster embedded DB
-2. **Test fixtures**: Pre-seed data to avoid setup time
-3. **CI optimization**: Run E2E tests only on specific branches
-4. **Visual testing**: Add screenshot comparisons for UI regression
+1. **Test fixtures**: Pre-seed data to avoid setup time
+2. **CI optimization**: Run E2E tests only on specific branches
+3. **Visual testing**: Add screenshot comparisons for UI regression
 
 ## Adding New Tests
 
@@ -162,22 +138,7 @@ e2e/
 ├── mocks/
 │   ├── handlers.ts          # Base API handlers
 │   ├── volume-handlers.ts   # 1000+ record handlers
-│   ├── sync-handlers.ts     # Sync operation handlers
 │   └── index.ts             # Combined handlers
-├── page-objects/
-│   ├── LoginPage.ts         # Login flow
-│   ├── DashboardPage.ts     # Dashboard navigation
-│   ├── SalesListPage.ts     # Sales list interactions
-│   ├── NewSalePage.ts       # New sale form
-│   ├── SaleDetailPage.ts    # Sale detail view
-│   └── PublicSalePage.ts    # Public token sale
-├── tests/
-│   ├── sales-*.spec.ts      # Sales flow tests
-│   ├── orders-*.spec.ts     # Order flow tests
-│   ├── volume-*.spec.ts     # Performance tests
-│   └── integration-msw.spec.ts # Fast MSW tests
-└── utils/
-    └── index.ts             # Test helpers
 ```
 
 ## Debugging

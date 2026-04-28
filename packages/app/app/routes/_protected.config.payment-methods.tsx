@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   usePaymentMethodsConfig,
   useUpdatePaymentMethodsConfig,
+  type PaymentMethodsConfig,
 } from "~/hooks/use-payment-methods-config";
 import { useUploadFile, validateFile } from "~/hooks/use-files";
 
@@ -176,7 +177,7 @@ export default function PaymentMethodsConfigPage() {
   const { data: config, isLoading } = usePaymentMethodsConfig();
   const updateMutation = useUpdatePaymentMethodsConfig();
   
-  const [methods, setMethods] = useState<Record<string, any>>({});
+  const [methods, setMethods] = useState<PaymentMethodsConfig["methods"] | null>(null);
   const [editingMethod, setEditingMethod] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,29 +187,41 @@ export default function PaymentMethodsConfigPage() {
   }, [config]);
 
   const toggleMethod = (id: string) => {
-    setMethods((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], enabled: !prev[id].enabled },
-    }));
+    setMethods((prev) => {
+      if (!prev) return prev;
+      const method = prev[id as keyof typeof prev];
+      if (!method) return prev;
+      return {
+        ...prev,
+        [id]: { ...method, enabled: !method.enabled },
+      };
+    });
   };
 
   const updateMethodDetails = (id: string, field: string, value: string | undefined) => {
-    setMethods((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value },
-    }));
+    setMethods((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [id]: { ...prev[id as keyof typeof prev], [field]: value },
+      };
+    });
   };
 
   const handleQRImageChange = (methodId: string, url: string | undefined) => {
-    setMethods((prev) => ({
-      ...prev,
-      [methodId]: { ...prev[methodId], qrImageUrl: url },
-    }));
+    setMethods((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [methodId]: { ...prev[methodId as keyof typeof prev], qrImageUrl: url },
+      };
+    });
   };
 
   const handleSave = async () => {
+    if (!methods) return;
     try {
-      await updateMutation.mutateAsync(methods as any);
+      await updateMutation.mutateAsync(methods);
       toast.success("Métodos de pago guardados correctamente");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
@@ -253,7 +266,7 @@ export default function PaymentMethodsConfigPage() {
 
             <CardContent className="space-y-4">
               {METHOD_DEFINITIONS.map((methodDef) => {
-                const methodData = methods[methodDef.id] || { enabled: false };
+                const methodData = methods?.[methodDef.id] || { enabled: false };
                 const isEditing = editingMethod === methodDef.id;
 
                 return (

@@ -15,15 +15,15 @@ export class NewSalePage {
   }
 
   async expectLoaded(): Promise<void> {
-    // Wait for loading screens to disappear - longer timeout for PGlite init
+    // Wait for loading screens to disappear
     await this.page.waitForFunction(
       () => {
         const text = document.body.innerText || document.body.textContent || "";
-        return !text.includes("Inicializando") && 
-               !text.includes("Cargando") && 
+        return !text.includes("Inicializando") &&
+               !text.includes("Cargando") &&
                !text.includes("Loading");
       },
-      { timeout: 120000 } // 2 minutes for PGlite initialization
+      { timeout: 120000 }
     ).catch(() => {
       // If still loading after 2 minutes, continue anyway
       console.log("Warning: Page still loading after 2 minutes");

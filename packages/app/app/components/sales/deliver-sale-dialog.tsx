@@ -51,8 +51,7 @@ export function DeliverSaleDialog({
       await onDeliver();
       reset();
       onClose();
-    } catch (error) {
-      console.error("Error delivering sale:", error);
+    } catch {
     } finally {
       setIsSubmitting(false);
     }

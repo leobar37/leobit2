@@ -209,11 +209,10 @@ export const paymentMethodEnum = pgEnum("payment_method", [
 | `productUnits` | Unit definitions | ❌ No |
 | `tags` | Customer tags | ❌ No |
 
-### Sync & Supporting
+### Supporting Tables
 
 | Table | Purpose | Syncable |
 |-------|---------|----------|
-| `syncOperations` | Offline operation queue | Internal |
 | `files` | File attachments | ❌ No |
 | `assets` | Business assets | ❌ No |
 

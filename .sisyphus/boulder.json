@@ -1,33 +1,39 @@
 {
-  "active_plan": "/Users/leobar37/code/avileo/.sisyphus/plans/frontend-remove-engine-eden-hooks.md",
-  "started_at": "2026-04-28T03:08:42.000Z",
+  "active_plan": "/Users/leobar37/code/avileo/.sisyphus/plans/online-first-sync-removal.md",
+  "started_at": "2026-04-28T19:25:32.363Z",
   "session_ids": [
-    "ses_22e1f1f38ffeaXUYkL4PNJCr70",
-    "ses_22d74c04affebpTMEFjaIDl3pp"
+    "ses_22a904a62ffeKubUbD4frZQhlZ",
+    "ses_22a3cc457ffeJlvU8zJjWKfed0",
+    "ses_22a3ca735ffensK07puzd7pBRl",
+    "ses_22a3c7f1affeI7doWZOA5RKLGq",
+    "ses_22a3c5ae0ffeWZk5i5n1b5M6w1"
   ],
-  "plan_name": "frontend-remove-engine-eden-hooks",
+  "plan_name": "online-first-sync-removal",
   "agent": "atlas",
   "session_origins": {
-    "ses_22e1f1f38ffeaXUYkL4PNJCr70": "direct",
-    "ses_22d74c04affebpTMEFjaIDl3pp": "appended"
+    "ses_22a904a62ffeKubUbD4frZQhlZ": "direct",
+    "ses_22a3cc457ffeJlvU8zJjWKfed0": "appended",
+    "ses_22a3ca735ffensK07puzd7pBRl": "appended",
+    "ses_22a3c7f1affeI7doWZOA5RKLGq": "appended",
+    "ses_22a3c5ae0ffeWZk5i5n1b5M6w1": "appended"
   },
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "**API Helpers — `unwrapApiResponse` + `extractData` refactor**",
-      "session_id": "ses_22d90afddffeCEnLoSTOTPzEXx",
-      "agent": "explore",
-      "updated_at": "2026-04-28T04:55:32.483Z"
-    },
-    "todo:4": {
-      "task_key": "todo:4",
-      "task_label": "4",
-      "task_title": "**Hook: `use-customers.ts`**",
-      "session_id": "ses_22d72b0bfffekrDSl2Byw7CmgT",
+      "task_title": "Establish sync/offline removal baseline",
+      "session_id": "ses_229f5ef9fffeBPgW8OrRfvibCb",
       "agent": "Sisyphus-Junior",
-      "category": "deep",
-      "updated_at": "2026-04-28T05:52:01.786Z"
+      "category": "quick",
+      "updated_at": "2026-04-28T21:43:12.911Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "ses_229d300d9ffeQuyA1r5ge4kbYJ",
+      "agent": "oracle",
+      "updated_at": "2026-04-28T22:20:43.996Z"
     }
   }
 }

@@ -20,7 +20,6 @@ export default defineConfig({
 			"tests/integration/hooks/use-customers.integration.spec.tsx",
 			"tests/integration/hooks/use-products.integration.spec.tsx",
 			"tests/integration/hooks/use-sales.integration.spec.tsx",
-			"tests/integration/sync/sync-page.integration.spec.tsx",
 		],
 	},
 });

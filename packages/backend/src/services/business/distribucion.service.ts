@@ -14,7 +14,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem, NewDistribucionItem } from "../../db/schema";
-import { db, syncOperations } from "../../lib/db";
+import { db } from "../../lib/db";
 import { sales, visitas, distribucionItems } from "../../db/schema";
 import type { DbTransaction } from "../../lib/txid";
 import { isPositive, isGreaterThanOrEqual, add, subtract as decimalSubtract } from "../../lib/decimal";
@@ -145,26 +145,7 @@ export class DistribucionService {
       estado: "activo",
     }, tx);
 
-    await dbOrTx.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-create-distribucion-${distribucion.id}`,
-      entity: "distribuciones",
-      action: "create",
-      entityId: distribucion.id,
-      payload: {
-        id: distribucion.id,
-        vendedorId: distribucion.vendedorId,
-        puntoVenta: distribucion.puntoVenta,
-        notaCreacion: distribucion.notaCreacion,
-        montoRecaudado: distribucion.montoRecaudado,
-        fecha: distribucion.fecha,
-        estado: distribucion.estado,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
         const createdItem = await this.itemRepository.create(ctx, {
@@ -175,25 +156,7 @@ export class DistribucionService {
           unidad: item.unidad,
         }, tx);
 
-        await dbOrTx.insert(syncOperations).values({
-          businessId: ctx.businessId,
-          operationId: `api-create-distribucion-item-${createdItem.id}`,
-          entity: "distribucion_items",
-          action: "create",
-          entityId: createdItem.id,
-          payload: {
-            id: createdItem.id,
-            distribucionId: createdItem.distribucionId,
-            variantId: createdItem.variantId,
-            cantidadAsignada: createdItem.cantidadAsignada,
-            cantidadVendida: createdItem.cantidadVendida,
-            unidad: createdItem.unidad,
-          },
-          status: "processed",
-          clientTimestamp: new Date(),
-          processedAt: new Date(),
-        });
-      }
+              }
     }
 
     if (data.groupId) {
@@ -207,24 +170,7 @@ export class DistribucionService {
 
         // Register sync operations for each created visita
         for (const visita of createdVisitas) {
-          await dbOrTx.insert(syncOperations).values({
-            businessId: ctx.businessId,
-            operationId: `api-create-visita-${visita.id}`,
-            entity: "visitas",
-            action: "create",
-            entityId: visita.id,
-            payload: {
-              id: visita.id,
-              distribucionId: visita.distribucionId,
-              customerId: visita.customerId,
-              vendedorId: visita.vendedorId,
-              status: visita.status,
-            },
-            status: "processed",
-            clientTimestamp: new Date(),
-            processedAt: new Date(),
-          });
-        }
+                  }
       }
     }
 
@@ -272,22 +218,7 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-update-distribucion-${updated.id}`,
-      entity: "distribuciones",
-      action: "update",
-      entityId: updated.id,
-      payload: {
-        id: updated.id,
-        puntoVenta: updated.puntoVenta,
-        estado: updated.estado,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     return updated;
   }
 
@@ -325,24 +256,7 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-close-distribucion-${updated.id}`,
-      entity: "distribuciones",
-      action: "update",
-      entityId: updated.id,
-      payload: {
-        id: updated.id,
-        estado: updated.estado,
-        notaCierre: updated.notaCierre,
-        closedAt: updated.closedAt,
-        closedBy: updated.closedBy,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     return updated;
   }
 
@@ -478,18 +392,7 @@ export class DistribucionService {
     const associatedVisitas = await this.visitaRepository.findByDistribucionId(ctx, id);
 
     for (const visita of associatedVisitas) {
-      await db.insert(syncOperations).values({
-        businessId: ctx.businessId,
-        operationId: `api-delete-visita-${visita.id}`,
-        entity: "visitas",
-        action: "delete",
-        entityId: visita.id,
-        payload: { id: visita.id },
-        status: "processed",
-        clientTimestamp: new Date(),
-        processedAt: new Date(),
-      });
-    }
+          }
 
     // Delete visitas from database
     await db
@@ -503,18 +406,7 @@ export class DistribucionService {
 
     await this.repository.delete(ctx, id);
 
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-delete-distribucion-${id}`,
-      entity: "distribuciones",
-      action: "delete",
-      entityId: id,
-      payload: { id },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-  }
+      }
 
   async replaceDistribucionItems(
     ctx: RequestContext,
@@ -630,24 +522,7 @@ export class DistribucionService {
     // Create cierre items (implementation would need cierre item repository)
     // This is a placeholder - actual implementation would insert into distribucion_cierre_items
 
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-close-distribucion-${updated.id}`,
-      entity: "distribuciones",
-      action: "update",
-      entityId: updated.id,
-      payload: {
-        id: updated.id,
-        estado: updated.estado,
-        notaCierre: updated.notaCierre,
-        closedAt: updated.closedAt,
-        closedBy: updated.closedBy,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     return updated;
   }
 
@@ -693,25 +568,7 @@ export class DistribucionService {
     });
 
     // Register sync operation
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-add-distribucion-item-${createdItem.id}`,
-      entity: "distribucion_items",
-      action: "create",
-      entityId: createdItem.id,
-      payload: {
-        id: createdItem.id,
-        distribucionId: createdItem.distribucionId,
-        variantId: createdItem.variantId,
-        cantidadAsignada: createdItem.cantidadAsignada,
-        cantidadVendida: createdItem.cantidadVendida,
-        unidad: createdItem.unidad,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     return createdItem;
   }
 
@@ -769,21 +626,7 @@ export class DistribucionService {
     }
 
     // Register sync operation
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-update-distribucion-item-${itemId}`,
-      entity: "distribucion_items",
-      action: "update",
-      entityId: itemId,
-      payload: {
-        id: itemId,
-        ...updateData,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-
+    
     return updatedItem;
   }
 
@@ -816,21 +659,7 @@ export class DistribucionService {
     await this.itemRepository.delete(ctx, itemId);
 
     // Register sync operation
-    await db.insert(syncOperations).values({
-      businessId: ctx.businessId,
-      operationId: `api-delete-distribucion-item-${itemId}`,
-      entity: "distribucion_items",
-      action: "delete",
-      entityId: itemId,
-      payload: {
-        id: itemId,
-        distribucionId,
-      },
-      status: "processed",
-      clientTimestamp: new Date(),
-      processedAt: new Date(),
-    });
-  }
+      }
 
   /**
    * Get items with enriched product/variant names

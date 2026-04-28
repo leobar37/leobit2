@@ -24,7 +24,6 @@ import {
   useToggleSaleToken,
   useShareSale,
 } from "~/hooks/use-sale-token";
-import { useSaleSyncStatus } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useOnline } from "~/hooks/use-online";
 
@@ -52,19 +51,11 @@ export function SaleShareDrawer({
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
-  const { isSynced, ensureSynced } = useSaleSyncStatus(saleId);
 
   const handleGenerate = async () => {
     if (!isOnline) {
       toast.error("Se requiere conexión a internet para generar el enlace de compartir");
       return;
-    }
-    if (!isSynced) {
-      const synced = await ensureSynced();
-      if (!synced) {
-        toast.error("No se pudo sincronizar la venta. Intenta de nuevo.");
-        return;
-      }
     }
     generateToken.mutate(saleId);
   };

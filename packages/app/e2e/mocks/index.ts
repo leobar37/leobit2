@@ -2,7 +2,7 @@
  * Barrel Export for E2E Mock Handlers
  *
  * This module re-exports all MSW handlers and utilities for E2E testing.
- * It combines base handlers, volume handlers, and sync handlers into a
+ * It combines base handlers and volume handlers into a
  * single export for easy setup in tests.
  */
 
@@ -12,7 +12,6 @@ import {
   initializeVolumeData,
   resetVolumeData,
 } from "./volume-handlers";
-import { handlers as syncHandlers } from "./sync-handlers";
 
 // Re-export initialization functions
 export { initializeVolumeData, resetVolumeData };
@@ -39,7 +38,6 @@ export { initializeVolumeData, resetVolumeData };
 export const handlers = [
   ...baseHandlers,
   ...volumeHandlers,
-  ...syncHandlers,
 ];
 
 // Re-export utility functions from handlers
@@ -55,5 +53,4 @@ export {
   getVolumeOrders,
 } from "./volume-handlers";
 
-// Re-export sync utilities
-export { resetSyncStore, getPendingOperations } from "./sync-handlers";
+

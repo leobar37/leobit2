@@ -89,7 +89,7 @@ export function EditDistribucionForm({
 
   const handleSubmit = form.handleSubmit((data) => {
     if (!selectedPuntoVentaState) {
-      form.setError("puntoVentaId" as any, { 
+      form.setError("puntoVentaId" as never, { 
         message: "Seleccione un punto de venta" 
       });
       return;

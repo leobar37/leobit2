@@ -1,0 +1,28 @@
+=== TASK 10 SCRIPTS CLEANED ===
+Date: Tue Apr 28 15:10:38 -05 2026
+
+DELETED:
+- packages/backend/scripts/fix-abono-sync-operations.ts
+  Reason: Script's ONLY purpose was fixing sync_operations records. Table is dropped.
+
+MODIFIED:
+- packages/backend/scripts/reset-db-dual.ts
+  Removed: syncOperations import and deletion step
+
+- packages/backend/scripts/reset-db.ts
+  Removed: syncOperations import and deletion step
+
+- packages/backend/scripts/backup-db.ts
+  Removed: syncOperations from schema import, TABLES array, and tableMap
+
+- packages/backend/scripts/apply-migrations.ts
+  Removed: sync_operations ALTER TABLE and CREATE INDEX statements
+
+- packages/backend/scripts/backfill-abono-seller-id.ts
+  Removed: Console log referencing deleted fix-abono-sync-operations.ts script
+
+- packages/shared/src/schema.ts
+  Updated: File header comment to remove PGlite reference (now "frontend/backend API contract")
+
+- packages/backend/src/db/schema/AGENTS.md
+  Updated: Removed syncOperations row from table listing; renamed "Sync & Supporting" to "Supporting Tables"

@@ -35,7 +35,7 @@ export function useTags() {
     queryKey: queryKeys.tags.all,
     queryFn: async () => {
       const response = await api.tags.get();
-      return extractData(response) as unknown as Tag[];
+      return extractData<Tag[]>(response);
     },
   });
 }
@@ -49,7 +49,7 @@ export function useTag(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.tags({ id }).get();
-      return extractData(response) as unknown as Tag;
+      return extractData<Tag>(response);
     },
     enabled: !!id,
   });
@@ -63,8 +63,8 @@ export function useCreateTag() {
 
   return useMutation({
     mutationFn: async (input: CreateTagInput): Promise<Tag> => {
-      const response = await api.tags.post(input as any);
-      return extractData(response) as unknown as Tag;
+      const response = await api.tags.post(input);
+      return extractData<Tag>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tags.all });
@@ -86,8 +86,8 @@ export function useUpdateTag() {
       id: string;
       input: UpdateTagInput;
     }): Promise<Tag> => {
-      const response = await api.tags({ id }).put(input as any);
-      return extractData(response) as unknown as Tag;
+      const response = await api.tags({ id }).put(input);
+      return extractData<Tag>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

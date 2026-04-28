@@ -44,7 +44,7 @@ export function usePayments() {
     queryKey: queryKeys.payments.all,
     queryFn: async (): Promise<Abono[]> => {
       const response = await api.payments.get();
-      return extractData(response) as unknown as Abono[];
+      return extractData<Abono[]>(response);
     },
   });
 }
@@ -59,7 +59,7 @@ export function useCustomerPayments(customerId: string | null) {
       const response = await api.payments.get({
         query: { customerId },
       });
-      return extractData(response) as unknown as Abono[];
+      return extractData<Abono[]>(response);
     },
     enabled: !!customerId,
   });
@@ -71,7 +71,7 @@ export function usePayment(id: string | null) {
     queryFn: async (): Promise<Abono | null> => {
       if (!id) return null;
       const response = await api.payments({ id }).get();
-      return extractData(response) as unknown as Abono;
+      return extractData<Abono>(response);
     },
     enabled: !!id,
   });
@@ -94,8 +94,8 @@ export function useCreatePayment() {
         notes: input.notes,
         proofImageId: input.proofImageId,
         referenceNumber: input.referenceNumber,
-      } as any);
-      return extractData(response) as unknown as Abono;
+      });
+      return extractData<Abono>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
@@ -168,14 +168,14 @@ export function useUpdatePayment() {
       if (input.proofImageId) {
         const response = await api.payments({ id }).proof.put({
           proofImageId: input.proofImageId,
-        } as any);
-        return extractData(response) as unknown as Abono;
+        });
+        return extractData<Abono>(response);
       }
       if (input.referenceNumber !== undefined) {
         const response = await api.payments({ id }).reference.put({
           referenceNumber: input.referenceNumber,
-        } as any);
-        return extractData(response) as unknown as Abono;
+        });
+        return extractData<Abono>(response);
       }
       throw new Error("No update fields provided");
     },

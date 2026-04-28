@@ -63,7 +63,7 @@ export function useVariantsByProduct(productId: string, filters?: VariantFilters
           includeInactive: filters?.includeInactive ? "true" : undefined,
         },
       });
-      const variants = extractData(response) as unknown as ProductVariant[];
+      const variants = extractData<ProductVariant[]>(response);
       if (filters?.isActive !== undefined && !filters.includeInactive) {
         return variants.filter((v) => v.isActive === filters.isActive);
       }
@@ -82,7 +82,7 @@ export function useVariant(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.variants({ id }).get();
-      return extractData(response) as unknown as ProductVariant;
+      return extractData<ProductVariant>(response);
     },
     enabled: !!id,
   });
@@ -102,8 +102,8 @@ export function useCreateVariant() {
       productId: string;
       input: CreateVariantInput;
     }): Promise<ProductVariant> => {
-      const response = await api.products({ id: productId }).variants.post(input as any);
-      return extractData(response) as unknown as ProductVariant;
+      const response = await api.products({ id: productId }).variants.post(input);
+      return extractData<ProductVariant>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -127,7 +127,7 @@ export function useUpdateVariant() {
       id: string;
       input: UpdateVariantInput;
     }): Promise<void> => {
-      const response = await api.variants({ id }).put(input as any);
+      const response = await api.variants({ id }).put(input);
       extractData(response);
     },
     onSuccess: () => {
@@ -170,7 +170,7 @@ export function useReorderVariants() {
       productId: string;
       variantIds: string[];
     }): Promise<void> => {
-      const response = await api.products({ id: productId }).variants.reorder.post({ variantIds } as any);
+      const response = await api.products({ id: productId }).variants.reorder.post({ variantIds });
       extractData(response);
     },
     onSuccess: (_, variables) => {

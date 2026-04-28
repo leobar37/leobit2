@@ -4,7 +4,7 @@ import { businesses, businessUsers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { RequestContext } from "../context/request-context";
 import { services, repositories } from "./services";
-import { backfillSyncOperations } from "./backfill-sync-operations";
+
 
 const CLIENT1_USER = {
   email: "cliente1@gmail.com",
@@ -167,13 +167,6 @@ export async function seedClient1User() {
 
   // Seed all data
   await seedClient1Data(ctx);
-
-  // Run backfill to create sync operations
-  console.log("\n🔄 Running sync operations backfill...");
-  const backfillResults = await backfillSyncOperations(businessId);
-  const totalCreated = backfillResults.reduce((sum, r) => sum + r.created, 0);
-  const totalSkipped = backfillResults.reduce((sum, r) => sum + r.skipped, 0);
-  console.log(`✓ Backfill complete: ${totalCreated} created, ${totalSkipped} skipped`);
 
   console.log("\n✅ Cliente1 seed completed!");
   console.log("\nLogin credentials:");

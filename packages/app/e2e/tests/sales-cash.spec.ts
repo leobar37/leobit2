@@ -7,38 +7,33 @@ import { initializeVolumeData, resetVolumeData } from "../mocks";
 
 /**
  * E2E Tests for Cash Sales (Venta al Contado)
- * 
+ *
  * These tests verify the cash sales flow in the Avileo POS system.
  * They require:
  * 1. Dev server running (bun run dev)
  * 2. MSW mock handlers configured
- * 3. PGlite initialized (can take 2-3 minutes on first load)
- * 
- * For faster testing without PGlite, use MSW mocks only.
+ *
+ * For faster testing, use MSW mocks only.
  */
 
-// Increase test timeout for PGlite initialization
 test.setTimeout(300000); // 5 minutes
 
 test.describe("Cash Sales (Venta al Contado)", () => {
   test.beforeEach(async ({ page }) => {
-    // Skip if PGlite is slow - these tests are complex E2E tests
-    // For faster feedback, use unit tests instead
-    test.skip(true, "PGlite initialization takes too long - use unit tests for faster feedback");
-    
+    test.skip(true, "E2E tests require full server stack - use unit tests for faster feedback");
+
     await initializeVolumeData();
-    
+
     // Login using dev credentials (pre-filled in dev mode)
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginWithDevCredentials();
-    
-    // Wait for PGlite initialization to complete
+
     await page.waitForFunction(
       () => !document.body.textContent?.includes("Inicializando base de datos local"),
-      { timeout: 180000 } // 3 minutes for PGlite
+      { timeout: 180000 }
     ).catch(() => {
-      console.log("PGlite initialization might still be in progress, continuing...");
+      console.log("Initialization might still be in progress, continuing...");
     });
   });
 

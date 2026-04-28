@@ -62,7 +62,7 @@ export function PuntoVentaForm({ puntoVenta, onClose, onSuccess }: PuntoVentaFor
         await updatePuntoVenta.mutateAsync({ id: puntoVenta.id, input: submitData });
         onClose();
       } else {
-        const newPuntoVenta = await createPuntoVenta.mutateAsync(submitData as any);
+        const newPuntoVenta = await createPuntoVenta.mutateAsync(submitData);
         if (onSuccess) {
           onSuccess(newPuntoVenta);
         } else {

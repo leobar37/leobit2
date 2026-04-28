@@ -12,13 +12,7 @@ async function applyMigrations() {
       ALTER TABLE sales ADD COLUMN IF NOT EXISTS sync_group_id VARCHAR(100)
     `);
     await db.execute(sql`
-      ALTER TABLE sync_operations ADD COLUMN IF NOT EXISTS sync_group_id VARCHAR(128)
-    `);
-    await db.execute(sql`
       CREATE INDEX IF NOT EXISTS idx_sales_sync_group_id ON sales(sync_group_id)
-    `);
-    await db.execute(sql`
-      CREATE INDEX IF NOT EXISTS idx_sync_operations_sync_group_id ON sync_operations(sync_group_id)
     `);
     console.log("✓ 0041_add_sync_group_ids applied");
 

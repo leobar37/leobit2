@@ -387,19 +387,16 @@ import {
   initializeVolumeData,
   resetVolumeData,
 } from "./volume-handlers";
-import { handlers as syncHandlers } from "./sync-handlers";
 
 // Combined handlers for easy setup
 export const handlers = [
   ...baseHandlers,
   ...volumeHandlers,
-  ...syncHandlers,
 ];
 
 // Re-export initialization functions
 export { initializeVolumeData, resetVolumeData };
 export { resetE2EData, getSales, addE2ESale, getCustomers } from "./handlers";
-export { resetSyncStore, getPendingOperations } from "./sync-handlers";
 ```
 
 ### Usage in Test Setup

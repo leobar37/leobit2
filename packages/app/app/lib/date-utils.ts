@@ -290,7 +290,7 @@ export function formatRecentDateTime(date: Date | string | null | undefined): st
     return "Sin fecha";
   }
 
-  // Handle Date objects directly (e.g., from PGlite TIMESTAMP columns)
+  // Handle Date objects directly (e.g., from database TIMESTAMP columns)
   let targetDate: Date;
   if (date instanceof Date) {
     targetDate = date;

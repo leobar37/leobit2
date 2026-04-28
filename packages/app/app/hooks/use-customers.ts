@@ -64,8 +64,6 @@ export interface CustomerTagSummary {
   tagColor: string;
   assignedAt: Date;
   assignedBy: null;
-  syncStatus: string;
-  syncAttempts: number;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -77,7 +75,7 @@ export interface CustomerTagSummary {
 export function useCustomers(filters?: CustomerSearchFilters) {
   return useQuery({
     queryKey: filters
-      ? queryKeys.customers.search(filters as Record<string, unknown>)
+      ? queryKeys.customers.search(filters)
       : queryKeys.customers.all,
     queryFn: async () => {
       const response = await api.customers.get({
@@ -88,7 +86,7 @@ export function useCustomers(filters?: CustomerSearchFilters) {
           tagIds: filters?.tagIds?.join(","),
         },
       });
-      return extractData(response) as unknown as Customer[];
+      return extractData<Customer[]>(response);
     },
   });
 }
@@ -98,7 +96,7 @@ export function useCustomers(filters?: CustomerSearchFilters) {
  */
 export function usePaginatedCustomers(query: CustomerPageQuery) {
   return useQuery({
-    queryKey: queryKeys.customers.page(query as Record<string, unknown>),
+    queryKey: queryKeys.customers.page(query),
     queryFn: async (): Promise<PaginatedCustomersResult> => {
       const response = await api.customers.get({
         query: {
@@ -108,7 +106,7 @@ export function usePaginatedCustomers(query: CustomerPageQuery) {
           tagIds: query.tagIds?.join(","),
         },
       });
-      const data = extractData(response) as unknown as Customer[];
+      const data = extractData<Customer[]>(response);
       return { items: data, total: data.length };
     },
   });
@@ -125,12 +123,12 @@ export function useCustomerTagsSummary(customerIds: string[]) {
       const results = await Promise.all(
         customerIds.map(async (id) => {
           const response = await api.customers({ id }).tags.get();
-          const tags = extractData(response) as unknown as Array<{
+          const tags = extractData<Array<{
             tagId: string;
             tagName: string;
             tagColor: string;
             assignedAt: string;
-          }>;
+          }>>(response);
           return tags.map(
             (tag) =>
               ({
@@ -140,8 +138,6 @@ export function useCustomerTagsSummary(customerIds: string[]) {
                 tagColor: tag.tagColor,
                 assignedAt: new Date(tag.assignedAt),
                 assignedBy: null,
-                syncStatus: "synced",
-                syncAttempts: 0,
                 version: 1,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -164,7 +160,7 @@ export function useCustomer(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.customers({ id }).get();
-      return extractData(response) as unknown as Customer;
+      return extractData<Customer>(response);
     },
     enabled: !!id,
   });
@@ -182,7 +178,7 @@ export function useSearchCustomers(searchTerm: string | null) {
           search: searchTerm && searchTerm.length >= 2 ? searchTerm : undefined,
         },
       });
-      return extractData(response) as unknown as Customer[];
+      return extractData<Customer[]>(response);
     },
   });
 }
@@ -195,8 +191,8 @@ export function useCreateCustomer() {
 
   return useMutation({
     mutationFn: async (input: CreateCustomerInput): Promise<Customer> => {
-      const response = await api.customers.post(input as any);
-      return extractData(response) as unknown as Customer;
+      const response = await api.customers.post(input);
+      return extractData<Customer>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
@@ -219,8 +215,8 @@ export function useUpdateCustomer() {
       id: string;
       input: UpdateCustomerInput;
     }): Promise<Customer> => {
-      const response = await api.customers({ id }).put(input as any);
-      return extractData(response) as unknown as Customer;
+      const response = await api.customers({ id }).put(input);
+      return extractData<Customer>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

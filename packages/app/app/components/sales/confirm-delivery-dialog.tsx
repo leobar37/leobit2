@@ -93,8 +93,7 @@ export function ConfirmDeliveryDialog({
       });
       reset();
       onClose();
-    } catch (error) {
-      console.error("Error confirming delivery:", error);
+    } catch {
     } finally {
       setIsSubmitting(false);
     }

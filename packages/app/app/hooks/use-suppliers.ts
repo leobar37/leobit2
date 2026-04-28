@@ -54,7 +54,7 @@ export function useSuppliers() {
     queryKey: queryKeys.suppliers.all,
     queryFn: async () => {
       const response = await api.suppliers.get();
-      return extractData(response) as unknown as Supplier[];
+      return extractData<Supplier[]>(response);
     },
   });
 }
@@ -71,7 +71,7 @@ export function useSearchSuppliers(searchTerm: string | null) {
           search: searchTerm && searchTerm.length >= 2 ? searchTerm : undefined,
         },
       });
-      return extractData(response) as unknown as Supplier[];
+      return extractData<Supplier[]>(response);
     },
   });
 }
@@ -85,7 +85,7 @@ export function useSupplier(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.suppliers({ id }).get();
-      return extractData(response) as unknown as Supplier;
+      return extractData<Supplier>(response);
     },
     enabled: !!id,
   });
@@ -99,8 +99,8 @@ export function useCreateSupplier() {
 
   return useMutation({
     mutationFn: async (input: CreateSupplierInput): Promise<Supplier> => {
-      const response = await api.suppliers.post(input as any);
-      return extractData(response) as unknown as Supplier;
+      const response = await api.suppliers.post(input);
+      return extractData<Supplier>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.all });
@@ -122,8 +122,8 @@ export function useUpdateSupplier() {
       id: string;
       input: UpdateSupplierInput;
     }): Promise<Supplier> => {
-      const response = await api.suppliers({ id }).put(input as any);
-      return extractData(response) as unknown as Supplier;
+      const response = await api.suppliers({ id }).put(input);
+      return extractData<Supplier>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

@@ -61,13 +61,8 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
 
     setLoading(true);
     try {
-      const perfStart = performance.now();
       const sale = await createDraftSale.mutateAsync({ type: "instant_sale" });
       onOpenChange(false);
-      console.log("[Perf][CreateSaleTypeSheet] direct draft created", {
-        saleId: sale.id,
-        totalMs: Number((performance.now() - perfStart).toFixed(2)),
-      });
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       toast.error("Error al crear venta", {
@@ -135,17 +130,12 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
 
     setLoading(true);
     try {
-      const perfStart = performance.now();
       const sale = await createDraftSale.mutateAsync({
         type: "pre_order",
         deliveryDate,
       });
       setShowDatePicker(false);
       onOpenChange(false);
-      console.log("[Perf][CreateSaleTypeSheet] pre-order draft created", {
-        saleId: sale.id,
-        totalMs: Number((performance.now() - perfStart).toFixed(2)),
-      });
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
       toast.error("Error al crear venta", {

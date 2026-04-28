@@ -71,9 +71,8 @@ export function RescheduleSaleDialog({
       });
       toast.success("Fecha de entrega actualizada");
       handleClose();
-    } catch (error) {
+    } catch {
       toast.error("Error al reprogramar la venta");
-      console.error(error);
     }
   };
 

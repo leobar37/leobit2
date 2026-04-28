@@ -16,26 +16,6 @@ import { useSupplier, useDeleteSupplier } from "~/hooks/use-suppliers";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { formatDate } from "~/lib/formatting";
 
-function SyncBadge({ status }: { status: "pending" | "synced" | "error" }) {
-  const styles = {
-    pending: "bg-amber-100 text-amber-700",
-    synced: "bg-green-100 text-green-700",
-    error: "bg-red-100 text-red-700",
-  };
-
-  const labels = {
-    pending: "Pendiente",
-    synced: "Sincronizado",
-    error: "Error",
-  };
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
-  );
-}
-
 export default function ProveedorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();

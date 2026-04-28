@@ -5,11 +5,8 @@ import { api } from "../lib/api-client";
 import {
   clearStoredAuthState,
   clearStoredBusinessId,
-  clearLocalDatabaseNamespace,
   setStoredBusinessId,
   setStoredBusinessUserId,
-  setLocalDatabaseNamespace,
-  clearSyncKeys,
   getStoredAuthToken,
   getStoredBusinessId,
 } from "../lib/session-storage";
@@ -47,10 +44,6 @@ async function ensureSessionReady() {
   }
 
   return session;
-}
-
-function buildDatabaseNamespace(userId: string, businessId: string, sessionId?: string) {
-  return [userId, businessId, sessionId ?? "session"].join("__");
 }
 
 async function waitForToken(maxRetries = 10, delayMs = 200): Promise<string | null> {
@@ -99,16 +92,6 @@ export function useAuth() {
       return { needsRedirect: true, redirectTo: "/business/create" };
     }
 
-    if (sessionState.user?.id) {
-      setLocalDatabaseNamespace(
-        buildDatabaseNamespace(
-          sessionState.user.id,
-          businessId,
-          sessionState.session?.id,
-        ),
-      );
-    }
-
     return { needsRedirect: false };
   };
 
@@ -142,16 +125,6 @@ export function useAuth() {
       return { needsRedirect: true, redirectTo: "/business/create" };
     }
 
-    if (sessionState.user?.id) {
-      setLocalDatabaseNamespace(
-        buildDatabaseNamespace(
-          sessionState.user.id,
-          businessId,
-          sessionState.session?.id,
-        ),
-      );
-    }
-
     return { needsRedirect: false };
   };
 
@@ -161,11 +134,7 @@ export function useAuth() {
     clearStoredAuthState();
     clearAuthSessionCache();
     clearStoredBusinessId();
-    clearLocalDatabaseNamespace();
-    clearSyncKeys();
 
-    // Notify server in background (fire and forget - ignore errors)
-    // The local cleanup is already done, so the user is effectively logged out
     authClient.signOut().catch((error) => {
       console.warn("Logout server call failed (can be ignored):", error);
     });

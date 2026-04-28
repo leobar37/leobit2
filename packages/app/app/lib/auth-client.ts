@@ -183,7 +183,6 @@ export function useAuthSession() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    networkMode: "offlineFirst",
   });
 }
 

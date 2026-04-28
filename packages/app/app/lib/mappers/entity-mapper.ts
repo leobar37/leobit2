@@ -1,6 +1,6 @@
 /**
  * snake_case to camelCase mapper for database results
- * Normalizes raw PGlite query results to match TypeScript interfaces
+ * Normalizes raw database query results to match TypeScript interfaces
  */
 
 type SnakeToCamel<S extends string> = S extends `${infer T}_${infer U}`
@@ -26,23 +26,23 @@ export function toCamelCase(str: string): string {
  */
 export function mapToCamelCase<T>(obj: T): SnakeCaseKeysToCamelCase<T> {
   if (obj === null || obj === undefined) {
-    return obj as any;
+    return obj as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => mapToCamelCase(item)) as any;
+    return obj.map((item) => mapToCamelCase(item)) as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
   if (typeof obj === "object") {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = toCamelCase(key);
       result[camelKey] = mapToCamelCase(value);
     }
-    return result;
+    return result as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
-  return obj as any;
+  return obj as unknown as SnakeCaseKeysToCamelCase<T>;
 }
 
 /**
@@ -61,7 +61,7 @@ export function mapEntityList<T>(rows: Record<string, unknown>[]): T[] {
 }
 
 /**
- * Utility to handle both snake_case (from PGlite) and camelCase (from TypeScript)
+ * Utility to handle both snake_case (from database) and camelCase (from TypeScript)
  * Use this when you're unsure which format you'll receive
  *
  * @example
@@ -146,7 +146,7 @@ function isISODateString(value: unknown): boolean {
  * Converts snake_case keys to camelCase and automatically converts Date objects to ISO strings
  * Works recursively for nested objects
  *
- * PGlite returns Date objects for TIMESTAMP columns, but our TypeScript interfaces expect strings.
+ * Databases may return Date objects for TIMESTAMP columns, but our TypeScript interfaces expect strings.
  * This function ensures dates are always returned as ISO strings.
  *
  * @example
@@ -156,15 +156,15 @@ function isISODateString(value: unknown): boolean {
  */
 export function mapToCamelCaseWithDates<T>(obj: T): SnakeCaseKeysToCamelCase<T> {
   if (obj === null || obj === undefined) {
-    return obj as any;
+    return obj as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => mapToCamelCaseWithDates(item)) as any;
+    return obj.map((item) => mapToCamelCaseWithDates(item)) as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
   if (typeof obj === "object") {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = toCamelCase(key);
       // Convert Date objects to ISO strings for date fields
@@ -174,8 +174,8 @@ export function mapToCamelCaseWithDates<T>(obj: T): SnakeCaseKeysToCamelCase<T> 
         result[camelKey] = mapToCamelCaseWithDates(value);
       }
     }
-    return result;
+    return result as unknown as SnakeCaseKeysToCamelCase<T>;
   }
 
-  return obj as any;
+  return obj as unknown as SnakeCaseKeysToCamelCase<T>;
 }

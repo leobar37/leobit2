@@ -165,8 +165,6 @@ backfillAbonoSellerId()
     }
 
     console.log("\n✅ Backfill completed!");
-    console.log("⚠️  Remember to run: bun run scripts/fix-abono-sync-operations.ts");
-    console.log("   to update sync_operations payloads as well.");
     process.exit(0);
   })
   .catch((error) => {

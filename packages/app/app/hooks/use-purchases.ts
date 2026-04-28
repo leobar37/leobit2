@@ -25,8 +25,6 @@ export interface Purchase {
   createdAt: Date;
   updatedAt: Date;
   version?: number;
-  syncAttempts?: number;
-  syncStatus?: string;
 }
 
 /** Purchase item */
@@ -79,7 +77,7 @@ export function usePurchases() {
     queryKey: queryKeys.purchases.all,
     queryFn: async (): Promise<Purchase[]> => {
       const response = await api.purchases.get();
-      return extractData(response) as unknown as Purchase[];
+      return extractData<Purchase[]>(response);
     },
   });
 }
@@ -93,7 +91,7 @@ export function usePurchase(id: string | null) {
     queryFn: async (): Promise<PurchaseWithItems | null> => {
       if (!id) return null;
       const response = await api.purchases({ id }).get();
-      return extractData(response) as unknown as PurchaseWithItems;
+      return extractData<PurchaseWithItems>(response);
     },
     enabled: !!id,
   });
@@ -109,7 +107,7 @@ export function usePurchasesBySupplier(supplierId: string) {
       const response = await api.purchases.get({
         query: { supplierId },
       });
-      return extractData(response) as unknown as Purchase[];
+      return extractData<Purchase[]>(response);
     },
     enabled: !!supplierId,
   });
@@ -125,7 +123,7 @@ export function usePurchasesByStatus(status: PurchaseStatus) {
       const response = await api.purchases.get({
         query: { status },
       });
-      return extractData(response) as unknown as Purchase[];
+      return extractData<Purchase[]>(response);
     },
   });
 }
@@ -138,8 +136,8 @@ export function useCreatePurchase() {
 
   return useMutation({
     mutationFn: async (input: CreatePurchaseInput): Promise<Purchase> => {
-      const response = await api.purchases.post(input as any);
-      return extractData(response) as unknown as Purchase;
+      const response = await api.purchases.post(input);
+      return extractData<Purchase>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
@@ -180,7 +178,7 @@ export function useUpdatePurchaseStatus() {
       id: string;
       status: PurchaseStatus;
     }): Promise<void> => {
-      const response = await api.purchases({ id }).status.put({ status } as any);
+      const response = await api.purchases({ id }).status.put({ status });
       extractData(response);
     },
     onSuccess: (_, variables) => {

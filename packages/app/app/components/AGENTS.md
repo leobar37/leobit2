@@ -4,7 +4,7 @@
 
 ## Overview
 
-This directory contains the React component library for Avileo - an offline-first chicken sales management system. Components are organized by category: reusable UI primitives, form components, and domain-specific business components for customers, products, sales, inventory, and distribution management.
+This directory contains the React component library for Avileo - an online-first chicken sales management system. Components are organized by category: reusable UI primitives, form components, and domain-specific business components for customers, products, sales, inventory, and distribution management.
 
 ## Project Type & Stack
 
@@ -329,13 +329,12 @@ The `/frontend` skill has a more complete pattern in `patterns/create-modal.md` 
 - Don't use English for user-facing text
 - Don't create modals inline in routes - consider extracting to feature modals folder
 
-### Offline-First Considerations
+### Online-First Considerations
 
-The app is offline-first. Components should:
+The app is online-first. Components should:
 - Handle loading states gracefully
-- Display sync status when relevant
 - Use optimistic updates where appropriate
-- Reference the `SyncContext` from `sync/sync-status.tsx` for network state
+- Reference the network state hook for connectivity status
 
 ## Dependencies
 

@@ -198,21 +198,6 @@ export {
 } from "./staff-invitations";
 
 export {
-  syncOperations,
-  syncOperationsRelations,
-  type SyncOperation,
-  type NewSyncOperation,
-} from "./sync-operations";
-
-
-
-export {
-  syncDeadLetter,
-  type SyncDeadLetter,
-  type NewSyncDeadLetter,
-} from "./sync-dead-letter";
-
-export {
   suppliers,
   suppliersRelations,
   type Supplier,

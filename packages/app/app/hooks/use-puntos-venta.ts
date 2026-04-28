@@ -24,7 +24,6 @@ export type CreatePuntoVentaInput = {
   name: string;
   code?: string;
   description?: string;
-  type?: "carro" | "local" | "mercado" | "ruta" | "otro";
   isActive?: boolean;
   sortOrder?: number;
 };
@@ -45,7 +44,7 @@ export function usePuntosVenta() {
     queryKey: QUERY_KEYS.puntosVenta,
     queryFn: async () => {
       const response = await api["puntos-venta"].get();
-      return extractData(response, "Failed to load puntos de venta") as PuntoVenta[];
+      return extractData<PuntoVenta[]>(response, "Failed to load puntos de venta");
     },
   });
 }
@@ -58,7 +57,7 @@ export function usePuntosVentaActivos() {
     queryKey: QUERY_KEYS.puntosVentaActive,
     queryFn: async () => {
       const response = await api["puntos-venta"].active.get();
-      return extractData(response, "Failed to load puntos de venta activos") as PuntoVenta[];
+      return extractData<PuntoVenta[]>(response, "Failed to load puntos de venta activos");
     },
   });
 }
@@ -72,7 +71,7 @@ export function usePuntoVenta(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api["puntos-venta"]({ id }).get();
-      return extractData(response, "Failed to load punto de venta") as PuntoVenta;
+      return extractData<PuntoVenta>(response, "Failed to load punto de venta");
     },
     enabled: !!id,
   });
@@ -86,8 +85,8 @@ export function useCreatePuntoVenta() {
 
   return useMutation({
     mutationFn: async (input: CreatePuntoVentaInput) => {
-      const response = await api["puntos-venta"].post(input as any);
-      return extractData(response, "Failed to create punto de venta") as PuntoVenta;
+      const response = await api["puntos-venta"].post(input);
+      return extractData<PuntoVenta>(response, "Failed to create punto de venta");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.puntosVenta });
@@ -109,8 +108,8 @@ export function useUpdatePuntoVenta() {
       id: string;
       input: UpdatePuntoVentaInput;
     }) => {
-      const response = await api["puntos-venta"]({ id }).put(input as any);
-      return extractData(response, "Failed to update punto de venta") as PuntoVenta;
+      const response = await api["puntos-venta"]({ id }).put(input);
+      return extractData<PuntoVenta>(response, "Failed to update punto de venta");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -130,7 +129,7 @@ export function useTogglePuntoVenta() {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await api["puntos-venta"]({ id })["toggle"].patch();
-      return extractData(response, "Failed to toggle punto de venta") as PuntoVenta;
+      return extractData<PuntoVenta>(response, "Failed to toggle punto de venta");
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({

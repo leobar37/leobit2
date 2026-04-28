@@ -27,7 +27,7 @@ export function useCustomerTagsWithDetails(customerId: string | null) {
     queryFn: async () => {
       if (!customerId) return [];
       const response = await api.customers({ id: customerId }).tags.get();
-      return extractData(response) as unknown as CustomerTagWithDetails[];
+      return extractData<CustomerTagWithDetails[]>(response);
     },
     enabled: !!customerId,
   });

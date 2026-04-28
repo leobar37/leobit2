@@ -3,8 +3,12 @@ import { formatNumber } from "~/lib/utils";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Product } from "@avileo/shared";
 import type { ProductVariant } from "~/hooks/use-product-variants";
+
+interface CalculatorProduct {
+  id: string;
+  unit: string;
+}
 import {
 	calculateKgProduct,
 	calculateUnitProduct,
@@ -31,7 +35,7 @@ const calculatorSchema = z.object({
 export type CalculatorFormData = z.infer<typeof calculatorSchema>;
 
 interface UseSmartCalculatorOptions {
-	product: Product | undefined;
+	product: CalculatorProduct | undefined;
 	variant: ProductVariant | undefined;
 	initialPrice?: string;
 	autoFillPrice?: boolean;

@@ -5,7 +5,7 @@
     "enabled": true,
     "timeout": 30
   },
-  "globalDependencies": ["package.json", "bun.lock", "drizzle-sync.config.ts"],
+  "globalDependencies": ["package.json", "bun.lock"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -21,9 +21,6 @@
       "outputs": ["dist/**"]
     },
     "@avileo/shared#build": {
-      "outputs": ["dist/**"]
-    },
-    "@avileo/drizzle-sync#build": {
       "outputs": ["dist/**"]
     },
     "dev": {

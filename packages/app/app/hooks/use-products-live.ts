@@ -1,6 +1,6 @@
 /**
  * Products Hook - Barrel export
- * All product hooks are now service-based (offline-first)
+ * All product hooks are now service-based
  */
 export {
   useProducts,

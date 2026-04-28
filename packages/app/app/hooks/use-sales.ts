@@ -3,7 +3,6 @@
  * Reactively fetch and mutate sales using Eden Treaty API
  */
 
-import { useCallback } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
@@ -215,7 +214,7 @@ export function useSales(filters?: SaleFilters) {
 
   return useQuery({
     queryKey: filters
-      ? queryKeys.sales.lists(filters as Record<string, unknown>)
+      ? queryKeys.sales.lists(filters)
       : queryKeys.sales.all,
     queryFn: async () => {
       const response = await api.sales.get({
@@ -224,15 +223,17 @@ export function useSales(filters?: SaleFilters) {
           offset: "0",
         },
       });
-      const sales = extractData(response) as SaleListItem[];
+      const sales = extractData<SaleListItem[]>(response);
       return applyClientSideFilters(sales, filters);
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }
 
 export function usePaginatedSales(query: SalePageQuery) {
   return useQuery({
-    queryKey: queryKeys.sales.lists((query as unknown) as Record<string, unknown>),
+    queryKey: queryKeys.sales.lists(query),
     queryFn: async (): Promise<PaginatedSalesResult> => {
       const fetchLimit = query.limit * 3;
       const response = await api.sales.get({
@@ -244,7 +245,7 @@ export function usePaginatedSales(query: SalePageQuery) {
           offset: String(query.offset),
         },
       });
-      const sales = extractData(response) as SaleListItem[];
+      const sales = extractData<SaleListItem[]>(response);
       const filtered = applyClientSideFilters(sales, query);
 
       return {
@@ -253,6 +254,8 @@ export function usePaginatedSales(query: SalePageQuery) {
       };
     },
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }
 
@@ -265,35 +268,13 @@ export function useSale(id: string | null) {
     queryFn: async (): Promise<SaleWithItems | null> => {
       if (!id) return null;
       const response = await api.sales({ id }).get();
-      return extractData(response) as SaleWithItems;
+      return extractData<SaleWithItems>(response);
     },
     enabled: !!id,
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
-}
-
-/**
- * Hook to check the sync status of a specific sale
- * Simplified for API-based architecture - always reports synced
- */
-export function useSaleSyncStatus(saleId: string | null) {
-  const { data: sale, isLoading, error } = useSale(saleId);
-
-  const ensureSynced = useCallback(async (): Promise<boolean> => {
-    return true;
-  }, []);
-
-  return {
-    isSynced: true,
-    isPending: false,
-    hasSyncError: false,
-    syncAttempts: 0,
-    syncStatus: "synced" as const,
-    sale,
-    isLoading,
-    error,
-    ensureSynced,
-  };
 }
 
 /**
@@ -311,10 +292,12 @@ export function useSalesByCustomer(customerId: string) {
           offset: "0",
         },
       });
-      const sales = extractData(response) as SaleListItem[];
+      const sales = extractData<SaleListItem[]>(response);
       return sales.filter((sale) => sale.customerId === customerId);
     },
     enabled: !!customerId,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }
 
@@ -333,9 +316,11 @@ export function useSalesByStatus(status: SaleStatus) {
           offset: "0",
         },
       });
-      const sales = extractData(response) as SaleListItem[];
+      const sales = extractData<SaleListItem[]>(response);
       return sales.filter((sale) => sale.status === status);
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }
 
@@ -354,7 +339,6 @@ export function useCreateSale() {
       items: CreateSaleItemInput[];
     }): Promise<Sale> => {
       const response = await api.sales.post({
-        id: undefined,
         customerId: sale.customerId,
         distribucionId: sale.distribucionId,
         visitaId: sale.visitaId,
@@ -377,8 +361,8 @@ export function useCreateSale() {
           unitPriceQuoted: item.unitPriceQuoted,
           subtotal: item.subtotal,
         })),
-      } as any);
-      return extractData(response) as Sale;
+      });
+      return extractData<Sale>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
@@ -402,7 +386,6 @@ export function useCreateDraftSale() {
       type?: "instant_sale" | "pre_order";
       deliveryDate?: string;
     }): Promise<Sale> => {
-      const perfStart = performance.now();
       const sellerId = business?.businessUserId;
 
       if (!sellerId) {
@@ -419,13 +402,9 @@ export function useCreateDraftSale() {
         visitaId: options?.visitaId,
         deliveryDate: options?.deliveryDate,
         items: [],
-      } as any);
-
-      const sale = extractData(response) as Sale;
-      console.log("[Perf][useCreateDraftSale] mutationFn", {
-        saleId: sale.id,
-        totalMs: Number((performance.now() - perfStart).toFixed(2)),
       });
+
+      const sale = extractData<Sale>(response);
       return sale;
     },
     onSuccess: (sale) => {

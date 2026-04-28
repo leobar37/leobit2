@@ -29,7 +29,7 @@ export function useCustomerTags(customerId: string | null) {
     queryFn: async () => {
       if (!customerId) return [];
       const response = await api.customers({ id: customerId }).tags.get();
-      return extractData(response) as unknown as CustomerTagItem[];
+      return extractData<CustomerTagItem[]>(response);
     },
     enabled: !!customerId,
   });
@@ -54,7 +54,7 @@ export function useAddCustomerTag() {
     mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }): Promise<void> => {
       // Get current tags
       const response = await api.customers({ id: customerId }).tags.get();
-      const currentTags = extractData(response) as unknown as CustomerTagItem[];
+      const currentTags = extractData<CustomerTagItem[]>(response);
       const tagIds = [...currentTags.map((t) => t.tagId), tagId];
       const uniqueTagIds = [...new Set(tagIds)];
 
@@ -78,7 +78,7 @@ export function useRemoveCustomerTag() {
   return useMutation({
     mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }): Promise<void> => {
       const response = await api.customers({ id: customerId }).tags.get();
-      const currentTags = extractData(response) as unknown as CustomerTagItem[];
+      const currentTags = extractData<CustomerTagItem[]>(response);
       const tagIds = currentTags.map((t) => t.tagId).filter((id) => id !== tagId);
 
       const assignResponse = await api.customers({ id: customerId }).tags.post({ tagIds });

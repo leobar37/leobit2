@@ -26,20 +26,16 @@ export const api = treaty<App>(API_URL, {
 
 /** Extracts data from Eden response or throws standardized error */
 export function extractData<T>(
-  response: { data?: { success: boolean; data?: T; error?: string } | null; error?: { value: unknown } | null },
+  response: { data?: { success: boolean; data?: unknown; error?: string } | null; error?: { value: unknown } | null },
   defaultError = "Request failed"
 ): T {
-  console.log("[extractData] Response:", JSON.stringify(response, null, 2));
   if (response.error) {
-    console.error("[extractData] Response error:", response.error);
     throw new Error(String(response.error.value));
   }
   if (!response.data?.success || !response.data.data) {
-    console.error("[extractData] Invalid data:", { success: response.data?.success, hasData: !!response.data?.data, error: response.data?.error });
     throw new Error(response.data?.error || defaultError);
   }
-  console.log("[extractData] Success! Data:", response.data.data);
-  return response.data.data;
+  return response.data.data as T;
 }
 
 /**

@@ -316,6 +316,13 @@
       "when": 1777351521421,
       "tag": "0060_drop_sync_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1745856000000,
+      "tag": "0061_drop_sync_tables",
+      "breakpoints": true
     }
   ]
 }

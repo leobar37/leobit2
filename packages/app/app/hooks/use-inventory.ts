@@ -46,7 +46,7 @@ export function useVariantInventoryItem(variantId: string | null) {
     queryFn: async () => {
       if (!variantId) return null;
       const response = await api.variants({ id: variantId }).inventory.get();
-      return extractData(response) as unknown as VariantInventoryItem;
+      return extractData<VariantInventoryItem>(response);
     },
     enabled: !!variantId,
   });
@@ -66,7 +66,7 @@ export function useValidateVariantStock() {
       requestedQty: number;
     }): Promise<StockValidationResult> => {
       const response = await api.variants({ id: variantId }).inventory.get();
-      const inventory = extractData(response) as unknown as VariantInventoryItem;
+      const inventory = extractData<VariantInventoryItem>(response);
       const availableQty = inventory ? parseFloat(inventory.quantity) : 0;
 
       return {
@@ -92,7 +92,7 @@ export function useValidateBatchStock() {
 
       for (const item of items) {
         const response = await api.variants({ id: item.variantId }).inventory.get();
-        const inventory = extractData(response) as unknown as VariantInventoryItem;
+        const inventory = extractData<VariantInventoryItem>(response);
         const availableQty = inventory ? parseFloat(inventory.quantity) : 0;
 
         results.push({

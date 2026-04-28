@@ -134,7 +134,7 @@ export function useDistribuciones(params?: {
           estado: params?.estado,
         },
       });
-      return extractData(response) as unknown as Distribucion[];
+      return extractData<Distribucion[]>(response);
     },
     enabled: !!businessId,
   });
@@ -153,7 +153,7 @@ export function useSellerDistribuciones(
       const response = await api.distribuciones.get({
         query: { vendedorId },
       });
-      return extractData(response) as unknown as Distribucion[];
+      return extractData<Distribucion[]>(response);
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -172,7 +172,7 @@ export function useActiveDistribucion(
       const response = await api.distribuciones.get({
         query: { vendedorId, estado: "activo" },
       });
-      const data = extractData(response) as unknown as Distribucion[];
+      const data = extractData<Distribucion[]>(response);
       return data[0] || null;
     },
     enabled: !!businessId && !!vendedorId,
@@ -195,9 +195,9 @@ export function useMiDistribucion(fecha?: string) {
       const response = await api.distribuciones.mine.get({
         query: fecha ? { fecha } : undefined,
       });
-      const data = extractData(response) as unknown as Distribucion & {
+      const data = extractData<Distribucion & {
         items?: BackendDistribucionItem[];
-      };
+      }>(response);
       return data ? mapDistribucionWithItems(data) : null;
     },
     enabled: !!businessId && !!vendedorId,
@@ -213,9 +213,9 @@ export function useDistribucion(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.distribuciones({ id }).get();
-      const data = extractData(response) as unknown as Distribucion & {
+      const data = extractData<Distribucion & {
         items?: BackendDistribucionItem[];
-      };
+      }>(response);
       return mapDistribucionWithItems(data);
     },
     enabled: !!id,
@@ -230,8 +230,8 @@ export function useCreateDistribucion() {
 
   return useMutation({
     mutationFn: async (input: CreateDistribucionApiInput) => {
-      const response = await api.distribuciones.post(input as any);
-      return extractData(response) as unknown as Distribucion;
+      const response = await api.distribuciones.post(input);
+      return extractData<Distribucion>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -254,8 +254,8 @@ export function useCloseDistribucion() {
     mutationFn: async (input: CloseDistribucionInput) => {
       const response = await api.distribuciones({ id: input.id }).close.patch({
         notaCierre: input.notaCierre,
-      } as any);
-      return extractData(response) as unknown as Distribucion;
+      });
+      return extractData<Distribucion>(response);
     },
     onSuccess: (_, input) => {
       queryClient.invalidateQueries({
@@ -286,8 +286,8 @@ export function useUpdateDistribucionItems() {
         unidad: string;
       }>;
     }) => {
-      const response = await api.distribuciones({ id }).items.put({ items } as any);
-      return extractData(response) as unknown as Distribucion;
+      const response = await api.distribuciones({ id }).items.put({ items });
+      return extractData<Distribucion>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -309,8 +309,8 @@ export function useUpdateDistribucion() {
   return useMutation({
     mutationFn: async (data: { id: string; puntoVenta?: string; estado?: string }) => {
       const { id, ...changes } = data;
-      const response = await api.distribuciones({ id }).put(changes as any);
-      return extractData(response) as unknown as Distribucion;
+      const response = await api.distribuciones({ id }).put(changes);
+      return extractData<Distribucion>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

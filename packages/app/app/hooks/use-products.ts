@@ -52,7 +52,7 @@ export function useProducts() {
     queryKey: queryKeys.products.all,
     queryFn: async () => {
       const response = await api.products.get();
-      return extractData(response) as unknown as unknown as Product[];
+      return extractData<Product[]>(response);
     },
   });
 }
@@ -66,7 +66,7 @@ export function useProduct(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.products({ id }).get();
-      return extractData(response) as unknown as Product;
+      return extractData<Product>(response);
     },
     enabled: !!id,
   });
@@ -80,8 +80,8 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: async (input: CreateProductInput): Promise<Product> => {
-      const response = await api.products.post(input as any);
-      return extractData(response) as unknown as Product;
+      const response = await api.products.post(input);
+      return extractData<Product>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
@@ -103,8 +103,8 @@ export function useUpdateProduct() {
       id: string;
       input: UpdateProductInput;
     }): Promise<Product> => {
-      const response = await api.products({ id }).put(input as any);
-      return extractData(response) as unknown as Product;
+      const response = await api.products({ id }).put(input);
+      return extractData<Product>(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

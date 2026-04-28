@@ -3,7 +3,7 @@ import { auth } from "../lib/auth";
 import { db } from "../lib/db";
 import { RequestContext } from "../context/request-context";
 import { abonos, businesses, businessUsers, sales as salesSchema } from "../db/schema";
-import { backfillSyncOperations } from "./backfill-sync-operations";
+
 import {
   ABONOS,
   CLIENT2_BUSINESS,
@@ -196,12 +196,6 @@ export async function seedClient2User() {
   const ctx = RequestContext.forWorker(businessId, businessUserId);
 
   await seedClient2Data(ctx);
-
-  console.log("\n🔄 Running sync operations backfill...");
-  const backfillResults = await backfillSyncOperations(businessId);
-  const totalCreated = backfillResults.reduce((sum, result) => sum + result.created, 0);
-  const totalSkipped = backfillResults.reduce((sum, result) => sum + result.skipped, 0);
-  console.log(`✓ Backfill complete: ${totalCreated} created, ${totalSkipped} skipped`);
 
   console.log("\n✅ JUAVIK client2 seed completed!");
   console.log("\nLogin credentials:");

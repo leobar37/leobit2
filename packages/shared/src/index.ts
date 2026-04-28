@@ -368,17 +368,6 @@ export type {
   NewVariantInventory,
 } from "./schema";
 
-// Sync configuration exports
-export {
-  SYNC_ENTITIES,
-  type SyncEntity,
-  ENTITY_PRIORITIES,
-  SYNC_STATUS_TRACKED,
-  SELF_HEAL_INSERTABLE,
-  isSyncEntity,
-  getEntityPriority,
-} from "./sync-config";
-
 // Staged sync exports
 export {
   SYNC_STAGES,

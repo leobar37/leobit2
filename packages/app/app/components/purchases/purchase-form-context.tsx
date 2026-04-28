@@ -146,7 +146,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     queryFn: async () => {
       if (!purchaseId) return null;
       const response = await api.purchases({ id: purchaseId }).get();
-      return extractData(response) as unknown as PurchaseWithItems;
+      return extractData<PurchaseWithItems>(response);
     },
     enabled: !!purchaseId,
   });
@@ -340,8 +340,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         })),
       };
 
-      const response = await api.purchases.post(input as any);
-      const result = extractData(response) as unknown as PurchaseWithItems;
+      const response = await api.purchases.post(input);
+      const result = extractData<PurchaseWithItems>(response);
       return result.id;
     },
     onSuccess: (id) => {

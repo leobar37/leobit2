@@ -3,7 +3,7 @@
  * Integration Tests with MSW Mocking
  * 
  * These tests use MSW to mock all API calls and local storage,
- * allowing fast testing without requiring PGlite initialization.
+ * allowing fast testing without requiring a running backend.
  * 
  * They test the UI components and user flows in isolation.
  */
@@ -131,19 +131,18 @@ test.describe("MSW Integration Tests", () => {
   });
 });
 
-test.describe("E2E Sales Flows (Skipped - Requires PGlite)", () => {
-  test.skip(true, "These tests require PGlite which takes too long to initialize in CI");
-  
+test.describe("E2E Sales Flows", () => {
+  test.skip(true, "E2E tests require full server stack");
+
   test("should create a cash sale", async ({ page }) => {
-    // This test requires PGlite for local database operations
-    // Skipped until we have a faster local DB solution
+    // Placeholder for full E2E cash sale test
   });
 
   test("should create a credit sale", async ({ page }) => {
-    // This test requires PGlite for local database operations
+    // Placeholder for full E2E credit sale test
   });
 
   test("should add customer to sale", async ({ page }) => {
-    // This test requires PGlite for local database operations
+    // Placeholder for full E2E customer sale test
   });
 });

@@ -36,14 +36,14 @@ import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { ToolbarActions } from "~/components/layout/toolbar-actions";
 import { useNewSaleContext } from "./new-sale-context";
 import { useToast } from "~/hooks/use-toast";
-
+import { useOnline } from "~/hooks/use-online";
 
 export function CustomerSection() {
   const { saleId, visitaId, sale, items } = useNewSaleContext();
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const calculations = useSaleCalculations(sale as any, items);
+  const calculations = useSaleCalculations(sale, items);
 
   const isFromVisita = !!visitaId;
 
@@ -60,15 +60,13 @@ export function CustomerSection() {
         },
       });
     } catch (error) {
-      console.error("[CustomerSection] Error updating customer:", error);
       toast.error("Error al seleccionar cliente", {
         description: "No se pudo actualizar el cliente de la venta",
       });
     }
   };
 
-  // Handle both camelCase and snake_case from DB
-  const customerId = sale?.customerId ?? (sale as any)?.customer_id ?? null;
+  const customerId = sale?.customerId ?? null;
   // Transform SaleCustomer to the type expected by CustomerSelect
   const customer = sale?.customer
     ? {
@@ -131,7 +129,7 @@ export function PaymentModeSection() {
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
-  const calculations = useSaleCalculations(sale as any, items);
+  const calculations = useSaleCalculations(sale, items);
 
   // Define callback before guard clause to ensure hooks are always called in same order
   const handleUpdateAmountPaid = useCallback(
@@ -337,7 +335,7 @@ export function CartSection() {
 export function SaleSummaryCard() {
   const { sale, items } = useNewSaleContext();
 
-  const calculations = useSaleCalculations(sale as any, items);
+  const calculations = useSaleCalculations(sale, items);
 
   if (items.length === 0) {
     return null;
@@ -407,14 +405,20 @@ export function SaleSubmitBar() {
   const { saleId, returnTo, sale, items } = useNewSaleContext();
   const { toast } = useToast();
   const finalizeSale = useFinalizeSale();
+  const { isOnline } = useOnline();
 
-  const calculations = useSaleCalculations(sale as any, items);
+  const calculations = useSaleCalculations(sale, items);
 
   // Check if we're in delivery mode (confirmed pre_order)
   const isDeliveryMode = sale?.type === "pre_order" && sale?.status === "confirmed";
 
   const handleSubmit = async () => {
     if (!calculations.canSubmit || !saleId || !sale) return;
+
+    if (!isOnline) {
+      toast.error("Necesitas conexión a internet para confirmar la venta.");
+      return;
+    }
 
     try {
       if (isDeliveryMode) {
@@ -448,7 +452,6 @@ export function SaleSubmitBar() {
 
       navigate(returnTo);
     } catch (error) {
-      console.error("[SaleSubmitBar] Error finalizing sale:", error);
       const message = error instanceof Error ? error.message : "No se pudo completar la venta";
       toast.error(isDeliveryMode ? "Error al confirmar entrega" : "Error al finalizar venta", {
         description: message,
@@ -480,7 +483,7 @@ export function SaleSubmitBar() {
         </div>
         <Button
           onClick={handleSubmit}
-          disabled={!calculations.canSubmit || finalizeSale.isPending}
+          disabled={!calculations.canSubmit || finalizeSale.isPending || !isOnline}
           className={cn(
             "h-11 px-6 rounded-xl text-sm font-semibold shadow-md whitespace-nowrap disabled:opacity-100",
             isDeliveryMode
@@ -563,8 +566,8 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     calculation,
     handleClear,
   } = useSmartCalculator({
-    product: selectedProduct as any,
-    variant: selectedVariant as any,
+    product: selectedProduct,
+    variant: selectedVariant,
     autoFillPrice,
     hideTara,
     initialValues: editingInitialValues,
@@ -641,7 +644,6 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
 
       navigate(returnPath ?? getSaleEditorPath(saleId));
     } catch (error) {
-      console.error("[CalculatorContent] Error saving item:", error);
       const message = error instanceof Error ? error.message : "No se pudo agregar el producto";
       toast.error("Error al agregar producto", {
         description: message,

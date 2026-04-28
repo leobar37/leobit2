@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 
 export interface StockAlert {
   variantId: string;
@@ -14,13 +15,8 @@ export interface StockAlert {
 }
 
 async function getStockAlerts(): Promise<StockAlert[]> {
-  const { data, error } = await api.reports["stock-alerts"].get();
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as any).data as StockAlert[];
+  const response = await api.reports["stock-alerts"].get();
+  return extractData<StockAlert[]>(response);
 }
 
 export function useStockAlerts() {

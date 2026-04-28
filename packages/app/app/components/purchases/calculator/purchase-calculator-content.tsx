@@ -75,8 +75,8 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
     calculation,
     handleClear,
   } = useSmartCalculator({
-    product: selectedProduct as any,
-    variant: selectedVariant as any,
+    product: selectedProduct,
+    variant: selectedVariant,
     autoFillPrice: false,
     initialValues: editingInitialValues,
   });

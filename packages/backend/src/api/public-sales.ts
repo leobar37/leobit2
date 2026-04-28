@@ -8,7 +8,6 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { sales, saleItems } from "../db/schema/sales";
 import { saleTokens } from "../db/schema/sale-tokens";
-import { syncOperations } from "../db/schema/sync-operations";
 import { productVariants, products, variantInventory } from "../db/schema/inventory";
 import { NotFoundError, ValidationError, ForbiddenError } from "../errors";
 import { normalizeAmount, normalizeQuantity } from "../lib/number-utils";
@@ -829,23 +828,6 @@ export const publicSaleRoutes = new Elysia({
           updatedAt: new Date(),
         })
         .where(eq(sales.id, saleData.id));
-
-      // Create sync operation so vendor receives the update via pull sync
-      await db.insert(syncOperations).values({
-        businessId: saleData.businessId,
-        operationId: `server-sale-update-${saleData.id}-${Date.now()}`,
-        entity: "sales",
-        action: "update",
-        entityId: saleData.id,
-        payload: {
-          id: saleData.id,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-        },
-        status: "processed",
-        clientTimestamp: new Date(),
-        processedAt: new Date(),
-      });
 
       // Optionally deactivate token after confirmation
       // await db.update(saleTokens).set({ isActive: false }).where(eq(saleTokens.id, tokenData.id));

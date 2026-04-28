@@ -1,4 +1,4 @@
-import { User, Phone, MapPin, CreditCard, CloudOff, Check, Users } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, Check, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
 import type { Customer } from "@avileo/shared";
@@ -37,7 +37,6 @@ export function CustomerCard({
   preloadedTags,
   preloadedGroups,
 }: CustomerCardProps) {
-  const isPending = customer.syncStatus === "pending";
   const { data: customerTagsQuery } = useCustomerTagsWithDetails(
     preloadedTags ? null : customer.id
   );
@@ -102,17 +101,9 @@ export function CustomerCard({
           )}
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className={cn("font-semibold truncate", selected ? "text-orange-950" : "text-foreground")}>
-                {customer.name}
-              </h3>
-              {isPending && !selectable && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full flex-shrink-0">
-                  <CloudOff className="h-3 w-3" />
-                  Sin sincronizar
-                </span>
-              )}
-            </div>
+            <h3 className={cn("font-semibold truncate", selected ? "text-orange-950" : "text-foreground")}>
+              {customer.name}
+            </h3>
 
             {/* Tags */}
             {showTags && customerTags && customerTags.length > 0 && (

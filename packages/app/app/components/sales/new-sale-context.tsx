@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
 import { useSaleEditorState } from "~/hooks/use-sale-editor-state";
 import { useSale } from "~/hooks/use-sales-db";
-import type { SaleItem } from "~/hooks/use-sales";
+import type { SaleItem, SaleWithItems } from "~/hooks/use-sales";
 
 interface NewSaleContextType {
   saleId: string | null;
@@ -12,7 +12,7 @@ interface NewSaleContextType {
   visitaId: string | null;
   setLinkedVisitaId: (id: string | null) => void;
   returnTo: string;
-  sale: ReturnType<typeof useSale>["data"];
+  sale: SaleWithItems | null;
   items: SaleItem[];
   isSaleLoading: boolean;
 }

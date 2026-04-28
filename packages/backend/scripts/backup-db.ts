@@ -22,70 +22,12 @@ import {
   suppliers,
   purchases,
   purchaseItems,
-  productUnits,
-  tags,
-  customerTags,
-  userProfiles,
-  syncOperations,
   staffInvitations,
-  saleTokens,
   systemConfig,
   businessPaymentSettings,
   businessUserWhatsAppSettings,
   whatsAppTemplates,
   whatsAppMessages,
-} from "../src/db/schema";
-import { eq } from "drizzle-orm";
-import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// Go up from scripts/ -> backend/ -> packages/ -> root
-const projectRoot = path.resolve(__dirname, "../../..");
-
-interface BackupData {
-  metadata: {
-    timestamp: string;
-    version: string;
-    source: string;
-    tables: string[];
-  };
-  tables: Record<string, unknown[]>;
-  checksum?: string;
-  checksumAlgorithm?: string;
-}
-
-const TABLES = [
-  'businesses',
-  'businessUsers',
-  'userProfiles',
-  'customers',
-  'tags',
-  'customerTags',
-  'sales',
-  'saleItems',
-  'abonos',
-  'saleTokens',
-  'products',
-  'productVariants',
-  'productUnits',
-  'assets',
-  'files',
-  'distribuciones',
-  'distribucionItems',
-  'suppliers',
-  'purchases',
-  'purchaseItems',
-  'syncOperations',
-  'staffInvitations',
-  'systemConfig',
-  'businessPaymentSettings',
-  'businessUserWhatsAppSettings',
-  'whatsAppTemplates',
-  'whatsAppMessages',
 ] as const;
 
 type TableName = typeof TABLES[number];
@@ -111,7 +53,6 @@ const tableMap: Record<TableName, unknown> = {
   suppliers,
   purchases,
   purchaseItems,
-  syncOperations,
   staffInvitations,
   systemConfig,
   businessPaymentSettings,

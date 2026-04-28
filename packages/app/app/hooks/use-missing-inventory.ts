@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 
 export interface MissingInventoryItem {
   productId: string;
@@ -19,15 +20,10 @@ export interface MissingInventoryFilters {
 async function getMissingInventory(
   filters?: MissingInventoryFilters
 ): Promise<MissingInventoryItem[]> {
-  const { data, error } = await api.reports["missing-inventory"].get({
+  const response = await api.reports["missing-inventory"].get({
     query: filters,
   });
-
-  if (error) {
-    throw new Error(String(error.value));
-  }
-
-  return (data as any).data as MissingInventoryItem[];
+  return extractData<MissingInventoryItem[]>(response);
 }
 
 export function useMissingInventory(filters?: MissingInventoryFilters) {

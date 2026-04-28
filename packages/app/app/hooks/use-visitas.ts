@@ -96,7 +96,7 @@ export function useVisitas(distribucionId: string | undefined) {
       const response = await api.visitas.get({
         query: { distribucionId },
       });
-      const data = extractData(response) as BackendVisita[];
+      const data = extractData<BackendVisita[]>(response);
       return data.map(mapVisita);
     },
     enabled: !!distribucionId,
@@ -114,11 +114,11 @@ export function useUpdateVisita() {
       const patchResponse = await api.visitas({ id }).patch({
         status: input.status,
         motivoNoCompra: input.motivoNoCompra,
-        saleId: input.saleId,
-      } as any);
+        saleId: input.saleId ?? undefined,
+      });
       extractData(patchResponse);
       const getResponse = await api.visitas({ id }).get();
-      const data = extractData(getResponse) as BackendVisita;
+      const data = extractData<BackendVisita>(getResponse);
       return mapVisita(data);
     },
     onSuccess: () => {
@@ -139,10 +139,10 @@ export function useCreateVisita() {
       const postResponse = await api.visitas.post({
         distribucionId: input.distribucionId,
         customerId: input.customerId,
-      } as any);
-      const created = extractData(postResponse) as BackendVisita;
+      });
+      const created = extractData<BackendVisita>(postResponse);
       const getResponse = await api.visitas({ id: created.id }).get();
-      const data = extractData(getResponse) as BackendVisita;
+      const data = extractData<BackendVisita>(getResponse);
       return mapVisita(data);
     },
     onSuccess: (_, variables) => {
@@ -163,9 +163,9 @@ export function useCreateVisitasFromGroup() {
   return useMutation<Visita[], Error, { distribucionId: string; groupId: string }>({
     mutationFn: async ({ distribucionId, groupId }) => {
       const groupResponse = await api.groups({ id: groupId }).get();
-      const group = extractData(groupResponse) as {
+      const group = extractData<{
         members: Array<{ customerId: string }>;
-      };
+      }>(groupResponse);
 
       if (!group?.members?.length) {
         throw new Error("El grupo no tiene miembros");
@@ -176,8 +176,8 @@ export function useCreateVisitasFromGroup() {
       const bulkResponse = await api.visitas.bulk.post({
         distribucionId,
         customerIds,
-      } as any);
-      const result = extractData(bulkResponse) as { visits: BackendVisita[]; count: number };
+      });
+      const result = extractData<{ visits: BackendVisita[]; count: number }>(bulkResponse);
       return result.visits.map((v) => mapVisita(v));
     },
     onSuccess: (_, variables) => {

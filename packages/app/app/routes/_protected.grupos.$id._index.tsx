@@ -20,25 +20,6 @@ import {
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { formatDate } from "~/lib/formatting";
 
-function SyncBadge({ status }: { status: "pending" | "synced" | "error" }) {
-  const styles = {
-    pending: "bg-amber-100 text-amber-700",
-    synced: "bg-green-100 text-green-700",
-    error: "bg-red-100 text-red-700",
-  };
-
-  const labels = {
-    pending: "Pendiente",
-    synced: "Sincronizado",
-    error: "Error",
-  };
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
-  );
-}
 
 export default function GroupDetailPage() {
   const { id } = useParams();
@@ -143,9 +124,7 @@ export default function GroupDetailPage() {
                     <Calendar className="h-4 w-4" />
                     <span>Creado: {formatDate(group.createdAt)}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <SyncBadge status={group.syncStatus as "pending" | "synced" | "error"} />
-                  </div>
+
                 </div>
               </div>
             </div>
