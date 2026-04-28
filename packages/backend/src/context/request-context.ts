@@ -88,6 +88,14 @@ export class RequestContext {
   ) {}
 
   /**
+   * Tenant ID for compatibility with drizzle-sync framework.
+   * Alias for businessId.
+   */
+  get tenantId(): string {
+    return this.businessId;
+  }
+
+  /**
    * Verifica si el usuario tiene un permiso específico
    */
   hasPermission(permission: Permission): boolean {

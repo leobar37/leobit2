@@ -22,6 +22,7 @@ export type {
   SyncClientEngine as SyncClientEngineClass,
   InitialSyncProgress,
   InitialSyncResult,
+  BatchContext,
 } from "./sync-client-engine";
 
 // Factory function
@@ -39,7 +40,6 @@ export type {
   SyncClientStatusOperations,
   EntityServiceDefinition,
   ISyncClientHttpClient,
-  IClientCursorStorage,
   SyncTableEntry,
 } from "./types";
 
@@ -53,10 +53,6 @@ export type {
 
 // Re-export DatabaseInitConfig from database-init for engine configuration
 export type { DatabaseInitConfig } from "./database-init";
-
-// Cursor storage
-/** @deprecated Use createStorageAdapter() from ./storage instead */
-export { createLocalStorageCursorStorage } from "./local-storage-cursor";
 
 // Storage abstraction
 export {

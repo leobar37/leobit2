@@ -80,6 +80,7 @@ export const SYNC_STAGES = {
       "distribucion_items",
       "suppliers",
       "visitas",
+      "files",
       "tags",
       "customer_tags",
       "customer_groups",

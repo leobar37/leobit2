@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useAccountsReceivable, useTotalAccountsReceivable } from "~/hooks/use-accounts-receivable";
+import { usePayments } from "~/hooks/use-payments";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
@@ -99,6 +100,9 @@ export default function CobrosPage() {
     search: search || undefined,
     minBalance: 0.01,
   });
+  const { data: payments = [] } = usePayments();
+  const pendingPayments = payments.filter((payment) => payment.sync_status === "pending").length;
+  const errorPayments = payments.filter((payment) => payment.sync_status === "error").length;
 
   useEffect(() => {
     setPage(1);
@@ -120,6 +124,26 @@ export default function CobrosPage() {
         <p className="text-sm text-muted-foreground mt-2">
           {debtors.length} {debtors.length === 1 ? "cliente" : "clientes"} con deuda
         </p>
+        {(pendingPayments > 0 || errorPayments > 0) && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+            {pendingPayments > 0 ? (
+              <span
+                className="rounded-full bg-amber-100 px-2 py-1 text-amber-700"
+                data-testid="abonos-pending-sync-count"
+              >
+                {pendingPayments} abono{pendingPayments === 1 ? "" : "s"} pendiente{pendingPayments === 1 ? "" : "s"}
+              </span>
+            ) : null}
+            {errorPayments > 0 ? (
+              <span
+                className="rounded-full bg-red-100 px-2 py-1 text-red-700"
+                data-testid="abonos-error-sync-count"
+              >
+                {errorPayments} con error de sync
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       <div className="relative">

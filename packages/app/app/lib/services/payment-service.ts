@@ -4,18 +4,11 @@
  * Extends AbonosService for basic CRUD, adds payment-specific business logic
  */
 
-import type { SyncClientEngineLike } from "./base-service";
+import { BaseService, type EntityType, type SyncClientEngineLike } from "./base-service";
 // Tables accessed via this.tables from engine
 // // Tables are now accessed via this.tables from the engine
 import { eq, and, like, or, sql, desc, gte, not, inArray, isNotNull } from "drizzle-orm";
 import { mapToCamelCase } from "~/lib/mappers/entity-mapper";
-
-// Import generated base service
-import { AbonosService } from "~/lib/sync/generated/services";
-import type {
-  CreateAbonosInput,
-  UpdateAbonosInput,
-} from "~/lib/sync/generated/services";
 
 /** Input for creating a new payment (backward compatible with original) */
 export interface CreateAbonoInput {
@@ -50,7 +43,9 @@ export interface Abono {
   related_sale_id: string | null;
   sync_status: "pending" | "synced" | "error";
   sync_attempts: number;
+  version: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AccountsReceivableQuery {
@@ -80,7 +75,15 @@ export interface AccountsReceivablePage {
  * Payment Service for managing debt payments (this.tables.abonos)
  * Extends AbonosService for local-first operations with sync integration
  */
-export class PaymentService extends AbonosService {
+export class PaymentService extends BaseService {
+  getEntityType(): EntityType {
+    return "abonos";
+  }
+
+  getEntityPrefix(): string {
+    return "abo";
+  }
+
   async findAccountsReceivablePage(query: AccountsReceivableQuery): Promise<AccountsReceivablePage> {
     const minBalance = query.minBalance ?? 0.01;
     
@@ -235,7 +238,9 @@ export class PaymentService extends AbonosService {
       related_sale_id: row.relatedSaleId,
       sync_status: row.syncStatus as Abono["sync_status"],
       sync_attempts: row.syncAttempts,
+      version: row.version,
       created_at: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+      updated_at: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
     };
   }
 
@@ -371,7 +376,6 @@ export class PaymentService extends AbonosService {
    * Create a new payment (abono)
    * Custom implementation that validates before creating
    */
-  // @ts-expect-error - Return type Abono is incompatible with parent but required for consumer hooks
   async create(input: CreateAbonoInput): Promise<Abono> {
     try {
       // Validate customer belongs to this business
@@ -385,23 +389,49 @@ export class PaymentService extends AbonosService {
 
       const id = this.generateId();
       const now = this.now();
+      const correlationId = input.relatedSaleId
+        ? `sale:payment:${input.relatedSaleId}:${id}`
+        : `abono:create:${id}`;
+      const relatedSale = input.relatedSaleId
+        ? await this.findRelatedSale(input.relatedSaleId)
+        : null;
+      const saleUpdate = relatedSale
+        ? this.buildSalePaymentUpdate(relatedSale, input.amount)
+        : null;
 
-      // Insert using Drizzle ORM
-      await this.db.insert(this.tables.abonos).values({
-        id,
-        customerId: input.customerId,
-        sellerId: input.sellerId ?? undefined,
-        businessId: this.businessId,
-        relatedSaleId: input.relatedSaleId ?? undefined,
-        amount,
-        paymentMethod: input.paymentMethod ?? "efectivo",
-        referenceNumber: input.referenceNumber ?? undefined,
-        proofImageId: input.proofImageId ?? undefined,
-        notes: input.notes ?? undefined,
-        syncStatus: "pending",
-        syncAttempts: 0,
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
+      await this.db.transaction(async (tx) => {
+        await tx.insert(this.tables.abonos).values({
+          id,
+          customerId: input.customerId,
+          sellerId: input.sellerId ?? undefined,
+          businessId: this.businessId,
+          relatedSaleId: input.relatedSaleId ?? undefined,
+          amount,
+          paymentMethod: input.paymentMethod ?? "efectivo",
+          referenceNumber: input.referenceNumber ?? undefined,
+          proofImageId: input.proofImageId ?? undefined,
+          notes: input.notes ?? undefined,
+          syncStatus: "pending",
+          syncAttempts: 0,
+          version: 1,
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        });
+
+        if (relatedSale && saleUpdate) {
+          await tx
+            .update(this.tables.sales)
+            .set({
+              ...saleUpdate,
+              syncStatus: "pending",
+              version: sql`${this.tables.sales.version} + 1`,
+              updatedAt: new Date(now),
+            })
+            .where(and(
+              eq(this.tables.sales.id, relatedSale.id),
+              eq(this.tables.sales.businessId, this.businessId)
+            ));
+        }
       });
 
       // Queue sync operation
@@ -414,7 +444,17 @@ export class PaymentService extends AbonosService {
         proofImageId: input.proofImageId,
         referenceNumber: input.referenceNumber,
         relatedSaleId: input.relatedSaleId,
-      } as Record<string, unknown>);
+      } as Record<string, unknown>, undefined, 1, {
+        idempotencyKey: `abono:create:${id}`,
+        correlationId,
+      });
+
+      if (relatedSale && saleUpdate) {
+        await this.queueSync("update", relatedSale.id, saleUpdate, "sales", Number(relatedSale.version ?? 1) + 1, {
+          idempotencyKey: `sale:update:${relatedSale.id}:${correlationId}`,
+          correlationId,
+        });
+      }
 
       // Return the created payment
       const payment = await this.findById(id);
@@ -433,7 +473,6 @@ export class PaymentService extends AbonosService {
    * Only notes, proof_image_id, and reference_number can be updated
    * Amount cannot be changed - delete and recreate instead
    */
-  // @ts-expect-error - Return type Abono | null is incompatible with parent void return but required for consumer hooks
   async update(id: string, input: UpdateAbonoInput): Promise<Abono | null> {
     // Only notes, proofImageId, and referenceNumber can be updated
     // Amount cannot be changed - this is a business rule
@@ -450,6 +489,7 @@ export class PaymentService extends AbonosService {
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {
       syncStatus: "pending",
+      version: sql`${this.tables.abonos.version} + 1`,
       updatedAt: new Date(now),
     };
 
@@ -468,14 +508,20 @@ export class PaymentService extends AbonosService {
     // Update using Drizzle ORM
     await this.db.update(this.tables.abonos)
       .set(updateData)
-      .where(eq(this.tables.abonos.id, id));
+      .where(and(
+        eq(this.tables.abonos.id, id),
+        eq(this.tables.abonos.businessId, this.businessId)
+      ));
 
     // Queue sync operation
     await this.queueSync("update", id, {
       notes: input.notes,
       proofImageId: input.proofImageId,
       referenceNumber: input.referenceNumber,
-    } as Record<string, unknown>);
+    } as Record<string, unknown>, undefined, undefined, {
+      idempotencyKey: `abono:update:${id}:${now}`,
+      correlationId: `abono:update:${id}`,
+    });
 
     return this.findById(id);
   }
@@ -490,11 +536,81 @@ export class PaymentService extends AbonosService {
       return;
     }
 
-    // Delete from local database
-    await this.db.delete(this.tables.abonos).where(eq(this.tables.abonos.id, id));
+    const relatedSale = payment.related_sale_id
+      ? await this.findRelatedSale(payment.related_sale_id)
+      : null;
+    const saleUpdate = relatedSale
+      ? this.buildSalePaymentUpdate(relatedSale, -Number(payment.amount))
+      : null;
+
+    await this.db.transaction(async (tx) => {
+      await tx.delete(this.tables.abonos).where(and(
+        eq(this.tables.abonos.id, id),
+        eq(this.tables.abonos.businessId, this.businessId)
+      ));
+
+      if (relatedSale && saleUpdate) {
+        await tx
+          .update(this.tables.sales)
+          .set({
+            ...saleUpdate,
+            syncStatus: "pending",
+            version: sql`${this.tables.sales.version} + 1`,
+            updatedAt: new Date(this.now()),
+          })
+          .where(and(
+            eq(this.tables.sales.id, relatedSale.id),
+            eq(this.tables.sales.businessId, this.businessId)
+          ));
+      }
+    });
 
     // Queue sync operation
-    await this.queueSync("delete", id, {});
+    await this.queueSync("delete", id, {
+      customerId: payment.customer_id,
+    }, undefined, undefined, {
+      idempotencyKey: `abono:delete:${id}:${this.now()}`,
+      correlationId: `abono:delete:${id}`,
+    });
+
+    if (relatedSale && saleUpdate) {
+      const correlationId = `abono:delete:${id}`;
+      await this.queueSync("update", relatedSale.id, saleUpdate, "sales", Number(relatedSale.version ?? 1) + 1, {
+        idempotencyKey: `sale:update:${relatedSale.id}:${correlationId}`,
+        correlationId,
+      });
+    }
+  }
+
+  private async findRelatedSale(saleId: string) {
+    const rows = await this.db
+      .select({
+        id: this.tables.sales.id,
+        amountPaid: this.tables.sales.amountPaid,
+        balanceDue: this.tables.sales.balanceDue,
+        version: this.tables.sales.version,
+      })
+      .from(this.tables.sales)
+      .where(and(
+        eq(this.tables.sales.id, saleId),
+        eq(this.tables.sales.businessId, this.businessId)
+      ))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  private buildSalePaymentUpdate(
+    sale: { amountPaid: string | number; balanceDue: string | number },
+    amountDelta: number
+  ): Record<string, unknown> {
+    const amountPaid = Math.max(Number(sale.amountPaid ?? 0) + amountDelta, 0);
+    const balanceDue = Math.max(Number(sale.balanceDue ?? 0) - amountDelta, 0);
+
+    return {
+      amountPaid: this.normalizeCurrency(amountPaid),
+      balanceDue: this.normalizeCurrency(balanceDue),
+    };
   }
 }
 

@@ -30,10 +30,11 @@ export class CustomerTagService extends CustomerTagsService {
    * Get all tags for a customer
    */
   async getCustomerTags(customerId: string): Promise<CustomerTag[]> {
-    return this.db
+    const result = await this.db
       .select()
       .from(this.tables.customerTags)
       .where(eq(this.tables.customerTags.customerId, customerId));
+    return result as CustomerTag[];
   }
 
   /**
@@ -181,6 +182,7 @@ export class CustomerTagService extends CustomerTagsService {
    * Get all customer-tag mappings for the current business
    */
   async getAllCustomerTags(): Promise<CustomerTag[]> {
-    return this.db.select().from(this.tables.customerTags);
+    const result = await this.db.select().from(this.tables.customerTags);
+    return result as CustomerTag[];
   }
 }

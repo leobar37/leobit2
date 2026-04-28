@@ -1,6 +1,5 @@
-import { CheckCircle2, CloudDownload, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SyncDevTools } from "@avileo/drizzle-sync/react/devtools";
 import { useNavigate } from "react-router";
 
 export default function SyncPage() {
@@ -34,7 +33,6 @@ export default function SyncPage() {
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
-      <SyncDevTools enabled={import.meta.env.DEV} />
     </div>
   );
 }

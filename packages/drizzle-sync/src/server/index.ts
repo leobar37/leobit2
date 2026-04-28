@@ -73,6 +73,14 @@ export {
   type ISyncDeadLetterRepository,
 } from "./dead-letter-repository";
 
+// SyncService
+export { SyncService, type SyncServiceConfig, type SyncServiceHooks, type SyncChange, type ConflictCheckResult as SyncServiceConflictCheckResult } from "./sync-service";
+
+// Drizzle repositories
+export { DrizzleSyncOperationRepository, type DrizzleOperationRepoConfig } from "./drizzle/operation-repository";
+export { DrizzleSyncConflictRepository, type DrizzleConflictRepoConfig } from "./drizzle/conflict-repository";
+export { DrizzleSyncDeadLetterRepository, type DrizzleDeadLetterRepoConfig } from "./drizzle/dead-letter-repository";
+
 // Logger
 export { SyncLogger, syncLogger, type LogRequestContext } from "./sync-logger";
 export {

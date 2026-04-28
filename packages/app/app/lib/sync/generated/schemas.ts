@@ -313,8 +313,6 @@ export const salesSchema = z.object({
   orderDate: z.coerce.date().nullable(),
   status: z.enum(["draft", "confirmed", "active", "delivered", "cancelled"]),
   version: z.number(),
-  confirmedSnapshot: z.record(z.string(), z.unknown()).nullable(),
-  deliveredSnapshot: z.record(z.string(), z.unknown()).nullable(),
   allowCustomerEdit: z.boolean(),
   syncStatus: z.enum(["pending", "synced", "error"]),
   syncAttempts: z.number(),
@@ -355,8 +353,6 @@ export interface SalesInput {
   orderDate?: Date;
   status: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
   version: number;
-  confirmedSnapshot?: Record<string, unknown>;
-  deliveredSnapshot?: Record<string, unknown>;
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;

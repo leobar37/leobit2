@@ -24,10 +24,15 @@ const mockBusinessUserId = "user_123";
 
 function createMockEngine(): SyncClientEngineLike {
   return {
-    getPg: () => mockPg,
     getDb: () => mockDb,
+    getAdapter: () => ({ query: vi.fn(), exec: vi.fn(), getDb: () => mockDb }) as any,
     getSyncOperations: () => mockSyncService as any,
     getConfig: () => ({ tenantId: mockBusinessId, userId: mockBusinessUserId }),
+    tables: {
+      visitas: {} as any,
+      customers: {} as any,
+    },
+    batch: vi.fn(async (callback) => callback({ tx: mockDb, enqueue: vi.fn(), enqueueMany: vi.fn() } as any)),
   };
 }
 

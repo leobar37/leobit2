@@ -41,10 +41,12 @@ function createMockEngine(
   businessUserId: string,
 ): SyncClientEngineLike {
   return {
-    getPg: () => pg,
     getDb: () => db,
+    getAdapter: () => ({ query: vi.fn(), exec: vi.fn(), getDb: () => db }) as any,
     getSyncOperations: () => mockSyncService as any,
     getConfig: () => ({ tenantId: businessId, userId: businessUserId }),
+    tables: {},
+    batch: vi.fn(async (callback) => callback({ tx: db, enqueue: vi.fn(), enqueueMany: vi.fn() } as any)),
   };
 }
 

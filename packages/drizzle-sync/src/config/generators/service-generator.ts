@@ -113,7 +113,7 @@ export function generateService(
 
   // Generate CreateInput interface
   const createInputFields = userColumns.map((col) => {
-    const tsType = getTypeScriptType(col);
+    const tsType = getTypeScriptType(col, config.fieldCodecs?.[col.name]);
     const isRequired = col.notNull && col.default === undefined;
     return `  ${camelCase(col.name)}${isRequired ? "" : "?"}: ${tsType};`;
   });
@@ -121,7 +121,7 @@ export function generateService(
 
   // Generate UpdateInput interface (all fields optional)
   const updateInputFields = userColumns.map((col) => {
-    const tsType = getTypeScriptType(col);
+    const tsType = getTypeScriptType(col, config.fieldCodecs?.[col.name]);
     return `  ${camelCase(col.name)}?: ${tsType};`;
   });
   const updateInputInterface = `export interface Update${pascalCase(entityName)}Input {\n${updateInputFields.join("\n")}\n}`;
@@ -155,11 +155,10 @@ export function generateService(
 
   // Generate the service class
   const serviceCode = `
-import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
 import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
 import type { SyncClientEngineLike } from "~/lib/services/base-service";
+import type { BatchContext } from "@avileo/drizzle-sync/client";
 import { SyncStatus, ${tableRef} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 
 ${createInputInterface}
@@ -197,13 +196,25 @@ export class ${pascalCase(entityName)}Service extends BaseService {
   async findByBusiness(options?: { search?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<typeof ${tableRef}.$inferSelect[]> {
     return this.list(options);
   }
+${generateNormalizeRow(userColumns, config.fieldCodecs, tableRef)}
 
   /**
    * Create a new ${entityName}
    * Stores locally and queues for server sync
    */
   async create(input: Create${pascalCase(entityName)}Input): Promise<typeof ${tableRef}.$inferSelect> {
-    const id = this.generateId();
+    return this.engine.batch((ctx) => this.createInBatch(ctx, input));
+  }
+
+  /**
+   * Create a new ${entityName} inside an existing sync batch.
+   */
+  async createInBatch(
+    ctx: BatchContext,
+    input: Create${pascalCase(entityName)}Input,
+    options?: { id?: string; idempotencyKey?: string; correlationId?: string; skipSync?: boolean; syncPayloadExtra?: Record<string, unknown> }
+  ): Promise<typeof ${tableRef}.$inferSelect> {
+    const id = options?.id ?? this.generateId();
 ${includeTimestamps && !junctionTable ? "    const now = this.now();" : ""}
 
     const entity: typeof ${tableRef}.$inferInsert = {
@@ -213,11 +224,21 @@ ${junctionTable ? generateInsertFieldsJunction(userColumns, config.fieldCodecs) 
 ${includeTimestamps && !junctionTable ? "      createdAt: new Date(now),\n      updatedAt: new Date(now)," : ""}
     };
 
-    await this.db.insert(${tableRef}).values(entity);
+    await ctx.tx.insert(${tableRef}).values(entity);
 
-    await this.queueSync("create", id, {
+    if (!options?.skipSync) {
+      await ctx.enqueue({
+        entity_type: ${pascalCase(entityName)}Service.ENTITY_TYPE,
+        operation: "create",
+        entityId: id,
+        data: {
 ${generatePayloadFields(userColumns, config.fieldCodecs)}
-    });
+          ...(options?.syncPayloadExtra ?? {}),
+        },
+        idempotencyKey: options?.idempotencyKey,
+        correlationId: options?.correlationId,
+      });
+    }
 
     return { ...entity } as typeof ${tableRef}.$inferSelect;
   }
@@ -233,6 +254,19 @@ ${junctionTable ? "" : `
       throw new Error(\`${pascalCase(entityName)} not found: \${id}\`);
     }
 
+    await this.engine.batch((ctx) => this.updateInBatch(ctx, id, input));
+  }
+
+  /**
+   * Update an existing ${entityName} inside an existing sync batch.
+   */
+  async updateInBatch(
+    ctx: BatchContext,
+    id: string,
+    input: Update${pascalCase(entityName)}Input,
+    options?: { idempotencyKey?: string; correlationId?: string; skipSync?: boolean; syncPayloadExtra?: Record<string, unknown> }
+  ): Promise<void> {
+
     const now = this.now();
     const updateData: Partial<typeof ${tableRef}.$inferInsert> = {
       updatedAt: new Date(now),
@@ -242,12 +276,24 @@ ${junctionTable ? "" : `
     const syncPayload: Record<string, unknown> = {};
 
 ${generateUpdateFields(userColumns, config.fieldCodecs)}
-    await this.db
+    await ctx.tx
       .update(${tableRef})
       .set(updateData)
       .where(eq(${tableRef}.id, id));
 
-    await this.queueSync("update", id, syncPayload);
+    if (!options?.skipSync) {
+      await ctx.enqueue({
+        entity_type: ${pascalCase(entityName)}Service.ENTITY_TYPE,
+        operation: "update",
+        entityId: id,
+        data: {
+          ...syncPayload,
+          ...(options?.syncPayloadExtra ?? {}),
+        },
+        idempotencyKey: options?.idempotencyKey,
+        correlationId: options?.correlationId,
+      });
+    }
   }
 
   /**
@@ -260,11 +306,32 @@ ${generateUpdateFields(userColumns, config.fieldCodecs)}
       throw new Error(\`${pascalCase(entityName)} not found: \${id}\`);
     }
 
-    await this.db
+    await this.engine.batch((ctx) => this.deleteInBatch(ctx, id));
+  }
+
+  /**
+   * Delete a ${entityName} inside an existing sync batch.
+   */
+  async deleteInBatch(
+    ctx: BatchContext,
+    id: string,
+    options?: { payload?: Record<string, unknown>; idempotencyKey?: string; correlationId?: string; skipSync?: boolean }
+  ): Promise<void> {
+
+    await ctx.tx
       .delete(${tableRef})
       .where(eq(${tableRef}.id, id));
 
-    await this.queueSync("delete", id, {});
+    if (!options?.skipSync) {
+      await ctx.enqueue({
+        entity_type: ${pascalCase(entityName)}Service.ENTITY_TYPE,
+        operation: "delete",
+        entityId: id,
+        data: options?.payload ?? {},
+        idempotencyKey: options?.idempotencyKey,
+        correlationId: options?.correlationId,
+      });
+    }
   }`}
 }
 `;
@@ -434,7 +501,7 @@ function generateUpdateFields(columns: ColumnMetadata[], fieldCodecs?: FieldCode
 
     if (codec) {
       updateExpr = getCodecTransformExpression(codec, sourceExpr, col.notNull);
-      payloadExpr = sourceExpr;
+      payloadExpr = updateExpr;
     } else if (col.dataType === "date") {
       // For updateData: convert string to Date for Drizzle
       // For syncPayload: keep as string (JSON serialization)
@@ -483,12 +550,57 @@ function getCodecTransformExpression(codec: { kind: string; isNullable?: boolean
 }
 
 /**
+ * Generate a normalizeRow static method that applies codec fromStorage
+ * transformations for read normalization.
+ */
+function generateNormalizeRow(columns: ColumnMetadata[], fieldCodecs: FieldCodecMap | undefined, tableRef: string): string {
+  const codecFields = columns.filter((col) => fieldCodecs?.[col.name]);
+  if (codecFields.length === 0) return "";
+
+  const lines = codecFields.map((col) => {
+    const fieldName = camelCase(col.name);
+    const codec = fieldCodecs![col.name];
+    const transformExpr = getCodecTransformExpression(codec, `row.${fieldName}`, col.notNull);
+    return `      ${fieldName}: ${transformExpr},`;
+  });
+
+  return `
+  /**
+   * Normalize a row after reading from DB, applying codec transformations.
+   */
+  normalizeRow(row: typeof ${tableRef}.$inferSelect): typeof ${tableRef}.$inferSelect {
+    if (!row) return row;
+    return {
+      ...row,
+${lines.join("\n")}
+    } as typeof ${tableRef}.$inferSelect;
+  }`;
+}
+
+/**
  * Get TypeScript type for a column
  * Note: Date columns return 'string' because PGlite stores dates as ISO strings
  * and the frontend Zod schemas (e.g., distribuciones.fecha) expect strings.
  * The actual Date objects are constructed when needed for Drizzle operations.
  */
-function getTypeScriptType(col: ColumnMetadata): string {
+function getTypeScriptType(col: ColumnMetadata, codec?: { kind: string; isNullable?: boolean }): string {
+  if (codec) {
+    const baseType = (() => {
+      switch (codec.kind) {
+        case "currency":
+        case "weight":
+        case "decimal":
+          return "string | number";
+        default:
+          return null;
+      }
+    })();
+
+    if (baseType) {
+      return codec.isNullable ? `${baseType} | null` : baseType;
+    }
+  }
+
   switch (col.dataType) {
     case "string":
       return "string";
@@ -613,11 +725,10 @@ export function generateServicesFile(outputs: ServiceOutput[]): string {
     }
   }
 
-  const imports = `import type { PGlite } from "@electric-sql/pglite";
-import type { drizzle } from "drizzle-orm/pglite";
-import { eq, and, desc } from "drizzle-orm";
+  const imports = `import { eq, and, desc } from "drizzle-orm";
 import { BaseService, type EntityType } from "~/lib/services/base-service";
 import type { SyncClientEngineLike } from "~/lib/services/base-service";
+import type { BatchContext } from "@avileo/drizzle-sync/client";
 import { SyncStatus${tableImports.size > 0 ? `, ${[...tableImports].join(", ")}` : ""} } from "${DRIZZLE_SCHEMA_IMPORT_PATH}";
 `;
 

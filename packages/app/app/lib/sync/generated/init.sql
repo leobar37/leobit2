@@ -3,19 +3,19 @@
 -- PostgreSQL-compatible DDL for PGlite
 
 CREATE TABLE IF NOT EXISTS "customers" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(255) NOT NULL DEFAULT NULL,
-  "dni" VARCHAR(20) DEFAULT NULL,
-  "phone" VARCHAR(50) DEFAULT NULL,
-  "address" TEXT DEFAULT NULL,
-  "notes" TEXT DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "name" VARCHAR(255) NOT NULL,
+  "dni" VARCHAR(20),
+  "phone" VARCHAR(50),
+  "address" TEXT,
+  "notes" TEXT,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "created_by" UUID DEFAULT NULL,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "business_id" UUID NOT NULL,
+  "created_by" UUID,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -23,17 +23,18 @@ CREATE INDEX IF NOT EXISTS "idx_customers_sync_status" ON "customers"(sync_statu
 CREATE INDEX IF NOT EXISTS "idx_customers_business_id" ON "customers"(business_id);
 
 CREATE TABLE IF NOT EXISTS "products" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(255) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "name" VARCHAR(255) NOT NULL,
   "type" TEXT NOT NULL DEFAULT 'pollo',
   "unit" TEXT NOT NULL DEFAULT 'kg',
-  "base_price" DECIMAL(10, 2) NOT NULL DEFAULT NULL,
+  "base_price" DECIMAL(10, 2) NOT NULL,
+  "cost_price" DECIMAL(10, 2) NOT NULL DEFAULT '0',
   "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
-  "image_id" UUID DEFAULT NULL,
+  "image_id" UUID,
   "has_variants" BOOLEAN NOT NULL DEFAULT FALSE,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
@@ -45,13 +46,13 @@ CREATE INDEX IF NOT EXISTS "idx_products_business_id" ON "products"(business_id)
 CREATE INDEX IF NOT EXISTS "idx_products_image_id" ON "products"("image_id");
 
 CREATE TABLE IF NOT EXISTS "product_variants" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "product_id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(50) NOT NULL DEFAULT NULL,
-  "sku" VARCHAR(50) DEFAULT NULL,
-  "unit_quantity" DECIMAL(10, 3) NOT NULL DEFAULT NULL,
-  "price" DECIMAL(10, 2) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "product_id" UUID NOT NULL,
+  "business_id" UUID NOT NULL,
+  "name" VARCHAR(50) NOT NULL,
+  "sku" VARCHAR(50),
+  "unit_quantity" DECIMAL(10, 3) NOT NULL,
+  "price" DECIMAL(10, 2) NOT NULL,
   "cost_price" DECIMAL(10, 2) NOT NULL DEFAULT '0',
   "sort_order" INTEGER NOT NULL DEFAULT 0,
   "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
@@ -60,8 +61,8 @@ CREATE TABLE IF NOT EXISTS "product_variants" (
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -70,21 +71,21 @@ CREATE INDEX IF NOT EXISTS "idx_product_variants_business_id" ON "product_varian
 CREATE INDEX IF NOT EXISTS "idx_product_variants_product_id" ON "product_variants"("product_id");
 
 CREATE TABLE IF NOT EXISTS "suppliers" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(255) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "name" VARCHAR(255) NOT NULL,
   "type" TEXT NOT NULL DEFAULT 'regular',
-  "ruc" VARCHAR(20) DEFAULT NULL,
-  "address" TEXT DEFAULT NULL,
-  "phone" VARCHAR(20) DEFAULT NULL,
-  "email" VARCHAR(255) DEFAULT NULL,
-  "notes" TEXT DEFAULT NULL,
+  "ruc" VARCHAR(20),
+  "address" TEXT,
+  "phone" VARCHAR(20),
+  "email" VARCHAR(255),
+  "notes" TEXT,
   "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -92,15 +93,15 @@ CREATE INDEX IF NOT EXISTS "idx_suppliers_sync_status" ON "suppliers"(sync_statu
 CREATE INDEX IF NOT EXISTS "idx_suppliers_business_id" ON "suppliers"(business_id);
 
 CREATE TABLE IF NOT EXISTS "tags" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(100) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "name" VARCHAR(100) NOT NULL,
   "color" VARCHAR(20) NOT NULL DEFAULT '#f97316',
-  "business_id" UUID NOT NULL DEFAULT NULL,
+  "business_id" UUID NOT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -108,15 +109,15 @@ CREATE INDEX IF NOT EXISTS "idx_tags_sync_status" ON "tags"(sync_status);
 CREATE INDEX IF NOT EXISTS "idx_tags_business_id" ON "tags"(business_id);
 
 CREATE TABLE IF NOT EXISTS "customer_tags" (
-  "customer_id" UUID NOT NULL DEFAULT NULL,
-  "tag_id" UUID NOT NULL DEFAULT NULL,
-  "assigned_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "assigned_by" UUID DEFAULT NULL,
+  "customer_id" UUID NOT NULL,
+  "tag_id" UUID NOT NULL,
+  "assigned_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "assigned_by" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS "idx_customer_tags_sync_status" ON "customer_tags"(sync_status);
@@ -124,14 +125,14 @@ CREATE INDEX IF NOT EXISTS "idx_customer_tags_customer_id" ON "customer_tags"("c
 CREATE INDEX IF NOT EXISTS "idx_customer_tags_tag_id" ON "customer_tags"("tag_id");
 
 CREATE TABLE IF NOT EXISTS "customer_groups" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "name" VARCHAR(100) NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "name" VARCHAR(100) NOT NULL,
+  "business_id" UUID NOT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -139,17 +140,17 @@ CREATE INDEX IF NOT EXISTS "idx_customer_groups_sync_status" ON "customer_groups
 CREATE INDEX IF NOT EXISTS "idx_customer_groups_business_id" ON "customer_groups"(business_id);
 
 CREATE TABLE IF NOT EXISTS "customer_group_members" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "group_id" UUID NOT NULL DEFAULT NULL,
-  "customer_id" UUID NOT NULL DEFAULT NULL,
-  "added_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "added_by" UUID DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "group_id" UUID NOT NULL,
+  "customer_id" UUID NOT NULL,
+  "added_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "added_by" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -159,19 +160,19 @@ CREATE INDEX IF NOT EXISTS "idx_customer_group_members_group_id" ON "customer_gr
 CREATE INDEX IF NOT EXISTS "idx_customer_group_members_customer_id" ON "customer_group_members"("customer_id");
 
 CREATE TABLE IF NOT EXISTS "visitas" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "distribucion_id" UUID NOT NULL DEFAULT NULL,
-  "customer_id" UUID NOT NULL DEFAULT NULL,
-  "vendedor_id" UUID NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "distribucion_id" UUID NOT NULL,
+  "customer_id" UUID NOT NULL,
+  "vendedor_id" UUID NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'pendiente',
-  "motivo_no_compra" VARCHAR(255) DEFAULT NULL,
-  "sale_id" UUID DEFAULT NULL,
+  "motivo_no_compra" VARCHAR(255),
+  "sale_id" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -183,43 +184,41 @@ CREATE INDEX IF NOT EXISTS "idx_visitas_vendedor_id" ON "visitas"("vendedor_id")
 CREATE INDEX IF NOT EXISTS "idx_visitas_sale_id" ON "visitas"("sale_id");
 
 CREATE TABLE IF NOT EXISTS "sales" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "customer_id" UUID DEFAULT NULL,
-  "seller_id" UUID DEFAULT NULL,
-  "distribucion_id" UUID DEFAULT NULL,
-  "visita_id" UUID DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "customer_id" UUID,
+  "seller_id" UUID,
+  "distribucion_id" UUID,
+  "visita_id" UUID,
   "type" TEXT NOT NULL DEFAULT 'instant_sale',
   "sale_type" TEXT NOT NULL DEFAULT 'contado',
-  "payment_mode" TEXT DEFAULT NULL,
-  "total_amount" DECIMAL(12, 2) NOT NULL DEFAULT NULL,
+  "payment_mode" TEXT,
+  "total_amount" DECIMAL(12, 2) NOT NULL,
   "amount_paid" DECIMAL(12, 2) NOT NULL DEFAULT '0',
   "balance_due" DECIMAL(12, 2) NOT NULL DEFAULT '0',
   "tara" DECIMAL(10, 3) DEFAULT '0',
-  "net_weight" DECIMAL(10, 3) DEFAULT NULL,
-  "sale_date" TIMESTAMP NOT NULL DEFAULT NULL,
-  "delivery_date" TIMESTAMP DEFAULT NULL,
-  "order_date" TIMESTAMP DEFAULT NULL,
+  "net_weight" DECIMAL(10, 3),
+  "sale_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "delivery_date" TIMESTAMP,
+  "order_date" TIMESTAMP,
   "status" TEXT NOT NULL DEFAULT 'draft',
   "version" INTEGER NOT NULL DEFAULT 1,
-  "confirmed_snapshot" JSONB DEFAULT NULL,
-  "delivered_snapshot" JSONB DEFAULT NULL,
   "allow_customer_edit" BOOLEAN NOT NULL DEFAULT TRUE,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "cancelled_at" TIMESTAMP DEFAULT NULL,
-  "cancelled_by" UUID DEFAULT NULL,
-  "cancel_reason" TEXT DEFAULT NULL,
-  "refund_amount" DECIMAL(12, 2) DEFAULT NULL,
-  "refund_date" TIMESTAMP DEFAULT NULL,
-  "refund_method" TEXT DEFAULT NULL,
-  "refund_reference" VARCHAR(100) DEFAULT NULL,
-  "refund_notes" TEXT DEFAULT NULL,
-  "advance_payment_method" VARCHAR(20) DEFAULT NULL,
-  "advance_reference_number" VARCHAR(50) DEFAULT NULL,
-  "advance_proof_image_id" UUID DEFAULT NULL,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "cancelled_at" TIMESTAMP,
+  "cancelled_by" UUID,
+  "cancel_reason" TEXT,
+  "refund_amount" DECIMAL(12, 2),
+  "refund_date" TIMESTAMP,
+  "refund_method" TEXT,
+  "refund_reference" VARCHAR(100),
+  "refund_notes" TEXT,
+  "advance_payment_method" VARCHAR(20),
+  "advance_reference_number" VARCHAR(50),
+  "advance_proof_image_id" UUID,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -232,27 +231,27 @@ CREATE INDEX IF NOT EXISTS "idx_sales_visita_id" ON "sales"("visita_id");
 CREATE INDEX IF NOT EXISTS "idx_sales_advance_proof_image_id" ON "sales"("advance_proof_image_id");
 
 CREATE TABLE IF NOT EXISTS "sale_items" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "sale_id" UUID NOT NULL DEFAULT NULL,
-  "product_id" UUID NOT NULL DEFAULT NULL,
-  "variant_id" UUID NOT NULL DEFAULT NULL,
-  "product_name" VARCHAR(255) NOT NULL DEFAULT NULL,
-  "variant_name" VARCHAR(50) NOT NULL DEFAULT NULL,
-  "quantity" DECIMAL(10, 3) DEFAULT NULL,
-  "ordered_quantity" DECIMAL(10, 3) DEFAULT NULL,
-  "delivered_quantity" DECIMAL(10, 3) DEFAULT NULL,
-  "unit_price" DECIMAL(10, 2) DEFAULT NULL,
-  "unit_price_quoted" DECIMAL(10, 2) DEFAULT NULL,
-  "unit_price_final" DECIMAL(10, 2) DEFAULT NULL,
-  "subtotal" DECIMAL(12, 2) NOT NULL DEFAULT NULL,
-  "cost_price_snapshot" DECIMAL(10, 2) DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "sale_id" UUID NOT NULL,
+  "product_id" UUID NOT NULL,
+  "variant_id" UUID NOT NULL,
+  "product_name" VARCHAR(255) NOT NULL,
+  "variant_name" VARCHAR(50) NOT NULL,
+  "quantity" DECIMAL(10, 3),
+  "ordered_quantity" DECIMAL(10, 3),
+  "delivered_quantity" DECIMAL(10, 3),
+  "unit_price" DECIMAL(10, 2),
+  "unit_price_quoted" DECIMAL(10, 2),
+  "unit_price_final" DECIMAL(10, 2),
+  "subtotal" DECIMAL(12, 2) NOT NULL,
+  "cost_price_snapshot" DECIMAL(10, 2),
   "is_modified" BOOLEAN NOT NULL DEFAULT FALSE,
-  "original_quantity" DECIMAL(10, 3) DEFAULT NULL,
+  "original_quantity" DECIMAL(10, 3),
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -263,20 +262,20 @@ CREATE INDEX IF NOT EXISTS "idx_sale_items_product_id" ON "sale_items"("product_
 CREATE INDEX IF NOT EXISTS "idx_sale_items_variant_id" ON "sale_items"("variant_id");
 
 CREATE TABLE IF NOT EXISTS "purchases" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "supplier_id" UUID DEFAULT NULL,
-  "purchase_date" TIMESTAMP DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "supplier_id" UUID,
+  "purchase_date" TIMESTAMP,
   "total_amount" DECIMAL(12, 2) NOT NULL DEFAULT '0',
   "status" TEXT NOT NULL DEFAULT 'draft',
-  "invoice_number" VARCHAR(50) DEFAULT NULL,
-  "receipt_image_id" UUID DEFAULT NULL,
-  "notes" TEXT DEFAULT NULL,
+  "invoice_number" VARCHAR(50),
+  "receipt_image_id" UUID,
+  "notes" TEXT,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -286,20 +285,20 @@ CREATE INDEX IF NOT EXISTS "idx_purchases_supplier_id" ON "purchases"("supplier_
 CREATE INDEX IF NOT EXISTS "idx_purchases_receipt_image_id" ON "purchases"("receipt_image_id");
 
 CREATE TABLE IF NOT EXISTS "purchase_items" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "purchase_id" UUID NOT NULL DEFAULT NULL,
-  "product_id" UUID NOT NULL DEFAULT NULL,
-  "variant_id" UUID DEFAULT NULL,
-  "unit_id" UUID DEFAULT NULL,
-  "quantity" DECIMAL(10, 3) NOT NULL DEFAULT NULL,
-  "unit_cost" DECIMAL(10, 2) NOT NULL DEFAULT NULL,
-  "total_cost" DECIMAL(12, 2) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "purchase_id" UUID NOT NULL,
+  "product_id" UUID NOT NULL,
+  "variant_id" UUID,
+  "unit_id" UUID,
+  "quantity" DECIMAL(10, 3) NOT NULL,
+  "unit_cost" DECIMAL(10, 2) NOT NULL,
+  "total_cost" DECIMAL(12, 2) NOT NULL,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -311,23 +310,23 @@ CREATE INDEX IF NOT EXISTS "idx_purchase_items_variant_id" ON "purchase_items"("
 CREATE INDEX IF NOT EXISTS "idx_purchase_items_unit_id" ON "purchase_items"("unit_id");
 
 CREATE TABLE IF NOT EXISTS "distribuciones" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "vendedor_id" UUID NOT NULL DEFAULT NULL,
-  "punto_venta" VARCHAR(100) NOT NULL DEFAULT NULL,
-  "punto_venta_id" UUID DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "vendedor_id" UUID NOT NULL,
+  "punto_venta" VARCHAR(100) NOT NULL,
+  "punto_venta_id" UUID,
   "monto_recaudado" DECIMAL(12, 2) NOT NULL DEFAULT '0',
-  "nota_creacion" TEXT DEFAULT NULL,
-  "nota_cierre" TEXT DEFAULT NULL,
-  "fecha" TIMESTAMP NOT NULL DEFAULT NULL,
+  "nota_creacion" TEXT,
+  "nota_cierre" TEXT,
+  "fecha" TIMESTAMP NOT NULL,
   "estado" TEXT NOT NULL DEFAULT 'activo',
-  "closed_at" TIMESTAMP DEFAULT NULL,
-  "closed_by" UUID DEFAULT NULL,
+  "closed_at" TIMESTAMP,
+  "closed_by" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -337,18 +336,18 @@ CREATE INDEX IF NOT EXISTS "idx_distribuciones_vendedor_id" ON "distribuciones"(
 CREATE INDEX IF NOT EXISTS "idx_distribuciones_punto_venta_id" ON "distribuciones"("punto_venta_id");
 
 CREATE TABLE IF NOT EXISTS "distribucion_items" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "distribucion_id" UUID NOT NULL DEFAULT NULL,
-  "variant_id" UUID NOT NULL DEFAULT NULL,
-  "cantidad_asignada" DECIMAL(10, 3) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "distribucion_id" UUID NOT NULL,
+  "variant_id" UUID NOT NULL,
+  "cantidad_asignada" DECIMAL(10, 3) NOT NULL,
   "cantidad_vendida" DECIMAL(10, 3) NOT NULL DEFAULT '0',
   "unidad" VARCHAR(20) NOT NULL DEFAULT 'kg',
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -358,21 +357,21 @@ CREATE INDEX IF NOT EXISTS "idx_distribucion_items_distribucion_id" ON "distribu
 CREATE INDEX IF NOT EXISTS "idx_distribucion_items_variant_id" ON "distribucion_items"("variant_id");
 
 CREATE TABLE IF NOT EXISTS "abonos" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID NOT NULL DEFAULT NULL,
-  "customer_id" UUID NOT NULL DEFAULT NULL,
-  "seller_id" UUID DEFAULT NULL,
-  "amount" DECIMAL(12, 2) NOT NULL DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID NOT NULL,
+  "customer_id" UUID NOT NULL,
+  "seller_id" UUID,
+  "amount" DECIMAL(12, 2) NOT NULL,
   "payment_method" TEXT NOT NULL DEFAULT 'efectivo',
-  "notes" TEXT DEFAULT NULL,
-  "proof_image_id" UUID DEFAULT NULL,
-  "reference_number" VARCHAR(50) DEFAULT NULL,
-  "related_sale_id" UUID DEFAULT NULL,
+  "notes" TEXT,
+  "proof_image_id" UUID,
+  "reference_number" VARCHAR(50),
+  "related_sale_id" UUID,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -384,19 +383,19 @@ CREATE INDEX IF NOT EXISTS "idx_abonos_proof_image_id" ON "abonos"("proof_image_
 CREATE INDEX IF NOT EXISTS "idx_abonos_related_sale_id" ON "abonos"("related_sale_id");
 
 CREATE TABLE IF NOT EXISTS "files" (
-  "id" UUID NOT NULL DEFAULT NULL,
-  "business_id" UUID DEFAULT NULL,
-  "filename" VARCHAR(255) NOT NULL DEFAULT NULL,
-  "storage_path" VARCHAR(500) NOT NULL DEFAULT NULL,
-  "mime_type" VARCHAR(100) NOT NULL DEFAULT NULL,
-  "size_bytes" INTEGER NOT NULL DEFAULT NULL,
-  "created_at" TIMESTAMP NOT NULL DEFAULT NULL,
-  "deleted_at" TIMESTAMP DEFAULT NULL,
-  "deleted_by" TEXT DEFAULT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "business_id" UUID,
+  "filename" VARCHAR(255) NOT NULL,
+  "storage_path" VARCHAR(500) NOT NULL,
+  "mime_type" VARCHAR(100) NOT NULL,
+  "size_bytes" INTEGER NOT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted_at" TIMESTAMP,
+  "deleted_by" TEXT,
   "sync_status" TEXT NOT NULL DEFAULT 'synced',
   "sync_attempts" INTEGER NOT NULL DEFAULT 0,
   "version" INTEGER NOT NULL DEFAULT 1,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT NULL,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("id")
 );
 
@@ -418,6 +417,7 @@ CREATE TABLE IF NOT EXISTS sync_operations (
   last_error TEXT,
   last_attempt_at TIMESTAMP,
   idempotency_key TEXT UNIQUE,
+  correlation_id TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -426,6 +426,7 @@ CREATE INDEX IF NOT EXISTS idx_sync_operations_tenant ON sync_operations(busines
 CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(business_id, entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(business_id, status);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_correlation ON sync_operations(correlation_id);
 CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);
 
 CREATE TABLE IF NOT EXISTS sync_dead_letter (

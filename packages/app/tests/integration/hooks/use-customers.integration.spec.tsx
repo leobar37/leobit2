@@ -12,7 +12,7 @@ import { server } from "../../setup";
 import {
   useCustomers,
   useCreateCustomer,
-} from "~/hooks/use-customers-live";
+} from "~/hooks/use-customers";
 import "fake-indexeddb/auto";
 
 // Test providers wrapper

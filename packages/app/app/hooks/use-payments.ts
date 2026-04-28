@@ -5,13 +5,15 @@ import type { Abono, CreateAbonoInput, UpdateAbonoInput } from "~/lib/services/p
 import { useBusiness } from "~/hooks/use-business";
 
 const QUERY_KEYS = {
-  payments: ["payments"],
-  customerPayments: (customerId: string) => ["payments", "customer", customerId],
-  businessPayments: ["payments", "business"],
+  payments: ["abonos"],
+  customerPayments: (customerId: string) => ["abonos", "customer", customerId],
+  businessPayments: ["abonos", "business"],
+  customerPaymentsEmpty: ["abonos", "customer"],
+  detail: (id: string | null) => ["abonos", "detail", id],
 } as const;
 
 export function usePayments() {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
 
   return useQuery({
     queryKey: QUERY_KEYS.businessPayments,
@@ -22,12 +24,12 @@ export function usePayments() {
 }
 
 export function useCustomerPayments(customerId: string | null) {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
 
   return useQuery({
     queryKey: customerId
       ? QUERY_KEYS.customerPayments(customerId)
-      : ["payments-new", "customer"],
+      : QUERY_KEYS.customerPaymentsEmpty,
     queryFn: async (): Promise<Abono[]> => {
       if (!customerId) return [];
       return paymentService.findByCustomer(customerId);
@@ -37,10 +39,10 @@ export function useCustomerPayments(customerId: string | null) {
 }
 
 export function usePayment(id: string | null) {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
 
   return useQuery({
-    queryKey: ["payments-new", "detail", id],
+    queryKey: QUERY_KEYS.detail(id),
     queryFn: async (): Promise<Abono | null> => {
       if (!id) return null;
       return paymentService.findById(id);
@@ -54,7 +56,7 @@ export function usePayment(id: string | null) {
  * Returns an async function that creates a payment and returns the payment ID
  */
 export function useCreatePayment() {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
   const queryClient = useQueryClient();
   const { data: business } = useBusiness();
 
@@ -74,6 +76,7 @@ export function useCreatePayment() {
 
   return async (data: {
     customerId: string;
+    relatedSaleId?: string;
     amount: string;
     paymentMethod: string;
     referenceNumber?: string;
@@ -85,6 +88,7 @@ export function useCreatePayment() {
     }
     const result = await mutation.mutateAsync({
       customerId: data.customerId,
+      relatedSaleId: data.relatedSaleId,
       sellerId: sellerId,
       amount: parseFloat(data.amount) || 0,
       paymentMethod: data.paymentMethod,
@@ -96,7 +100,7 @@ export function useCreatePayment() {
 }
 
 export function useDeletePayment() {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -106,7 +110,7 @@ export function useDeletePayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
       queryClient.invalidateQueries({
-        queryKey: ["payments-new", "customer"],
+        queryKey: QUERY_KEYS.customerPaymentsEmpty,
       });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
@@ -119,7 +123,7 @@ export function useDeletePayment() {
  * Returns an async function that takes paymentId and data
  */
 export function useUpdatePayment() {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -127,7 +131,7 @@ export function useUpdatePayment() {
       return paymentService.update(id, input);
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["payments-new", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.payments });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       if (data?.customer_id) {

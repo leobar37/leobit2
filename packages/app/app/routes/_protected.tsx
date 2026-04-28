@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw, LogOut, AlertCircle, WifiOff } from "lucide-react";
-import { SyncProvider } from "~/components/sync/sync-status";
-import { SyncDevTools, SyncDevToolsProvider } from "@avileo/drizzle-sync/react/devtools";
+import { SyncProvider as FrameworkSyncProvider, createSyncReactRuntime } from "@avileo/drizzle-sync/react";
+import { SyncDevToolsProvider } from "@avileo/drizzle-sync/react/devtools";
 import { useClearSyncStorage } from "~/hooks/use-clear-sync-storage";
 import {
   ConflictResolver,
@@ -21,6 +21,7 @@ import { getStoredBusinessId, getStoredAuthToken, getStoredBusinessUserId, clear
 import { createFetchHttpClient, getDeviceId, getDeviceFingerprint } from "@avileo/drizzle-sync/client";
 import type { SyncClientEngine } from "@avileo/drizzle-sync/client";
 import { createAvileoSyncEngine, type AvileoSyncEngine } from "~/lib/sync/generated/engine";
+import type { AvileoAppOverrides } from "~/lib/sync/service-overrides";
 // Local alias to align TypeScript's module-level type references
 type LocalEngineState = SyncClientEngine<Record<string, unknown>> | null;
 import { useSyncInit } from "@avileo/drizzle-sync/react";
@@ -75,7 +76,7 @@ function ServicesProviderWrapper({
       try {
         const { appServiceOverrides } = await import("~/lib/sync/service-overrides");
         if (cancelled) return;
-        const eng = createAvileoSyncEngine({
+        const eng = createAvileoSyncEngine<AvileoAppOverrides>({
           tenantId: businessId,
           userId: businessUserId,
           authToken: token,
@@ -152,6 +153,15 @@ function ServicesProviderWrapper({
   // Detect offline mode
   const isOfflineMode = business && (businessError || (!navigator.onLine && isFetching));
 
+  // Create sync runtime when engine is ready
+  const syncRuntime = useMemo(() => {
+    if (!engine || !isReady) return null;
+    return createSyncReactRuntime({
+      engine: engine as unknown as Parameters<typeof createSyncReactRuntime>[0]["engine"],
+      startOnMount: false, // Already initialized via useSyncInit
+    });
+  }, [engine, isReady]);
+
   // Track elapsed time during business loading
   useEffect(() => {
     if (isBusinessLoading && !business) {
@@ -219,7 +229,6 @@ function ServicesProviderWrapper({
             )}
           </div>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -257,7 +266,6 @@ function ServicesProviderWrapper({
             </button>
           </div>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -284,7 +292,6 @@ function ServicesProviderWrapper({
             Resetear e ir al login
           </button>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -306,38 +313,12 @@ function ServicesProviderWrapper({
             Reintentar
           </button>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
-  // Offline mode: we have cached business data from persister but API failed or we're offline
-  if (isOfflineMode && business) {
-    return (
-      <>
-        <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
-          <WifiOff className="h-3 w-3" />
-          Modo offline - datos del negocio en cache
-        </div>
-        {children}
-      </>
-    );
-  }
-
-  // Timeout with cached data - use persisted data from TanStack Query
-  if (hasTimedOut && (isBusinessLoading || !business)) {
-    if (business) {
-      return (
-        <>
-          <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
-            <WifiOff className="h-3 w-3" />
-            Modo offline - datos del negocio en cache
-          </div>
-          {children}
-        </>
-      );
-    }
-
+  // Timeout without cached data
+  if (hasTimedOut && !business) {
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
@@ -372,12 +353,11 @@ function ServicesProviderWrapper({
             </button>
           </div>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
-  if (businessError) {
+  if (businessError && !business) {
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 min-h-[50vh]">
@@ -414,12 +394,11 @@ function ServicesProviderWrapper({
             </button>
           </div>
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
-  if (isBusinessLoading || !business) {
+  if (!business) {
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
@@ -431,12 +410,46 @@ function ServicesProviderWrapper({
             </p>
           )}
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
 
-  return <>{children}</>;
+  // Create sync runtime when engine is ready
+  // Don't render children until engine is ready and runtime is created
+  if (!syncRuntime) {
+    return (
+      <>
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <p className="text-sm text-muted-foreground">Inicializando sincronización...</p>
+        </div>
+      </>
+    );
+  }
+
+  const renderWithSyncProvider = (content: React.ReactNode) => (
+    <FrameworkSyncProvider
+      runtime={syncRuntime}
+      engine={engine as unknown as Parameters<typeof FrameworkSyncProvider>[0]["engine"]}
+    >
+      {content}
+    </FrameworkSyncProvider>
+  );
+
+  // Offline mode: we have cached business data from persister but API failed or we're offline
+  if (isOfflineMode || hasTimedOut) {
+    return renderWithSyncProvider(
+      <>
+        <div className="fixed top-0 left-0 right-0 bg-amber-500/90 text-white text-xs px-3 py-1.5 flex items-center gap-2 z-50">
+          <WifiOff className="h-3 w-3" />
+          Modo offline - datos del negocio en cache
+        </div>
+        {children}
+      </>
+    );
+  }
+
+  return renderWithSyncProvider(children);
 }
 
 export default function ProtectedLayout() {
@@ -513,7 +526,6 @@ export default function ProtectedLayout() {
         <div className="min-h-screen flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         </div>
-        <SyncDevTools enabled={import.meta.env.DEV} />
       </>
     );
   }
@@ -526,21 +538,18 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <SyncProvider>
-      <ServicesProviderWrapper businessId={businessId} token={token}>
-        <DevToolsWithConfig>
-          <AppLayout>
-            <OutletWithLog />
-            <SyncDevTools enabled={import.meta.env.DEV} />
-            <ConflictResolver
-              conflict={activeConflict}
-              isOpen={!!activeConflict}
-              onClose={() => setActiveConflict(null)}
-              onResolve={handleResolveConflict}
-            />
-          </AppLayout>
-        </DevToolsWithConfig>
-      </ServicesProviderWrapper>
-    </SyncProvider>
+    <ServicesProviderWrapper businessId={businessId} token={token}>
+      <DevToolsWithConfig>
+        <AppLayout>
+          <OutletWithLog />
+          <ConflictResolver
+            conflict={activeConflict}
+            isOpen={!!activeConflict}
+            onClose={() => setActiveConflict(null)}
+            onResolve={handleResolveConflict}
+          />
+        </AppLayout>
+      </DevToolsWithConfig>
+    </ServicesProviderWrapper>
   );
 }

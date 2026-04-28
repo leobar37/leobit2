@@ -4,7 +4,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
@@ -52,7 +52,7 @@ interface PurchaseFormContextType {
   };
   purchaseError: string | null;
   clearPurchaseError: () => void;
-  form: ReturnType<typeof useForm<PurchaseFormValues>>;
+  form: UseFormReturn<PurchaseFormValues>;
   totalAmount: number;
   cartItemsCount: number;
   isFormValid: boolean;
@@ -112,12 +112,20 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   const form = useForm<PurchaseFormValues>({
     defaultValues: {
-      purchaseDate: purchase?.purchaseDate || new Date().toISOString().split("T")[0],
+      purchaseDate: purchase?.purchaseDate
+        ? typeof purchase.purchaseDate === "string"
+          ? purchase.purchaseDate
+          : purchase.purchaseDate.toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
     },
     values: {
-      purchaseDate: purchase?.purchaseDate || new Date().toISOString().split("T")[0],
+      purchaseDate: purchase?.purchaseDate
+        ? typeof purchase.purchaseDate === "string"
+          ? purchase.purchaseDate
+          : purchase.purchaseDate.toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
     },

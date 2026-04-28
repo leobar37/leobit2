@@ -171,8 +171,6 @@ function transformFieldName(fieldName: string): string {
     unitPriceQuoted: "unit_price_quoted",
     unitPriceFinal: "unit_price_final",
     originalQuantity: "original_quantity",
-    confirmedSnapshot: "confirmed_snapshot",
-    deliveredSnapshot: "delivered_snapshot",
     allowCustomerEdit: "allow_customer_edit",
     cancelReason: "cancel_reason",
     refundAmount: "refund_amount",
@@ -256,9 +254,7 @@ function convertValue(value: unknown, fieldName: string): unknown {
   }
 
   // Handle JSON fields
-  const jsonFields = [
-    "confirmedSnapshot", "deliveredSnapshot", "calculatorSettings"
-  ];
+  const jsonFields = ["calculatorSettings"];
   if (jsonFields.includes(fieldName)) {
     if (typeof value === "object") {
       return JSON.stringify(value);

@@ -119,6 +119,8 @@ export interface EnqueueParams {
   data: Record<string, unknown>;
   /** Optional unique key for idempotency (auto-generated if not provided) */
   idempotencyKey?: string;
+  /** Optional correlation key for grouped logical operations */
+  correlationId?: string;
 }
 
 /**
@@ -149,6 +151,7 @@ export interface SyncOperationRecord {
   last_error: string | null;
   last_attempt_at: string | null;
   idempotency_key: string | null;
+  correlation_id?: string | null;
   created_at: string;
   updated_at: string;
   [key: string]: unknown;

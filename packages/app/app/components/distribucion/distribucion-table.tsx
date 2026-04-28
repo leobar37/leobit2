@@ -37,7 +37,8 @@ export function DistribucionTable({
 }: DistribucionTableProps) {
   const getVendedorLabel = (dist: DistribucionListItem) => dist.vendedorName?.trim() || "Vendedor no disponible";
 
-  const isModoConProductos = (modo: Distribucion["modo"]) => modo !== "libre";
+  const hasItems = (dist: DistribucionListItem) =>
+    (dist.items?.length ?? 0) > 0;
 
   const getStatusBadge = (estado: Distribucion["estado"]) => {
     const config =
@@ -119,7 +120,7 @@ export function DistribucionTable({
                 </span>
               </div>
 
-              {isModoConProductos(dist.modo) ? (
+              {hasItems(dist as DistribucionListItem) ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div className="shell-block-muted rounded-[18px] p-3">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Asignado</p>
@@ -136,8 +137,8 @@ export function DistribucionTable({
                 </div>
               ) : (
                 <div className="mt-4 shell-block-muted rounded-[18px] p-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Modo</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">Libre - Registro al cerrar</p>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Productos</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">Sin productos asignados</p>
                 </div>
               )}
 
@@ -212,12 +213,12 @@ export function DistribucionTable({
                   </TableCell>
                   <TableCell>{dist.puntoVenta}</TableCell>
                   <TableCell className="text-right">
-                    {isModoConProductos(dist.modo)
+                    {hasItems(dist as DistribucionListItem)
                       ? `${formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadAsignada || 0), 0) || 0)} kg`
                       : "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {isModoConProductos(dist.modo)
+                    {hasItems(dist as DistribucionListItem)
                       ? `${formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + Number(item.cantidadVendida || 0), 0) || 0)} kg`
                       : "—"}
                   </TableCell>

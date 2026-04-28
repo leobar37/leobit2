@@ -69,6 +69,17 @@ export interface ISyncOperationRepository<
     tx?: TTransaction,
     payload?: Record<string, unknown>
   ): Promise<void>;
+
+  findMany(
+    ctx: TRequestContext,
+    options: {
+      status?: string;
+      since?: Date;
+      limit?: number;
+      entityTypes?: string[];
+      cursorOperationId?: string;
+    }
+  ): Promise<SyncOperationRecord[]>;
 }
 
 /**
@@ -184,6 +195,17 @@ export abstract class SyncOperationRepository<
     tx?: TTransaction,
     payload?: Record<string, unknown>
   ): Promise<void>;
+
+  abstract findMany(
+    ctx: TRequestContext,
+    options: {
+      status?: string;
+      since?: Date;
+      limit?: number;
+      entityTypes?: string[];
+      cursorOperationId?: string;
+    }
+  ): Promise<SyncOperationRecord[]>;
 
   // Protected methods for concrete implementations
 

@@ -11,7 +11,6 @@ import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
-import { saleMachine } from "../transitions";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
@@ -190,19 +189,6 @@ export class SaleService {
           ctx,
           data.visitaId,
           { status: "compro", saleId: sale.id },
-          tx
-        );
-      }
-
-      if (data.saleType === "credito" && data.customerId && amountPaid > 0) {
-        const initialPaymentReference = `init-sale:${sale.id}`;
-        await this.paymentRepository.createInitialPayment(
-          ctx,
-          {
-            customerId: data.customerId,
-            amount: amountPaid.toFixed(2),
-            referenceNumber: initialPaymentReference,
-          },
           tx
         );
       }
@@ -407,13 +393,22 @@ export class SaleService {
       throw new ValidationError("No puedes confirmar una venta sin productos");
     }
 
-    // For pre_orders, use versioned confirm
+    // For pre_orders, use the generic versioned update path.
     if (sale.type === "pre_order") {
       if (baseVersion === undefined) {
         throw new ValidationError("baseVersion es requerido para confirmar pedidos");
       }
       return db.transaction(async (tx) => {
-        const confirmedSale = await this.repository.confirmPreOrder(ctx, id, baseVersion, tx);
+        const confirmedSale = await this.repository.update(
+          ctx,
+          id,
+          {
+            status: "confirmed",
+            version: baseVersion + 1,
+          },
+          tx,
+          baseVersion
+        );
         return {
           data: confirmedSale,
           txid: await getTxid(tx),
@@ -456,7 +451,16 @@ export class SaleService {
     }
 
     return db.transaction(async (tx) => {
-      const deliveredSale = await this.repository.deliverPreOrder(ctx, id, baseVersion, tx);
+      const deliveredSale = await this.repository.update(
+        ctx,
+        id,
+        {
+          status: "delivered",
+          version: baseVersion + 1,
+        },
+        tx,
+        baseVersion
+      );
       return {
         data: deliveredSale,
         txid: await getTxid(tx),
@@ -489,21 +493,46 @@ export class SaleService {
     }
 
     const previousStatus = sale.status as "draft" | "confirmed" | "active" | "delivered";
-    
-    // Get sale items for the transition hook
-    const saleItems = await this.repository.findSaleItems(ctx, id);
-    const saleWithItems = { ...sale, items: saleItems };
 
     return db.transaction(async (tx) => {
-      // Execute state machine transition first (for active status, handles side effects)
-      if (previousStatus === "active") {
-        // Temporarily attach refund data to sale for the hook
-        (saleWithItems as any)._refundData = {
-          refundAmount: data.refundAmount,
-          refundMethod: data.refundMethod,
-          refundReference: data.refundReference,
-        };
-        await saleMachine.executeTransition(ctx, saleWithItems, previousStatus, "cancelled", tx);
+      if ((previousStatus === "active" || previousStatus === "confirmed") && sale.distribucionId) {
+        const saleItems = await this.repository.findSaleItems(ctx, id, tx);
+        const distribucionItems = await this.distribucionItemRepository.findByDistribucionId(
+          ctx,
+          sale.distribucionId
+        );
+
+        for (const saleItem of saleItems) {
+          const distItem = distribucionItems.find((item) => item.variantId === saleItem.variantId);
+          const quantity = saleItem.quantity ?? saleItem.orderedQuantity;
+          if (!distItem || !quantity) {
+            continue;
+          }
+
+          const currentVendida = Number.parseFloat(distItem.cantidadVendida);
+          const newVendida = Math.max(currentVendida - Number.parseFloat(quantity), 0);
+          await this.distribucionItemRepository.updateVendido(
+            ctx,
+            distItem.id,
+            newVendida.toString(),
+            tx
+          );
+        }
+      }
+
+      if (previousStatus === "active" && data.refundAmount && data.refundAmount > 0 && sale.customerId) {
+        await this.paymentRepository.createReversal(
+          ctx,
+          {
+            customerId: sale.customerId,
+            amount: (-data.refundAmount).toFixed(2),
+            paymentMethod: data.refundMethod ?? "efectivo",
+            referenceNumber: data.refundReference,
+            notes: `Reembolso por cancelación de venta #${sale.id}`,
+            relatedSaleId: sale.id,
+          },
+          tx
+        );
       }
 
       const updateData: Partial<Sale> = {

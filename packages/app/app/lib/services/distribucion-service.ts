@@ -84,19 +84,25 @@ export class DistribucionService extends DistribucionesService {
    * Find all this.tables.distribuciones for the current business with optional filters
    * Overrides parent to add filtering support
    */
-  async findByBusiness(filters?: FindDistribucionesFilters): Promise<Distribucion[]> {
+  async findByBusiness(options?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  } & FindDistribucionesFilters): Promise<Distribucion[]> {
     const conditions = [eq(this.tables.distribuciones.businessId, this.businessId)];
 
-    if (filters?.fecha) {
-      conditions.push(eq(this.tables.distribuciones.fecha, filters.fecha));
+    if (options?.fecha) {
+      conditions.push(eq(this.tables.distribuciones.fecha, options.fecha));
     }
 
-    if (filters?.vendedorId) {
-      conditions.push(eq(this.tables.distribuciones.vendedorId, filters.vendedorId));
+    if (options?.vendedorId) {
+      conditions.push(eq(this.tables.distribuciones.vendedorId, options.vendedorId));
     }
 
-    if (filters?.estado) {
-      conditions.push(eq(this.tables.distribuciones.estado, filters.estado));
+    if (options?.estado) {
+      conditions.push(eq(this.tables.distribuciones.estado, options.estado));
     }
 
     const result = await this.db
@@ -128,7 +134,6 @@ export class DistribucionService extends DistribucionesService {
       notaCierre: undefined,
       fecha,
       estado: "activo",
-      modo: "libre",
       syncStatus: "pending",
       syncAttempts: 0,
       createdAt: new Date(now),
@@ -181,7 +186,7 @@ export class DistribucionService extends DistribucionesService {
       .from(this.tables.distribuciones)
       .where(eq(this.tables.distribuciones.id, id))
       .limit(1);
-    return result[0];
+    return result[0] as Distribucion;
   }
 
   /**
@@ -247,6 +252,42 @@ export class DistribucionService extends DistribucionesService {
       ...distribucion,
       items,
     };
+  }
+
+  /**
+   * Find active distribucion for a seller on a specific date
+   * Returns the most recent active or "en_ruta" distribucion for the seller
+   */
+  async findActiveBySeller(
+    vendedorId: string,
+    fecha?: string
+  ): Promise<DistribucionWithItems | null> {
+    const conditions = [
+      eq(this.tables.distribuciones.businessId, this.businessId),
+      eq(this.tables.distribuciones.vendedorId, vendedorId),
+      eq(this.tables.distribuciones.estado, "activo"),
+    ];
+
+    if (fecha) {
+      conditions.push(eq(this.tables.distribuciones.fecha, fecha));
+    }
+
+    const result = await this.db
+      .select()
+      .from(this.tables.distribuciones)
+      .where(and(...conditions))
+      .orderBy(desc(this.tables.distribuciones.createdAt))
+      .limit(1);
+
+    const distribucion = result[0];
+    if (!distribucion) return null;
+
+    const items = await this.getItemsWithNames(distribucion.id);
+
+    return {
+      ...distribucion,
+      items,
+    } as DistribucionWithItems;
   }
 
   /**

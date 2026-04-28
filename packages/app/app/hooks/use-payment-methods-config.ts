@@ -22,6 +22,7 @@ export interface PaymentMethodsConfig {
     plin: PaymentMethodConfig;
     transferencia: PaymentMethodConfig;
     tarjeta: PaymentMethodConfig;
+    saldo?: PaymentMethodConfig;
   };
   createdAt: Date;
   updatedAt: Date;

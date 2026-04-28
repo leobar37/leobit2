@@ -142,7 +142,7 @@ export function EditDistribucionForm({
           </div>
         )}
 
-        {distribucion.modo === "libre" && !hasItems && (
+        {!hasItems && (
           <div className="space-y-4">
             <div className="p-4 bg-orange-50 rounded-xl">
               <div className="flex items-center gap-2 mb-2">

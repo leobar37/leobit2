@@ -1,48 +1,36 @@
 /**
  * Distribuciones Hook
- * Reactively fetch and mutate distribuciones using PGlite + ElectricSQL
- * 
- * Migration from TanStack DB to PGlite
+ * Reactively fetch and mutate distribuciones using the sync framework.
+ *
+ * Reads: offline via framework service -> PGlite
+ * Writes: online-only via API
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { eq, and, gte, desc, like, or } from "drizzle-orm";
-import { useSyncEngine } from "@avileo/drizzle-sync/react";
-import {
-  distribuciones,
-  distribucionItems,
-  DistribucionStatus,
-  type Distribuciones as Distribucion,
-  type DistribucionItems as DistribucionItem,
-} from "~/lib/sync/generated/schema";
-import { useBusiness } from "./use-business";
-import { getStoredBusinessId } from "~/lib/session-storage";
 import { useEngineService } from "@avileo/drizzle-sync/react";
 import { DistribucionService } from "~/lib/services/distribucion-service";
 import type { CreateDistribucionInput, CreateDistribucionItemInput } from "~/lib/services/distribucion-service";
+import { useBusiness } from "./use-business";
+import { getStoredBusinessId } from "~/lib/session-storage";
 import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 import { useManualSync } from "./use-manual-sync";
-import { api, extractData } from "~/lib/api-client";
+import { api } from "~/lib/api-client";
 
 const DISTRIBUCIONES_QUERY_KEY = "distribuciones";
 
 /**
  * Helper to extract error message from API response
- * Backend returns errors in format: { success: false, error: { code: "...", message: "..." } }
- * or { success: false, error: "string message" }
  */
 function handleApiError(response: { data?: { success?: boolean; error?: string | { code?: string; message?: string } } | null; error?: { value?: unknown } | null }): never {
-  // Network/fetch error
   if (response.error) {
     throw new Error(String(response.error.value));
   }
 
-  // Business logic error from backend
   if (response.data?.error) {
     const errorData = response.data.error;
-    if (typeof errorData === 'string') {
+    if (typeof errorData === "string") {
       throw new Error(errorData);
     }
-    if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+    if (errorData && typeof errorData === "object" && "message" in errorData) {
       throw new Error(String(errorData.message));
     }
   }
@@ -61,41 +49,16 @@ export function useDistribuciones(params?: {
   const { data: business } = useBusiness();
   const storedBusinessId = getStoredBusinessId();
   const businessId = business?.id || storedBusinessId;
-  const engine = useSyncEngine();
+  const distribucionService = useEngineService<DistribucionService>("distribuciones");
 
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, businessId, params],
     queryFn: async () => {
-      console.log("[useDistribuciones] Fetching from PGlite...", { businessId, params });
-      if (!businessId) {
-        console.log("[useDistribuciones] No businessId, returning empty");
-        return [];
-      }
-      
-      const { db } = engine.getDatabaseInstance();
-      
-      let conditions = [eq(distribuciones.businessId, businessId)];
-      
-      if (params?.fecha) {
-        conditions.push(eq(distribuciones.fecha, params.fecha));
-      }
-      
-      if (params?.vendedorId) {
-        conditions.push(eq(distribuciones.vendedorId, params.vendedorId));
-      }
-      
-      if (params?.estado) {
-        conditions.push(eq(distribuciones.estado, params.estado));
-      }
-      
-      const result = await db
-        .select()
-        .from(distribuciones)
-        .where(and(...conditions))
-        .orderBy(desc(distribuciones.fecha), desc(distribuciones.createdAt));
-      
-      console.log("[useDistribuciones] Found", result.length, "distribuciones");
-      return result;
+      if (!businessId) return [];
+      return distribucionService.findByBusiness({
+        ...params,
+        vendedorId: params?.vendedorId,
+      });
     },
     enabled: !!businessId,
   });
@@ -108,21 +71,14 @@ export function useSellerDistribuciones(
   businessId: string,
   vendedorId: string
 ) {
-  const engine = useSyncEngine();
+  const distribucionService = useEngineService<DistribucionService>("distribuciones");
+
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, "seller", vendedorId],
     queryFn: async () => {
-      const { db } = engine.getDatabaseInstance();
-      return db
-        .select()
-        .from(distribuciones)
-        .where(
-          and(
-            eq(distribuciones.businessId, businessId),
-            eq(distribuciones.vendedorId, vendedorId)
-          )
-        )
-        .orderBy(desc(distribuciones.createdAt));
+      return distribucionService.findByBusiness({
+        vendedorId,
+      });
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -135,24 +91,12 @@ export function useActiveDistribucion(
   businessId: string,
   vendedorId: string
 ) {
-  const engine = useSyncEngine();
+  const distribucionService = useEngineService<DistribucionService>("distribuciones");
+
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, "active", vendedorId],
     queryFn: async () => {
-      const { db } = engine.getDatabaseInstance();
-      const result = await db
-        .select()
-        .from(distribuciones)
-        .where(
-          and(
-            eq(distribuciones.businessId, businessId),
-            eq(distribuciones.vendedorId, vendedorId),
-            eq(distribuciones.estado, DistribucionStatus.ACTIVO)
-          )
-        )
-        .orderBy(desc(distribuciones.createdAt))
-        .limit(1);
-      return result[0] || null;
+      return distribucionService.findActiveBySeller(vendedorId);
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -164,54 +108,35 @@ export function useActiveDistribucion(
 export function useMiDistribucion(fecha?: string) {
   const { data: business } = useBusiness();
   const storedBusinessId = getStoredBusinessId();
-  const today = fecha || new Date().toISOString().split("T")[0];
   const businessId = business?.id || storedBusinessId;
   const vendedorId = business?.businessUserId;
+  const distribucionService = useEngineService<DistribucionService>("distribuciones");
 
-  const queryResult = useActiveDistribucion(businessId || "", vendedorId || "");
-  
-  return {
-    ...queryResult,
-    data: queryResult.data,
-  };
+  return useQuery({
+    queryKey: [DISTRIBUCIONES_QUERY_KEY, "mi-distribucion", vendedorId, fecha],
+    queryFn: async () => {
+      if (!vendedorId) return null;
+      return distribucionService.findActiveBySeller(vendedorId, fecha);
+    },
+    enabled: !!businessId && !!vendedorId,
+  });
 }
 
 /**
  * Get a single distribucion with items
  */
 export function useDistribucion(id: string | null) {
-  const engine = useSyncEngine();
+  const distribucionService = useEngineService<DistribucionService>("distribuciones");
+
   return useQuery({
     queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
     queryFn: async () => {
       if (!id) return null;
-
-      const { db } = engine.getDatabaseInstance();
-
-      const [distResult, itemsResult] = await Promise.all([
-        db
-          .select()
-          .from(distribuciones)
-          .where(eq(distribuciones.id, id))
-          .limit(1),
-        db
-          .select()
-          .from(distribucionItems)
-          .where(eq(distribucionItems.distribucionId, id)),
-      ]);
-
-      if (!distResult[0]) return null;
-
-      return {
-        ...distResult[0],
-        items: itemsResult,
-      };
+      return distribucionService.findByIdWithItems(id);
     },
     enabled: !!id,
   });
 }
-
-
 
 /**
  * Input type for creating a distribucion via API
@@ -252,16 +177,12 @@ export function useCreateDistribucion() {
     offlineMessage: "Se requiere conexión a internet para crear una distribución",
     onSuccess: async () => {
       console.log("[useCreateDistribucion] onSuccess - pulling changes immediately");
-      // Force pull immediately to sync new distribucion from server to PGlite
       await pullNow();
 
       console.log("[useCreateDistribucion] onSuccess - invalidating queries");
-      // Invalidate both distribuciones and visitas since creating a distribucion
-      // automatically creates visitas on the backend
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
       });
-      // Use predicate to invalidate all visit queries regardless of distribucionId
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
       });
@@ -296,7 +217,6 @@ export function useCloseDistribucion() {
     },
     offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
     onSuccess: async (_, input) => {
-      // Force pull immediately to sync closure from server to PGlite
       await pullNow();
 
       queryClient.invalidateQueries({
@@ -393,38 +313,29 @@ export function useDeleteDistribucion() {
     },
     offlineMessage: "Se requiere conexión a internet para eliminar la distribución",
     onMutate: async (id: string) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: [DISTRIBUCIONES_QUERY_KEY] });
 
-      // Snapshot previous value
       const previousDistribuciones = queryClient.getQueryData([DISTRIBUCIONES_QUERY_KEY]);
 
-      // Optimistically update to the new value
       queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], (old: any) => {
         if (!old) return old;
         return old.filter((d: any) => d.id !== id);
       });
 
-      // Return context with the snapshotted value
       return { previousDistribuciones };
     },
     onError: (err, id, context: any) => {
-      // Rollback to previous value on error
       if (context?.previousDistribuciones) {
         queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], context.previousDistribuciones);
       }
       console.error("[Distribuciones] useDeleteDistribucion - error:", err);
     },
     onSuccess: async () => {
-      // Force pull immediately to sync deletion from server to PGlite
       await pullNow();
 
-      // Invalidate both distribuciones and visitas since deleting a distribucion
-      // also deletes associated visitas on the backend
       queryClient.invalidateQueries({
         queryKey: [DISTRIBUCIONES_QUERY_KEY],
       });
-      // Use predicate to invalidate all visit queries regardless of distribucionId
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
       });
@@ -432,94 +343,5 @@ export function useDeleteDistribucion() {
   });
 }
 
-/**
- * Add an item to a distribucion
- */
-export function useAddDistribucionItem() {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      distribucionId,
-      item,
-    }: {
-      distribucionId: string;
-      item: CreateDistribucionItemInput;
-    }) => {
-      return distribucionService.addItem(distribucionId, item);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
-      });
-    },
-  });
-}
-
-/**
- * Update a distribucion item
- */
-export function useUpdateDistribucionItem() {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      distribucionId,
-      itemId,
-      data,
-    }: {
-      distribucionId: string;
-      itemId: string;
-      data: {
-        cantidadAsignada?: number;
-        cantidadVendida?: number;
-      };
-    }) => {
-      return distribucionService.updateItem(distribucionId, itemId, data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
-      });
-    },
-  });
-}
-
-/**
- * Remove an item from a distribucion
- */
-export function useRemoveDistribucionItem() {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      distribucionId,
-      itemId,
-    }: {
-      distribucionId: string;
-      itemId: string;
-    }) => {
-      return distribucionService.removeItem(distribucionId, itemId);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.distribucionId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
-      });
-    },
-  });
-}
-
-export type { Distribucion, DistribucionItem };
+export type { Distribucion, DistribucionItem, DistribucionWithItems } from "~/lib/services/distribucion-service";
 export type { CreateDistribucionInput, CreateDistribucionItemInput };

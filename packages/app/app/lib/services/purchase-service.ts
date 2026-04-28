@@ -135,7 +135,7 @@ export class PurchaseService extends PurchasesService {
       ...purchase,
       totalAmount: this.normalizeCurrency(purchase.totalAmount),
       items: normalizedItems,
-    };
+    } as PurchaseWithItems;
   }
 
   /**
@@ -178,7 +178,7 @@ export class PurchaseService extends PurchasesService {
     return result.map((purchase) => ({
       ...purchase,
       totalAmount: this.normalizeCurrency(purchase.totalAmount),
-    }));
+    })) as Purchase[];
   }
 
   /**
@@ -195,7 +195,7 @@ export class PurchaseService extends PurchasesService {
         )
       )
       .orderBy(desc(this.tables.purchases.updatedAt));
-    return result;
+    return result as Purchase[];
   }
 
   /**
@@ -238,7 +238,7 @@ export class PurchaseService extends PurchasesService {
     return result.map((purchase) => ({
       ...purchase,
       totalAmount: this.normalizeCurrency(purchase.totalAmount),
-    }));
+    })) as Purchase[];
   }
 
   /**
@@ -313,169 +313,11 @@ export class PurchaseService extends PurchasesService {
           quantity: String(item.quantity),
           unitCost: this.normalizeCurrency(item.unitCost),
           totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-        }, undefined, "purchase_items");
+        }, "purchase_items");
       }
     }
 
     return (await this.findById(id)) as PurchaseWithItems;
-  }
-
-  /**
-   * Override create to call createWithItems internally for atomic operations
-   */
-  async create(input: CreatePurchasesInput = {}): Promise<Purchase> {
-    // Delegate to createWithItems for atomic operations
-    const purchase = await this.createWithItems({
-      supplierId: input.supplierId,
-      purchaseDate: input.purchaseDate,
-      totalAmount: input.totalAmount,
-      invoiceNumber: input.invoiceNumber,
-      notes: input.notes,
-      receiptImageId: input.receiptImageId,
-    });
-    return purchase;
-  }
-
-  /**
-   * Update a purchase (works for any status including drafts)
-   * Overrides parent to use custom sync queue
-   */
-  async update(id: string, input: UpdatePurchaseInput): Promise<void> {
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new Error(`Purchase not found: ${id}`);
-    }
-
-    const now = this.now();
-    const updateData: Record<string, unknown> = {
-      updatedAt: new Date(now),
-      syncStatus: SyncStatus.PENDING,
-    };
-
-    if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
-    if (input.purchaseDate !== undefined) updateData.purchaseDate = input.purchaseDate;
-    if (input.totalAmount !== undefined) updateData.totalAmount = this.normalizeCurrency(input.totalAmount);
-    if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
-    if (input.receiptImageId !== undefined) updateData.receiptImageId = input.receiptImageId;
-    if (input.notes !== undefined) updateData.notes = input.notes;
-
-    await this.db
-      .update(this.tables.purchases)
-      .set(updateData)
-      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
-
-    // Queue sync with version for conflict detection
-    await this.queueSync("update", id, input as Record<string, unknown>);
-  }
-
-  /**
-   * Update the status of a purchase
-   * Validates required fields when confirming (draft -> pending)
-   */
-  async updateStatus(id: string, status: PurchaseStatus): Promise<void> {
-    const purchase = await this.findById(id);
-    if (!purchase) {
-      throw new Error("Purchase not found");
-    }
-
-    // Validate when confirming a draft
-    if (purchase.status === "draft" && status === "pending") {
-      if (!purchase.supplierId) {
-        throw new Error("Se requiere un proveedor para confirmar la compra");
-      }
-      if (!purchase.purchaseDate) {
-        throw new Error("Se requiere una fecha para confirmar la compra");
-      }
-      if (purchase.items.length === 0) {
-        throw new Error("Se requiere al menos un item para confirmar la compra");
-      }
-    }
-
-    await this.db
-      .update(this.tables.purchases)
-      .set({
-        status,
-        updatedAt: new Date(),
-        syncStatus: SyncStatus.PENDING,
-      })
-      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
-
-    await this.queueSync("update", id, { status });
-  }
-
-  /**
-   * Delete a purchase (only drafts can be deleted)
-   */
-  async delete(id: string): Promise<void> {
-    const purchase = await this.findById(id);
-    if (!purchase) {
-      return;
-    }
-
-    // Only allow deleting drafts
-    if (purchase.status !== "draft") {
-      throw new Error("Solo los borradores pueden ser eliminados");
-    }
-
-    // Delete items first
-    for (const item of purchase.items) {
-      await this.queueSync("delete", item.id, { purchaseId: id }, "purchase_items");
-    }
-
-    // Delete the purchase
-    await this.db
-      .delete(this.tables.purchases)
-      .where(and(eq(this.tables.purchases.id, id), eq(this.tables.purchases.businessId, this.businessId)));
-
-    await this.queueSync("delete", id, {});
-  }
-
-  /**
-   * Add an item to a purchase (only drafts)
-   */
-  async addItem(purchaseId: string, item: CreatePurchaseItemInput): Promise<void> {
-    const purchase = await this.findById(purchaseId);
-    if (!purchase) {
-      throw new Error("Purchase not found");
-    }
-
-    // Only allow adding items to drafts
-    if (purchase.status !== "draft") {
-      throw new Error("Solo los borradores pueden ser editados");
-    }
-
-    const now = this.now();
-    const itemId = this.generateId();
-
-    await this.db.insert(this.tables.purchaseItems).values({
-      id: itemId,
-      businessId: this.businessId,
-      purchaseId,
-      productId: item.productId,
-      variantId: item.variantId ?? undefined,
-      unitId: item.unitId ?? undefined,
-      quantity: String(item.quantity),
-      unitCost: this.normalizeCurrency(item.unitCost),
-      totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-      syncStatus: "pending",
-      syncAttempts: 0,
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
-    });
-
-    // Recalculate total
-    await this.recalculateTotal(purchaseId);
-
-    // Sync item with FK reference (purchase_id in payload)
-    await this.queueSync("create", itemId, {
-      purchaseId,
-      productId: item.productId,
-      variantId: item.variantId,
-      unitId: item.unitId,
-      quantity: String(item.quantity),
-      unitCost: this.normalizeCurrency(item.unitCost),
-      totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-    }, undefined, "purchase_items");
   }
 
   /**
@@ -564,6 +406,27 @@ export class PurchaseService extends PurchasesService {
   }
 
   /**
+   * Update purchase status
+   */
+  async updateStatus(id: string, status: PurchaseStatus): Promise<void> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error(`Purchase not found: ${id}`);
+    }
+
+    await this.db
+      .update(this.tables.purchases)
+      .set({
+        status,
+        updatedAt: new Date(),
+        syncStatus: SyncStatus.PENDING,
+      })
+      .where(eq(this.tables.purchases.id, id));
+
+    await this.queueSync("update", id, { status });
+  }
+
+  /**
    * Add an item to an existing purchase (for editing confirmed this.tables.purchases)
    * Does NOT check for draft status - use with caution
    */
@@ -600,7 +463,7 @@ export class PurchaseService extends PurchasesService {
       quantity: String(item.quantity),
       unitCost: this.normalizeCurrency(item.unitCost),
       totalCost: this.normalizeCurrency(item.quantity * item.unitCost),
-    }, undefined, "purchase_items");
+    }, "purchase_items");
   }
 
   /**
@@ -641,7 +504,7 @@ export class PurchaseService extends PurchasesService {
       quantity: data.quantity !== undefined ? String(data.quantity) : undefined,
       unitCost: data.unitCost !== undefined ? this.normalizeCurrency(data.unitCost) : undefined,
       totalCost: totalCost !== undefined ? this.normalizeCurrency(totalCost) : undefined,
-    }, undefined, "purchase_items");
+    }, "purchase_items");
   }
 
   /**

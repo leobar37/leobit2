@@ -47,10 +47,15 @@ function createMockEngine(
   businessUserId: string,
 ): SyncClientEngineLike {
   return {
-    getPg: () => pg,
     getDb: () => db,
+    getAdapter: () => ({ query: vi.fn(), exec: vi.fn(), getDb: () => db }) as any,
     getSyncOperations: () => mockSyncService as any,
     getConfig: () => ({ tenantId: businessId, userId: businessUserId }),
+    tables: {
+      distribuciones: {} as any,
+      distribucionItems: {} as any,
+    },
+    batch: vi.fn(async (callback) => callback({ tx: db, enqueue: vi.fn(), enqueueMany: vi.fn() } as any)),
   };
 }
 
@@ -71,11 +76,6 @@ describe("DistribucionService", () => {
 
   describe("createWithItems", () => {
     it("should create distribucion with items atomically using FK references", async () => {
-      // Setup mock for distribucion insert
-      mockPg.query
-        .mockResolvedValueOnce({ rows: [] }) // INSERT distribucion
-        .mockResolvedValueOnce({ rows: [{ id: "dist-1" }] }); // SELECT after insert
-
       const input: CreateDistribucionInput = {
         vendedorId: "vendedor-1",
         puntoVenta: "Mercado Central",
@@ -90,22 +90,37 @@ describe("DistribucionService", () => {
 
       const result = await service.createWithItems(input);
 
-      // Verify distribucion was inserted
-      expect(mockPg.query).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO distribuciones"),
-        expect.arrayContaining([
-          expect.any(String), // id
-          businessId, // business_id
-          "vendedor-1", // vendedor_id
-          "Mercado Central", // punto_venta
-        ])
-      );
+      const valuesCalls = mockDb.values.mock.calls.map(([payload]) => payload);
+      expect(valuesCalls[0]).toMatchObject({
+        businessId,
+        vendedorId: "vendedor-1",
+        puntoVenta: "Mercado Central",
+        puntoVentaId: "pv-1",
+        notaCreacion: "Primera distribución del día",
+        fecha: "2026-04-20",
+        estado: "activo",
+        syncStatus: "pending",
+      });
 
-      // Verify items were inserted with FK reference (distribucion_id in payload)
-      const itemInsertCalls = mockPg.query.mock.calls.filter((call) =>
-        call[0]?.includes("INSERT INTO distribucion_items")
-      );
-      expect(itemInsertCalls).toHaveLength(2);
+      const distribucionId = valuesCalls[0].id;
+      expect(valuesCalls.slice(1, 3)).toEqual([
+        expect.objectContaining({
+          businessId,
+          distribucionId,
+          variantId: "var-1",
+          cantidadAsignada: "10.000",
+          unidad: "kg",
+          syncStatus: "pending",
+        }),
+        expect.objectContaining({
+          businessId,
+          distribucionId,
+          variantId: "var-2",
+          cantidadAsignada: "5.000",
+          unidad: "kg",
+          syncStatus: "pending",
+        }),
+      ]);
 
       // Verify sync was queued for parent first, then children
       expect(mockSyncService.enqueue).toHaveBeenCalledTimes(3); // 1 distribucion + 2 items

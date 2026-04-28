@@ -55,43 +55,6 @@ export class PaymentRepository {
     return abono;
   }
 
-  async findByReferenceNumber(ctx: RequestContext, referenceNumber: string): Promise<Abono | undefined> {
-    return db.query.abonos.findFirst({
-      where: and(
-        eq(abonos.businessId, ctx.businessId),
-        eq(abonos.referenceNumber, referenceNumber)
-      ),
-    });
-  }
-
-  async createInitialPayment(
-    ctx: RequestContext,
-    data: {
-      customerId: string;
-      amount: string;
-      referenceNumber: string;
-    },
-    tx?: DbTransaction
-  ): Promise<Abono | undefined> {
-    const executor = tx ?? db;
-
-    const [abono] = await executor
-      .insert(abonos)
-      .values({
-        customerId: data.customerId,
-        businessId: ctx.businessId,
-        sellerId: ctx.businessUserId,
-        amount: data.amount,
-        paymentMethod: "efectivo",
-        notes: "Abono inicial registrado en la venta",
-        referenceNumber: data.referenceNumber,
-      })
-      .onConflictDoNothing({ target: abonos.referenceNumber })
-      .returning();
-
-    return abono;
-  }
-
   async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
     const executor = tx ?? db;
     await executor
@@ -146,13 +109,17 @@ export class PaymentRepository {
 
     const [abono] = await executor
       .update(abonos)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-        version: expectedVersion !== undefined ? data.version ?? (expectedVersion + 1) : undefined,
-      })
+        .set({
+          ...data,
+          updatedAt: new Date(),
+          version: data.version ?? sql`${abonos.version} + 1`,
+        })
       .where(and(...conditions))
       .returning();
+
+    if (!abono) {
+      throw new Error("Abono no encontrado o modificado por otro dispositivo");
+    }
 
     return abono;
   }

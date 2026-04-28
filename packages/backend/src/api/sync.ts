@@ -5,19 +5,12 @@ import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
 import { createLogger } from "../lib/logger";
-import { SyncConflictRepository } from "../services/sync/framework/SyncConflictRepository";
-import { SyncDeadLetterRepository } from "../services/sync/framework/SyncDeadLetterRepository";
-import { SyncMetricsService } from "../services/sync/framework/SyncMetricsService";
-import type { SyncOperationInput } from "../services/sync/types";
-import type { SyncBatchEntry } from "../services/sync/sync.service";
+import type { SyncBatchEntry } from "../services/business/sync.service";
 import { parseCursor } from "./sync-cursor";
 
 const logger = createLogger("SyncRoute");
 
-// Maximum operations per batch request
 const MAX_BATCH_SIZE = 100;
-
-// Maximum limit for /sync/changes
 const MAX_CHANGES_LIMIT = 500;
 const DEFAULT_CHANGES_LIMIT = 100;
 
@@ -51,6 +44,13 @@ const entityLiterals = [
 
 const entityTypeSchema = t.Union(entityLiterals);
 
+function parseIntParam(value: string | undefined, min: number, max: number, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed) || parsed < min) return fallback;
+  return Math.min(parsed, max);
+}
+
 export const syncRoutes = new Elysia({ prefix: "/sync" })
   .use(contextPlugin)
   .use(servicesPlugin)
@@ -59,7 +59,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
     async ({ syncService, ctx, body, set }) => {
       const entries = body.entries;
 
-      // Normalize entity types inside each operation
       const normalizedEntries: SyncBatchEntry[] = entries.map((entry) => {
         if (entry.kind === "single") {
           return {
@@ -79,7 +78,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         };
       });
 
-      // Count total operations for limit enforcement
       const totalOperations = normalizedEntries.reduce(
         (count, entry) =>
           count + (entry.kind === "batch" ? entry.operations.length : 1),
@@ -98,7 +96,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         };
       }
 
-      // Validate each operation
       let opIndex = 0;
       for (const entry of normalizedEntries) {
         const ops = entry.kind === "batch" ? entry.operations : [entry.operation];
@@ -143,7 +140,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         }
       }
 
-      // Log incoming sync batch request
       const allOps = normalizedEntries.flatMap((entry) =>
         entry.kind === "batch" ? entry.operations : [entry.operation]
       );
@@ -172,7 +168,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       );
       const duration = Date.now() - startTime;
 
-      // Log completion
       const failedOps = result.results.filter((r: { success: boolean }) => !r.success);
       logger.info({
         msg: "📤 SYNC BATCH RESPONSE",
@@ -243,10 +238,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   .get(
     "/changes",
     async ({ syncService, ctx, query, set }) => {
-      // Parse and validate cursor (since parameter)
-      // Supports two formats:
-      // 1. Legacy: ISO 8601 timestamp (e.g., "2026-03-07T18:07:41.784Z")
-      // 2. New: timestamp_operationId (e.g., "2026-03-07T18:07:41.784Z_op-123")
       let since: Date | undefined;
       let cursorOperationId: string | undefined;
       if (query.since) {
@@ -270,7 +261,6 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         since = cursorResult.date;
         cursorOperationId = cursorResult.operationId;
 
-        // Validate cursor is not in the future
         if (since && since > new Date()) {
           set.status = 400;
           return {
@@ -283,25 +273,8 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         }
       }
 
-      // Parse and validate limit
-      let limit = DEFAULT_CHANGES_LIMIT;
-      if (query.limit) {
-        const parsedLimit = parseInt(query.limit, 10);
-        if (isNaN(parsedLimit) || parsedLimit < 1) {
-          set.status = 400;
-          return {
-            success: false,
-            error: {
-              code: "INVALID_LIMIT",
-              message: "Invalid 'limit' parameter. Must be a positive integer.",
-            },
-          };
-        }
-        // Cap limit at maximum
-        limit = Math.min(parsedLimit, MAX_CHANGES_LIMIT);
-      }
+      const limit = parseIntParam(query.limit, 1, MAX_CHANGES_LIMIT, DEFAULT_CHANGES_LIMIT);
 
-      // Parse entityTypes filter for staged loading (comma-separated list)
       let entityTypes: string[] | undefined;
       if (query.entityTypes) {
         entityTypes = query.entityTypes
@@ -325,18 +298,20 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       query: t.Object({
         since: t.Optional(t.String()),
         limit: t.Optional(t.String()),
-        entityTypes: t.Optional(t.String()), // Comma-separated entity types
+        entityTypes: t.Optional(t.String()),
       }),
     }
   )
   .get(
     "/health",
-    async ({ ctx }) => {
-      const { syncLogger } = await import("../services/sync/sync-logger");
+    async ({ syncService, ctx }) => {
+      const health = await syncService.getHealth(ctx as RequestContext);
+      const { syncLogger } = await import("../lib/sync-logger");
 
       return {
         success: true,
         data: {
+          ...health,
           metrics: syncLogger.getMetrics(),
           errorSummary: syncLogger.getErrorSummary(),
           recentErrors: syncLogger.getRecentErrors(10),
@@ -346,48 +321,28 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   )
   .get(
     "/conflicts",
-    async ({ ctx, query }) => {
-      const conflictRepo = new SyncConflictRepository();
+    async ({ syncService, ctx, query }) => {
+      const limit = parseIntParam(query.limit, 1, 100, 50);
+      const offset = parseIntParam(query.offset, 0, 10000, 0);
 
-      let limit = 50;
-      if (query.limit) {
-        const parsedLimit = parseInt(query.limit, 10);
-        if (!isNaN(parsedLimit) && parsedLimit > 0) {
-          limit = Math.min(parsedLimit, 100);
-        }
-      }
-
-      let offset = 0;
-      if (query.offset) {
-        const parsedOffset = parseInt(query.offset, 10);
-        if (!isNaN(parsedOffset) && parsedOffset >= 0) {
-          offset = parsedOffset;
-        }
-      }
-
-      const conflicts = await conflictRepo.findByBusiness(
-        ctx as RequestContext,
-        {
-          status: query.status || "pending",
-          entityType: query.entityType
-            ? normalizeEntityTypeFilter(query.entityType)
-            : undefined,
-          limit,
-          offset,
-        }
-      );
-
-      const pendingCount = await conflictRepo.countPending(ctx as RequestContext);
+      const result = await syncService.getConflicts(ctx as RequestContext, {
+        status: query.status || "pending",
+        entityType: query.entityType
+          ? normalizeEntityTypeFilter(query.entityType)
+          : undefined,
+        limit,
+        offset,
+      });
 
       return {
         success: true,
         data: {
-          conflicts,
-          pendingCount,
+          conflicts: result.conflicts,
+          pendingCount: result.pending,
           pagination: {
             limit,
             offset,
-            hasMore: conflicts.length === limit,
+            hasMore: result.conflicts.length === limit,
           },
         },
       };
@@ -403,13 +358,14 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   )
   .get(
     "/conflicts/:id",
-    async ({ ctx, params }) => {
-      const conflictRepo = new SyncConflictRepository();
+    async ({ syncService, ctx, params }) => {
+      const result = await syncService.getConflicts(ctx as RequestContext, {
+        status: "pending",
+        limit: 1,
+        offset: 0,
+      });
 
-      const conflict = await conflictRepo.findById(
-        ctx as RequestContext,
-        params.id
-      );
+      const conflict = result.conflicts.find((c: any) => c.id === params.id);
 
       if (!conflict) {
         return {
@@ -429,36 +385,7 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/conflicts/:id/resolve",
-    async ({ ctx, params, body, set }) => {
-      const conflictRepo = new SyncConflictRepository();
-
-      const conflict = await conflictRepo.findById(
-        ctx as RequestContext,
-        params.id
-      );
-
-      if (!conflict) {
-        set.status = 404;
-        return {
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Conflict not found",
-          },
-        };
-      }
-
-      if (conflict.status !== "pending") {
-        set.status = 400;
-        return {
-          success: false,
-          error: {
-            code: "ALREADY_RESOLVED",
-            message: `Conflict already resolved with strategy: ${conflict.resolution}`,
-          },
-        };
-      }
-
+    async ({ syncService, ctx, params, body, set }) => {
       const validResolutions = ["server", "local", "merge"];
       if (!validResolutions.includes(body.resolution)) {
         set.status = 400;
@@ -471,28 +398,51 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
         };
       }
 
-      const resolvedConflict = await conflictRepo.resolve(
-        ctx as RequestContext,
-        params.id,
-        {
+      try {
+        const resolvedConflict = await syncService.resolveConflict(
+          ctx as RequestContext,
+          params.id,
+          {
+            resolution: body.resolution,
+            mergedData: body.mergedData,
+          }
+        );
+
+        logger.info({
+          msg: "✅ Conflict resolved by admin",
+          conflictId: params.id,
           resolution: body.resolution,
-          mergedData: body.mergedData,
+          resolvedBy: ctx.businessUserId,
+        });
+
+        return {
+          success: true,
+          data: resolvedConflict,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("not found")) {
+          set.status = 404;
+          return {
+            success: false,
+            error: {
+              code: "NOT_FOUND",
+              message: "Conflict not found",
+            },
+          };
         }
-      );
-
-      logger.info({
-        msg: "✅ Conflict resolved by admin",
-        conflictId: params.id,
-        entityType: conflict.entityType,
-        entityId: conflict.entityId,
-        resolution: body.resolution,
-        resolvedBy: ctx.businessUserId,
-      });
-
-      return {
-        success: true,
-        data: resolvedConflict,
-      };
+        if (message.includes("already resolved")) {
+          set.status = 400;
+          return {
+            success: false,
+            error: {
+              code: "ALREADY_RESOLVED",
+              message,
+            },
+          };
+        }
+        throw error;
+      }
     },
     {
       body: t.Object({
@@ -505,45 +455,26 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       }),
     }
   )
-  // Dead Letter Queue endpoints
   .get(
     "/dead-letter",
-    async ({ ctx, query }) => {
-      const dlqRepo = new SyncDeadLetterRepository();
+    async ({ syncService, ctx, query }) => {
+      const limit = parseIntParam(query.limit, 1, 100, 50);
+      const offset = parseIntParam(query.offset, 0, 10000, 0);
 
-      let limit = 50;
-      if (query.limit) {
-        const parsedLimit = parseInt(query.limit, 10);
-        if (!isNaN(parsedLimit) && parsedLimit > 0) {
-          limit = Math.min(parsedLimit, 100);
-        }
-      }
-
-      let offset = 0;
-      if (query.offset) {
-        const parsedOffset = parseInt(query.offset, 10);
-        if (!isNaN(parsedOffset) && parsedOffset >= 0) {
-          offset = parsedOffset;
-        }
-      }
-
-      const [items, total] = await Promise.all([
-        dlqRepo.findByBusiness(ctx as RequestContext, {
-          limit,
-          offset,
-          entity: query.entity
-            ? normalizeEntityTypeFilter(query.entity)
-            : undefined,
-        }),
-        dlqRepo.countByBusiness(ctx as RequestContext),
-      ]);
+      const result = await syncService.getDeadLetterItems(ctx as RequestContext, {
+        limit,
+        offset,
+        entity: query.entity
+          ? normalizeEntityTypeFilter(query.entity)
+          : undefined,
+      });
 
       return {
         success: true,
         data: {
-          items,
-          total,
-          pagination: { limit, offset, hasMore: items.length === limit },
+          items: result.items,
+          total: result.total,
+          pagination: { limit, offset, hasMore: result.items.length === limit },
         },
       };
     },
@@ -557,10 +488,13 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   )
   .get(
     "/dead-letter/:id",
-    async ({ ctx, params }) => {
-      const dlqRepo = new SyncDeadLetterRepository();
+    async ({ syncService, ctx, params }) => {
+      const result = await syncService.getDeadLetterItems(ctx as RequestContext, {
+        limit: 1,
+        offset: 0,
+      });
 
-      const item = await dlqRepo.findById(ctx as RequestContext, params.id);
+      const item = result.items.find((i: any) => i.id === params.id);
 
       if (!item) {
         return {
@@ -580,10 +514,11 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
   )
   .delete(
     "/dead-letter/:id",
-    async ({ ctx, params }) => {
-      const dlqRepo = new SyncDeadLetterRepository();
-
-      const deleted = await dlqRepo.delete(ctx as RequestContext, params.id);
+    async ({ syncService, ctx, params }) => {
+      const deleted = await syncService.deleteDeadLetterItem(
+        ctx as RequestContext,
+        params.id
+      );
 
       if (!deleted) {
         return {
@@ -601,21 +536,12 @@ export const syncRoutes = new Elysia({ prefix: "/sync" })
       };
     }
   )
-  // Sync Health Metrics endpoint
   .get(
     "/metrics",
-    async ({ ctx, query }) => {
-      const metricsService = new SyncMetricsService();
+    async ({ syncService, ctx, query }) => {
+      const hours = parseIntParam(query.hours, 1, 168, 24);
 
-      let hours = 24;
-      if (query.hours) {
-        const parsedHours = parseInt(query.hours, 10);
-        if (!isNaN(parsedHours) && parsedHours > 0) {
-          hours = Math.min(parsedHours, 168); // Max 1 week
-        }
-      }
-
-      const metrics = await metricsService.getMetrics(
+      const metrics = await syncService.getMetrics(
         ctx as RequestContext,
         hours
       );

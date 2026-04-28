@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generatePostgreSQLDDL, generatePostgreSQLDDLFile } from "../postgres-ddl-generator";
 import type { EntitySyncConfig } from "../../types";
+import type { SerializedEntity } from "../../schema-types";
 import { pgTable, uuid, varchar, text, integer, boolean, timestamp, jsonb, decimal, index } from "drizzle-orm/pg-core";
 
 // Mock Drizzle table for testing
@@ -80,6 +81,101 @@ describe("PostgreSQL DDL Generator", () => {
       const result = generatePostgreSQLDDL("test_entity", testConfig);
 
       expect(result.createTable).toContain('"created_at" TIMESTAMP');
+    });
+
+    it("formats serialized SQL timestamp defaults for PGlite", () => {
+      const serializedEntity: SerializedEntity = {
+        name: "products",
+        entityType: "products",
+        tableName: "products",
+        columns: [
+          {
+            name: "id",
+            dataType: "string",
+            drizzleType: "PgUUID",
+            notNull: true,
+            hasDefault: true,
+            default: { __type: "sql", value: "gen_random_uuid()" },
+            primary: true,
+            isEnum: false,
+          },
+          {
+            name: "created_at",
+            dataType: "date",
+            drizzleType: "PgTimestamp",
+            notNull: true,
+            hasDefault: true,
+            default: { __type: "sql", value: "now()" },
+            primary: false,
+            isEnum: false,
+          },
+        ],
+        config: {
+          syncable: true,
+          autoFields: true,
+        },
+        graph: {
+          parents: [],
+          children: [],
+          priority: 1,
+        },
+      };
+
+      const result = generatePostgreSQLDDL("products", serializedEntity);
+
+      expect(result.createTable).toContain('"id" UUID NOT NULL DEFAULT gen_random_uuid()');
+      expect(result.createTable).toContain('"created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+      expect(result.createTable).not.toContain("DEFAULT NULL");
+    });
+
+    it("does not emit DEFAULT NULL for serialized columns without defaults", () => {
+      const serializedEntity: SerializedEntity = {
+        name: "products",
+        entityType: "products",
+        tableName: "products",
+        columns: [
+          {
+            name: "name",
+            dataType: "string",
+            drizzleType: "PgVarchar",
+            notNull: true,
+            hasDefault: false,
+            default: null,
+            primary: false,
+            isEnum: false,
+            length: 255,
+          },
+        ],
+        config: {
+          syncable: true,
+          autoFields: true,
+        },
+        graph: {
+          parents: [],
+          children: [],
+          priority: 1,
+        },
+      };
+
+      const result = generatePostgreSQLDDL("products", serializedEntity);
+
+      expect(result.createTable).toContain('"name" VARCHAR(255) NOT NULL');
+      expect(result.createTable).not.toContain("DEFAULT NULL");
+    });
+
+    it("uses physical table columns even when sync config excludes a field", () => {
+      const result = generatePostgreSQLDDL("products", {
+        table: pgTable("products", {
+          id: uuid("id").primaryKey(),
+          name: varchar("name", { length: 255 }).notNull(),
+          costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
+        }),
+        syncable: true,
+        autoFields: true,
+        excludeFields: ["cost_price"],
+      });
+
+      expect(result.createTable).toContain('"cost_price" DECIMAL(10, 2) NOT NULL DEFAULT \'0\'');
     });
 
     it("maps jsonb to JSONB", () => {

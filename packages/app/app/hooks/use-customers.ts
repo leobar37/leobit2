@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServices } from "@avileo/drizzle-sync/react";
-import type { AvileoAppOverrides } from "~/lib/sync/service-overrides";
+import type { AvileoAppServices } from "~/lib/sync/service-overrides";
 import type { Customers as Customer } from "~/lib/sync/generated/schema";
 import type {
   CreateCustomerInput,
@@ -31,7 +31,7 @@ export interface PaginatedCustomersResult {
  * Get all customers for the current business
  */
 function useCustomerService() {
-  const services = useServices<AvileoAppOverrides>();
+  const services = useServices<AvileoAppServices>();
   return services.customers;
 }
 

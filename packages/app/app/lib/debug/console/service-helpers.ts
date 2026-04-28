@@ -10,8 +10,9 @@ import type { CustomerService } from "~/lib/services/customer-service";
 import type { SaleService } from "~/lib/services/sale-service";
 // TODO: Replace with framework event system
 interface TimelineEvent {
-  timestamp: string;
+  timestamp: Date;
   type: string;
+  message: string;
   data?: Record<string, unknown>;
 }
 const getEventBuffer = (): TimelineEvent[] => [];

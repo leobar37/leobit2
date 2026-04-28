@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "plan": "simplify-sync-handlers",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Audit usage of custom handlers and transitions",
+      "file": "tasks/01-audit-usage.md",
+      "status": "completed",
+      "phase": "analysis",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-016",
+        "FR-017",
+        "FR-018"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Remove snapshot fields from schema and all references",
+      "file": "tasks/02-remove-snapshots.md",
+      "status": "completed",
+      "phase": "cleanup",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-007"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Migrate sales handler to SyncHandlerBuilder",
+      "file": "tasks/03-migrate-sales-handler.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-016",
+        "FR-017"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Migrate distribucion handler to SyncHandlerBuilder",
+      "file": "tasks/04-migrate-distribucion-handler.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-017"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Migrate purchase handler to SyncHandlerBuilder with inline inventory hook",
+      "file": "tasks/05-migrate-purchase-handler.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-005",
+        "FR-012",
+        "FR-014",
+        "FR-017"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Move abono initial payment creation to frontend",
+      "file": "tasks/06-move-abono-creation.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [
+        "T-003"
+      ],
+      "requirements": [
+        "FR-006",
+        "FR-015"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Cleanup base classes and transition infrastructure",
+      "file": "tasks/07-cleanup-base-classes.md",
+      "status": "completed",
+      "phase": "cleanup",
+      "dependencies": [
+        "T-003",
+        "T-004",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-013"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Update or remove tests for deleted handlers and transitions",
+      "file": "tasks/08-update-tests.md",
+      "status": "completed",
+      "phase": "testing",
+      "dependencies": [
+        "T-007"
+      ],
+      "requirements": [
+        "FR-018"
+      ]
+    },
+    {
+      "id": "T-009",
+      "title": "End-to-end verification of sync flows",
+      "file": "tasks/09-verify-sync-e2e.md",
+      "status": "completed",
+      "phase": "verification",
+      "dependencies": [
+        "T-008"
+      ],
+      "requirements": [
+        "NFR-001",
+        "NFR-002",
+        "NFR-003"
+      ]
+    }
+  ]
+}

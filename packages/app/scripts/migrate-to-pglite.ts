@@ -113,8 +113,6 @@ const FIELD_MAPPINGS: Record<string, Record<string, string>> = {
     orderDate: "order_date",
     status: "status",
     version: "version",
-    confirmedSnapshot: "confirmed_snapshot",
-    deliveredSnapshot: "delivered_snapshot",
     allowCustomerEdit: "allow_customer_edit",
     syncStatus: "sync_status",
     syncAttempts: "sync_attempts",
@@ -479,7 +477,7 @@ function convertValue(value: unknown, fieldName: string): unknown {
   }
 
   // Handle JSON fields
-  const jsonFields = ["confirmedSnapshot", "deliveredSnapshot", "calculatorSettings"];
+  const jsonFields = ["calculatorSettings"];
   if (jsonFields.includes(fieldName)) {
     if (typeof value === "string") {
       try {
@@ -683,8 +681,6 @@ async function createTables(pg: PGlite): Promise<void> {
       order_date DATE,
       status TEXT NOT NULL DEFAULT 'draft',
       version INTEGER NOT NULL DEFAULT 1,
-      confirmed_snapshot JSONB,
-      delivered_snapshot JSONB,
       allow_customer_edit BOOLEAN NOT NULL DEFAULT true,
       sync_status TEXT NOT NULL DEFAULT 'pending',
       sync_attempts INTEGER NOT NULL DEFAULT 0,

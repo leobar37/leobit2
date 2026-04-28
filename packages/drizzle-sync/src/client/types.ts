@@ -233,7 +233,7 @@ export interface ISyncClientHttpClient {
 
 /**
  * Cursor storage interface for persisting pull cursors.
- * Defaults to an in-memory implementation.
+ * @deprecated Use `StorageAdapter` from `@avileo/drizzle-sync/client/storage` instead.
  */
 export interface IClientCursorStorage {
   get(key: string): string | null;
@@ -319,7 +319,10 @@ export interface SyncClientEngineConfig<TStage extends string = string> {
   sync?: SyncClientEngineSyncConfig;
   /** Optional staged pull configuration */
   stages?: SyncClientEngineStagedConfig<TStage>;
-  /** Optional cursor storage (defaults to in-memory) */
+  /**
+   * Optional cursor storage (defaults to StorageAdapter).
+   * @deprecated Provide a custom `storageAdapter` or use the default `StorageAdapter` instead.
+   */
   cursorStorage?: IClientCursorStorage;
   /** Optional custom event emitter (defaults to SyncEventEmitter) */
   eventEmitter?: ISyncEventEmitter;

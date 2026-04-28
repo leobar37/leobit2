@@ -79,7 +79,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     "id", TENANT_COLUMN_TOKEN, "customer_id", "seller_id", "distribucion_id", "visita_id",
     "type", "sale_type", "payment_mode", "total_amount", "amount_paid", "balance_due",
     "tara", "net_weight", "sale_date", "delivery_date", "order_date", "status",
-    "version", "confirmed_snapshot", "delivered_snapshot", "allow_customer_edit",
+    "version", "allow_customer_edit",
     "sync_status", "sync_attempts", "cancelled_at", "cancelled_by", "cancel_reason",
     "refund_amount", "refund_date", "refund_method", "refund_reference", "refund_notes",
     "advance_payment_method", "advance_reference_number", "advance_proof_image_id",

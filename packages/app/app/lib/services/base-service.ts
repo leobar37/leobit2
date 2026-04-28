@@ -1,28 +1,32 @@
 /**
  * Base Service
  * Abstract base class for entity services providing common functionality
- * for local-first operations with automatic sync integration
+ * for local-first operations with automatic sync integration.
+ *
+ * All database access goes through the sync engine abstraction.
+ * No direct PGlite/raw SQL except via adapter.exec/query for edge cases.
  */
 
-import type { PGlite } from "@electric-sql/pglite";
 import type { drizzle } from "drizzle-orm/pglite";
 import { isSyncEntity } from "@avileo/shared";
 import { SyncStatus } from "~/lib/sync/generated/schema";
-import type { EnqueueParams, SyncWritePort } from "@avileo/drizzle-sync/client";
+import type { EnqueueParams, SyncWritePort, BatchContext } from "@avileo/drizzle-sync/client";
 import type { DatabaseAdapter } from "@avileo/drizzle-sync/core";
 import { VALID_TABLES } from "@avileo/drizzle-sync/pglite";
 import { generateId } from "~/lib/utils/id-generator";
 import { toLocalISOString } from "~/lib/date-utils";
 import { formatCurrency, formatWeight } from "~/lib/utils";
 
+/** Minimal contract the app services need from the sync engine. */
 export interface SyncClientEngineLike {
-  getPg(): PGlite;
   getDb(): ReturnType<typeof drizzle>;
   getAdapter(): DatabaseAdapter;
   getSyncOperations(): SyncWritePort | null;
   getConfig(): { tenantId: string; userId: string };
   /** Drizzle ORM tables exposed by the engine */
   tables: Record<string, any>;
+  /** Execute a batch of sync operations atomically with a local transaction. */
+  batch<T>(callback: (ctx: BatchContext) => Promise<T>): Promise<T>;
 }
 
 /**
@@ -56,7 +60,7 @@ export type EntityType =
 
 /**
  * SQL table-name safety allowlist for frontend services.
- * 
+ *
  * Uses VALID_TABLES from schema-mapper as the single source of truth,
  * plus local-only tables that don't sync.
  */
@@ -100,10 +104,6 @@ export abstract class BaseService {
     this.engine = engine;
   }
 
-  protected get pg(): PGlite {
-    return this.engine.getPg();
-  }
-
   protected get db(): ReturnType<typeof drizzle> {
     return this.engine.getDb();
   }
@@ -133,22 +133,17 @@ export abstract class BaseService {
   }
 
   /**
-    * Drizzle ORM tables exposed by the engine.
-    * Use this to access schema tables without importing from @avileo/shared.
-    *
-    * @example
-    * ```typescript
-    * const result = await this.db.select().from(this.tables.customers).where(eq(this.tables.customers.id, id));
-    * ```
-    */
+   * Drizzle ORM tables exposed by the engine.
+   * Use this to access schema tables without importing from @avileo/shared.
+   */
   protected get tables(): Record<string, any> {
     return this.engine.tables;
   }
 
   /**
-    * Returns the entity type for this service
-    * Must be implemented by subclasses
-    */
+   * Returns the entity type for this service
+   * Must be implemented by subclasses
+   */
   abstract getEntityType(): EntityType;
 
   /**
@@ -190,6 +185,7 @@ export abstract class BaseService {
     entityVersion?: number,
     options?: {
       idempotencyKey?: string;
+      correlationId?: string;
     }
   ): Promise<void> {
     const entityType = entityTypeOverride ?? this.getEntityType();
@@ -206,6 +202,7 @@ export abstract class BaseService {
         ...(entityVersion !== undefined && { _localVersion: entityVersion }),
       },
       idempotencyKey: options?.idempotencyKey ?? generateId(),
+      correlationId: options?.correlationId,
     };
 
     await this.syncService.enqueue(params);

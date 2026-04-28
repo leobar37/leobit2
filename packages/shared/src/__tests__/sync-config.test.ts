@@ -4,12 +4,15 @@ import {
   getEntityPriority,
   isSyncEntity,
 } from "../sync-config";
+import { getAllStagedEntities } from "../sync-stages";
+import { PaymentMethod } from "../schema";
 
 declare const describe: (name: string, fn: () => void) => void;
 declare const it: (name: string, fn: () => void) => void;
 declare const expect: (value: unknown) => {
   toBe: (expected: unknown) => void;
   toContain: (expected: unknown) => void;
+  toEqual: (expected: unknown) => void;
   toBeLessThan: (expected: number) => void;
 };
 
@@ -44,6 +47,25 @@ describe("sync-config", () => {
       expect(SYNC_ENTITIES as readonly string[]).toContain(entity);
       expect(isSyncEntity(entity)).toBe(true);
     }
+  });
+
+  it("should stage every configured sync entity", () => {
+    const stagedEntities = getAllStagedEntities();
+
+    for (const entity of SYNC_ENTITIES) {
+      expect(stagedEntities).toContain(entity);
+    }
+  });
+
+  it("should expose the canonical payment methods", () => {
+    expect(Object.values(PaymentMethod)).toEqual([
+      "efectivo",
+      "yape",
+      "plin",
+      "transferencia",
+      "tarjeta",
+      "saldo",
+    ]);
   });
 
   it("should process parent entities before child entities", () => {

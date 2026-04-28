@@ -456,8 +456,6 @@ async function seedRealSales(ctx: RequestContext, salesData: any[]) {
       orderDate: sale.orderDate,
       status: sale.status,
       version: sale.version,
-      confirmedSnapshot: sale.confirmedSnapshot,
-      deliveredSnapshot: sale.deliveredSnapshot,
       allowCustomerEdit: sale.allowCustomerEdit,
       syncStatus: sale.syncStatus || "synced",
       syncAttempts: sale.syncAttempts || 0,

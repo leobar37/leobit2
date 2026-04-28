@@ -1,0 +1,4 @@
+[     377ms] [ERROR] Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep) @ http://localhost:5173/@fs/Users/leobar37/.claude/artifacts/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=1f048fbf:0
+[     378ms] [ERROR] Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep) @ http://localhost:5173/@fs/Users/leobar37/.claude/artifacts/node_modules/.vite/deps/react.js?v=1f048fbf:0
+[     397ms] [ERROR] Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep) @ http://localhost:5173/@fs/Users/leobar37/.claude/artifacts/node_modules/.vite/deps/react-dom_client.js?v=1f048fbf:0
+[     398ms] [ERROR] Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep) @ http://localhost:5173/@fs/Users/leobar37/.claude/artifacts/node_modules/.vite/deps/@tanstack_react-query.js?v=1f048fbf:0

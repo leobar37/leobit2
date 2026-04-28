@@ -49,7 +49,7 @@ export class PaymentService {
     data: {
       customerId: string;
       amount: number;
-      paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
+      paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
       notes?: string;
       proofImageId?: string;
       referenceNumber?: string;

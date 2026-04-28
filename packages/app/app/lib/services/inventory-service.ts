@@ -55,7 +55,7 @@ export class InventoryService extends BaseService {
    * @returns Inventory item or null if not found
    */
   async getInventoryForVariant(variantId: string): Promise<VariantInventoryItem | null> {
-    const result = await this.pg.query<{
+    const result = await this.adapter.query<{
       id: string;
       variant_id: string;
       quantity: string;
@@ -85,7 +85,7 @@ export class InventoryService extends BaseService {
    * @returns Array of variant inventory items
    */
   async getAllVariantInventory(): Promise<VariantInventoryItem[]> {
-    const result = await this.pg.query<{
+    const result = await this.adapter.query<{
       id: string;
       variant_id: string;
       quantity: string;

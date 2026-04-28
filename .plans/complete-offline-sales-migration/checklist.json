@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "plan": "complete-offline-sales-migration",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Canonical contracts and schema parity",
+      "file": "tasks/01-canonical-contracts-and-schema-parity.md",
+      "status": "completed",
+      "phase": "contracts",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "NFR-003",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Backend sync conflict integrity",
+      "file": "tasks/02-backend-sync-conflict-integrity.md",
+      "status": "completed",
+      "phase": "backend",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-004",
+        "NFR-001",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Operation grouping and ordering",
+      "file": "tasks/03-operation-grouping-and-ordering.md",
+      "status": "completed",
+      "phase": "sync-framework",
+      "dependencies": [
+        "T-001",
+        "T-002"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-006",
+        "NFR-002",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Frontend service identity and hooks",
+      "file": "tasks/04-frontend-service-identity-and-hooks.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-007",
+        "NFR-002",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Atomic sales and payment services",
+      "file": "tasks/05-atomic-sales-and-payment-services.md",
+      "status": "completed",
+      "phase": "frontend-services",
+      "dependencies": [
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-005",
+        "FR-006",
+        "FR-008",
+        "NFR-002",
+        "NFR-004"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Cobros UI and balance flow",
+      "file": "tasks/06-cobros-ui-and-balance-flow.md",
+      "status": "completed",
+      "phase": "ui",
+      "dependencies": [
+        "T-004",
+        "T-005"
+      ],
+      "requirements": [
+        "FR-007",
+        "FR-008",
+        "NFR-002",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Validation and offline gold path",
+      "file": "tasks/07-validation-and-offline-gold-path.md",
+      "status": "in_progress",
+      "phase": "validation",
+      "dependencies": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "FR-009",
+        "NFR-005"
+      ]
+    }
+  ]
+}

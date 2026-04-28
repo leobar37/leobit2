@@ -1,6 +1,6 @@
 import type { ColumnMetadata, SyncTenancyConfig } from "../../config/types";
 import type { SerializedEntity } from "../../config/schema-types";
-import { getColumnsToInclude, isSerializedEntity, type GeneratorEntity } from "./schema-adapter";
+import { getAllColumns, isSerializedEntity, type GeneratorEntity } from "./schema-adapter";
 
 export interface PostgreSQLDDLOutput {
   tableName: string;
@@ -28,7 +28,7 @@ export function generatePostgreSQLDDL(
   tenancy?: SyncTenancyConfig
 ): PostgreSQLDDLOutput {
   const tableName = isSerializedEntity(entity) ? entity.tableName : entityName;
-  const columnsToInclude = getColumnsToInclude(entity);
+  const columnsToInclude = getAllColumns(entity);
 
   const columnDefs: string[] = [];
 
@@ -71,7 +71,7 @@ export function generatePostgreSQLDDL(
 function columnToPostgresDef(col: ColumnMetadata): string {
   const pgType = mapToPostgresType(col);
   const nullable = col.notNull ? "NOT NULL" : "";
-  const defaultVal = col.default !== undefined ? `DEFAULT ${formatPostgresDefault(col.default, col.dataType)}` : "";
+  const defaultVal = col.hasDefault ? `DEFAULT ${formatPostgresDefault(col.default, col.dataType)}` : "";
 
   const parts = [`"${col.name}"`, pgType, nullable, defaultVal].filter(Boolean).join(" ");
 
@@ -153,6 +153,10 @@ function formatPostgresDefault(value: unknown, dataType: ColumnMetadata["dataTyp
   if (typeof value === "number") return String(value);
   if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
 
+  if (isSerializedSqlDefault(value)) {
+    return mapSqlDefault(value.value);
+  }
+
   // Handle Drizzle SQL functions like gen_random_uuid() and now()
   if (value && typeof value === "object" && "queryChunks" in value) {
     // This is a Drizzle SQL function - extract the SQL text
@@ -160,12 +164,31 @@ function formatPostgresDefault(value: unknown, dataType: ColumnMetadata["dataTyp
     if (sqlObj.queryChunks && sqlObj.queryChunks.length > 0) {
       const chunk = sqlObj.queryChunks[0];
       if (chunk.value && chunk.value.length > 0) {
-        return chunk.value[0];
+        return mapSqlDefault(chunk.value[0]);
       }
     }
   }
 
   return "NULL";
+}
+
+function isSerializedSqlDefault(value: unknown): value is { __type: "sql"; value: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__type" in value &&
+    (value as { __type?: unknown }).__type === "sql" &&
+    "value" in value &&
+    typeof (value as { value?: unknown }).value === "string"
+  );
+}
+
+function mapSqlDefault(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "now()" || normalized === "current_timestamp") {
+    return "CURRENT_TIMESTAMP";
+  }
+  return value;
 }
 
 function generatePostgresIndexes(tableName: string, columns: ColumnMetadata[], tenantColumn: string): string[] {
@@ -214,6 +237,7 @@ export function generateInfrastructureDDL(tenantColumn = "tenant_id"): string {
     `  last_error TEXT,`,
     `  last_attempt_at TIMESTAMP,`,
     `  idempotency_key TEXT UNIQUE,`,
+    `  correlation_id TEXT,`,
     `  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,`,
     `  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
     `);`,
@@ -222,6 +246,7 @@ export function generateInfrastructureDDL(tenantColumn = "tenant_id"): string {
     `CREATE INDEX IF NOT EXISTS idx_sync_operations_entity ON sync_operations(${tenantColumn}, entity_type, entity_id);`,
     `CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(${tenantColumn}, status);`,
     `CREATE INDEX IF NOT EXISTS idx_sync_operations_idempotency ON sync_operations(idempotency_key);`,
+    `CREATE INDEX IF NOT EXISTS idx_sync_operations_correlation ON sync_operations(correlation_id);`,
     `CREATE INDEX IF NOT EXISTS idx_sync_operations_created ON sync_operations(created_at);`,
     "",
     `CREATE TABLE IF NOT EXISTS sync_dead_letter (`,

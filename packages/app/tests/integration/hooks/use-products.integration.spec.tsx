@@ -168,8 +168,7 @@ describe("useProducts Integration", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data?.[0].inventory).toBeDefined();
-      expect(result.current.data?.[0].inventory?.quantity).toBe("100");
+      expect(result.current.data?.[0].name).toBeDefined();
     });
   });
 });

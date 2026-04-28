@@ -138,4 +138,26 @@ export default defineConfig([
     treeshake: true,
     external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
   },
+  // The database-init module is bundled into the root and pglite entrypoints too,
+  // so the worker must be emitted next to each compiled entry that references it.
+  {
+    entry: ["src/client/pglite.worker.ts"],
+    format: ["esm"],
+    dts: false,
+    outDir: "dist",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+    external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
+  },
+  {
+    entry: ["src/client/pglite.worker.ts"],
+    format: ["esm"],
+    dts: false,
+    outDir: "dist/pglite",
+    clean: false,
+    splitting: false,
+    treeshake: true,
+    external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
+  },
 ]);

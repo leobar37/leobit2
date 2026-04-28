@@ -224,11 +224,6 @@ export function ProductVariantSelector({
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{variant.name}</p>
-                        {variant.inventory && (
-                          <p className="text-sm text-muted-foreground">
-                            Stock: {formatKilos(variant.inventory.quantity, 1)} kg
-                          </p>
-                        )}
                       </div>
                     </button>
                   ))
@@ -256,11 +251,6 @@ export function ProductVariantSelector({
                       <Plus className="h-5 w-5" />
                     </Button>
                   </div>
-                  {selectedVariant?.inventory && (
-                    <p className="text-xs text-muted-foreground">
-                      Disponible: {formatKilos(selectedVariant.inventory.quantity, 1)} kg
-                    </p>
-                  )}
                 </div>
               )}
             </div>

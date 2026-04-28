@@ -184,11 +184,6 @@ export function DistribucionItemSelector({
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{variant.name}</p>
-                      {variant.inventory && (
-                        <p className="text-sm text-muted-foreground">
-                          Stock: {variant.inventory.quantity} kg
-                        </p>
-                      )}
                     </div>
                     {selectedVariantId === variant.id && (
                       <div className="h-5 w-5 rounded-full bg-orange-500 flex items-center justify-center">
@@ -213,12 +208,6 @@ export function DistribucionItemSelector({
                     className="rounded-xl flex-1"
                   />
                 </div>
-                {selectedVariant.inventory && (
-                  <p className="text-xs text-muted-foreground">
-                    Disponible: {selectedVariant.inventory.quantity} kg
-                  </p>
-                )}
-
                 <div className="flex gap-2 pt-2">
                   <Button
                     type="button"

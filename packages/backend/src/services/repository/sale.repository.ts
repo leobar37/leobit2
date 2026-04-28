@@ -3,7 +3,6 @@ import { db } from "../../lib/db";
 import { logger } from "../../lib/logger";
 import { sales, saleItems, type Sale, type NewSale, type SaleItem, type NewSaleItem } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import { VersionConflictError } from "../../errors";
 import { toDateColumnValue, toTimestampColumnValue } from "../../lib/date-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -191,8 +190,6 @@ export class SaleRepository {
         | "refundReference"
         | "refundNotes"
         | "version"
-        | "confirmedSnapshot"
-        | "deliveredSnapshot"
         | "deliveryDate"
         | "saleType"
         | "paymentMode"
@@ -245,8 +242,6 @@ export class SaleRepository {
         | "refundReference"
         | "refundNotes"
         | "version"
-        | "confirmedSnapshot"
-        | "deliveredSnapshot"
         | "deliveryDate"
         | "saleType"
         | "paymentMode"
@@ -376,97 +371,6 @@ export class SaleRepository {
       return executeUpdate(tx);
     }
     return db.transaction(executeUpdate);
-  }
-
-  async confirmPreOrder(
-    ctx: RequestContext,
-    id: string,
-    baseVersion: number,
-    tx?: DbTransaction
-  ): Promise<Sale> {
-    const executor = tx ?? db;
-
-    // Get current sale with items for snapshot
-    const sale = await this.findById(ctx, id);
-    if (!sale) {
-      throw new Error("Sale not found");
-    }
-
-    if (sale.version !== baseVersion) {
-      throw new VersionConflictError("La venta");
-    }
-
-    const [updated] = await executor
-      .update(sales)
-      .set({
-        status: "confirmed",
-        version: baseVersion + 1,
-        confirmedSnapshot: {
-          items: sale.items,
-          totalAmount: sale.totalAmount,
-          timestamp: new Date().toISOString(),
-        },
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(sales.id, id),
-          eq(sales.businessId, ctx.businessId),
-          eq(sales.version, baseVersion)
-        )
-      )
-      .returning();
-
-    if (!updated) {
-      throw new VersionConflictError("La venta");
-    }
-
-    return updated;
-  }
-
-  async deliverPreOrder(
-    ctx: RequestContext,
-    id: string,
-    baseVersion: number,
-    tx?: DbTransaction
-  ): Promise<Sale> {
-    const executor = tx ?? db;
-
-    const sale = await this.findById(ctx, id);
-    if (!sale) {
-      throw new Error("Sale not found");
-    }
-
-    if (sale.version !== baseVersion) {
-      throw new VersionConflictError("La venta");
-    }
-
-    const [updated] = await executor
-      .update(sales)
-      .set({
-        status: "delivered",
-        version: baseVersion + 1,
-        deliveredSnapshot: {
-          items: sale.items,
-          totalAmount: sale.totalAmount,
-          timestamp: new Date().toISOString(),
-        },
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(sales.id, id),
-          eq(sales.businessId, ctx.businessId),
-          eq(sales.version, baseVersion)
-        )
-      )
-      .returning();
-
-    if (!updated) {
-      throw new VersionConflictError("La venta");
-    }
-
-    return updated;
   }
 
   async count(ctx: RequestContext, filters?: { startDate?: Date; endDate?: Date }): Promise<number> {
@@ -613,7 +517,8 @@ export class SaleRepository {
       .where(
         and(
           eq(saleItems.id, itemId),
-          eq(saleItems.saleId, saleId)
+          eq(saleItems.saleId, saleId),
+          eq(saleItems.businessId, ctx.businessId)
         )
       )
       .returning();
@@ -634,7 +539,8 @@ export class SaleRepository {
       .where(
         and(
           eq(saleItems.id, itemId),
-          eq(saleItems.saleId, saleId)
+          eq(saleItems.saleId, saleId),
+          eq(saleItems.businessId, ctx.businessId)
         )
       );
   }
@@ -651,6 +557,7 @@ export class SaleRepository {
       .update(sales)
       .set({
         totalAmount,
+        version: sql`${sales.version} + 1`,
         updatedAt: new Date(),
       })
       .where(
@@ -685,6 +592,7 @@ export class SaleRepository {
           FROM ${saleItems}
           WHERE ${saleItems.saleId} = ${saleId}
         ) - ${sales.amountPaid}, 0)`,
+        version: sql`${sales.version} + 1`,
         updatedAt: new Date(),
       })
       .where(

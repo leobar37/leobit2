@@ -22,11 +22,11 @@ export class QueueRepository {
 
   async insert(operation: SyncOperationRecord): Promise<void> {
     await this.executor.exec(
-      `INSERT INTO sync_operations (
-         id, ${this.tenantColumn}, entity_type, operation, entity_id,
-         payload, status, version, sync_attempts, last_error,
-         last_attempt_at, idempotency_key, created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, 0, NULL, NULL, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+       `INSERT INTO sync_operations (
+          id, ${this.tenantColumn}, entity_type, operation, entity_id,
+          payload, status, version, sync_attempts, last_error,
+          last_attempt_at, idempotency_key, correlation_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, 0, NULL, NULL, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         operation.id,
         this.tenantId,
@@ -37,6 +37,7 @@ export class QueueRepository {
         OPERATION_STATUS.PENDING,
         operation.version,
         operation.idempotency_key,
+        operation.correlation_id ?? null,
       ]
     );
   }

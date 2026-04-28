@@ -108,7 +108,7 @@ export function useCreateDraftPurchase() {
 
   return useMutation({
     mutationFn: async (input?: CreatePurchaseInput): Promise<Purchase> => {
-      return purchaseService.create(input);
+      return purchaseService.create(input ?? {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });

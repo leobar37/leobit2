@@ -1,5 +1,7 @@
-import { CreditCard } from "lucide-react";
+import { Link } from "react-router";
+import { CreditCard, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { Sale } from "~/lib/services/sale-service";
 import { cn, formatCurrency } from "~/lib/utils";
 import { SaleDetailSection } from "./sale-detail-section";
@@ -11,7 +13,7 @@ interface SaleDetailPaymentCardProps {
 export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
   const paidAmount = Number(sale.amountPaid ?? 0);
   const totalAmount = Number(sale.totalAmount ?? 0);
-  const dueAmount = Math.max(totalAmount - paidAmount, 0);
+  const dueAmount = Math.max(Number(sale.balanceDue ?? totalAmount - paidAmount), 0);
   const rows = [
     { label: "Total", value: `S/ ${formatCurrency(sale.totalAmount)}` },
     { label: "Abono inicial", value: `S/ ${formatCurrency(paidAmount)}` },
@@ -61,6 +63,18 @@ export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
             </Badge>
           )}
         </div>
+
+        {sale.saleType === "credito" && sale.customerId && dueAmount > 0 ? (
+          <Button asChild className="mb-3 h-11 w-full rounded-xl bg-orange-500 hover:bg-orange-600">
+            <Link
+              to={`/cobros/nuevo?clienteId=${sale.customerId}&saleId=${sale.id}`}
+              data-testid="register-sale-abono-link"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              Registrar abono de esta venta
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </SaleDetailSection>
   );

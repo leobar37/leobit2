@@ -203,7 +203,7 @@ export default function DashboardPage() {
             <Link to="/mi-distribucion" className="block">
               <InventoryCard
                 puntoVenta={distribucion.puntoVenta}
-                modo={distribucion.modo as "estricto" | "acumulativo" | "libre"}
+                modo={"libre" as const}
                 estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
                 cantidadItems={0}
               />

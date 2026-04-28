@@ -80,6 +80,7 @@ export class VisitaService extends VisitasService {
     const row = result[0];
     return {
       id: row.id,
+      version: 1,
       distribucionId: row.distribucionId,
       customerId: row.customerId,
       vendedorId: row.vendedorId,
@@ -133,6 +134,7 @@ export class VisitaService extends VisitasService {
 
     return result.map(row => ({
       id: row.id,
+      version: 1,
       distribucionId: row.distribucionId,
       customerId: row.customerId,
       vendedorId: row.vendedorId,
@@ -186,6 +188,7 @@ export class VisitaService extends VisitasService {
 
     return result.map(row => ({
       id: row.id,
+      version: 1,
       distribucionId: row.distribucionId,
       customerId: row.customerId,
       vendedorId: row.vendedorId,

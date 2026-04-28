@@ -154,6 +154,7 @@ export class CustomerRepository {
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),
         ...(data.syncAttempts !== undefined && { syncAttempts: data.syncAttempts }),
+        version: sql`${customers.version} + 1`,
         updatedAt: new Date(),
       })
       .where(and(

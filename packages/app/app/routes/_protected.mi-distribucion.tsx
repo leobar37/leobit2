@@ -20,25 +20,13 @@ import { toast } from "sonner";
 import { useSync } from "~/components/sync/sync-status";
 import { createModal } from "~/lib/modal/create-modal";
 import { Loader2 } from "lucide-react";
+import type { DistribucionWithItems } from "~/lib/services/distribucion-service";
 
-type MiDistribucionWithItems = {
-  puntoVenta: string;
-  modo: string;
-  estado: string;
-  closedAt?: string | null;
-  items?: Array<{
-    id: string;
-    cantidadAsignada: number;
-    cantidadVendida: number;
-    unidad: string;
-    variant?: {
-      name?: string | null;
-      product?: {
-        name?: string | null;
-      } | null;
-    } | null;
-  }>;
-};
+function parseNumber(value: string | null): number {
+  if (!value) return 0;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+}
 
 // Simple Confirmation Dialog for Cierre
 interface CierreConfirmData {
@@ -278,19 +266,19 @@ export default function MiDistribucionPage() {
     );
   }
 
-  const distribucionWithItems = distribucion as MiDistribucionWithItems;
+  const distribucionWithItems = distribucion as DistribucionWithItems;
 
   return (
     <>
       <div className="space-y-4 pb-24">
         <InventoryCard
           puntoVenta={distribucionWithItems.puntoVenta}
-          modo={distribucionWithItems.modo as "estricto" | "acumulativo" | "libre"}
+          modo={"libre" as const}
           estado={distribucionWithItems.estado as "activo" | "cerrado" | "en_ruta"}
           cantidadItems={distribucionWithItems.items?.length || 0}
         />
 
-        {distribucionWithItems.modo === "libre" && (!distribucionWithItems.items || distribucionWithItems.items.length === 0) && (
+        {(!distribucionWithItems.items || distribucionWithItems.items.length === 0) && (
           <Card className="border border-gray-100 rounded-xl">
             <CardContent className="p-6 text-center">
               <Package className="h-10 w-10 text-orange-500 mx-auto mb-3" />
@@ -312,7 +300,9 @@ export default function MiDistribucionPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {distribucionWithItems.items.map((item) => {
-                const cantidadDisponible = item.cantidadAsignada - item.cantidadVendida;
+                const asignada = parseNumber(item.cantidadAsignada);
+                const vendida = parseNumber(item.cantidadVendida);
+                const cantidadDisponible = asignada - vendida;
                 return (
                   <div
                     key={item.id}
@@ -320,10 +310,10 @@ export default function MiDistribucionPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
-                        {item.variant?.product?.name || "Producto"}
+                        {item.productName || "Producto"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.variant?.name || "Variante"}
+                        {item.variantName || "Variante"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -332,12 +322,12 @@ export default function MiDistribucionPage() {
                           {formatKilos(cantidadDisponible)} {item.unidad}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          de {formatKilos(item.cantidadAsignada)} {item.unidad}
+                          de {formatKilos(asignada)} {item.unidad}
                         </p>
                       </div>
-                      {item.cantidadVendida > 0 && (
+                      {vendida > 0 && (
                         <Badge variant="secondary" className="bg-white text-xs">
-                          {Math.round((item.cantidadVendida / item.cantidadAsignada) * 100)}%
+                          {Math.round((vendida / asignada) * 100)}%
                         </Badge>
                       )}
                     </div>

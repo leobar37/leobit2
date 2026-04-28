@@ -45,7 +45,7 @@ export class PullSyncService {
   }
 
   async initialize(): Promise<void> {
-    // Nothing to initialize
+    this.status.cursor = this.cursorStorage.get("pull-cursor");
   }
 
   async pull(): Promise<PullResult> {
@@ -82,6 +82,7 @@ export class PullSyncService {
         // Update cursor
         if (response.nextSince) {
           this.cursorStorage.set("pull-cursor", response.nextSince);
+          this.status.cursor = response.nextSince;
         }
 
         this.status.lastPullTime = new Date();
@@ -97,6 +98,7 @@ export class PullSyncService {
       // Update cursor even if no changes
       if (response.nextSince) {
         this.cursorStorage.set("pull-cursor", response.nextSince);
+        this.status.cursor = response.nextSince;
       }
 
       this.status.lastPullTime = new Date();

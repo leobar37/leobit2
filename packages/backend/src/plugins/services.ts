@@ -12,7 +12,7 @@ import { DistribucionItemRepository } from "../services/repository/distribucion-
 import { DistribucionService } from "../services/business/distribucion.service";
 import { SaleRepository } from "../services/repository/sale.repository";
 import { SaleService } from "../services/business/sale.service";
-import { SyncService } from "../services/sync/sync.service";
+import { SyncService } from "../services/business/sync.service";
 import { AssetRepository } from "../services/repository/asset.repository";
 import { AssetService } from "../services/business/asset.service";
 import { FileRepository } from "../services/repository/file.repository";
@@ -79,14 +79,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const visitaRepo = new VisitaRepository();
 
     // Initialize state machines with their transitions
-    initializeStateMachines({ 
-      variantRepo: productVariantRepo,
-      saleDeps: {
-        paymentRepository: paymentRepo,
-        distribucionItemRepository: distribucionItemRepo,
-        saleRepository: saleRepo,
-      }
-    });
+    initializeStateMachines({});
 
     const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
     const customerService = new CustomerService(customerRepo);

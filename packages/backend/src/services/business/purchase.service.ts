@@ -13,7 +13,6 @@ import {
   ForbiddenError,
 } from "../../errors";
 import type { Purchase, NewPurchaseItem } from "../../db/schema";
-import { purchaseMachine } from "../transitions";
 
 export interface CreatePurchaseItemInput {
   productId: string;
@@ -180,17 +179,13 @@ export class PurchaseService {
       throw new ValidationError("No se puede modificar una compra cancelada");
     }
 
-    const previousStatus = existing.status as "pending" | "received" | "cancelled";
-
-    // Execute state machine transition for inventory updates
-    if (previousStatus !== status) {
-      const purchaseWithItems = await this.repository.findById(ctx, id);
-      if (purchaseWithItems) {
-        await purchaseMachine.executeTransition(ctx, purchaseWithItems, previousStatus, status);
-      }
-    }
+    const previousStatus = existing.status as "draft" | "pending" | "received" | "cancelled";
 
     return db.transaction(async (tx) => {
+      if (previousStatus !== status) {
+        await this.applyInventoryTransition(ctx, existing, previousStatus, status, tx);
+      }
+
       const updated = await this.repository.updateStatus(ctx, id, status, tx);
       if (!updated) {
         throw new NotFoundError("Compra");
@@ -230,19 +225,38 @@ export class PurchaseService {
     return this.repository.count(ctx);
   }
 
-  private async updateVariantInventory(
+  private async applyInventoryTransition(
     ctx: RequestContext,
-    variantId: string,
-    quantity: number
+    purchase: PurchaseWithItems,
+    previousStatus: "draft" | "pending" | "received" | "cancelled",
+    nextStatus: "pending" | "received" | "cancelled",
+    tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
   ): Promise<void> {
-    const existingInventory = await this.variantRepo.getInventory(ctx, variantId);
+    const direction = previousStatus === "pending" && nextStatus === "received"
+      ? 1
+      : previousStatus === "received" && nextStatus === "cancelled"
+        ? -1
+        : 0;
 
-    if (existingInventory) {
-      const currentQty = parseFloat(existingInventory.quantity);
-      const newQty = currentQty + quantity;
-      await this.variantRepo.updateInventory(ctx, variantId, newQty.toString());
-    } else {
-      await this.variantRepo.createInventory(ctx, { variantId, quantity: quantity.toString() });
+    if (direction === 0) {
+      return;
+    }
+
+    for (const item of purchase.items) {
+      const quantity = Number.parseFloat(item.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        continue;
+      }
+
+      const variantId = item.variantId || item.productId;
+      const currentInventory = await this.variantRepo.getInventory(ctx, variantId);
+      if (currentInventory) {
+        const currentQty = Number.parseFloat(currentInventory.quantity);
+        const nextQty = Math.max(0, currentQty + quantity * direction);
+        await this.variantRepo.updateInventory(ctx, variantId, nextQty.toString(), tx);
+      } else if (direction > 0) {
+        await this.variantRepo.createInventory(ctx, { variantId, quantity: quantity.toString() }, tx);
+      }
     }
   }
 }

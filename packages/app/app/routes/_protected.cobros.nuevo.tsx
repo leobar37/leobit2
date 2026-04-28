@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from "react-router";
 import { formatNumber } from "~/lib/utils";
-import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone } from "lucide-react";
+import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone, WifiOff } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +22,7 @@ import { FormPage } from "~/components/layout/form-page";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
-  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta"]),
+  paymentMethod: z.enum(["efectivo", "yape", "plin", "transferencia", "tarjeta", "saldo"]),
   referenceNumber: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -35,6 +35,7 @@ const paymentMethods = [
   { id: "plin" as const, label: "Plin", icon: Receipt },
   { id: "transferencia" as const, label: "Transferencia", icon: Receipt },
   { id: "tarjeta" as const, label: "Tarjeta", icon: Receipt },
+  { id: "saldo" as const, label: "Saldo", icon: Wallet },
 ];
 
 function QuickAmountButton({
@@ -124,6 +125,7 @@ export default function NuevoCobroPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const customerId = searchParams.get("clienteId");
+  const saleId = searchParams.get("saleId") || undefined;
 
   const { data: customer } = useCustomer(customerId || "");
   const { data: customerBalance } = useCustomerBalance(customerId);
@@ -224,6 +226,7 @@ export default function NuevoCobroPage() {
 
       const paymentId = await createPayment({
         customerId,
+        relatedSaleId: saleId,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         referenceNumber: data.referenceNumber || undefined,
@@ -400,6 +403,7 @@ export default function NuevoCobroPage() {
                     key={method.id}
                     type="button"
                     variant={isSelected ? "default" : "outline"}
+                    data-testid={`payment-method-${method.id}`}
                     onClick={() => setValue("paymentMethod", method.id)}
                     className={`h-auto rounded-[16px] border-stone-200/90 py-3.5 shadow-none flex flex-col items-center gap-1.5 ${
                       isSelected ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-white/80 hover:bg-white"
@@ -475,6 +479,15 @@ export default function NuevoCobroPage() {
                 )}
               </div>
             )}
+
+            {proofImage && !isOnline() ? (
+              <div className="shell-block-muted flex gap-2 rounded-[16px] px-3 py-2 text-sm text-amber-700">
+                <WifiOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  El abono se guardará sin conexión. La captura requiere internet y no se subirá ahora.
+                </span>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notas (opcional)</Label>

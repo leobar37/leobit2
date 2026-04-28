@@ -19,6 +19,8 @@ export const PaymentMethod = {
   YAPE: "yape",
   PLIN: "plin",
   TRANSFERENCIA: "transferencia",
+  TARJETA: "tarjeta",
+  SALDO: "saldo",
 } as const;
 
 export const SyncStatus = {
@@ -273,8 +275,6 @@ export interface Order {
   advanceReferenceNumber: string | null;
   advanceProofImageId: string | null;
   totalAmount: string;
-  confirmedSnapshot: Record<string, unknown> | null;
-  deliveredSnapshot: Record<string, unknown> | null;
   version: number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;

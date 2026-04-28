@@ -1,63 +1,25 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+/**
+ * Sync Status Adapter
+ * Legacy adapter that maps framework sync state to local sync interface.
+ * All sync state now comes from @avileo/drizzle-sync/react useSyncState().
+ */
 
-interface SyncContextValue {
+import { useSyncState } from "@avileo/drizzle-sync/react";
+
+interface SyncAdapterValue {
   isOnline: boolean;
   actualIsOnline: boolean;
   lastSync: Date | null;
 }
 
-const SyncContext = createContext<SyncContextValue>({
-  isOnline: true,
-  actualIsOnline: true,
-  lastSync: null,
-});
+export function useSync(): SyncAdapterValue {
+  const state = useSyncState();
 
-export function SyncProvider({ children }: { children: ReactNode }) {
-  const [actualIsOnline, setActualIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-  const isOnline = actualIsOnline;
-
-  useEffect(() => {
-    const handleOnline = () => setActualIsOnline(true);
-    const handleOffline = () => setActualIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  // Update lastSync when online status changes to true
-  useEffect(() => {
-    if (isOnline) {
-      setLastSync(new Date());
-    }
-  }, [isOnline]);
-
-  return (
-    <SyncContext.Provider
-      value={{
-        isOnline,
-        actualIsOnline,
-        lastSync,
-      }}
-    >
-      {children}
-    </SyncContext.Provider>
-  );
-}
-
-export function useSync() {
-  return useContext(SyncContext);
+  return {
+    isOnline: state.isOnline,
+    actualIsOnline: state.isOnline,
+    lastSync: state.lastSyncTime ? new Date(state.lastSyncTime) : null,
+  };
 }
 
 export function SyncStatus() {

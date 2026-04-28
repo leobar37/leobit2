@@ -101,6 +101,7 @@ function recordToEntry(record: SyncOperationRecord): SyncBatchEntry {
       entityId: string;
       data: Record<string, unknown>;
       idempotencyKey?: string;
+      correlationId?: string;
     }>) ?? [];
 
     return {
@@ -113,6 +114,7 @@ function recordToEntry(record: SyncOperationRecord): SyncBatchEntry {
         payload: op.data,
         localVersion: record.version,
         localTimestamp: record.created_at,
+        correlationId: op.correlationId ?? record.correlation_id ?? undefined,
       })),
     };
   }
@@ -127,6 +129,7 @@ function recordToEntry(record: SyncOperationRecord): SyncBatchEntry {
       payload: parsePayload(record.payload),
       localVersion: record.version,
       localTimestamp: record.created_at,
+      correlationId: record.correlation_id ?? undefined,
     },
   };
 }

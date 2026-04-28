@@ -73,6 +73,9 @@ export default function CustomersPage() {
         assignedBy: null,
         syncStatus: "synced",
         syncAttempts: 0,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
       map.set(tag.customerId, existing);
     }

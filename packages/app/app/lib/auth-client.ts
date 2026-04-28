@@ -167,16 +167,16 @@ async function resolveSessionWithOfflineFallback(): Promise<AuthSessionData | nu
 }
 
 export function useAuthSession() {
-  console.log("[DEBUG Auth] useAuthSession called - creating query");
+  const hasStoredToken = !!getStoredAuthToken();
+
   return useQuery({
     queryKey: PERSISTED_REMOTE_QUERY_KEYS.authSession,
     queryFn: async () => {
-      console.log("[DEBUG Auth] Query function START");
       const result = await resolveSessionWithOfflineFallback();
-      console.log("[DEBUG Auth] Query function END, result:", JSON.stringify(result));
-      // Return empty session object instead of null to prevent refetch loops
-      return result ?? { user: null, session: null };
+      return result;
     },
+    enabled: hasStoredToken,
+    initialData: hasStoredToken ? undefined : null,
     retry: false, // Disable retry - causes hanging on network issues
     staleTime: Infinity, // Never auto-refetch
     gcTime: 24 * 60 * 60 * 1000,

@@ -4,7 +4,6 @@ import { CodeBuilder } from "./code-builder";
 import {
   extractTableName,
   getAllColumns,
-  getColumnsToInclude,
   type GeneratorEntity,
 } from "./schema-adapter";
 
@@ -14,9 +13,8 @@ export function generateApplierConfig(
 ): GeneratedApplierConfig {
   const tableName = extractTableName(entityName, entity);
   const columns = getAllColumns(entity);
-  const columnsToInclude = getColumnsToInclude(entity);
 
-  const columnNames = columnsToInclude.map((c) => c.name);
+  const columnNames = columns.map((c) => c.name);
 
   if (!columnNames.includes("sync_status")) {
     columnNames.push("sync_status");
@@ -26,8 +24,8 @@ export function generateApplierConfig(
   }
 
   const defaults: Record<string, unknown> = {};
-  for (const col of columnsToInclude) {
-    if (col.notNull && col.default === undefined) {
+  for (const col of columns) {
+    if (col.notNull && !col.hasDefault) {
       const defaultValue = inferDefaultForType(col.dataType);
       if (defaultValue !== undefined) {
         defaults[col.name] = defaultValue;

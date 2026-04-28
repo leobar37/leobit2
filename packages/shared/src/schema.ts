@@ -58,6 +58,7 @@ export const PaymentMethod = {
   YAPE: "yape",
   PLIN: "plin",
   TRANSFERENCIA: "transferencia",
+  TARJETA: "tarjeta",
   SALDO: "saldo",
 } as const;
 
@@ -162,6 +163,7 @@ export const sales = pgTable(
     customerId: uuid("customer_id"),
     sellerId: uuid("seller_id"),
     distribucionId: uuid("distribucion_id"),
+    visitaId: uuid("visita_id"),
     type: text("type").notNull().default(TransactionType.INSTANT_SALE),
     saleType: text("sale_type").notNull().default(SaleType.CONTADO),
     paymentMode: text("payment_mode"),
@@ -175,8 +177,6 @@ export const sales = pgTable(
     orderDate: date("order_date"),
     status: text("status").notNull().default(SaleStatus.DRAFT),
     version: integer("version").notNull().default(1),
-    confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
-    deliveredSnapshot: jsonb("delivered_snapshot").$type<Record<string, unknown>>(),
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
@@ -215,7 +215,7 @@ export const saleItems = pgTable(
   "sale_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    businessId: uuid("business_id"),
+    businessId: uuid("business_id").notNull(),
     saleId: uuid("sale_id").notNull(),
     productId: uuid("product_id").notNull(),
     variantId: uuid("variant_id").notNull(),
@@ -266,6 +266,7 @@ export const abonos = pgTable(
     notes: text("notes"),
     syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
     syncAttempts: integer("sync_attempts").notNull().default(0),
+    version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

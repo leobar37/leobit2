@@ -12,11 +12,14 @@
 
 import type { SyncClientEngineLike } from "./base-service";
 import { BaseService, type EntityType } from "./base-service";
-import { SyncStatus } from "~/lib/sync/generated/schema";
 import { generateId } from "~/lib/utils";
 import { mapToCamelCase, mapToCamelCaseWithDates } from "../mappers/entity-mapper";
 import { eq, sql, and, gte, lte, inArray, isNull } from "drizzle-orm";
-import { SalesService as GeneratedSalesService, SaleItemsService as GeneratedItemsService } from "~/lib/sync/generated/services";
+import {
+  AbonosService as GeneratedAbonosService,
+  SalesService as GeneratedSalesService,
+  SaleItemsService as GeneratedItemsService,
+} from "~/lib/sync/generated/services";
 
 /**
  * Sale status types
@@ -89,8 +92,6 @@ export interface Sale {
   orderDate: string | null;
   status: SaleStatus;
   version: number;
-  confirmedSnapshot: Record<string, unknown> | null;
-  deliveredSnapshot: Record<string, unknown> | null;
   allowCustomerEdit: boolean;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
@@ -193,11 +194,13 @@ export interface UpdateSaleInput {
 export class SaleService extends BaseService {
   private generatedSalesService: GeneratedSalesService;
   private generatedItemsService: GeneratedItemsService;
+  private generatedAbonosService: GeneratedAbonosService;
 
   constructor(engine: SyncClientEngineLike) {
     super(engine);
     this.generatedSalesService = new GeneratedSalesService(engine);
     this.generatedItemsService = new GeneratedItemsService(engine);
+    this.generatedAbonosService = new GeneratedAbonosService(engine);
   }
 
   /**
@@ -218,30 +221,14 @@ export class SaleService extends BaseService {
    * Normalizes sale monetary and weight fields after reading from DB
    */
   private normalizeSale<T extends { totalAmount: string | number; amountPaid: string | number; balanceDue: string | number; tara: string | number | null; netWeight: string | number | null }>(sale: T): T {
-    return {
-      ...sale,
-      totalAmount: this.normalizeCurrency(sale.totalAmount),
-      amountPaid: this.normalizeCurrency(sale.amountPaid),
-      balanceDue: this.normalizeCurrency(sale.balanceDue),
-      tara: this.normalizeWeight(sale.tara),
-      netWeight: this.normalizeWeight(sale.netWeight),
-    };
+    return this.generatedSalesService.normalizeRow(sale as any) as unknown as T;
   }
 
   /**
    * Normalizes sale item monetary and weight fields after reading from DB
    */
   private normalizeSaleItem<T extends { subtotal: string | number; quantity: string | number | null; orderedQuantity: string | number | null; deliveredQuantity: string | number | null; unitPrice: string | number | null; unitPriceQuoted: string | number | null; unitPriceFinal: string | number | null }>(item: T): T {
-    return {
-      ...item,
-      subtotal: this.normalizeCurrency(item.subtotal),
-      quantity: this.normalizeWeight(item.quantity),
-      orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-      deliveredQuantity: this.normalizeWeight(item.deliveredQuantity),
-      unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-      unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-      unitPriceFinal: this.normalizeNullableCurrency(item.unitPriceFinal),
-    };
+    return this.generatedItemsService.normalizeRow(item as any) as unknown as T;
   }
 
   private buildPagedSalesWhere(query: SalePageQuery) {
@@ -577,14 +564,14 @@ export class SaleService extends BaseService {
       sellerId,
       distribucionId: saleInput.distribucionId ?? undefined,
       visitaId: saleInput.visitaId ?? undefined,
-      type: type as string,
-      saleType: saleType as string,
+      type,
+      saleType,
       paymentMode: saleInput.paymentMode ?? undefined,
-      totalAmount: this.normalizeCurrency(totalAmount),
-      amountPaid: this.normalizeCurrency(0),
-      balanceDue: this.normalizeCurrency(totalAmount),
-      tara: this.normalizeWeight(saleInput.tara),
-      netWeight: this.normalizeWeight(saleInput.netWeight),
+      totalAmount,
+      amountPaid: 0,
+      balanceDue: totalAmount,
+      tara: saleInput.tara ?? undefined,
+      netWeight: saleInput.netWeight ?? undefined,
       saleDate,
       deliveryDate: saleInput.deliveryDate ?? undefined,
       orderDate: saleInput.orderDate ?? undefined,
@@ -632,53 +619,99 @@ export class SaleService extends BaseService {
     const amountPaid = saleInput.amountPaid ?? 0;
     const balanceDue = totalAmount - amountPaid;
 
-    const sale = await this.generatedSalesService.create({
-      customerId: saleInput.customerId ?? undefined,
-      sellerId,
-      distribucionId: saleInput.distribucionId ?? undefined,
-      visitaId: saleInput.visitaId ?? undefined,
-      type: saleInput.type || "instant_sale",
-      saleType: saleInput.saleType || "contado",
-      paymentMode: saleInput.paymentMode ?? undefined,
-      totalAmount: this.normalizeCurrency(totalAmount),
-      amountPaid: this.normalizeCurrency(amountPaid),
-      balanceDue: this.normalizeCurrency(balanceDue),
-      tara: this.normalizeWeight(saleInput.tara),
-      netWeight: this.normalizeWeight(saleInput.netWeight),
-      saleDate,
-      deliveryDate: saleInput.deliveryDate ?? undefined,
-      orderDate: saleInput.orderDate ?? undefined,
-      status: "draft",
-      allowCustomerEdit: true,
-      advancePaymentMethod: undefined,
-      advanceReferenceNumber: undefined,
-      advanceProofImageId: undefined,
-      cancelledAt: undefined,
-      cancelledBy: undefined,
-      cancelReason: undefined,
-      refundAmount: undefined,
-      refundDate: undefined,
-      refundMethod: undefined,
-      refundReference: undefined,
-      refundNotes: undefined,
+    const saleId = this.generateId();
+    const correlationId = `sale:create:${saleId}`;
+    const itemRows = items.map((item) => ({
+      id: this.generateId(),
+      saleId,
+      productId: item.productId,
+      variantId: item.variantId,
+      productName: item.productName,
+      variantName: item.variantName,
+      quantity: item.quantity,
+      orderedQuantity: item.orderedQuantity,
+      unitPrice: item.unitPrice,
+      unitPriceQuoted: item.unitPriceQuoted,
+      subtotal: item.subtotal,
+    }));
+
+    await this.engine.batch(async (ctx) => {
+      await this.generatedSalesService.createInBatch(ctx, {
+        customerId: saleInput.customerId ?? undefined,
+        sellerId,
+        distribucionId: saleInput.distribucionId ?? undefined,
+        visitaId: saleInput.visitaId ?? undefined,
+        type: saleInput.type || "instant_sale",
+        saleType: saleInput.saleType || "contado",
+        paymentMode: saleInput.paymentMode ?? undefined,
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        tara: saleInput.tara,
+        netWeight: saleInput.netWeight,
+        saleDate,
+        deliveryDate: saleInput.deliveryDate ?? undefined,
+        orderDate: saleInput.orderDate ?? undefined,
+        status: "draft",
+        allowCustomerEdit: true,
+      }, {
+        id: saleId,
+        idempotencyKey: `sale:create:${saleId}`,
+        correlationId,
+        syncPayloadExtra: {
+          items: itemRows.map((item) => ({
+            id: item.id,
+            productId: item.productId,
+            variantId: item.variantId,
+            productName: item.productName,
+            variantName: item.variantName,
+            quantity: item.quantity,
+            orderedQuantity: item.orderedQuantity,
+            unitPrice: item.unitPrice,
+            unitPriceQuoted: item.unitPriceQuoted,
+            subtotal: item.subtotal,
+          })),
+        },
+      });
+
+      for (const item of itemRows) {
+        await this.generatedItemsService.createInBatch(ctx, {
+          saleId,
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          variantName: item.variantName,
+          quantity: item.quantity,
+          orderedQuantity: item.orderedQuantity,
+          unitPrice: item.unitPrice,
+          unitPriceQuoted: item.unitPriceQuoted,
+          subtotal: item.subtotal,
+        }, {
+          id: item.id,
+          correlationId,
+          skipSync: true,
+        });
+      }
+
+      if (saleInput.saleType === "credito" && amountPaid > 0 && saleInput.customerId) {
+        const abonoId = this.generateId();
+        await this.generatedAbonosService.createInBatch(ctx, {
+          customerId: saleInput.customerId,
+          sellerId,
+          amount: amountPaid,
+          paymentMethod: "efectivo",
+          referenceNumber: `init-sale:${saleId}`,
+          relatedSaleId: saleId,
+          notes: "Abono inicial registrado en la venta",
+        }, {
+          id: abonoId,
+          idempotencyKey: `abono:create:${abonoId}`,
+          correlationId,
+        });
+      }
     });
 
-    for (const item of items) {
-      await this.generatedItemsService.create({
-        saleId: sale.id,
-        productId: item.productId,
-        variantId: item.variantId,
-        productName: item.productName,
-        variantName: item.variantName,
-        quantity: this.normalizeWeight(item.quantity),
-        orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-        unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-        unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-        subtotal: this.normalizeCurrency(item.subtotal),
-      });
-    }
-
-    const createdSale = await this.findById(sale.id);
+    const createdSale = await this.findById(saleId);
     if (!createdSale) {
       throw new Error("Failed to retrieve created sale");
     }
@@ -723,9 +756,9 @@ export class SaleService extends BaseService {
     await this.generatedSalesService.update(id, {
       status: "active",
       saleType: paymentMode === "pago_total" ? "contado" : "credito",
-      totalAmount: this.normalizeCurrency(totalAmount),
-      amountPaid: this.normalizeCurrency(amountPaid),
-      balanceDue: this.normalizeCurrency(balanceDue),
+      totalAmount,
+      amountPaid,
+      balanceDue,
       paymentMode,
     });
   }
@@ -771,9 +804,9 @@ export class SaleService extends BaseService {
     await this.generatedSalesService.update(id, {
       status: "confirmed",
       saleType: paymentMode === "pago_total" ? "contado" : "credito",
-      totalAmount: this.normalizeCurrency(totalAmount),
-      amountPaid: this.normalizeCurrency(amountPaid),
-      balanceDue: this.normalizeCurrency(balanceDue),
+      totalAmount,
+      amountPaid,
+      balanceDue,
       paymentMode,
     });
   }
@@ -797,7 +830,7 @@ export class SaleService extends BaseService {
     }
 
     await this.generatedSalesService.update(id, {
-      status: "delivered",
+      status: "delivered" as const,
       saleType: sale.saleType,
     });
   }
@@ -835,9 +868,9 @@ export class SaleService extends BaseService {
 
     const adjustments: Array<{
       itemId: string;
-      deliveredQuantity: string;
-      unitPriceFinal: string | null;
-      newSubtotal: string;
+      deliveredQuantity: number;
+      unitPriceFinal: number | null;
+      newSubtotal: number;
     }> = [];
     let totalAmount = 0;
 
@@ -853,29 +886,46 @@ export class SaleService extends BaseService {
 
       adjustments.push({
         itemId: itemUpdate.itemId,
-        deliveredQuantity: this.normalizeWeight(deliveredQty),
-        unitPriceFinal: this.normalizeNullableCurrency(finalPrice),
-        newSubtotal: this.normalizeCurrency(subtotal),
+        deliveredQuantity: deliveredQty,
+        unitPriceFinal: finalPrice,
+        newSubtotal: subtotal,
       });
     }
 
     const amountPaid = options.amountPaid ?? parseFloat(sale.amountPaid);
     const newBalance = totalAmount - amountPaid;
 
-    for (const adjustment of adjustments) {
-      await this.generatedItemsService.update(adjustment.itemId, {
-        deliveredQuantity: adjustment.deliveredQuantity,
-        unitPriceFinal: adjustment.unitPriceFinal,
-        subtotal: adjustment.newSubtotal,
-        isModified: true,
-      });
-    }
-
-    await this.generatedSalesService.update(id, {
+    const saleUpdate = {
       status: "delivered",
-      totalAmount: this.normalizeCurrency(totalAmount),
-      balanceDue: this.normalizeCurrency(newBalance),
-      paymentMode: options.paymentMode ?? sale.paymentMode ?? undefined,
+      totalAmount,
+      balanceDue: newBalance,
+      paymentMode: (options.paymentMode ?? sale.paymentMode ?? undefined) as "pago_total" | "a_cuenta" | "debe_todo" | undefined,
+    } as const;
+    const correlationId = `sale:finalize:${id}:${Date.now()}`;
+
+    await this.engine.batch(async (ctx) => {
+      for (const adjustment of adjustments) {
+        await this.generatedItemsService.updateInBatch(
+          ctx,
+          adjustment.itemId,
+          {
+            saleId: id,
+            deliveredQuantity: adjustment.deliveredQuantity,
+            unitPriceFinal: adjustment.unitPriceFinal ?? undefined,
+            subtotal: adjustment.newSubtotal,
+            isModified: true,
+          },
+          {
+            idempotencyKey: `sale_item:update:${adjustment.itemId}:${correlationId}`,
+            correlationId,
+          }
+        );
+      }
+
+      await this.generatedSalesService.updateInBatch(ctx, id, saleUpdate, {
+        idempotencyKey: `sale:update:${id}:${correlationId}`,
+        correlationId,
+      });
     });
   }
 
@@ -915,57 +965,7 @@ export class SaleService extends BaseService {
       throw new Error("Cannot update a cancelled sale");
     }
 
-    const syncPayload: Record<string, unknown> = {};
-
-    if (input.customerId !== undefined) {
-      syncPayload.customerId = input.customerId || null;
-    }
-
-    if (input.saleType !== undefined) {
-      syncPayload.saleType = input.saleType;
-    }
-
-    if (input.type !== undefined) {
-      syncPayload.type = input.type;
-    }
-
-    if (input.totalAmount !== undefined) {
-      syncPayload.totalAmount = this.normalizeCurrency(input.totalAmount);
-    }
-
-    if (input.amountPaid !== undefined) {
-      syncPayload.amountPaid = this.normalizeCurrency(input.amountPaid);
-    }
-
-    if (input.balanceDue !== undefined) {
-      syncPayload.balanceDue = this.normalizeCurrency(input.balanceDue);
-    }
-
-    if (input.tara !== undefined) {
-      syncPayload.tara = this.normalizeWeight(input.tara);
-    }
-
-    if (input.netWeight !== undefined) {
-      syncPayload.netWeight = this.normalizeWeight(input.netWeight);
-    }
-
-    if (input.deliveryDate !== undefined) {
-      syncPayload.deliveryDate = input.deliveryDate || null;
-    }
-
-    if (input.orderDate !== undefined) {
-      syncPayload.orderDate = input.orderDate || null;
-    }
-
-    if (input.paymentMode !== undefined) {
-      syncPayload.paymentMode = input.paymentMode || null;
-    }
-
-    if (Object.keys(syncPayload).length === 0) {
-      return;
-    }
-
-    await this.generatedSalesService.update(id, syncPayload);
+    await this.generatedSalesService.update(id, input);
   }
 
   /**
@@ -991,10 +991,13 @@ export class SaleService extends BaseService {
           eq(this.tables.saleItems.businessId, this.businessId)
         )
       );
-    for (const item of items) {
-      await this.generatedItemsService.delete(item.id);
-    }
-    await this.generatedSalesService.delete(id);
+    const correlationId = `sale:delete:${id}:${Date.now()}`;
+    await this.engine.batch(async (ctx) => {
+      for (const item of items) {
+        await this.generatedItemsService.deleteInBatch(ctx, item.id, { correlationId });
+      }
+      await this.generatedSalesService.deleteInBatch(ctx, id, { correlationId });
+    });
   }
 
   /**
@@ -1040,7 +1043,7 @@ export class SaleService extends BaseService {
         )
       )
       .limit(1);
-    
+
     if (existingItemResult.length > 0) {
       throw new Error("El producto ya está en la venta. Edita la cantidad desde el carrito.");
     }
@@ -1050,36 +1053,59 @@ export class SaleService extends BaseService {
       throw new Error("Sale not found");
     }
 
-    const result = await this.generatedItemsService.create({
+    const itemId = this.generateId();
+    const itemPayload = {
       saleId,
       productId: item.productId,
       variantId: item.variantId,
       productName: item.productName,
       variantName: item.variantName,
-      quantity: this.normalizeWeight(item.quantity),
-      orderedQuantity: this.normalizeWeight(item.orderedQuantity),
-      unitPrice: this.normalizeNullableCurrency(item.unitPrice),
-      unitPriceQuoted: this.normalizeNullableCurrency(item.unitPriceQuoted),
-      subtotal: this.normalizeCurrency(item.subtotal),
-    });
+      quantity: item.quantity,
+      orderedQuantity: item.orderedQuantity,
+      unitPrice: item.unitPrice,
+      unitPriceQuoted: item.unitPriceQuoted,
+      subtotal: item.subtotal,
+    };
 
     const currentTotal = parseFloat(sale.totalAmount || "0");
     const currentBalance = parseFloat(sale.balanceDue || "0");
-    const newTotal = currentTotal + parseFloat(item.subtotal);
-    const newBalance = currentBalance + parseFloat(item.subtotal);
+    const newTotal = currentTotal + Number(item.subtotal);
+    const newBalance = currentBalance + Number(item.subtotal);
+    const saleUpdate = {
+      totalAmount: newTotal,
+      balanceDue: newBalance,
+    };
+    const correlationId = `sale:item:add:${saleId}:${itemId}`;
 
-    await this.generatedSalesService.update(saleId, {
-      totalAmount: this.normalizeCurrency(newTotal),
-      balanceDue: this.normalizeCurrency(newBalance),
+    await this.engine.batch(async (ctx) => {
+      await this.generatedItemsService.createInBatch(ctx, itemPayload, {
+        id: itemId,
+        idempotencyKey: `sale_item:create:${itemId}`,
+        correlationId,
+      });
+
+      await this.generatedSalesService.updateInBatch(ctx, saleId, saleUpdate, {
+        idempotencyKey: `sale:update:${saleId}:${correlationId}`,
+        correlationId,
+      });
     });
 
     console.log("[Perf][SaleService] addItem", {
       saleId,
-      itemId: result.id,
+      itemId,
       totalMs: Number((performance.now() - perfStart).toFixed(2)),
     });
 
-    return result as unknown as SaleItem;
+    const created = await this.db
+      .select()
+      .from(this.tables.saleItems)
+      .where(and(
+        eq(this.tables.saleItems.id, itemId),
+        eq(this.tables.saleItems.businessId, this.businessId)
+      ))
+      .limit(1);
+
+    return mapToCamelCase(created[0]) as unknown as SaleItem;
   }
 
   /**
@@ -1127,7 +1153,8 @@ export class SaleService extends BaseService {
       .where(
         and(
           eq(this.tables.saleItems.id, itemId),
-          eq(this.tables.saleItems.saleId, saleId)
+          eq(this.tables.saleItems.saleId, saleId),
+          eq(this.tables.saleItems.businessId, this.businessId)
         )
       )
       .limit(1);
@@ -1142,27 +1169,44 @@ export class SaleService extends BaseService {
     const subtotalDiff = newSubtotal - oldSubtotal;
 
     const updateData: Record<string, unknown> = {};
-    if (data.quantity !== undefined) updateData.quantity = this.normalizeWeight(data.quantity);
-    if (data.unitPrice !== undefined) updateData.unitPrice = this.normalizeNullableCurrency(data.unitPrice);
-    if (data.subtotal !== undefined) updateData.subtotal = this.normalizeCurrency(data.subtotal);
+    if (data.quantity !== undefined) updateData.quantity = data.quantity;
+    if (data.unitPrice !== undefined) updateData.unitPrice = data.unitPrice;
+    if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
     updateData.isModified = true;
 
-    await this.generatedItemsService.update(itemId, updateData);
-
+    const correlationId = `sale:item:update:${saleId}:${itemId}:${Date.now()}`;
+    const sale = await this.findById(saleId);
+    const saleUpdate: Record<string, unknown> = {};
     if (Math.abs(subtotalDiff) > 0.01) {
-      const sale = await this.findById(saleId);
       if (sale) {
         const currentTotal = parseFloat(sale.totalAmount || "0");
         const currentBalance = parseFloat(sale.balanceDue || "0");
         const newTotal = currentTotal + subtotalDiff;
         const newBalance = currentBalance + subtotalDiff;
 
-        await this.generatedSalesService.update(saleId, {
-          totalAmount: this.normalizeCurrency(newTotal),
-          balanceDue: this.normalizeCurrency(newBalance),
-        });
+        saleUpdate.totalAmount = newTotal;
+        saleUpdate.balanceDue = newBalance;
       }
     }
+
+    await this.engine.batch(async (ctx) => {
+      await this.generatedItemsService.updateInBatch(
+        ctx,
+        itemId,
+        { saleId, ...updateData },
+        {
+          idempotencyKey: `sale_item:update:${itemId}:${correlationId}`,
+          correlationId,
+        }
+      );
+
+      if (Object.keys(saleUpdate).length > 0 && sale) {
+        await this.generatedSalesService.updateInBatch(ctx, saleId, saleUpdate, {
+          idempotencyKey: `sale:update:${saleId}:${correlationId}`,
+          correlationId,
+        });
+      }
+    });
 
     console.log("[Perf][SaleService] updateItem", {
       saleId,
@@ -1210,7 +1254,8 @@ export class SaleService extends BaseService {
       .where(
         and(
           eq(this.tables.saleItems.id, itemId),
-          eq(this.tables.saleItems.saleId, saleId)
+          eq(this.tables.saleItems.saleId, saleId),
+          eq(this.tables.saleItems.businessId, this.businessId)
         )
       )
       .limit(1);
@@ -1221,20 +1266,29 @@ export class SaleService extends BaseService {
 
     const subtotal = parseFloat(itemResult[0].subtotal);
 
-    await this.generatedItemsService.delete(itemId);
-
     const sale = await this.findById(saleId);
-    if (sale) {
-      const currentTotal = parseFloat(sale.totalAmount || "0");
-      const currentBalance = parseFloat(sale.balanceDue || "0");
-      const newTotal = currentTotal - subtotal;
-      const newBalance = currentBalance - subtotal;
+    const currentTotal = parseFloat(sale?.totalAmount || "0");
+    const currentBalance = parseFloat(sale?.balanceDue || "0");
+    const saleUpdate = {
+      totalAmount: currentTotal - subtotal,
+      balanceDue: currentBalance - subtotal,
+    };
+    const correlationId = `sale:item:remove:${saleId}:${itemId}:${Date.now()}`;
 
-      await this.generatedSalesService.update(saleId, {
-        totalAmount: this.normalizeCurrency(newTotal),
-        balanceDue: this.normalizeCurrency(newBalance),
+    await this.engine.batch(async (ctx) => {
+      await this.generatedItemsService.deleteInBatch(ctx, itemId, {
+        payload: { saleId, productId: "deleted", variantId: "deleted", productName: "deleted", variantName: "deleted", subtotal: "0" },
+        idempotencyKey: `sale_item:delete:${itemId}:${correlationId}`,
+        correlationId,
       });
-    }
+
+      if (sale) {
+        await this.generatedSalesService.updateInBatch(ctx, saleId, saleUpdate, {
+          idempotencyKey: `sale:update:${saleId}:${correlationId}`,
+          correlationId,
+        });
+      }
+    });
 
     console.log("[Perf][SaleService] removeItem", {
       saleId,
@@ -1263,8 +1317,8 @@ export class SaleService extends BaseService {
     const newBalanceDue = Math.max(currentBalanceDue - amount, 0);
 
     await this.generatedSalesService.update(saleId, {
-      amountPaid: this.normalizeCurrency(newAmountPaid),
-      balanceDue: this.normalizeCurrency(newBalanceDue),
+      amountPaid: newAmountPaid,
+      balanceDue: newBalanceDue,
     });
   }
 

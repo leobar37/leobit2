@@ -25,7 +25,7 @@ export interface AccountsReceivablePage {
 }
 
 export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
 
   const limit = filters.limit ?? (filters.customerId ? 1 : 100);
   const offset = filters.offset ?? 0;
@@ -68,7 +68,7 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
 export function useTotalAccountsReceivable(
   filters: AccountsReceivableFilters = {}
 ) {
-  const paymentService = useEngineService<PaymentService>("payments");
+  const paymentService = useEngineService<PaymentService>("abonos");
 
   const { data: totalDebt = 0, isLoading } = useQuery({
     queryKey: ["accounts-receivable", "total", filters],

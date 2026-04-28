@@ -36,8 +36,6 @@ export interface Order {
   advanceReferenceNumber: string | null;
   advanceProofImageId: string | null;
   totalAmount: string;
-  confirmedSnapshot: Record<string, unknown> | null;
-  deliveredSnapshot: Record<string, unknown> | null;
   version: number;
   syncStatus: "pending" | "synced" | "error";
   syncAttempts: number;
@@ -189,35 +187,13 @@ export function generateOrder(index: number, overrides?: OrderOverrides): Order 
     : null;
   const advanceReferenceNumber = hasAdvancePayment ? faker.string.numeric(10) : null;
 
-  // Snapshots for confirmed/delivered orders
-  let confirmedSnapshot: Record<string, unknown> | null = null;
-  let deliveredSnapshot: Record<string, unknown> | null = null;
-
-  if (status === "confirmed" || status === "delivered") {
-    confirmedSnapshot = {
-      totalAmount: totalAmount.toFixed(2),
-      items: items.map((item) => ({
-        productId: item.productId,
-        orderedQuantity: item.orderedQuantity,
-        unitPriceQuoted: item.unitPriceQuoted,
-      })),
-      confirmedAt: new Date().toISOString(),
-    };
-  }
-
   if (status === "delivered") {
     // Update delivered quantities
-    const deliveredItems = items.map((item) => ({
+    items.splice(0, items.length, ...items.map((item) => ({
       ...item,
       deliveredQuantity: item.orderedQuantity,
       unitPriceFinal: item.unitPriceQuoted,
-    }));
-
-    deliveredSnapshot = {
-      totalAmount: totalAmount.toFixed(2),
-      items: deliveredItems,
-      deliveredAt: new Date().toISOString(),
-    };
+    })));
   }
 
   const order: Order = {
@@ -236,8 +212,6 @@ export function generateOrder(index: number, overrides?: OrderOverrides): Order 
     advanceReferenceNumber,
     advanceProofImageId: null,
     totalAmount: totalAmount.toFixed(2),
-    confirmedSnapshot,
-    deliveredSnapshot,
     version: status === "delivered" ? 3 : status === "confirmed" ? 2 : 1,
     syncStatus: overrides?.syncStatus ?? faker.helpers.arrayElement(["pending", "synced", "error"]),
     syncAttempts: 0,

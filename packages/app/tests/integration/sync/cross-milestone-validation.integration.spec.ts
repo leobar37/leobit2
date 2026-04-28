@@ -101,13 +101,12 @@ describe("Cross-Milestone Validation", () => {
 
       expect(customersPriority).toBe(1);
       expect(salesPriority).toBe(1);
-      expect(abonosPriority).toBe(1);
+      expect(abonosPriority).toBe(2);
 
-      // All are at priority 1 (top-level entities)
-      // The queue processes by entity_type within the same priority
-      expect(customersPriority).toBeLessThan(2);
-      expect(salesPriority).toBeLessThan(2);
-      expect(abonosPriority).toBeLessThan(2);
+      // Parents at priority 1, abonos at priority 2 (child-like)
+      expect(customersPriority).toBeLessThan(3);
+      expect(salesPriority).toBeLessThan(3);
+      expect(abonosPriority).toBeLessThan(3);
     });
 
     it("should have correct priority for venta workflow entities", () => {
@@ -127,10 +126,10 @@ describe("Cross-Milestone Validation", () => {
       // Parents should be at priority 1
       expect(priorities.customers).toBe(1);
       expect(priorities.sales).toBe(1);
-      expect(priorities.abonos).toBe(1);
 
       // Children should be at priority 2
       expect(priorities.sale_items).toBe(2);
+      expect(priorities.abonos).toBe(2);
 
       // Parents come before children
       expect(priorities.sales).toBeLessThan(priorities.sale_items);
@@ -211,12 +210,10 @@ describe("Cross-Milestone Validation", () => {
       const expectedPriority1 = [
         "customers",
         "sales",
-        "abonos",
         "products",
         "purchases",
         "distribuciones",
         "tags",
-        "visitas",
         "customer_groups",
         "suppliers",
       ];

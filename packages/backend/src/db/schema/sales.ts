@@ -13,7 +13,6 @@ import {
   integer,
   text,
   date,
-  jsonb,
   boolean,
   index,
 } from "drizzle-orm/pg-core";
@@ -70,10 +69,8 @@ export const sales = pgTable(
     // pre_order: draft -> confirmed -> delivered/cancelled
     status: saleStatusEnum("status").notNull().default("draft"),
 
-    // Versioning & snapshots (from orders)
+    // Versioning
     version: integer("version").notNull().default(1),
-    confirmedSnapshot: jsonb("confirmed_snapshot").$type<Record<string, unknown>>(),
-    deliveredSnapshot: jsonb("delivered_snapshot").$type<Record<string, unknown>>(),
 
     // Customer edit permissions (from orders)
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),

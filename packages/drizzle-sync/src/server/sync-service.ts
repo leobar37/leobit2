@@ -14,7 +14,8 @@ import type {
 import type { GenericConflictResolverRegistry } from "./conflict-resolver";
 import type { DeadLetterRecord, ISyncDeadLetterRepository } from "./dead-letter-repository";
 import type {
-  ISyncOperationRepository
+  ISyncOperationRepository,
+  SyncOperationRecord,
 } from "./operation-repository";
 import type { SyncEngine, SyncRequestContext } from "./sync-engine";
 import type {
@@ -215,11 +216,11 @@ export class SyncService<
       ? `${last.processedAt.toISOString()}_${last.operationId}`
       : serverTimestamp;
 
-    let mappedChanges: SyncChange[] = results.map((item) => ({
+    let mappedChanges: SyncChange[] = results.map((item: SyncOperationRecord) => ({
       idempotencyKey: item.operationId,
-      entityType: item.entityType ?? (item as any).entity ?? "",
-      operation: item.operation ?? (item as any).action ?? "",
-      entityId: item.entityId ?? "",
+      entityType: (item as any).entityType ?? (item as any).entity ?? "",
+      operation: (item as any).operation ?? (item as any).action ?? "",
+      entityId: (item as any).entityId ?? "",
       payload: item.payload ?? {},
       localTimestamp: (item as any).clientTimestamp?.toISOString() ?? serverTimestamp,
       processedAt: item.processedAt?.toISOString() ?? serverTimestamp,

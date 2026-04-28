@@ -37,7 +37,8 @@ export class SupplierService extends SuppliersService {
    * 
    * NOTE: This overrides the generated method to add search functionality
    */
-  async findByBusiness(search?: string): Promise<Supplier[]> {
+  async findByBusiness(options?: { search?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<Supplier[]> {
+    const search = options?.search;
     const conditions = [this.businessId ? eq(this.tables.suppliers.businessId, this.businessId) : undefined];
 
     if (search) {

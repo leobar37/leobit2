@@ -49,32 +49,33 @@ class FetchHttpClient implements ISyncClientHttpClient {
   constructor(private config: FetchHttpClientConfig) {}
 
   async postBatch(
-    operations: unknown[],
+    entries: unknown[],
   ): Promise<{ success: boolean; results: unknown[] }> {
-    // Map SyncOperationRecord (snake_case) to backend SyncOperationInput (camelCase)
-    // and inject device tracking metadata
-    const mappedOperations = (operations as Record<string, unknown>[]).map((op) => {
-      const payload = op.payload;
-      const normalizedPayload =
-        typeof payload === "string" ? JSON.parse(payload) : payload;
-      return {
-        idempotencyKey:
-          (op.idempotency_key as string) ?? (op.id as string),
-        entityType: op.entity_type as string,
-        entityId: op.entity_id as string,
-        operation: op.operation as string,
-        payload: normalizedPayload as Record<string, unknown>,
-        localVersion: (op.version as number) ?? 1,
-        localTimestamp: (op.created_at as string) ?? new Date().toISOString(),
-        deviceId: this.config.getDeviceId?.() ?? undefined,
-        sourceFingerprint: this.config.getFingerprint?.() ?? undefined,
+    const withDeviceMetadata = (entry: unknown): unknown => {
+      if (!entry || typeof entry !== "object") return entry;
+      const raw = entry as Record<string, unknown>;
+      const enrichOperation = (operation: unknown): unknown => {
+        if (!operation || typeof operation !== "object") return operation;
+        return {
+          ...(operation as Record<string, unknown>),
+          deviceId: this.config.getDeviceId?.() ?? undefined,
+          sourceFingerprint: this.config.getFingerprint?.() ?? undefined,
+        };
       };
-    });
+
+      if (raw.kind === "single") {
+        return { ...raw, operation: enrichOperation(raw.operation) };
+      }
+      if (raw.kind === "batch" && Array.isArray(raw.operations)) {
+        return { ...raw, operations: raw.operations.map(enrichOperation) };
+      }
+      return raw;
+    };
 
     const body = await this.fetch<{ success: boolean; data?: { results?: unknown[] } }>(
       "POST",
       "/sync/batch",
-      { operations: mappedOperations },
+      { entries: entries.map(withDeviceMetadata) },
     );
 
     if (!body.success || !body.data?.results) {

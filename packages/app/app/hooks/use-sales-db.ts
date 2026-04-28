@@ -127,7 +127,7 @@ export function useFinalizeSale() {
         subtotal?: number;
       }>;
       amountPaid?: number;
-      paymentMode?: string;
+      paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
     }) => {
       // If in delivery mode, use finalizeDelivery instead
       if (isDeliveryMode) {

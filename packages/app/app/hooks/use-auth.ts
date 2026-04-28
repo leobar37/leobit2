@@ -194,7 +194,7 @@ export function useAuth() {
   return {
     user: session?.user ?? null,
     isAuthenticated: !!session?.user,
-    isLoading: isPending,
+    isLoading: !!getStoredAuthToken() && isPending,
     isLoggingOut,
     login,
     register,

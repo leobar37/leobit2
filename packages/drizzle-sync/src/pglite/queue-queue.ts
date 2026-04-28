@@ -52,6 +52,7 @@ export class PgSyncQueue implements ISyncQueue {
       version: 1,
       sync_attempts: 0,
       idempotency_key: params.idempotencyKey || crypto.randomUUID(),
+      correlation_id: params.correlationId ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_error: null,
@@ -72,6 +73,7 @@ export class PgSyncQueue implements ISyncQueue {
         entityId: p.entityId,
         data: p.data,
         idempotencyKey: p.idempotencyKey,
+        correlationId: p.correlationId,
       })),
     };
     const operation: SyncOperationRecord = {
@@ -86,6 +88,7 @@ export class PgSyncQueue implements ISyncQueue {
       version: 1,
       sync_attempts: 0,
       idempotency_key: params[0]?.idempotencyKey || crypto.randomUUID(),
+      correlation_id: params[0]?.correlationId ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_error: null,

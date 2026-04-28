@@ -115,11 +115,7 @@ export function VariantList({
                   <span className="text-gray-500">
                     Cant: <span className="text-gray-700 font-medium">{variant.unitQuantity}</span>
                   </span>
-                  {variant.inventory && (
-                    <span className="text-gray-500">
-                      Stock: <span className="text-gray-700 font-medium">{variant.inventory.quantity}</span>
-                    </span>
-                  )}
+
                 </div>
               </div>
             </div>

@@ -38,7 +38,7 @@ import { PgSyncQueue } from "../pglite/queue-queue";
 import { PushSyncService } from "../pglite/push-service";
 import type { PushServiceOptions } from "../pglite/push-types";
 import { PullSyncService } from "../pglite/pull-service";
-import type { PullServiceOptions, PullHttpClient } from "../pglite/pull-types";
+import type { PullServiceOptions, PullHttpClient, CursorStorage } from "../pglite/pull-types";
 import { SyncCoordinator, type SyncCoordinatorOptions } from "../pglite/coordination-coordinator";
 import { StagedPullCoordinator, type StageConfig, type IPullService as IStagedPullService } from "../pglite/coordination-staged-pull-coordinator";
 import { SyncMutex, type ISyncMutex } from "../pglite/sync-mutex";
@@ -67,6 +67,8 @@ function createBrowserNavigator(): INavigator {
 }
 
 export interface BatchContext {
+  /** Drizzle transaction handle. Available when the adapter supports transactions. */
+  tx: ReturnType<typeof drizzle>;
   enqueue: (params: EnqueueParams) => Promise<string>;
   enqueueMany: (params: EnqueueParams[]) => Promise<string>;
 }
@@ -330,7 +332,7 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
     const pullServiceOptions: PullServiceOptions = {
       httpClient: pullHttpClient,
       applierConfig: this.config.applierConfig,
-      cursorStorage: cursorStorage ?? undefined,
+      cursorStorage: cursorStorage ?? this.createStorageCursorAdapter(),
       mutex: this.mutex,
       logger: this.config.logger,
       isOnline: this.config.isOnline,
@@ -608,21 +610,22 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
    * Execute a callback within a database transaction if the adapter supports it.
    * Falls back to non-transactional execution if transactions are not available.
    */
-  async withTransaction<T>(callback: () => Promise<T>): Promise<T> {
+  async withTransaction<T>(callback: (tx: ReturnType<typeof drizzle>) => Promise<T>): Promise<T> {
     this.ensureInitialized();
     const db = this.getDb() as any;
     if (typeof db.transaction === "function") {
       return db.transaction(callback);
     }
-    return callback();
+    return callback(null as unknown as ReturnType<typeof drizzle>);
   }
 
   /**
    * Execute a batch of operations atomically.
    *
-   * The callback receives a context with an `enqueue` function that accumulates
-   * sync operations. After the callback succeeds, all accumulated operations are
-   * enqueued as a single atomic batch entry.
+   * The callback receives a context with `tx` and `enqueue` / `enqueueMany`
+   * functions. Use `tx` for local Drizzle writes and `enqueue` / `enqueueMany`
+   * to accumulate sync operations. After the callback succeeds, all accumulated
+   * operations are enqueued as a single atomic batch entry.
    *
    * If the adapter supports transactions, the callback runs inside a transaction.
    * If the callback throws, the transaction is rolled back and no sync operations
@@ -633,18 +636,20 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
 
     const operations: EnqueueParams[] = [];
 
-    const ctx: BatchContext = {
-      enqueue: (op: EnqueueParams) => {
-        operations.push(op);
-        return Promise.resolve("");
-      },
-      enqueueMany: (ops: EnqueueParams[]) => {
-        operations.push(...ops);
-        return Promise.resolve("");
-      },
+    const runCallback = async (tx: ReturnType<typeof drizzle>) => {
+      const ctx: BatchContext = {
+        tx,
+        enqueue: (op: EnqueueParams) => {
+          operations.push(op);
+          return Promise.resolve("");
+        },
+        enqueueMany: (ops: EnqueueParams[]) => {
+          operations.push(...ops);
+          return Promise.resolve("");
+        },
+      };
+      return callback(ctx);
     };
-
-    const runCallback = async () => callback(ctx);
 
     let result: T;
     try {
@@ -771,6 +776,14 @@ export class SyncClientEngine<TServices extends Record<string, unknown> = Record
     if (this.state === "uninitialized") {
       throw new Error("SyncClientEngine not initialized. Call initialize() first.");
     }
+  }
+
+  private createStorageCursorAdapter(): CursorStorage {
+    return {
+      get: (key: string) => this.storageAdapter.getCursor(key),
+      set: (key: string, value: string) => this.storageAdapter.setCursor(value, key),
+      remove: (key: string) => this.storageAdapter.removeCursor(key),
+    };
   }
 
   private instantiateServices(): void {
