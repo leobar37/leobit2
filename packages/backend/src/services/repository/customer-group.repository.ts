@@ -134,8 +134,6 @@ export class CustomerGroupRepository {
         id: data.id, // Use provided ID (from sync entityId) or generate new
         name: data.name,
         businessId: ctx.businessId,
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 
@@ -206,8 +204,6 @@ export class CustomerGroupRepository {
       groupId,
       customerId,
       addedBy: ctx.businessUserId,
-      syncStatus: "synced",
-      syncAttempts: 0,
     }));
 
     const result = await executor
@@ -258,13 +254,11 @@ export class CustomerGroupRepository {
   async findByCustomerId(ctx: RequestContext, customerId: string): Promise<Array<{
     id: string;
     name: string;
-    syncStatus: string;
   }>> {
     const results = await db
       .select({
         id: customerGroups.id,
         name: customerGroups.name,
-        syncStatus: customerGroups.syncStatus,
       })
       .from(customerGroupMembers)
       .innerJoin(

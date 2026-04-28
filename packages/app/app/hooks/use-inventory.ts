@@ -1,31 +1,38 @@
 /**
- * Inventory Hooks (Variant-based, offline-first)
- * Reactively fetch and validate inventory using PGlite services
+ * Inventory Hooks (API-based)
+ * Reactively fetch and validate inventory using Eden Treaty API
  */
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { InventoryService } from "~/lib/services/inventory-service";
-import type {
-  VariantInventoryItem,
-  StockValidationResult,
-} from "~/lib/services/inventory-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-const QUERY_KEYS = {
-  variantInventory: (variantId: string) => ["variant-inventory", variantId],
-  allVariantInventory: ["variant-inventory"],
-} as const;
+/** Inventory item for a product variant */
+export interface VariantInventoryItem {
+  id: string;
+  variantId: string;
+  quantity: string;
+  updatedAt: string;
+}
+
+/** Result of stock validation */
+export interface StockValidationResult {
+  available: boolean;
+  requestedQty: number;
+  availableQty: number;
+  variantId?: string;
+}
 
 /**
  * Get all variant inventory items for the business
+ * @deprecated No batch inventory API endpoint exists. Consider fetching per-variant instead.
  */
 export function useVariantInventory() {
-  const inventoryService = useEngineService<InventoryService>("inventory");
-
   return useQuery({
-    queryKey: QUERY_KEYS.allVariantInventory,
+    queryKey: queryKeys.inventory.all,
     queryFn: async () => {
-      return inventoryService.getAllVariantInventory();
+      throw new Error("Batch inventory fetch is not supported by the API. Use useVariantInventoryItem instead.");
     },
   });
 }
@@ -34,13 +41,12 @@ export function useVariantInventory() {
  * Get inventory for a specific variant
  */
 export function useVariantInventoryItem(variantId: string | null) {
-  const inventoryService = useEngineService<InventoryService>("inventory");
-
   return useQuery({
-    queryKey: variantId ? QUERY_KEYS.variantInventory(variantId) : ["variant-inventory", "detail"],
+    queryKey: variantId ? queryKeys.inventory.detail(variantId) : ["inventory", "detail"],
     queryFn: async () => {
       if (!variantId) return null;
-      return inventoryService.getInventoryForVariant(variantId);
+      const response = await api.variants({ id: variantId }).inventory.get();
+      return extractData(response) as unknown as VariantInventoryItem;
     },
     enabled: !!variantId,
   });
@@ -48,10 +54,9 @@ export function useVariantInventoryItem(variantId: string | null) {
 
 /**
  * Validate stock availability for a variant (for sales)
+ * Fetches inventory via API and validates locally.
  */
 export function useValidateVariantStock() {
-  const inventoryService = useEngineService<InventoryService>("inventory");
-
   return useMutation({
     mutationFn: async ({
       variantId,
@@ -60,25 +65,47 @@ export function useValidateVariantStock() {
       variantId: string;
       requestedQty: number;
     }): Promise<StockValidationResult> => {
-      return inventoryService.validateVariantStock(variantId, requestedQty);
+      const response = await api.variants({ id: variantId }).inventory.get();
+      const inventory = extractData(response) as unknown as VariantInventoryItem;
+      const availableQty = inventory ? parseFloat(inventory.quantity) : 0;
+
+      return {
+        available: availableQty >= requestedQty,
+        requestedQty,
+        availableQty,
+        variantId,
+      };
     },
   });
 }
 
 /**
  * Batch validate stock for multiple items (cart validation)
+ * Fetches inventory per variant via API and validates locally.
  */
 export function useValidateBatchStock() {
-  const inventoryService = useEngineService<InventoryService>("inventory");
-
   return useMutation({
     mutationFn: async (
       items: Array<{ variantId: string; requestedQty: number }>
     ): Promise<StockValidationResult[]> => {
-      return inventoryService.validateBatchStock(items);
+      const results: StockValidationResult[] = [];
+
+      for (const item of items) {
+        const response = await api.variants({ id: item.variantId }).inventory.get();
+        const inventory = extractData(response) as unknown as VariantInventoryItem;
+        const availableQty = inventory ? parseFloat(inventory.quantity) : 0;
+
+        results.push({
+          available: availableQty >= item.requestedQty,
+          requestedQty: item.requestedQty,
+          availableQty,
+          variantId: item.variantId,
+        });
+      }
+
+      return results;
     },
   });
 }
 
-// Re-export types for convenience
-export type { VariantInventoryItem, StockValidationResult };
+

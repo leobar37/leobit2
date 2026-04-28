@@ -1,6 +1,6 @@
 import { Calendar, Scale, User } from "lucide-react";
 import { formatDeliveryCountdown } from "~/lib/date-utils";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
 import { cn, formatCurrency } from "~/lib/utils";
 import { SaleDetailSection } from "./sale-detail-section";
 

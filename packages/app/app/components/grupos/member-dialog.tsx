@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 
 interface Member {
   customerId: string;
@@ -51,7 +51,7 @@ export function MemberDialog({
   onAddMembers,
   isManagingMembers,
 }: MemberDialogProps) {
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

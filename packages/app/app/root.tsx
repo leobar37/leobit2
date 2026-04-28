@@ -153,23 +153,6 @@ export default function App() {
     }
   }, []);
 
-  // Suppress known PGlite duplicate key errors during sync
-  useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const errorMessage = String(event.reason);
-      if (
-        errorMessage.includes("duplicate key value violates unique constraint") ||
-        errorMessage.includes("_pkey")
-      ) {
-        // Silently ignore - these can occur during offline sync reconciliation
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-    return () => window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-  }, []);
-
   // Handle module loading errors (stale service worker cache)
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {

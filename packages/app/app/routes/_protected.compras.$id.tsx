@@ -60,7 +60,7 @@ export default function PurchaseDetailPage() {
   const { data: purchase, isLoading } = usePurchase(id!);
   const { data: business } = useBusiness();
   const businessId = business?.id || "";
-  const { data: suppliers } = useSuppliers(businessId);
+  const { data: suppliers } = useSuppliers();
   const supplier = purchase?.supplierId && suppliers
     ? suppliers.find((s: { id: string }) => s.id === purchase.supplierId)
     : null;
@@ -274,9 +274,9 @@ export default function PurchaseDetailPage() {
         </Card>
 
         <div className="space-y-3">
-          {(purchase.status === "pending" || purchase.status === "draft") && (
+          {purchase.status === "pending" && (
             <Button
-              onClick={() => id && navigate(getPurchaseEditorPath(id, purchase.status === "draft"))}
+              onClick={() => id && navigate(getPurchaseEditorPath(id, false))}
               className="w-full bg-orange-500 hover:bg-orange-600 rounded-xl"
             >
               <Pencil className="h-4 w-4 mr-2" />

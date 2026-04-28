@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, uploadFile } from "~/lib/api-client";
-import { getFileUploadService } from "@avileo/drizzle-sync/client";
 
 export interface FileRecord {
   id: string;
@@ -87,7 +86,6 @@ export function useUploadFile(options?: UploadFileOptions) {
 }
 
 export async function uploadFileNow(file: File): Promise<FileUploadResponse> {
-  const fileService = getFileUploadService();
   const fileId = crypto.randomUUID();
 
   const formData = new FormData();

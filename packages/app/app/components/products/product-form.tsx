@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
-import type { Products as Product } from "~/lib/sync/generated/schema";
+import type { Product } from "@avileo/shared";
 import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
 interface ProductFormProps {

@@ -13,7 +13,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createModal } from "~/lib/modal/create-modal";
 import { cn } from "~/lib/utils";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 import {
   useCustomerGroups,
   useCreateCustomerGroup,
@@ -30,7 +30,7 @@ function BulkGroupAssignmentDrawerContent({
   customerIds,
   onAssigned,
 }: BulkGroupAssignmentData & { close: () => void }) {
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
   const { data: groups = [], isLoading } = useCustomerGroups();
   const createGroup = useCreateCustomerGroup();
   const addMembers = useAddMembersToGroup();
@@ -67,7 +67,9 @@ function BulkGroupAssignmentDrawerContent({
 
     try {
       const result = await createGroup.mutateAsync({ name, customerIds });
-      const createdGroup = "group" in result ? result.group : result;
+      const createdGroup = ("group" in (result as unknown as object)
+        ? (result as unknown as { group: { id: string } }).group
+        : result) as { id: string };
       setSelectedGroupIds((prev) => new Set(prev).add(createdGroup.id));
       setNewGroupName("");
       setIsCreateExpanded(false);

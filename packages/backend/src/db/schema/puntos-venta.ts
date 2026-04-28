@@ -13,7 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
-import { syncStatusEnum } from "./enums";
 
 export const puntoVentaTypes = ["carro", "local", "mercado", "ruta", "otro"] as const;
 export type PuntoVentaType = (typeof puntoVentaTypes)[number];
@@ -35,12 +34,6 @@ export const puntosVenta = pgTable(
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
 
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -50,7 +43,6 @@ export const puntosVenta = pgTable(
     index("idx_puntos_venta_is_active").on(table.isActive),
     index("idx_puntos_venta_sort_order").on(table.sortOrder),
     index("idx_puntos_venta_type").on(table.type),
-    index("idx_puntos_venta_sync_status").on(table.syncStatus),
   ]
 );
 

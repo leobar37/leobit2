@@ -23,8 +23,6 @@ export interface UpdateProductUnitInput {
   baseUnitQuantity?: string;
   isActive?: boolean;
   sortOrder?: number;
-  syncStatus?: "pending" | "synced" | "error";
-  syncAttempts?: number;
 }
 
 export class ProductUnitRepository {
@@ -108,10 +106,6 @@ export class ProductUnitRepository {
         }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
-        ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),
-        ...(data.syncAttempts !== undefined && {
-          syncAttempts: data.syncAttempts,
-        }),
         updatedAt: new Date(),
       })
       .where(

@@ -11,14 +11,16 @@ import { formatDeliveryCountdown, formatRecentDateTime } from "~/lib/date-utils"
 import { cn, formatCurrency } from "~/lib/utils";
 import { useDeleteSale } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
+
+type SaleWithOptionalSync = Sale & { syncStatus?: string };
 
 interface SaleCardProps {
-  sale: Sale;
+  sale: SaleWithOptionalSync;
   onClick?: () => void;
 }
 
-const syncStatusLabel: Record<Sale["syncStatus"], string> = {
+const syncStatusLabel: Record<string, string> = {
   pending: "Pendiente",
   synced: "Sincronizado",
   error: "Error",
@@ -128,19 +130,21 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                   {saleStatusLabel[sale.status]}
                 </Badge>
 
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
-                    sale.syncStatus === "error"
-                      ? "bg-red-100 text-red-700"
-                      : sale.syncStatus === "pending"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-slate-100 text-slate-700"
-                  )}
-                >
-                  {syncStatusLabel[sale.syncStatus]}
-                </Badge>
+                {sale.syncStatus && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
+                      sale.syncStatus === "error"
+                        ? "bg-red-100 text-red-700"
+                        : sale.syncStatus === "pending"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-slate-100 text-slate-700"
+                    )}
+                  >
+                    {syncStatusLabel[sale.syncStatus]}
+                  </Badge>
+                )}
 
                 {hasBalanceDue && (
                   <Badge

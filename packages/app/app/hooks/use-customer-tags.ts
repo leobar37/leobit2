@@ -1,12 +1,19 @@
 /**
- * Customer Tags Hook (Service-based)
- * Reactively fetch and mutate customer-tag assignments using PGlite services
+ * Customer Tags Hook (API-based)
+ * Reactively fetch and mutate customer-tag assignments using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerTagService } from "~/lib/services/customer-tag-service";
-import type { CustomerTags as CustomerTag, Tags as Tag } from "~/lib/sync/generated/schema";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
+
+export interface CustomerTagItem {
+  tagId: string;
+  tagName: string;
+  tagColor: string;
+  assignedAt: string;
+}
 
 export const customerTagsKeys = {
   customerTags: (customerId: string) => ["customer-tags", customerId] as const,
@@ -17,13 +24,12 @@ export const customerTagsKeys = {
  * Get all tags for a specific customer
  */
 export function useCustomerTags(customerId: string | null) {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
-
   return useQuery({
     queryKey: customerId ? customerTagsKeys.customerTags(customerId) : ["customer-tags", "none"],
     queryFn: async () => {
       if (!customerId) return [];
-      return customerTagService.getCustomerTags(customerId);
+      const response = await api.customers({ id: customerId }).tags.get();
+      return extractData(response) as unknown as CustomerTagItem[];
     },
     enabled: !!customerId,
   });
@@ -35,23 +41,30 @@ export function useCustomerTags(customerId: string | null) {
 export function useCustomerTagIds(customerId: string | null) {
   const { data: customerTags } = useCustomerTags(customerId);
 
-  return customerTags?.map(ct => ct.tagId) ?? [];
+  return customerTags?.map((ct) => ct.tagId) ?? [];
 }
 
 /**
  * Add a tag to a customer
  */
 export function useAddCustomerTag() {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }): Promise<void> => {
-      return customerTagService.addTag(customerId, tagId);
+      // Get current tags
+      const response = await api.customers({ id: customerId }).tags.get();
+      const currentTags = extractData(response) as unknown as CustomerTagItem[];
+      const tagIds = [...currentTags.map((t) => t.tagId), tagId];
+      const uniqueTagIds = [...new Set(tagIds)];
+
+      const assignResponse = await api.customers({ id: customerId }).tags.post({ tagIds: uniqueTagIds });
+      extractData(assignResponse);
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
       queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.tags([vars.customerId]) });
     },
   });
 }
@@ -60,16 +73,21 @@ export function useAddCustomerTag() {
  * Remove a tag from a customer
  */
 export function useRemoveCustomerTag() {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ customerId, tagId }: { customerId: string; tagId: string }): Promise<void> => {
-      return customerTagService.removeTag(customerId, tagId);
+      const response = await api.customers({ id: customerId }).tags.get();
+      const currentTags = extractData(response) as unknown as CustomerTagItem[];
+      const tagIds = currentTags.map((t) => t.tagId).filter((id) => id !== tagId);
+
+      const assignResponse = await api.customers({ id: customerId }).tags.post({ tagIds });
+      extractData(assignResponse);
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
       queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.tags([vars.customerId]) });
     },
   });
 }
@@ -78,16 +96,17 @@ export function useRemoveCustomerTag() {
  * Assign tags to a customer (replaces all existing tags)
  */
 export function useAssignCustomerTags() {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ customerId, tagIds }: { customerId: string; tagIds: string[] }): Promise<void> => {
-      return customerTagService.assignTags(customerId, tagIds);
+      const response = await api.customers({ id: customerId }).tags.post({ tagIds });
+      extractData(response);
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: customerTagsKeys.customerTags(vars.customerId) });
       queryClient.invalidateQueries({ queryKey: ["customer-tags-with-details", vars.customerId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.tags([vars.customerId]) });
     },
   });
 }

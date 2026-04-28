@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCancelSaleDialog } from "~/components/sales/cancel-sale-provider";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
 import { SaleShareDrawer } from "./sale-share-drawer";
 import { RescheduleSaleDialog } from "./reschedule-sale-dialog";
 

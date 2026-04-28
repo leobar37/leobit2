@@ -152,9 +152,6 @@ export class CustomerRepository {
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.address !== undefined && { address: data.address }),
         ...(data.notes !== undefined && { notes: data.notes }),
-        ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),
-        ...(data.syncAttempts !== undefined && { syncAttempts: data.syncAttempts }),
-        version: sql`${customers.version} + 1`,
         updatedAt: new Date(),
       })
       .where(and(

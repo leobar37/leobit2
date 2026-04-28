@@ -17,7 +17,6 @@ import {
   MapPin,
   Building2,
   AlertTriangle,
-  RefreshCw,
 } from "lucide-react";
 import {
   MinimalCard,
@@ -153,24 +152,6 @@ const whatsappConfigItem: ConfigItem = {
   iconBg: "bg-green-100",
 };
 
-const conflictosConfigItem: ConfigItem = {
-  icon: AlertTriangle,
-  title: "Conflictos",
-  description: "Resuelve conflictos de sincronización",
-  href: "/config/conflictos",
-  color: "text-orange-600",
-  iconBg: "bg-orange-100",
-};
-
-const syncConfigItem: ConfigItem = {
-  icon: RefreshCw,
-  title: "Sync",
-  description: "Administración de sincronización",
-  href: "/config/sync",
-  color: "text-blue-600",
-  iconBg: "bg-blue-100",
-};
-
 const stockAlertsConfigItem: ConfigItem = {
   icon: AlertTriangle,
   title: "Alertas de Stock",
@@ -200,8 +181,6 @@ export default function ConfigIndexPage() {
         tagsConfigItem,
         flagsConfigItem,
         whatsappConfigItem,
-        conflictosConfigItem,
-        syncConfigItem,
         ...baseConfigItems.slice(2),
       ]
     : baseConfigItems;

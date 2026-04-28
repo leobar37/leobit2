@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 import { useSales } from "./use-sales";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 
 interface CustomerHistory {
   totalPurchases: number;
@@ -59,7 +60,7 @@ const QUERY_KEYS = {
 } as const;
 
 export function useSaleAnalysis(saleId: string | null) {
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
   const { data: allSales = [] } = useSales();
 
   return useQuery({
@@ -70,17 +71,11 @@ export function useSaleAnalysis(saleId: string | null) {
       // Find sale in local data to check sync status
       const sale = allSales.find((s) => s.id === saleId);
 
-      // Only call API if sale is synced to backend
-      if (isOnline && sale?.syncStatus === "synced") {
+      // Only call API if online
+      if (isOnline) {
         try {
-          // Cast to any to handle the dynamic route - the endpoint exists in backend
-          const reportsApi = api.reports as any;
-          const { data, error } = await reportsApi["sale/:id/analysis"].get({
-            params: { id: saleId },
-          });
-          if (!error && data?.success && data?.data) {
-            return data.data as SaleAnalysis;
-          }
+          const response = await api.reports.sale({ id: saleId }).analysis.get();
+          return extractData(response) as SaleAnalysis;
         } catch {
           // Fall back to local calculation
         }

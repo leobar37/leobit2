@@ -7,7 +7,7 @@
 import { Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKilos } from "~/lib/utils";
-import type { DistribucionItemEnriched } from "~/lib/services/distribucion-service";
+import type { DistribucionItemEnriched } from "~/hooks/use-distribuciones";
 
 interface DistribucionItemsSummaryProps {
   items: DistribucionItemEnriched[];

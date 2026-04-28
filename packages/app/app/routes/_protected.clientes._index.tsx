@@ -65,17 +65,10 @@ export default function CustomersPage() {
     for (const tag of customerTags) {
       const existing = map.get(tag.customerId) ?? [];
       existing.push({
-        customerId: tag.customerId,
         tagId: tag.tagId,
         tagName: tag.tagName,
         tagColor: tag.tagColor,
-        assignedAt: new Date(),
-        assignedBy: null,
-        syncStatus: "synced",
-        syncAttempts: 0,
-        version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        assignedAt: new Date().toISOString(),
       });
       map.set(tag.customerId, existing);
     }
@@ -236,7 +229,7 @@ export default function CustomersPage() {
             {customers.map((customer) => (
               <CustomerCard
                 key={customer.id}
-                customer={customer}
+                customer={customer as unknown as import("@avileo/shared").Customer}
                 compact
                 selectable
                 selected={selectedCustomerIds.has(customer.id)}

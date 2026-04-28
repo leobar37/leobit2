@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
 import { useSaleEditorState } from "~/hooks/use-sale-editor-state";
 import { useSale } from "~/hooks/use-sales-db";
-import type { SaleItem } from "~/lib/services/sale-service";
+import type { SaleItem } from "~/hooks/use-sales";
 
 interface NewSaleContextType {
   saleId: string | null;

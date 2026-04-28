@@ -17,10 +17,10 @@ import { formatKilos, formatCurrency } from "~/lib/utils";
 import { BusinessUserRole } from "@avileo/shared";
 import { useMemo, useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 import { createModal } from "~/lib/modal/create-modal";
 import { Loader2 } from "lucide-react";
-import type { DistribucionWithItems } from "~/lib/services/distribucion-service";
+import type { DistribucionWithItems } from "~/hooks/use-distribuciones";
 
 function parseNumber(value: string | null): number {
   if (!value) return 0;
@@ -37,7 +37,7 @@ function CierreConfirmContent({
   close,
   distribucionId,
 }: { close: () => void } & CierreConfirmData) {
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
   const closeDistribucion = useCloseDistribucion();
   const [notaCierre, setNotaCierre] = useState("");
 
@@ -120,7 +120,7 @@ export default function MiDistribucionPage() {
   const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
   const createSale = useCreateSale();
   const cierreConfirm = useCierreConfirmDialog();
 

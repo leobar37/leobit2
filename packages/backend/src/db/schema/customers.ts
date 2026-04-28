@@ -12,7 +12,6 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { syncStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customerTags } from "./customer-tags";
 
@@ -29,13 +28,6 @@ export const customers = pgTable(
     address: text("address"),
     notes: text("notes"),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Relations - creado por un usuario dentro de un negocio
     businessId: uuid("business_id")
       .notNull()
@@ -50,7 +42,6 @@ export const customers = pgTable(
     index("idx_customers_name").on(table.name),
     index("idx_customers_dni").on(table.dni),
     index("idx_customers_business_id").on(table.businessId),
-    index("idx_customers_sync_status").on(table.syncStatus),
     index("idx_customers_created_by").on(table.createdBy),
     index("idx_customers_business_name").on(table.businessId, table.name),
     index("idx_customers_business_dni").on(table.businessId, table.dni),

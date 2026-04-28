@@ -3,7 +3,7 @@ import { formatNumber } from "~/lib/utils";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Products as Product } from "~/lib/sync/generated/schema";
+import type { Product } from "@avileo/shared";
 import type { ProductVariant } from "~/hooks/use-product-variants";
 import {
 	calculateKgProduct,

@@ -3,14 +3,13 @@ import { Package, Search, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SyncStatus } from "~/components/sync/sync-status";
 import { useProducts } from "~/hooks/use-products-live";
 import { useListSearch } from "~/hooks/use-list-search";
 import { ProductCard } from "@/components/products/product-card";
 import { useSetLayout } from "~/components/layout/app-layout";
 
 export default function ProductsPage() {
-  useSetLayout({ title: "Catálogo", actions: <SyncStatus /> });
+  useSetLayout({ title: "Catálogo" });
 
   const { data: products, isLoading, error } = useProducts();
 

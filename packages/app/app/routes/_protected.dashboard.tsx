@@ -17,7 +17,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
-import { useSyncStatus } from "~/hooks/use-sync-status";
 import { useProducts } from "~/hooks/use-products";
 import { useSales } from "~/hooks/use-sales";
 import { BusinessUserRole } from "@avileo/shared";
@@ -40,7 +39,6 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
-  const { data: syncStatus } = useSyncStatus();
 
   const [period, setPeriod] = useState<PeriodValue>({
     type: "day",
@@ -58,7 +56,6 @@ export default function DashboardPage() {
   const { data: sales = [] } = useSales();
 
   const isOnline = navigator.onLine;
-  const hasPending = syncStatus?.pending ? syncStatus.pending > 0 : false;
   const hasProducts = products.length > 0;
   const hasSales = sales.length > 0;
 
@@ -92,12 +89,6 @@ export default function DashboardPage() {
         <div className="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
           <WifiOff className="h-4 w-4" />
           Sin conexión - mostrando datos locales
-        </div>
-      )}
-      {isOnline && hasPending && (
-        <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
-          <CloudOff className="h-4 w-4" />
-          {syncStatus?.pending} operación{syncStatus?.pending !== 1 ? "es" : ""} pendiente{syncStatus?.pending !== 1 ? "s" : ""} de sincronizar
         </div>
       )}
 

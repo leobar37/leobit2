@@ -189,7 +189,6 @@ export default function ProveedorDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>Creado el {formatDate(supplier.createdAt)}</span>
-              <SyncBadge status={(supplier.syncStatus as "pending" | "synced" | "error") || "pending"} />
             </div>
           </CardContent>
         </Card>

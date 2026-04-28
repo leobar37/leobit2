@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { CreditCard, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
 import { cn, formatCurrency } from "~/lib/utils";
 import { SaleDetailSection } from "./sale-detail-section";
 

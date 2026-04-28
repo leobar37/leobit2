@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { BackgroundSyncBadge } from "~/components/sync/background-sync-badge";
 import { usePaginatedSales } from "~/hooks/use-sales";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useSaleFilters } from "~/hooks/use-sale-filters";
@@ -17,10 +16,10 @@ import {
   getSaleDetailPathWithReturn,
   getSaleEditorPathWithReturn,
 } from "~/lib/sales/navigation";
-import type { Sale as SaleCardData } from "~/lib/services/sale-service";
+import type { Sale as SaleCardData } from "~/hooks/use-sales";
 
 export default function SalesPage() {
-  useSetLayout({ title: "Ventas", actions: <BackgroundSyncBadge /> });
+  useSetLayout({ title: "Ventas" });
 
   const { data: miDistribucion } = useMiDistribucion();
   const navigate = useNavigate();

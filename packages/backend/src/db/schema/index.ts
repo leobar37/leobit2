@@ -29,7 +29,6 @@ export {
 export {
   userRoleEnum,
   businessUserRoleEnum,
-  syncStatusEnum,
   saleTypeEnum,
   transactionTypeEnum,
   paymentModeEnum,
@@ -205,12 +204,7 @@ export {
   type NewSyncOperation,
 } from "./sync-operations";
 
-export {
-  syncConflicts,
-  syncConflictsRelations,
-  type SyncConflict,
-  type NewSyncConflict,
-} from "./sync-conflicts";
+
 
 export {
   syncDeadLetter,

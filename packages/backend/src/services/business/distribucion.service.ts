@@ -143,8 +143,6 @@ export class DistribucionService {
       notaCreacion: data.notaCreacion,
       fecha,
       estado: "activo",
-      syncStatus: "synced",
-      syncAttempts: 0,
     }, tx);
 
     await dbOrTx.insert(syncOperations).values({
@@ -175,8 +173,6 @@ export class DistribucionService {
           cantidadAsignada: item.cantidadAsignada,
           cantidadVendida: "0",
           unidad: item.unidad,
-          syncStatus: "synced",
-          syncAttempts: 0,
         }, tx);
 
         await dbOrTx.insert(syncOperations).values({
@@ -558,8 +554,6 @@ export class DistribucionService {
         cantidadAsignada: item.cantidadAsignada,
         cantidadVendida: "0",
         unidad: item.unidad,
-        syncStatus: "synced",
-        syncAttempts: 0,
       });
     }
 
@@ -696,8 +690,6 @@ export class DistribucionService {
       cantidadAsignada: item.cantidadAsignada,
       cantidadVendida: "0",
       unidad: item.unidad,
-      syncStatus: "synced",
-      syncAttempts: 0,
     });
 
     // Register sync operation

@@ -1,27 +1,148 @@
 /**
- * Sales Hook (Service-based)
- * Reactively fetch and mutate sales using PGlite services
+ * Sales Hook (API-based)
+ * Reactively fetch and mutate sales using Eden Treaty API
  */
 
 import { useCallback } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { SaleService } from "~/lib/services/sale-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 import { useBusiness } from "~/hooks/use-business";
 import { useToastError } from "~/hooks/use-toast-error";
-import { useManualSync } from "~/hooks/use-manual-sync";
-import type {
-  Sale,
-  SaleWithItems,
-  SaleListItem,
-  SaleStatus,
-  CreateSaleInput,
-  CreateSaleItemInput,
-  UpdateSaleInput,
-  SalePageQuery,
-} from "~/lib/services/sale-service";
 
-export type { Sale, SaleWithItems, SaleListItem, SaleStatus, CreateSaleInput, CreateSaleItemInput, UpdateSaleInput };
+export type SaleStatus = "draft" | "confirmed" | "active" | "delivered" | "cancelled";
+export type SaleType = "instant_sale" | "pre_order";
+export type SalePaymentType = "contado" | "credito";
+
+export interface SaleCustomer {
+  id: string;
+  name: string;
+  dni: string | null;
+  phone: string | null;
+}
+
+export interface SaleItem {
+  id: string;
+  businessId: string;
+  saleId: string;
+  productId: string;
+  variantId: string;
+  productName: string;
+  variantName: string;
+  quantity: string | null;
+  orderedQuantity: string | null;
+  deliveredQuantity: string | null;
+  unitPrice: string | null;
+  unitPriceQuoted: string | null;
+  unitPriceFinal: string | null;
+  subtotal: string;
+  isModified: boolean;
+  originalQuantity: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Sale {
+  id: string;
+  businessId: string;
+  customerId: string | null;
+  customer?: SaleCustomer | null;
+  sellerId: string;
+  distribucionId: string | null;
+  visitaId: string | null;
+  type: SaleType;
+  saleType: SalePaymentType;
+  paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null;
+  totalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  tara: string | null;
+  netWeight: string | null;
+  saleDate: string;
+  deliveryDate: string | null;
+  orderDate: string | null;
+  status: SaleStatus;
+  version: number;
+  allowCustomerEdit: boolean;
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  cancelReason: string | null;
+  refundAmount: string | null;
+  refundDate: string | null;
+  refundMethod: "efectivo" | "yape" | "plin" | "transferencia" | "saldo" | null;
+  refundReference: string | null;
+  refundNotes: string | null;
+  advancePaymentMethod: string | null;
+  advanceReferenceNumber: string | null;
+  advanceProofImageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SaleWithItems = Sale & { items: SaleItem[] };
+export type SaleListItem = Sale & { items?: SaleItem[] };
+
+export interface SalePageQuery {
+  limit: number;
+  offset: number;
+  customerId?: string;
+  status?: SaleStatus;
+  distribucionId?: string | "none" | "all";
+  search?: string;
+  type?: SaleType;
+  saleType?: SalePaymentType;
+  startDate?: string;
+  endDate?: string;
+  hasBalanceDue?: boolean;
+}
+
+export interface PaginatedSalesResult {
+  items: SaleListItem[];
+  total: number;
+}
+
+export interface CreateSaleInput {
+  customerId?: string;
+  sellerId: string;
+  distribucionId?: string;
+  visitaId?: string;
+  type?: SaleType;
+  saleType?: SalePaymentType;
+  totalAmount: number;
+  amountPaid?: number;
+  tara?: number;
+  netWeight?: number;
+  deliveryDate?: string;
+  orderDate?: string;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+}
+
+export interface CreateSaleItemInput {
+  productId: string;
+  variantId: string;
+  productName: string;
+  variantName: string;
+  quantity?: number;
+  orderedQuantity?: number;
+  unitPrice?: number;
+  unitPriceQuoted?: number;
+  subtotal: number;
+}
+
+export interface UpdateSaleInput {
+  customerId?: string;
+  saleType?: SalePaymentType;
+  type?: SaleType;
+  totalAmount?: number;
+  amountPaid?: number;
+  balanceDue?: number;
+  tara?: number;
+  netWeight?: number;
+  deliveryDate?: string;
+  orderDate?: string;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+}
 
 export interface CancelSaleInput {
   id: string;
@@ -31,59 +152,105 @@ export interface CancelSaleInput {
   refundReference?: string;
 }
 
-const QUERY_KEYS = {
-  sales: ["sales-new"],
-  sale: (id: string) => ["sales-new", id],
-  byCustomer: (customerId: string) => ["sales-new", "customer", customerId],
-  byStatus: (status: SaleStatus) => ["sales-new", "status", status],
-  page: (query: SalePageQuery) => ["sales-new", "page", query],
-} as const;
-
 interface SaleFilters {
   customerId?: string;
   status?: SaleStatus;
-  distribucionId?: string | 'none' | 'all';
+  distribucionId?: string | "none" | "all";
 }
 
-export interface PaginatedSalesResult {
-  items: SaleListItem[];
-  total: number;
+function toNumber(value: string | number | null | undefined): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function applyClientSideFilters(
+  sales: SaleListItem[],
+  filters?: SalePageQuery | SaleFilters
+): SaleListItem[] {
+  if (!filters) return sales;
+
+  return sales.filter((sale) => {
+    const pageFilters = filters as SalePageQuery;
+
+    if (pageFilters.customerId && sale.customerId !== pageFilters.customerId) {
+      return false;
+    }
+    if (pageFilters.status && sale.status !== pageFilters.status) {
+      return false;
+    }
+    if (pageFilters.distribucionId && pageFilters.distribucionId !== "all") {
+      if (pageFilters.distribucionId === "none") {
+        if (sale.distribucionId !== null) return false;
+      } else if (sale.distribucionId !== pageFilters.distribucionId) {
+        return false;
+      }
+    }
+    if (pageFilters.type && sale.type !== pageFilters.type) {
+      return false;
+    }
+    if (pageFilters.hasBalanceDue && toNumber(sale.balanceDue) <= 0) {
+      return false;
+    }
+    if (pageFilters.search?.trim()) {
+      const term = pageFilters.search.trim().toLowerCase();
+      const inId = sale.id.toLowerCase().includes(term);
+      const inCustomer = sale.customer?.name?.toLowerCase().includes(term) ?? false;
+      const inType = sale.saleType.toLowerCase().includes(term);
+      if (!inId && !inCustomer && !inType) return false;
+    }
+
+    return true;
+  });
 }
 
 /**
  * Get all sales with optional filters (paginated - max 50 per page)
  */
 export function useSales(filters?: SaleFilters) {
-  const saleService = useEngineService<SaleService>("sales");
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
     queryKey: filters
-      ? ["sales-new", "filtered", filters]
-      : QUERY_KEYS.sales,
+      ? queryKeys.sales.lists(filters as Record<string, unknown>)
+      : queryKeys.sales.all,
     queryFn: async () => {
-      const query: SalePageQuery = {
-        limit: DEFAULT_PAGE_SIZE,
-        offset: 0,
-        ...(filters?.customerId && { customerId: filters.customerId }),
-        ...(filters?.status && { status: filters.status }),
-        ...(filters?.distribucionId && filters.distribucionId !== 'all' && {
-          distribucionId: filters.distribucionId === 'none' ? 'none' : filters.distribucionId,
-        }),
-      };
-      const result = await saleService.findPageByBusiness(query);
-      return result.items;
+      const response = await api.sales.get({
+        query: {
+          limit: String(DEFAULT_PAGE_SIZE),
+          offset: "0",
+        },
+      });
+      const sales = extractData(response) as SaleListItem[];
+      return applyClientSideFilters(sales, filters);
     },
   });
 }
 
 export function usePaginatedSales(query: SalePageQuery) {
-  const saleService = useEngineService<SaleService>("sales");
-
   return useQuery({
-    queryKey: QUERY_KEYS.page(query),
+    queryKey: queryKeys.sales.lists((query as unknown) as Record<string, unknown>),
     queryFn: async (): Promise<PaginatedSalesResult> => {
-      return saleService.findPageByBusiness(query);
+      const fetchLimit = query.limit * 3;
+      const response = await api.sales.get({
+        query: {
+          ...(query.startDate && { startDate: query.startDate }),
+          ...(query.endDate && { endDate: query.endDate }),
+          ...(query.saleType && { saleType: query.saleType }),
+          limit: String(fetchLimit),
+          offset: String(query.offset),
+        },
+      });
+      const sales = extractData(response) as SaleListItem[];
+      const filtered = applyClientSideFilters(sales, query);
+
+      return {
+        items: filtered.slice(0, query.limit),
+        total: filtered.length,
+      };
     },
     placeholderData: keepPreviousData,
   });
@@ -93,13 +260,12 @@ export function usePaginatedSales(query: SalePageQuery) {
  * Get a single sale by ID with items
  */
 export function useSale(id: string | null) {
-  const saleService = useEngineService<SaleService>("sales");
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.sale(id) : ["sales-new", "detail"],
+    queryKey: id ? queryKeys.sales.detail(id) : ["sales", "detail"],
     queryFn: async (): Promise<SaleWithItems | null> => {
       if (!id) return null;
-      return saleService.findById(id);
+      const response = await api.sales({ id }).get();
+      return extractData(response) as SaleWithItems;
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -108,28 +274,21 @@ export function useSale(id: string | null) {
 
 /**
  * Hook to check the sync status of a specific sale
- * Returns sync status information useful for UI decisions
+ * Simplified for API-based architecture - always reports synced
  */
 export function useSaleSyncStatus(saleId: string | null) {
   const { data: sale, isLoading, error } = useSale(saleId);
-  const { pushNow } = useManualSync();
-  const queryClient = useQueryClient();
 
   const ensureSynced = useCallback(async (): Promise<boolean> => {
-    if (sale?.syncStatus === "synced") return true;
-    const result = await pushNow();
-    if (result.failed === 0) {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(saleId!) });
-    }
-    return result.failed === 0;
-  }, [sale?.syncStatus, pushNow, queryClient, saleId]);
+    return true;
+  }, []);
 
   return {
-    isSynced: sale?.syncStatus === "synced",
-    isPending: sale?.syncStatus === "pending",
-    hasSyncError: sale?.syncStatus === "error",
-    syncAttempts: sale?.syncAttempts ?? 0,
-    syncStatus: sale?.syncStatus ?? "pending",
+    isSynced: true,
+    isPending: false,
+    hasSyncError: false,
+    syncAttempts: 0,
+    syncStatus: "synced" as const,
     sale,
     isLoading,
     error,
@@ -141,18 +300,19 @@ export function useSaleSyncStatus(saleId: string | null) {
  * Get sales by customer ID (paginated)
  */
 export function useSalesByCustomer(customerId: string) {
-  const saleService = useEngineService<SaleService>("sales");
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
-    queryKey: QUERY_KEYS.byCustomer(customerId),
+    queryKey: queryKeys.sales.byCustomer(customerId),
     queryFn: async () => {
-      const result = await saleService.findPageByBusiness({
-        limit: DEFAULT_PAGE_SIZE,
-        offset: 0,
-        customerId,
+      const response = await api.sales.get({
+        query: {
+          limit: String(DEFAULT_PAGE_SIZE),
+          offset: "0",
+        },
       });
-      return result.items;
+      const sales = extractData(response) as SaleListItem[];
+      return sales.filter((sale) => sale.customerId === customerId);
     },
     enabled: !!customerId,
   });
@@ -162,18 +322,19 @@ export function useSalesByCustomer(customerId: string) {
  * Get sales by status (paginated)
  */
 export function useSalesByStatus(status: SaleStatus) {
-  const saleService = useEngineService<SaleService>("sales");
   const DEFAULT_PAGE_SIZE = 50;
 
   return useQuery({
-    queryKey: QUERY_KEYS.byStatus(status),
+    queryKey: queryKeys.sales.byStatus(status),
     queryFn: async () => {
-      const result = await saleService.findPageByBusiness({
-        limit: DEFAULT_PAGE_SIZE,
-        offset: 0,
-        status,
+      const response = await api.sales.get({
+        query: {
+          limit: String(DEFAULT_PAGE_SIZE),
+          offset: "0",
+        },
       });
-      return result.items;
+      const sales = extractData(response) as SaleListItem[];
+      return sales.filter((sale) => sale.status === status);
     },
   });
 }
@@ -182,7 +343,6 @@ export function useSalesByStatus(status: SaleStatus) {
  * Create a new sale with items
  */
 export function useCreateSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -193,11 +353,36 @@ export function useCreateSale() {
       sale: CreateSaleInput;
       items: CreateSaleItemInput[];
     }): Promise<Sale> => {
-      return saleService.createWithItems(sale, items);
+      const response = await api.sales.post({
+        id: undefined,
+        customerId: sale.customerId,
+        distribucionId: sale.distribucionId,
+        visitaId: sale.visitaId,
+        type: sale.type,
+        saleType: sale.saleType ?? "contado",
+        totalAmount: sale.totalAmount,
+        amountPaid: sale.amountPaid ?? 0,
+        tara: sale.tara,
+        netWeight: sale.netWeight,
+        deliveryDate: sale.deliveryDate,
+        orderDate: sale.orderDate,
+        items: items.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          variantId: item.variantId,
+          variantName: item.variantName,
+          quantity: item.quantity,
+          orderedQuantity: item.orderedQuantity,
+          unitPrice: item.unitPrice,
+          unitPriceQuoted: item.unitPriceQuoted,
+          subtotal: item.subtotal,
+        })),
+      } as any);
+      return extractData(response) as Sale;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({ queryKey: ["sales-new", "page"], exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
     },
   });
 }
@@ -206,7 +391,6 @@ export function useCreateSale() {
  * Create a draft sale without items and return the created sale
  */
 export function useCreateDraftSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
   const { data: business } = useBusiness();
 
@@ -219,23 +403,25 @@ export function useCreateDraftSale() {
       deliveryDate?: string;
     }): Promise<Sale> => {
       const perfStart = performance.now();
-
       const sellerId = business?.businessUserId;
 
       if (!sellerId) {
-        console.log("[useCreateDraftSale] ERROR: No sellerId available");
         throw new Error("Business seller is not available");
       }
 
-      const sale = await saleService.createDraft({
-        sellerId,
-        type: options?.type ?? "instant_sale",
+      const response = await api.sales.post({
         saleType: "contado",
+        totalAmount: 0,
+        amountPaid: 0,
+        type: options?.type ?? "instant_sale",
         customerId: options?.customerId,
         distribucionId: options?.distribucionId,
         visitaId: options?.visitaId,
         deliveryDate: options?.deliveryDate,
-      });
+        items: [],
+      } as any);
+
+      const sale = extractData(response) as Sale;
       console.log("[Perf][useCreateDraftSale] mutationFn", {
         saleId: sale.id,
         totalMs: Number((performance.now() - perfStart).toFixed(2)),
@@ -243,10 +429,11 @@ export function useCreateDraftSale() {
       return sale;
     },
     onSuccess: (sale) => {
-      queryClient.setQueryData(QUERY_KEYS.sale(sale.id), {
+      queryClient.setQueryData(queryKeys.sales.detail(sale.id), {
         ...sale,
         items: [],
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
     },
   });
 }
@@ -255,18 +442,18 @@ export function useCreateDraftSale() {
  * Confirm a sale (draft -> active)
  */
 export function useConfirmSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      return saleService.confirm(id);
+      const response = await api.sales({ id }).confirm.post({});
+      extractData(response);
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("active") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("draft") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("active") });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
     },
@@ -277,27 +464,24 @@ export function useConfirmSale() {
  * Confirm a pre_order (draft -> confirmed)
  */
 export function useConfirmPreOrder() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
   const { showError } = useToastError();
 
   return useMutation({
     mutationFn: async ({ id, baseVersion }: { id: string; baseVersion: number }): Promise<void> => {
-      return saleService.confirmPreOrder(id, baseVersion);
+      const response = await api.sales({ id }).confirm.post({ baseVersion });
+      extractData(response);
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.byStatus("confirmed"),
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("draft") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("confirmed") });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : "Error al confirmar el pedido";
-      // Check if it's a version conflict error
       if (message.includes("modificada") || message.includes("modificado")) {
         showError("Conflicto de versión", {
           description: "Esta venta fue modificada. Refresca la página e intenta de nuevo.",
@@ -314,22 +498,18 @@ export function useConfirmPreOrder() {
  * Deliver a pre_order (confirmed -> delivered)
  */
 export function useDeliverSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      return saleService.deliver(id);
+    mutationFn: async ({ id, baseVersion }: { id: string; baseVersion: number }): Promise<void> => {
+      const response = await api.sales({ id }).deliver.post({ baseVersion });
+      extractData(response);
     },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.byStatus("confirmed"),
-      });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.byStatus("delivered"),
-      });
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("confirmed") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("delivered") });
     },
   });
 }
@@ -338,21 +518,21 @@ export function useDeliverSale() {
  * Cancel a sale
  */
 export function useCancelSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      reason,
-    }: CancelSaleInput): Promise<void> => {
-      return saleService.cancel(id, reason);
+    mutationFn: async ({ id, reason, refundAmount, refundMethod, refundReference }: CancelSaleInput): Promise<void> => {
+      const response = await api.sales({ id }).cancel.post({
+        reason,
+        refundAmount,
+        refundMethod,
+        refundReference,
+      });
+      extractData(response);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.sale(variables.id),
-      });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
     },
   });
 }
@@ -361,7 +541,6 @@ export function useCancelSale() {
  * Update a sale
  */
 export function useUpdateSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -372,15 +551,21 @@ export function useUpdateSale() {
       id: string;
       input: UpdateSaleInput;
     }): Promise<void> => {
-      return saleService.update(id, input);
+      const response = await api.sales({ id }).patch({
+        customerId: input.customerId ?? null,
+        deliveryDate: input.deliveryDate ?? null,
+        saleType: input.saleType,
+        paymentMode: input.paymentMode ?? null,
+        totalAmount: input.totalAmount,
+        amountPaid: input.amountPaid,
+      });
+      extractData(response);
     },
     onSuccess: async (_data, variables) => {
-      // Apply partial optimistic update to sale detail cache
       queryClient.setQueryData(
-        QUERY_KEYS.sale(variables.id),
+        queryKeys.sales.detail(variables.id),
         (previous: SaleWithItems | null | undefined) => {
           if (!previous) return previous;
-
           return {
             ...previous,
             ...variables.input,
@@ -388,42 +573,35 @@ export function useUpdateSale() {
           };
         }
       );
-
-      // Invalidate page/list queries so next fetch gets fresh data
-      queryClient.invalidateQueries({ queryKey: ["sales-new", "page"], exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
     },
     onError: (_error, variables) => {
-      // On error, invalidate the sale cache so the next read
-      // fetches authoritative data from the server instead of
-      // keeping the stale partial update from onSettled
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(variables.id) });
     },
   });
 }
 
 /**
  * Delete a draft sale (hard delete) or cancel a processed sale (soft delete)
- * All operations go through the sync engine
  */
 export function useDeleteSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }): Promise<void> => {
       if (status === "draft") {
-        // Hard delete for drafts
-        return saleService.delete(id);
+        const response = await api.sales({ id }).delete();
+        if (response.error) throw new Error(String(response.error.value));
       } else {
-        // Soft delete (cancel) for processed sales
-        return saleService.cancel(id, "Cancelado por el usuario");
+        const response = await api.sales({ id }).cancel.post({ reason: "Cancelado por el usuario" });
+        extractData(response);
       }
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sale(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sales });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("draft") });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.byStatus("cancelled") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("draft") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.byStatus("cancelled") });
     },
   });
 }

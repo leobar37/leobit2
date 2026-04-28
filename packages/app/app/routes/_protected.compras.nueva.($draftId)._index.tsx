@@ -25,7 +25,7 @@ function DraftIndicator() {
     );
   }
 
-  if (!purchase || purchase.status !== "draft") return null;
+  if (!purchase) return null;
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">

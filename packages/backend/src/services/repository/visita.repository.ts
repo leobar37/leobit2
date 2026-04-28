@@ -45,8 +45,6 @@ export class VisitaRepository {
         status: visitas.status,
         motivoNoCompra: visitas.motivoNoCompra,
         saleId: visitas.saleId,
-        syncStatus: visitas.syncStatus,
-        syncAttempts: visitas.syncAttempts,
         createdAt: visitas.createdAt,
         updatedAt: visitas.updatedAt,
         customerName: customers.name,
@@ -77,8 +75,6 @@ export class VisitaRepository {
         status: visitas.status,
         motivoNoCompra: visitas.motivoNoCompra,
         saleId: visitas.saleId,
-        syncStatus: visitas.syncStatus,
-        syncAttempts: visitas.syncAttempts,
         createdAt: visitas.createdAt,
         updatedAt: visitas.updatedAt,
         customerName: customers.name,
@@ -108,8 +104,6 @@ export class VisitaRepository {
         vendedorId: ctx.businessUserId,
         businessId: ctx.businessId,
         status: "pendiente",
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 
@@ -130,8 +124,6 @@ export class VisitaRepository {
       vendedorId: ctx.businessUserId,
       businessId: ctx.businessId,
       status: "pendiente",
-      syncStatus: "synced",
-      syncAttempts: 0,
     }));
 
     const dbOrTx = tx || db;

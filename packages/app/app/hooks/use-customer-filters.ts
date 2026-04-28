@@ -1,13 +1,12 @@
 import { useMemo } from "react";
 import { useQueryState, parseAsArrayOf, parseAsString } from "nuqs";
-import { useQuery } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerTagService } from "~/lib/services/customer-tag-service";
 import { filterBySearch, useDebounce, type SearchableField } from "~/lib/search";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
 
-interface CustomerWithTagIds extends Customer {
-  tagIds: string[];
+interface Customer {
+  id: string;
+  name: string;
+  dni?: string | null;
+  phone?: string | null;
 }
 
 interface UseCustomerFiltersParams {
@@ -29,8 +28,6 @@ interface UseCustomerFiltersResult {
   isFiltering: boolean;
 }
 
-const ALL_CUSTOMER_TAGS_KEY = ["all-customer-tags"] as const;
-
 export function useCustomerFilters({
   customers,
   searchFields = [
@@ -39,10 +36,7 @@ export function useCustomerFilters({
     (customer) => customer.phone ?? undefined,
   ],
   debounceMs = 300,
-  loadTagRelations = true,
 }: UseCustomerFiltersParams = {}): UseCustomerFiltersResult {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
-
   const [tagIds, setTagIds] = useQueryState(
     "tags",
     parseAsArrayOf(parseAsString).withDefault([])
@@ -60,51 +54,20 @@ export function useCustomerFilters({
 
   const debouncedSearch = useDebounce(search, debounceMs);
 
-  const { data: allCustomerTags } = useQuery({
-    queryKey: ALL_CUSTOMER_TAGS_KEY,
-    queryFn: async () => {
-      return customerTagService.getAllCustomerTags();
-    },
-    staleTime: 1000 * 60,
-    enabled: loadTagRelations,
-  });
-
-  const customersWithTagIds = useMemo<CustomerWithTagIds[]>(() => {
-    if (!customers) return [];
-
-    const tagMap = new Map<string, string[]>();
-    for (const ct of allCustomerTags ?? []) {
-      const existing = tagMap.get(ct.customerId) ?? [];
-      existing.push(ct.tagId);
-      tagMap.set(ct.customerId, existing);
-    }
-
-    return customers.map((customer) => ({
-      ...customer,
-      tagIds: tagMap.get(customer.id) ?? [],
-    }));
-  }, [customers, allCustomerTags]);
-
   const filteredCustomers = useMemo(() => {
-    if (!customersWithTagIds || customersWithTagIds.length === 0) {
+    if (!customers || customers.length === 0) {
       return [];
     }
 
-    const filtered = filterBySearch(customersWithTagIds, {
+    return filterBySearch(customers, {
       search: debouncedSearch,
       fields: searchFields,
     });
+  }, [customers, debouncedSearch, searchFields]);
 
-    if (tagIds.length === 0) {
-      return filtered;
-    }
-
-    return filtered.filter((customer) =>
-      tagIds.every((tagId) => customer.tagIds.includes(tagId))
-    );
-  }, [customersWithTagIds, debouncedSearch, searchFields, tagIds]);
-
-  const handleSetTagIds = (value: string[] | ((prev: string[]) => string[])) => {
+  const handleSetTagIds = (
+    value: string[] | ((prev: string[]) => string[])
+  ) => {
     if (typeof value === "function") {
       setTagIds(value(tagIds));
     } else {
@@ -112,7 +75,9 @@ export function useCustomerFilters({
     }
   };
 
-  const handleSetGroupIds = (value: string[] | ((prev: string[]) => string[])) => {
+  const handleSetGroupIds = (
+    value: string[] | ((prev: string[]) => string[])
+  ) => {
     if (typeof value === "function") {
       setGroupIds(value(groupIds));
     } else {

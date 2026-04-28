@@ -406,8 +406,6 @@ async function seedRealCustomers(ctx: RequestContext, customersData: any[]) {
       phone: customer.phone,
       address: customer.address,
       notes: customer.notes,
-      syncStatus: customer.syncStatus || "synced",
-      syncAttempts: customer.syncAttempts || 0,
       createdBy: customer.createdBy,
       createdAt: new Date(customer.createdAt),
       updatedAt: new Date(customer.updatedAt),

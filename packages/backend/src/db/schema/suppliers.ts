@@ -9,7 +9,7 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { supplierTypeEnum, syncStatusEnum } from "./enums";
+import { supplierTypeEnum } from "./enums";
 import { businesses } from "./businesses";
 
 export const suppliers = pgTable(
@@ -36,13 +36,6 @@ export const suppliers = pgTable(
     notes: text("notes"),
 
     isActive: boolean("is_active").notNull().default(true),
-
-    // Sync fields for offline-first support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

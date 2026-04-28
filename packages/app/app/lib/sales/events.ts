@@ -1,5 +1,5 @@
 import type { CartItem, PaymentMode } from "./types";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
+import type { Customer } from "@avileo/shared";
 
 type EventMap = {
   "cart:add": { item: CartItem };

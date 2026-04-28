@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { PGlite } from "@electric-sql/pglite";
 import type { Business } from "@avileo/shared";
 import { offlineCache } from "~/lib/cache";
 
@@ -11,7 +10,7 @@ interface CachedBusinessData {
   fromCache: true;
 }
 
-export function useCachedBusiness(pg: PGlite | null) {
+export function useCachedBusiness(pg: unknown | null) {
   return useQuery({
     queryKey: ["cached-business"],
     queryFn: async () => {
@@ -38,10 +37,10 @@ export function useCachedBusiness(pg: PGlite | null) {
   });
 }
 
-export async function setCachedBusiness(pg: PGlite, data: CachedBusinessData): Promise<void> {
+export async function setCachedBusiness(pg: unknown, data: CachedBusinessData): Promise<void> {
   await offlineCache.set(pg, CACHE_KEY, data, CACHE_TTL_MS);
 }
 
-export async function clearCachedBusiness(pg: PGlite): Promise<void> {
+export async function clearCachedBusiness(pg: unknown): Promise<void> {
   await offlineCache.remove(pg, CACHE_KEY);
 }

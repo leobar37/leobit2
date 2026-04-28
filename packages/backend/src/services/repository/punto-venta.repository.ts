@@ -46,7 +46,7 @@ export class PuntoVentaRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewPuntoVenta, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">,
+    data: Omit<NewPuntoVenta, "businessId" | "id" | "createdAt" | "updatedAt">,
     tx?: DbTransaction
   ): Promise<PuntoVenta> {
     const dbOrTx = tx || db;
@@ -55,8 +55,6 @@ export class PuntoVentaRepository {
       .values({
         ...data,
         businessId: ctx.businessId,
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 
@@ -66,7 +64,7 @@ export class PuntoVentaRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewPuntoVenta, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">>,
+    data: Partial<Omit<NewPuntoVenta, "businessId" | "id" | "createdAt" | "updatedAt">>,
     tx?: DbTransaction
   ): Promise<PuntoVenta | undefined> {
     const dbOrTx = tx || db;
@@ -80,7 +78,6 @@ export class PuntoVentaRepository {
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         updatedAt: new Date(),
-        syncStatus: "synced",
       })
       .where(and(
         eq(puntosVenta.id, id),

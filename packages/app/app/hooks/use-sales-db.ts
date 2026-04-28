@@ -10,10 +10,10 @@ import {
   useDeliverSale,
 } from "./use-sales";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { SaleService } from "~/lib/services/sale-service";
-import { ProductService } from "~/lib/services/product-service";
-import type { SaleWithItems, SaleItem } from "~/lib/services/sale-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
+import type { SaleWithItems, SaleItem, UpdateSaleInput } from "./use-sales";
 
 export { useSales, useSalesByCustomer, useConfirmSale, useCancelSale, useDeleteSale, useDeliverSale };
 export { useUpdateSaleBase as useUpdateSale };
@@ -45,7 +45,6 @@ export function useSaleItems(saleId: string | null) {
 
 export function useCreateSale() {
   const baseMutation = useCreateSaleBase();
-  const productService = useEngineService<ProductService>("products");
 
   return {
     ...baseMutation,
@@ -69,10 +68,14 @@ export function useCreateSale() {
     }) => {
       const itemsWithNames = await Promise.all(
         params.items.map(async (item) => {
-          const product = await productService.findById(item.productId);
-          const variant = item.variantId
-            ? await productService.findVariantById(item.variantId)
-            : null;
+          const productResponse = await api.products({ id: item.productId }).get();
+          const product = extractData(productResponse) as { name: string } | null;
+
+          let variant: { name: string } | null = null;
+          if (item.variantId) {
+            const variantResponse = await api.variants({ id: item.variantId }).get();
+            variant = extractData(variantResponse) as { name: string } | null;
+          }
 
           return {
             productId: item.productId,
@@ -103,7 +106,6 @@ export function useCreateSale() {
 }
 
 export function useFinalizeSale() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -129,44 +131,40 @@ export function useFinalizeSale() {
       amountPaid?: number;
       paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
     }) => {
-      // If in delivery mode, use finalizeDelivery instead
       if (isDeliveryMode) {
-        return saleService.finalizeDelivery(id, {
-          items: deliveryItems || [],
-          amountPaid,
-          paymentMode,
-        });
+        for (const item of deliveryItems || []) {
+          const patchResponse = await api.sales({ id }).items({ itemId: item.itemId }).patch({
+            deliveredQuantity: item.deliveredQuantity,
+            unitPriceFinal: item.unitPriceFinal,
+            subtotal: item.subtotal,
+          });
+          extractData(patchResponse);
+        }
+
+        const deliverResponse = await api.sales({ id }).deliver.post({ baseVersion: version });
+        extractData(deliverResponse);
+        return;
       }
 
-      // Otherwise, use the normal confirmation flow
       if (type === "pre_order") {
-        return saleService.confirmPreOrder(id, version);
+        const response = await api.sales({ id }).confirm.post({ baseVersion: version });
+        extractData(response);
+        return;
       }
-      return saleService.confirm(id);
+
+      const response = await api.sales({ id }).confirm.post({});
+      extractData(response);
     },
-    onSettled: async (_data, _variables, error) => {
-      // Invalidate regardless of success or error to ensure UI consistency
-      // Note: useFinalizeSale variables contain id, type, version, etc.
-      queryClient.invalidateQueries({ queryKey: ["sales-new"] });
+    onSettled: async (_data, _error) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       queryClient.invalidateQueries({ queryKey: ["customers-new"] });
-      // Invalidate paginated queries to reflect updated totals
-      queryClient.invalidateQueries({ queryKey: ["sales-new", "page"], exact: false });
-
-      // Only refetch on success (error means something went wrong, don't mask it)
-      if (!error) {
-        await queryClient.refetchQueries({
-          queryKey: ["sales-new"],
-          type: 'active',
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
     },
   });
 }
 
 export function useAddSaleItem() {
-  const saleService = useEngineService<SaleService>("sales");
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -183,15 +181,17 @@ export function useAddSaleItem() {
         subtotal: number;
       };
     }) => {
-      const [product, variant] = await Promise.all([
-        productService.findById(item.productId),
-        item.variantId ? productService.findVariantById(item.variantId) : Promise.resolve(null),
+      const [productResponse, variantResponse] = await Promise.all([
+        api.products({ id: item.productId }).get(),
+        item.variantId ? api.variants({ id: item.variantId }).get() : Promise.resolve(null),
       ]);
+
+      const product = extractData(productResponse) as { name: string } | null;
+      const variant = variantResponse ? extractData(variantResponse) as { name: string } | null : null;
 
       if (!product) throw new Error("Product not found");
 
-      // addItem now handles the atomic total update internally
-      const createdItem = await saleService.addItem(saleId, {
+      const response = await api.sales({ id: saleId }).items.post({
         productId: item.productId,
         variantId: item.variantId || "",
         productName: product.name,
@@ -199,12 +199,13 @@ export function useAddSaleItem() {
         quantity: item.quantity,
         unitPrice: item.price,
         subtotal: item.subtotal,
-      });
+      } as any);
 
+      const createdItem = extractData(response) as unknown as SaleItem;
       return { saleId, createdItem };
     },
     onSuccess: ({ saleId, createdItem }) => {
-      queryClient.setQueryData(["sales-new", saleId], (previous: SaleWithItems | null | undefined) => {
+      queryClient.setQueryData(queryKeys.sales.detail(saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
         const subtotal = toNumber(createdItem.subtotal);
@@ -224,7 +225,6 @@ export function useAddSaleItem() {
 }
 
 export function useRemoveSaleItem() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -235,13 +235,12 @@ export function useRemoveSaleItem() {
       saleId: string;
       itemId: string;
     }) => {
-      // removeItem now handles the atomic total update internally
-      await saleService.removeItem(saleId, itemId);
-
+      const response = await api.sales({ id: saleId }).items({ itemId }).delete();
+      if (response.error) throw new Error(String(response.error.value));
       return saleId;
     },
     onSuccess: (_data, variables) => {
-      queryClient.setQueryData(["sales-new", variables.saleId], (previous: SaleWithItems | null | undefined) => {
+      queryClient.setQueryData(queryKeys.sales.detail(variables.saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
         const existingItem = (previous.items ?? []).find((item) => item.id === variables.itemId);
@@ -260,7 +259,6 @@ export function useRemoveSaleItem() {
 }
 
 export function useUpdateSaleItem() {
-  const saleService = useEngineService<SaleService>("sales");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -277,11 +275,16 @@ export function useUpdateSaleItem() {
         subtotal: number;
       };
     }) => {
-      const updatedItem = await saleService.updateItem(saleId, itemId, data);
+      const response = await api.sales({ id: saleId }).items({ itemId }).patch({
+        quantity: data.quantity,
+        unitPrice: data.unitPrice,
+        subtotal: data.subtotal,
+      });
+      const updatedItem = extractData(response) as unknown as SaleItem;
       return { saleId, itemId, updatedItem };
     },
     onSuccess: (result) => {
-      queryClient.setQueryData(["sales-new", result.saleId], (previous: SaleWithItems | null | undefined) => {
+      queryClient.setQueryData(queryKeys.sales.detail(result.saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
         const oldItem = (previous.items ?? []).find((item) => item.id === result.itemId);

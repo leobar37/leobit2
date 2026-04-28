@@ -1,15 +1,27 @@
 /**
- * Suppliers Hook (Service-based)
- * Reactively fetch and mutate suppliers using PGlite services
+ * Suppliers Hook (API-based)
+ * Reactively fetch and mutate suppliers using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { eq, and, ilike } from "drizzle-orm";
-import { suppliers, type Suppliers as Supplier } from "~/lib/sync/generated/schema";
-import { useEngineService, useSyncEngine } from "@avileo/drizzle-sync/react";
-import { SupplierService } from "~/lib/services/supplier-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-export type { Supplier };
+export interface Supplier {
+  id: string;
+  businessId: string;
+  name: string;
+  type: string;
+  ruc: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /** Input for creating a new supplier */
 export interface CreateSupplierInput {
@@ -34,63 +46,33 @@ export interface UpdateSupplierInput {
   isActive?: boolean;
 }
 
-const SUPPLIERS_QUERY_KEY = "suppliers";
-
 /**
  * Get all suppliers for a business
  */
-export function useSuppliers(businessId: string) {
-  const engine = useSyncEngine();
+export function useSuppliers() {
   return useQuery({
-    queryKey: [SUPPLIERS_QUERY_KEY, businessId],
+    queryKey: queryKeys.suppliers.all,
     queryFn: async () => {
-      const { db } = engine.getDatabaseInstance();
-      return db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.businessId, businessId))
-        .orderBy(suppliers.name);
+      const response = await api.suppliers.get();
+      return extractData(response) as unknown as Supplier[];
     },
-    enabled: !!businessId,
   });
 }
 
 /**
  * Search suppliers by name
  */
-export function useSearchSuppliers(
-  businessId: string,
-  searchTerm: string | null
-) {
-  const engine = useSyncEngine();
+export function useSearchSuppliers(searchTerm: string | null) {
   return useQuery({
-    queryKey: [SUPPLIERS_QUERY_KEY, "search", businessId, searchTerm],
+    queryKey: queryKeys.suppliers.search(searchTerm),
     queryFn: async () => {
-      const { db } = engine.getDatabaseInstance();
-
-      if (!searchTerm || searchTerm.length < 2) {
-        return db
-          .select()
-          .from(suppliers)
-          .where(eq(suppliers.businessId, businessId))
-          .orderBy(suppliers.name)
-          .limit(20);
-      }
-
-      const term = `%${searchTerm}%`;
-      return db
-        .select()
-        .from(suppliers)
-        .where(
-          and(
-            eq(suppliers.businessId, businessId),
-            ilike(suppliers.name, term)
-          )
-        )
-        .orderBy(suppliers.name)
-        .limit(20);
+      const response = await api.suppliers.get({
+        query: {
+          search: searchTerm && searchTerm.length >= 2 ? searchTerm : undefined,
+        },
+      });
+      return extractData(response) as unknown as Supplier[];
     },
-    enabled: !!businessId,
   });
 }
 
@@ -98,18 +80,12 @@ export function useSearchSuppliers(
  * Get a single supplier
  */
 export function useSupplier(id: string | null) {
-  const engine = useSyncEngine();
   return useQuery({
-    queryKey: [SUPPLIERS_QUERY_KEY, id],
+    queryKey: id ? queryKeys.suppliers.detail(id) : ["suppliers", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      const { db } = engine.getDatabaseInstance();
-      const result = await db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.id, id))
-        .limit(1);
-      return result[0] || null;
+      const response = await api.suppliers({ id }).get();
+      return extractData(response) as unknown as Supplier;
     },
     enabled: !!id,
   });
@@ -119,15 +95,15 @@ export function useSupplier(id: string | null) {
  * Create a new supplier
  */
 export function useCreateSupplier() {
-  const supplierService = useEngineService<SupplierService>("suppliers");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateSupplierInput) => {
-      return supplierService.create(input);
+    mutationFn: async (input: CreateSupplierInput): Promise<Supplier> => {
+      const response = await api.suppliers.post(input as any);
+      return extractData(response) as unknown as Supplier;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.all });
     },
   });
 }
@@ -136,18 +112,24 @@ export function useCreateSupplier() {
  * Update a supplier
  */
 export function useUpdateSupplier() {
-  const supplierService = useEngineService<SupplierService>("suppliers");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateSupplierInput }) => {
-      return supplierService.update(id, input);
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateSupplierInput;
+    }): Promise<Supplier> => {
+      const response = await api.suppliers({ id }).put(input as any);
+      return extractData(response) as unknown as Supplier;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: [SUPPLIERS_QUERY_KEY, variables.id],
+        queryKey: queryKeys.suppliers.detail(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.all });
     },
   });
 }
@@ -156,15 +138,15 @@ export function useUpdateSupplier() {
  * Delete a supplier
  */
 export function useDeleteSupplier() {
-  const supplierService = useEngineService<SupplierService>("suppliers");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      return supplierService.delete(id);
+    mutationFn: async (id: string): Promise<void> => {
+      const response = await api.suppliers({ id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SUPPLIERS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.all });
     },
   });
 }

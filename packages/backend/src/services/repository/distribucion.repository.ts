@@ -173,10 +173,6 @@ export class DistribucionRepository {
         }),
         ...(data.fecha !== undefined && { fecha: data.fecha }),
         ...(data.estado !== undefined && { estado: data.estado }),
-        ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),
-        ...(data.syncAttempts !== undefined && {
-          syncAttempts: data.syncAttempts,
-        }),
         ...(data.closedAt !== undefined && { closedAt: data.closedAt }),
         ...(data.closedBy !== undefined && { closedBy: data.closedBy }),
       })

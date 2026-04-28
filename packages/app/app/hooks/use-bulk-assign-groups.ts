@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerGroupService } from "~/lib/services/customer-group-service";
+import { api } from "~/lib/api-client";
+import { queryKeys } from "~/lib/query-keys";
 
 export interface BulkAssignGroupsInput {
   customerIds: string[];
@@ -9,20 +9,28 @@ export interface BulkAssignGroupsInput {
 
 export function useBulkAssignGroups() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async ({ customerIds, groupIds }: BulkAssignGroupsInput) => {
-      for (const groupId of groupIds) {
-        await customerGroupService.addMembers(groupId, customerIds);
-      }
+      await Promise.all(
+        groupIds.map(async (groupId) => {
+          const response = await api
+            .groups({ id: groupId })
+            .members.post({ customerIds });
+          if (response.error) throw new Error(String(response.error.value));
+        })
+      );
     },
     onSuccess: (_, { groupIds }) => {
-      queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
-      queryClient.invalidateQueries({ queryKey: ["customer-groups-with-details"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-groups-with-details"],
+      });
 
       groupIds.forEach((groupId) => {
-        queryClient.invalidateQueries({ queryKey: ["customer-groups", groupId] });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.customerGroups.detail(groupId),
+        });
       });
     },
   });

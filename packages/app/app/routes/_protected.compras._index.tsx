@@ -9,7 +9,7 @@ import { usePurchases, useCreateDraftPurchase } from "~/hooks/use-purchases";
 import { useListSearch } from "~/hooks/use-list-search";
 import { useSetLayout } from "~/components/layout/app-layout";
 
-import type { Purchase } from "~/lib/services/purchase-service";
+import type { Purchase } from "~/hooks/use-purchases";
 
 function getPurchaseDisplayTotal(purchase: Purchase) {
   return parseFloat(purchase.totalAmount) || 0;
@@ -17,14 +17,12 @@ function getPurchaseDisplayTotal(purchase: Purchase) {
 
 function PurchaseCard({ purchase }: { purchase: Purchase }) {
   const statusLabels: Record<Purchase["status"], string> = {
-    draft: "Borrador",
     pending: "Pendiente",
     received: "Recibido",
     cancelled: "Cancelado",
   };
 
   const statusColors: Record<Purchase["status"], string> = {
-    draft: "bg-gray-100 text-gray-700",
     pending: "bg-yellow-100 text-yellow-700",
     received: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700",

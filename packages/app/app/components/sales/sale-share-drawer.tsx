@@ -26,7 +26,7 @@ import {
 } from "~/hooks/use-sale-token";
 import { useSaleSyncStatus } from "~/hooks/use-sales";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 
 interface SaleShareDrawerProps {
   saleId: string;
@@ -48,7 +48,7 @@ export function SaleShareDrawer({
   const toggleToken = useToggleSaleToken();
   const { buildUrl, buildMessage, copyToClipboard } = useShareSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
 
   const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
   const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";

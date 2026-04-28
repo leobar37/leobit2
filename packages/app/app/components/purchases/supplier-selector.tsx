@@ -22,7 +22,7 @@ export function SupplierSelector({
   const { data: business } = useBusiness();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: suppliers = [], isLoading } = useSuppliers(business?.id || "");
+  const { data: suppliers = [], isLoading } = useSuppliers();
 
   const handleSelectSupplier = (supplier: Supplier) => {
     onSelectSupplier(supplier);

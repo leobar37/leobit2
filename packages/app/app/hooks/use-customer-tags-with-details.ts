@@ -3,15 +3,15 @@
  * Returns customer tags enriched with tag name and color
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerTagService } from "~/lib/services/customer-tag-service";
-import { TagService } from "~/lib/services/tag-service";
-import type { CustomerTags as CustomerTag, Tags as Tag } from "~/lib/sync/generated/schema";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 
-export interface CustomerTagWithDetails extends CustomerTag {
+export interface CustomerTagWithDetails {
+  tagId: string;
   tagName: string;
   tagColor: string;
+  assignedAt: string;
 }
 
 const QUERY_KEYS = {
@@ -22,32 +22,12 @@ const QUERY_KEYS = {
  * Get all tags for a specific customer with tag details (name, color)
  */
 export function useCustomerTagsWithDetails(customerId: string | null) {
-  const customerTagService = useEngineService<CustomerTagService>("customerTags");
-  const tagService = useEngineService<TagService>("tags");
-
   return useQuery({
     queryKey: customerId ? QUERY_KEYS.customerTagsWithDetails(customerId) : ["customer-tags-with-details", "none"],
     queryFn: async () => {
       if (!customerId) return [];
-      
-      // Get customer-tag assignments
-      const customerTags = await customerTagService.getCustomerTags(customerId);
-      
-      if (customerTags.length === 0) return [];
-      
-      // Get all tags to enrich with names and colors
-      const allTags = await tagService.findByBusiness();
-      const tagMap = new Map(allTags.map(t => [t.id, t]));
-      
-      // Enrich customer tags with tag details
-      return customerTags.map(ct => {
-        const tag = tagMap.get(ct.tagId);
-        return {
-          ...ct,
-          tagName: tag?.name ?? "Tag",
-          tagColor: tag?.color ?? "#f97316",
-        };
-      });
+      const response = await api.customers({ id: customerId }).tags.get();
+      return extractData(response) as unknown as CustomerTagWithDetails[];
     },
     enabled: !!customerId,
   });
@@ -58,10 +38,10 @@ export function useCustomerTagsWithDetails(customerId: string | null) {
  */
 export function useInvalidateCustomerTagsWithDetails() {
   const queryClient = useQueryClient();
-  
+
   return (customerId: string) => {
-    queryClient.invalidateQueries({ 
-      queryKey: QUERY_KEYS.customerTagsWithDetails(customerId) 
+    queryClient.invalidateQueries({
+      queryKey: QUERY_KEYS.customerTagsWithDetails(customerId),
     });
   };
 }

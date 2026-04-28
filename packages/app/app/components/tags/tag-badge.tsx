@@ -3,7 +3,7 @@
  * Displays a tag with its color
  */
 import { X } from "lucide-react";
-import type { Tags as Tag } from "~/lib/sync/generated/schema";
+import type { Tag } from "@avileo/shared";
 
 interface TagBadgeProps {
   tag: Tag | { id: string; name: string; color: string };

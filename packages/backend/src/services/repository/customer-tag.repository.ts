@@ -46,8 +46,6 @@ export class CustomerTagRepository {
         customerId,
         tagId,
         assignedBy: ctx.businessUserId,
-        syncStatus: "synced",
-        syncAttempts: 0,
       }));
 
       await db
@@ -73,8 +71,6 @@ export class CustomerTagRepository {
         tagId,
         assignedBy: ctx.businessUserId,
         assignedAt: new Date(),
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 

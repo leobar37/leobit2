@@ -1,7 +1,7 @@
 import { User, Phone, MapPin, CreditCard, CloudOff, Check, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
+import type { Customer } from "@avileo/shared";
 
 import { useCustomerGroupsWithDetails, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerTagsWithDetails, type CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";

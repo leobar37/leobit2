@@ -1,23 +1,50 @@
 /**
- * Product Variants Hook (Service-based)
- * Reactively fetch and mutate product variants using PGlite services (offline-first)
+ * Product Variants Hook (API-based)
+ * Reactively fetch and mutate product variants using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { ProductService } from "~/lib/services/product-service";
-import type {
-  ProductVariant,
-  CreateVariantInput,
-  UpdateVariantInput,
-} from "~/lib/services/product-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-const QUERY_KEYS = {
-  variants: (productId: string) => ["products", productId, "variants"],
-  variant: (id: string) => ["variants", id],
-  variantInventory: (variantId: string) => ["variants", variantId, "inventory"],
-} as const;
+/** Product variant entity */
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  businessId: string;
+  name: string;
+  sku: string | null;
+  unitQuantity: string;
+  price: string;
+  costPrice: string;
+  sortOrder: number;
+  isActive: boolean;
+  lowStockThreshold: string;
+  criticalStockThreshold: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
+/** Input for creating a product variant */
+export interface CreateVariantInput {
+  name: string;
+  sku?: string;
+  unitQuantity: number;
+  price: number;
+  isActive?: boolean;
+}
+
+/** Input for updating a product variant */
+export interface UpdateVariantInput {
+  name?: string;
+  sku?: string;
+  unitQuantity?: number;
+  price?: number;
+  isActive?: boolean;
+}
+
+/** Filters for variant queries */
 export interface VariantFilters {
   isActive?: boolean;
   includeInactive?: boolean;
@@ -27,12 +54,16 @@ export interface VariantFilters {
  * Get all variants for a specific product
  */
 export function useVariantsByProduct(productId: string, filters?: VariantFilters) {
-  const productService = useEngineService<ProductService>("products");
-
   return useQuery({
-    queryKey: [...QUERY_KEYS.variants(productId), filters],
+    queryKey: [...queryKeys.variants.byProduct(productId), filters],
     queryFn: async () => {
-      const variants = await productService.getVariants(productId);
+      const response = await api.products({ id: productId }).variants.get({
+        query: {
+          isActive: filters?.isActive !== undefined ? String(filters.isActive) : undefined,
+          includeInactive: filters?.includeInactive ? "true" : undefined,
+        },
+      });
+      const variants = extractData(response) as unknown as ProductVariant[];
       if (filters?.isActive !== undefined && !filters.includeInactive) {
         return variants.filter((v) => v.isActive === filters.isActive);
       }
@@ -46,13 +77,12 @@ export function useVariantsByProduct(productId: string, filters?: VariantFilters
  * Get a single variant by ID
  */
 export function useVariant(id: string | null) {
-  const productService = useEngineService<ProductService>("products");
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.variant(id) : ["variants", "detail"],
+    queryKey: id ? queryKeys.variants.detail(id) : ["variants", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      return productService.findVariantById(id);
+      const response = await api.variants({ id }).get();
+      return extractData(response) as unknown as ProductVariant;
     },
     enabled: !!id,
   });
@@ -60,10 +90,8 @@ export function useVariant(id: string | null) {
 
 /**
  * Create a new product variant (admin only)
- * Queues sync operation when offline
  */
 export function useCreateVariant() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -74,11 +102,12 @@ export function useCreateVariant() {
       productId: string;
       input: CreateVariantInput;
     }): Promise<ProductVariant> => {
-      return productService.createVariant({ ...input, productId });
+      const response = await api.products({ id: productId }).variants.post(input as any);
+      return extractData(response) as unknown as ProductVariant;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.variants(variables.productId),
+        queryKey: queryKeys.variants.byProduct(variables.productId),
       });
     },
   });
@@ -86,10 +115,8 @@ export function useCreateVariant() {
 
 /**
  * Update an existing product variant (admin only)
- * Queues sync operation when offline
  */
 export function useUpdateVariant() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -100,11 +127,12 @@ export function useUpdateVariant() {
       id: string;
       input: UpdateVariantInput;
     }): Promise<void> => {
-      return productService.updateVariant(id, input);
+      const response = await api.variants({ id }).put(input as any);
+      extractData(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["variants"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
@@ -114,16 +142,16 @@ export function useUpdateVariant() {
  * Sets isActive to false
  */
 export function useDeactivateVariant() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      return productService.updateVariant(id, { isActive: false });
+      const response = await api.variants({ id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["variants"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
@@ -132,7 +160,6 @@ export function useDeactivateVariant() {
  * Reorder variants by updating sortOrder
  */
 export function useReorderVariants() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -143,18 +170,15 @@ export function useReorderVariants() {
       productId: string;
       variantIds: string[];
     }): Promise<void> => {
-      const updates = variantIds.map((variantId, index) =>
-        productService.updateVariant(variantId, { sortOrder: index })
-      );
-      await Promise.all(updates);
+      const response = await api.products({ id: productId }).variants.reorder.post({ variantIds } as any);
+      extractData(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.variants(variables.productId),
+        queryKey: queryKeys.variants.byProduct(variables.productId),
       });
     },
   });
 }
 
-// Re-export types for convenience
-export type { ProductVariant, CreateVariantInput, UpdateVariantInput };
+

@@ -17,7 +17,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { saleTypeEnum, saleStatusEnum, transactionTypeEnum, paymentModeEnum, refundMethodEnum, syncStatusEnum } from "./enums";
+import { saleTypeEnum, saleStatusEnum, transactionTypeEnum, paymentModeEnum, refundMethodEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
@@ -75,10 +75,6 @@ export const sales = pgTable(
     // Customer edit permissions (from orders)
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
     // Cancellation fields
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: uuid("cancelled_by").references(() => businessUsers.id),
@@ -107,7 +103,6 @@ export const sales = pgTable(
     index("idx_sales_visita_id").on(table.visitaId),
     index("idx_sales_type").on(table.type),
     index("idx_sales_sale_type").on(table.saleType),
-    index("idx_sales_sync_status").on(table.syncStatus),
     index("idx_sales_status").on(table.status),
     index("idx_sales_cancelled_at").on(table.cancelledAt),
     index("idx_sales_sale_date").on(table.saleDate),
@@ -160,10 +155,6 @@ export const saleItems = pgTable(
     // Tracking modifications (from orders)
     isModified: boolean("is_modified").notNull().default(false),
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
-
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),

@@ -1,41 +1,114 @@
 /**
- * Distribuciones Hook
- * Reactively fetch and mutate distribuciones using the sync framework.
- *
- * Reads: offline via framework service -> PGlite
- * Writes: online-only via API
+ * Distribuciones Hook (API-based)
+ * Reactively fetch and mutate distribuciones using Eden Treaty API
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { DistribucionService } from "~/lib/services/distribucion-service";
-import type { CreateDistribucionInput, CreateDistribucionItemInput } from "~/lib/services/distribucion-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
-import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
-import { useManualSync } from "./use-manual-sync";
-import { api } from "~/lib/api-client";
 
-const DISTRIBUCIONES_QUERY_KEY = "distribuciones";
+export interface Distribucion {
+  id: string;
+  businessId: string;
+  vendedorId: string;
+  puntoVenta: string;
+  puntoVentaId: string | null;
+  montoRecaudado: string;
+  notaCreacion: string | null;
+  notaCierre: string | null;
+  fecha: string;
+  estado: string;
+  modo: string;
+  closedAt: string | null;
+  closedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Helper to extract error message from API response
- */
-function handleApiError(response: { data?: { success?: boolean; error?: string | { code?: string; message?: string } } | null; error?: { value?: unknown } | null }): never {
-  if (response.error) {
-    throw new Error(String(response.error.value));
-  }
+export interface DistribucionItem {
+  id: string;
+  distribucionId: string;
+  variantId: string;
+  cantidadAsignada: string;
+  cantidadVendida: string | null;
+  unidad: string;
+}
 
-  if (response.data?.error) {
-    const errorData = response.data.error;
-    if (typeof errorData === "string") {
-      throw new Error(errorData);
-    }
-    if (errorData && typeof errorData === "object" && "message" in errorData) {
-      throw new Error(String(errorData.message));
-    }
-  }
+export interface DistribucionItemEnriched extends DistribucionItem {
+  productName?: string;
+  variantName?: string;
+}
 
-  throw new Error("Error desconocido");
+export type DistribucionWithItems = Distribucion & { items: DistribucionItemEnriched[] };
+
+export interface CreateDistribucionItemInput {
+  variantId: string;
+  cantidadAsignada: number;
+  unidad: string;
+}
+
+export interface CreateDistribucionInput {
+  vendedorId: string;
+  puntoVenta: string;
+  puntoVentaId?: string;
+  notaCreacion?: string;
+  fecha?: string;
+  items?: CreateDistribucionItemInput[];
+}
+
+export interface CreateDistribucionApiInput {
+  vendedorId: string;
+  puntoVenta: string;
+  puntoVentaId?: string;
+  notaCreacion?: string;
+  fecha?: string;
+  groupId?: string;
+  items: Array<{
+    variantId: string;
+    cantidadAsignada: number;
+    unidad: string;
+  }>;
+}
+
+export interface CloseDistribucionInput {
+  id: string;
+  notaCierre?: string;
+}
+
+interface BackendDistribucionItem {
+  id: string;
+  distribucionId: string;
+  variantId: string;
+  cantidadAsignada: string;
+  cantidadVendida: string | null;
+  unidad: string;
+  variant?: {
+    name?: string;
+    product?: {
+      name?: string;
+    };
+  };
+}
+
+function mapDistribucionWithItems(
+  d: Distribucion & { items?: BackendDistribucionItem[] }
+): DistribucionWithItems {
+  return {
+    ...d,
+    items:
+      d.items?.map((item) => ({
+        id: item.id,
+        distribucionId: item.distribucionId,
+        variantId: item.variantId,
+        cantidadAsignada: String(item.cantidadAsignada),
+        cantidadVendida: item.cantidadVendida ? String(item.cantidadVendida) : null,
+        unidad: item.unidad,
+        variantName: item.variant?.name,
+        productName: item.variant?.product?.name,
+      })) ?? [],
+  };
 }
 
 /**
@@ -49,16 +122,19 @@ export function useDistribuciones(params?: {
   const { data: business } = useBusiness();
   const storedBusinessId = getStoredBusinessId();
   const businessId = business?.id || storedBusinessId;
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
 
   return useQuery({
-    queryKey: [DISTRIBUCIONES_QUERY_KEY, businessId, params],
+    queryKey: [queryKeys.distribuciones.all, businessId, params],
     queryFn: async () => {
       if (!businessId) return [];
-      return distribucionService.findByBusiness({
-        ...params,
-        vendedorId: params?.vendedorId,
+      const response = await api.distribuciones.get({
+        query: {
+          fecha: params?.fecha,
+          vendedorId: params?.vendedorId,
+          estado: params?.estado,
+        },
       });
+      return extractData(response) as unknown as Distribucion[];
     },
     enabled: !!businessId,
   });
@@ -71,14 +147,13 @@ export function useSellerDistribuciones(
   businessId: string,
   vendedorId: string
 ) {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-
   return useQuery({
-    queryKey: [DISTRIBUCIONES_QUERY_KEY, "seller", vendedorId],
+    queryKey: queryKeys.distribuciones.seller(vendedorId),
     queryFn: async () => {
-      return distribucionService.findByBusiness({
-        vendedorId,
+      const response = await api.distribuciones.get({
+        query: { vendedorId },
       });
+      return extractData(response) as unknown as Distribucion[];
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -91,12 +166,14 @@ export function useActiveDistribucion(
   businessId: string,
   vendedorId: string
 ) {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-
   return useQuery({
-    queryKey: [DISTRIBUCIONES_QUERY_KEY, "active", vendedorId],
+    queryKey: queryKeys.distribuciones.active(vendedorId),
     queryFn: async () => {
-      return distribucionService.findActiveBySeller(vendedorId);
+      const response = await api.distribuciones.get({
+        query: { vendedorId, estado: "activo" },
+      });
+      const data = extractData(response) as unknown as Distribucion[];
+      return data[0] || null;
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -110,13 +187,18 @@ export function useMiDistribucion(fecha?: string) {
   const storedBusinessId = getStoredBusinessId();
   const businessId = business?.id || storedBusinessId;
   const vendedorId = business?.businessUserId;
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
 
   return useQuery({
-    queryKey: [DISTRIBUCIONES_QUERY_KEY, "mi-distribucion", vendedorId, fecha],
+    queryKey: queryKeys.distribuciones.mine(vendedorId || "", fecha),
     queryFn: async () => {
       if (!vendedorId) return null;
-      return distribucionService.findActiveBySeller(vendedorId, fecha);
+      const response = await api.distribuciones.mine.get({
+        query: fecha ? { fecha } : undefined,
+      });
+      const data = extractData(response) as unknown as Distribucion & {
+        items?: BackendDistribucionItem[];
+      };
+      return data ? mapDistribucionWithItems(data) : null;
     },
     enabled: !!businessId && !!vendedorId,
   });
@@ -126,62 +208,34 @@ export function useMiDistribucion(fecha?: string) {
  * Get a single distribucion with items
  */
 export function useDistribucion(id: string | null) {
-  const distribucionService = useEngineService<DistribucionService>("distribuciones");
-
   return useQuery({
-    queryKey: [DISTRIBUCIONES_QUERY_KEY, id],
+    queryKey: id ? queryKeys.distribuciones.detail(id) : ["distribuciones", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      return distribucionService.findByIdWithItems(id);
+      const response = await api.distribuciones({ id }).get();
+      const data = extractData(response) as unknown as Distribucion & {
+        items?: BackendDistribucionItem[];
+      };
+      return mapDistribucionWithItems(data);
     },
     enabled: !!id,
   });
 }
 
 /**
- * Input type for creating a distribucion via API
- */
-export interface CreateDistribucionApiInput {
-  vendedorId: string;
-  puntoVenta: string;
-  puntoVentaId?: string;
-  notaCreacion?: string;
-  fecha?: string;
-  modo?: "estricto" | "acumulativo" | "libre";
-  groupId?: string;
-  items: Array<{
-    variantId: string;
-    cantidadAsignada: number;
-    unidad: string;
-  }>;
-}
-
-/**
  * Create a new distribucion
- * ONLINE-ONLY: Requires internet connection
  */
 export function useCreateDistribucion() {
   const queryClient = useQueryClient();
-  const { pullNow } = useManualSync();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: CreateDistribucionApiInput) => {
-      console.log("[useCreateDistribucion] Creating distribucion via API...", input);
-      const response = await (api.distribuciones as any).post(input);
-      console.log("[useCreateDistribucion] API response:", response);
-      if (!response.data?.success || response.error) {
-        handleApiError(response);
-      }
-      return response.data.data;
+      const response = await api.distribuciones.post(input as any);
+      return extractData(response) as unknown as Distribucion;
     },
-    offlineMessage: "Se requiere conexión a internet para crear una distribución",
-    onSuccess: async () => {
-      console.log("[useCreateDistribucion] onSuccess - pulling changes immediately");
-      await pullNow();
-
-      console.log("[useCreateDistribucion] onSuccess - invalidating queries");
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+        queryKey: queryKeys.distribuciones.all,
       });
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
@@ -190,40 +244,25 @@ export function useCreateDistribucion() {
   });
 }
 
-export interface CloseDistribucionInput {
-  id: string;
-  notaCierre?: string;
-}
-
 /**
  * Close a distribucion with cierre data
- * Requires internet connection
  */
 export function useCloseDistribucion() {
   const queryClient = useQueryClient();
-  const { pullNow } = useManualSync();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (input: CloseDistribucionInput) => {
-      console.log("[Distribuciones] useCloseDistribucion - calling API for id:", input.id);
-      const response = await (api.distribuciones({ id: input.id }).close as any).patch({
+      const response = await api.distribuciones({ id: input.id }).close.patch({
         notaCierre: input.notaCierre,
-      });
-      console.log("[Distribuciones] useCloseDistribucion - API response:", response);
-      if (!response.data?.success || response.error) {
-        handleApiError(response);
-      }
-      return response.data.data;
+      } as any);
+      return extractData(response) as unknown as Distribucion;
     },
-    offlineMessage: "Se requiere conexión a internet para cerrar una distribución",
-    onSuccess: async (_, input) => {
-      await pullNow();
-
+    onSuccess: (_, input) => {
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, input.id],
+        queryKey: queryKeys.distribuciones.detail(input.id),
       });
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+        queryKey: queryKeys.distribuciones.all,
       });
     },
   });
@@ -231,12 +270,11 @@ export function useCloseDistribucion() {
 
 /**
  * Update distribucion items (replace all items)
- * Requires internet connection
  */
 export function useUpdateDistribucionItems() {
   const queryClient = useQueryClient();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async ({
       id,
       items,
@@ -248,19 +286,15 @@ export function useUpdateDistribucionItems() {
         unidad: string;
       }>;
     }) => {
-      const response = await (api.distribuciones({ id }).items as any).put({ items });
-      if (!response.data?.success || response.error) {
-        handleApiError(response);
-      }
-      return response.data.data;
+      const response = await api.distribuciones({ id }).items.put({ items } as any);
+      return extractData(response) as unknown as Distribucion;
     },
-    offlineMessage: "Se requiere conexión a internet para actualizar los items de distribución",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.id],
+        queryKey: queryKeys.distribuciones.detail(variables.id),
       });
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+        queryKey: queryKeys.distribuciones.all,
       });
     },
   });
@@ -268,27 +302,22 @@ export function useUpdateDistribucionItems() {
 
 /**
  * Update distribucion
- * Requires internet connection
  */
 export function useUpdateDistribucion() {
   const queryClient = useQueryClient();
 
-  return useOfflineAwareMutation({
-    mutationFn: async (data: { id: string; [key: string]: unknown }) => {
+  return useMutation({
+    mutationFn: async (data: { id: string; puntoVenta?: string; estado?: string }) => {
       const { id, ...changes } = data;
-      const response = await (api.distribuciones({ id }) as any).put(changes);
-      if (!response.data?.success || response.error) {
-        handleApiError(response);
-      }
-      return response.data.data;
+      const response = await api.distribuciones({ id }).put(changes as any);
+      return extractData(response) as unknown as Distribucion;
     },
-    offlineMessage: "Se requiere conexión a internet para actualizar la distribución",
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY, variables.id],
+        queryKey: queryKeys.distribuciones.detail(variables.id),
       });
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+        queryKey: queryKeys.distribuciones.all,
       });
     },
   });
@@ -296,45 +325,42 @@ export function useUpdateDistribucion() {
 
 /**
  * Delete a distribucion
- * Requires internet connection
  */
 export function useDeleteDistribucion() {
   const queryClient = useQueryClient();
-  const { pullNow } = useManualSync();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: async (id: string) => {
-      console.log("[Distribuciones] useDeleteDistribucion - calling API for id:", id);
       const response = await api.distribuciones({ id }).delete();
-      if (response.error) {
-        handleApiError(response);
-      }
-      console.log("[Distribuciones] useDeleteDistribucion - deleted successfully");
+      if (response.error) throw new Error(String(response.error.value));
     },
-    offlineMessage: "Se requiere conexión a internet para eliminar la distribución",
     onMutate: async (id: string) => {
-      await queryClient.cancelQueries({ queryKey: [DISTRIBUCIONES_QUERY_KEY] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.distribuciones.all });
 
-      const previousDistribuciones = queryClient.getQueryData([DISTRIBUCIONES_QUERY_KEY]);
+      const previousDistribuciones = queryClient.getQueryData(
+        queryKeys.distribuciones.all
+      );
 
-      queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], (old: any) => {
-        if (!old) return old;
-        return old.filter((d: any) => d.id !== id);
+      queryClient.setQueryData(queryKeys.distribuciones.all, (old: unknown) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((d: { id?: string }) => d.id !== id);
       });
 
       return { previousDistribuciones };
     },
-    onError: (err, id, context: any) => {
-      if (context?.previousDistribuciones) {
-        queryClient.setQueryData([DISTRIBUCIONES_QUERY_KEY], context.previousDistribuciones);
+    onError: (err, id, context) => {
+      const ctx = context as { previousDistribuciones?: unknown } | undefined;
+      if (ctx?.previousDistribuciones) {
+        queryClient.setQueryData(
+          queryKeys.distribuciones.all,
+          ctx.previousDistribuciones
+        );
       }
       console.error("[Distribuciones] useDeleteDistribucion - error:", err);
     },
-    onSuccess: async () => {
-      await pullNow();
-
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [DISTRIBUCIONES_QUERY_KEY],
+        queryKey: queryKeys.distribuciones.all,
       });
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
@@ -342,6 +368,3 @@ export function useDeleteDistribucion() {
     },
   });
 }
-
-export type { Distribucion, DistribucionItem, DistribucionWithItems } from "~/lib/services/distribucion-service";
-export type { CreateDistribucionInput, CreateDistribucionItemInput };

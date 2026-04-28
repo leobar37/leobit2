@@ -1,4 +1,4 @@
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
+import type { Customer } from "@avileo/shared";
 import type { PaymentMode } from "~/lib/sales/types";
 
 export interface PaymentSummary {

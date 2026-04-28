@@ -3,8 +3,6 @@
  * Simple key-value storage with optional TTL
  */
 
-import type { PGlite } from "@electric-sql/pglite";
-
 const CACHE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS app_cache (
   key TEXT PRIMARY KEY,
@@ -15,20 +13,22 @@ CREATE TABLE IF NOT EXISTS app_cache (
 CREATE INDEX IF NOT EXISTS idx_app_cache_expires ON app_cache(expires_at);
 `;
 
-async function ensureTable(pg: PGlite): Promise<void> {
+async function ensureTable(pg: unknown): Promise<void> {
   try {
-    await pg.exec(CACHE_TABLE_SQL);
+    await (pg as { exec: (sql: string) => Promise<void> }).exec(CACHE_TABLE_SQL);
   } catch (error) {
     console.warn("[Cache] Failed to create table:", error);
   }
 }
 
 export const offlineCache = {
-  async get<T>(pg: PGlite, key: string): Promise<T | null> {
+  async get<T>(pg: unknown, key: string): Promise<T | null> {
     try {
       await ensureTable(pg);
 
-      const result = await pg.query<{ value: string; expires_at: string | null }>(
+      const result = await (pg as {
+        query: <R>(sql: string, params: unknown[]) => Promise<{ rows: R[] }>
+      }).query<{ value: string; expires_at: string | null }>(
         `SELECT value, expires_at FROM app_cache WHERE key = $1`,
         [key]
       );
@@ -50,7 +50,7 @@ export const offlineCache = {
     }
   },
 
-  async set<T>(pg: PGlite, key: string, value: T, ttlMs?: number): Promise<void> {
+  async set<T>(pg: unknown, key: string, value: T, ttlMs?: number): Promise<void> {
     try {
       await ensureTable(pg);
 
@@ -58,7 +58,9 @@ export const offlineCache = {
       const expiresAt = ttlMs ? now + ttlMs : null;
       const jsonValue = JSON.stringify(value);
 
-      await pg.query(
+      await (pg as {
+        query: (sql: string, params: unknown[]) => Promise<void>
+      }).query(
         `INSERT INTO app_cache (key, value, cached_at, expires_at)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (key) DO UPDATE SET
@@ -72,17 +74,19 @@ export const offlineCache = {
     }
   },
 
-  async remove(pg: PGlite, key: string): Promise<void> {
+  async remove(pg: unknown, key: string): Promise<void> {
     try {
-      await pg.query(`DELETE FROM app_cache WHERE key = $1`, [key]);
+      await (pg as {
+        query: (sql: string, params: unknown[]) => Promise<void>
+      }).query(`DELETE FROM app_cache WHERE key = $1`, [key]);
     } catch (error) {
       console.error(`[Cache] Failed to remove "${key}":`, error);
     }
   },
 
-  async clear(pg: PGlite): Promise<void> {
+  async clear(pg: unknown): Promise<void> {
     try {
-      await pg.exec(`DELETE FROM app_cache`);
+      await (pg as { exec: (sql: string) => Promise<void> }).exec(`DELETE FROM app_cache`);
     } catch (error) {
       console.error("[Cache] Failed to clear cache:", error);
     }

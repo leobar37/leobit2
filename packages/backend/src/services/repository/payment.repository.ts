@@ -92,33 +92,25 @@ export class PaymentRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes"> & { version?: number }>,
-    tx?: DbTransaction,
-    expectedVersion?: number
+    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes">>,
+    tx?: DbTransaction
   ): Promise<Abono> {
     const executor = tx ?? db;
-
-    const conditions = [
-      eq(abonos.id, id),
-      eq(abonos.businessId, ctx.businessId)
-    ];
-
-    if (expectedVersion !== undefined) {
-      conditions.push(eq(abonos.version, expectedVersion));
-    }
 
     const [abono] = await executor
       .update(abonos)
         .set({
           ...data,
           updatedAt: new Date(),
-          version: data.version ?? sql`${abonos.version} + 1`,
         })
-      .where(and(...conditions))
+      .where(and(
+        eq(abonos.id, id),
+        eq(abonos.businessId, ctx.businessId)
+      ))
       .returning();
 
     if (!abono) {
-      throw new Error("Abono no encontrado o modificado por otro dispositivo");
+      throw new Error("Abono no encontrado");
     }
 
     return abono;

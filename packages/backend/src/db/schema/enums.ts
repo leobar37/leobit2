@@ -13,13 +13,6 @@ export const businessUserRoleEnum = pgEnum("business_user_role", [
   "VENDEDOR",
 ]);
 
-// Sync status (used by multiple tables)
-export const syncStatusEnum = pgEnum("sync_status", [
-  "pending",
-  "synced",
-  "error",
-]);
-
 // Sales / Transactions
 export const saleTypeEnum = pgEnum("sale_type", ["contado", "credito"]);
 export const transactionTypeEnum = pgEnum("transaction_type", ["instant_sale", "pre_order"]);

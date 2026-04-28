@@ -10,7 +10,7 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { purchaseStatusEnum, syncStatusEnum } from "./enums";
+import { purchaseStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 import { suppliers } from "./suppliers";
 import { products, productVariants } from "./inventory";
@@ -40,13 +40,6 @@ export const purchases = pgTable(
     receiptImageId: uuid("receipt_image_id").references(() => files.id),
 
     notes: text("notes"),
-
-    // Sync fields for offline-first support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -88,13 +81,6 @@ export const purchaseItems = pgTable(
 
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
 
-    // Sync fields for offline-first support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -103,7 +89,6 @@ export const purchaseItems = pgTable(
     index("idx_purchase_items_purchase_id").on(table.purchaseId),
     index("idx_purchase_items_product_id").on(table.productId),
     index("idx_purchase_items_variant_id").on(table.variantId),
-    index("idx_purchase_items_sync_status").on(table.syncStatus),
     index("idx_purchase_items_updated_at").on(table.updatedAt),
   ]
 );

@@ -19,18 +19,11 @@
     "test:e2e:msw:headed": "HEADED=1 playwright test --config=playwright.msw.config.ts",
     "test:e2e:volume": "playwright test --config=playwright.volume.config.ts",
     "test:e2e:perf": "playwright test --config=playwright.perf.config.ts",
-    "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts",
-    "db:migrate": "bun scripts/migrate-to-pglite.ts",
-    "db:rollback": "bun scripts/rollback-migration.ts",
-    "db:rollback:verify": "bun scripts/rollback-migration.ts --verify-only",
-    "db:rollback:clear": "bun scripts/rollback-migration.ts --clear-only",
-    "db:rollback:test": "bun scripts/rollback-migration.ts --file-based"
+    "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts"
   },
   "dependencies": {
-    "@avileo/drizzle-sync": "workspace:*",
     "@avileo/shared": "workspace:*",
     "@date-fns/tz": "^1.4.1",
-    "@electric-sql/pglite": "^0.3.15",
     "@elysiajs/eden": "^1.4.8",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",

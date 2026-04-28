@@ -1,5 +1,5 @@
 import { XCircle } from "lucide-react";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 
 interface SaleCancelledCardProps {

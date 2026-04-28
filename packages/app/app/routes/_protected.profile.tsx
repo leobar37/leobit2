@@ -17,7 +17,6 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
 import { useRef, useState } from "react";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { DatabaseResetButton } from "~/components/sync/database-reset-button";
 
 const profileSchema = z.object({
   dni: z.string().max(20).optional(),
@@ -188,18 +187,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Database Reset Section */}
-          <Card className="border-0 shadow-lg rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-base">Datos locales</CardTitle>
-              <CardDescription>
-                Administra los datos almacenados localmente en este dispositivo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DatabaseResetButton />
-            </CardContent>
-          </Card>
         </div>
     </div>
   );

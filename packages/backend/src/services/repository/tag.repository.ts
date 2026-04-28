@@ -28,7 +28,7 @@ export class TagRepository {
 
   async create(
     ctx: RequestContext,
-    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">,
+    data: Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">,
     tx?: DbTransaction
   ): Promise<Tag> {
     const dbOrTx = tx || db;
@@ -37,8 +37,6 @@ export class TagRepository {
       .values({
         ...data,
         businessId: ctx.businessId,
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 
@@ -47,7 +45,7 @@ export class TagRepository {
 
   async createWithId(
     ctx: RequestContext,
-    data: Omit<NewTag, "businessId" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">,
+    data: Omit<NewTag, "businessId" | "createdAt" | "updatedAt">,
     tx?: DbTransaction
   ): Promise<Tag> {
     const dbOrTx = tx || db;
@@ -56,8 +54,6 @@ export class TagRepository {
       .values({
         ...data,
         businessId: ctx.businessId,
-        syncStatus: "synced",
-        syncAttempts: 0,
       })
       .returning();
 
@@ -67,7 +63,7 @@ export class TagRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt" | "syncStatus" | "syncAttempts">>,
+    data: Partial<Omit<NewTag, "businessId" | "id" | "createdAt" | "updatedAt">>,
     tx?: DbTransaction
   ): Promise<Tag | undefined> {
     const dbOrTx = tx || db;
@@ -77,7 +73,6 @@ export class TagRepository {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.color !== undefined && { color: data.color }),
         updatedAt: new Date(),
-        syncStatus: "synced",
       })
       .where(and(
         eq(tags.id, id),

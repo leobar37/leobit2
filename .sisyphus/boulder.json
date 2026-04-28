@@ -1,32 +1,33 @@
 {
-  "active_plan": "/Users/leobar37/code/avileo/.sisyphus/plans/juavik-client2-seed.md",
-  "started_at": "2026-03-29T00:05:45.000Z",
+  "active_plan": "/Users/leobar37/code/avileo/.sisyphus/plans/frontend-remove-engine-eden-hooks.md",
+  "started_at": "2026-04-28T03:08:42.000Z",
   "session_ids": [
-    "ses_2c94aa8f6ffeE9fFzd85KrPqHt",
-    "ses_2c913d31cffe1tyl3Em3sa8Omr",
-    "ses_2c900e945ffeTI5qJ9h0arCneC",
-    "ses_2c9010d61ffeqHsDqHiNsxv2Mk",
-    "ses_2c901316effef1sC5psJtoysHY",
-    "ses_2c8c0b665ffeU6BFLtnyUVU9mN",
-    "ses_2c8accf17ffebZ0mqQIMamerB0",
-    "ses_2c8a3ed58ffeSu8MtvCFzl4baQ",
-    "ses_2c89dfe20ffeFyRyHrQDXyEzVT",
-    "ses_2c89def2dffe4qJDIO8A2olefT",
-    "ses_2c89de340ffeb3yLz3CirmyLrM",
-    "ses_2c8815b9dffegN2XqfvnJzz0Lr",
-    "ses_2c858af79ffe2lNAvfFYZSe0ug"
+    "ses_22e1f1f38ffeaXUYkL4PNJCr70",
+    "ses_22d74c04affebpTMEFjaIDl3pp"
   ],
-  "plan_name": "juavik-client2-seed",
+  "plan_name": "frontend-remove-engine-eden-hooks",
   "agent": "atlas",
+  "session_origins": {
+    "ses_22e1f1f38ffeaXUYkL4PNJCr70": "direct",
+    "ses_22d74c04affebpTMEFjaIDl3pp": "appended"
+  },
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Freeze the JUAVIK canonical contract and page manifest",
-      "session_id": "ses_2c858af79ffe2lNAvfFYZSe0ug",
+      "task_title": "**API Helpers — `unwrapApiResponse` + `extractData` refactor**",
+      "session_id": "ses_22d90afddffeCEnLoSTOTPzEXx",
+      "agent": "explore",
+      "updated_at": "2026-04-28T04:55:32.483Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "**Hook: `use-customers.ts`**",
+      "session_id": "ses_22d72b0bfffekrDSl2Byw7CmgT",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-03-29T03:42:16.318Z"
+      "category": "deep",
+      "updated_at": "2026-04-28T05:52:01.786Z"
     }
   }
 }

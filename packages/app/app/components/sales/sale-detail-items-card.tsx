@@ -1,5 +1,5 @@
 import { Package } from "lucide-react";
-import type { SaleItem } from "~/lib/services/sale-service";
+import type { SaleItem } from "~/hooks/use-sales";
 import { cn, formatCurrency } from "~/lib/utils";
 import { SaleDetailSection } from "./sale-detail-section";
 

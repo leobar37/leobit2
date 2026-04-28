@@ -12,7 +12,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
-import { syncStatusEnum } from "./enums";
 
 // Table definition
 export const tags = pgTable(
@@ -29,13 +28,6 @@ export const tags = pgTable(
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
 
-    // Sync status for offline support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -43,7 +35,6 @@ export const tags = pgTable(
   (table) => [
     index("idx_tags_business_id").on(table.businessId),
     index("idx_tags_name").on(table.name),
-    index("idx_tags_sync_status").on(table.syncStatus),
   ]
 );
 

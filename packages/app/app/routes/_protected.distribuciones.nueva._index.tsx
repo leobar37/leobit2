@@ -8,8 +8,7 @@ import { useToastError } from "~/hooks/use-toast-error";
 import { getToday } from "~/lib/date-utils";
 import { useSearchParams, useNavigate } from "react-router";
 import { FormPage } from "~/components/layout/form-page";
-import { useSync } from "~/components/sync/sync-status";
-import { useHasPendingSync } from "@avileo/drizzle-sync/react";
+import { useOnline } from "~/hooks/use-online";
 import { useToast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
 
@@ -21,21 +20,13 @@ export default function NuevaDistribucionPage() {
   const formRef = useRef<CreateDistribucionFormRef>(null);
   const [isValid, setIsValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isOnline } = useSync();
-  const hasPendingSync = useHasPendingSync();
+  const { isOnline } = useOnline();
   const { toast } = useToast();
 
   const fechaFromUrl = searchParams.get("fecha");
   const selectedDate = fechaFromUrl || getToday();
 
   const handleSubmit = async (data: CreateDistribucionApiInput) => {
-    if (hasPendingSync) {
-      toast.warning("Sincronización pendiente", {
-        description: "Espere a que se completen las operaciones pendientes antes de crear una distribución.",
-      });
-      return;
-    }
-
     console.log("[NuevaDistribucion] Submitting...", data);
     setIsSubmitting(true);
     try {
@@ -76,7 +67,7 @@ export default function NuevaDistribucionPage() {
       toolbar={
         <Button
           onClick={() => formRef.current?.submit()}
-          disabled={isLoading || !isValid || !isOnline || hasPendingSync}
+          disabled={isLoading || !isValid || !isOnline}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isLoading ? (
@@ -88,11 +79,6 @@ export default function NuevaDistribucionPage() {
             <>
               <WifiOff className="h-5 w-5 mr-2" />
               Sin conexión
-            </>
-          ) : hasPendingSync ? (
-            <>
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Sincronizando...
             </>
           ) : (
             <>
@@ -108,14 +94,6 @@ export default function NuevaDistribucionPage() {
           <WifiOff className="h-4 w-4" />
           <AlertDescription>
             Se requiere conexión a internet para crear una distribución porque se generan visitas automáticamente.
-          </AlertDescription>
-        </Alert>
-      )}
-      {hasPendingSync && (
-        <Alert variant="warning" className="mb-4">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertDescription>
-            Hay operaciones pendientes de sincronización. Espere a que se completen antes de crear una distribución.
           </AlertDescription>
         </Alert>
       )}

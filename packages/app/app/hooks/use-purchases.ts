@@ -1,36 +1,85 @@
 /**
- * Purchases Hook - Service-based
- * Reactively fetch and mutate purchases using PGlite services
+ * Purchases Hook - API-based
+ * Reactively fetch and mutate purchases using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { PurchaseService } from "~/lib/services/purchase-service";
-import type {
-  Purchase,
-  PurchaseWithItems,
-  PurchaseStatus,
-  CreatePurchaseInput,
-  CreatePurchaseItemInput,
-} from "~/lib/services/purchase-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-const QUERY_KEYS = {
-  purchases: ["purchases-new"],
-  purchase: (id: string) => ["purchases-new", id],
-  bySupplier: (supplierId: string) => ["purchases-new", "supplier", supplierId],
-  byStatus: (status: PurchaseStatus) => ["purchases-new", "status", status],
-} as const;
+/** Purchase status type (API only supports pending, received, cancelled) */
+export type PurchaseStatus = "pending" | "received" | "cancelled";
+
+/** Purchase entity */
+export interface Purchase {
+  id: string;
+  businessId: string;
+  supplierId: string | null;
+  purchaseDate: string | null;
+  totalAmount: string;
+  status: PurchaseStatus;
+  invoiceNumber: string | null;
+  receiptImageId: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  version?: number;
+  syncAttempts?: number;
+  syncStatus?: string;
+}
+
+/** Purchase item */
+export interface PurchaseItem {
+  id: string;
+  businessId: string;
+  purchaseId: string;
+  productId: string;
+  variantId: string | null;
+  unitId: string | null;
+  quantity: string;
+  unitCost: string;
+  totalCost: string;
+  createdAt: Date;
+  updatedAt: Date;
+  productName?: string;
+  variantName?: string;
+}
+
+/** Purchase with its items */
+export interface PurchaseWithItems extends Purchase {
+  items: PurchaseItem[];
+}
+
+/** Input for creating a purchase item */
+export interface CreatePurchaseItemInput {
+  productId: string;
+  variantId?: string;
+  unitId?: string;
+  packs?: number;
+  quantity: number;
+  unitCost: number;
+}
+
+/** Input for creating a purchase */
+export interface CreatePurchaseInput {
+  supplierId: string;
+  purchaseDate: string;
+  invoiceNumber?: string;
+  receiptImageId?: string;
+  notes?: string;
+  items: CreatePurchaseItemInput[];
+}
 
 /**
  * Get all purchases for the current business
  */
 export function usePurchases() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
-
   return useQuery({
-    queryKey: QUERY_KEYS.purchases,
+    queryKey: queryKeys.purchases.all,
     queryFn: async (): Promise<Purchase[]> => {
-      return purchaseService.findByBusiness();
+      const response = await api.purchases.get();
+      return extractData(response) as unknown as Purchase[];
     },
   });
 }
@@ -39,13 +88,12 @@ export function usePurchases() {
  * Get a single purchase by ID
  */
 export function usePurchase(id: string | null) {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.purchase(id) : ["purchases-new", "detail"],
+    queryKey: id ? queryKeys.purchases.detail(id) : ["purchases", "detail"],
     queryFn: async (): Promise<PurchaseWithItems | null> => {
       if (!id) return null;
-      return purchaseService.findById(id);
+      const response = await api.purchases({ id }).get();
+      return extractData(response) as unknown as PurchaseWithItems;
     },
     enabled: !!id,
   });
@@ -55,12 +103,13 @@ export function usePurchase(id: string | null) {
  * Get purchases by supplier
  */
 export function usePurchasesBySupplier(supplierId: string) {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
-
   return useQuery({
-    queryKey: QUERY_KEYS.bySupplier(supplierId),
+    queryKey: queryKeys.purchases.bySupplier(supplierId),
     queryFn: async (): Promise<Purchase[]> => {
-      return purchaseService.findBySupplier(supplierId);
+      const response = await api.purchases.get({
+        query: { supplierId },
+      });
+      return extractData(response) as unknown as Purchase[];
     },
     enabled: !!supplierId,
   });
@@ -70,14 +119,14 @@ export function usePurchasesBySupplier(supplierId: string) {
  * Get purchases by status
  */
 export function usePurchasesByStatus(status: PurchaseStatus) {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
-
   return useQuery({
-    queryKey: QUERY_KEYS.byStatus(status),
+    queryKey: queryKeys.purchases.byStatus(status),
     queryFn: async (): Promise<Purchase[]> => {
-      return purchaseService.findByBusiness();
+      const response = await api.purchases.get({
+        query: { status },
+      });
+      return extractData(response) as unknown as Purchase[];
     },
-    select: (data: Purchase[]) => data.filter((p) => p.status === status),
   });
 }
 
@@ -85,34 +134,34 @@ export function usePurchasesByStatus(status: PurchaseStatus) {
  * Create a new purchase
  */
 export function useCreatePurchase() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreatePurchaseInput): Promise<Purchase> => {
-      return purchaseService.create(input);
+      const response = await api.purchases.post(input as any);
+      return extractData(response) as unknown as Purchase;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
-      queryClient.invalidateQueries({ queryKey: ["purchases-new", "supplier"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
+      queryClient.invalidateQueries({ queryKey: ["purchases", "supplier"] });
     },
   });
 }
 
 /**
  * Create a draft purchase (for immediate editing)
+ * @deprecated The API does not support draft purchases. Use useCreatePurchase instead.
  */
 export function useCreateDraftPurchase() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input?: CreatePurchaseInput): Promise<Purchase> => {
-      return purchaseService.create(input ?? {});
+    mutationFn: async (_input?: CreatePurchaseInput): Promise<Purchase> => {
+      throw new Error("Draft purchases are not supported by the API. Use useCreatePurchase instead.");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
-      queryClient.invalidateQueries({ queryKey: ["purchases-new", "drafts"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
+      queryClient.invalidateQueries({ queryKey: ["purchases", "drafts"] });
     },
   });
 }
@@ -121,7 +170,6 @@ export function useCreateDraftPurchase() {
  * Update purchase status
  */
 export function useUpdatePurchaseStatus() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -132,16 +180,15 @@ export function useUpdatePurchaseStatus() {
       id: string;
       status: PurchaseStatus;
     }): Promise<void> => {
-      return purchaseService.updateStatus(id, status);
+      const response = await api.purchases({ id }).status.put({ status } as any);
+      extractData(response);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.id),
+        queryKey: queryKeys.purchases.detail(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
-      queryClient.invalidateQueries({
-        queryKey: ["purchases-new", "status"],
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
+      queryClient.invalidateQueries({ queryKey: ["purchases", "status"] });
     },
   });
 }
@@ -150,39 +197,31 @@ export function useUpdatePurchaseStatus() {
  * Delete a purchase
  */
 export function useDeletePurchase() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      return purchaseService.delete(id);
+      const response = await api.purchases({ id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchase(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
-      queryClient.invalidateQueries({
-        queryKey: ["purchases-new", "supplier"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["purchases-new", "status"],
-      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
+      queryClient.invalidateQueries({ queryKey: ["purchases", "supplier"] });
+      queryClient.invalidateQueries({ queryKey: ["purchases", "status"] });
     },
   });
 }
 
 /**
  * Update a purchase item (for editing confirmed purchases)
+ * @deprecated The API does not support individual item operations.
  */
 export function useUpdatePurchaseItem() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      purchaseId,
-      itemId,
-      data,
-    }: {
+    mutationFn: async (_: {
       purchaseId: string;
       itemId: string;
       data: {
@@ -191,107 +230,95 @@ export function useUpdatePurchaseItem() {
         totalCost?: number;
       };
     }): Promise<void> => {
-      return purchaseService.updateItemInPurchase(purchaseId, itemId, data);
+      throw new Error("Individual purchase item operations are not supported by the API.");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+        queryKey: queryKeys.purchases.detail(variables.purchaseId),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
     },
   });
 }
 
-
-
 /**
  * Add an item to an existing purchase (for editing confirmed purchases)
+ * @deprecated The API does not support individual item operations.
  */
 export function useAddPurchaseItem() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      purchaseId,
-      item,
-    }: {
+    mutationFn: async (_: {
       purchaseId: string;
       item: CreatePurchaseItemInput;
     }): Promise<void> => {
-      return purchaseService.addItemToPurchase(purchaseId, item);
+      throw new Error("Individual purchase item operations are not supported by the API.");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+        queryKey: queryKeys.purchases.detail(variables.purchaseId),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
     },
   });
 }
 
 /**
  * Remove an item from a purchase (for editing confirmed purchases)
+ * @deprecated The API does not support individual item operations.
  */
 export function useRemovePurchaseItem() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      purchaseId,
-      itemId,
-    }: {
+    mutationFn: async (_: {
       purchaseId: string;
       itemId: string;
     }): Promise<void> => {
-      return purchaseService.deleteItemFromPurchase(purchaseId, itemId);
+      throw new Error("Individual purchase item operations are not supported by the API.");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.purchaseId),
+        queryKey: queryKeys.purchases.detail(variables.purchaseId),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
     },
   });
 }
 
 /**
  * Get all drafts for the current business
+ * @deprecated The API does not support draft purchases.
  */
 export function usePurchaseDrafts() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
-
   return useQuery({
-    queryKey: ["purchases-new", "drafts"],
+    queryKey: ["purchases", "drafts"],
     queryFn: async (): Promise<Purchase[]> => {
-      return purchaseService.findDrafts();
+      return [];
     },
   });
 }
 
 /**
  * Update a purchase (any field)
+ * @deprecated The API only supports status updates. Use useUpdatePurchaseStatus instead.
  */
 export function useUpdatePurchase() {
-  const purchaseService = useEngineService<PurchaseService>("purchases");
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
+    mutationFn: async (_: {
       id: string;
-      input: Parameters<typeof purchaseService.update>[1];
+      input: Partial<CreatePurchaseInput>;
     }): Promise<void> => {
-      return purchaseService.update(id, input);
+      throw new Error("Full purchase updates are not supported by the API. Use useUpdatePurchaseStatus instead.");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.purchase(variables.id),
+        queryKey: queryKeys.purchases.detail(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchases });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
     },
   });
 }

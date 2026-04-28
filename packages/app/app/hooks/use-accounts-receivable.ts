@@ -1,10 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { PaymentService } from "~/lib/services/payment-service";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
+
+export interface AccountsReceivableCustomer {
+  id: string;
+  name: string;
+  phone: string | null;
+}
 
 export interface AccountsReceivableItem {
-  customer: Customer;
+  customer: AccountsReceivableCustomer;
   totalDebt: number;
   totalSales: number;
   totalPayments: number;
@@ -25,35 +31,42 @@ export interface AccountsReceivablePage {
 }
 
 export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
-  const paymentService = useEngineService<PaymentService>("abonos");
-
   const limit = filters.limit ?? (filters.customerId ? 1 : 100);
   const offset = filters.offset ?? 0;
 
   const query = useQuery({
-    queryKey: ["accounts-receivable", { ...filters, limit, offset }],
+    queryKey: queryKeys.reports.accountsReceivable({
+      ...filters,
+      limit,
+      offset,
+    } as Record<string, unknown>),
     queryFn: async (): Promise<AccountsReceivablePage> => {
-      const page = await paymentService.findAccountsReceivablePage({
-        search: filters.search,
-        minBalance: filters.minBalance,
-        customerId: filters.customerId,
-        limit,
-        offset,
+      const response = await api.reports["accounts-receivable"].get({
+        query: {
+          search: filters.search,
+          minBalance: filters.minBalance?.toString(),
+          limit: limit.toString(),
+          offset: offset.toString(),
+        },
       });
 
+      const items = extractData(response) as Array<{
+        customer: AccountsReceivableCustomer;
+        totalDebt: number;
+        totalSales: number;
+        totalPayments: number;
+        lastSaleDate: string | null;
+      }>;
+
       return {
-        items: page.items.map((item) => ({
-          customer: {
-            id: item.customerId,
-            name: item.customerName,
-            phone: item.customerPhone,
-          } as Customer,
+        items: items.map((item) => ({
+          customer: item.customer,
           totalDebt: Number(item.totalDebt ?? 0),
           totalSales: Number(item.totalSales ?? 0),
           totalPayments: Number(item.totalPayments ?? 0),
           lastSaleDate: item.lastSaleDate ? new Date(item.lastSaleDate) : null,
         })),
-        total: page.total,
+        total: items.length,
       };
     },
   });
@@ -68,16 +81,13 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
 export function useTotalAccountsReceivable(
   filters: AccountsReceivableFilters = {}
 ) {
-  const paymentService = useEngineService<PaymentService>("abonos");
-
   const { data: totalDebt = 0, isLoading } = useQuery({
-    queryKey: ["accounts-receivable", "total", filters],
-    queryFn: () =>
-      paymentService.getAccountsReceivableTotal({
-        search: filters.search,
-        minBalance: filters.minBalance,
-        customerId: filters.customerId,
-      }),
+    queryKey: queryKeys.reports.accountsReceivableTotal(filters as Record<string, unknown>),
+    queryFn: async () => {
+      const response = await api.reports["accounts-receivable"].total.get();
+      const data = extractData(response) as { total: number };
+      return data.total;
+    },
   });
 
   return {

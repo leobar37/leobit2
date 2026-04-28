@@ -34,8 +34,6 @@ export class ProductRepository {
         costPrice: products.costPrice,
         isActive: products.isActive,
         imageId: products.imageId,
-        syncStatus: products.syncStatus,
-        syncAttempts: products.syncAttempts,
         createdAt: products.createdAt,
         variantCount: sql<number>`count(${productVariants.id})`,
       })
@@ -70,8 +68,6 @@ export class ProductRepository {
         costPrice: products.costPrice,
         isActive: products.isActive,
         imageId: products.imageId,
-        syncStatus: products.syncStatus,
-        syncAttempts: products.syncAttempts,
         createdAt: products.createdAt,
         hasVariants: products.hasVariants,
       })

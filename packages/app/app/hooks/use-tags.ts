@@ -1,32 +1,41 @@
 /**
- * Tags Hook (Service-based)
- * Reactively fetch and mutate tags using PGlite services
+ * Tags Hook (API-based)
+ * Reactively fetch and mutate tags using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { TagService } from "~/lib/services/tag-service";
-import type { Tags as Tag } from "~/lib/sync/generated/schema";
-import type { CreateTagInput, UpdateTagInput } from "~/lib/services/tag-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-// Re-export Tag type for backward compatibility
-export type { Tag };
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  businessId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const QUERY_KEYS = {
-  tags: ["tags"],
-  tag: (id: string) => ["tags", id],
-} as const;
+export interface CreateTagInput {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagInput {
+  name?: string;
+  color?: string;
+}
 
 /**
  * Get all tags for the current business
  */
 export function useTags() {
-  const tagService = useEngineService<TagService>("tags");
-
   return useQuery({
-    queryKey: QUERY_KEYS.tags,
+    queryKey: queryKeys.tags.all,
     queryFn: async () => {
-      return tagService.findByBusiness();
+      const response = await api.tags.get();
+      return extractData(response) as unknown as Tag[];
     },
   });
 }
@@ -35,13 +44,12 @@ export function useTags() {
  * Get a single tag by ID
  */
 export function useTag(id: string | null) {
-  const tagService = useEngineService<TagService>("tags");
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.tag(id) : ["tags", "detail"],
+    queryKey: id ? queryKeys.tags.detail(id) : ["tags", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      return tagService.findById(id);
+      const response = await api.tags({ id }).get();
+      return extractData(response) as unknown as Tag;
     },
     enabled: !!id,
   });
@@ -51,15 +59,15 @@ export function useTag(id: string | null) {
  * Create a new tag
  */
 export function useCreateTag() {
-  const tagService = useEngineService<TagService>("tags");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateTagInput): Promise<Tag> => {
-      return tagService.create(input);
+      const response = await api.tags.post(input as any);
+      return extractData(response) as unknown as Tag;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags.all });
     },
   });
 }
@@ -68,7 +76,6 @@ export function useCreateTag() {
  * Update an existing tag
  */
 export function useUpdateTag() {
-  const tagService = useEngineService<TagService>("tags");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -78,14 +85,15 @@ export function useUpdateTag() {
     }: {
       id: string;
       input: UpdateTagInput;
-    }): Promise<void> => {
-      return tagService.update(id, input);
+    }): Promise<Tag> => {
+      const response = await api.tags({ id }).put(input as any);
+      return extractData(response) as unknown as Tag;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.tag(variables.id),
+        queryKey: queryKeys.tags.detail(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags.all });
     },
   });
 }
@@ -94,16 +102,18 @@ export function useUpdateTag() {
  * Delete a tag
  */
 export function useDeleteTag() {
-  const tagService = useEngineService<TagService>("tags");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      return tagService.delete(id);
+      const response = await api.tags({ id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tag(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tags });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.tags.detail(id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags.all });
     },
   });
 }

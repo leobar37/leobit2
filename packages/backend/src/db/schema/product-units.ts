@@ -13,7 +13,6 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { syncStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 import { products } from "./inventory";
 import { productVariants } from "./inventory";
@@ -50,13 +49,6 @@ export const productUnits = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
 
-    // Sync
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -66,7 +58,6 @@ export const productUnits = pgTable(
     index("idx_product_units_product_id").on(table.productId),
     index("idx_product_units_variant_id").on(table.variantId),
     index("idx_product_units_is_active").on(table.isActive),
-    index("idx_product_units_sync_status").on(table.syncStatus),
   ]
 );
 

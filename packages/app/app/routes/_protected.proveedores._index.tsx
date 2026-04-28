@@ -70,7 +70,7 @@ export default function ProveedoresPage() {
 
   const { data: business } = useBusiness();
   const [search, setSearch] = useState("");
-  const { data: suppliers, isLoading } = useSuppliers(business?.id || "");
+  const { data: suppliers, isLoading } = useSuppliers();
 
   return (
     <>

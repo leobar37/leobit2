@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/drawer";
 import { Loader2 } from "lucide-react";
 import { createModal } from "~/lib/modal/create-modal";
-import { useSync } from "~/components/sync/sync-status";
+import { useOnline } from "~/hooks/use-online";
 
 interface GroupFormData {
   mode: "create" | "edit";
@@ -26,7 +26,7 @@ function GroupFormDrawerContent({
   onSubmit,
   isSubmitting,
 }: GroupFormData & { close: () => void }) {
-  const { isOnline } = useSync();
+  const { isOnline } = useOnline();
 
   return (
     <>

@@ -10,7 +10,6 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { syncStatusEnum } from "./enums";
 import { customerGroups } from "./customer-groups";
 import { customers } from "./customers";
 import { businessUsers } from "./businesses";
@@ -36,13 +35,6 @@ export const customerGroupMembers = pgTable(
     addedAt: timestamp("added_at").notNull().defaultNow(),
     addedBy: uuid("added_by").references(() => businessUsers.id),
 
-    // Sync status for offline support
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -51,7 +43,6 @@ export const customerGroupMembers = pgTable(
     index("idx_customer_group_members_business_id").on(table.businessId),
     index("idx_customer_group_members_group_id").on(table.groupId),
     index("idx_customer_group_members_customer_id").on(table.customerId),
-    index("idx_customer_group_members_sync_status").on(table.syncStatus),
     index("idx_customer_group_members_updated_at").on(table.updatedAt),
   ]
 );

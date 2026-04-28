@@ -12,7 +12,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { visitaStatusEnum, syncStatusEnum } from "./enums";
+import { visitaStatusEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones } from "./inventory";
@@ -48,13 +48,6 @@ export const visitas = pgTable(
     // Optional link to sale if customer purchased
     saleId: uuid("sale_id").references(() => sales.id, { onDelete: "set null" }),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -66,7 +59,6 @@ export const visitas = pgTable(
     index("idx_visitas_vendedor_id").on(table.vendedorId),
     index("idx_visitas_status").on(table.status),
     index("idx_visitas_sale_id").on(table.saleId),
-    index("idx_visitas_sync_status").on(table.syncStatus),
     index("idx_visitas_created_at").on(table.createdAt),
   ]
 );

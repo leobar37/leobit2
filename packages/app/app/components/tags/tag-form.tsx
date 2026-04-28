@@ -8,7 +8,7 @@ import { z } from "zod";
 import { FormInput } from "~/components/forms/form-input";
 import { Button } from "@/components/ui/button";
 import { useCreateTag, useUpdateTag } from "~/hooks/use-tags";
-import type { Tags as Tag } from "~/lib/sync/generated/schema";
+import type { Tag } from "@avileo/shared";
 
 const tagSchema = z.object({
   name: z

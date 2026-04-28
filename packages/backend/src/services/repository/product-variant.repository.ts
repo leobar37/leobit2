@@ -25,8 +25,6 @@ export interface UpdateVariantInput {
   costPrice?: string;
   sortOrder?: number;
   isActive?: boolean;
-  syncStatus?: "pending" | "synced" | "error";
-  syncAttempts?: number;
 }
 
 export class ProductVariantRepository {
@@ -112,8 +110,6 @@ export class ProductVariantRepository {
         ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.syncStatus !== undefined && { syncStatus: data.syncStatus }),
-        ...(data.syncAttempts !== undefined && { syncAttempts: data.syncAttempts }),
         updatedAt: new Date(),
       })
       .where(eq(productVariants.id, id))

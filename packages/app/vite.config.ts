@@ -20,40 +20,12 @@ function suppressReactDevToolsWarning(): Plugin {
   };
 }
 
-// Add COOP/COEP headers for WASM support in Firefox
-function crossOriginIsolation(): Plugin {
-  return {
-    name: "cross-origin-isolation",
-    configureServer(server) {
-      server.middlewares.use((_req, res, next) => {
-        res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
-        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-        next();
-      });
-    },
-  };
-}
-
-// Force ES module format for workers (required for PGlite worker with module resolution)
-function workerEsFormat(): Plugin {
-  return {
-    name: "worker-es-format",
-    config(config) {
-      // @ts-expect-error Vite internal worker option
-      config.worker = { format: 'es' };
-      return config;
-    },
-  };
-}
-
 export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   plugins: [
     isDev && suppressReactDevToolsWarning(),
-    workerEsFormat(),
-    crossOriginIsolation(),
     reactRouter(),
     tsconfigPaths({
       ignoreConfigErrors: true,
@@ -75,9 +47,7 @@ export default defineConfig({
       ],
       workbox: {
         // Cache static assets but NOT index.html (prevents stale HTML with old chunk references)
-        globPatterns: ["**/*.{js,css,ico,png,svg,woff2,wasm,data}"],
-        // Increase limit for PGlite WASM files (~9MB wasm + ~5MB data)
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
         // Disable navigateFallback - we handle navigation via runtimeCaching NetworkFirst
         // navigateFallback can use stale precached index.html, which causes chunk loading errors
         // Instead, runtimeCaching with request.mode === "navigate" handles all navigation
@@ -91,21 +61,6 @@ export default defineConfig({
         // runtimeCaching must be ordered with navigation LAST for highest priority
         // Workbox checks routes in reverse registration order
         runtimeCaching: [
-          // PGlite WASM files - cache for offline database initialization
-          {
-            urlPattern: /\.(wasm|data)$/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "pglite-cache",
-              expiration: {
-                maxEntries: 4,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
           // Google Fonts
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -222,7 +177,6 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   optimizeDeps: {
-    exclude: ["@electric-sql/pglite"],
     include: [
       "react-day-picker",
       "date-fns",
@@ -241,7 +195,6 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        "@electric-sql/pglite/dist/fs/nodefs.js",
         // Exclude engine files from SSR/bundling - they use browser-only APIs
         // Use a function to ensure we only match relative imports, not absolute Docker paths
         (id) => {
@@ -253,8 +206,6 @@ export default defineConfig({
     },
   },
   ssr: {
-    // Exclude browser-only modules from SSR
-    external: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
     noExternal: [],
   },
   server: {
@@ -270,5 +221,5 @@ export default defineConfig({
       clearScreen: () => {},
     },
   },
-  assetsInclude: ["**/*.md", "**/*.wasm", "**/*.data"],
+  assetsInclude: ["**/*.md"],
 });

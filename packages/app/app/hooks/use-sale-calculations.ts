@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Sale, SaleItem } from "~/lib/services/sale-service";
+import type { Sale, SaleItem } from "~/hooks/use-sales";
 
 export interface SaleCalculations {
   totalAmount: number;

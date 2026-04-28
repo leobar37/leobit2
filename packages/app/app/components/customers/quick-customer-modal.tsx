@@ -12,7 +12,7 @@ import {
 import { createModal } from "~/lib/modal/create-modal";
 import { useCreateCustomer } from "~/hooks/use-customers";
 import { FormInput } from "~/components/forms/form-input";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
+import type { Customer } from "~/hooks/use-customers";
 
 const quickCustomerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),

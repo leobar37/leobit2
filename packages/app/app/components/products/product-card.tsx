@@ -2,7 +2,7 @@ import { DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
-import type { Products as Product } from "~/lib/sync/generated/schema";
+import type { Product } from "@avileo/shared";
 
 interface ProductCardProps {
   product: Product;

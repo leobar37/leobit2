@@ -331,6 +331,43 @@ export interface UpdateOrderInput {
   }>;
 }
 
+export type {
+  Customer,
+  NewCustomer,
+  Product,
+  NewProduct,
+  Tag,
+  NewTag,
+  Sale,
+  NewSale,
+  SaleItem,
+  NewSaleItem,
+  ProductVariant,
+  NewProductVariant,
+  Abono,
+  NewAbono,
+  Supplier,
+  NewSupplier,
+  Purchase,
+  NewPurchase,
+  PurchaseItem,
+  NewPurchaseItem,
+  Distribucion,
+  NewDistribucion,
+  DistribucionItem,
+  NewDistribucionItem,
+  CustomerTag,
+  NewCustomerTag,
+  CustomerGroup,
+  NewCustomerGroup,
+  CustomerGroupMember,
+  NewCustomerGroupMember,
+  Visita,
+  NewVisita,
+  VariantInventory,
+  NewVariantInventory,
+} from "./schema";
+
 // Sync configuration exports
 export {
   SYNC_ENTITIES,

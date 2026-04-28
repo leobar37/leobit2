@@ -1,11 +1,7 @@
-/**
- * Customer Groups Hook
- * Local-first: All operations use CustomerGroupService for offline support
- */
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { CustomerGroupService } from "~/lib/services/customer-group-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 import { toast } from "sonner";
 
 export interface GroupMember {
@@ -17,29 +13,55 @@ export interface GroupMember {
 export interface CustomerGroup {
   id: string;
   name: string;
-  syncStatus: string;
-  syncAttempts: number;
   createdAt: Date;
   updatedAt: Date;
   memberCount?: number;
   members?: GroupMember[];
 }
 
-const QUERY_KEYS = {
-  groups: ["customer-groups"] as const,
-  group: (id: string) => ["customer-groups", id] as const,
-  groupsWithDetails: ["customer-groups-with-details"] as const,
-};
+function mapApiGroup(data: {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  memberCount?: number;
+  members?: Array<{
+    customerId: string;
+    customerName: string;
+    addedAt: string;
+  }>;
+}): CustomerGroup {
+  return {
+    id: data.id,
+    name: data.name,
+    createdAt: new Date(data.createdAt),
+    updatedAt: new Date(data.updatedAt),
+    memberCount: data.memberCount,
+    members: data.members?.map((m) => ({
+      customerId: m.customerId,
+      customerName: m.customerName,
+      addedAt: new Date(m.addedAt),
+    })),
+  };
+}
 
 /**
  * Get all customer groups for the current business
  */
 export function useCustomerGroups() {
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
-
   return useQuery({
-    queryKey: QUERY_KEYS.groups,
-    queryFn: () => customerGroupService.findAll(),
+    queryKey: queryKeys.customerGroups.all,
+    queryFn: async () => {
+      const response = await api.groups.get();
+      const data = extractData(response) as unknown as Array<{
+        id: string;
+        name: string;
+        createdAt: string;
+        updatedAt: string;
+        memberCount: number;
+      }>;
+      return data.map(mapApiGroup);
+    },
     staleTime: 1000 * 60,
   });
 }
@@ -48,13 +70,24 @@ export function useCustomerGroups() {
  * Get a single customer group by ID with members
  */
 export function useCustomerGroup(id: string | null) {
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
-
   return useQuery({
-    queryKey: QUERY_KEYS.group(id || ""),
-    queryFn: () => {
+    queryKey: id ? queryKeys.customerGroups.detail(id) : queryKeys.customerGroups.all,
+    queryFn: async () => {
       if (!id) return null;
-      return customerGroupService.findById(id);
+      const response = await api.groups({ id }).get();
+      const data = extractData(response) as unknown as {
+        id: string;
+        name: string;
+        createdAt: string;
+        updatedAt: string;
+        memberCount?: number;
+        members?: Array<{
+          customerId: string;
+          customerName: string;
+          addedAt: string;
+        }>;
+      };
+      return mapApiGroup(data);
     },
     enabled: !!id,
     staleTime: 1000 * 60,
@@ -63,21 +96,36 @@ export function useCustomerGroup(id: string | null) {
 
 /**
  * Create a new customer group
- * Supports optional customerIds to add members atomically using createWithMembers
+ * Supports optional customerIds to add members atomically
  */
 export function useCreateCustomerGroup() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { name: string; customerIds?: string[] }) => {
+      const createResponse = await api.groups.post({ name: input.name });
+      const data = extractData(createResponse) as unknown as {
+        id: string;
+        name: string;
+        createdAt: string;
+        updatedAt: string;
+        memberCount: number;
+      };
+      const group = mapApiGroup(data);
+
       if (input.customerIds && input.customerIds.length > 0) {
-        return customerGroupService.createWithMembers({ name: input.name }, input.customerIds);
+        const membersResponse = await api
+          .groups({ id: group.id })
+          .members.post({ customerIds: input.customerIds });
+        if (membersResponse.error) {
+          throw new Error(String(membersResponse.error.value));
+        }
       }
-      return customerGroupService.create({ name: input.name });
+
+      return group;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
       toast.success("Grupo creado correctamente");
     },
     onError: (error) => {
@@ -91,15 +139,26 @@ export function useCreateCustomerGroup() {
  */
 export function useUpdateCustomerGroup() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { id: string; name: string }) => {
-      return customerGroupService.update(input.id, { name: input.name });
+      const response = await api
+        .groups({ id: input.id })
+        .put({ name: input.name });
+      const data = extractData(response) as unknown as {
+        id: string;
+        name: string;
+        createdAt: string;
+        updatedAt: string;
+        memberCount: number;
+      };
+      return mapApiGroup(data);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customerGroups.detail(variables.id),
+      });
       toast.success("Grupo actualizado correctamente");
     },
     onError: (error) => {
@@ -113,14 +172,14 @@ export function useUpdateCustomerGroup() {
  */
 export function useDeleteCustomerGroup() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { id: string }) => {
-      return customerGroupService.delete(input.id);
+      const response = await api.groups({ id: input.id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
       toast.success("Grupo eliminado correctamente");
     },
     onError: (error) => {
@@ -134,17 +193,21 @@ export function useDeleteCustomerGroup() {
  */
 export function useAddMembersToGroup() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { groupId: string; customerIds: string[] }) => {
-      return customerGroupService.addMembers(input.groupId, input.customerIds);
+      const response = await api
+        .groups({ id: input.groupId })
+        .members.post({ customerIds: input.customerIds });
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.groupsWithDetails,
+        queryKey: queryKeys.customerGroups.detail(variables.groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-groups-with-details"],
         exact: false,
       });
       toast.success("Miembros agregados correctamente");
@@ -160,17 +223,22 @@ export function useAddMembersToGroup() {
  */
 export function useRemoveMemberFromGroup() {
   const queryClient = useQueryClient();
-  const customerGroupService = useEngineService<CustomerGroupService>("customerGroups");
 
   return useMutation({
     mutationFn: async (input: { groupId: string; customerId: string }) => {
-      return customerGroupService.removeMember(input.groupId, input.customerId);
+      const response = await api
+        .groups({ id: input.groupId })
+        .members({ customerId: input.customerId })
+        .delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.group(variables.groupId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.groupsWithDetails,
+        queryKey: queryKeys.customerGroups.detail(variables.groupId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-groups-with-details"],
         exact: false,
       });
       toast.success("Miembro eliminado correctamente");

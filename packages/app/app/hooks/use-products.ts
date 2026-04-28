@@ -1,28 +1,58 @@
 /**
- * Products Hook (Service-based)
- * Reactively fetch and mutate products using PGlite services (offline-first)
+ * Products Hook (API-based)
+ * Reactively fetch and mutate products using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEngineService } from "@avileo/drizzle-sync/react";
-import { ProductService } from "~/lib/services/product-service";
-import type { Product, CreateProductInput, UpdateProductInput } from "~/lib/services/product-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-const QUERY_KEYS = {
-  products: ["products"],
-  product: (id: string) => ["products", id],
-} as const;
+export interface Product {
+  id: string;
+  businessId: string;
+  name: string;
+  type: string;
+  unit: string;
+  basePrice: string;
+  costPrice: string;
+  isActive: boolean;
+  hasVariants: boolean;
+  imageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductInput {
+  name: string;
+  type?: "pollo" | "huevo" | "otro";
+  unit: "kg" | "unidad";
+  basePrice: string;
+  costPrice?: string;
+  isActive?: boolean;
+  imageId?: string;
+  hasVariants?: boolean;
+}
+
+export interface UpdateProductInput {
+  name?: string;
+  type?: "pollo" | "huevo" | "otro";
+  unit?: "kg" | "unidad";
+  basePrice?: string;
+  costPrice?: string;
+  isActive?: boolean;
+  imageId?: string | null;
+}
 
 /**
  * Get all products for the current business
  */
 export function useProducts() {
-  const productService = useEngineService<ProductService>("products");
-
   return useQuery({
-    queryKey: QUERY_KEYS.products,
+    queryKey: queryKeys.products.all,
     queryFn: async () => {
-      return productService.findByBusiness();
+      const response = await api.products.get();
+      return extractData(response) as unknown as unknown as Product[];
     },
   });
 }
@@ -31,42 +61,38 @@ export function useProducts() {
  * Get a single product by ID
  */
 export function useProduct(id: string | null) {
-  const productService = useEngineService<ProductService>("products");
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.product(id) : ["products", "detail"],
+    queryKey: id ? queryKeys.products.detail(id) : ["products", "detail"],
     queryFn: async () => {
       if (!id) return null;
-      return productService.findById(id);
+      const response = await api.products({ id }).get();
+      return extractData(response) as unknown as Product;
     },
     enabled: !!id,
   });
 }
 
 /**
- * Create a new product (admin only)
- * Queues sync operation when offline
+ * Create a new product
  */
 export function useCreateProduct() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateProductInput): Promise<Product> => {
-      return productService.create(input);
+      const response = await api.products.post(input as any);
+      return extractData(response) as unknown as Product;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
 
 /**
- * Update an existing product (admin only)
- * Queues sync operation when offline
+ * Update an existing product
  */
 export function useUpdateProduct() {
-  const productService = useEngineService<ProductService>("products");
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -76,15 +102,15 @@ export function useUpdateProduct() {
     }: {
       id: string;
       input: UpdateProductInput;
-    }): Promise<void> => {
-      return productService.update(id, input);
+    }): Promise<Product> => {
+      const response = await api.products({ id }).put(input as any);
+      return extractData(response) as unknown as Product;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.product(variables.id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.products.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
-
-// Re-export types for convenience
-export type { Product, CreateProductInput, UpdateProductInput };

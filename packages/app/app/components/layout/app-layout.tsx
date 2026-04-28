@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { SyncDevTools } from "@avileo/drizzle-sync/react/devtools";
 import {
   Sheet,
   SheetContent,
@@ -276,9 +275,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
               })}
             </div>
           </nav>
-        )}
-        
-        <SyncDevTools enabled={import.meta.env.DEV} />
+        )        }
       </div>
     </LayoutContext.Provider>
   );

@@ -1,68 +1,156 @@
 /**
- * Customers Hook (Service-based)
- * Reactively fetch and mutate customers using PGlite services
+ * Customers Hook (API-based)
+ * Reactively fetch and mutate customers using Eden Treaty API
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServices } from "@avileo/drizzle-sync/react";
-import type { AvileoAppServices } from "~/lib/sync/service-overrides";
-import type { Customers as Customer } from "~/lib/sync/generated/schema";
-import type {
-  CreateCustomerInput,
-  UpdateCustomerInput,
-  CustomerSearchFilters,
-  CustomerPageQuery,
-} from "~/lib/services/customer-service";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
+import { queryKeys } from "~/lib/query-keys";
 
-const QUERY_KEYS = {
-  customers: ["customers-new"],
-  customer: (id: string) => ["customers-new", id],
-  search: (filters: CustomerSearchFilters) => ["customers-new", "search", filters],
-  page: (query: CustomerPageQuery) => ["customers-new", "page", query],
-  tags: (customerIds: string[]) => ["customers-new", "tags", customerIds],
-} as const;
+export interface Customer {
+  id: string;
+  name: string;
+  dni: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  businessId: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface PaginatedCustomersResult {
   items: Customer[];
   total: number;
 }
 
+export interface CustomerSearchFilters {
+  search?: string;
+  limit?: number;
+  offset?: number;
+  tagIds?: string[];
+}
+
+export interface CustomerPageQuery {
+  search?: string;
+  limit?: number;
+  offset?: number;
+  tagIds?: string[];
+  groupIds?: string[];
+}
+
+export interface CreateCustomerInput {
+  name: string;
+  dni?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateCustomerInput {
+  name?: string;
+  dni?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface CustomerTagSummary {
+  customerId: string;
+  tagId: string;
+  tagName: string;
+  tagColor: string;
+  assignedAt: Date;
+  assignedBy: null;
+  syncStatus: string;
+  syncAttempts: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /**
  * Get all customers for the current business
  */
-function useCustomerService() {
-  const services = useServices<AvileoAppServices>();
-  return services.customers;
-}
-
 export function useCustomers(filters?: CustomerSearchFilters) {
-  const customerService = useCustomerService();
-
   return useQuery({
-    queryKey: filters ? QUERY_KEYS.search(filters) : QUERY_KEYS.customers,
+    queryKey: filters
+      ? queryKeys.customers.search(filters as Record<string, unknown>)
+      : queryKeys.customers.all,
     queryFn: async () => {
-      return customerService.findByBusiness(filters);
+      const response = await api.customers.get({
+        query: {
+          search: filters?.search,
+          limit: filters?.limit?.toString(),
+          offset: filters?.offset?.toString(),
+          tagIds: filters?.tagIds?.join(","),
+        },
+      });
+      return extractData(response) as unknown as Customer[];
     },
   });
 }
 
+/**
+ * Get paginated customers for the current business
+ */
 export function usePaginatedCustomers(query: CustomerPageQuery) {
-  const customerService = useCustomerService();
-
   return useQuery({
-    queryKey: QUERY_KEYS.page(query),
+    queryKey: queryKeys.customers.page(query as Record<string, unknown>),
     queryFn: async (): Promise<PaginatedCustomersResult> => {
-      return customerService.findPageByBusiness(query);
+      const response = await api.customers.get({
+        query: {
+          search: query.search,
+          limit: query.limit?.toString(),
+          offset: query.offset?.toString(),
+          tagIds: query.tagIds?.join(","),
+        },
+      });
+      const data = extractData(response) as unknown as Customer[];
+      return { items: data, total: data.length };
     },
   });
 }
 
+/**
+ * Get tags summary for multiple customers
+ */
 export function useCustomerTagsSummary(customerIds: string[]) {
-  const customerService = useCustomerService();
-
   return useQuery({
-    queryKey: QUERY_KEYS.tags(customerIds),
-    queryFn: async () => customerService.getCustomerTagsForCustomers(customerIds),
+    queryKey: queryKeys.customers.tags(customerIds),
+    queryFn: async (): Promise<CustomerTagSummary[]> => {
+      if (customerIds.length === 0) return [];
+      const results = await Promise.all(
+        customerIds.map(async (id) => {
+          const response = await api.customers({ id }).tags.get();
+          const tags = extractData(response) as unknown as Array<{
+            tagId: string;
+            tagName: string;
+            tagColor: string;
+            assignedAt: string;
+          }>;
+          return tags.map(
+            (tag) =>
+              ({
+                customerId: id,
+                tagId: tag.tagId,
+                tagName: tag.tagName,
+                tagColor: tag.tagColor,
+                assignedAt: new Date(tag.assignedAt),
+                assignedBy: null,
+                syncStatus: "synced",
+                syncAttempts: 0,
+                version: 1,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }) as CustomerTagSummary
+          );
+        })
+      );
+      return results.flat();
+    },
     enabled: customerIds.length > 0,
   });
 }
@@ -71,13 +159,12 @@ export function useCustomerTagsSummary(customerIds: string[]) {
  * Get a single customer by ID
  */
 export function useCustomer(id: string | null) {
-  const customerService = useCustomerService();
-
   return useQuery({
-    queryKey: id ? QUERY_KEYS.customer(id) : ["customers-new", "detail"],
+    queryKey: id ? queryKeys.customers.detail(id) : queryKeys.customers.all,
     queryFn: async () => {
       if (!id) return null;
-      return customerService.findById(id);
+      const response = await api.customers({ id }).get();
+      return extractData(response) as unknown as Customer;
     },
     enabled: !!id,
   });
@@ -87,15 +174,15 @@ export function useCustomer(id: string | null) {
  * Search customers by name, DNI, or phone
  */
 export function useSearchCustomers(searchTerm: string | null) {
-  const customerService = useCustomerService();
-
   return useQuery({
-    queryKey: ["customers-new", "search", searchTerm],
+    queryKey: ["customers", "search", searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) {
-        return customerService.findByBusiness({});
-      }
-      return customerService.findByBusiness({ search: searchTerm });
+      const response = await api.customers.get({
+        query: {
+          search: searchTerm && searchTerm.length >= 2 ? searchTerm : undefined,
+        },
+      });
+      return extractData(response) as unknown as Customer[];
     },
   });
 }
@@ -104,16 +191,16 @@ export function useSearchCustomers(searchTerm: string | null) {
  * Create a new customer
  */
 export function useCreateCustomer() {
-  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateCustomerInput): Promise<Customer> => {
-      return customerService.create(input);
+      const response = await api.customers.post(input as any);
+      return extractData(response) as unknown as Customer;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
-      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
     },
   });
 }
@@ -122,7 +209,6 @@ export function useCreateCustomer() {
  * Update an existing customer
  */
 export function useUpdateCustomer() {
-  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -132,15 +218,16 @@ export function useUpdateCustomer() {
     }: {
       id: string;
       input: UpdateCustomerInput;
-    }): Promise<void> => {
-      return customerService.update(id, input);
+    }): Promise<Customer> => {
+      const response = await api.customers({ id }).put(input as any);
+      return extractData(response) as unknown as Customer;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.customer(variables.id),
+        queryKey: queryKeys.customers.detail(variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
-      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
     },
   });
 }
@@ -149,17 +236,19 @@ export function useUpdateCustomer() {
  * Delete a customer
  */
 export function useDeleteCustomer() {
-  const customerService = useCustomerService();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      return customerService.delete(id);
+      const response = await api.customers({ id }).delete();
+      if (response.error) throw new Error(String(response.error.value));
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customer(id) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
-      queryClient.invalidateQueries({ queryKey: ["customers-new", "search"] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customers.detail(id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
     },
   });
 }

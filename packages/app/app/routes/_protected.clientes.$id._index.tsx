@@ -267,7 +267,6 @@ export default function CustomerDetailPage() {
                           {formatDate(sale.saleDate)}
                         </p>
                       </div>
-                      <SyncBadge status={sale.syncStatus} />
                     </div>
                     <div className="mt-3 flex justify-between text-sm">
                       <span>Total</span>
@@ -302,17 +301,16 @@ export default function CustomerDetailPage() {
                         S/ {formatCurrency(payment.amount)}
                       </p>
                       <p className="text-sm capitalize text-muted-foreground">
-                        {payment.payment_method}
+                        {payment.paymentMethod}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(payment.created_at)}
+                        {formatDate(payment.createdAt)}
                       </p>
                     </div>
-                    <SyncBadge status={payment.sync_status} />
                   </div>
-                  {payment.reference_number ? (
+                  {payment.referenceNumber ? (
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Operación: {payment.reference_number}
+                      Operación: {payment.referenceNumber}
                     </p>
                   ) : null}
                   {payment.notes ? (

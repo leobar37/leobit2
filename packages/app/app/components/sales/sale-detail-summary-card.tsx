@@ -1,10 +1,12 @@
 import { ShoppingCart, WifiOff, Wifi } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { Sale } from "~/lib/services/sale-service";
+import type { Sale } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 
+type SaleWithOptionalSync = Sale & { syncStatus?: string };
+
 interface SaleDetailSummaryCardProps {
-  sale: Sale;
+  sale: SaleWithOptionalSync;
 }
 
 export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
@@ -122,24 +124,26 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
               )}
             </div>
 
-            <div className="mt-3 flex items-center gap-1.5">
-              {sale.syncStatus === "synced" ? (
-                <>
-                  <Wifi className="h-3 w-3 text-emerald-500" />
-                  <span className="text-xs text-emerald-600 font-medium">Sincronizado</span>
-                </>
-              ) : sale.syncStatus === "error" ? (
-                <>
-                  <WifiOff className="h-3 w-3 text-red-500" />
-                  <span className="text-xs text-red-600 font-medium">Error de sincronización</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-3 w-3 text-amber-500" />
-                  <span className="text-xs text-amber-600 font-medium">Pendiente de sincronizar</span>
-                </>
-              )}
-            </div>
+            {sale.syncStatus && (
+              <div className="mt-3 flex items-center gap-1.5">
+                {sale.syncStatus === "synced" ? (
+                  <>
+                    <Wifi className="h-3 w-3 text-emerald-500" />
+                    <span className="text-xs text-emerald-600 font-medium">Sincronizado</span>
+                  </>
+                ) : sale.syncStatus === "error" ? (
+                  <>
+                    <WifiOff className="h-3 w-3 text-red-500" />
+                    <span className="text-xs text-red-600 font-medium">Error de sincronización</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3 text-amber-500" />
+                    <span className="text-xs text-amber-600 font-medium">Pendiente de sincronizar</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

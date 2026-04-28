@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, CheckCircle, Store, UserRound, Loader2 } from "lucide-react";
 import type { Distribucion } from "~/hooks/use-distribuciones";
-import type { DistribucionItem } from "~/lib/services/distribucion-service";
+import type { DistribucionItem } from "~/hooks/use-distribuciones";
 import { cn, formatKilos as formatKilosUtil } from "~/lib/utils";
 
 interface DistribucionTableProps {

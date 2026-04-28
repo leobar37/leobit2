@@ -13,7 +13,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { paymentMethodEnum, syncStatusEnum } from "./enums";
+import { paymentMethodEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { files } from "./files";
@@ -51,13 +51,6 @@ export const abonos = pgTable(
     // Related sale for cancellation tracking
     relatedSaleId: uuid("related_sale_id").references(() => sales.id),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -69,7 +62,6 @@ export const abonos = pgTable(
     index("idx_abonos_payment_method").on(table.paymentMethod),
     index("idx_abonos_proof_image_id").on(table.proofImageId),
     index("idx_abonos_related_sale_id").on(table.relatedSaleId),
-    index("idx_abonos_sync_status").on(table.syncStatus),
     index("idx_abonos_created_at").on(table.createdAt),
     index("idx_abonos_updated_at").on(table.updatedAt),
   ]

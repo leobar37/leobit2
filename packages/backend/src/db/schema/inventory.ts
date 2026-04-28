@@ -20,7 +20,6 @@ import {
   productTypeEnum,
   productUnitEnum,
   distribucionStatusEnum,
-  syncStatusEnum,
 } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { sales, saleItems } from "./sales";
@@ -55,20 +54,12 @@ export const products = pgTable(
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
-
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
   },
   (table) => [
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
     index("idx_products_is_active").on(table.isActive),
     index("idx_products_image_id").on(table.imageId),
-    index("idx_products_sync_status").on(table.syncStatus),
     index("idx_products_updated_at").on(table.updatedAt),
   ]
 );
@@ -103,13 +94,6 @@ export const distribuciones = pgTable(
     closedAt: timestamp("closed_at"),
     closedBy: uuid("closed_by").references(() => businessUsers.id),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -119,7 +103,6 @@ export const distribuciones = pgTable(
     index("idx_distribuciones_vendedor_id").on(table.vendedorId),
     index("idx_distribuciones_fecha").on(table.fecha),
     index("idx_distribuciones_estado").on(table.estado),
-    index("idx_distribuciones_sync_status").on(table.syncStatus),
     index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
     index("idx_distribuciones_vendedor_fecha").on(table.vendedorId, table.fecha),
     index("idx_distribuciones_closed_at").on(table.closedAt),
@@ -148,12 +131,6 @@ export const distribucionItems = pgTable(
 
     unidad: varchar("unidad", { length: 20 }).notNull().default("kg"),
 
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -161,7 +138,6 @@ export const distribucionItems = pgTable(
     index("idx_distribucion_items_business_id").on(table.businessId),
     index("idx_distribucion_items_distribucion_id").on(table.distribucionId),
     index("idx_distribucion_items_variant_id").on(table.variantId),
-    index("idx_distribucion_items_sync_status").on(table.syncStatus),
     uniqueIndex("idx_distribucion_items_unique").on(table.distribucionId, table.variantId),
   ]
 );
@@ -195,13 +171,6 @@ export const productVariants = pgTable(
     lowStockThreshold: decimal("low_stock_threshold", { precision: 10, scale: 3 }).notNull().default("10"),
     criticalStockThreshold: decimal("critical_stock_threshold", { precision: 10, scale: 3 }).notNull().default("5"),
 
-    // Sync
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -210,7 +179,6 @@ export const productVariants = pgTable(
     index("idx_variants_business_id").on(table.businessId),
     index("idx_variants_product_id").on(table.productId),
     index("idx_variants_is_active").on(table.isActive),
-    index("idx_variants_sync_status").on(table.syncStatus),
     uniqueIndex("idx_variants_product_name").on(table.productId, table.name),
   ]
 );
@@ -228,9 +196,6 @@ export const variantInventory = pgTable(
       .notNull()
       .references(() => productVariants.id, { onDelete: "cascade" }),
     quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
 
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -324,20 +289,12 @@ export const distribucionCierreItems = pgTable(
     // Calculated field
     montoVentas: decimal("monto_ventas", { precision: 12, scale: 2 }),
 
-    // Sync status for offline-first
-    syncStatus: syncStatusEnum("sync_status").notNull().default("synced"),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
-
-    // Version for optimistic locking (multi-device conflict detection)
-    version: integer("version").notNull().default(1),
-
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_cierre_items_business_id").on(table.businessId),
     index("idx_cierre_items_distribucion_id").on(table.distribucionId),
     index("idx_cierre_items_variant_id").on(table.variantId),
-    index("idx_cierre_items_sync_status").on(table.syncStatus),
     uniqueIndex("idx_cierre_items_unique").on(table.distribucionId, table.variantId),
   ]
 );
