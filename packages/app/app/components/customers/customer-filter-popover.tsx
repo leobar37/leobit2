@@ -64,7 +64,7 @@ export function CustomerFilterPopover({
         <Button
           type="button"
           variant="outline"
-          className="h-12 w-full min-w-0 justify-between rounded-xl border-stone-200/80 bg-white/75 px-3 text-left shadow-[0_1px_6px_rgba(15,23,42,0.02)] hover:bg-white"
+          className="shell-field h-12 w-full min-w-0 justify-between rounded-xl px-3 text-left shadow-none dark:hover:bg-white/[0.08]"
         >
           <div className="flex min-w-0 items-center gap-2">
             <Filter className="h-4 w-4 shrink-0" />
@@ -76,7 +76,10 @@ export function CustomerFilterPopover({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-stone-200/80 p-4" align="end">
+      <PopoverContent
+        className="shell-card-flat w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-stone-200/80 p-4 dark:border-white/10 dark:bg-[#171922]"
+        align="end"
+      >
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Filtros</p>
@@ -115,7 +118,7 @@ export function CustomerFilterPopover({
             <TagSelect selectedTagIds={selectedTagIds} onChange={onTagIdsChange} />
 
             {selectedTagCount > 0 && (
-              <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-1">
+              <div className="flex flex-wrap gap-2 border-t shell-divider pt-1">
                 {selectedTags.map((tag) => (
                   <TagBadge key={tag.id} tag={tag} size="sm" />
                 ))}
@@ -126,7 +129,7 @@ export function CustomerFilterPopover({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/12 dark:hover:text-orange-100"
                 onClick={() => {
                   setIsOpen(false);
                   onCreateClick();
@@ -138,7 +141,7 @@ export function CustomerFilterPopover({
             )}
           </div>
 
-          <div className="space-y-3 border-t border-stone-100 pt-4">
+          <div className="space-y-3 border-t shell-divider pt-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Grupos</p>
               {selectedGroupCount > 0 && (
@@ -168,8 +171,8 @@ export function CustomerFilterPopover({
                       className={cn(
                         "w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors",
                         isSelected
-                          ? "border-orange-300 bg-orange-50 text-orange-800"
-                          : "border-stone-200/80 bg-white hover:bg-stone-50"
+                          ? "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/14 dark:text-orange-100"
+                          : "border-stone-200/80 bg-white hover:bg-stone-50 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
                       )}
                     >
                       <span className="flex items-center gap-2">

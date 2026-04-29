@@ -7,13 +7,14 @@ import { Route, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPage } from "~/components/layout/form-page";
+import { MobilePage } from "~/components/mobile/mobile-page";
+import { hydrateCurrentBusinessContext } from "~/lib/business-context";
 
 const createBusinessSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
@@ -55,8 +56,18 @@ export default function CreateBusinessPage() {
       await createBusiness.mutateAsync(input);
       navigate("/onboarding/data");
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al crear negocio";
+
+      if (message.includes("ya tiene un negocio asociado")) {
+        const businessContext = await hydrateCurrentBusinessContext();
+        if (businessContext?.businessId) {
+          navigate("/onboarding/data");
+          return;
+        }
+      }
+
       form.setError("root", {
-        message: error instanceof Error ? error.message : "Error al crear negocio",
+        message,
       });
     }
   };
@@ -68,7 +79,8 @@ export default function CreateBusinessPage() {
       maxWidth="sm"
       toolbar={
         <Button
-          onClick={form.handleSubmit(onSubmit)}
+          type="submit"
+          form="business-create-form"
           disabled={createBusiness.isPending || !form.formState.isValid}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
@@ -83,7 +95,7 @@ export default function CreateBusinessPage() {
         </Button>
       }
     >
-      <Card className="border-0 shadow-lg rounded-3xl">
+      <MobilePage.Card variant="flat">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Route className="w-8 h-8 text-white" />
@@ -97,7 +109,7 @@ export default function CreateBusinessPage() {
         </CardHeader>
 
         <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form id="business-create-form" onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <FormInput
               label="Nombre del negocio *"
@@ -167,7 +179,7 @@ export default function CreateBusinessPage() {
           </CardContent>
         </form>
       </FormProvider>
-      </Card>
+      </MobilePage.Card>
     </FormPage>
   );
 }

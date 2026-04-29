@@ -1,6 +1,7 @@
 import { useNavigate, useParams, useLocation } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { PurchaseCalculatorContent } from "~/components/purchases/calculator";
+import { MobileShell } from "~/components/mobile";
 
 interface PreFilledItem {
   variantId: string;
@@ -23,26 +24,26 @@ export default function ComprasCalculadoraPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
+    <MobileShell.Root variant="fullscreen" className="fixed inset-0 z-[60] app-shell">
+      <MobileShell.Header>
         <div className="flex items-center h-16 px-3 sm:px-4">
           <button
             onClick={handleBack}
-            className="p-2 -ml-2 rounded-xl hover:bg-orange-50"
+            className="shell-toolbar-button p-2 -ml-2 rounded-xl"
             aria-label="Volver"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="font-bold text-lg ml-1">Calculadora</h1>
         </div>
-      </header>
+      </MobileShell.Header>
 
-      <div className="flex-1 p-4 overflow-y-auto">
+      <MobileShell.Content className="px-0 py-0">
         <PurchaseCalculatorContent 
           onAddedToCart={handleBack} 
           preFilledItems={preFilledItems}
         />
-      </div>
-    </div>
+      </MobileShell.Content>
+    </MobileShell.Root>
   );
 }

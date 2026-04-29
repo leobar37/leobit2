@@ -141,7 +141,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 > Implementation + Test = ONE task. Never separate.
 > EVERY task MUST have: Agent Profile + Parallelization + QA Scenarios.
 
-- [ ] 1. Define semantic mobile/theme token layer
+- [x] 1. Define semantic mobile/theme token layer
 
   **What to do**: In `packages/app/app/styles/globals.css`, add semantic CSS variables/classes for app background, page surface, card surface, footer surface, border, muted blocks, primary action, danger action, focus ring, bottom-nav, and shadow tokens for both `:root` and `.dark`. Replace current shell helper internals (`app-shell`, `shell-surface`, `shell-card-flat`, etc.) to reference variables instead of raw color values. Preserve existing class names as compatibility aliases during migration.
   **Must NOT do**: Do not rename existing shell classes yet. Do not rewrite leaf components unrelated to page shell usage.
@@ -181,7 +181,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `feat(ui): add semantic mobile theme tokens` | Files: [`packages/app/app/styles/globals.css`]
 
-- [ ] 2. Build portal slot infrastructure and utilities
+- [x] 2. Build portal slot infrastructure and utilities
 
   **What to do**: Create `packages/app/app/components/mobile/mobile-slots.tsx` with `MobileSlotProvider`, `MobileSlotHost`, `MobileSlot`, `useMobileSlot`, and utilities for register/unregister. Slots: `header:left`, `header:center`, `header:right`, `footer`, `floating`, `bottom-nav`, `modal-header`, `modal-footer`. Define single-writer slots for header/footer; multi-writer stack only for floating actions. On unmount or route change, stale slot content must unregister. Use stable portal hosts and `createPortal`; ensure context stays in React tree.
   **Must NOT do**: Do not use imperative DOM mutation. Do not allow silent multiple footer writers; warn in DEV and last writer wins only for explicitly single-writer slots.
@@ -221,7 +221,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `feat(ui): add mobile portal slot system` | Files: [`packages/app/app/components/mobile/mobile-slots.tsx`, `packages/app/app/components/mobile/index.ts`]
 
-- [ ] 3. Implement complete theme provider and toggle
+- [x] 3. Implement complete theme provider and toggle
 
   **What to do**: Add `packages/app/app/components/theme/theme-provider.tsx`, `theme-toggle.tsx`, and theme storage helpers. Mode values: `system`, `light`, `dark`. Precedence: persisted choice → system preference → light fallback. Apply `.dark` and `data-theme` before visible paint using an inline script in `root.tsx` or a hydration-safe effect strategy. Theme toggle must be available in protected app header/settings and public/auth layout through a compound slot/control.
   **Must NOT do**: Do not depend on server theme state. Do not add a backend preference in this refactor. Do not use raw Tailwind color overrides for dark mode in routes.
@@ -261,7 +261,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `feat(ui): add persisted theme modes` | Files: [`packages/app/app/components/theme/*`, `packages/app/app/root.tsx`]
 
-- [ ] 4. Create compound mobile shell/page API
+- [x] 4. Create compound mobile shell/page API
 
   **What to do**: Create `packages/app/app/components/mobile/mobile-shell.tsx`, `mobile-page.tsx`, and `mobile-fixed-footer.tsx`. API must be JSX compound components, e.g. `<MobileShell.Root variant="protected|public">`, `<MobileShell.Header>`, `<MobileShell.Content>`, `<MobileShell.Footer>`, `<MobilePage.Root>`, `<MobilePage.Card>`, `<MobileFixedFooter>`. Props allowed only for semantic variants (`public`, `protected`, `fullscreen`) and accessibility identifiers; no prop-heavy layout assembly. Footer must use portal slot internally and CSS `env(safe-area-inset-bottom)` plus progressive keyboard offsets.
   **Must NOT do**: Do not require route files to pass title/footer/header as props. Do not hardcode colors in component classes.
@@ -301,7 +301,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `feat(ui): add compound mobile shell primitives` | Files: [`packages/app/app/components/mobile/*`]
 
-- [ ] 5. Add mobile keyboard and viewport utility
+- [x] 5. Add mobile keyboard and viewport utility
 
   **What to do**: Add `packages/app/app/hooks/use-mobile-keyboard.ts` and optional CSS vars updated from `visualViewport`. Expose `isKeyboardLikelyVisible`, `keyboardHeight`, `visualViewportHeight`, and `supportsVirtualKeyboard`. Default mode must not set `navigator.virtualKeyboard.overlaysContent = true`. Add explicit `enableVirtualKeyboardOverlay()` helper for future opt-in only, with feature detection. `MobileFixedFooter` consumes CSS variables and safe fallbacks.
   **Must NOT do**: Do not globally change viewport behavior. Do not make Safari/Firefox depend on Chromium-only APIs.
@@ -341,7 +341,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `feat(ui): add mobile keyboard viewport utility` | Files: [`packages/app/app/hooks/use-mobile-keyboard.ts`, relevant tests]
 
-- [ ] 6. Integrate mobile core into root and protected shell
+- [x] 6. Integrate mobile core into root and protected shell
 
   **What to do**: Wrap app in `ThemeProvider` and protected layout in mobile slot provider/shell. Refactor `AppLayout` to become a compatibility adapter over `MobileShell.Root variant="protected"`, preserving `useSetLayout` temporarily while introducing JSX slot usage. Bottom nav remains owned by protected shell. `ToolbarActions` becomes a compatibility wrapper around `MobileShell.Footer` or `MobileSlot name="footer"`.
   **Must NOT do**: Do not break existing routes that still call `useSetLayout` or `ToolbarActions`. Do not remove `FormPage` yet.
@@ -381,7 +381,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(ui): route app layout through mobile shell` | Files: [`packages/app/app/root.tsx`, `packages/app/app/components/layout/app-layout.tsx`, `packages/app/app/components/layout/toolbar-actions.tsx`]
 
-- [ ] 7. Migrate auth pages to public mobile core
+- [x] 7. Migrate auth pages to public mobile core
 
   **What to do**: Refactor `packages/app/app/routes/login.tsx` and `packages/app/app/routes/register.tsx` to use `MobileShell.Root variant="public"`, `MobilePage`, and `MobileFixedFooter`. Move submit CTAs and auth links to footer slot using `form` attribute where needed. Keep health drawer behavior and invitation alert behavior unchanged. Add theme toggle access in public shell/header or footer. Remove hardcoded `bg-white`, `orange-*`, `stone-*`, `CardFooter` layout from auth shells.
   **Must NOT do**: Do not change auth redirects, validation schemas, or health repair behavior.
@@ -423,7 +423,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(auth): use public mobile shell` | Files: [`packages/app/app/routes/login.tsx`, `packages/app/app/routes/register.tsx`]
 
-- [ ] 8. Deprecate FormPage default mode and migrate form routes
+- [x] 8. Deprecate FormPage default mode and migrate form routes
 
   **What to do**: Refactor `FormPage` into a compatibility wrapper around `MobilePage`/`MobileFixedFooter`, or replace route usage directly with compound APIs. Migrate all 11 `FormPage` routes: `_protected.onboarding.data.tsx`, `_protected.compras.nueva.($draftId)._index.tsx`, `_protected.proveedores.nuevo.tsx`, `_protected.cobros.nuevo.tsx`, `_protected.proveedores.$id.edit.tsx`, `_protected.clientes.$id.edit.tsx`, `_protected.clientes.nuevo.tsx`, `_protected.business.create.tsx`, `_protected.productos.nuevo.tsx`, `_protected.business.edit.tsx`, `_protected.distribuciones.nueva._index.tsx`. Ensure all submit buttons live in `MobileFixedFooter` and no route uses standalone app shell mode.
   **Must NOT do**: Do not keep `FormPage` default mode as a second shell. Do not change form schemas, mutations, or navigation outcomes.
@@ -464,7 +464,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(forms): migrate FormPage routes to mobile core` | Files: [`packages/app/app/components/layout/form-page.tsx`, listed route files]
 
-- [ ] 9. Migrate list/index routes and floating actions
+- [x] 9. Migrate list/index routes and floating actions
 
   **What to do**: Replace route-local floating action buttons and manual bottom offsets with `MobileShell.FloatingAction` or `MobileSlot name="floating"` in list/index routes. Candidates: `_protected.clientes._index.tsx`, `_protected.ventas._index.tsx`, `_protected.distribuciones.tsx`, `_protected.visitas.tsx`, `_protected.productos._index.tsx`, `_protected.compras._index.tsx`, `_protected.proveedores._index.tsx`, `_protected.config.tags.tsx`, `_protected.config.puntos-venta.tsx`. Remove `fixed bottom-28/right-4` and inconsistent `bottom-20` usage.
   **Must NOT do**: Do not change list filters, data loading, or navigation destinations.
@@ -503,7 +503,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(routes): standardize floating actions` | Files: [listed route files]
 
-- [ ] 10. Migrate detail/edit/manual shell routes
+- [x] 10. Migrate detail/edit/manual shell routes
 
   **What to do**: Replace route-local sticky headers, manual `<main>` padding, and fixed bottom action bars in detail/edit/calculator routes with mobile shell slots and content primitives. Candidates: `_protected.productos.$id.tsx`, `_protected.compras.$id.editar._index.tsx`, `_protected.compras.$id.tsx`, `_protected.ventas.$id._index.tsx`, `_protected.clientes.$id._index.tsx`, `_protected.grupos.$id._index.tsx`, `_protected.ventas.$id.editar.calculadora.tsx`, `_protected.compras.nueva.($draftId).calculadora.tsx`. Preserve fullscreen calculator intent using `MobileShell.Root variant="fullscreen"` only where needed.
   **Must NOT do**: Do not change calculator math, purchase/sale mutations, or route params.
@@ -542,7 +542,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(routes): migrate detail shells to mobile core` | Files: [listed route files]
 
-- [ ] 11. Migrate config/report/settings pages and token hardcodes
+- [x] 11. Migrate config/report/settings pages and token hardcodes
 
   **What to do**: Standardize config/report/admin pages to the mobile core and semantic tokens. Candidates: `_protected.config.tags.tsx`, `_protected.config.puntos-venta.tsx`, `_protected.config.notifications.tsx`, `_protected.config.security.tsx`, `_protected.config.whatsapp.tsx`, `_protected.config.whatsapp.templates.tsx`, `_protected.config.appearance.tsx`, `_protected.config.flags.tsx`, `_protected.reportes.*`, `_protected.team.tsx`, `_protected.invitations.tsx`, `_protected.profile.tsx`. Add theme toggle/config UI to appearance/profile/settings route as appropriate.
   **Must NOT do**: Do not redesign settings workflows; only migrate shell/actions/tokens and add theme setting UI.
@@ -581,7 +581,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(settings): standardize mobile shell and theme tokens` | Files: [listed route files]
 
-- [ ] 12. Unify modal/page portal vocabulary
+- [x] 12. Unify modal/page portal vocabulary
 
   **What to do**: Align modal compound components with the new slot vocabulary without breaking existing modal API. Update `lib/modal/components.tsx` and `create-modal.tsx` only if needed to share naming/utilities (`Header`, `Content`, `Footer`, slot cleanup concepts). Document that modal slots are sibling primitives, not page shell slots, unless rendered inside the same provider intentionally.
   **Must NOT do**: Do not rewrite modal behavior or all modal consumers. Do not make modal slots depend on protected page shell hosts.
@@ -620,7 +620,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `refactor(ui): align modal slot vocabulary` | Files: [`packages/app/app/lib/modal/*`, selected consumers if needed]
 
-- [ ] 13. Add static audit for mobile core compliance
+- [x] 13. Add static audit for mobile core compliance
 
   **What to do**: Add a script or documented command set under `packages/app` (preferred: `scripts/audit-mobile-core.ts` or package script) that fails on forbidden patterns in migrated route files: ad-hoc `fixed bottom-`, manual `pb-24`/`pb-32`, old route shell gradients, raw shell colors, direct `CardFooter` layout usage in auth/form route footers, and `FormPage` standalone/default mode. Allowlist primitive internals and intentional fullscreen exceptions.
   **Must NOT do**: Do not fail on legitimate leaf component color usage until corresponding semantic tokens exist. Keep initial audit focused on route shell/layout tokens.
@@ -658,7 +658,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `test(ui): add mobile core static audit` | Files: [`packages/app/scripts/*`, `packages/app/package.json`]
 
-- [ ] 14. Add Playwright mobile layout/theme regression coverage
+- [x] 14. Add Playwright mobile layout/theme regression coverage
 
   **What to do**: Add Playwright specs for mobile core behavior: `/login`, `/register`, `/clientes/nuevo`, a list route with floating action, a protected route with bottom nav + footer, theme persistence/system mode, route transition slot cleanup, and modal/page footer coexistence. Use Pixel 5 project. Add stable selectors to mobile primitives where needed (`data-testid="mobile-fixed-footer"`, `mobile-bottom-nav`, `theme-toggle`, slot hosts).
   **Must NOT do**: Do not rely on manual screenshots only; every test must have binary assertions.
@@ -699,7 +699,7 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 
   **Commit**: YES | Message: `test(ui): cover mobile shell regressions` | Files: [`packages/app/e2e/tests/*`, page objects if needed]
 
-- [ ] 15. Remove deprecated shells, update docs, and finalize compliance
+- [x] 15. Remove deprecated shells, update docs, and finalize compliance
 
   **What to do**: Remove or narrow deprecated `FormPage` standalone mode, mark `useSetLayout`/`ToolbarActions` compatibility APIs with sunset comments if retained, update `packages/app/app/components/AGENTS.md` or relevant local docs with the new mobile core rules. Ensure route authors know to use compound API and footer slots. Run full static audit and tests.
   **Must NOT do**: Do not delete compatibility functions still referenced unless all references are migrated.
@@ -742,10 +742,10 @@ Wave 6: Cleanup/deprecation and final verification — Task 15 + Final Verificat
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 > **Do NOT auto-proceed after verification. Wait for user's explicit approval before marking work complete.**
 > **Never mark F1-F4 as checked before getting user's okay.** Rejection or user feedback -> fix -> re-run -> present again -> wait for okay.
-- [ ] F1. Plan Compliance Audit — oracle
-- [ ] F2. Code Quality Review — unspecified-high
-- [ ] F3. Real Manual QA — unspecified-high (+ playwright if UI)
-- [ ] F4. Scope Fidelity Check — deep
+- [x] F1. Plan Compliance Audit — oracle
+- [x] F2. Code Quality Review — unspecified-high
+- [x] F3. Real Manual QA — unspecified-high (+ playwright if UI)
+- [x] F4. Scope Fidelity Check — deep
 
 ## Commit Strategy
 - Commit after each task or tightly coupled pair if execution tooling requires fewer commits.

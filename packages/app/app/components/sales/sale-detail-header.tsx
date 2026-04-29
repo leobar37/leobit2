@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileShell, MobileSlot } from "~/components/mobile";
 import { useCancelSaleDialog } from "~/components/sales/cancel-sale-provider";
 import type { Sale } from "~/hooks/use-sales";
 import { SaleShareDrawer } from "./sale-share-drawer";
@@ -31,8 +32,8 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
   const canReschedule = sale?.type === "pre_order" && sale?.status === "draft";
 
   return (
-    <header className="sticky top-0 z-50 border-b shell-surface">
-      <div className="flex h-14 items-center gap-2 px-3 sm:px-4">
+    <>
+      <MobileShell.BackButton>
         <Button
           variant="ghost"
           size="icon"
@@ -41,9 +42,13 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold tracking-tight">{title ?? "Detalle de venta"}</h1>
-        </div>
+      </MobileShell.BackButton>
+
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate text-lg font-bold tracking-tight">{title ?? "Detalle de venta"}</h1>
+      </MobileSlot>
+
+      <MobileSlot name="header:right" priority={10}>
         <div className="flex shrink-0 items-center gap-1.5">
           {sale && canReschedule && (
             <RescheduleSaleDialog
@@ -108,7 +113,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
             </DropdownMenu>
           )}
         </div>
-      </div>
-    </header>
+      </MobileSlot>
+    </>
   );
 }

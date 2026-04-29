@@ -92,6 +92,97 @@ import { useCustomers } from "~/hooks/use-customers";
 
 ### Component Patterns
 
+### Mobile Core Layout (Preferred)
+
+Use the mobile shell primitives from `~/components/mobile` for protected/form pages.
+
+Recommended base composition:
+
+```tsx
+import { MobileSlot, MobileFixedFooter } from "~/components/mobile";
+import { MobileShell, MobilePage } from "~/components/mobile";
+import { ThemeToggle } from "~/components/theme";
+
+export default function Page() {
+  return (
+    <MobileShell.Root variant="protected">
+      <MobileSlot name="header:left" priority={10}>
+        <MobileShell.BackButton />
+      </MobileSlot>
+
+      <MobileSlot name="header:center" priority={10}>
+        <h1>Título</h1>
+      </MobileSlot>
+
+      <MobileSlot name="header:right" priority={10}>
+        <ThemeToggle />
+      </MobileSlot>
+
+      <MobileShell.Header />
+
+      <MobileShell.Content>
+        <MobilePage.Root maxWidth="md">
+          {/* page content */}
+        </MobilePage.Root>
+      </MobileShell.Content>
+
+      <MobileShell.Footer />
+    </MobileShell.Root>
+  );
+}
+```
+
+#### Slot vocabulary
+
+- `header:left`: back button / secondary actions
+- `header:center`: page title / key status text
+- `header:right`: menu, filter toggles, profile / theme actions
+- `footer`: route-level action bar (if supported by layout)
+- `floating`: floating CTA (FAB)
+
+#### Footer patterns
+
+For route-level action rows under a shared shell:
+
+```tsx
+<MobileSlot name="footer" priority={10}>
+  <MobilePage.Card variant="flat">...</MobilePage.Card>
+</MobileSlot>
+```
+
+For standalone fixed bars (for example, pages not using shared shell footer host):
+
+```tsx
+<MobileFixedFooter aboveNav>
+  <MobilePage.Root maxWidth="md">
+    <Button type="button" className="w-full">
+      Guardar
+    </Button>
+  </MobilePage.Root>
+</MobileFixedFooter>
+```
+
+#### Card and form entry points
+
+```tsx
+<MobilePage.Card variant="flat">Contenido principal</MobilePage.Card>
+<MobilePage.Card variant="soft">Resumen</MobilePage.Card>
+<MobilePage.Card variant="muted">Tarjeta de estado</MobilePage.Card>
+```
+
+### Legacy migration rules
+
+- Avoid route-local shell wrappers such as:
+  - manual fixed footers (`fixed bottom-*`)
+  - manual sticky headers (`sticky top-0`)
+  - gradient/fullscreen wrappers (`min-h-screen app-shell` with local header/main sections)
+  - ad-hoc bottom padding (`pb-24`, `pb-32`) for shell compensation
+- Prefer slot writers over local wrappers; keep layout ownership in the nearest
+  shared shell (`MobileShell.Root`, `MobileShell.Header`, `MobileShell.Content`,
+  `MobileShell.Footer`) to avoid nested shell conflicts.
+- Keep legacy wrappers (`useSetLayout`, `FormPage`, `ToolbarActions`) only
+  for backward compatibility while routes migrate to direct route-level shell slots.
+
 #### UI Primitive Pattern (shadcn/ui style)
 
 ```typescript

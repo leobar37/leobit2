@@ -12,6 +12,7 @@ import { CancelSaleDialog } from "~/components/sales/cancel-sale-dialog";
 import { CancelSaleProvider } from "~/components/sales/cancel-sale-provider";
 import { SaleCancelledCard } from "~/components/sales/sale-cancelled-card";
 import { SaleDetailHeader } from "~/components/sales/sale-detail-header";
+import { MobilePage } from "~/components/mobile";
 import { SaleDetailInfoCard } from "~/components/sales/sale-detail-info-card";
 import { SaleDetailItemsCard } from "~/components/sales/sale-detail-items-card";
 import { SaleDetailPaymentCard } from "~/components/sales/sale-detail-payment-card";
@@ -69,14 +70,14 @@ export default function SaleDetailPage() {
 
   return (
     <CancelSaleProvider sale={sale}>
-      <div className="min-h-screen app-shell">
+      <>
         <SaleDetailHeader
           canCancel={canCancel}
           onBack={() => goBack("/ventas")}
           sale={sale}
         />
 
-        <main className="space-y-3 px-3 py-3 pb-24 sm:px-4">
+        <MobilePage.Root className="space-y-3">
           <div className="shell-card-flat overflow-hidden rounded-[22px]">
             <div className="border-b shell-divider px-3 pt-1">
               <div className="flex">
@@ -142,8 +143,8 @@ export default function SaleDetailPage() {
           </div>
 
           <CancelSaleDialog />
-        </main>
-      </div>
+        </MobilePage.Root>
+      </>
     </CancelSaleProvider>
   );
 }

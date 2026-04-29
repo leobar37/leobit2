@@ -26,7 +26,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "bg-white rounded-xl p-4 border border-gray-100 shadow-sm",
+        "shell-card-flat rounded-[24px] p-4",
         className
       )}
     >
@@ -63,8 +63,11 @@ export function MetricCard({
         </div>
         <div
           className={cn(
-            "p-2.5 rounded-lg bg-gray-50 shrink-0 ml-3",
-            iconColor.replace("text-", "bg-").replace("600", "100")
+            "ml-3 shrink-0 rounded-[18px] p-2.5",
+            iconColor === "text-green-600" && "bg-emerald-100 dark:bg-emerald-500/15",
+            iconColor === "text-blue-600" && "bg-blue-100 dark:bg-blue-500/15",
+            iconColor === "text-red-600" && "bg-red-100 dark:bg-red-500/15",
+            iconColor === "text-orange-600" && "bg-orange-100 dark:bg-orange-500/15"
           )}
         >
           <Icon className={cn("h-5 w-5", iconColor)} />

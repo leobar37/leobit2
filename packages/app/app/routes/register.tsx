@@ -3,26 +3,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link, useSearchParams } from "react-router";
 import { Route, Loader2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { registerSchema, type RegisterInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
 import { api } from "~/lib/api-client";
+import {
+  MobileShell,
+  MobilePage,
+  MobileFixedFooter,
+  MobileSlot,
+  MobileSlotProvider,
+} from "~/components/mobile";
+import { ThemeToggle } from "~/components/theme";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invitationToken = searchParams.get("token");
   const { user, isLoading, register } = useAuth();
+  const [showLoginRecovery, setShowLoginRecovery] = useState(false);
 
   const { data: invitationData, isLoading: isLoadingInvitation } = useQuery({
     queryKey: ["invitation", invitationToken],
@@ -58,7 +60,7 @@ export default function RegisterPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -69,11 +71,18 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterInput) => {
     try {
-      const result = await register({
-        email: data.email,
-        password: data.password,
-        name: data.name,
-      });
+      setShowLoginRecovery(false);
+
+      const result = await Promise.race([
+        register({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("REGISTER_TIMEOUT_RECOVERY")), 12000)
+        ),
+      ]);
 
       // If there's an invitation token, accept it before checking business redirect.
       // This creates the business association on the backend so hydrateCurrentBusinessId
@@ -103,8 +112,20 @@ export default function RegisterPage() {
         navigate("/dashboard");
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al crear la cuenta";
+      const shouldOfferLoginRecovery =
+        message.includes("REGISTER_TIMEOUT_RECOVERY")
+        || message.includes("AUTH_TIMEOUT")
+        || message.toLowerCase().includes("timed out");
+
+      if (shouldOfferLoginRecovery) {
+        setShowLoginRecovery(true);
+      }
+
       form.setError("root", {
-        message: error instanceof Error ? error.message : "Error al crear la cuenta",
+        message: shouldOfferLoginRecovery
+          ? "La creación de cuenta está tardando más de lo normal. Si tu cuenta sí se creó, puedes continuar iniciando sesión con este mismo correo."
+          : message,
       });
     }
   };
@@ -113,118 +134,151 @@ export default function RegisterPage() {
   const hasValidInvitation = invitationData?.data?.name;
 
   return (
-    <div className="app-shell flex min-h-[100svh] items-center px-4 py-5 sm:px-6 sm:py-8">
-      <div className="mx-auto w-full max-w-sm">
-        <Card className="shell-card-flat w-full overflow-hidden rounded-[28px] border-stone-200/90">
-          <div className="h-1.5 w-full bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300" />
+    <MobileSlotProvider>
+      <MobileShell.Root variant="public">
+        <MobileShell.Header />
 
-          <CardHeader className="space-y-4 px-5 pb-2 pt-5 sm:px-6">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
-              <Route className="h-7 w-7 text-white" />
-            </div>
+        <MobileSlot name="header:right" priority={10}>
+          <ThemeToggle />
+        </MobileSlot>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-orange-700">Avileo</p>
-              <CardTitle className="text-[2rem] font-bold tracking-[-0.04em] text-foreground">
-                {hasValidInvitation ? "Unirme a un negocio" : "Crear cuenta"}
-              </CardTitle>
-              <CardDescription className="max-w-[17rem] text-sm leading-6 text-muted-foreground">
-                {hasValidInvitation
-                  ? `Has sido invitado a unirte a un negocio. Crea tu cuenta para aceptar la invitación.`
-                  : "Regístrate para empezar a gestionar tu negocio."}
-              </CardDescription>
-            </div>
-          </CardHeader>
+        <MobileShell.Content className="flex items-start justify-center sm:items-center">
+          <MobilePage.Root maxWidth="sm" className="w-full">
+            <MobilePage.Card className="w-full overflow-hidden rounded-none border-0 bg-transparent shadow-none">
+              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-orange-400 to-amber-300" />
 
-          {isInvitationInvalid && (
-            <div className="px-5 sm:px-6 pb-2">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                  <p className="font-medium">Invitación no válida</p>
-                  <p className="text-amber-700">El enlace ha expirado o ya fue usado. Puedes crear una cuenta individual.</p>
+              <div className="space-y-3 px-5 pb-2 pt-4 sm:space-y-4 sm:px-6 sm:pt-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-primary shadow-lg sm:h-14 sm:w-14 sm:rounded-[20px]">
+                  <Route className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
+                </div>
+
+                <div className="space-y-1.5 sm:space-y-2">
+                  <p className="text-sm font-medium text-primary">Avileo</p>
+                  <h1 className="text-[1.8rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2rem]">
+                    {hasValidInvitation ? "Unirme a un negocio" : "Crear cuenta"}
+                  </h1>
+                  <p className="max-w-[19rem] text-sm leading-5 text-muted-foreground sm:max-w-[17rem] sm:leading-6">
+                    {hasValidInvitation
+                      ? `Has sido invitado a unirte a un negocio. Crea tu cuenta para aceptar la invitación.`
+                      : "Regístrate para empezar a gestionar tu negocio."}
+                  </p>
                 </div>
               </div>
-            </div>
-          )}
 
-          <FormProvider {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="space-y-3 px-5 pb-2 sm:px-6">
-                <FormInput
-                  label="Nombre completo"
-                  placeholder="Ej: Juan Pérez"
-                  error={form.formState.errors.name?.message}
-                  className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 shadow-none focus-visible:ring-orange-200"
-                  name="name"
-                />
+              {isInvitationInvalid && (
+                <div className="px-5 sm:px-6 pb-2">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium">Invitación no válida</p>
+                      <p className="text-amber-700">El enlace ha expirado o ya fue usado. Puedes crear una cuenta individual.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                <FormInput
-                  label="Correo electrónico"
-                  type="email"
-                  placeholder="tu@email.com"
-                  error={form.formState.errors.email?.message}
-                  className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 shadow-none focus-visible:ring-orange-200"
-                  autoComplete="email"
-                  name="email"
-                />
-
-                <FormPassword
-                  label="Contraseña"
-                  placeholder="Mínimo 8 caracteres"
-                  error={form.formState.errors.password?.message}
-                  className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 pr-12 shadow-none focus-visible:ring-orange-200"
-                  {...form.register("password")}
-                />
-
-                <FormPassword
-                  label="Confirmar contraseña"
-                  placeholder="Repite la contraseña"
-                  error={form.formState.errors.confirmPassword?.message}
-                  className="h-12 rounded-[18px] border-stone-200/90 bg-white px-4 pr-12 shadow-none focus-visible:ring-orange-200"
-                  {...form.register("confirmPassword")}
-                />
-
-                {form.formState.errors.root && (
-                  <p data-testid="register-error" className="text-center text-sm text-destructive">
-                    {form.formState.errors.root.message}
-                  </p>
-                )}
-              </CardContent>
-
-              <CardFooter className="flex flex-col gap-3 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-                <Button
-                  type="submit"
-                  data-testid="register-submit"
-                  className="h-12 w-full rounded-[18px] bg-orange-500 text-base font-semibold text-white shadow-sm transition-colors hover:bg-orange-600"
-                  disabled={form.formState.isSubmitting || !form.formState.isValid}
-                >
-                  {form.formState.isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creando cuenta...
-                    </>
-                  ) : hasValidInvitation ? (
-                    "Crear cuenta y unirme"
-                  ) : (
-                    "Crear cuenta"
-                  )}
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  ¿Ya tienes cuenta?{" "}
-                  <Link
-                    to="/login"
-                    className="text-orange-600 hover:text-orange-700 font-medium"
+              <FormProvider {...form}>
+                <form id="register-form" onSubmit={form.handleSubmit(onSubmit)}>
+                  <div
+                    className="space-y-3 px-5 pb-2 sm:px-6"
+                    style={{
+                      paddingBottom:
+                        "calc(var(--shell-public-footer-offset, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)))",
+                    }}
                   >
-                    Inicia sesión
-                  </Link>
-                </p>
-              </CardFooter>
-            </form>
-          </FormProvider>
-        </Card>
-      </div>
-    </div>
+                    <FormInput
+                      label="Nombre completo"
+                      placeholder="Ej: Juan Pérez"
+                      error={form.formState.errors.name?.message}
+                      className="h-12 rounded-[18px] px-4 shadow-none"
+                      name="name"
+                    />
+
+                    <FormInput
+                      label="Correo electrónico"
+                      type="email"
+                      placeholder="tu@email.com"
+                      error={form.formState.errors.email?.message}
+                      className="h-12 rounded-[18px] px-4 shadow-none"
+                      autoComplete="email"
+                      name="email"
+                    />
+
+                    <FormPassword
+                      label="Contraseña"
+                      placeholder="Mínimo 8 caracteres"
+                      error={form.formState.errors.password?.message}
+                      className="h-12 rounded-[18px] px-4 pr-12 shadow-none"
+                      {...form.register("password")}
+                    />
+
+                    <FormPassword
+                      label="Confirmar contraseña"
+                      placeholder="Repite la contraseña"
+                      error={form.formState.errors.confirmPassword?.message}
+                      className="h-12 rounded-[18px] px-4 pr-12 shadow-none"
+                      {...form.register("confirmPassword")}
+                    />
+
+                    {form.formState.errors.root && (
+                      <div className="space-y-3">
+                        <p data-testid="register-error" className="text-center text-sm text-destructive">
+                          {form.formState.errors.root.message}
+                        </p>
+                        {showLoginRecovery ? (
+                          <Button
+                            asChild
+                            type="button"
+                            variant="outline"
+                            className="h-11 w-full rounded-[18px]"
+                          >
+                            <Link to={`/login?email=${encodeURIComponent(form.getValues("email"))}`}>
+                              Ir a iniciar sesión
+                            </Link>
+                          </Button>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </form>
+              </FormProvider>
+            </MobilePage.Card>
+          </MobilePage.Root>
+        </MobileShell.Content>
+
+        <MobileFixedFooter>
+          <div className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              form="register-form"
+              data-testid="register-submit"
+              className="h-12 w-full rounded-[18px] bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              disabled={form.formState.isSubmitting || !form.formState.isValid}
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creando cuenta...
+                </>
+              ) : hasValidInvitation ? (
+                "Crear cuenta y unirme"
+              ) : (
+                "Crear cuenta"
+              )}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              ¿Ya tienes cuenta?{" "}
+              <Link
+                to="/login"
+                className="text-primary hover:text-primary/90 font-medium"
+              >
+                Inicia sesión
+              </Link>
+            </p>
+          </div>
+        </MobileFixedFooter>
+      </MobileShell.Root>
+    </MobileSlotProvider>
   );
 }

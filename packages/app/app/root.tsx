@@ -18,6 +18,7 @@ import { Toaster } from "sonner";
 import { Provider as JotaiProvider } from "jotai";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Button } from "@/components/ui/button";
+import { ThemeProvider, themeScript } from "@/components/theme";
 import { createQueryPersister } from "~/lib/query/persister";
 import { queryClient } from "~/lib/query/client";
 import { getStoredBusinessId } from "~/lib/session-storage";
@@ -39,7 +40,7 @@ export function HydrateFallback() {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -54,6 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Meta />
         <Links />
       </head>
@@ -183,17 +185,19 @@ export default function App() {
   }, []);
 
   return (
-    <JotaiProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{ persister: queryPersister }}
-      >
-        <NuqsAdapter>
-          <Outlet />
-        </NuqsAdapter>
-        <Toaster position="top-center" />
-      </PersistQueryClientProvider>
-    </JotaiProvider>
+    <ThemeProvider>
+      <JotaiProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister: queryPersister }}
+        >
+          <NuqsAdapter>
+            <Outlet />
+          </NuqsAdapter>
+          <Toaster position="top-center" />
+        </PersistQueryClientProvider>
+      </JotaiProvider>
+    </ThemeProvider>
   );
 }
 

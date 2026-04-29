@@ -272,10 +272,10 @@ export default function NuevoCobroPage() {
     <FormPage
       title="Registrar pago"
       backHref={customerId ? `/clientes/${customerId}` : "/cobros"}
-      useLayout
       toolbar={
         <Button
-          onClick={handleSubmit(onSubmit)}
+          type="submit"
+          form="cobro-form"
           disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0 || currentDebt === 0}
           data-testid="save-abono-button"
           className="h-12 w-full rounded-xl bg-orange-500 text-base font-semibold shadow-sm hover:bg-orange-600 disabled:bg-orange-300 disabled:text-white disabled:opacity-100"
@@ -291,7 +291,7 @@ export default function NuevoCobroPage() {
         </Button>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+      <form id="cobro-form" onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <Card className="shell-card-flat rounded-[24px]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -336,7 +336,7 @@ export default function NuevoCobroPage() {
                   decimals={2}
                   min="0.01"
                   max={currentDebt}
-                  className="shell-field h-14 rounded-[16px] border-stone-200/90 bg-white/90 pl-10 pr-4 text-2xl font-bold tracking-[-0.04em] shadow-none focus-visible:ring-1 focus-visible:ring-orange-200"
+                  className="shell-field h-14 rounded-[16px] pl-10 pr-4 text-2xl font-bold tracking-[-0.04em] shadow-none focus-visible:ring-1 focus-visible:ring-orange-200"
                   {...register("amount")}
                 />
               </div>
@@ -471,7 +471,7 @@ export default function NuevoCobroPage() {
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    className="shell-field h-16 w-full rounded-[16px] border-dashed text-sm shadow-none hover:bg-white"
+                      className="shell-field h-16 w-full rounded-[16px] border-dashed text-sm shadow-none"
                   >
                     <Camera className="h-5 w-5 mr-2" />
                     Adjuntar captura de pantalla

@@ -9,6 +9,7 @@ import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import { useBusiness } from "~/hooks/use-business";
 import { useToastError } from "~/hooks/use-toast-error";
+import { getSaleFinancialState } from "~/hooks/use-sale-calculations";
 
 export type SaleStatus = "draft" | "confirmed" | "active" | "delivered" | "cancelled";
 export type SaleType = "instant_sale" | "pre_order";
@@ -545,9 +546,22 @@ export function useUpdateSale() {
         queryKeys.sales.detail(variables.id),
         (previous: SaleWithItems | null | undefined) => {
           if (!previous) return previous;
+
+          const nextSaleType = variables.input.saleType ?? previous.saleType;
+          const nextTotalAmount = variables.input.totalAmount ?? toNumber(previous.totalAmount);
+          const nextAmountPaid = variables.input.amountPaid ?? toNumber(previous.amountPaid);
+          const { balanceDue } = getSaleFinancialState({
+            saleType: nextSaleType,
+            totalAmount: nextTotalAmount,
+            amountPaid: nextAmountPaid,
+          });
+
           return {
             ...previous,
             ...variables.input,
+            totalAmount: nextTotalAmount.toString(),
+            amountPaid: nextAmountPaid.toString(),
+            balanceDue: balanceDue.toString(),
             updatedAt: new Date().toISOString(),
           };
         }

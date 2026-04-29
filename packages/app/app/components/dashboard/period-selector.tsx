@@ -118,7 +118,7 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
     <div className={cn("space-y-3", className)}>
       {/* Period Type Selector */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 flex bg-gray-100 rounded-xl p-1">
+        <div className="shell-block-muted flex flex-1 rounded-[20px] p-1">
           {PERIOD_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -127,8 +127,8 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                 "flex-1 py-2.5 px-2 text-sm font-medium rounded-lg transition-all",
                 "min-h-[44px] touch-manipulation",
                 value.type === option.value
-                  ? "bg-white text-orange-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-orange-600 shadow-sm dark:bg-white/[0.06] dark:text-orange-300 dark:shadow-none"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {option.label}
@@ -143,9 +143,8 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
           onClick={() => handleTypeChange("range")}
           className={cn(
             "w-full flex items-center justify-between",
-            "px-4 py-3 bg-orange-50 rounded-xl",
-            "text-sm text-orange-700 font-medium",
-            "border border-orange-200",
+            "rounded-xl px-4 py-3",
+            "border border-orange-200 bg-orange-50/80 text-sm font-medium text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200",
             "active:scale-[0.99] transition-transform"
           )}
         >
@@ -159,10 +158,10 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
 
       {/* Range Selection Drawer */}
       <Drawer open={rangeDrawerOpen} onOpenChange={setRangeDrawerOpen}>
-        <DrawerContent className="w-full rounded-t-[24px] flex flex-col max-h-[90vh]">
-          <DrawerHeader className="border-b border-gray-100 px-4 pb-3 pt-2 flex-shrink-0">
+        <DrawerContent className="flex max-h-[90vh] w-full flex-col rounded-t-[24px]">
+          <DrawerHeader className="flex-shrink-0 border-b border-border/60 px-4 pb-3 pt-2">
             <div className="flex items-center justify-between">
-              <DrawerTitle className="text-lg font-semibold text-gray-900">
+              <DrawerTitle className="text-lg font-semibold text-foreground">
                 Seleccionar rango
               </DrawerTitle>
               <Button
@@ -172,18 +171,18 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                 onClick={() => setRangeDrawerOpen(false)}
                 className="rounded-full h-9 w-9"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </Button>
             </div>
           </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto">
             {/* Start Date */}
-            <div className="p-4 border-b border-gray-100">
-              <p className="text-sm font-medium text-gray-700 mb-3">
+            <div className="border-b border-border/60 p-4">
+              <p className="mb-3 text-sm font-medium text-foreground">
                 Fecha de inicio
               </p>
-              <div className="bg-white rounded-xl border border-gray-200 p-3">
+              <div className="shell-card-flat rounded-xl p-3">
                 <Calendar
                   mode="single"
                   selected={tempRange.start}
@@ -191,14 +190,14 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                   initialFocus={false}
                   className={cn(
                     "border-0 w-full",
-                    "[&_.rdp-caption]:text-gray-900",
+                    "[&_.rdp-caption]:text-foreground",
                     "[&_.rdp-caption]:font-semibold",
                     "[&_.rdp-caption]:text-base",
                     "[&_.rdp-nav_button]:w-8",
                     "[&_.rdp-nav_button]:h-8",
                     "[&_.rdp-nav_button]:rounded-full",
-                    "[&_.rdp-nav_button]:hover:bg-orange-50",
-                    "[&_.rdp-head_cell]:text-gray-500",
+                    "[&_.rdp-nav_button]:hover:bg-orange-50 [&_.rdp-nav_button]:dark:hover:bg-orange-500/10",
+                    "[&_.rdp-head_cell]:text-muted-foreground",
                     "[&_.rdp-head_cell]:font-medium",
                     "[&_.rdp-head_cell]:text-xs",
                     "[&_.rdp-head_cell]:w-full",
@@ -211,20 +210,20 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                     "[&_.rdp-button]:min-h-[44px]",
                     "[&_.rdp-button]:rounded-full",
                     "[&_.rdp-button]:text-sm",
-                    "[&_.rdp-day_today]:bg-orange-100",
-                    "[&_.rdp-day_today]:text-orange-700",
+                    "[&_.rdp-day_today]:bg-orange-100 [&_.rdp-day_today]:dark:bg-orange-500/15",
+                    "[&_.rdp-day_today]:text-orange-700 [&_.rdp-day_today]:dark:text-orange-300",
                     "[&_.rdp-day_today]:font-semibold",
                     "[&_.rdp-day_today]:rounded-full",
-                    "[&_.rdp-day_selected]:bg-orange-500",
+                    "[&_.rdp-day_selected]:bg-orange-500 [&_.rdp-day_selected]:dark:bg-orange-400",
                     "[&_.rdp-day_selected]:text-white",
                     "[&_.rdp-day_selected]:font-semibold",
                     "[&_.rdp-day_selected]:rounded-full",
-                    "[&_.rdp-day_selected:hover]:bg-orange-600",
-                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50",
-                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-gray-900",
+                    "[&_.rdp-day_selected:hover]:bg-orange-600 [&_.rdp-day_selected:hover]:dark:bg-orange-500",
+                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50 [&_.rdp-button:hover:not(.rdp-day_selected)]:dark:bg-white/10",
+                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-foreground",
                     "[&_.rdp-disabled]:opacity-30",
                     "[&_.rdp-disabled]:cursor-not-allowed",
-                    "[&_.rdp-day_outside]:text-gray-300",
+                    "[&_.rdp-day_outside]:text-gray-300 [&_.rdp-day_outside]:dark:text-white/20",
                     "[&_.rdp-table]:w-full"
                   )}
                 />
@@ -238,10 +237,10 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
 
             {/* End Date */}
             <div className="p-4">
-              <p className="text-sm font-medium text-gray-700 mb-3">
+              <p className="mb-3 text-sm font-medium text-foreground">
                 Fecha de fin
               </p>
-              <div className="bg-white rounded-xl border border-gray-200 p-3">
+              <div className="shell-card-flat rounded-xl p-3">
                 <Calendar
                   mode="single"
                   selected={tempRange.end}
@@ -252,14 +251,14 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                   initialFocus={false}
                   className={cn(
                     "border-0 w-full",
-                    "[&_.rdp-caption]:text-gray-900",
+                    "[&_.rdp-caption]:text-foreground",
                     "[&_.rdp-caption]:font-semibold",
                     "[&_.rdp-caption]:text-base",
                     "[&_.rdp-nav_button]:w-8",
                     "[&_.rdp-nav_button]:h-8",
                     "[&_.rdp-nav_button]:rounded-full",
-                    "[&_.rdp-nav_button]:hover:bg-orange-50",
-                    "[&_.rdp-head_cell]:text-gray-500",
+                    "[&_.rdp-nav_button]:hover:bg-orange-50 [&_.rdp-nav_button]:dark:hover:bg-orange-500/10",
+                    "[&_.rdp-head_cell]:text-muted-foreground",
                     "[&_.rdp-head_cell]:font-medium",
                     "[&_.rdp-head_cell]:text-xs",
                     "[&_.rdp-head_cell]:w-full",
@@ -272,20 +271,20 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
                     "[&_.rdp-button]:min-h-[44px]",
                     "[&_.rdp-button]:rounded-full",
                     "[&_.rdp-button]:text-sm",
-                    "[&_.rdp-day_today]:bg-orange-100",
-                    "[&_.rdp-day_today]:text-orange-700",
+                    "[&_.rdp-day_today]:bg-orange-100 [&_.rdp-day_today]:dark:bg-orange-500/15",
+                    "[&_.rdp-day_today]:text-orange-700 [&_.rdp-day_today]:dark:text-orange-300",
                     "[&_.rdp-day_today]:font-semibold",
                     "[&_.rdp-day_today]:rounded-full",
-                    "[&_.rdp-day_selected]:bg-orange-500",
+                    "[&_.rdp-day_selected]:bg-orange-500 [&_.rdp-day_selected]:dark:bg-orange-400",
                     "[&_.rdp-day_selected]:text-white",
                     "[&_.rdp-day_selected]:font-semibold",
                     "[&_.rdp-day_selected]:rounded-full",
-                    "[&_.rdp-day_selected:hover]:bg-orange-600",
-                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50",
-                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-gray-900",
+                    "[&_.rdp-day_selected:hover]:bg-orange-600 [&_.rdp-day_selected:hover]:dark:bg-orange-500",
+                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50 [&_.rdp-button:hover:not(.rdp-day_selected)]:dark:bg-white/10",
+                    "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-foreground",
                     "[&_.rdp-disabled]:opacity-30",
                     "[&_.rdp-disabled]:cursor-not-allowed",
-                    "[&_.rdp-day_outside]:text-gray-300",
+                    "[&_.rdp-day_outside]:text-gray-300 [&_.rdp-day_outside]:dark:text-white/20",
                     "[&_.rdp-table]:w-full"
                   )}
                 />
@@ -305,8 +304,8 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
               disabled={!isRangeValid}
               className={cn(
                 "w-full rounded-xl h-12 font-medium",
-                "bg-orange-500 hover:bg-orange-600 text-white",
-                "disabled:bg-gray-200 disabled:text-gray-500"
+                "bg-orange-500 text-white hover:bg-orange-600",
+                "disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-white/10 dark:disabled:text-white/35"
               )}
             >
               Aplicar rango
@@ -315,7 +314,7 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
               type="button"
               variant="outline"
               onClick={() => setRangeDrawerOpen(false)}
-              className="w-full rounded-xl h-12 border-gray-200 text-gray-600 hover:bg-gray-50"
+              className="h-12 w-full rounded-xl border-border/70 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             >
               Cancelar
             </Button>

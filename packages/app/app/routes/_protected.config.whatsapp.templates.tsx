@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import {
   useWhatsAppTemplates,
   useCreateWhatsAppTemplate,
@@ -346,23 +347,23 @@ export default function WhatsAppTemplatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config/whatsapp">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">
-            Plantillas de Mensajes
-          </span>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config/whatsapp"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">
+          Plantillas de Mensajes
+        </h1>
+      </MobileSlot>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-2xl mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+      <MobilePage.Root maxWidth="lg" className="space-y-4">
+        <MobilePage.Card variant="flat">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -517,9 +518,9 @@ export default function WhatsAppTemplatesPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </MobilePage.Card>
 
-          <Card className="border-0 shadow-md rounded-2xl">
+          <MobilePage.Card variant="soft">
             <CardHeader>
               <CardTitle className="text-base">Variables disponibles</CardTitle>
               <CardDescription>
@@ -549,9 +550,8 @@ export default function WhatsAppTemplatesPage() {
                 ))}
               </div>
             </CardContent>
-          </Card>
-        </div>
-      </main>
+          </MobilePage.Card>
+      </MobilePage.Root>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
@@ -639,6 +639,6 @@ export default function WhatsAppTemplatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

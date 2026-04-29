@@ -17,6 +17,7 @@ import {
   changePasswordSchema,
   type ChangePasswordInput,
 } from "~/lib/schemas";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 
 export default function SecurityPage() {
   const { changePassword } = useAuth();
@@ -53,21 +54,21 @@ export default function SecurityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Seguridad</span>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Seguridad</h1>
+      </MobileSlot>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        <MobilePage.Card variant="flat">
             <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto bg-red-100 rounded-2xl flex items-center justify-center">
                 <Shield className="h-8 w-8 text-red-600" />
@@ -140,27 +141,8 @@ export default function SecurityPage() {
                 </Button>
               </form>
             </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md rounded-2xl bg-amber-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">
-                    Consejos de seguridad
-                  </p>
-                  <ul className="text-xs text-amber-700 mt-2 space-y-1 list-disc list-inside">
-                    <li>Usa al menos 8 caracteres</li>
-                    <li>Combina letras, números y símbolos</li>
-                    <li>No reutilices contraseñas de otros sitios</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+          </MobilePage.Card>
+      </MobilePage.Root>
+    </>
   );
 }

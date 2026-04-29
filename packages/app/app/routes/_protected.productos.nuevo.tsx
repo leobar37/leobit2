@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCreateProduct } from "~/hooks/use-products";
 import { FormPage } from "~/components/layout/form-page";
+import { MobilePage } from "~/components/mobile/mobile-page";
 import { ProductFormContent } from "~/components/products/product-form-content";
 import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
@@ -79,7 +80,7 @@ export default function NuevoProductoPage() {
           <ProductFormContent form={form} />
 
           {/* Variants Toggle Card */}
-          <Card className="border-0 shadow-lg rounded-3xl">
+          <MobilePage.Card variant="flat" className="rounded-3xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -109,7 +110,7 @@ export default function NuevoProductoPage() {
                 </label>
               </div>
             </CardContent>
-          </Card>
+          </MobilePage.Card>
         </div>
       </FormProvider>
     </FormPage>

@@ -11,6 +11,25 @@ export interface SaleCalculations {
   canSubmit: boolean;
 }
 
+interface SaleFinancialStateInput {
+  saleType: "contado" | "credito";
+  totalAmount: number;
+  amountPaid: string | number | null | undefined;
+}
+
+function normalizeAmount(amountPaid: string | number | null | undefined): number {
+  if (typeof amountPaid === "number") {
+    return Number.isFinite(amountPaid) ? amountPaid : 0;
+  }
+
+  if (typeof amountPaid === "string") {
+    const parsed = Number(amountPaid);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
 /**
  * Calcula el monto total de los items
  */
@@ -48,6 +67,19 @@ export function getBalanceDue(
 ): number {
   if (saleType === "contado") return 0;
   return Math.max(totalAmount - amountPaidValue, 0);
+}
+
+export function getSaleFinancialState({
+  saleType,
+  totalAmount,
+  amountPaid,
+}: SaleFinancialStateInput) {
+  const amountPaidValue = normalizeAmount(amountPaid);
+
+  return {
+    amountPaidValue,
+    balanceDue: getBalanceDue(saleType, totalAmount, amountPaidValue),
+  };
 }
 
 /**
@@ -97,12 +129,16 @@ export function useSaleCalculations(
     const totalAmount = calculateTotalAmount(items);
     const paymentMode = sale?.paymentMode ?? "pago_total";
     const saleType = sale?.saleType || getSaleType(paymentMode);
-    const amountPaidValue = getAmountPaidValue(
+    const rawAmountPaidValue = getAmountPaidValue(
       paymentMode,
       totalAmount,
       sale?.amountPaid || "0"
     );
-    const balanceDue = getBalanceDue(saleType, totalAmount, amountPaidValue);
+    const { amountPaidValue, balanceDue } = getSaleFinancialState({
+      saleType,
+      totalAmount,
+      amountPaid: rawAmountPaidValue,
+    });
     const requiresCustomer = getRequiresCustomer(saleType);
     const hasValidPartial = getHasValidPartialAmount(
       paymentMode,

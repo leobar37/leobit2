@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSuppliers } from "~/hooks/use-suppliers";
 import { useBusiness } from "~/hooks/use-business";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 
 function SupplierCard({ supplier }: { supplier: {
   id: string;
@@ -110,17 +111,16 @@ export default function ProveedoresPage() {
         </div>
       </div>
 
-      <Link
-        to="/proveedores/nuevo"
-        className="fixed bottom-20 right-4 z-50"
-      >
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-orange-500 hover:bg-orange-600"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+      <MobileShell.FloatingAction>
+        <Link to="/proveedores/nuevo">
+          <Button
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-lg bg-orange-500 hover:bg-orange-600"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </Link>
+      </MobileShell.FloatingAction>
     </>
   );
 }

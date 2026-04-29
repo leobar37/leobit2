@@ -5,6 +5,7 @@ import { useStockAlerts, type StockAlert } from "~/hooks/use-stock-alerts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 
 function getAlertConfig(alertType: StockAlert["alertType"]) {
   switch (alertType) {
@@ -49,29 +50,32 @@ export default function AlertasStockPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-3">
-            <Link to="/reportes" className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="font-bold text-lg">Alertas de Inventario</h1>
-          </div>
-          {totalAlerts > 0 && (
-            <Button
-              onClick={handleGoToPurchases}
-              className="bg-orange-500 hover:bg-orange-600"
-              size="sm"
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Comprar Todo
-            </Button>
-          )}
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/reportes"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Alertas de Inventario</h1>
+      </MobileSlot>
+      {totalAlerts > 0 && (
+        <MobileSlot name="header:right" priority={10}>
+          <Button
+            onClick={handleGoToPurchases}
+            className="bg-orange-500 hover:bg-orange-600"
+            size="sm"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Comprar Todo
+          </Button>
+        </MobileSlot>
+      )}
 
-      <main className="p-4 pb-24 space-y-4">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-3">
           <Card className="border-red-100 bg-red-50/50">
@@ -204,7 +208,7 @@ export default function AlertasStockPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </MobilePage.Root>
+    </>
   );
 }

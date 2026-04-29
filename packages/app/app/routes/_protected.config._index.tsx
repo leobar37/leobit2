@@ -19,11 +19,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import {
-  MinimalCard,
-  MinimalCardContent,
   MinimalCardTitle,
   MinimalCardDescription,
-  MinimalCardMedia,
 } from "~/components/cards";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -187,36 +184,34 @@ export default function ConfigIndexPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header - Sin fondo, solo texto */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold text-foreground">Menú</h1>
-        <p className="text-base text-muted-foreground mt-1">
+        <h1 className="text-[2rem] font-semibold tracking-[-0.04em] text-foreground">
+          Menú
+        </h1>
+        <p className="mt-1 text-base text-muted-foreground">
           Todas las opciones de la aplicación
         </p>
       </div>
 
-      {/* Lista de opciones */}
       <div className="space-y-3">
         {configItems.map((item) => (
           <Link key={item.href} to={item.href} className="block">
-            <MinimalCard 
-              variant="outlined" 
-              interactive 
-              clickable 
-              radius="md"
-              className="flex items-center gap-4"
-            >
-              <MinimalCardMedia icon={item.icon} iconColor={item.color} size="md" />
-              <MinimalCardContent>
-                <MinimalCardTitle className="text-base font-medium">
+            <div className="shell-card-flat flex items-center gap-4 rounded-[24px] border border-white/6 bg-[#1d2028] px-4 py-4 shadow-[0_14px_34px_rgba(0,0,0,0.24)] transition-colors hover:border-white/12 hover:bg-[#232631]">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[18px] bg-white/[0.04] ring-1 ring-white/8">
+                <item.icon className={`h-7 w-7 ${item.color}`} />
+              </div>
+              <div className="min-w-0 flex-1 pr-2">
+                <MinimalCardTitle className="text-[1.1rem] font-semibold tracking-[-0.03em]">
                   {item.title}
                 </MinimalCardTitle>
-                <MinimalCardDescription>
+                <MinimalCardDescription className="mt-1 text-[0.98rem] leading-snug text-muted-foreground/90">
                   {item.description}
                 </MinimalCardDescription>
-              </MinimalCardContent>
-              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            </MinimalCard>
+              </div>
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.04] text-white/45 ring-1 ring-white/6">
+                <ChevronRight className="h-5 w-5" />
+              </div>
+            </div>
           </Link>
         ))}
       </div>

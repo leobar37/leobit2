@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router";
 import { getPurchaseEditorPath } from "~/lib/purchases/navigation";
 import {
+  ArrowLeft,
   ShoppingCart,
   Calendar,
   Receipt,
@@ -16,6 +17,7 @@ import { formatCurrency, formatWeight } from "~/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MobileFixedFooter, MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
 import {
   usePurchase,
   useUpdatePurchaseStatus,
@@ -24,7 +26,6 @@ import {
 import { useSuppliers } from "~/hooks/use-suppliers";
 import { useBusiness } from "~/hooks/use-business";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import { useSetLayout } from "~/components/layout/app-layout";
 
 const statusLabels: Record<string, string> = {
   draft: "Borrador",
@@ -51,15 +52,8 @@ export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  useSetLayout({
-    title: "Detalle de Compra",
-    showBackButton: true,
-    backHref: "/compras",
-  });
-
   const { data: purchase, isLoading } = usePurchase(id!);
-  const { data: business } = useBusiness();
-  const businessId = business?.id || "";
+  useBusiness();
   const { data: suppliers } = useSuppliers();
   const supplier = purchase?.supplierId && suppliers
     ? suppliers.find((s: { id: string }) => s.id === purchase.supplierId)
@@ -152,8 +146,22 @@ export default function PurchaseDetailPage() {
     : storedTotal;
 
   return (
-    <div className="min-h-screen app-shell">
-      <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
+    <>
+      <MobileShell.BackButton>
+        <Link
+          to="/compras"
+          className="shell-toolbar-button -ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Volver"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+      </MobileShell.BackButton>
+
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate text-lg font-bold tracking-tight">Detalle de Compra</h1>
+      </MobileSlot>
+
+      <MobilePage.Root className="space-y-4">
         <Card className="shell-card-flat overflow-hidden rounded-[30px]">
           <div className="border-b shell-divider bg-orange-50/80 p-4">
             <div className="flex items-start gap-4">
@@ -273,7 +281,10 @@ export default function PurchaseDetailPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-3">
+      </MobilePage.Root>
+
+      <MobileFixedFooter aboveNav>
+        <MobilePage.Root maxWidth="lg" className="space-y-3">
           {purchase.status === "pending" && (
             <Button
               onClick={() => id && navigate(getPurchaseEditorPath(id, false))}
@@ -318,10 +329,10 @@ export default function PurchaseDetailPage() {
               Eliminar Compra
             </Button>
           )}
-        </div>
-      </main>
+        </MobilePage.Root>
+      </MobileFixedFooter>
 
       <ConfirmDialog />
-    </div>
+    </>
   );
 }

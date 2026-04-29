@@ -3,6 +3,7 @@ import { Search, Wallet, User, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useAccountsReceivable, useTotalAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { usePayments } from "~/hooks/use-payments";
@@ -48,9 +49,9 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
             </div>
 
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${debtLevel.color}`}>
+              <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${debtLevel.color}`}>
                 {debtLevel.label}
-              </span>
+              </Badge>
               {account.lastSaleDate && (
                 <span className="text-xs text-muted-foreground">
                   Última: {formatDate(account.lastSaleDate)}
@@ -111,14 +112,14 @@ export default function CobrosPage() {
   return (
     <div className="space-y-4">
       {/* Stats Card - Border lateral rojo */}
-      <div className="border-l-4 border-red-500 bg-white py-3 pl-4 pr-3">
+      <div className="shell-card-soft border-l-4 border-red-500 py-3 pl-4 pr-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Total por cobrar</p>
             <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(totalDebt)}</p>
           </div>
-          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-            <Wallet className="h-5 w-5 text-red-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-red-500/14 dark:text-red-300">
+            <Wallet className="h-5 w-5" />
           </div>
         </div>
         <p className="text-sm text-muted-foreground mt-2">
@@ -133,7 +134,7 @@ export default function CobrosPage() {
           placeholder="Buscar cliente..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 rounded-xl"
+          className="shell-field pl-10"
         />
       </div>
 
@@ -143,16 +144,16 @@ export default function CobrosPage() {
         </div>
       ) : debtors.length === 0 ? (
         <div className="text-center py-12">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-10 w-10 text-green-600" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100/90 dark:bg-emerald-500/14">
+            <AlertCircle className="h-10 w-10 text-emerald-600 dark:text-emerald-300" />
           </div>
-          <h3 className="text-lg font-semibold text-green-700">
+          <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
             ¡Todas las cuentas al día!
           </h3>
-          <p className="text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground">
             No hay deudas pendientes
           </p>
-          <Button variant="outline" className="mt-4 rounded-xl" asChild>
+          <Button variant="outline" className="mt-4 rounded-xl dark:border-white/10 dark:bg-white/6 dark:hover:bg-white/10" asChild>
             <Link to="/ventas">
               Ir a ventas
             </Link>

@@ -4,6 +4,7 @@ import { formatCurrency, formatKilos } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MobileFixedFooter, MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
 import { usePurchaseForm } from "~/components/purchases/purchase-form-context";
 import { getPurchaseCalculatorPath } from "~/lib/purchases/navigation";
 
@@ -32,31 +33,32 @@ export default function CompraEditarIndexPage() {
   }
 
   return (
-    <div className="min-h-screen app-shell">
-      <header className="sticky top-0 z-40 rounded-3xl border shell-surface">
-        <div className="flex h-16 items-center justify-between px-3 sm:px-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(`/compras/${purchaseId}`)}
-              className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-lg font-bold tracking-tight">Editar Compra</h1>
-          </div>
-          {items.length > 0 && (
-            <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/82 px-3 py-1.5 text-orange-700 shadow-sm backdrop-blur-sm">
-              <ShoppingCart className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-semibold">
-                S/ {formatCurrency(totalAmount)}
-              </span>
-            </div>
-          )}
-        </div>
-      </header>
+    <>
+      <MobileShell.BackButton>
+        <button
+          type="button"
+          onClick={() => navigate(`/compras/${purchaseId}`)}
+          className="shell-toolbar-button -ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Volver"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      </MobileShell.BackButton>
 
-      <main className="px-3 py-4 sm:px-4 pb-32 space-y-4">
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate text-lg font-bold tracking-tight">Editar Compra</h1>
+      </MobileSlot>
+
+      {items.length > 0 && (
+        <MobileSlot name="header:right" priority={10}>
+          <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/82 px-3 py-1.5 text-orange-700 shadow-sm backdrop-blur-sm">
+            <ShoppingCart className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-semibold">S/ {formatCurrency(totalAmount)}</span>
+          </div>
+        </MobileSlot>
+      )}
+
+      <MobilePage.Root className="space-y-4">
         <Card className="shell-card-flat overflow-hidden rounded-[30px]">
           <div className="border-b shell-divider bg-orange-50/80 p-4">
             <div className="flex items-start gap-4">
@@ -152,10 +154,11 @@ export default function CompraEditarIndexPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
-        <div className="max-w-lg mx-auto space-y-2">
+      </MobilePage.Root>
+
+      <MobileFixedFooter aboveNav>
+        <MobilePage.Root maxWidth="lg" className="space-y-2">
           <Button
             onClick={onSave}
             disabled={isPending}
@@ -171,10 +174,10 @@ export default function CompraEditarIndexPage() {
                 <CheckCircle2 className="h-5 w-5 mr-2" />
                 Guardar Compra
               </>
-            )}
+              )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </MobilePage.Root>
+      </MobileFixedFooter>
+    </>
   );
 }

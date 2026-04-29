@@ -10,7 +10,6 @@ import {
 } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -20,6 +19,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { Switch } from "@/components/ui/switch";
 import { useRef, useState } from "react";
 import { FormPage } from "~/components/layout/form-page";
+import { MobilePage } from "~/components/mobile/mobile-page";
 
 const updateBusinessSchema = z.object({
   name: z.string().min(2).max(100),
@@ -138,7 +138,8 @@ export default function EditBusinessPage() {
       backHref="/config"
       toolbar={
         <Button
-          onClick={form.handleSubmit(onSubmit)}
+          type="submit"
+          form="business-edit-form"
           disabled={updateBusiness.isPending || !form.formState.isValid}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
@@ -154,7 +155,7 @@ export default function EditBusinessPage() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
-        <Card className="border-0 shadow-lg rounded-3xl">
+        <MobilePage.Card variant="flat">
           <CardHeader className="text-center">
             <div className="relative inline-block">
               <div
@@ -195,7 +196,7 @@ export default function EditBusinessPage() {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form id="business-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormInput
                 label="Nombre del negocio"
                 error={form.formState.errors.name?.message}
@@ -271,7 +272,7 @@ export default function EditBusinessPage() {
               )}
             </form>
           </CardContent>
-        </Card>
+        </MobilePage.Card>
       </div>
     </FormPage>
   );

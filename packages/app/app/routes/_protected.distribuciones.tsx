@@ -31,6 +31,7 @@ import { z } from "zod";
 import { FormDate } from "@/components/forms/form-date";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 import { useOnline } from "~/hooks/use-online";
 import { useTeam } from "~/hooks/use-team";
 import { useState } from "react";
@@ -165,7 +166,7 @@ export default function DistribucionesPage() {
 
   return (
     <>
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4">
         {!isOnline && (
           <Alert variant="destructive">
             <WifiOff className="h-4 w-4" />
@@ -176,7 +177,7 @@ export default function DistribucionesPage() {
         )}
 
         <FormProvider {...filterForm}>
-          <div className="shell-card-flat rounded-[22px] border border-stone-200/85 p-3">
+          <div className="shell-card-flat rounded-[22px] p-3">
             <FormDate
               name="fecha"
               quickActionLabels={["Hoy", "Mañana"]}
@@ -184,7 +185,7 @@ export default function DistribucionesPage() {
           </div>
         </FormProvider>
 
-        <Card className="shell-card-flat rounded-[24px] border-stone-200/85">
+          <Card className="shell-card-flat rounded-[24px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Resumen del día</CardTitle>
           </CardHeader>
@@ -292,13 +293,15 @@ export default function DistribucionesPage() {
       </div>
 
       {isAdmin && (
-        <Button
-          size="icon"
-          className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-          onClick={handleNavigateToCreate}
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
+        <MobileShell.FloatingAction>
+          <Button
+            size="icon"
+            className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+            onClick={handleNavigateToCreate}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </MobileShell.FloatingAction>
       )}
     </>
   );

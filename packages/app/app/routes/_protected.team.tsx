@@ -23,6 +23,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import type { TeamMember } from "@avileo/shared";
 
 const updateMemberSchema = z.object({
@@ -64,7 +65,7 @@ function TeamMemberCard({
   };
 
   return (
-    <Card className="border-0 shadow-md rounded-2xl">
+    <MobilePage.Card variant="soft">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -112,7 +113,7 @@ function TeamMemberCard({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </MobilePage.Card>
   );
 }
 
@@ -180,73 +181,72 @@ export default function TeamPage() {
 
   if (business?.role !== "ADMIN_NEGOCIO") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <MobilePage.Card variant="flat" className="w-full max-w-sm">
           <CardHeader className="text-center">
             <CardTitle>Acceso restringido</CardTitle>
             <CardDescription>
               Solo los administradores pueden gestionar el equipo
             </CardDescription>
           </CardHeader>
-        </Card>
+        </MobilePage.Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground flex-1">
-            Mi Equipo
-          </span>
-          <Link to="/invitations">
-            <Button size="sm" className="rounded-xl">
-              <Route className="h-4 w-4 mr-1" />
-              Invitar
-            </Button>
-          </Link>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Mi Equipo</h1>
+      </MobileSlot>
+      <MobileSlot name="header:right" priority={10}>
+        <Link to="/invitations">
+          <Button size="sm" className="rounded-xl">
+            <Route className="h-4 w-4 mr-1" />
+            Invitar
+          </Button>
+        </Link>
+      </MobileSlot>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-            </div>
-          ) : team?.length === 0 ? (
-            <Card className="border-0 shadow-lg rounded-3xl">
-              <CardContent className="p-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <CardTitle className="text-lg mb-2">No hay miembros</CardTitle>
-                <CardDescription>
-                  Invita a tu primer vendedor para empezar
-                </CardDescription>
-                <Link to="/invitations" className="mt-4 inline-block">
-                  <Button>Ir a invitaciones</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {team?.map((member) => (
-                <TeamMemberCard
-                  key={member.id}
-                  member={member}
-                  onEdit={handleEdit}
-                  onDeactivate={handleDeactivate}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          </div>
+        ) : team?.length === 0 ? (
+          <MobilePage.Card variant="flat">
+            <CardContent className="p-8 text-center">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <CardTitle className="text-lg mb-2">No hay miembros</CardTitle>
+              <CardDescription>
+                Invita a tu primer vendedor para empezar
+              </CardDescription>
+              <Link to="/invitations" className="mt-4 inline-block">
+                <Button>Ir a invitaciones</Button>
+              </Link>
+            </CardContent>
+          </MobilePage.Card>
+        ) : (
+          <div className="space-y-3">
+            {team?.map((member) => (
+              <TeamMemberCard
+                key={member.id}
+                member={member}
+                onEdit={handleEdit}
+                onDeactivate={handleDeactivate}
+              />
+            ))}
+          </div>
+        )}
+      </MobilePage.Root>
 
       <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DrawerContent className="max-h-[85vh]">
@@ -304,6 +304,6 @@ export default function TeamPage() {
       </Drawer>
 
       <ConfirmDialog />
-    </div>
+    </>
   );
 }

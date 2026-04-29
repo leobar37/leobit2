@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePurchases, useCreateDraftPurchase } from "~/hooks/use-purchases";
 import { useListSearch } from "~/hooks/use-list-search";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 
 import type { Purchase } from "~/hooks/use-purchases";
 
@@ -130,18 +131,20 @@ export default function ComprasPage() {
         </div>
       </div>
 
-      <Button
-        size="icon"
-        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-        onClick={handleCreatePurchase}
-        disabled={createDraftPurchase.isPending}
-      >
-        {createDraftPurchase.isPending ? (
-          <Loader2 className="h-6 w-6 animate-spin" />
-        ) : (
-          <Plus className="h-6 w-6" />
-        )}
-      </Button>
+      <MobileShell.FloatingAction>
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full bg-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+          onClick={handleCreatePurchase}
+          disabled={createDraftPurchase.isPending}
+        >
+          {createDraftPurchase.isPending ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <Plus className="h-6 w-6" />
+          )}
+        </Button>
+      </MobileShell.FloatingAction>
     </>
   );
 }

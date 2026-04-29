@@ -23,6 +23,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import type { Invitation } from "@avileo/shared";
 
 const createInvitationSchema = z.object({
@@ -79,7 +80,7 @@ function InvitationCard({
   };
 
   return (
-    <Card className="border-0 shadow-md rounded-2xl">
+    <MobilePage.Card variant="soft">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -130,7 +131,7 @@ function InvitationCard({
           )}
         </div>
       </CardContent>
-    </Card>
+    </MobilePage.Card>
   );
 }
 
@@ -178,120 +179,119 @@ export default function InvitationsPage() {
 
   if (business?.role !== "ADMIN_NEGOCIO") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <MobilePage.Card variant="flat" className="w-full max-w-sm">
           <CardHeader className="text-center">
             <CardTitle>Acceso restringido</CardTitle>
             <CardDescription>
               Solo los administradores pueden gestionar invitaciones
             </CardDescription>
           </CardHeader>
-        </Card>
+        </MobilePage.Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground flex-1">
-            Invitaciones
-          </span>
-          <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DrawerTrigger
-              className="inline-flex items-center justify-center h-8 px-3 text-sm font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Invitar
-            </DrawerTrigger>
-            <DrawerContent className="max-h-[85vh]">
-              <DrawerHeader className="px-4 pb-3 pt-2">
-                <DrawerTitle>Invitar vendedor</DrawerTitle>
-                <DrawerDescription>
-                  Crea una invitación para unir un vendedor a tu negocio
-                </DrawerDescription>
-              </DrawerHeader>
-              <FormProvider {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormInput
-                    name="name"
-                    label="Nombre del vendedor"
-                    placeholder="Ej: Juan Pérez"
-                  />
-                  <FormInput
-                    name="email"
-                    label="Email"
-                    type="email"
-                    placeholder="vendedor@email.com"
-                  />
-                  <FormInput
-                    name="salesPoint"
-                    label="Punto de venta (opcional)"
-                    placeholder="Ej: Carro A, Casa, etc."
-                  />
-                  {form.formState.errors.root && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.root.message}
-                    </p>
-                  )}
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={createInvitation.isPending || !form.formState.isValid}
-                  >
-                    {createInvitation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creando...
-                      </>
-                    ) : (
-                      "Crear invitación"
-                    )}
-                  </Button>
-                </form>
-              </FormProvider>
-            </DrawerContent>
-          </Drawer>
-        </div>
-      </header>
-
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-            </div>
-          ) : invitations?.length === 0 ? (
-            <Card className="border-0 shadow-lg rounded-3xl">
-              <CardContent className="p-8 text-center">
-                <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <CardTitle className="text-lg mb-2">
-                  No hay invitaciones
-                </CardTitle>
-                <CardDescription>
-                  Crea una invitación para unir vendedores a tu negocio
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {invitations?.map((invitation) => (
-                <InvitationCard
-                  key={invitation.id}
-                  invitation={invitation}
-                  onCancel={handleCancel}
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Invitaciones</h1>
+      </MobileSlot>
+      <MobileSlot name="header:right" priority={10}>
+        <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DrawerTrigger
+            className="inline-flex items-center justify-center h-8 px-3 text-sm font-medium rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Invitar
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[85vh]">
+            <DrawerHeader className="px-4 pb-3 pt-2">
+              <DrawerTitle>Invitar vendedor</DrawerTitle>
+              <DrawerDescription>
+                Crea una invitación para unir un vendedor a tu negocio
+              </DrawerDescription>
+            </DrawerHeader>
+            <FormProvider {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormInput
+                  name="name"
+                  label="Nombre del vendedor"
+                  placeholder="Ej: Juan Pérez"
                 />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+                <FormInput
+                  name="email"
+                  label="Email"
+                  type="email"
+                  placeholder="vendedor@email.com"
+                />
+                <FormInput
+                  name="salesPoint"
+                  label="Punto de venta (opcional)"
+                  placeholder="Ej: Carro A, Casa, etc."
+                />
+                {form.formState.errors.root && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.root.message}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={createInvitation.isPending || !form.formState.isValid}
+                >
+                  {createInvitation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    "Crear invitación"
+                  )}
+                </Button>
+              </form>
+            </FormProvider>
+          </DrawerContent>
+        </Drawer>
+      </MobileSlot>
+
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          </div>
+        ) : invitations?.length === 0 ? (
+          <MobilePage.Card variant="flat">
+            <CardContent className="p-8 text-center">
+              <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <CardTitle className="text-lg mb-2">
+                No hay invitaciones
+              </CardTitle>
+              <CardDescription>
+                Crea una invitación para unir vendedores a tu negocio
+              </CardDescription>
+            </CardContent>
+          </MobilePage.Card>
+        ) : (
+          <div className="space-y-3">
+            {invitations?.map((invitation) => (
+              <InvitationCard
+                key={invitation.id}
+                invitation={invitation}
+                onCancel={handleCancel}
+              />
+            ))}
+          </div>
+        )}
+      </MobilePage.Root>
+    </>
   );
 }

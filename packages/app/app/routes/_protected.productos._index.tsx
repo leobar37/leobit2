@@ -7,6 +7,7 @@ import { useProducts } from "~/hooks/use-products-live";
 import { useListSearch } from "~/hooks/use-list-search";
 import { ProductCard } from "@/components/products/product-card";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 
 export default function ProductsPage() {
   useSetLayout({ title: "Catálogo" });
@@ -69,15 +70,17 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <Button
-        size="icon"
-        asChild
-        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-      >
-        <Link to="/productos/nuevo" aria-label="Nuevo producto">
-          <Plus className="h-6 w-6" />
-        </Link>
-      </Button>
+      <MobileShell.FloatingAction>
+        <Button
+          size="icon"
+          asChild
+          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+        >
+          <Link to="/productos/nuevo" aria-label="Nuevo producto">
+            <Plus className="h-6 w-6" />
+          </Link>
+        </Button>
+      </MobileShell.FloatingAction>
     </>
   );
 }

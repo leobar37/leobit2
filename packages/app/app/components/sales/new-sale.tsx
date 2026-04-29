@@ -28,12 +28,16 @@ import {
   useUpdateSaleItem,
 } from "~/hooks/use-sales-db";
 import { useUpdateSale } from "~/hooks/use-sales";
-import { useSaleCalculations } from "~/hooks/use-sale-calculations";
+import {
+  getAmountPaidValue,
+  getBalanceDue,
+  getSaleType,
+  useSaleCalculations,
+} from "~/hooks/use-sale-calculations";
 import { formatCurrency, formatKilos, formatNumber, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
-import { ToolbarActions } from "~/components/layout/toolbar-actions";
 import { useNewSaleContext } from "./new-sale-context";
 import { useToast } from "~/hooks/use-toast";
 import { useOnline } from "~/hooks/use-online";
@@ -153,22 +157,27 @@ export function PaymentModeSection() {
     if (!saleId) return;
 
     const totalAmountNum = calculations.totalAmount;
-    const amountPaidNum =
-      mode === "pago_total"
-        ? totalAmountNum
-        : mode === "debe_todo"
-          ? 0
-          : parseFloat(sale?.amountPaid || "0");
+    const nextSaleType = getSaleType(mode);
+    const amountPaidNum = getAmountPaidValue(
+      mode,
+      totalAmountNum,
+      sale?.amountPaid || "0",
+    );
+    const nextBalanceDue = getBalanceDue(
+      nextSaleType,
+      totalAmountNum,
+      amountPaidNum,
+    );
 
     try {
       await updateSale.mutateAsync({
         id: saleId,
         input: {
           paymentMode: mode,
-          saleType: mode === "pago_total" ? "contado" : "credito",
+          saleType: nextSaleType,
           totalAmount: totalAmountNum,
           amountPaid: amountPaidNum,
-          balanceDue: calculations.balanceDue,
+          balanceDue: nextBalanceDue,
         },
       });
     } catch {
@@ -504,9 +513,21 @@ export function SaleSubmitBar() {
 
 interface CalculatorContentProps {
   returnPath?: string;
+  onActionsChange?: (actions: CalculatorFooterActions | null) => void;
 }
 
-export function CalculatorContent({ returnPath }: CalculatorContentProps) {
+export interface CalculatorFooterActions {
+  primaryLabel: string;
+  secondaryLabel: string;
+  isPrimaryDisabled: boolean;
+  onPrimaryAction: () => void | Promise<void>;
+  onSecondaryAction: () => void;
+}
+
+export function CalculatorContent({
+  returnPath,
+  onActionsChange,
+}: CalculatorContentProps) {
   const navigate = useNavigate();
   const { saleId, items: saleItems, editingItemId, setEditingItemId } = useNewSaleContext();
   
@@ -605,7 +626,7 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
     }
   }, [isEditMode, editingItem, selectedProduct, selectedVariant, isKgProduct, form]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (
       !selectedProduct ||
       !selectedVariant ||
@@ -649,12 +670,61 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
         description: message,
       });
     }
-  };
+  }, [
+    addItem,
+    calculation.isValid,
+    calculation.quantity,
+    calculation.subtotal,
+    calculation.unitPrice,
+    editingItem,
+    isEditMode,
+    navigate,
+    returnPath,
+    saleId,
+    selectedProduct,
+    selectedVariant,
+    setEditingItemId,
+    toast,
+    updateItem,
+  ]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditingItemId(null);
     navigate(returnPath || getSaleEditorPath(saleId!));
-  };
+  }, [navigate, returnPath, saleId, setEditingItemId]);
+
+  const calculatorActions = useMemo<CalculatorFooterActions | null>(() => {
+    if (!selectedVariant) {
+      return null;
+    }
+
+    return {
+      primaryLabel: isEditMode
+        ? `Actualizar · S/ ${formatCurrency(calculation.subtotal)}`
+        : `Agregar al carrito · S/ ${formatCurrency(calculation.subtotal)}`,
+      secondaryLabel: "Cancelar",
+      isPrimaryDisabled: !isValid || updateItem.isPending || addItem.isPending,
+      onPrimaryAction: handleSave,
+      onSecondaryAction: handleCancel,
+    };
+  }, [
+    addItem.isPending,
+    calculation.subtotal,
+    handleCancel,
+    handleSave,
+    isEditMode,
+    isValid,
+    selectedVariant,
+    updateItem.isPending,
+  ]);
+
+  useEffect(() => {
+    onActionsChange?.(calculatorActions);
+
+    return () => {
+      onActionsChange?.(null);
+    };
+  }, [calculatorActions, onActionsChange]);
 
   return (
     <div className="flex flex-col h-full">
@@ -948,30 +1018,6 @@ export function CalculatorContent({ returnPath }: CalculatorContentProps) {
           </div>
         )}
       </div>
-
-      {/* Action Buttons */}
-      {selectedVariant && (
-        <ToolbarActions>
-          <div className="space-y-2">
-          <Button
-            onClick={handleSave}
-            disabled={!isValid || updateItem.isPending || addItem.isPending}
-            className="h-12 w-full rounded-2xl bg-orange-500 shadow-[0_14px_28px_rgba(249,115,22,0.2)] hover:bg-orange-600 disabled:bg-orange-300"
-          >
-            {isEditMode
-              ? `Actualizar · S/ ${formatCurrency(calculation.subtotal)}`
-              : `Agregar al carrito · S/ ${formatCurrency(calculation.subtotal)}`}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="h-12 w-full rounded-2xl border-white/70 bg-white/76 shadow-sm hover:bg-white"
-          >
-            Cancelar
-          </Button>
-          </div>
-        </ToolbarActions>
-      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { usePaginatedCustomers, useCustomerTagsSummary } from "~/hooks/use-custo
 import { useCustomerGroupsSummary, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerFilters } from "~/hooks/use-customer-filters";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 import { BulkCustomerTagsModal, useBulkCustomerTagsModal } from "~/components/customers/bulk-tag-assignment-drawer";
 import {
   BulkGroupAssignmentDrawer,
@@ -128,7 +129,7 @@ export default function CustomersPage() {
               placeholder="Buscar cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-12 rounded-xl border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
+              className="shell-field h-12 pl-11 pr-4"
             />
           </div>
           <div className="w-full">
@@ -160,7 +161,7 @@ export default function CustomersPage() {
         ) : (
           <div className="space-y-3">
             {customers.length > 0 && (
-              <div className="flex items-center justify-between rounded-xl border border-stone-200/80 bg-white/50 p-3 px-4">
+              <div className="shell-card-soft flex items-center justify-between rounded-xl p-3 px-4">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                   <button
                     type="button"
@@ -168,7 +169,7 @@ export default function CustomersPage() {
                     className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                       selectedCustomerIds.size === customers.length
                         ? "border-orange-500 bg-orange-500"
-                        : "border-stone-300 hover:border-orange-400"
+                        : "border-stone-300 hover:border-orange-400 dark:border-white/15"
                     }`}
                   >
                     {selectedCustomerIds.size === customers.length && (
@@ -187,7 +188,7 @@ export default function CustomersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 rounded-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                        className="gap-1.5 rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/16"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         Acciones
@@ -195,7 +196,7 @@ export default function CustomersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-48 rounded-xl border-stone-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur"
+                      className="w-48 rounded-xl border-stone-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur dark:border-white/10 dark:bg-[#171922]/95"
                     >
                       <DropdownMenuItem
                         onSelect={(event) => {
@@ -205,7 +206,7 @@ export default function CustomersPage() {
                             onAssigned: clearSelection,
                           });
                         }}
-                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700"
+                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-100"
                       >
                         <Users className="h-4 w-4" />
                         Asignar grupos
@@ -215,7 +216,7 @@ export default function CustomersPage() {
                           event.preventDefault();
                           bulkTagsModal.open({ customerIds: Array.from(selectedCustomerIds) });
                         }}
-                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700"
+                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-100"
                       >
                         <Tags className="h-4 w-4" />
                         Asignar tags
@@ -252,7 +253,7 @@ export default function CustomersPage() {
         )}
       </div>
 
-      <div className="fixed bottom-28 right-4 z-50 flex gap-3">
+      <MobileShell.FloatingAction>
         <Button
           size="icon"
           className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
@@ -260,7 +261,7 @@ export default function CustomersPage() {
         >
           <Plus className="h-6 w-6" />
         </Button>
-      </div>
+      </MobileShell.FloatingAction>
 
       <BulkCustomerTagsModal />
       <BulkGroupAssignmentDrawer />

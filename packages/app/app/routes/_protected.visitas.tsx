@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer } from "@/components/ui/drawer";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 import { useCustomers } from "~/hooks/use-customers";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useCreateDraftSale } from "~/hooks/use-sales";
@@ -256,7 +257,7 @@ export default function VisitasPage() {
       )}
 
       {distribucion && (
-        <div className="fixed bottom-28 right-4 z-50">
+        <MobileShell.FloatingAction>
           <Button
             size="icon"
             className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
@@ -264,7 +265,7 @@ export default function VisitasPage() {
           >
             <Plus className="h-6 w-6" />
           </Button>
-        </div>
+        </MobileShell.FloatingAction>
       )}
 
       <SelectionDialog

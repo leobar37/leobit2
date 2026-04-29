@@ -19,6 +19,7 @@ import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { useCustomerPayments } from "~/hooks/use-payments";
 import { useSalesByCustomer } from "~/hooks/use-sales";
+import { MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
@@ -83,42 +84,47 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <div className="min-h-screen app-shell">
-      <header className="sticky top-0 z-50 border-b shell-surface">
-        <div className="flex h-16 items-center gap-3 px-3 sm:px-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="truncate text-lg font-bold">{customer.name}</h1>
-          <div className="ml-auto flex items-center gap-1">
-            <button
-              onClick={handleDelete}
-              className="rounded-2xl p-2 text-red-600 transition-colors hover:bg-white/70"
-              title="Eliminar cliente"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-            <Link
-              to={`/clientes/${id}/edit`}
-              className="rounded-2xl p-2 transition-colors hover:bg-white/70"
-            >
-              <Pencil className="h-5 w-5" />
-            </Link>
-            <button
-              onClick={() => tagsModal.open({ customerId: id! })}
-              className="rounded-2xl p-2 transition-colors hover:bg-white/70"
-              title="Asignar etiquetas"
-            >
-              <Tags className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+    <>
+      <MobileShell.BackButton>
+        <button
+          onClick={() => navigate(-1)}
+          className="shell-toolbar-button -ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Volver"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      </MobileShell.BackButton>
 
-      <main className="space-y-4 px-3 py-4 pb-32 sm:px-4">
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate text-lg font-bold">{customer.name}</h1>
+      </MobileSlot>
+
+      <MobileSlot name="header:right" priority={10}>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleDelete}
+            className="rounded-2xl p-2 text-red-600 transition-colors hover:bg-white/70"
+            title="Eliminar cliente"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+          <Link
+            to={`/clientes/${id}/edit`}
+            className="rounded-2xl p-2 transition-colors hover:bg-white/70"
+          >
+            <Pencil className="h-5 w-5" />
+          </Link>
+          <button
+            onClick={() => tagsModal.open({ customerId: id! })}
+            className="rounded-2xl p-2 transition-colors hover:bg-white/70"
+            title="Asignar etiquetas"
+          >
+            <Tags className="h-5 w-5" />
+          </button>
+        </div>
+      </MobileSlot>
+
+      <MobilePage.Root className="space-y-4">
         <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -303,7 +309,7 @@ export default function CustomerDetailPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </MobilePage.Root>
+    </>
   );
 }

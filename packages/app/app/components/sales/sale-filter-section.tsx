@@ -37,7 +37,7 @@ export function SaleFilterSection({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between rounded-xl border border-stone-200/80 bg-white/75 px-3 py-2.5 text-left shadow-[0_1px_6px_rgba(15,23,42,0.02)] transition-colors hover:bg-white"
+        className="shell-card-soft flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/90 dark:hover:bg-white/[0.08]"
       >
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -66,7 +66,7 @@ export function SaleFilterSection({
       </button>
 
       {isExpanded && (
-        <div className="space-y-5 rounded-xl border border-stone-200/80 bg-white/75 p-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)]">
+        <div className="shell-card-soft space-y-5 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Filtros avanzados</p>
             {activeFilterCount > 0 && (
@@ -88,7 +88,7 @@ export function SaleFilterSection({
             onEndDateChange={onEndDateChange}
           />
 
-          <div className="space-y-3 border-t border-stone-100 pt-4">
+          <div className="space-y-3 border-t border-border/60 pt-4">
             <p className="text-sm font-medium">Tipo de pago</p>
             <div className="flex gap-2">
               {(
@@ -105,8 +105,8 @@ export function SaleFilterSection({
                   className={cn(
                     "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
                     saleType === option.value
-                      ? "bg-orange-100 text-orange-700"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                      ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
                   )}
                 >
                   {option.label}
@@ -115,7 +115,7 @@ export function SaleFilterSection({
             </div>
           </div>
 
-          <div className="space-y-3 border-t border-stone-100 pt-4">
+          <div className="space-y-3 border-t border-border/60 pt-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Con deuda pendiente</p>
               <button
@@ -125,7 +125,7 @@ export function SaleFilterSection({
                 onClick={() => onHasBalanceDueChange(!hasBalanceDue)}
                 className={cn(
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                  hasBalanceDue ? "bg-orange-500" : "bg-stone-200"
+                  hasBalanceDue ? "bg-orange-500" : "bg-stone-200 dark:bg-white/12"
                 )}
               >
                 <span

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "audit:mobile-core": "bun scripts/audit-mobile-core.ts",
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "bun run server.js",

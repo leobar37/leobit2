@@ -53,9 +53,13 @@ export function WeeklySalesChart({
   }));
   const maxValue = Math.max(...data, 1);
   const tickInterval = getTickInterval(periodType, labels.length);
+  const isDark =
+    typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false;
 
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+    <div className="shell-card-flat rounded-[24px] p-4">
       <h3 className="text-sm font-semibold text-foreground mb-4">
         {CHART_TITLES[periodType]}
       </h3>
@@ -69,7 +73,7 @@ export function WeeklySalesChart({
               dataKey="day"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
+              tick={{ fontSize: 11, fill: isDark ? "#a8acb7" : "#6b7280" }}
               tickFormatter={(value) => formatXAxisLabel(String(value), periodType)}
               interval={tickInterval}
               minTickGap={18}
@@ -78,7 +82,7 @@ export function WeeklySalesChart({
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 10, fill: "#6b7280" }}
+              tick={{ fontSize: 10, fill: isDark ? "#a8acb7" : "#6b7280" }}
               tickFormatter={(value) =>
                 value >= 1000 ? `S/${(value / 1000).toFixed(0)}k` : `S/${value}`
               }
@@ -91,10 +95,11 @@ export function WeeklySalesChart({
                 formatXAxisLabel(String(value), periodType)
               }
               contentStyle={{
-                backgroundColor: "#fff",
-                border: "1px solid #e5e7eb",
+                backgroundColor: isDark ? "rgba(29, 31, 38, 0.96)" : "#fff",
+                border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e5e7eb",
                 borderRadius: "8px",
                 fontSize: "12px",
+                color: isDark ? "#f3f4f6" : "#111827",
               }}
             />
             <Bar

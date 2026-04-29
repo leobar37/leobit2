@@ -67,7 +67,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         onClick={onClick}
         className="cursor-pointer"
       >
-        <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90">
+        <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90 dark:hover:border-white/15">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -85,7 +85,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600"
+                    className="h-7 w-7 rounded-full text-red-500 ring-1 ring-red-100/80 transition-colors hover:bg-red-50 hover:text-red-600 dark:ring-red-500/20 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                     onClick={handleDelete}
                     disabled={deleteSale.isPending}
                   >
@@ -93,7 +93,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                   </Button>
                 )}
 
-                <div className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground ring-1 ring-stone-200/90 dark:ring-white/10">
                   <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
                 </div>
               </div>
@@ -111,12 +111,9 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
               <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
                 <Badge
-                  variant="outline"
+                  variant={isDraft ? "warning" : "success"}
                   className={cn(
-                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none",
-                    isDraft
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-green-100 text-green-700"
+                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none shadow-none"
                   )}
                 >
                   {saleStatusLabel[sale.status]}
@@ -124,8 +121,8 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
                 {hasBalanceDue && (
                   <Badge
-                    variant="outline"
-                    className="rounded-full border-0 bg-orange-100 px-2.5 py-1 text-[11px] font-semibold leading-none text-orange-700"
+                    variant="warning"
+                    className="rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none shadow-none"
                   >
                     Debe S/ {formatCurrency(sale.balanceDue)}
                   </Badge>
@@ -135,14 +132,14 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
 
             <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-white/50">
                   <User className="h-3.5 w-3.5" />
                 </div>
                 <span className="truncate">{customerName}</span>
               </div>
 
               <div className="flex min-w-0 items-center gap-2 sm:justify-end">
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-white/50">
                   <CalendarDays className="h-3.5 w-3.5" />
                 </div>
                 <span className="truncate">

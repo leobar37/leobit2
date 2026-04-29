@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import {
   useWhatsAppStatus,
   useConnectWhatsApp,
@@ -121,23 +122,23 @@ export default function WhatsAppConfigPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">
-            Configuración WhatsApp
-          </span>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">
+          Configuración WhatsApp
+        </h1>
+      </MobileSlot>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        <MobilePage.Card variant="flat">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-4">
@@ -283,9 +284,9 @@ export default function WhatsAppConfigPage() {
                 </>
               )}
             </CardContent>
-          </Card>
+          </MobilePage.Card>
 
-          <Card className="border-0 shadow-md rounded-2xl">
+          <MobilePage.Card variant="soft">
             <CardHeader>
               <CardTitle className="text-base">
                 ¿Cómo conectar?
@@ -302,9 +303,9 @@ export default function WhatsAppConfigPage() {
                 <li>¡Listo! Tu WhatsApp está conectado</li>
               </ol>
             </CardContent>
-          </Card>
+          </MobilePage.Card>
 
-          <Card className="border-0 shadow-md rounded-2xl">
+          <MobilePage.Card variant="soft">
             <CardHeader>
               <CardTitle className="text-base">Gestión de Mensajes</CardTitle>
               <CardDescription>
@@ -342,9 +343,8 @@ export default function WhatsAppConfigPage() {
                 </div>
               </Link>
             </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+          </MobilePage.Card>
+      </MobilePage.Root>
+    </>
   );
 }

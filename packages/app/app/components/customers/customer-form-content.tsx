@@ -22,9 +22,9 @@ export function CustomerFormContent({ customer }: CustomerFormContentProps) {
   const { register } = useFormContext();
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl">
+    <Card className="shell-card-flat rounded-[28px] border-stone-200/85 shadow-none dark:border-white/10">
       <CardHeader>
-        <CardTitle className="text-xl">
+        <CardTitle className="text-xl tracking-[-0.03em]">
           {customer ? "Editar Cliente" : "Información del Cliente"}
         </CardTitle>
       </CardHeader>
@@ -54,7 +54,7 @@ export function CustomerFormContent({ customer }: CustomerFormContentProps) {
           <textarea
             {...register("notes")}
             placeholder="Notas adicionales sobre el cliente..."
-            className="w-full min-h-[100px] px-4 py-3 rounded-xl border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+            className="shell-field min-h-[100px] w-full resize-none rounded-[20px] px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-200 dark:focus-visible:ring-orange-400/40 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 

@@ -10,6 +10,7 @@ import { useSaleFilters } from "~/hooks/use-sale-filters";
 import { SaleCard } from "~/components/sales/sale-card";
 import { SaleFilterSection } from "~/components/sales/sale-filter-section";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { MobileShell } from "~/components/mobile";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 import { formatDisplayDate } from "~/lib/date-utils";
 import {
@@ -103,7 +104,7 @@ export default function SalesPage() {
             placeholder="Buscar venta, cliente o producto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
+            className="shell-field h-12 rounded-[20px] pl-11 pr-4 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200 dark:focus-visible:ring-orange-400/40"
           />
         </div>
 
@@ -126,7 +127,7 @@ export default function SalesPage() {
               <button
                 type="button"
                 onClick={() => { setStartDate(""); setEndDate(""); }}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20"
               >
                 {formatDisplayDate(startDate)}
                 {endDate && endDate !== startDate && ` - ${formatDisplayDate(endDate)}`}
@@ -137,7 +138,7 @@ export default function SalesPage() {
               <button
                 type="button"
                 onClick={() => setSaleType("")}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20"
               >
                 {saleType === "contado" ? "Contado" : "Crédito"}
                 <X className="h-3 w-3" />
@@ -147,7 +148,7 @@ export default function SalesPage() {
               <button
                 type="button"
                 onClick={() => setHasBalanceDue(false)}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20"
               >
                 Con deuda
                 <X className="h-3 w-3" />
@@ -166,8 +167,8 @@ export default function SalesPage() {
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 tab === "all" && !tipo
-                  ? "bg-orange-100 text-orange-700"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
               }`}
             >
               Todas
@@ -177,8 +178,8 @@ export default function SalesPage() {
                 onClick={() => setTab("mine")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                   tab === "mine"
-                    ? "bg-orange-100 text-orange-700"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
                 }`}
               >
                 <MapPin className="h-3.5 w-3.5" />
@@ -189,8 +190,8 @@ export default function SalesPage() {
               onClick={() => setTab("free")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 tab === "free"
-                  ? "bg-orange-100 text-orange-700"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
               }`}
             >
               Libres
@@ -199,21 +200,21 @@ export default function SalesPage() {
               onClick={() => setTab("drafts")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 tab === "drafts"
-                  ? "bg-orange-100 text-orange-700"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
               }`}
             >
               Borradores
             </button>
 
-            <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80" />
+            <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80 dark:bg-white/10" />
 
             <button
               onClick={() => setTipo(tipo === "ventas" ? "" : "ventas")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 tipo === "ventas"
-                  ? "bg-orange-100 text-orange-700"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
               }`}
             >
               Ventas
@@ -222,8 +223,8 @@ export default function SalesPage() {
               onClick={() => setTipo(tipo === "pedidos" ? "" : "pedidos")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 tipo === "pedidos"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
               }`}
             >
               Pedidos
@@ -240,7 +241,7 @@ export default function SalesPage() {
 
         {error && (
           <div className="text-center py-8">
-            <p className="text-red-500">Error al cargar ventas</p>
+            <p className="text-red-500 dark:text-red-300">Error al cargar ventas</p>
           </div>
         )}
 
@@ -284,13 +285,15 @@ export default function SalesPage() {
         </div>
       </div>
 
-      <Button
-        size="icon"
-        className="fixed right-4 bottom-28 z-50 h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
-        onClick={() => setCreateSheetOpen(true)}
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      <MobileShell.FloatingAction>
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+          onClick={() => setCreateSheetOpen(true)}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </MobileShell.FloatingAction>
 
       <CreateSaleTypeSheet
         open={createSheetOpen}

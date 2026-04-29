@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import type { CalculatorConfig } from "@avileo/shared";
 
 interface CalculatorSectionProps {
@@ -128,100 +129,95 @@ export default function FlagsConfigPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={() => navigate("/config")}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </div>
-          <CardTitle className="text-2xl">Flags</CardTitle>
-          <CardDescription className="text-orange-100">
-            Configuración de calculadoras y features del negocio
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Card className="border-0 shadow-md rounded-2xl">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Calculator className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Calculadoras</CardTitle>
-              <CardDescription>
-                Personaliza el comportamiento de las calculadoras
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {localSettings && (
-            <>
-              <CalculatorSection
-                title="Ventas"
-                description="Configuración para la calculadora de ventas"
-                config={localSettings.calculators.sales}
-                onChange={(config) => updateCalculatorConfig("sales", config)}
-              />
-
-              <div className="border-t" />
-
-              <CalculatorSection
-                title="Pedidos"
-                description="Configuración para la calculadora de pedidos"
-                config={localSettings.calculators.orders}
-                onChange={(config) => updateCalculatorConfig("orders", config)}
-              />
-
-              <div className="border-t" />
-
-              <CalculatorSection
-                title="Compras"
-                description="Configuración para la calculadora de compras"
-                config={localSettings.calculators.purchases}
-                onChange={(config) =>
-                  updateCalculatorConfig("purchases", config)
-                }
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          className="flex-1 rounded-xl"
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <button
           onClick={() => navigate("/config")}
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
         >
-          Cancelar
-        </Button>
-        <Button
-          className="flex-1 rounded-xl"
-          onClick={handleSave}
-          disabled={isSaving || !localSettings}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Guardar
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </button>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Flags</h1>
+      </MobileSlot>
+
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        <MobilePage.Card variant="flat">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Calculator className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Calculadoras</CardTitle>
+                <CardDescription>
+                  Personaliza el comportamiento de las calculadoras
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {localSettings && (
+              <>
+                <CalculatorSection
+                  title="Ventas"
+                  description="Configuración para la calculadora de ventas"
+                  config={localSettings.calculators.sales}
+                  onChange={(config) => updateCalculatorConfig("sales", config)}
+                />
+
+                <div className="border-t" />
+
+                <CalculatorSection
+                  title="Pedidos"
+                  description="Configuración para la calculadora de pedidos"
+                  config={localSettings.calculators.orders}
+                  onChange={(config) => updateCalculatorConfig("orders", config)}
+                />
+
+                <div className="border-t" />
+
+                <CalculatorSection
+                  title="Compras"
+                  description="Configuración para la calculadora de compras"
+                  config={localSettings.calculators.purchases}
+                  onChange={(config) =>
+                    updateCalculatorConfig("purchases", config)
+                  }
+                />
+              </>
+            )}
+          </CardContent>
+        </MobilePage.Card>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 rounded-xl"
+            onClick={() => navigate("/config")}
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1 rounded-xl"
+            onClick={handleSave}
+            disabled={isSaving || !localSettings}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar
+              </>
+            )}
+          </Button>
+        </div>
+      </MobilePage.Root>
+    </>
   );
 }

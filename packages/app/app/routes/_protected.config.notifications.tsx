@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 
 const notificationsConfigSchema = z.object({
   emailNotifications: z.boolean(),
@@ -49,21 +50,21 @@ export default function NotificationsConfigPage() {
   };
 
   return (
-    <div className="min-h-screen app-shell">
-      <header className="sticky top-0 z-50 border-b shell-surface">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="mr-3 rounded-2xl">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Notificaciones</span>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/config"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Notificaciones</h1>
+      </MobileSlot>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <Card className="shell-card-flat rounded-[30px]">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
+        <MobilePage.Card variant="flat">
             <CardHeader>
               <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4">
                 <Bell className="h-8 w-8 text-yellow-600" />
@@ -212,9 +213,8 @@ export default function NotificationsConfigPage() {
                 </Button>
               </form>
             </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+          </MobilePage.Card>
+      </MobilePage.Root>
+    </>
   );
 }

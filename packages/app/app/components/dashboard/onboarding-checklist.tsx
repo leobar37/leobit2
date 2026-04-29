@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { X, CheckCircle2, Circle, Store, Package, ShoppingCart } from "lucide-react";
+import { X, CheckCircle2, Store, Package, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useState, useEffect } from "react";
@@ -77,7 +77,7 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
   }
 
   return (
-    <Card className="mb-6 border-orange-200 bg-gradient-to-br from-orange-50 to-white">
+    <Card className="shell-card mb-6 overflow-hidden rounded-[28px] border-orange-200/70 bg-[linear-gradient(180deg,rgba(255,248,240,0.96)_0%,rgba(255,255,255,0.9)_100%)] dark:border-orange-500/20 dark:bg-[linear-gradient(180deg,rgba(35,30,28,0.96)_0%,rgba(24,26,32,0.92)_100%)]">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
@@ -94,16 +94,16 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
             </span>
             <button
               onClick={handleDismiss}
-              className="p-1 rounded-full hover:bg-orange-100 transition-colors"
+              className="rounded-full p-1 transition-colors hover:bg-orange-100/80 dark:hover:bg-white/10"
               aria-label="Cerrar checklist"
             >
-              <X className="h-4 w-4 text-gray-400" />
+              <X className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
         </div>
-        <div className="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
           <div
-            className="h-full bg-orange-500 transition-all duration-500 ease-out"
+            className="h-full bg-orange-500 transition-all duration-500 ease-out dark:bg-orange-400"
             style={{ width: `${(completedCount / totalCount) * 100}%` }}
           />
         </div>
@@ -115,15 +115,15 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
             key={item.id}
             className={`flex items-start gap-3 p-3 rounded-xl transition-all ${
               item.completed
-                ? "bg-green-50 border border-green-100"
-                : "bg-white border border-gray-100 hover:border-orange-200"
+                ? "border border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                : "border border-black/5 bg-white/70 hover:border-orange-200 dark:border-white/8 dark:bg-white/[0.04] dark:hover:border-orange-400/30"
             }`}
           >
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                 item.completed
-                  ? "bg-green-500 text-white"
-                  : "bg-orange-100 text-orange-600"
+                  ? "bg-emerald-500 text-white dark:bg-emerald-400 dark:text-emerald-950"
+                  : "bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300"
               }`}
             >
               {item.completed ? (
@@ -138,7 +138,7 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
                 <div>
                   <h3
                     className={`font-medium ${
-                      item.completed ? "text-green-800" : "text-foreground"
+                      item.completed ? "text-emerald-800 dark:text-emerald-200" : "text-foreground"
                     }`}
                   >
                     {item.label}
@@ -166,7 +166,7 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
                   </Button>
                 )}
                 {item.completed && (
-                  <span className="text-sm text-green-600 font-medium">
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
                     Listo
                   </span>
                 )}

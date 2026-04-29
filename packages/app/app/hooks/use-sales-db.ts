@@ -14,6 +14,7 @@ import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import type { SaleWithItems, SaleItem, UpdateSaleInput } from "./use-sales";
+import { getSaleFinancialState } from "./use-sale-calculations";
 
 export { useSales, useSalesByCustomer, useConfirmSale, useCancelSale, useDeleteSale, useDeliverSale };
 export { useUpdateSaleBase as useUpdateSale };
@@ -25,6 +26,23 @@ function toNumber(value: string | number | null | undefined): number {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function recalculateCachedSaleFinancials(
+  previous: SaleWithItems,
+  nextTotalAmount: number,
+) {
+  const safeTotalAmount = Math.max(nextTotalAmount, 0);
+  const { balanceDue } = getSaleFinancialState({
+    saleType: previous.saleType,
+    totalAmount: safeTotalAmount,
+    amountPaid: previous.amountPaid,
+  });
+
+  return {
+    totalAmount: safeTotalAmount.toString(),
+    balanceDue: balanceDue.toString(),
+  };
 }
 
 export function useSale(id: string | null) {
@@ -209,13 +227,14 @@ export function useAddSaleItem() {
         if (!previous) return previous;
 
         const subtotal = toNumber(createdItem.subtotal);
-        const totalAmount = (toNumber(previous.totalAmount) + subtotal).toString();
-        const balanceDue = (toNumber(previous.balanceDue) + subtotal).toString();
+        const financials = recalculateCachedSaleFinancials(
+          previous,
+          toNumber(previous.totalAmount) + subtotal,
+        );
 
         return {
           ...previous,
-          totalAmount,
-          balanceDue,
+          ...financials,
           items: [...(previous.items ?? []), createdItem],
           updatedAt: new Date().toISOString(),
         };
@@ -245,11 +264,14 @@ export function useRemoveSaleItem() {
 
         const existingItem = (previous.items ?? []).find((item) => item.id === variables.itemId);
         const subtotal = toNumber(existingItem?.subtotal);
+        const financials = recalculateCachedSaleFinancials(
+          previous,
+          toNumber(previous.totalAmount) - subtotal,
+        );
 
         return {
           ...previous,
-          totalAmount: (toNumber(previous.totalAmount) - subtotal).toString(),
-          balanceDue: (toNumber(previous.balanceDue) - subtotal).toString(),
+          ...financials,
           items: (previous.items ?? []).filter((item) => item.id !== variables.itemId),
           updatedAt: new Date().toISOString(),
         };
@@ -291,6 +313,10 @@ export function useUpdateSaleItem() {
         const oldSubtotal = toNumber(oldItem?.subtotal);
         const newSubtotal = toNumber(result.updatedItem.subtotal);
         const subtotalDiff = newSubtotal - oldSubtotal;
+        const financials = recalculateCachedSaleFinancials(
+          previous,
+          toNumber(previous.totalAmount) + subtotalDiff,
+        );
 
         const nextItems: SaleItem[] = (previous.items ?? []).map((item) =>
           item.id === result.itemId ? result.updatedItem : item
@@ -298,8 +324,7 @@ export function useUpdateSaleItem() {
 
         return {
           ...previous,
-          totalAmount: (toNumber(previous.totalAmount) + subtotalDiff).toString(),
-          balanceDue: (toNumber(previous.balanceDue) + subtotalDiff).toString(),
+          ...financials,
           items: nextItems,
           updatedAt: new Date().toISOString(),
         };

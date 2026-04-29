@@ -69,6 +69,13 @@ export function createModal<TProps extends object>(
     if (!isOpen) return null;
 
     const content = (
+      /**
+       * ModalLayoutProvider owns local overlay slots only.
+       *
+       * This is intentionally separate from the route-level MobileShell slot system:
+       * modal Header / Content / Footer primitives portal within the current overlay,
+       * while page shell slots render into global route hosts.
+       */
       <ModalLayoutProvider>
         <ContentComponent {...((data || {}) as TProps)} close={close} />
       </ModalLayoutProvider>

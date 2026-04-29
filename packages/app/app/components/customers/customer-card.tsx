@@ -6,11 +6,6 @@ import type { Customer } from "@avileo/shared";
 import { useCustomerGroupsWithDetails, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerTagsWithDetails, type CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";
 import { TagBadge } from "~/components/tags";
-import {
-  MinimalCard,
-  MinimalCardContent,
-  MinimalCardMedia,
-} from "~/components/cards";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -62,19 +57,17 @@ export function CustomerCard({
   };
 
   return (
-    <MinimalCard
-      variant={selected ? "filled" : "outlined"}
-      tone={selected ? "primary" : "neutral"}
-      interactive
-      clickable={!selectable}
-      radius="md"
+    <div
       className={cn(
-        selectable && "cursor-pointer",
-        selected && "border border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)]"
+        "rounded-[24px] border px-4 py-4 transition-colors",
+        selectable || onNavigate ? "cursor-pointer" : "",
+        selected
+          ? "border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)] dark:border-orange-400/30 dark:bg-orange-500/12 dark:shadow-[0_10px_30px_rgba(249,115,22,0.12)]"
+          : "shell-card-flat border-stone-200/85 hover:border-stone-300/90 hover:bg-white/90 dark:border-white/10 dark:hover:border-white/15 dark:hover:bg-white/[0.08]"
       )}
       onClick={handleCardClick}
     >
-      <MinimalCardContent className={cn(compact ? "p-3" : "p-4")}>
+      <div className={cn(compact ? "p-0" : "p-0")}>
         <div className="flex items-start gap-3">
           {selectable ? (
             <button
@@ -82,8 +75,8 @@ export function CustomerCard({
               onClick={handleSelectClick}
               className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                 selected
-                  ? "bg-orange-500 text-white"
-                  : "bg-orange-100 text-orange-600"
+                  ? "bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)]"
+                  : "bg-orange-100 text-orange-600 dark:bg-orange-500/14 dark:text-orange-300"
               }`}
             >
               {selected ? (
@@ -93,15 +86,13 @@ export function CustomerCard({
               )}
             </button>
           ) : (
-            <MinimalCardMedia 
-              icon={User} 
-              iconColor="text-orange-600" 
-              size="md" 
-            />
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/14 dark:text-orange-300">
+              <User className="h-5 w-5" />
+            </div>
           )}
 
           <div className="flex-1 min-w-0">
-            <h3 className={cn("font-semibold truncate", selected ? "text-orange-950" : "text-foreground")}>
+            <h3 className={cn("font-semibold truncate", selected ? "text-orange-950 dark:text-orange-100" : "text-foreground")}>
               {customer.name}
             </h3>
 
@@ -131,8 +122,8 @@ export function CustomerCard({
                     key={group.id}
                     variant="outline"
                     className={cn(
-                      "h-5 rounded-full border-orange-200 bg-white/80 px-1.5 text-[10px] font-medium text-orange-700 shadow-none",
-                      selected && "border-orange-300 bg-white text-orange-800"
+                      "h-5 rounded-full border-orange-200 bg-orange-50/90 px-1.5 text-[10px] font-medium text-orange-700 shadow-none dark:border-orange-500/20 dark:bg-orange-500/14 dark:text-orange-200",
+                      selected && "border-orange-300 bg-white text-orange-800 dark:border-orange-400/30 dark:bg-orange-500/18 dark:text-orange-100"
                     )}
                   >
                     <Users className="mr-1 h-3 w-3" />
@@ -150,21 +141,21 @@ export function CustomerCard({
             {!compact && (
               <div className="mt-2 space-y-1">
               {customer.dni && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div className={`flex items-center gap-2 text-sm ${selected ? "text-orange-900/80 dark:text-orange-100/80" : "text-muted-foreground"}`}>
                   <CreditCard className="h-3.5 w-3.5" />
                   <span>{customer.dni}</span>
                 </div>
               )}
 
               {customer.phone && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div className={`flex items-center gap-2 text-sm ${selected ? "text-orange-900/80 dark:text-orange-100/80" : "text-muted-foreground"}`}>
                   <Phone className="h-3.5 w-3.5" />
                   <span>{customer.phone}</span>
                 </div>
               )}
 
               {customer.address && (
-                <div className={`flex items-center gap-2 text-sm ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+                <div className={`flex items-center gap-2 text-sm ${selected ? "text-orange-900/80 dark:text-orange-100/80" : "text-muted-foreground"}`}>
                   <MapPin className="h-3.5 w-3.5" />
                   <span className="truncate">{customer.address}</span>
                 </div>
@@ -173,7 +164,7 @@ export function CustomerCard({
             )}
           </div>
         </div>
-      </MinimalCardContent>
-    </MinimalCard>
+      </div>
+    </div>
   );
 }

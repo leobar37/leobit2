@@ -6,7 +6,6 @@ import { User, Loader2 } from "lucide-react";
 import { useCustomer, useUpdateCustomer } from "~/hooks/use-customers";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPage } from "~/components/layout/form-page";
+import { MobilePage } from "~/components/mobile/mobile-page";
 
 const editCustomerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -84,7 +84,7 @@ export default function EditCustomerPage() {
   if (!customer) {
     return (
       <div className="app-shell flex min-h-screen items-center justify-center p-4">
-        <Card className="shell-card-flat w-full max-w-sm rounded-[28px]">
+        <MobilePage.Card variant="flat" className="w-full max-w-sm rounded-[28px]">
           <CardHeader className="text-center">
             <CardTitle>Cliente no encontrado</CardTitle>
             <CardDescription>
@@ -98,7 +98,7 @@ export default function EditCustomerPage() {
               </Button>
             </Link>
           </CardContent>
-        </Card>
+        </MobilePage.Card>
       </div>
     );
   }
@@ -117,7 +117,8 @@ export default function EditCustomerPage() {
             Cancelar
           </Button>
           <Button
-            onClick={form.handleSubmit(onSubmit)}
+            type="submit"
+            form="customer-form"
             disabled={updateCustomer.isPending || !form.formState.isValid}
             className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
           >
@@ -134,7 +135,7 @@ export default function EditCustomerPage() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
-        <Card className="shell-card-flat rounded-[30px]">
+        <MobilePage.Card variant="flat">
           <CardHeader className="text-center">
             <div className="relative inline-block">
               <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.18)]">
@@ -148,7 +149,7 @@ export default function EditCustomerPage() {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form id="customer-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormInput
                 label="Nombre"
                 error={form.formState.errors.name?.message}
@@ -186,7 +187,7 @@ export default function EditCustomerPage() {
               )}
             </form>
           </CardContent>
-        </Card>
+        </MobilePage.Card>
       </div>
     </FormPage>
   );

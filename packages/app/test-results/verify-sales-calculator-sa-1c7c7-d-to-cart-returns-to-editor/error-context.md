@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - button "Cambiar tema" [ref=e8] [cursor=pointer]:
+        - img
+        - generic [ref=e9]: "Tema actual: Sistema"
+    - main [ref=e10]:
+      - generic [ref=e12]:
+        - generic [ref=e14]:
+          - img [ref=e16]
+          - generic [ref=e20]:
+            - paragraph [ref=e21]: Avileo
+            - heading "Bienvenido" [level=1] [ref=e22]
+            - paragraph [ref=e23]: Ingresa tus credenciales para continuar.
+            - generic [ref=e24]: Modo desarrollo
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - text: Correo electrónico
+            - textbox "tu@email.com" [ref=e28]: demo@avileo.com
+            - paragraph [ref=e29]
+          - generic [ref=e30]:
+            - text: Contraseña
+            - generic [ref=e31]:
+              - textbox "........" [ref=e32]: demo123456
+              - button [ref=e33] [cursor=pointer]:
+                - img
+            - paragraph [ref=e34]
+    - generic [ref=e37]:
+      - button "Iniciar sesión" [ref=e38] [cursor=pointer]
+      - paragraph [ref=e39]:
+        - text: ¿No tienes cuenta?
+        - link "Regístrate" [ref=e40] [cursor=pointer]:
+          - /url: /register
+  - region "Notifications alt+T"
+  - generic [ref=e42]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - button "Select element" [ref=e48] [cursor=pointer]:
+          - img [ref=e49]
+        - generic:
+          - generic:
+            - button "Open history":
+              - generic:
+                - img
+        - generic:
+          - generic:
+            - button "Copy all history items":
+              - img
+        - button "Open more actions menu" [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+      - button "Disable React Grab" [pressed] [ref=e60] [cursor=pointer]
+    - button "Collapse toolbar" [ref=e63] [cursor=pointer]:
+      - img [ref=e64]
+```

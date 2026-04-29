@@ -1,10 +1,11 @@
 import { Link } from "react-router";
 import { ArrowLeft, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ToolbarActions } from "./toolbar-actions";
-import { useSetLayout } from "./app-layout";
-import { cn } from "~/lib/utils";
-import type { ReactNode } from "react";
+import { MobileShell } from "~/components/mobile/mobile-shell";
+import { MobileSlot } from "~/components/mobile/mobile-slots";
+import { MobilePage } from "~/components/mobile/mobile-page";
+import { MobileFixedFooter } from "~/components/mobile/mobile-fixed-footer";
+import type { CSSProperties, ReactNode } from "react";
 
 interface FormPageProps {
   title: string;
@@ -13,17 +14,16 @@ interface FormPageProps {
   children: ReactNode;
   toolbar?: ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "full";
-  useLayout?: boolean;
 }
 
-const maxWidthClasses = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-xl",
-  full: "",
-};
-
+/**
+ * @deprecated Use direct mobile shell composition with `MobileShell`, `MobileSlot`,
+ * and `MobilePage` in route JSX instead.
+ *
+ * This wrapper is preserved only as a compatibility shim for legacy form routes
+ * that still rely on it. It no longer renders a standalone shell; all layout
+ * is delegated to the shared mobile shell stack.
+ */
 export function FormPage({
   title,
   backHref,
@@ -31,50 +31,44 @@ export function FormPage({
   children,
   toolbar,
   maxWidth = "md",
-  useLayout = false,
 }: FormPageProps) {
-  if (useLayout) {
-    useSetLayout({
-      title,
-      showBackButton: true,
-      backHref,
-    });
-
-    return (
-      <div className={cn("h-full overflow-y-auto mx-auto", maxWidthClasses[maxWidth])}>
-        <div className={toolbar ? "pb-20" : ""}>
-          {children}
-        </div>
-        {toolbar && <ToolbarActions>{toolbar}</ToolbarActions>}
-      </div>
-    );
-  }
+  const contentStyle = toolbar
+    ? ({
+        paddingBottom:
+          "calc(var(--shell-bottom-nav-height, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)) + 5.5rem)",
+      } satisfies CSSProperties)
+    : undefined;
 
   return (
-    <div className="min-h-screen app-shell">
-      <header className="sticky top-0 z-50 border-b shell-surface">
-        <div className="flex items-center gap-3 h-16 px-3 sm:px-4">
-          <Link
-            to={backHref}
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          {Icon && <Icon className="h-5 w-5 text-orange-600" />}
-          <h1 className="font-bold text-lg">{title}</h1>
+    <>
+      <MobileShell.BackButton>
+        <Link
+          to={backHref}
+          className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+      </MobileShell.BackButton>
+
+      <MobileSlot name="header:center" priority={10}>
+        <div className="flex min-w-0 items-center gap-2 flex-1">
+          {Icon && <Icon className="h-5 w-5 text-orange-600 shrink-0" />}
+          <h1 className="font-bold text-lg truncate">{title}</h1>
         </div>
-      </header>
+      </MobileSlot>
 
-      <main
-        className={`px-3 py-4 sm:px-4 ${toolbar ? "pb-32" : "pb-24"} ${
-          maxWidthClasses[maxWidth]
-        } mx-auto`}
-      >
-        {children}
-      </main>
+      <MobilePage.Root maxWidth={maxWidth}>
+        <div style={contentStyle}>{children}</div>
+      </MobilePage.Root>
 
-      {toolbar && <ToolbarActions>{toolbar}</ToolbarActions>}
-    </div>
+      {toolbar && (
+        <MobileFixedFooter aboveNav>
+          <MobilePage.Root maxWidth={maxWidth}>
+            {toolbar}
+          </MobilePage.Root>
+        </MobileFixedFooter>
+      )}
+    </>
   );
 }
 
@@ -83,6 +77,10 @@ interface FormToolbarProps {
   className?: string;
 }
 
+/**
+ * @deprecated Prefer declaring the form action row with route-level
+ * `MobileSlot name="footer"` content and `MobileFixedFooter`.
+ */
 export function FormToolbar({ children, className }: FormToolbarProps) {
   return <div className={className}>{children}</div>;
 }
@@ -95,6 +93,10 @@ interface SubmitButtonProps {
   icon?: ReactNode;
 }
 
+/**
+ * @deprecated Prefer explicit `Button` actions using `form`/`type="submit"`
+ * and the parent layout's shell primitives (`MobileFixedFooter`, `MobilePage`).
+ */
 export function FormSubmitButton({
   onClick,
   isLoading,

@@ -10,6 +10,7 @@ import { useProduct } from "~/hooks/use-products-live";
 import { ProductForm, type ProductFormData } from "~/components/products/product-form";
 import { VariantList } from "~/components/products/variant-list";
 import { type VariantFormData } from "~/components/products/variant-form";
+import { MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
 import {
   useVariantsByProduct,
   useCreateVariant,
@@ -194,18 +195,18 @@ export default function ProductDetailPage() {
 
   if (isProductLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <MobilePage.Root className="flex min-h-[50vh] items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Package className="h-5 w-5 animate-pulse" />
           <p>Cargando producto...</p>
         </div>
-      </div>
+      </MobilePage.Root>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <MobilePage.Root className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-lg font-medium text-muted-foreground">
@@ -218,45 +219,49 @@ export default function ProductDetailPage() {
             Volver a productos
           </button>
         </div>
-      </div>
+      </MobilePage.Root>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Compact header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between h-12 px-3 sm:px-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/productos")}
-              className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-            </button>
-            <h1 className="font-semibold text-base truncate">{product.name}</h1>
-            <Badge className={`text-[10px] px-1.5 py-0 ${typeBadgeClasses[product.type]}`}>
-              {typeLabels[product.type]}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-semibold text-orange-600 text-sm">S/ {product.basePrice}</span>
-            <span className="text-gray-300">|</span>
-            <Badge
-              variant={product.isActive ? "default" : "secondary"}
-              className={`text-[10px] px-1.5 py-0 ${
-                product.isActive
-                  ? "bg-green-100 text-green-700 hover:bg-green-100"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              {product.isActive ? "Activo" : "Inactivo"}
-            </Badge>
-          </div>
-        </div>
-      </header>
+    <>
+      <MobileShell.BackButton>
+        <button
+          onClick={() => navigate("/productos")}
+          className="shell-toolbar-button -ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Volver"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+      </MobileShell.BackButton>
 
-      <main className="px-3 py-3 sm:px-4 pb-8 space-y-3">
+      <MobileSlot name="header:center" priority={10}>
+        <div className="flex min-w-0 items-center gap-2 flex-1">
+          <h1 className="truncate text-lg font-bold tracking-tight">{product.name}</h1>
+          <Badge className={`text-[10px] px-1.5 py-0 ${typeBadgeClasses[product.type]}`}>
+            {typeLabels[product.type]}
+          </Badge>
+        </div>
+      </MobileSlot>
+
+      <MobileSlot name="header:right" priority={10}>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-semibold text-orange-600 text-sm">S/ {product.basePrice}</span>
+          <span className="text-gray-300">|</span>
+          <Badge
+            variant={product.isActive ? "default" : "secondary"}
+            className={`text-[10px] px-1.5 py-0 ${
+              product.isActive
+                ? "bg-green-100 text-green-700 hover:bg-green-100"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            {product.isActive ? "Activo" : "Inactivo"}
+          </Badge>
+        </div>
+      </MobileSlot>
+
+      <MobilePage.Root className="space-y-3">
         <ProductForm
           product={product}
           onSubmit={handleSubmit}
@@ -309,7 +314,7 @@ export default function ProductDetailPage() {
 
         <VariantModal />
         <ConfirmDialog />
-      </main>
-    </div>
+      </MobilePage.Root>
+    </>
   );
 }

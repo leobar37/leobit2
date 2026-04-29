@@ -86,7 +86,7 @@ export default function DashboardPage() {
 
       {/* Offline Status Indicators */}
       {!isOnline && (
-        <div className="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-100/80 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
           <WifiOff className="h-4 w-4" />
           Sin conexión - mostrando datos locales
         </div>
@@ -98,34 +98,34 @@ export default function DashboardPage() {
       {/* Accesos Rápidos - Siempre visibles */}
       <div className="grid grid-cols-3 gap-2">
         <Link to="/ventas" className="block">
-          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
-            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5 text-orange-600" />
+          <div className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 transition-all active:scale-95 hover:bg-white/5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/15">
+              <ShoppingCart className="h-5 w-5 text-orange-600 dark:text-orange-300" />
             </div>
-            <span className="text-xs font-medium text-gray-700">Venta</span>
+            <span className="text-xs font-medium text-muted-foreground">Venta</span>
           </div>
         </Link>
 
         <Link to="/clientes" className="block">
-          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
+          <div className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 transition-all active:scale-95 hover:bg-white/5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/15">
+              <Users className="h-5 w-5 text-blue-600 dark:text-blue-300" />
             </div>
-            <span className="text-xs font-medium text-gray-700">Clientes</span>
+            <span className="text-xs font-medium text-muted-foreground">Clientes</span>
           </div>
         </Link>
 
         <Link to="/cobros" className="block relative">
-          <div className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 active:scale-95 transition-all">
-            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center relative">
-              <Wallet className="h-5 w-5 text-red-600" />
+          <div className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 transition-all active:scale-95 hover:bg-white/5">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/15">
+              <Wallet className="h-5 w-5 text-red-600 dark:text-red-300" />
               {debtorsCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {debtorsCount > 9 ? '9+' : debtorsCount}
                 </span>
               )}
             </div>
-            <span className="text-xs font-medium text-gray-700">Cobros</span>
+            <span className="text-xs font-medium text-muted-foreground">Cobros</span>
           </div>
         </Link>
 
@@ -133,13 +133,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Tabs para organizar el contenido */}
-      <Tabs defaultValue="resumen" className="w-full border-t pt-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="resumen" className="flex items-center gap-2">
+      <Tabs defaultValue="resumen" className="w-full border-t border-border/50 pt-4">
+        <TabsList className="shell-block-muted grid h-auto w-full grid-cols-2 rounded-[20px] p-1">
+          <TabsTrigger value="resumen" className="flex min-h-[52px] items-center gap-2 rounded-[14px]">
             <TrendingUp className="h-4 w-4" />
             Resumen
           </TabsTrigger>
-          <TabsTrigger value="distribucion" className="flex items-center gap-2">
+          <TabsTrigger value="distribucion" className="flex min-h-[52px] items-center gap-2 rounded-[14px]">
             <Package className="h-4 w-4" />
             Distribución
           </TabsTrigger>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
           {/* Alerta - Card blanca con borde lateral ámbar */}
           {usarDistribucion && !isLoadingDistribucion && !tieneDistribucion && (
             <Link to="/distribuciones" className="block">
-              <div className="border-l-4 border-amber-400 bg-white py-3 pl-4 pr-3">
+              <div className="rounded-r-2xl border-l-4 border-amber-400 bg-white/70 py-3 pl-4 pr-3 dark:bg-white/[0.04]">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
                   <div>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
 
           {!usarDistribucion && (
             <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <Package className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-white/20" />
               <p>El sistema de distribución está desactivado</p>
               <p className="text-sm">Contacta al administrador si necesitas activarlo</p>
             </div>

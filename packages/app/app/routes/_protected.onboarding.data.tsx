@@ -4,12 +4,12 @@ import { Sparkles, Package, Loader2, CheckCircle2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { FormPage } from "~/components/layout/form-page";
+import { MobilePage } from "~/components/mobile/mobile-page";
 import { api } from "~/lib/api-client";
 
 type OnboardingOption = "demo" | "empty" | null;
@@ -63,7 +63,7 @@ export default function OnboardingDataPage() {
         </Button>
       }
     >
-      <Card className="border-0 shadow-lg rounded-3xl">
+      <MobilePage.Card variant="flat">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Sparkles className="w-8 h-8 text-white" />
@@ -171,7 +171,7 @@ export default function OnboardingDataPage() {
             </p>
           )}
         </CardContent>
-      </Card>
+      </MobilePage.Card>
     </FormPage>
   );
 }

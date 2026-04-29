@@ -5,6 +5,7 @@ import { useMissingInventory } from "~/hooks/use-missing-inventory";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 
 export default function ComprasSugeridasPage() {
   const navigate = useNavigate();
@@ -21,29 +22,32 @@ export default function ComprasSugeridasPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="font-bold text-lg">Compras Sugeridas</h1>
-          </div>
-          {itemsNeedingPurchase.length > 0 && (
-            <Button
-              onClick={handleCreatePurchase}
-              className="bg-orange-500 hover:bg-orange-600"
-              size="sm"
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Crear Compra
-            </Button>
-          )}
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/dashboard"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Compras Sugeridas</h1>
+      </MobileSlot>
+      {itemsNeedingPurchase.length > 0 && (
+        <MobileSlot name="header:right" priority={10}>
+          <Button
+            onClick={handleCreatePurchase}
+            className="bg-orange-500 hover:bg-orange-600"
+            size="sm"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Crear Compra
+          </Button>
+        </MobileSlot>
+      )}
 
-      <main className="p-4 pb-24 space-y-4">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
         {/* Summary Card */}
         <Card className="border-orange-100">
           <CardHeader className="pb-3">
@@ -149,7 +153,7 @@ export default function ComprasSugeridasPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </MobilePage.Root>
+    </>
   );
 }

@@ -11,6 +11,7 @@ import {
   SummaryStats,
   SendReminderModal,
 } from "~/components/reports/accounts-receivable";
+import { MobileSlot, MobilePage } from "~/components/mobile";
 import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 export default function CuentasPorCobrarPage() {
@@ -32,17 +33,20 @@ export default function CuentasPorCobrarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center gap-3 h-16 px-4">
-          <Link to="/dashboard" className="p-2 -ml-2 rounded-xl hover:bg-orange-50">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="font-bold text-lg">Cuentas por Cobrar</h1>
-        </div>
-      </header>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        <Link
+          to="/dashboard"
+          className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5 pointer-events-none" />
+        </Link>
+      </MobileSlot>
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="truncate font-bold text-lg tracking-tight">Cuentas por Cobrar</h1>
+      </MobileSlot>
 
-      <main className="p-4 pb-24 space-y-4">
+      <MobilePage.Root maxWidth="md" className="space-y-4">
         <SummaryCard totalDebt={totalDebt} accounts={accounts} />
         <FilterCard />
         <AccountsList
@@ -51,13 +55,13 @@ export default function CuentasPorCobrarPage() {
           onSendReminder={handleSendReminder}
         />
         <SummaryStats accounts={accounts} />
-      </main>
+      </MobilePage.Root>
 
       <SendReminderModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         account={selectedAccount}
       />
-    </div>
+    </>
   );
 }

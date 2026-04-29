@@ -63,7 +63,6 @@ export default function NuevaDistribucionPage() {
       title="Nueva Distribución"
       backHref="/distribuciones"
       icon={Package}
-      useLayout={true}
       toolbar={
         <Button
           onClick={() => formRef.current?.submit()}
