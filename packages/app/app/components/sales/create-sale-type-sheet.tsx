@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { useCreateDraftSale } from "~/hooks/use-sales";
 import { useBusiness } from "~/hooks/use-business";
 import { useNavigate } from "react-router";
+import { cn } from "~/lib/utils";
 
 interface CreateSaleTypeSheetProps {
   open: boolean;
@@ -24,7 +25,10 @@ interface CreateSaleTypeSheetProps {
 export function CreateSaleTypeSheet({ open, onOpenChange }: CreateSaleTypeSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+      <SheetContent
+        side="bottom"
+        className="shell-surface rounded-t-3xl border shell-divider pb-8"
+      >
         <SheetHeader className="text-left">
           <SheetTitle className="text-xl">Nueva venta</SheetTitle>
           <SheetDescription>
@@ -77,9 +81,13 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
     <button
       onClick={handleVentaDirecta}
       disabled={loading || businessLoading || createDraftSale.isPending}
-      className="flex w-full items-center gap-4 rounded-2xl border border-stone-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:bg-orange-50/50 active:bg-orange-100/50 disabled:opacity-50"
+      className={cn(
+        "flex w-full items-center gap-4 rounded-2xl border p-4 text-left shadow-sm transition-colors disabled:opacity-50",
+        "border-orange-200/80 bg-white/90 hover:border-orange-300 hover:bg-orange-50/80 active:bg-orange-100/70",
+        "dark:border-orange-500/25 dark:bg-[#171922] dark:hover:border-orange-500/45 dark:hover:bg-orange-500/10 dark:active:bg-orange-500/15",
+      )}
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-100">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-500/15 ring-1 ring-orange-500/20">
         <ShoppingCart className="h-6 w-6 text-orange-600" />
       </div>
       <div className="flex-1">
@@ -91,7 +99,7 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
       {loading || createDraftSale.isPending ? (
         <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
       ) : (
-        <div className="h-5 w-5 rounded-full border-2 border-orange-500" />
+        <div className="h-5 w-5 rounded-full border-2 border-orange-500/90 bg-orange-500/10" />
       )}
     </button>
   );
@@ -151,9 +159,13 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
       <button
         onClick={handleSelectProgramar}
         disabled={createDraftSale.isPending}
-        className="flex w-full items-center gap-4 rounded-2xl border border-stone-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:bg-orange-50/50 active:bg-orange-100/50 disabled:opacity-50"
+        className={cn(
+          "flex w-full items-center gap-4 rounded-2xl border p-4 text-left shadow-sm transition-colors disabled:opacity-50",
+          "border-blue-200/80 bg-white/90 hover:border-blue-300 hover:bg-blue-50/80 active:bg-blue-100/70",
+          "dark:border-blue-500/25 dark:bg-[#171922] dark:hover:border-blue-500/45 dark:hover:bg-blue-500/10 dark:active:bg-blue-500/15",
+        )}
       >
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/15 ring-1 ring-blue-500/20">
           <Calendar className="h-6 w-6 text-blue-600" />
         </div>
         <div className="flex-1">
@@ -165,12 +177,15 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
         {createDraftSale.isPending ? (
           <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
         ) : (
-          <div className="h-5 w-5 rounded-full border-2 border-blue-500" />
+          <div className="h-5 w-5 rounded-full border-2 border-blue-500/90 bg-blue-500/10" />
         )}
       </button>
 
       <Sheet open={showDatePicker} onOpenChange={setShowDatePicker}>
-        <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+        <SheetContent
+          side="bottom"
+          className="shell-surface rounded-t-3xl border shell-divider pb-8"
+        >
           <SheetHeader className="text-left">
             <SheetTitle>Programar pedido</SheetTitle>
             <SheetDescription>

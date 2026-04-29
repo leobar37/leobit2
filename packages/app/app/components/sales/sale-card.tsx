@@ -131,18 +131,20 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
             </div>
 
             <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-white/50">
+              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-full px-2.5 py-1.5">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/15 dark:text-orange-300">
                   <User className="h-3.5 w-3.5" />
                 </div>
-                <span className="truncate">{customerName}</span>
+                <span className="truncate font-medium text-foreground/75">
+                  {customerName}
+                </span>
               </div>
 
-              <div className="flex min-w-0 items-center gap-2 sm:justify-end">
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 dark:bg-white/8 dark:text-white/50">
+              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-full px-2.5 py-1.5 sm:justify-end">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/15 dark:text-blue-300">
                   <CalendarDays className="h-3.5 w-3.5" />
                 </div>
-                <span className="truncate">
+                <span className="truncate font-medium text-foreground/75">
                   {isPreOrder
                     ? formatDeliveryCountdown(sale.deliveryDate)
                     : formatRecentDateTime(sale.saleDate)}

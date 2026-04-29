@@ -23,14 +23,14 @@ function SalesCalculatorFooter({
             <Button
               onClick={actions.onPrimaryAction}
               disabled={actions.isPrimaryDisabled}
-              className="h-12 w-full rounded-2xl bg-orange-500 shadow-[0_14px_28px_rgba(249,115,22,0.2)] hover:bg-orange-600 disabled:bg-orange-300"
+              className="h-12 w-full rounded-2xl bg-orange-500 text-white shadow-[0_14px_28px_rgba(249,115,22,0.2)] hover:bg-orange-600 disabled:border disabled:border-white/10 disabled:bg-white/[0.07] disabled:text-white/35 disabled:shadow-none"
             >
               {actions.primaryLabel}
             </Button>
             <Button
               variant="outline"
               onClick={actions.onSecondaryAction}
-              className="h-12 w-full rounded-2xl border-white/70 bg-white/76 shadow-sm hover:bg-white"
+              className="h-12 w-full rounded-2xl border-white/15 bg-white/[0.04] text-white shadow-sm hover:bg-white/[0.08] hover:text-white"
             >
               {actions.secondaryLabel}
             </Button>

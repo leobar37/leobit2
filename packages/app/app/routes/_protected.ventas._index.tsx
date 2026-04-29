@@ -288,6 +288,7 @@ export default function SalesPage() {
       <MobileShell.FloatingAction>
         <Button
           size="icon"
+          aria-label="Nueva venta"
           className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
           onClick={() => setCreateSheetOpen(true)}
         >

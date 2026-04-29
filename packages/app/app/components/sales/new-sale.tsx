@@ -10,11 +10,13 @@ import {
   Calculator as CalculatorIcon,
   Loader2,
   Pencil,
+  Search,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { CustomerSelect } from "~/components/customers/customer-select";
 import { CalculatorInput } from "~/components/calculator/calculator-input";
 import { AmountPaidInput } from "~/components/sales/amount-paid-input";
@@ -128,6 +130,12 @@ const paymentModes: {
   },
 ];
 
+const productTypeLabels: Record<string, string> = {
+  pollo: "Pollo",
+  huevo: "Huevos",
+  otro: "Otros",
+};
+
 export function PaymentModeSection() {
   const { saleId, sale, items } = useNewSaleContext();
   const updateSale = useUpdateSale();
@@ -188,18 +196,18 @@ export function PaymentModeSection() {
   };
 
   return (
-    <Card className="shell-card rounded-3xl border-0">
-      <CardContent className="p-4 space-y-4">
+    <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
+      <CardContent className="space-y-3 px-0 py-1">
         <div className="space-y-2">
           {paymentModes.map((mode) => (
             <button
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
               className={cn(
-                "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+                "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors",
                 sale?.paymentMode === mode.value
-                  ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                  : "border-white/70 bg-white/60 hover:bg-white/82",
+                  ? "bg-orange-500/12"
+                  : "bg-white/[0.045] hover:bg-white/[0.07]",
               )}
             >
               <div
@@ -207,7 +215,7 @@ export function PaymentModeSection() {
                   "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
                   sale?.paymentMode === mode.value
                     ? "bg-orange-500 text-white shadow-sm"
-                    : "shell-card-muted bg-white/72 text-gray-600",
+                    : "bg-white/[0.06] text-muted-foreground",
                 )}
               >
                 {mode.icon}
@@ -216,7 +224,7 @@ export function PaymentModeSection() {
                 <p
                   className={cn(
                     "font-medium",
-                    sale?.paymentMode === mode.value && "text-orange-900",
+                    sale?.paymentMode === mode.value && "text-orange-300",
                   )}
                 >
                   {mode.label}
@@ -262,7 +270,13 @@ export function PaymentModeSection() {
 // Cart Item Component
 // ============================================
 
-function CartItemRow({ itemId }: { itemId: string }) {
+function CartItemRow({
+  itemId,
+  productUnit,
+}: {
+  itemId: string;
+  productUnit?: string;
+}) {
   const navigate = useNavigate();
   const { saleId, items, setEditingItemId } = useNewSaleContext();
   const removeItem = useRemoveSaleItem();
@@ -270,21 +284,27 @@ function CartItemRow({ itemId }: { itemId: string }) {
   const item = items.find((i) => i.id === itemId);
   if (!item) return null;
 
+  const quantity = parseFloat(item.quantity ?? "0");
+  const quantityLabel =
+    productUnit === "unidad"
+      ? `${Math.round(quantity)} unidades`
+      : `${formatKilos(quantity)} kg`;
+
   const handleEdit = () => {
     setEditingItemId(item.id);
     navigate(`/ventas/${saleId}/editar/calculadora?itemId=${item.id}`);
   };
 
   return (
-    <div className="shell-card-muted flex items-center gap-3 rounded-2xl p-3.5">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/80">
+    <div className="flex items-center gap-3 rounded-[20px] bg-white/[0.055] p-3.5 transition-colors hover:bg-white/[0.075]">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/12">
         <Package className="h-5 w-5 text-orange-600" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{item.productName}</p>
         <p className="text-sm text-muted-foreground">
-          {item.variantName} · {formatKilos(parseFloat(item.quantity ?? "0"))}{" "}
-          kg × S/ {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
+          {item.variantName} · {quantityLabel} × S/{" "}
+          {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
         </p>
       </div>
       <div className="text-right">
@@ -296,7 +316,7 @@ function CartItemRow({ itemId }: { itemId: string }) {
         variant="ghost"
         size="icon"
         onClick={handleEdit}
-        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-orange-600"
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-orange-500"
       >
         <Pencil className="h-4 w-4" />
       </Button>
@@ -304,7 +324,7 @@ function CartItemRow({ itemId }: { itemId: string }) {
         variant="ghost"
         size="icon"
         onClick={() => removeItem.mutate({ saleId: saleId!, itemId: item.id })}
-        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -318,19 +338,28 @@ function CartItemRow({ itemId }: { itemId: string }) {
 
 export function CartSection() {
   const { items } = useNewSaleContext();
+  const { data: products = [] } = useProducts();
+  const productUnitById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.unit])),
+    [products],
+  );
 
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <Card className="shell-card rounded-3xl border-0">
-      <CardHeader className="pb-2">
+    <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
+      <CardHeader className="px-0 pb-2">
         <CardTitle className="text-base">Productos ({items.length})</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 px-0">
         {items.map((item) => (
-          <CartItemRow key={item.id} itemId={item.id} />
+          <CartItemRow
+            key={item.id}
+            itemId={item.id}
+            productUnit={productUnitById.get(item.productId)}
+          />
         ))}
       </CardContent>
     </Card>
@@ -480,7 +509,7 @@ export function SaleSubmitBar() {
   }
 
   return (
-    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 border-t shell-surface px-4 py-3 z-50">
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] left-0 right-0 bg-background/86 px-4 py-3 z-50 backdrop-blur-xl">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col">
           <span className="text-xs text-muted-foreground">
@@ -530,12 +559,14 @@ export function CalculatorContent({
 }: CalculatorContentProps) {
   const navigate = useNavigate();
   const { saleId, items: saleItems, editingItemId, setEditingItemId } = useNewSaleContext();
-  
+
   const editingItem = editingItemId ? saleItems.find((i) => i.id === editingItemId) : null;
   const isEditMode = !!editingItem;
-  
+
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+  const [productFilter, setProductFilter] = useState("all");
 
   // Sync product/variant selection when editing item loads
   useEffect(() => {
@@ -556,6 +587,31 @@ export function CalculatorContent({
     isFetching: isProductsFetching,
   } = useProducts();
   const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const activeProducts = useMemo(
+    () => products.filter((product) => product.isActive),
+    [products],
+  );
+  const showProductDiscovery = activeProducts.length > 8;
+  const productTypeFilters = useMemo(
+    () =>
+      Array.from(new Set(activeProducts.map((product) => product.type).filter(Boolean))),
+    [activeProducts],
+  );
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = productSearch.trim().toLowerCase();
+
+    return activeProducts.filter((product) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        product.name.toLowerCase().includes(normalizedSearch);
+      const matchesFilter =
+        productFilter === "all" ||
+        product.unit === productFilter ||
+        product.type === productFilter;
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [activeProducts, productFilter, productSearch]);
 
   const {
     data: variants = [],
@@ -731,89 +787,164 @@ export function CalculatorContent({
       {/* Product Selection */}
       <div
         className={cn(
-          "flex-1 overflow-y-auto p-4 space-y-4",
-          selectedVariant && "pb-36",
+          "flex-1 overflow-y-auto p-4 space-y-5",
+          selectedVariant && "pb-40",
         )}
       >
         {/* Product Selector */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Producto</label>
+        <div className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <label className="text-sm font-semibold text-white/95">
+                Producto
+              </label>
+              <p className="text-xs text-white/55">
+                {activeProducts.length} disponibles
+              </p>
+            </div>
+            {isProductsFetching && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Actualizando
+              </div>
+            )}
+          </div>
+
+          {showProductDiscovery && (
+            <div className="sticky top-0 z-10 -mx-1 space-y-2 bg-[#11131a]/96 px-1 py-2 backdrop-blur-xl">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+                <Input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Buscar producto..."
+                  className="h-11 rounded-2xl border-white/10 bg-white/[0.06] pl-10 pr-3 text-sm text-white shadow-none placeholder:text-white/45 focus:border-orange-500/40 focus:ring-orange-500/20"
+                />
+              </div>
+
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 hide-scrollbar">
+                {[
+                  { value: "all", label: "Todos" },
+                  { value: "kg", label: "Por kilo" },
+                  { value: "unidad", label: "Por unidad" },
+                  ...productTypeFilters.map((type) => ({
+                    value: type,
+                    label: productTypeLabels[type] ?? type,
+                  })),
+                ].map((filter) => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setProductFilter(filter.value)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      productFilter === filter.value
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
+                        : "border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white/90",
+                    )}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isProductsLoading ? (
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="shell-card rounded-2xl p-3 space-y-2"
+                  className="rounded-[20px] border border-white/10 bg-[#171922] p-3 space-y-2"
                 >
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
               ))}
             </div>
-          ) : products.filter((product) => product.isActive).length === 0 ? (
-            <Card className="shell-card rounded-3xl border-0">
+          ) : activeProducts.length === 0 ? (
+            <Card className="shell-card-flat rounded-3xl">
               <CardContent className="p-4 text-sm text-muted-foreground">
                 No hay productos activos para vender.
               </CardContent>
             </Card>
+          ) : filteredProducts.length === 0 ? (
+            <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
+              <p className="font-semibold text-white/95">No encontramos productos</p>
+              <p className="mt-1 text-sm text-white/55">
+                Prueba con otro nombre o cambia el filtro.
+              </p>
+            </div>
           ) : (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                {products
-                  .filter((p) => p.isActive)
-                  .map((product) => {
-                    const isInCart = saleItems.some((item) => item.productId === product.id);
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => {
-                          setSelectedProductId(product.id);
-                          setSelectedVariantId(null);
-                          handleClear();
-                        }}
-                        disabled={isInCart}
-                        className={cn(
-                          "rounded-2xl border p-3 text-left transition-colors",
-                          isInCart
-                            ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
-                            : selectedProductId === product.id
-                              ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                              : "border-white/70 bg-white/60 hover:bg-white/82",
-                        )}
-                      >
-                        <p className="font-medium text-sm">{product.name}</p>
-                        <Badge variant="secondary" className="mt-1">
-                          {product.unit === "kg" ? "Por kilo" : "Por unidad"}
-                        </Badge>
-                        {isInCart && (
-                          <Badge variant="outline" className="mt-1 ml-1 text-xs">
-                            Agregado
-                          </Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-              </div>
-              {isProductsFetching && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Actualizando productos...
-                </div>
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-2",
+                showProductDiscovery && "gap-2.5",
               )}
-            </>
+            >
+              {filteredProducts.map((product) => {
+                const isInCart = saleItems.some((item) => item.productId === product.id);
+                const isSelected = selectedProductId === product.id;
+
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProductId(product.id);
+                      setSelectedVariantId(null);
+                      handleClear();
+                    }}
+                    disabled={isInCart}
+                    className={cn(
+                      "min-h-[86px] rounded-[22px] border p-3 text-left transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
+                      isInCart
+                        ? "cursor-not-allowed border-white/8 bg-white/[0.035] opacity-55"
+                        : isSelected
+                          ? "border-orange-500/50 bg-orange-500/14 shadow-[0_12px_28px_rgba(249,115,22,0.12)]"
+                          : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
+                    )}
+                  >
+                    <div className="flex h-full flex-col justify-between gap-2">
+                      <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-white/95">
+                        {product.name}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/65">
+                          {product.unit === "kg" ? "Por kilo" : "Por unidad"}
+                        </span>
+                        {isInCart && (
+                          <span className="rounded-full bg-orange-500/12 px-2 py-0.5 text-[11px] font-semibold text-orange-300">
+                            Agregado
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
         {/* Variant Selector */}
         {selectedProduct && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Presentación</label>
+          <div className="space-y-3 rounded-[24px] border border-white/10 bg-white/[0.035] p-3">
+            <div>
+              <label className="text-sm font-semibold text-white/95">
+                Presentación
+              </label>
+              <p className="text-xs text-white/55">
+                {selectedProduct.name}
+              </p>
+            </div>
             {isVariantsLoading ? (
               <div className="grid grid-cols-2 gap-2">
                 {Array.from({ length: 2 }).map((_, index) => (
                   <div
                     key={index}
-                    className="shell-card rounded-2xl p-3 space-y-2"
+                    className="rounded-[20px] border border-white/10 bg-[#171922] p-3 space-y-2"
                   >
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-4 w-14" />
@@ -821,7 +952,7 @@ export function CalculatorContent({
                 ))}
               </div>
             ) : variants.length === 0 ? (
-              <Card className="shell-card rounded-3xl border-0">
+              <Card className="shell-card-flat rounded-3xl">
                 <CardContent className="p-4 text-sm text-muted-foreground">
                   Este producto no tiene presentaciones activas.
                 </CardContent>
@@ -837,21 +968,23 @@ export function CalculatorContent({
                         handleClear();
                       }}
                       className={cn(
-                        "rounded-2xl border p-3 text-left transition-colors",
+                        "rounded-[20px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
                         selectedVariantId === variant.id
-                          ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                          : "border-white/70 bg-white/60 hover:bg-white/82",
+                          ? "border-orange-500/50 bg-orange-500/14"
+                          : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
                       )}
                     >
-                      <p className="font-medium text-sm">{variant.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm font-semibold text-white/95">
+                        {variant.name}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-orange-300">
                         S/ {formatCurrency(variant.price)}
                       </p>
                     </button>
                   ))}
                 </div>
                 {isVariantsFetching && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs text-white/55">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Actualizando presentaciones...
                   </div>
@@ -863,10 +996,17 @@ export function CalculatorContent({
 
         {/* Calculator Form */}
         {selectedVariant && (
-          <div className="space-y-4 border-t pt-4 shell-divider">
+          <div className="space-y-4 rounded-[24px] border border-white/10 bg-[#171922] p-4">
             <div className="flex items-center gap-2">
-              <CalculatorIcon className="h-5 w-5 text-orange-600" />
-              <span className="font-medium">Calculadora</span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/20">
+                <CalculatorIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="font-semibold text-white/95">Calculadora</span>
+                <p className="text-xs text-white/55">
+                  {selectedVariant.name}
+                </p>
+              </div>
             </div>
 
             {isKgProduct ? (
@@ -986,12 +1126,12 @@ export function CalculatorContent({
 
             {/* Calculation Summary */}
             {calculation.isValid && (
-              <div className="shell-card-muted space-y-2 rounded-2xl p-4">
+              <div className="space-y-2 rounded-[20px] border border-orange-500/20 bg-orange-500/10 p-4">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">
                     Cantidad:
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-white/90">
                     {isKgProduct
                       ? `${formatKilos(calculation.quantity)} kg`
                       : `${Math.round(calculation.quantity)} unidades`}
@@ -1002,14 +1142,14 @@ export function CalculatorContent({
                     <span className="text-sm text-muted-foreground">
                       Precio unitario:
                     </span>
-                    <span className="font-medium">
+                    <span className="font-medium text-white/90">
                       S/ {formatCurrency(calculation.unitPrice)}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-orange-200/70 pt-2">
-                  <span className="font-medium">Subtotal:</span>
-                  <span className="font-bold text-lg">
+                <div className="flex justify-between border-t border-orange-500/20 pt-2">
+                  <span className="font-medium text-white/90">Subtotal:</span>
+                  <span className="text-lg font-bold text-orange-300">
                     S/ {formatCurrency(calculation.subtotal)}
                   </span>
                 </div>

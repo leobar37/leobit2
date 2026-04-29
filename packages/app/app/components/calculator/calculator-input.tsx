@@ -19,6 +19,7 @@ interface CalculatorInputProps {
 }
 
 export function CalculatorInput({
+  name,
   label,
   value,
   placeholder,
@@ -33,6 +34,7 @@ export function CalculatorInput({
   className,
 }: CalculatorInputProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const inputId = `calculator-${name}`;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -49,10 +51,14 @@ export function CalculatorInput({
 
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label htmlFor={inputId} className="text-sm font-medium text-foreground/80">
+        {label}
+      </label>
       
       <div className="relative">
         <input
+          id={inputId}
+          name={name}
           type="text"
           inputMode="decimal"
           value={value}
@@ -62,12 +68,12 @@ export function CalculatorInput({
           onBlur={() => setIsFocused(false)}
           disabled={isAutoCalculateTarget}
           className={cn(
-            "w-full h-11 px-3 pr-10 text-base rounded-xl border bg-white transition-all",
-            "focus:outline-none focus:ring-2",
+            "h-11 w-full rounded-xl border px-3 pr-10 text-base text-foreground transition-all placeholder:text-muted-foreground/70",
+            "bg-white/86 focus:outline-none focus:ring-2 dark:bg-white/[0.06]",
             isAutoCalculateTarget
-              ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30 cursor-not-allowed"
-              : "border-gray-200 focus:border-blue-500 focus:ring-blue-200",
-            value && !isAutoCalculateTarget && "bg-blue-50/30"
+              ? "cursor-not-allowed border-orange-400/70 bg-orange-50/50 focus:border-orange-500 focus:ring-orange-200 dark:bg-orange-500/10 dark:focus:ring-orange-500/20"
+              : "border-stone-200/80 focus:border-blue-500 focus:ring-blue-200 dark:border-white/10 dark:focus:border-blue-400 dark:focus:ring-blue-500/20",
+            value && !isAutoCalculateTarget && "bg-blue-50/40 dark:bg-blue-500/10"
           )}
         />
 
@@ -79,8 +85,8 @@ export function CalculatorInput({
             "absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full transition-all",
             "hover:scale-125 focus:outline-none focus:ring-2 focus:ring-offset-1",
             isAutoCalculateTarget
-              ? "bg-orange-500 ring-orange-300 shadow-sm shadow-orange-200"
-              : "bg-gray-300 hover:bg-gray-400 ring-gray-200",
+              ? "bg-orange-500 ring-orange-300 shadow-sm shadow-orange-200 dark:ring-orange-500/30 dark:shadow-orange-900/40"
+              : "bg-muted-foreground/40 hover:bg-muted-foreground/60 ring-muted-foreground/20",
             isFocused && "scale-110"
           )}
           title={isAutoCalculateTarget ? "Se calculará automáticamente" : "Click para calcular automáticamente"}
@@ -89,12 +95,12 @@ export function CalculatorInput({
 
       {helperText && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-500">{helperText}</p>
+          <p className="text-xs text-muted-foreground">{helperText}</p>
           {helperValue && onApplyHelperValue && (
             <button
               type="button"
               onClick={() => onApplyHelperValue(helperValue)}
-              className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors"
+              className="rounded bg-orange-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600 transition-colors hover:bg-orange-500/18 dark:text-orange-300"
             >
               Usar
             </button>
@@ -103,7 +109,7 @@ export function CalculatorInput({
       )}
 
       {isAutoCalculateTarget && (
-        <p className="text-xs text-orange-600 font-medium">
+        <p className="text-xs font-medium text-orange-600 dark:text-orange-300">
           Se calculará automáticamente
         </p>
       )}
@@ -113,6 +119,7 @@ export function CalculatorInput({
 
 // Compact version for smaller spaces
 export function CalculatorInputCompact({
+  name,
   label,
   value,
   placeholder,
@@ -121,6 +128,8 @@ export function CalculatorInputCompact({
   onToggleAutoCalculate,
   decimals = 2,
 }: Omit<CalculatorInputProps, "fieldType" | "helperText" | "className">) {
+  const inputId = `calculator-${name}`;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (val === "" || /^\d*\.?\d*$/.test(val)) {
@@ -132,7 +141,12 @@ export function CalculatorInputCompact({
 
   return (
     <div className="relative">
+      <label htmlFor={inputId} className="sr-only">
+        {label}
+      </label>
       <input
+        id={inputId}
+        name={name}
         type="text"
         inputMode="decimal"
         placeholder={placeholder}
@@ -140,11 +154,11 @@ export function CalculatorInputCompact({
         onChange={handleChange}
         disabled={isAutoCalculateTarget}
         className={cn(
-          "w-full h-10 px-3 pr-8 text-sm rounded-lg border transition-all",
-          "focus:outline-none focus:ring-2",
+          "h-10 w-full rounded-lg border px-3 pr-8 text-sm text-foreground transition-all placeholder:text-muted-foreground/70",
+          "bg-white/86 focus:outline-none focus:ring-2 dark:bg-white/[0.06]",
           isAutoCalculateTarget
-            ? "border-orange-300 focus:border-orange-500 focus:ring-orange-200 bg-orange-50/30 cursor-not-allowed"
-            : "border-gray-200 focus:border-blue-500 focus:ring-blue-200"
+            ? "cursor-not-allowed border-orange-400/70 bg-orange-50/50 focus:border-orange-500 focus:ring-orange-200 dark:bg-orange-500/10 dark:focus:ring-orange-500/20"
+            : "border-stone-200/80 focus:border-blue-500 focus:ring-blue-200 dark:border-white/10 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
         )}
       />
       
@@ -156,7 +170,7 @@ export function CalculatorInputCompact({
           "hover:scale-125",
           isAutoCalculateTarget
             ? "bg-orange-500 shadow-sm"
-            : "bg-gray-300 hover:bg-gray-400"
+            : "bg-muted-foreground/40 hover:bg-muted-foreground/60"
         )}
         title={isAutoCalculateTarget ? "Auto-calcular" : "Fijar valor"}
       />
@@ -184,7 +198,7 @@ export function CalculatorConfigIndicator({
     <button
       type="button"
       onClick={onClick}
-      className="text-xs text-gray-500 hover:text-orange-600 transition-colors flex items-center gap-1"
+      className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-orange-600 dark:hover:text-orange-300"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
       Calculando {fieldNames[autoCalculateField]} para {unitType}

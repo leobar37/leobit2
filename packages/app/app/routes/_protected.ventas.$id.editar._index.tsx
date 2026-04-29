@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { formatCurrency, formatDateForInput } from "~/lib/utils";
 import {
-  ArrowLeft,
   Calculator,
   Calendar,
   Loader2,
@@ -19,6 +18,7 @@ import {
   PaymentModeSection,
   SaleSubmitBar,
 } from "~/components/sales/new-sale";
+import { MobilePage } from "~/components/mobile";
 import { useNewSaleContext } from "~/components/sales/new-sale-context";
 import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +50,7 @@ function HeaderTotal() {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/82 px-3 py-1.5 text-orange-700 shadow-sm backdrop-blur-sm">
+    <div className="flex items-center gap-2 rounded-full bg-orange-500/12 px-3 py-1.5 text-orange-700 backdrop-blur-sm dark:text-orange-300">
       <ShoppingCart className="h-4 w-4 text-orange-600" />
       <span className="text-sm font-semibold">
         S/ {formatCurrency(calculations.totalAmount)}
@@ -113,91 +113,81 @@ export default function SaleEditorPage() {
   }
 
   const calculatorPath = getSaleCalculatorPath(saleId);
+  const pageTitle = isDeliveryMode
+    ? "Entregar Pedido"
+    : sale?.type === "pre_order"
+      ? "Editar Pedido"
+      : "Editar Venta";
+  const pageActions = sale ? (
+    <>
+      {sale.type === "instant_sale" && sale.status === "draft" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-xl text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+          title="Programar pedido"
+          onClick={() => {
+            setProgramarDate(formatDateForInput(new Date()));
+            setProgramarOpen(true);
+          }}
+        >
+          <Calendar className="h-4 w-4" />
+        </Button>
+      )}
+      {sale.type === "pre_order" &&
+        sale.status !== "cancelled" &&
+        sale.status !== "delivered" && (
+          <RescheduleSaleDialog
+            saleId={sale.id}
+            currentDeliveryDate={sale.deliveryDate}
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                title="Reprogramar entrega"
+              >
+                <Calendar className="h-4 w-4" />
+              </Button>
+            }
+          />
+        )}
+      {(sale.status === "draft" || sale.status === "confirmed") && (
+        <SaleShareDrawer
+          saleId={sale.id}
+          saleStatus={sale.status}
+          allowCustomerEdit={sale.allowCustomerEdit}
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-xl text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+              title="Compartir venta"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          }
+        />
+      )}
+    </>
+  ) : null;
 
   return (
     <div className="space-y-4">
-      <header className="sticky top-0 z-40 rounded-3xl border shell-surface">
-        <div className="flex h-16 items-center justify-between px-3 sm:px-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(returnTo)}
-              className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold tracking-tight">
-                {isDeliveryMode
-                  ? "Entregar Pedido"
-                  : sale?.type === "pre_order"
-                    ? "Editar Pedido"
-                    : "Editar Venta"}
-              </h1>
-              {isDeliveryMode && (
-                <Badge className="bg-indigo-100 text-indigo-700 border-0">
-                  <Truck className="h-3 w-3 mr-1" />
-                  Entrega
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <HeaderTotal />
-            {sale && (
-              <>
-                {sale.type === "instant_sale" && sale.status === "draft" && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
-                    title="Programar pedido"
-                    onClick={() => {
-                      setProgramarDate(formatDateForInput(new Date()));
-                      setProgramarOpen(true);
-                    }}
-                  >
-                    <Calendar className="h-4 w-4" />
-                  </Button>
-                )}
-                {sale.type === "pre_order" && sale.status !== "cancelled" && sale.status !== "delivered" && (
-                  <RescheduleSaleDialog
-                    saleId={sale.id}
-                    currentDeliveryDate={sale.deliveryDate}
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
-                        title="Reprogramar entrega"
-                      >
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                )}
-                {(sale.status === "draft" || sale.status === "confirmed") && (
-                  <SaleShareDrawer
-                    saleId={sale.id}
-                    saleStatus={sale.status}
-                    allowCustomerEdit={sale.allowCustomerEdit}
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
-                        title="Compartir venta"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <MobilePage.Header
+        title={pageTitle}
+        onBack={() => navigate(returnTo)}
+        meta={<HeaderTotal />}
+        actions={pageActions}
+        badge={
+          isDeliveryMode ? (
+            <Badge className="border-0 bg-indigo-500/15 text-indigo-300">
+              <Truck className="mr-1 h-3 w-3" />
+              Entrega
+            </Badge>
+          ) : null
+        }
+      />
 
       <main className="space-y-4 pb-24">
         <CustomerSection />
@@ -208,13 +198,13 @@ export default function SaleEditorPage() {
           data-testid="calculator-section"
         >
           <Card
-            className="shell-card cursor-pointer rounded-3xl border-0 transition-all hover:bg-white/88"
+            className="cursor-pointer rounded-[24px] border-0 bg-white/[0.04] shadow-none transition-colors hover:bg-white/[0.07]"
             onClick={() => navigate(calculatorPath)}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="shell-card-muted flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100/80">
-                  <Calculator className="h-6 w-6 text-orange-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/12 text-orange-400">
+                  <Calculator className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold">Calculadora</p>
@@ -223,7 +213,7 @@ export default function SaleEditorPage() {
                   </p>
                 </div>
                 <Button
-                  className="rounded-2xl bg-orange-500 shadow-sm hover:bg-orange-600"
+                  className="rounded-2xl bg-orange-500 text-white shadow-sm hover:bg-orange-600"
                   onClick={(event) => {
                     event.stopPropagation();
                     navigate(calculatorPath);

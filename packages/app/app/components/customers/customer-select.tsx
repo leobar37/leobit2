@@ -64,8 +64,9 @@ export function CustomerSelect({
     <>
       <Card
         className={cn(
-          "shell-card cursor-pointer rounded-3xl border-0 transition-colors",
-          !disabled && "hover:bg-white/90",
+          "cursor-pointer rounded-[24px] border-0 shadow-none transition-colors",
+          "bg-white/80 hover:bg-orange-50/75",
+          "dark:bg-white/[0.04] dark:hover:bg-white/[0.07]",
           disabled && "opacity-50 cursor-not-allowed",
         )}
         onClick={() => !disabled && setIsOpen(true)}
@@ -73,11 +74,11 @@ export function CustomerSelect({
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="shell-card-muted flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-100/80">
-                <User className="h-6 w-6 text-orange-600" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-500/12 text-orange-600 dark:text-orange-300">
+                <User className="h-6 w-6" />
               </div>
               <div className="min-w-0">
-                <p className="truncate font-semibold">
+                <p className="truncate font-semibold text-foreground">
                   {selectedCustomer?.name || placeholder}
                 </p>
                 {selectedCustomer?.phone && (
@@ -110,7 +111,7 @@ export function CustomerSelect({
                     e.stopPropagation();
                     handleClearCustomer();
                   }}
-                  className="rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
+                  className="rounded-2xl text-muted-foreground hover:bg-red-500/10 hover:text-destructive"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -121,8 +122,8 @@ export function CustomerSelect({
                 size="icon"
                 disabled={disabled}
                 className={cn(
-                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground",
-                  isOpen && "bg-orange-100 text-orange-700",
+                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground dark:hover:bg-white/[0.08]",
+                  isOpen && "bg-orange-500/15 text-orange-600 dark:text-orange-300",
                 )}
               >
                 <ChevronDown
