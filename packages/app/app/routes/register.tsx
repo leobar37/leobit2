@@ -64,7 +64,7 @@ export default function RegisterPage() {
   }
 
   if (user) {
-    return <Navigate to="/sync" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const onSubmit = async (data: RegisterInput) => {
@@ -100,7 +100,7 @@ export default function RegisterPage() {
       if (result.needsRedirect) {
         navigate(result.redirectTo);
       } else {
-        navigate("/sync");
+        navigate("/dashboard");
       }
     } catch (error) {
       form.setError("root", {

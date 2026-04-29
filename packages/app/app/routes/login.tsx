@@ -65,7 +65,7 @@ export default function LoginPage() {
   const hasToken = !!getStoredAuthToken();
 
   if (user && hasToken) {
-    return <Navigate to="/sync" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const onSubmit = async (data: LoginInput) => {
@@ -74,7 +74,7 @@ export default function LoginPage() {
       if (result.needsRedirect) {
         navigate(result.redirectTo);
       } else {
-        navigate("/sync");
+        navigate("/dashboard");
       }
     } catch (error) {
       form.setError("root", {

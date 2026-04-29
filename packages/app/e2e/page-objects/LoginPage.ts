@@ -27,7 +27,7 @@ export class LoginPage {
     await loginButton.click();
     
     // Wait for redirect
-    await this.page.waitForURL(/\/(sync|dashboard)/, { timeout: 30000 });
+    await this.page.waitForURL(/\/dashboard/, { timeout: 30000 });
   }
 
   async login(email: string = E2E_CREDENTIALS.email, password: string = E2E_CREDENTIALS.password) {
@@ -79,10 +79,10 @@ export class LoginPage {
     await loginButton.click({ force: true });
     
     // Wait for redirect
-    await this.page.waitForURL(/\/(sync|dashboard)/, { timeout: 30000 });
+    await this.page.waitForURL(/\/dashboard/, { timeout: 30000 });
   }
 
   async expectLoggedIn() {
-    await this.page.waitForURL(/\/(sync|dashboard)/);
+    await this.page.waitForURL(/\/dashboard/);
   }
 }

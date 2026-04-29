@@ -55,8 +55,8 @@ export default function Index() {
   // If we have a token but no session user yet, let sync handle validation
   // This handles the case where token exists but session is not loaded yet
   if (!user) {
-    console.log("[Index] Token exists but no session user, redirecting to sync for validation");
-    return <Navigate to="/sync" replace />;
+    console.log("[Index] Token exists but no session user, redirecting to dashboard");
+    return <Navigate to="/dashboard" replace />;
   }
 
   // User is authenticated with valid session
