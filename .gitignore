@@ -38,6 +38,9 @@ Thumbs.db
 e2e/.auth/
 *.png-snapshots/
 
+# Playwright MCP artifacts
+.playwright-mcp/
+
 # Embedded git repos / temp
 tanstack-db/
 tmp/

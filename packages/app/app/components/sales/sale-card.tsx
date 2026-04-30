@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ChevronRight,
+  Loader2,
   Trash2,
   User,
 } from "lucide-react";
@@ -89,7 +90,11 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                     onClick={handleDelete}
                     disabled={deleteSale.isPending}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteSale.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 )}
 
