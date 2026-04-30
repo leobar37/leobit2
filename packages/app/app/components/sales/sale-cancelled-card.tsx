@@ -1,6 +1,7 @@
 import { XCircle } from "lucide-react";
 import type { Sale } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
+import { decimalToNumber } from "@avileo/shared";
 
 interface SaleCancelledCardProps {
   sale: Sale;
@@ -22,7 +23,7 @@ export function SaleCancelledCard({ sale }: SaleCancelledCardProps) {
               : ""}
             {sale.cancelReason && ` - ${sale.cancelReason}`}
           </p>
-          {sale.refundAmount && Number(sale.refundAmount) > 0 && (
+          {sale.refundAmount && decimalToNumber(sale.refundAmount) > 0 && (
             <p className="mt-1 text-sm font-medium text-red-600">
               Reembolso: S/ {formatCurrency(sale.refundAmount)}
               {sale.refundMethod && ` vía ${sale.refundMethod}`}

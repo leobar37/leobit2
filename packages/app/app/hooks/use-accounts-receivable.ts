@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
+import { decimalToNumber } from "@avileo/shared";
 
 export interface AccountsReceivableCustomer {
   id: string;
@@ -61,9 +62,9 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
       return {
         items: items.map((item) => ({
           customer: item.customer,
-          totalDebt: Number(item.totalDebt ?? 0),
-          totalSales: Number(item.totalSales ?? 0),
-          totalPayments: Number(item.totalPayments ?? 0),
+          totalDebt: decimalToNumber(item.totalDebt),
+          totalSales: decimalToNumber(item.totalSales),
+          totalPayments: decimalToNumber(item.totalPayments),
           lastSaleDate: item.lastSaleDate ? new Date(item.lastSaleDate) : null,
         })),
         total: items.length,

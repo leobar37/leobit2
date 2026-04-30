@@ -404,3 +404,26 @@ export function generateSyncGroupId(): string {
 export function generateIdempotencyKey(): string {
   return createId();
 }
+
+// Transformers
+export {
+  // Core
+  createTransformer,
+  type Transformer,
+  type FieldTransform,
+  type TransformConfig,
+  // Decimal utilities
+  decimalToNumber,
+  decimalToString,
+  normalizeToStrings,
+  normalizeToNumbers,
+  // Entity transformers
+  saleItemTransformer,
+  purchaseItemTransformer,
+  distribucionItemTransformer,
+  saleTransformer,
+} from "./transformers";
+
+// Standards
+export { DECIMALS } from "./standards/decimals";
+export type { DecimalConfig } from "./standards/decimals";

@@ -12,6 +12,7 @@ import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { useUploadFile } from "~/hooks/use-files";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
+import { purchaseItemTransformer } from "@avileo/shared";
 
 /** Purchase status from API */
 type PurchaseStatus = "pending" | "received" | "cancelled";
@@ -195,9 +196,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         unitId: item.unitId ?? undefined,
         productName: item.productName || "Producto",
         variantName: item.variantName || "",
-        quantity: String(item.quantity),
-        unitCost: String(item.unitCost),
-        totalCost: String(item.totalCost),
+        ...(purchaseItemTransformer.toForm(item) as Pick<PurchaseItem, "quantity" | "unitCost" | "totalCost">),
       }));
     }
     return localItems;

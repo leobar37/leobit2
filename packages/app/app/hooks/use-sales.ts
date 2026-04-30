@@ -10,6 +10,7 @@ import { queryKeys } from "~/lib/query-keys";
 import { useBusiness } from "~/hooks/use-business";
 import { useToastError } from "~/hooks/use-toast-error";
 import { getSaleFinancialState } from "~/hooks/use-sale-calculations";
+import { decimalToNumber } from "@avileo/shared";
 
 export type SaleStatus = "draft" | "confirmed" | "active" | "delivered" | "cancelled";
 export type SaleType = "instant_sale" | "pre_order";
@@ -158,15 +159,6 @@ interface SaleFilters {
   distribucionId?: string | "none" | "all";
 }
 
-function toNumber(value: string | number | null | undefined): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
 function applyClientSideFilters(
   sales: SaleListItem[],
   filters?: SalePageQuery | SaleFilters
@@ -192,7 +184,7 @@ function applyClientSideFilters(
     if (pageFilters.type && sale.type !== pageFilters.type) {
       return false;
     }
-    if (pageFilters.hasBalanceDue && toNumber(sale.balanceDue) <= 0) {
+    if (pageFilters.hasBalanceDue && decimalToNumber(sale.balanceDue) <= 0) {
       return false;
     }
     if (pageFilters.search?.trim()) {
@@ -548,8 +540,8 @@ export function useUpdateSale() {
           if (!previous) return previous;
 
           const nextSaleType = variables.input.saleType ?? previous.saleType;
-          const nextTotalAmount = variables.input.totalAmount ?? toNumber(previous.totalAmount);
-          const nextAmountPaid = variables.input.amountPaid ?? toNumber(previous.amountPaid);
+          const nextTotalAmount = variables.input.totalAmount ?? decimalToNumber(previous.totalAmount);
+          const nextAmountPaid = variables.input.amountPaid ?? decimalToNumber(previous.amountPaid);
           const { balanceDue } = getSaleFinancialState({
             saleType: nextSaleType,
             totalAmount: nextTotalAmount,

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { decimalToNumber } from "@avileo/shared";
 import { z } from "zod";
 import { useCancelSale } from "~/hooks/use-sales";
 import type { CancelSaleInput, Sale } from "~/hooks/use-sales";
@@ -72,7 +73,7 @@ export function CancelSaleProvider({
   const isMountedRef = useRef(true);
   const saleId = sale.id;
   const saleNumber = sale.id.slice(-6);
-  const paidAmount = Number(sale.amountPaid ?? 0);
+  const paidAmount = decimalToNumber(sale.amountPaid);
   const form = useForm<CancelSaleFormValues>({
     resolver: zodResolver(cancelSaleSchema),
     defaultValues: getDefaultValues(paidAmount),

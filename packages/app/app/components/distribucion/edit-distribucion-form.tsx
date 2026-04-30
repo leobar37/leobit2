@@ -8,6 +8,7 @@ import { ProductVariantSelector } from "./product-variant-selector";
 import { useProducts } from "~/hooks/use-products";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Package } from "lucide-react";
+import { decimalToNumber } from "@avileo/shared";
 import type { Distribucion } from "~/hooks/use-distribuciones";
 import { PuntoVentaSelect } from "./punto-venta-select";
 import { usePuntosVentaActivos, type PuntoVenta } from "~/hooks/use-puntos-venta";
@@ -130,7 +131,7 @@ export function EditDistribucionForm({
                     <p className="text-sm font-semibold">
                       {item.cantidadAsignada} {item.unidad}
                     </p>
-                    {Number(item.cantidadVendida) > 0 && (
+                    {decimalToNumber(item.cantidadVendida) > 0 && (
                       <p className="text-xs text-muted-foreground">
                         Vendido: {item.cantidadVendida} {item.unidad}
                       </p>

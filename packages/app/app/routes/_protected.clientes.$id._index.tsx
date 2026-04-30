@@ -22,6 +22,7 @@ import { useSalesByCustomer } from "~/hooks/use-sales";
 import { MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
+import { decimalToNumber } from "@avileo/shared";
 import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
 
 export default function CustomerDetailPage() {
@@ -260,7 +261,7 @@ export default function CustomerDetailPage() {
                         S/ {formatCurrency(sale.totalAmount)}
                       </span>
                     </div>
-                    {Number(sale.balanceDue) > 0 ? (
+                    {decimalToNumber(sale.balanceDue) > 0 ? (
                       <div className="mt-1 flex justify-between text-sm">
                         <span>Saldo</span>
                         <span className="font-semibold text-red-600">

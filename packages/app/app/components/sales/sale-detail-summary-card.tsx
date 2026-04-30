@@ -2,15 +2,16 @@ import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Sale } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
+import { decimalToNumber } from "@avileo/shared";
 
 interface SaleDetailSummaryCardProps {
   sale: Sale;
 }
 
 export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
-  const paidAmount = Number(sale.amountPaid ?? 0);
-  const dueAmount = Number(sale.balanceDue ?? 0);
-  const totalAmount = Number(sale.totalAmount ?? 0);
+  const paidAmount = decimalToNumber(sale.amountPaid);
+  const dueAmount = decimalToNumber(sale.balanceDue);
+  const totalAmount = decimalToNumber(sale.totalAmount);
 
   const saleWorkflowStatus =
     sale.status === "draft"

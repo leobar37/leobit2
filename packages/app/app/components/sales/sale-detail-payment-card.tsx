@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Sale } from "~/hooks/use-sales";
 import { cn, formatCurrency } from "~/lib/utils";
+import { decimalToNumber } from "@avileo/shared";
 import { SaleDetailSection } from "./sale-detail-section";
 
 interface SaleDetailPaymentCardProps {
@@ -11,9 +12,9 @@ interface SaleDetailPaymentCardProps {
 }
 
 export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
-  const paidAmount = Number(sale.amountPaid ?? 0);
-  const totalAmount = Number(sale.totalAmount ?? 0);
-  const dueAmount = Math.max(Number(sale.balanceDue ?? totalAmount - paidAmount), 0);
+  const paidAmount = decimalToNumber(sale.amountPaid);
+  const totalAmount = decimalToNumber(sale.totalAmount);
+  const dueAmount = Math.max(decimalToNumber(sale.balanceDue) ?? (totalAmount - paidAmount), 0);
   const rows = [
     { label: "Total", value: `S/ ${formatCurrency(sale.totalAmount)}` },
     { label: "Abono inicial", value: `S/ ${formatCurrency(paidAmount)}` },

@@ -8,6 +8,7 @@ import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
+import { distribucionItemTransformer } from "@avileo/shared";
 
 export interface Distribucion {
   id: string;
@@ -102,8 +103,10 @@ function mapDistribucionWithItems(
         id: item.id,
         distribucionId: item.distribucionId,
         variantId: item.variantId,
-        cantidadAsignada: String(item.cantidadAsignada),
-        cantidadVendida: item.cantidadVendida ? String(item.cantidadVendida) : null,
+        ...(distribucionItemTransformer.toForm(item) as Pick<
+          DistribucionItem,
+          "cantidadAsignada" | "cantidadVendida"
+        >),
         unidad: item.unidad,
         variantName: item.variant?.name,
         productName: item.variant?.product?.name,

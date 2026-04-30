@@ -14,19 +14,13 @@ import { useSales } from "~/hooks/use-sales";
 import { useCreateSale } from "~/hooks/use-sales";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency } from "~/lib/utils";
-import { BusinessUserRole } from "@avileo/shared";
+import { BusinessUserRole, decimalToNumber } from "@avileo/shared";
 import { useMemo, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useOnline } from "~/hooks/use-online";
 import { createModal } from "~/lib/modal/create-modal";
 import { Loader2 } from "lucide-react";
 import type { DistribucionWithItems } from "~/hooks/use-distribuciones";
-
-function parseNumber(value: string | null): number {
-  if (!value) return 0;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? 0 : parsed;
-}
 
 // Simple Confirmation Dialog for Cierre
 interface CierreConfirmData {
@@ -300,8 +294,8 @@ export default function MiDistribucionPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {distribucionWithItems.items.map((item) => {
-                const asignada = parseNumber(item.cantidadAsignada);
-                const vendida = parseNumber(item.cantidadVendida);
+                const asignada = decimalToNumber(item.cantidadAsignada);
+                const vendida = decimalToNumber(item.cantidadVendida);
                 const cantidadDisponible = asignada - vendida;
                 return (
                   <div

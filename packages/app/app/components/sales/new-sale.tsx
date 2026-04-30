@@ -37,6 +37,7 @@ import {
   useSaleCalculations,
 } from "~/hooks/use-sale-calculations";
 import { formatCurrency, formatKilos, formatNumber, cn } from "~/lib/utils";
+import { saleItemTransformer } from "@avileo/shared";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
@@ -626,11 +627,13 @@ export function CalculatorContent({
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
 
-  const editingInitialValues = isEditMode && editingItem ? {
-    quantity: String(editingItem.quantity),
-    unitPrice: String(editingItem.unitPrice),
-    subtotal: String(editingItem.subtotal),
-  } : undefined;
+  const editingInitialValues = isEditMode && editingItem 
+    ? {
+        quantity: saleItemTransformer.toForm(editingItem).quantity || "",
+        unitPrice: saleItemTransformer.toForm(editingItem).unitPrice || "",
+        subtotal: saleItemTransformer.toForm(editingItem).subtotal || "",
+      }
+    : undefined;
 
   const {
     form,
@@ -654,16 +657,14 @@ export function CalculatorContent({
   useEffect(() => {
     if (!isEditMode || !editingItem || !selectedProduct || !selectedVariant) return;
 
-    // Reset form with editing item values
-    const quantity = String(editingItem.quantity);
-    const unitPrice = String(editingItem.unitPrice);
-    const subtotal = String(editingItem.subtotal);
+    // Reset form with editing item values (ya transformados por saleItemTransformer)
+    const values = saleItemTransformer.toForm(editingItem);
 
     if (isKgProduct) {
       form.reset({
-        totalAmount: subtotal,
-        pricePerKg: unitPrice,
-        kilos: quantity,
+        totalAmount: values.subtotal || "",
+        pricePerKg: values.unitPrice || "",
+        kilos: values.quantity || "",
         tara: "0",
         pricePerPack: "",
         packs: "",
@@ -671,12 +672,12 @@ export function CalculatorContent({
       });
     } else {
       form.reset({
-        totalAmount: subtotal,
+        totalAmount: values.subtotal || "",
         pricePerKg: "",
         kilos: "",
         tara: "0",
-        pricePerPack: unitPrice,
-        packs: quantity,
+        pricePerPack: values.unitPrice || "",
+        packs: values.quantity || "",
         units: "",
       });
     }
@@ -695,26 +696,28 @@ export function CalculatorContent({
     try {
       if (isEditMode && editingItem) {
         // Update existing item
+        const numericCalculation = saleItemTransformer.toNumbers(calculation);
         await updateItem.mutateAsync({
           saleId,
           itemId: editingItem.id,
           data: {
-            quantity: calculation.quantity,
-            unitPrice: calculation.unitPrice,
-            subtotal: calculation.subtotal,
+            quantity: numericCalculation.quantity ?? 0,
+            unitPrice: numericCalculation.unitPrice ?? 0,
+            subtotal: numericCalculation.subtotal ?? 0,
           },
         });
         setEditingItemId(null);
       } else {
         // Add new item
+        const numericCalculation = saleItemTransformer.toNumbers(calculation);
         await addItem.mutateAsync({
           saleId,
           item: {
             productId: selectedProduct.id,
             variantId: selectedVariant.id,
-            quantity: Number(calculation.quantity),
-            price: Number(calculation.unitPrice),
-            subtotal: Number(calculation.subtotal),
+            quantity: numericCalculation.quantity ?? 0,
+            price: numericCalculation.unitPrice ?? 0,
+            subtotal: numericCalculation.subtotal ?? 0,
           },
         });
       }

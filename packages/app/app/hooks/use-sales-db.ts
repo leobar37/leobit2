@@ -13,20 +13,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
+import { decimalToNumber } from "@avileo/shared";
 import type { SaleWithItems, SaleItem, UpdateSaleInput } from "./use-sales";
 import { getSaleFinancialState } from "./use-sale-calculations";
 
 export { useSales, useSalesByCustomer, useConfirmSale, useCancelSale, useDeleteSale, useDeliverSale };
 export { useUpdateSaleBase as useUpdateSale };
-
-function toNumber(value: string | number | null | undefined): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
 
 function recalculateCachedSaleFinancials(
   previous: SaleWithItems,
@@ -226,10 +218,10 @@ export function useAddSaleItem() {
       queryClient.setQueryData(queryKeys.sales.detail(saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
-        const subtotal = toNumber(createdItem.subtotal);
+        const subtotal = decimalToNumber(createdItem.subtotal);
         const financials = recalculateCachedSaleFinancials(
           previous,
-          toNumber(previous.totalAmount) + subtotal,
+          decimalToNumber(previous.totalAmount) + subtotal,
         );
 
         return {
@@ -263,10 +255,10 @@ export function useRemoveSaleItem() {
         if (!previous) return previous;
 
         const existingItem = (previous.items ?? []).find((item) => item.id === variables.itemId);
-        const subtotal = toNumber(existingItem?.subtotal);
+        const subtotal = decimalToNumber(existingItem?.subtotal);
         const financials = recalculateCachedSaleFinancials(
           previous,
-          toNumber(previous.totalAmount) - subtotal,
+          decimalToNumber(previous.totalAmount) - subtotal,
         );
 
         return {
@@ -310,12 +302,12 @@ export function useUpdateSaleItem() {
         if (!previous) return previous;
 
         const oldItem = (previous.items ?? []).find((item) => item.id === result.itemId);
-        const oldSubtotal = toNumber(oldItem?.subtotal);
-        const newSubtotal = toNumber(result.updatedItem.subtotal);
+        const oldSubtotal = decimalToNumber(oldItem?.subtotal);
+        const newSubtotal = decimalToNumber(result.updatedItem.subtotal);
         const subtotalDiff = newSubtotal - oldSubtotal;
         const financials = recalculateCachedSaleFinancials(
           previous,
-          toNumber(previous.totalAmount) + subtotalDiff,
+          decimalToNumber(previous.totalAmount) + subtotalDiff,
         );
 
         const nextItems: SaleItem[] = (previous.items ?? []).map((item) =>
