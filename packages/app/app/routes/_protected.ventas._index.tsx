@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { ShoppingCart, Search, Plus, MapPin, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cn } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -165,22 +166,24 @@ export default function SalesPage() {
                 setTab("all");
                 setTipo("");
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                 tab === "all" && !tipo
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-              }`}
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+              )}
             >
               Todas
             </button>
             {miDistribucion?.id && (
               <button
                 onClick={() => setTab("mine")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                   tab === "mine"
-                    ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-                }`}
+                    ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+                )}
               >
                 <MapPin className="h-3.5 w-3.5" />
                 Mi Dist.
@@ -188,44 +191,48 @@ export default function SalesPage() {
             )}
             <button
               onClick={() => setTab("free")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                 tab === "free"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-              }`}
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+              )}
             >
               Libres
             </button>
             <button
               onClick={() => setTab("drafts")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                 tab === "drafts"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-              }`}
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+              )}
             >
               Borradores
             </button>
 
-            <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80 dark:bg-white/10" />
+            <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80 dark:bg-white/[0.10]" />
 
             <button
               onClick={() => setTipo(tipo === "ventas" ? "" : "ventas")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                 tipo === "ventas"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-              }`}
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+              )}
             >
               Ventas
             </button>
             <button
               onClick={() => setTipo(tipo === "pedidos" ? "" : "pedidos")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
                 tipo === "pedidos"
-                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/8 dark:text-muted-foreground dark:hover:bg-white/12 dark:hover:text-foreground"
-              }`}
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/[0.15] dark:text-indigo-300 dark:ring-indigo-400/[0.20]"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+              )}
             >
               Pedidos
             </button>

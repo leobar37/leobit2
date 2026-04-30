@@ -66,8 +66,10 @@ function MobileShellRoot({
         data-variant={variant}
         className={cn(
           "relative flex flex-col",
-          isFullscreen ? "h-screen h-dvh overflow-hidden" : "min-h-screen min-h-dvh",
-          !isFullscreen && "app-shell",
+          isFullscreen || hasBottomNav
+            ? "h-screen h-dvh overflow-hidden"
+            : "min-h-screen min-h-dvh",
+          !isFullscreen && !hasBottomNav && "app-shell",
           className
         )}
         style={
@@ -165,7 +167,7 @@ function MobileShellContent({
       data-testid="mobile-shell-content"
       data-mobile-shell-content=""
       className={cn(
-        "flex-1 overflow-y-auto overscroll-y-contain",
+        "flex-1 min-h-0 overflow-y-auto overscroll-y-contain",
         "px-3 py-5 sm:px-4",
         hasBottomNav ? "shell-content-with-nav" : "shell-content-no-nav",
         className
