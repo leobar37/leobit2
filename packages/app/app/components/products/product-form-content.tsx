@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
+import { CategorySelect } from "@/components/products/category-select";
 import type { Product } from "@avileo/shared";
 import type { UseFormReturn } from "react-hook-form";
 import { type ProductFormData } from "~/lib/schemas/product-schema";
@@ -54,24 +55,12 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
           />
         </div>
 
-        <div className="hidden space-y-2">
-          <Label htmlFor="type" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Tipo
-          </Label>
-          <select
-            id="type"
-            data-testid="product-type-select"
-            {...register("type")}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <option value="pollo">Pollo</option>
-            <option value="huevo">Huevo</option>
-            <option value="otro">Otro</option>
-          </select>
-          {errors.type && (
-            <p className="text-sm text-red-500">{errors.type.message}</p>
-          )}
+        <div className="space-y-2">
+          <CategorySelect
+            name="categoryId"
+            label="Categoría"
+            placeholder="Seleccionar categoría"
+          />
         </div>
 
         <div className="space-y-2">

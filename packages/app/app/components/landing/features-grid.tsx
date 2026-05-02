@@ -5,39 +5,33 @@ import { FeatureCard } from "./feature-card";
 const features = [
   {
     icon: Calculator,
-    title: "Calculadora Inteligente",
-    description: "Calcula precios automaticamente: peso × precio/kg. Incluye resta de tara.",
-    gradient: "from-orange-500 to-orange-600"
+    title: "Calculadora Automatica",
+    description: "Peso × precio/kg con resta de tara. Tus vendedores cobran rapido y sin errores."
   },
   {
     icon: ShoppingCart,
-    title: "Ventas Simplificadas",
-    description: "Registra ventas con o sin cliente. Contado o credito. Todo en segundos.",
-    gradient: "from-blue-500 to-blue-600"
+    title: "Venta Rapida y Precisa",
+    description: "Contado o credito, con o sin cliente. Registra cada venta en segundos desde el celular."
   },
   {
     icon: Users,
-    title: "Clientes y Deudas",
-    description: "Gestiona clientes y controla cuentas por cobrar. Nunca pierdas dinero.",
-    gradient: "from-purple-500 to-purple-600"
+    title: "Clientes y Cuentas al Dia",
+    description: "Sabe quien debe, cuanto y cuando cobraste. Ninguna deuda se pierde."
   },
   {
     icon: Package,
-    title: "Control de Inventario",
-    description: "Asigna inventario diario a cada vendedor y controla lo vendido en tiempo real.",
-    gradient: "from-green-500 to-green-600"
+    title: "Inventario Siempre Claro",
+    description: "Asigna inventario por vendedor y controla lo vendido en tiempo real. Sin sorpresas."
   },
   {
     icon: BarChart3,
-    title: "Reportes y Analiticas",
-    description: "Dashboard con metricas y exportacion a Excel. Toma decisiones con datos.",
-    gradient: "from-pink-500 to-pink-600"
+    title: "Numeros que Deciden por Ti",
+    description: "Dashboard con metricas claras y exportacion a Excel. Deja de calcular de memoria."
   },
   {
     icon: MessageCircle,
-    title: "WhatsApp Integrado",
-    description: "Envia comprobantes por WhatsApp directamente. Tus clientes quedan tranquilos.",
-    gradient: "from-teal-500 to-teal-600"
+    title: "WhatsApp sin Complicaciones",
+    description: "Envia comprobantes directo al celular del cliente. Mas profesionalismo, menos preguntas."
   }
 ];
 
@@ -53,11 +47,7 @@ const containerVariants = {
 
 export function FeaturesGrid() {
   return (
-    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900/50 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" />
-      
+    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/20">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -66,10 +56,10 @@ export function FeaturesGrid() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             Todo lo que necesitas para tu negocio
           </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Funciones completas disenadas para avicolas y negocios con equipo de ventas en campo.
           </p>
         </motion.div>
@@ -79,7 +69,7 @@ export function FeaturesGrid() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
         >
           {features.map((feature, index) => (
             <FeatureCard
@@ -87,7 +77,6 @@ export function FeaturesGrid() {
               icon={feature.icon}
               title={feature.title}
               description={feature.description}
-              gradient={feature.gradient}
             />
           ))}
         </motion.div>

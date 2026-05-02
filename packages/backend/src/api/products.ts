@@ -11,7 +11,13 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     async ({ productService, ctx, query }) => {
       const products = await productService.getProducts(ctx as RequestContext, {
         search: query.search,
-        type: query.type as any,
+        categoryId: query.categoryId,
+        uncategorized:
+          query.uncategorized === "true"
+            ? true
+            : query.uncategorized === "false"
+              ? false
+              : undefined,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
         limit: query.limit ? parseInt(query.limit) : undefined,
         offset: query.offset ? parseInt(query.offset) : undefined,
@@ -21,7 +27,8 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     {
       query: t.Object({
         search: t.Optional(t.String()),
-        type: t.Optional(t.String()),
+        categoryId: t.Optional(t.String()),
+        uncategorized: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
@@ -55,7 +62,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
     {
       body: t.Object({
         name: t.String({ minLength: 2 }),
-        type: t.Optional(t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")])),
+        categoryId: t.Optional(t.Union([t.String(), t.Null()])),
         unit: t.Union([t.Literal("kg"), t.Literal("unidad")]),
         basePrice: t.String(),
         costPrice: t.Optional(t.String()),
@@ -81,7 +88,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
       }),
       body: t.Object({
         name: t.Optional(t.String({ minLength: 2 })),
-        type: t.Optional(t.Union([t.Literal("pollo"), t.Literal("huevo"), t.Literal("otro")])),
+        categoryId: t.Optional(t.Union([t.String(), t.Null()])),
         unit: t.Optional(t.Union([t.Literal("kg"), t.Literal("unidad")])),
         basePrice: t.Optional(t.String()),
         costPrice: t.Optional(t.String()),

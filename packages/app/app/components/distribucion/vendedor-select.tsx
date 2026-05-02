@@ -67,7 +67,7 @@ export function VendedorSelect({
       <Card
         className={cn(
           "shell-card cursor-pointer rounded-3xl border-0 transition-colors",
-          !disabled && "hover:bg-white/90",
+          !disabled && "hover:bg-accent",
           disabled && "opacity-50 cursor-not-allowed",
         )}
         onClick={() => !disabled && setIsOpen(true)}
@@ -108,7 +108,7 @@ export function VendedorSelect({
                     e.stopPropagation();
                     handleClearVendedor();
                   }}
-                  className="rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
+                  className="rounded-2xl text-muted-foreground hover:bg-accent hover:text-destructive"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -119,7 +119,7 @@ export function VendedorSelect({
                 size="icon"
                 disabled={disabled}
                 className={cn(
-                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground",
+                  "rounded-2xl text-muted-foreground hover:bg-accent hover:text-foreground",
                   isOpen && "bg-orange-100 text-orange-700",
                 )}
               >
@@ -175,15 +175,15 @@ export function VendedorSelect({
                   className={cn(
                     "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                     value === vendedor.id
-                      ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                      : "border-white/70 bg-white/60 hover:bg-white/82",
+                      ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-400/30 dark:bg-orange-500/12"
+                      : "border-border bg-card hover:bg-accent",
                   )}
                 >
-                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
+                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
                     {vendedor.role === "ADMIN_NEGOCIO" ? (
-                      <Crown className="h-5 w-5 text-orange-600" />
+                      <Crown className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                     ) : (
-                      <User className="h-5 w-5 text-orange-600" />
+                      <User className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

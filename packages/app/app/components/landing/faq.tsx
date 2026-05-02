@@ -4,27 +4,27 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
-    question: "Funciona realmente sin internet?",
-    answer: "Si, Avileo esta disenado para funcionar 100% offline. Puedes registrar ventas, gestionar clientes y ver reportes sin conexion. Los datos se sincronizan automaticamente cuando recuperas la conexion."
+    question: "¿Necesito instalar algo?",
+    answer: "No. Avileo funciona desde el navegador de tu computadora o celular. Solo necesitas iniciar sesion y empezar a registrar tu operacion."
   },
   {
-    question: "Que pasa si pierdo mi telefono?",
-    answer: "Tus datos estan seguros. Al sincronizar, toda la informacion se respalda en la nube. Si cambias de dispositivo, solo necesitas iniciar sesion y tus datos se descargaran automaticamente."
+    question: "¿Mis datos estan seguros?",
+    answer: "Si. La informacion se guarda en la nube con acceso protegido por usuario y contrasena. Ademas puedes exportar tus datos en cualquier momento."
   },
   {
-    question: "Cuantos usuarios puedo tener?",
+    question: "¿Cuantos usuarios puedo tener?",
     answer: "Depende de tu plan. El plan Basico incluye 1 usuario, Pro incluye 5 usuarios, y Empresa tiene usuarios ilimitados. Puedes agregar mas usuarios en cualquier momento."
   },
   {
-    question: "Puedo exportar mis datos?",
-    answer: "Si, en los planes Pro y Empresa puedes exportar tus ventas, clientes e inventario a Excel. Esto te permite hacer analisis adicionales o respaldos locales."
+    question: "¿Puedo exportar mis datos?",
+    answer: "Si, en los planes Pro y Empresa puedes exportar tus ventas, clientes e inventario a Excel para analisis o control contable."
   },
   {
-    question: "Como funciona la integracion con WhatsApp?",
+    question: "¿Como funciona la integracion con WhatsApp?",
     answer: "Puedes enviar comprobantes de venta directamente a tus clientes por WhatsApp. El sistema genera un mensaje automatico con los detalles de la compra que puedes enviar con un solo click."
   },
   {
-    question: "Hay contrato de permanencia?",
+    question: "¿Hay contrato de permanencia?",
     answer: "No, no hay contratos de permanencia. Puedes cancelar tu suscripcion en cualquier momento. Si cancelas, conservas acceso a tus datos hasta el final del periodo pagado."
   }
 ];
@@ -38,26 +38,26 @@ interface FAQItemProps {
 
 function FAQItem({ question, answer, isOpen, onClick }: FAQItemProps) {
   return (
-    <div className="border border-slate-700 rounded-xl overflow-hidden">
+    <div className="border-b border-border last:border-0">
       <button
         onClick={onClick}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-800/50 transition-colors"
+        className="w-full flex items-center justify-between py-5 text-left hover:text-orange-500 transition-colors"
       >
-        <span className="text-white font-medium pr-4">{question}</span>
+        <span className="text-foreground font-medium pr-4 text-left">{question}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </motion.div>
       </button>
       <motion.div
         initial={false}
         animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.25 }}
         className="overflow-hidden"
       >
-        <div className="px-6 pb-6 text-slate-400">
+        <div className="pb-5 text-muted-foreground text-sm leading-relaxed">
           {answer}
         </div>
       </motion.div>
@@ -78,10 +78,10 @@ export function FAQSection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             Preguntas frecuentes
           </h2>
-          <p className="text-slate-400 text-lg">
+          <p className="text-muted-foreground">
             Todo lo que necesitas saber sobre Avileo.
           </p>
         </motion.div>
@@ -91,7 +91,6 @@ export function FAQSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="space-y-4"
         >
           {faqs.map((faq, index) => (
             <FAQItem

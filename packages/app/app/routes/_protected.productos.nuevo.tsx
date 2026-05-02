@@ -22,7 +22,7 @@ export default function NuevoProductoPage() {
     mode: "onChange",
     defaultValues: {
       name: "",
-      type: "pollo",
+      categoryId: null,
       unit: "kg",
       basePrice: "",
       isActive: true,
@@ -34,7 +34,7 @@ export default function NuevoProductoPage() {
     try {
       const createdProduct = await createProduct.mutateAsync({
         name: data.name,
-        type: data.type ?? "pollo",
+        categoryId: data.categoryId ?? null,
         unit: data.unit,
         basePrice: data.basePrice,
         isActive: data.isActive,

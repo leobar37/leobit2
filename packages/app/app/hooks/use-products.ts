@@ -8,11 +8,18 @@ import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 
+export interface ProductCategorySummary {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Product {
   id: string;
   businessId: string;
   name: string;
-  type: string;
+  categoryId: string | null;
+  category: ProductCategorySummary | null;
   unit: string;
   basePrice: string;
   costPrice: string;
@@ -21,6 +28,27 @@ export interface Product {
   imageId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateProductInput {
+  name: string;
+  categoryId?: string | null;
+  unit: "kg" | "unidad";
+  basePrice: string;
+  costPrice?: string;
+  isActive?: boolean;
+  imageId?: string;
+  hasVariants?: boolean;
+}
+
+export interface UpdateProductInput {
+  name?: string;
+  categoryId?: string | null;
+  unit?: "kg" | "unidad";
+  basePrice?: string;
+  costPrice?: string;
+  isActive?: boolean;
+  imageId?: string | null;
 }
 
 export interface CreateProductInput {

@@ -142,13 +142,12 @@ export const volumeHandlers = [
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const offset = parseInt(url.searchParams.get("offset") || "0");
-    const type = url.searchParams.get("type");
+    const categoryId = url.searchParams.get("categoryId");
 
     let products = [...volumeData.products];
 
-    // Apply type filter
-    if (type) {
-      products = products.filter((p) => p.type === type);
+    if (categoryId) {
+      products = products.filter((p) => p.categoryId === categoryId);
     }
 
     return createPaginatedResponse(products, limit, offset);

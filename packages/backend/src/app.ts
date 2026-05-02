@@ -29,6 +29,7 @@ import { whatsappTemplateRoutes } from "./api/whatsapp/templates";
 import { whatsAppSettingsRoutes } from "./api/whatsapp/settings";
 import { whatsAppMessageRoutes } from "./api/whatsapp/messages";
 import { tagRoutes } from "./api/tags";
+import { productCategoryRoutes } from "./api/product-categories";
 import { puntoVentaRoutes } from "./api/puntos-venta";
 import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
 
@@ -92,6 +93,7 @@ export const app = new Elysia()
   .use(whatsAppSettingsRoutes)
   .use(whatsAppMessageRoutes)
   .use(tagRoutes)
+  .use(productCategoryRoutes)
   .use(puntoVentaRoutes)
   .use(authRoutes)
   .get("/", () => ({

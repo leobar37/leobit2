@@ -152,16 +152,20 @@ export {
 
 // Inventory (Products, Inventory, Distribuciones, Variants)
 export {
+  productCategories,
   products,
   distribuciones,
   distribucionItems,
   productVariants,
   variantInventory,
+  productCategoriesRelations,
   productsRelations,
   distribucionesRelations,
   distribucionItemsRelations,
   productVariantsRelations,
   variantInventoryRelations,
+  type ProductCategory,
+  type NewProductCategory,
   type Product,
   type NewProduct,
   type Distribucion,

@@ -41,6 +41,7 @@ interface Product {
   id: string;
   name: string;
   type: "pollo" | "carne" | "otros";
+  categoryId: string | null;
   unit: "kg" | "unidad";
   basePrice: string;
   isActive: boolean;
@@ -178,6 +179,7 @@ const products: Product[] = [
     id: "prod-1",
     name: "Pollo Entero",
     type: "pollo",
+    categoryId: "cat-pollo",
     unit: "kg",
     basePrice: "12.50",
     isActive: true,
@@ -189,6 +191,7 @@ const products: Product[] = [
     id: "prod-2",
     name: "Pollo Trozado",
     type: "pollo",
+    categoryId: "cat-pollo",
     unit: "kg",
     basePrice: "14.00",
     isActive: true,
@@ -200,6 +203,7 @@ const products: Product[] = [
     id: "prod-3",
     name: "Filete de Pechuga",
     type: "pollo",
+    categoryId: "cat-pollo",
     unit: "kg",
     basePrice: "18.00",
     isActive: true,
@@ -211,6 +215,7 @@ const products: Product[] = [
     id: "prod-4",
     name: "Alitas",
     type: "pollo",
+    categoryId: null,
     unit: "unidad",
     basePrice: "15.00",
     isActive: true,

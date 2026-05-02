@@ -15,21 +15,21 @@ export function TestimonialCard({ quote, author, role, avatar }: TestimonialCard
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0 }
       }}
-      className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-orange-500/30 transition-colors"
+      className="bg-background rounded-2xl p-6"
     >
-      <Quote className="w-8 h-8 text-orange-500/50 mb-4" />
-      <p className="text-slate-300 mb-6 leading-relaxed">&ldquo;{quote}&rdquo;</p>
+      <Quote className="w-7 h-7 text-muted-foreground/20 mb-4" />
+      <p className="text-muted-foreground mb-6 leading-relaxed text-sm">&ldquo;{quote}&rdquo;</p>
       <div className="flex items-center gap-3">
         {avatar ? (
-          <img src={avatar} alt={author} className="w-10 h-10 rounded-full object-cover" />
+          <img src={avatar} alt={author} className="w-9 h-9 rounded-full object-cover" />
         ) : (
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white font-semibold">
+          <div className="w-9 h-9 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
             {author.charAt(0)}
           </div>
         )}
         <div>
-          <p className="text-white font-medium">{author}</p>
-          <p className="text-slate-400 text-sm">{role}</p>
+          <p className="text-foreground font-medium text-sm">{author}</p>
+          <p className="text-muted-foreground text-xs">{role}</p>
         </div>
       </div>
     </motion.div>

@@ -78,6 +78,12 @@ export const EXPORT_METADATA = {
   originalBusinessId: exportedData.metadata.businessId,
 };
 
+export const CATEGORIES = [
+  { name: "Pollo", color: "#f97316" },
+  { name: "Huevo", color: "#eab308" },
+  { name: "Otro", color: "#6b7280" },
+];
+
 // Sin proveedores, distribuciones ni compras para este seed
 export const SUPPLIERS: never[] = [];
 export const DISTRIBUCIONES: never[] = [];

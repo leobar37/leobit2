@@ -613,4 +613,10 @@ export const PRODUCTS = CLIENT2_DATASET.products;
 export const CUSTOMERS = CLIENT2_DATASET.customers;
 export const SALES = CLIENT2_DATASET.sales;
 export const ABONOS = CLIENT2_DATASET.abonos;
+export const CATEGORIES = [
+  { name: "Pollo", color: "#f97316" },
+  { name: "Huevo", color: "#eab308" },
+  { name: "Otro", color: "#6b7280" },
+];
+
 export const CLIENT2_METADATA = CLIENT2_DATASET.metadata;

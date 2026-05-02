@@ -15,7 +15,7 @@ import {
   integer,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   productTypeEnum,
   productUnitEnum,
@@ -25,6 +25,31 @@ import { businesses, businessUsers } from "./businesses";
 import { sales, saleItems } from "./sales";
 import { assets } from "./assets";
 import { puntosVenta } from "./puntos-venta";
+
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    name: varchar("name", { length: 100 }).notNull(),
+    color: varchar("color", { length: 20 }).notNull().default("#f97316"),
+
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_product_categories_business_id").on(table.businessId),
+    index("idx_product_categories_name").on(table.name),
+    uniqueIndex("ux_product_categories_business_name_ci").on(
+      table.businessId,
+      sql`lower(${table.name})`
+    ),
+  ]
+);
 
 // Products table
 export const products = pgTable(
@@ -40,6 +65,9 @@ export const products = pgTable(
     // Product info
     name: varchar("name", { length: 255 }).notNull(),
     type: productTypeEnum("type").notNull().default("pollo"),
+    categoryId: uuid("category_id").references(() => productCategories.id, {
+      onDelete: "restrict",
+    }),
     unit: productUnitEnum("unit").notNull().default("kg"),
     basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
     costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -58,6 +86,7 @@ export const products = pgTable(
   (table) => [
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
+    index("idx_products_category_id").on(table.categoryId),
     index("idx_products_is_active").on(table.isActive),
     index("idx_products_image_id").on(table.imageId),
     index("idx_products_updated_at").on(table.updatedAt),
@@ -207,6 +236,8 @@ export const variantInventory = pgTable(
 );
 
 // Type exports
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type NewProductCategory = typeof productCategories.$inferInsert;
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
 export type Distribucion = typeof distribuciones.$inferSelect;
@@ -220,8 +251,20 @@ export type NewProductVariant = typeof productVariants.$inferInsert;
 export type VariantInventory = typeof variantInventory.$inferSelect;
 export type NewVariantInventory = typeof variantInventory.$inferInsert;
 
+export const productCategoriesRelations = relations(productCategories, ({ many, one }) => ({
+  business: one(businesses, {
+    fields: [productCategories.businessId],
+    references: [businesses.id],
+  }),
+  products: many(products),
+}));
+
 export const productsRelations = relations(products, ({ many, one }) => ({
   saleItems: many(saleItems),
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
   image: one(assets, {
     fields: [products.imageId],
     references: [assets.id],

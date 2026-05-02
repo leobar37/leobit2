@@ -2,7 +2,7 @@ import { db, businessUsers } from "../lib/db";
 import { RequestContext } from "../context/request-context";
 import { createTestUser, createClientUser } from "./auth";
 import { services } from "./services";
-import { repositories } from "./services";
+import { repositories, seedDefaultCategories } from "./services";
 import {
   TEST_BUSINESS,
   PRODUCTS,
@@ -15,6 +15,7 @@ import {
   PURCHASES,
   TAGS,
   CUSTOMER_TAGS,
+  CATEGORIES,
 } from "./data";
 import {
   CLIENT_USER,
@@ -29,6 +30,7 @@ import {
   PURCHASES as CLIENT_PURCHASES,
   TAGS as CLIENT_TAGS,
   CUSTOMER_TAGS as CLIENT_CUSTOMER_TAGS,
+  CATEGORIES as CLIENT_CATEGORIES,
 } from "./client-data";
 import {
   CLIENT1_USER,
@@ -43,6 +45,7 @@ import {
   PURCHASES as CLIENT1_PURCHASES,
   TAGS as CLIENT1_TAGS,
   CUSTOMER_TAGS as CLIENT1_CUSTOMER_TAGS,
+  CATEGORIES as CLIENT1_CATEGORIES,
 } from "./client1-data";
 import {
   saleItems as saleItemsSchema,
@@ -114,7 +117,7 @@ export async function seedDatabase(): Promise<SeedResult> {
   // Select data based on mode
   let currentUser, currentBusiness, currentProducts, currentProductVariants, currentCustomers;
   let currentSales, currentAbonos, currentDistribuciones, currentSuppliers, currentPurchases;
-  let currentTags, currentCustomerTags;
+  let currentTags, currentCustomerTags, currentCategories;
 
   if (isClient1) {
     // Modo cliente1@gmail.com
@@ -130,6 +133,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = CLIENT1_PURCHASES;
     currentTags = CLIENT1_TAGS;
     currentCustomerTags = CLIENT1_CUSTOMER_TAGS;
+    currentCategories = CLIENT1_CATEGORIES;
   } else if (isClient) {
     // Modo cliente@avileo.com
     currentUser = CLIENT_USER;
@@ -144,6 +148,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = CLIENT_PURCHASES;
     currentTags = CLIENT_TAGS;
     currentCustomerTags = CLIENT_CUSTOMER_TAGS;
+    currentCategories = CLIENT_CATEGORIES;
   } else {
     // Modo E2E (default)
     currentUser = { email: "e2e@avileo.com", password: "e2e123456", name: "Usuario E2E" };
@@ -158,6 +163,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     currentPurchases = PURCHASES;
     currentTags = TAGS;
     currentCustomerTags = CUSTOMER_TAGS;
+    currentCategories = CATEGORIES;
   }
 
   if (FORCE_MODE && !isClient && !isClient1) {
@@ -199,6 +205,9 @@ export async function seedDatabase(): Promise<SeedResult> {
   const paymentMethods = await seedPaymentMethods(ctx);
   console.log(`✓ Payment methods configured\n`);
 
+  const categoryMap = await seedDefaultCategories(ctx, currentCategories);
+  console.log(`✓ Seeded ${categoryMap.size} categories\n`);
+
   let seededProducts: SeedProduct[];
   let seededCustomers: any[];
   let seededSales: any[];
@@ -206,7 +215,7 @@ export async function seedDatabase(): Promise<SeedResult> {
 
   if (useRealData) {
     // Modo datos reales - usar funciones especiales con IDs preservados
-    seededProducts = await seedRealProducts(ctx, currentProducts, currentProductVariants);
+    seededProducts = await seedRealProducts(ctx, currentProducts, currentProductVariants, categoryMap);
     console.log(`✓ Seeded ${seededProducts.length} products with variants (IDs preservados)\n`);
 
     // Saltar suppliers, purchases, inventory en modo datos reales
@@ -255,7 +264,7 @@ export async function seedDatabase(): Promise<SeedResult> {
     };
   } else {
     // Modo normal (E2E o Client demo básico)
-    seededProducts = await seedProducts(ctx, currentProducts, currentProductVariants);
+    seededProducts = await seedProducts(ctx, currentProducts, currentProductVariants, categoryMap);
     console.log(`✓ Seeded ${seededProducts.length} products with variants\n`);
 
     const suppliers = await seedSuppliers(ctx, currentSuppliers);
@@ -316,7 +325,8 @@ export async function seedDatabase(): Promise<SeedResult> {
 async function seedRealProducts(
   ctx: RequestContext,
   productsData: any[],
-  variantsData: any[][]
+  variantsData: any[][],
+  categoryMap: Map<string, string>
 ): Promise<SeedProduct[]> {
   const existing = await db.query.products.findMany({
     where: (p, { eq }) => eq(p.businessId, ctx.businessId),
@@ -344,10 +354,14 @@ async function seedRealProducts(
     const productDef = productsData[i];
     const variantsDef = variantsData[i];
 
+    const categoryId = categoryMap.get(productDef.type) ?? null;
+    const categoryColumn = categoryId ? `, category_id` : "";
+    const categoryValue = categoryId ? `, '${categoryId}'` : "";
+
     // Insertar producto con ID preservado usando SQL directo
     await db.execute(`
-      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at, sync_status, sync_attempts)
-      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW(), 'synced', 0)
+      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at, sync_status, sync_attempts${categoryColumn})
+      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW(), 'synced', 0${categoryValue})
       ON CONFLICT (id) DO NOTHING
     `);
 
@@ -581,7 +595,8 @@ async function seedProducts(
     sku: string;
     unitQuantity: number;
     price: number;
-  }>>
+  }>>,
+  categoryMap: Map<string, string>
 ): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
@@ -604,9 +619,11 @@ async function seedProducts(
     const productDef = productsData[i];
     const variantsDef = variantsData[i];
 
+    const categoryId = categoryMap.get(productDef.type) ?? null;
+
     const result = await services.product.createProduct(ctx, {
       name: productDef.name,
-      type: productDef.type,
+      categoryId,
       unit: productDef.unit,
       basePrice: parseFloat(productDef.basePrice),
       isActive: productDef.isActive,

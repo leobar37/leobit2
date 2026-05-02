@@ -515,24 +515,43 @@ export function useCancelSale() {
 export function useUpdateSale() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: UpdateSaleInput;
-    }): Promise<void> => {
-      const response = await api.sales({ id }).patch({
-        customerId: input.customerId ?? null,
-        deliveryDate: input.deliveryDate ?? null,
-        saleType: input.saleType,
-        paymentMode: input.paymentMode ?? null,
-        totalAmount: input.totalAmount,
-        amountPaid: input.amountPaid,
-      });
-      extractData(response);
-    },
+    return useMutation({
+      mutationFn: async ({
+        id,
+        input,
+      }: {
+        id: string;
+        input: UpdateSaleInput;
+      }): Promise<void> => {
+        const payload: Record<string, unknown> = {};
+
+        if ("customerId" in input) {
+          payload.customerId = input.customerId;
+        }
+
+        if ("deliveryDate" in input) {
+          payload.deliveryDate = input.deliveryDate;
+        }
+
+        if ("saleType" in input) {
+          payload.saleType = input.saleType;
+        }
+
+        if ("paymentMode" in input) {
+          payload.paymentMode = input.paymentMode;
+        }
+
+        if ("totalAmount" in input) {
+          payload.totalAmount = input.totalAmount;
+        }
+
+        if ("amountPaid" in input) {
+          payload.amountPaid = input.amountPaid;
+        }
+
+        const response = await api.sales({ id }).patch(payload as any);
+        extractData(response);
+      },
     onSuccess: async (_data, variables) => {
       queryClient.setQueryData(
         queryKeys.sales.detail(variables.id),

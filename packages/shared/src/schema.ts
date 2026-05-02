@@ -291,6 +291,7 @@ export const products = pgTable(
     businessId: uuid("business_id").notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     type: text("type").notNull().default(ProductType.POLLO),
+    categoryId: uuid("category_id"),
     unit: text("unit").notNull().default(ProductUnit.KG),
     basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
     costPrice: decimal("cost_price", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -306,12 +307,41 @@ export const products = pgTable(
   (table) => [
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
+    index("idx_products_category_id").on(table.categoryId),
     index("idx_products_sync_status").on(table.syncStatus),
   ]
 );
 
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
+
+// ============================================================================
+// Product Categories
+// ============================================================================
+
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 100 }).notNull(),
+    color: varchar("color", { length: 20 }).notNull().default("#f97316"),
+    businessId: uuid("business_id").notNull(),
+    version: integer("version").notNull().default(1),
+    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
+    syncAttempts: integer("sync_attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_product_categories_business_id").on(table.businessId),
+    index("idx_product_categories_name").on(table.name),
+    index("idx_product_categories_sync_status").on(table.syncStatus),
+    index("idx_product_categories_updated_at").on(table.updatedAt),
+  ]
+);
+
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type NewProductCategory = typeof productCategories.$inferInsert;
 
 // ============================================================================
 // Product Variants
@@ -562,8 +592,16 @@ export const abonosRelations = relations(abonos, ({ one }) => ({
   }),
 }));
 
-export const productsRelations = relations(products, ({ many }) => ({
+export const productsRelations = relations(products, ({ many, one }) => ({
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
   variants: many(productVariants),
+}));
+
+export const productCategoriesRelations = relations(productCategories, ({ many }) => ({
+  products: many(products),
 }));
 
 export const productVariantsRelations = relations(productVariants, ({ one }) => ({

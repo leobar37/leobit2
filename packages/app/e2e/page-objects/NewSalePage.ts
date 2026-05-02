@@ -158,6 +158,28 @@ export class NewSalePage {
     await this.page.waitForTimeout(300);
   }
 
+  async selectProductFilter(label: string): Promise<void> {
+    await this.page.getByTestId("sale-product-filter-chip").filter({ hasText: label }).first().click();
+    await this.page.waitForTimeout(200);
+  }
+
+  async searchProduct(query: string): Promise<void> {
+    await this.page.getByTestId("sale-product-search-input").fill(query);
+    await this.page.waitForTimeout(300);
+  }
+
+  async expectProductOptionVisible(productName: string): Promise<void> {
+    await expect(
+      this.page.getByTestId("sale-product-option").filter({ hasText: productName }).first()
+    ).toBeVisible();
+  }
+
+  async expectProductOptionHidden(productName: string): Promise<void> {
+    await expect(
+      this.page.getByTestId("sale-product-option").filter({ hasText: productName })
+    ).toHaveCount(0);
+  }
+
   /**
    * Set weight in calculator
    */

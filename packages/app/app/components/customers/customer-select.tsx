@@ -87,9 +87,12 @@ export function CustomerSelect({
                   </p>
                 )}
                 {selectedCustomer && balanceData && balanceData.balanceDue > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className={cn("h-3.5 w-3.5", getDebtLevel(balanceData.balanceDue).color)} />
-                    <span className={cn("text-sm font-medium", getDebtLevel(balanceData.balanceDue).color)}>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium",
+                      getDebtLevel(balanceData.balanceDue).color
+                    )}>
+                      <TrendingUp className="h-3 w-3" />
                       Debe: S/ {formatCurrency(balanceData.balanceDue)}
                     </span>
                   </div>
@@ -122,7 +125,7 @@ export function CustomerSelect({
                 size="icon"
                 disabled={disabled}
                 className={cn(
-                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground dark:hover:bg-white/[0.08]",
+                  "rounded-2xl text-muted-foreground hover:bg-accent hover:text-foreground",
                   isOpen && "bg-orange-500/15 text-orange-600 dark:text-orange-300",
                 )}
               >
@@ -167,15 +170,15 @@ export function CustomerSelect({
             className={cn(
               "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
               searchQuery && customers.length === 0
-                ? "border-orange-300 bg-orange-50/70 hover:bg-orange-50"
-                : "border-dashed border-orange-300/60 hover:bg-orange-50/30",
+                ? "border-orange-300 bg-orange-50/70 hover:bg-orange-50 dark:border-orange-400/30 dark:bg-orange-500/12 dark:hover:bg-orange-500/18"
+                : "border-dashed border-orange-300/60 hover:bg-orange-50/30 dark:border-orange-400/20 dark:hover:bg-orange-500/10",
             )}
           >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/50">
-              <Plus className="h-5 w-5 text-orange-600" />
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/50 dark:bg-orange-500/14">
+              <Plus className="h-5 w-5 text-orange-600 dark:text-orange-300" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-orange-700">
+              <p className="font-medium text-orange-700 dark:text-orange-300">
                 {searchQuery && customers.length === 0
                   ? `Crear "${searchQuery}"`
                   : "Crear nuevo cliente"}
@@ -206,12 +209,12 @@ export function CustomerSelect({
                   className={cn(
                     "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                     value === customer.id
-                      ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                      : "border-white/70 bg-white/60 hover:bg-white/82",
+                      ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-400/30 dark:bg-orange-500/12"
+                      : "border-border bg-card hover:bg-accent",
                   )}
                 >
-                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
-                    <User className="h-5 w-5 text-orange-600" />
+                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
+                    <User className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{customer.name}</p>

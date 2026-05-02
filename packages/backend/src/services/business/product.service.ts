@@ -1,4 +1,6 @@
 import type { ProductRepository } from "../repository/product.repository";
+import type { CategoryRepository } from "../repository/category.repository";
+import type { ProductRecord } from "../repository/product.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
@@ -8,19 +10,20 @@ import {
   ValidationError,
   ForbiddenError,
 } from "../../errors";
-import type { Product } from "../../db/schema";
 
 export class ProductService {
   constructor(
     private repository: ProductRepository,
     private variantRepo: ProductVariantRepository,
+    private categoryRepo: CategoryRepository,
   ) {}
 
   async getProducts(
     ctx: RequestContext,
     filters?: {
       search?: string;
-      type?: string;
+      categoryId?: string;
+      uncategorized?: boolean;
       isActive?: boolean;
       limit?: number;
       offset?: number;
@@ -30,18 +33,20 @@ export class ProductService {
       throw new ForbiddenError("No tiene permisos para ver productos");
     }
 
-    const validTypes = ["pollo", "huevo", "otro"] as const;
-    const validatedType = filters?.type && validTypes.includes(filters.type as any) 
-      ? filters.type as "pollo" | "huevo" | "otro"
-      : undefined;
+    if (filters?.categoryId && filters.uncategorized) {
+      throw new ValidationError("No puede filtrar por categoría y sin categoría al mismo tiempo");
+    }
+
+    if (filters?.categoryId) {
+      await this.assertCategoryExists(ctx, filters.categoryId);
+    }
 
     return this.repository.findMany(ctx, {
       ...filters,
-      type: validatedType,
     });
   }
 
-  async getProduct(ctx: RequestContext, id: string): Promise<Product> {
+  async getProduct(ctx: RequestContext, id: string): Promise<ProductRecord> {
     if (!ctx.hasPermission("inventory.read")) {
       throw new ForbiddenError("No tiene permisos para ver productos");
     }
@@ -58,7 +63,7 @@ export class ProductService {
     ctx: RequestContext,
     data: {
       name: string;
-      type?: "pollo" | "huevo" | "otro";
+      categoryId?: string | null;
       unit: "kg" | "unidad";
       basePrice: number;
       costPrice?: number;
@@ -66,7 +71,7 @@ export class ProductService {
       imageId?: string;
       hasVariants?: boolean;
     }
-  ): Promise<MutationResult<Product>> {
+  ): Promise<MutationResult<ProductRecord>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear productos");
     }
@@ -87,10 +92,12 @@ export class ProductService {
       throw new ValidationError("El costo no puede ser mayor que el precio de venta");
     }
 
+    const categoryId = data.categoryId ? await this.assertCategoryExists(ctx, data.categoryId) : null;
+
     return db.transaction(async (tx) => {
       const product = await this.repository.create(ctx, {
         name: data.name,
-        type: data.type,
+        categoryId,
         unit: data.unit,
         basePrice: data.basePrice.toString(),
         costPrice: data.costPrice?.toString() ?? "0",
@@ -123,14 +130,14 @@ export class ProductService {
     id: string,
     data: {
       name?: string;
-      type?: "pollo" | "huevo" | "otro";
+      categoryId?: string | null;
       unit?: "kg" | "unidad";
       basePrice?: number;
       costPrice?: number;
       isActive?: boolean;
       imageId?: string | null;
     }
-  ): Promise<MutationResult<Product>> {
+  ): Promise<MutationResult<ProductRecord>> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar productos");
     }
@@ -156,10 +163,12 @@ export class ProductService {
       throw new ValidationError("El costo no puede ser mayor que el precio de venta");
     }
 
+    const categoryId = await this.resolveCategoryUpdate(ctx, data);
+
     return db.transaction(async (tx) => {
       const updated = await this.repository.update(ctx, id, {
         name: data.name,
-        type: data.type,
+        ...(categoryId.shouldUpdate ? { categoryId: categoryId.value } : {}),
         unit: data.unit,
         basePrice: data.basePrice?.toString(),
         costPrice: data.costPrice?.toString(),
@@ -191,19 +200,54 @@ export class ProductService {
     await this.repository.delete(ctx, id);
   }
 
-  async countProducts(ctx: RequestContext, filters?: { type?: string; isActive?: boolean }): Promise<number> {
+  async countProducts(
+    ctx: RequestContext,
+    filters?: { categoryId?: string; uncategorized?: boolean; isActive?: boolean }
+  ): Promise<number> {
     if (!ctx.hasPermission("inventory.read")) {
       throw new ForbiddenError("No tiene permisos para ver productos");
     }
 
-    const validTypes = ["pollo", "huevo", "otro"] as const;
-    const validatedType = filters?.type && validTypes.includes(filters.type as any) 
-      ? filters.type as "pollo" | "huevo" | "otro"
-      : undefined;
+    if (filters?.categoryId && filters.uncategorized) {
+      throw new ValidationError("No puede filtrar por categoría y sin categoría al mismo tiempo");
+    }
+
+    if (filters?.categoryId) {
+      await this.assertCategoryExists(ctx, filters.categoryId);
+    }
 
     return this.repository.count(ctx, {
-      type: validatedType as any,
+      categoryId: filters?.categoryId,
+      uncategorized: filters?.uncategorized,
       isActive: filters?.isActive,
     });
+  }
+
+  private async assertCategoryExists(ctx: RequestContext, categoryId: string): Promise<string> {
+    const category = await this.categoryRepo.findById(ctx, categoryId);
+
+    if (!category) {
+      throw new NotFoundError("Categoría de producto");
+    }
+
+    return category.id;
+  }
+
+  private async resolveCategoryUpdate(
+    ctx: RequestContext,
+    data: { categoryId?: string | null }
+  ): Promise<{ shouldUpdate: boolean; value: string | null | undefined }> {
+    if (!("categoryId" in data)) {
+      return { shouldUpdate: false, value: undefined };
+    }
+
+    if (data.categoryId === null || data.categoryId === undefined || data.categoryId === "") {
+      return { shouldUpdate: true, value: null };
+    }
+
+    return {
+      shouldUpdate: true,
+      value: await this.assertCategoryExists(ctx, data.categoryId),
+    };
   }
 }

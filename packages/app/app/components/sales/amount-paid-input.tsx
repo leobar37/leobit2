@@ -6,7 +6,7 @@ interface AmountPaidInputProps {
   saleId: string;
   totalAmount: number;
   initialAmount: string;
-  onUpdate: (amount: string, balanceDue: string) => Promise<void>;
+  onUpdate: (amount: string) => Promise<void>;
 }
 
 export const AmountPaidInput = memo(function AmountPaidInput({
@@ -25,11 +25,14 @@ export const AmountPaidInput = memo(function AmountPaidInput({
 
   const handleBlur = useCallback(async () => {
     const numValue = parseFloat(value) || 0;
-    const newBalanceDue = Math.max(totalAmount - numValue, 0);
+
+    if (numValue <= 0 || numValue > totalAmount) {
+      return;
+    }
 
     setIsUpdating(true);
     try {
-      await onUpdate(value, formatCurrency(newBalanceDue));
+      await onUpdate(value);
     } finally {
       setIsUpdating(false);
     }

@@ -13,19 +13,19 @@ export function CTASection() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             Listo para transformar tu negocio?
           </h2>
-          <p className="text-slate-400 text-lg mb-8">
+          <p className="text-muted-foreground text-lg mb-8">
             Empieza hoy mismo con tu prueba gratis de 14 dias. Sin compromiso.
           </p>
-          <Button size="lg" asChild className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-12 py-6 h-14 rounded-xl">
+          <Button size="lg" asChild className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-12 py-6 h-14 rounded-xl transition-colors">
             <Link to="/register">
               Comenzar prueba gratis
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </Button>
-          <p className="text-slate-500 mt-4 text-sm">
+          <p className="text-muted-foreground mt-4 text-sm">
             No se requiere tarjeta de credito
           </p>
         </motion.div>

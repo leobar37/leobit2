@@ -42,6 +42,10 @@ export const queryKeys = {
     all: ["tags"] as const,
     detail: (id: string) => ["tags", id] as const,
   },
+  productCategories: {
+    all: ["product-categories"] as const,
+    detail: (id: string) => ["product-categories", id] as const,
+  },
   customerTags: {
     detail: (customerId: string) => ["customer-tags", customerId] as const,
   },

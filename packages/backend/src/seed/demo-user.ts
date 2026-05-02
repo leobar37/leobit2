@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { businesses, businessUsers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { RequestContext } from "../context/request-context";
-import { services, repositories } from "./services";
+import { services, repositories, seedDefaultCategories } from "./services";
 
 
 const DEMO_USER = {
@@ -21,6 +21,12 @@ const DEMO_BUSINESS = {
 };
 
 // Demo data - full dataset for development
+const DEMO_CATEGORIES = [
+  { name: "Pollo", color: "#f97316" },
+  { name: "Huevo", color: "#eab308" },
+  { name: "Otro", color: "#6b7280" },
+];
+
 const DEMO_PRODUCTS = [
   {
     name: "Pollo Entero",
@@ -43,6 +49,13 @@ const DEMO_PRODUCTS = [
     basePrice: "15.00",
     isActive: true,
   },
+  {
+    name: "Producto sin categoría",
+    type: "otro" as const,
+    unit: "kg" as const,
+    basePrice: "8.00",
+    isActive: true,
+  },
 ];
 
 const DEMO_PRODUCT_VARIANTS = [
@@ -62,6 +75,9 @@ const DEMO_PRODUCT_VARIANTS = [
     { name: "Mollejas", sku: "MEN-MOL", unitQuantity: 0.5, price: 14.0 },
     { name: "Patitas", sku: "MEN-PAT", unitQuantity: 1, price: 12.0 },
     { name: "Alas", sku: "MEN-ALA", unitQuantity: 1, price: 19.0 },
+  ],
+  [
+    { name: "Estándar", sku: "SIN-CAT", unitQuantity: 1, price: 8.0 },
   ],
 ];
 
@@ -205,8 +221,11 @@ async function seedDemoData(ctx: RequestContext) {
   const config = await services.paymentMethodConfig.getConfig(ctx);
   console.log(`✓ Payment methods configured`);
 
+  const categoryMap = await seedDefaultCategories(ctx, DEMO_CATEGORIES);
+  console.log(`✓ Seeded ${categoryMap.size} categories`);
+
   // Seed products
-  const products = await seedProducts(ctx);
+  const products = await seedProducts(ctx, categoryMap);
   console.log(`✓ Seeded ${products.length} products with variants`);
 
   // Seed inventory
@@ -229,7 +248,10 @@ async function seedDemoData(ctx: RequestContext) {
   // console.log(`✓ Seeded ${abonos.length} abonos`);
 }
 
-async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
+async function seedProducts(
+  ctx: RequestContext,
+  categoryMap: Map<string, string>
+): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} products already exist, loading with variants`);
@@ -252,9 +274,13 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
     const productDef = DEMO_PRODUCTS[i];
     const variantsDef = DEMO_PRODUCT_VARIANTS[i];
 
+    const categoryId = productDef.name === "Producto sin categoría"
+      ? null
+      : categoryMap.get(productDef.type) ?? null;
+
     const result = await services.product.createProduct(ctx, {
       name: productDef.name,
-      type: productDef.type,
+      categoryId,
       unit: productDef.unit,
       basePrice: parseFloat(productDef.basePrice),
       isActive: productDef.isActive,

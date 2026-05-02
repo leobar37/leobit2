@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
 import type { Product } from "@avileo/shared";
+import { getCategoryColor } from "~/lib/utils/category-colors";
 
 interface ProductCardProps {
   product: Product;
@@ -10,11 +11,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onClick }: ProductCardProps) {
-  const typeColors = {
-    pollo: "bg-orange-100/90 text-orange-700",
-    huevo: "bg-yellow-100/90 text-yellow-700",
-    otro: "bg-stone-100 text-stone-600",
-  };
+  const category = product.category;
 
   return (
     <Card 
@@ -37,9 +34,13 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
               </h3>
               <Badge
                 variant="secondary"
-                className={`rounded-full border-0 px-2.5 py-1 text-xs font-medium capitalize ${typeColors[product.type as keyof typeof typeColors]}`}
+                className="rounded-full border-0 px-2.5 py-1 text-xs font-medium"
+                style={category ? {
+                  backgroundColor: `${getCategoryColor(category.color)}20`,
+                  color: getCategoryColor(category.color),
+                } : undefined}
               >
-                {product.type}
+                {category ? category.name : "Sin categoría"}
               </Badge>
             </div>
             

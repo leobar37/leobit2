@@ -85,7 +85,7 @@ export function ProductVariantSelector({
   return (
     <>
       <Card
-        className="shell-card cursor-pointer rounded-3xl border-0 transition-colors hover:bg-white/90"
+        className="shell-card cursor-pointer rounded-3xl border-0 transition-colors hover:bg-accent"
         onClick={() => setIsOpen(true)}
       >
         <CardContent className="p-4">
@@ -115,7 +115,7 @@ export function ProductVariantSelector({
                     setSelectedVariantId(null);
                     setCantidad("");
                   }}
-                  className="rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
+                  className="rounded-2xl text-muted-foreground hover:bg-accent hover:text-destructive"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -125,7 +125,7 @@ export function ProductVariantSelector({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground",
+                  "rounded-2xl text-muted-foreground hover:bg-accent hover:text-foreground",
                   isOpen && "bg-orange-100 text-orange-700",
                 )}
               >
@@ -170,11 +170,11 @@ export function ProductVariantSelector({
                     onClick={() => handleProductSelect(product.id)}
                     className={cn(
                       "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
-                      "border-white/70 bg-white/60 hover:bg-white/82",
+                      "border-border bg-card hover:bg-accent",
                     )}
                   >
-                    <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
-                      <Package className="h-5 w-5 text-orange-600" />
+                    <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
+                      <Package className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{product.name}</p>
@@ -218,8 +218,8 @@ export function ProductVariantSelector({
                       className={cn(
                         "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                         selectedVariantId === variant.id
-                          ? "shell-card-muted border-orange-300 bg-orange-50/90"
-                          : "border-white/70 bg-white/60 hover:bg-white/82",
+                          ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-400/30 dark:bg-orange-500/12"
+                          : "border-border bg-card hover:bg-accent",
                       )}
                     >
                       <div className="flex-1 min-w-0">

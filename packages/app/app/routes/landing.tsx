@@ -11,18 +11,18 @@ import { Footer } from "@/components/landing/footer";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Avileo - Sistema de Ventas Offline para Avicolas" },
-    { name: "description", content: "Sistema de gestion de ventas 100% offline. Vende sin internet, controla inventario y clientes. Ideal para avicolas y negocios locales." },
-    { name: "keywords", content: "sistema de ventas, offline, avicola, inventario, control de clientes" },
-    { property: "og:title", content: "Avileo - Vende sin internet" },
-    { property: "og:description", content: "El sistema de ventas que funciona donde otros no. 100% offline." },
+    { title: "Avileo - Sistema de Ventas Online para Avicolas" },
+    { name: "description", content: "Sistema de gestion de ventas online. Controla inventario, clientes y vendedores en tiempo real. Ideal para avicolas y negocios con equipo de campo." },
+    { name: "keywords", content: "sistema de ventas, avicola, inventario, control de clientes, gestion de vendedores" },
+    { property: "og:title", content: "Avileo - Controla tu negocio avicola en tiempo real" },
+    { property: "og:description", content: "La plataforma de ventas que organiza tu operacion, vendedores e inventario desde cualquier dispositivo." },
     { property: "og:url", content: "https://avileo.com" },
   ];
 }
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       <HeroSection />
       <FeaturesGrid />

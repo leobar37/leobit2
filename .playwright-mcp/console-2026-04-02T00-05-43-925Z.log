@@ -1,5 +1,0 @@
-[     118ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
-[     321ms] Uncaught TypeError: Cannot set properties of undefined (setting 'comment')
-    at extend (https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js:0:1774)
-    at <anonymous> (https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js:0:84)
-    at <anonymous> (https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js:0:297)

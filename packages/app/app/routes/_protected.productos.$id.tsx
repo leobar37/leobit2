@@ -21,18 +21,7 @@ import {
 } from "~/hooks/use-product-variants";
 import { VariantModal, useVariantModal } from "~/components/products/variant-modal";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-
-const typeLabels = {
-  pollo: "Pollo",
-  huevo: "Huevo",
-  otro: "Otro",
-};
-
-const typeBadgeClasses = {
-  pollo: "bg-orange-100 text-orange-700",
-  huevo: "bg-yellow-100 text-yellow-700",
-  otro: "bg-gray-100 text-gray-700",
-};
+import { getCategoryColor } from "~/lib/utils/category-colors";
 
 const unitLabels = {
   kg: "Kilogramo (kg)",
@@ -238,9 +227,21 @@ export default function ProductDetailPage() {
       <MobileSlot name="header:center" priority={10}>
         <div className="flex min-w-0 items-center gap-2 flex-1">
           <h1 className="truncate text-lg font-bold tracking-tight">{product.name}</h1>
-          <Badge className={`text-[10px] px-1.5 py-0 ${typeBadgeClasses[product.type]}`}>
-            {typeLabels[product.type]}
-          </Badge>
+          {product.category ? (
+            <Badge
+              className="text-[10px] px-1.5 py-0"
+              style={{
+                backgroundColor: `${getCategoryColor(product.category.color)}20`,
+                color: getCategoryColor(product.category.color),
+              }}
+            >
+              {product.category.name}
+            </Badge>
+          ) : (
+            <Badge className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-700">
+              Sin categoría
+            </Badge>
+          )}
         </div>
       </MobileSlot>
 

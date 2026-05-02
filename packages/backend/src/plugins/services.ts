@@ -41,6 +41,8 @@ import { WhatsAppMessageService } from "../services/business/whatsapp-message.se
 import { TemplateSeedService } from "../services/business/template-seed.service";
 import { TagRepository } from "../services/repository/tag.repository";
 import { TagService } from "../services/business/tag.service";
+import { CategoryRepository } from "../services/repository/category.repository";
+import { CategoryService } from "../services/business/category.service";
 import { CustomerTagRepository } from "../services/repository/customer-tag.repository";
 import { CustomerTagService } from "../services/business/customer-tag.service";
 import { PuntoVentaRepository } from "../services/repository/punto-venta.repository";
@@ -73,6 +75,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
     const whatsAppMessageRepo = new WhatsAppMessageRepository();
     const tagRepo = new TagRepository();
+    const categoryRepo = new CategoryRepository();
     const customerTagRepo = new CustomerTagRepository();
     const customerGroupRepo = new CustomerGroupRepository();
     const visitaRepo = new VisitaRepository();
@@ -82,7 +85,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
 
     const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
     const customerService = new CustomerService(customerRepo);
-    const productService = new ProductService(productRepo, productVariantRepo);
+    const productService = new ProductService(productRepo, productVariantRepo, categoryRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo);
     const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
@@ -106,6 +109,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     );
     const templateSeedService = new TemplateSeedService(whatsAppTemplateRepo);
     const tagService = new TagService(tagRepo);
+    const categoryService = new CategoryService(categoryRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
     const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
     const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo);
@@ -153,6 +157,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       templateSeedService,
       tagRepo,
       tagService,
+      categoryRepo,
+      categoryService,
       customerTagRepo,
       customerTagService,
       customerGroupRepo,

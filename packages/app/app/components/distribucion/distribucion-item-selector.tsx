@@ -132,8 +132,8 @@ export function DistribucionItemSelector({
                       "border-border bg-card hover:bg-accent"
                     )}
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
-                      <Package className="h-5 w-5 text-orange-600" />
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
+                      <Package className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{product.name}</p>
@@ -175,12 +175,12 @@ export function DistribucionItemSelector({
                     key={variant.id}
                     type="button"
                     onClick={() => handleVariantSelect(variant.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
-                      selectedVariantId === variant.id
-                        ? "border-orange-300 bg-orange-50"
-                        : "border-border bg-card hover:bg-accent"
-                    )}
+                      className={cn(
+                        "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+                        selectedVariantId === variant.id
+                          ? "border-orange-300 bg-orange-50 dark:border-orange-400/30 dark:bg-orange-500/12"
+                          : "border-border bg-card hover:bg-accent"
+                      )}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{variant.name}</p>

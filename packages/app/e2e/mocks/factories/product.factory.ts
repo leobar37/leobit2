@@ -21,6 +21,7 @@ export interface Product {
   id: string;
   name: string;
   type: "pollo" | "huevo" | "otro";
+  categoryId: string | null;
   unit: "kg" | "unidad";
   basePrice: string;
   isActive: boolean;
@@ -37,6 +38,7 @@ export interface ProductOverrides {
   syncStatus?: "pending" | "synced" | "error";
   hasVariants?: boolean;
   type?: "pollo" | "huevo" | "otro";
+  categoryId?: string | null;
 }
 
 // ============================================================================
@@ -44,6 +46,12 @@ export interface ProductOverrides {
 // ============================================================================
 
 const BUSINESS_ID = "biz-demo";
+
+const DEFAULT_CATEGORIES: Record<string, string> = {
+  pollo: "cat-pollo",
+  huevo: "cat-huevo",
+  otro: "cat-otro",
+};
 
 // Product type weights (pollo is most common)
 const PRODUCT_TYPES: Array<"pollo" | "huevo" | "otro"> = ["pollo", "pollo", "pollo", "huevo", "huevo", "otro"];
@@ -131,10 +139,18 @@ export function generateProduct(index: number, overrides?: ProductOverrides): Pr
   const hasVariants = overrides?.hasVariants ?? faker.datatype.boolean({ probability: 0.4 });
   const basePrice = faker.number.float({ min: 5, max: 50, fractionDigits: 2 });
 
+  // Support explicit categoryId, fallback to type mapping, or null for uncategorized
+  const categoryId = overrides?.categoryId !== undefined
+    ? overrides.categoryId
+    : type === "otro" && index % 5 === 0
+      ? null
+      : DEFAULT_CATEGORIES[type] ?? null;
+
   const product: Product = {
     id: productId,
     name: getProductName(type),
     type,
+    categoryId,
     unit: type === "huevo" ? "unidad" : "kg",
     basePrice: basePrice.toFixed(2),
     isActive: true,

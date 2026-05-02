@@ -130,12 +130,12 @@ export function SupplierSelector({
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left",
                     selectedSupplier?.id === supplier.id
-                      ? "bg-blue-100 border-2 border-blue-500"
-                      : "hover:bg-blue-50 border-2 border-transparent"
+                      ? "border-2 border-blue-500 bg-blue-50 dark:bg-blue-500/12 dark:border-blue-400/50"
+                      : "border-2 border-transparent hover:bg-accent"
                   )}
                 >
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Truck className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-100 dark:bg-blue-500/14">
+                    <Truck className="h-5 w-5 text-blue-600 dark:text-blue-300" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{supplier.name}</p>

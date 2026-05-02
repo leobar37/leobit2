@@ -1,25 +1,41 @@
 // @ts-nocheck - Route file with complex type errors
-import { Package, Search, Plus } from "lucide-react";
+import { useState } from "react";
+import { Package, Search, Plus, X } from "lucide-react";
 import { Link } from "react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "~/hooks/use-products-live";
+import { useProductCategories } from "~/hooks/use-product-categories";
 import { useListSearch } from "~/hooks/use-list-search";
 import { ProductCard } from "@/components/products/product-card";
+import {
+  CategoryManager,
+  CategoryManagerTrigger,
+} from "@/components/products/category-manager";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { MobileShell } from "~/components/mobile";
+import { cn } from "~/lib/utils";
+import { getCategoryColor } from "~/lib/utils/category-colors";
 
 export default function ProductsPage() {
   useSetLayout({ title: "Catálogo" });
 
   const { data: products, isLoading, error } = useProducts();
+  const { data: categories } = useProductCategories();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | "uncategorized" | null>(null);
+  const [managerOpen, setManagerOpen] = useState(false);
 
-  const { filteredItems: filteredProducts, search, setSearch } = useListSearch({
+  const { filteredItems: searchFilteredProducts, search, setSearch } = useListSearch({
     items: products,
     searchFields: [
       (product) => product.name,
-      (product) => product.type,
     ],
+  });
+
+  const filteredProducts = searchFilteredProducts.filter((product) => {
+    if (selectedCategoryId === null) return true;
+    if (selectedCategoryId === "uncategorized") return !product.categoryId;
+    return product.categoryId === selectedCategoryId;
   });
 
   return (
@@ -34,6 +50,67 @@ export default function ProductsPage() {
             className="shell-field h-12 rounded-[20px] pl-11 pr-4 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
           />
         </div>
+
+        <div className="flex items-center justify-between">
+          <CategoryManagerTrigger onClick={() => setManagerOpen(true)} />
+        </div>
+
+        {categories && categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            <button
+              data-testid="products-category-filter-chip"
+              type="button"
+              onClick={() => setSelectedCategoryId(null)}
+              className={cn(
+                "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                selectedCategoryId === null
+                  ? "bg-orange-500 text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              Todas
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                data-testid="products-category-filter-chip"
+                type="button"
+                onClick={() => setSelectedCategoryId(category.id)}
+                className={cn(
+                  "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
+                  selectedCategoryId === category.id
+                    ? "text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+                style={
+                  selectedCategoryId === category.id
+                    ? { backgroundColor: getCategoryColor(category.color) }
+                    : undefined
+                }
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: getCategoryColor(category.color) }}
+                />
+                {category.name}
+              </button>
+            ))}
+            <button
+              data-testid="products-category-filter-chip"
+              type="button"
+              onClick={() => setSelectedCategoryId("uncategorized")}
+              className={cn(
+                "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
+                selectedCategoryId === "uncategorized"
+                  ? "bg-gray-500 text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full border border-muted-foreground bg-transparent" />
+              Sin categoría
+            </button>
+          </div>
+        )}
 
         {isLoading && (
           <div className="py-8 text-center">
@@ -81,6 +158,8 @@ export default function ProductsPage() {
           </Link>
         </Button>
       </MobileShell.FloatingAction>
+
+      <CategoryManager open={managerOpen} onOpenChange={setManagerOpen} />
     </>
   );
 }

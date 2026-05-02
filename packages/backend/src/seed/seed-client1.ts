@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { businesses, businessUsers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { RequestContext } from "../context/request-context";
-import { services, repositories } from "./services";
+import { services, repositories, seedDefaultCategories } from "./services";
 
 
 const CLIENT1_USER = {
@@ -21,6 +21,12 @@ const CLIENT1_BUSINESS = {
 };
 
 // Productos: Pollo, Azúcar, Huevos (con variantes específicas)
+const CLIENT1_CATEGORIES = [
+  { name: "Pollo", color: "#f97316" },
+  { name: "Huevo", color: "#eab308" },
+  { name: "Otro", color: "#6b7280" },
+];
+
 const CLIENT1_PRODUCTS = [
   {
     name: "Pollo",
@@ -181,8 +187,11 @@ async function seedClient1Data(ctx: RequestContext) {
   const config = await services.paymentMethodConfig.getConfig(ctx);
   console.log(`✓ Payment methods configured`);
 
+  const categoryMap = await seedDefaultCategories(ctx, CLIENT1_CATEGORIES);
+  console.log(`✓ Seeded ${categoryMap.size} categories`);
+
   // Seed products
-  const products = await seedProducts(ctx);
+  const products = await seedProducts(ctx, categoryMap);
   console.log(`✓ Seeded ${products.length} products with variants`);
 
   // Seed inventory
@@ -194,7 +203,7 @@ async function seedClient1Data(ctx: RequestContext) {
   console.log(`✓ Seeded ${customers.length} customers`);
 }
 
-async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
+async function seedProducts(ctx: RequestContext, categoryMap: Map<string, string>): Promise<SeedProduct[]> {
   const existing = await services.product.getProducts(ctx);
   if (existing.length > 0) {
     console.log(`⚠ ${existing.length} products already exist, loading with variants`);
@@ -217,9 +226,11 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProduct[]> {
     const productDef = CLIENT1_PRODUCTS[i];
     const variantsDef = CLIENT1_PRODUCT_VARIANTS[i];
 
+    const categoryId = categoryMap.get(productDef.type) ?? null;
+
     const result = await services.product.createProduct(ctx, {
       name: productDef.name,
-      type: productDef.type,
+      categoryId,
       unit: productDef.unit,
       basePrice: parseFloat(productDef.basePrice),
       isActive: productDef.isActive,

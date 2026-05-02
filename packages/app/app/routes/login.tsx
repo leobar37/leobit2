@@ -22,7 +22,6 @@ import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 import {
   MobileShell,
   MobilePage,
-  MobileFixedFooter,
   MobileSlot,
   MobileSlotProvider,
 } from "~/components/mobile";
@@ -95,38 +94,34 @@ export default function LoginPage() {
 
         <MobileShell.Content className="flex items-start justify-center sm:items-center">
           <MobilePage.Root maxWidth="sm" className="w-full">
-            <MobilePage.Card className="w-full overflow-hidden sm:rounded-[28px] min-h-[100svh] sm:min-h-0">
-              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-orange-400 to-amber-300" />
+            <div className="min-h-[100svh] px-4 pb-8 pt-6 sm:min-h-0 sm:px-6 sm:py-8">
+              <div className="space-y-6 sm:space-y-8">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-primary shadow-lg sm:h-14 sm:w-14 sm:rounded-[20px]">
+                    <Route className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
+                  </div>
 
-              <div className="space-y-3 px-4 pb-2 pt-4 sm:space-y-4 sm:px-6 sm:pt-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-primary shadow-lg sm:h-14 sm:w-14 sm:rounded-[20px]">
-                  <Route className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <p className="text-sm font-medium text-primary">Avileo</p>
+                    <h1 className="text-[1.8rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2rem]">
+                      Bienvenido
+                    </h1>
+                    <p className="max-w-[19rem] text-sm leading-5 text-muted-foreground sm:max-w-[17rem] sm:leading-6">
+                      Ingresa tus credenciales para continuar.
+                    </p>
+                    {isDevelopment() && (
+                      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
+                        Modo desarrollo
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 sm:space-y-2">
-                  <p className="text-sm font-medium text-primary">Avileo</p>
-                  <h1 className="text-[1.8rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2rem]">
-                    Bienvenido
-                  </h1>
-                  <p className="max-w-[19rem] text-sm leading-5 text-muted-foreground sm:max-w-[17rem] sm:leading-6">
-                    Ingresa tus credenciales para continuar.
-                  </p>
-                  {isDevelopment() && (
-                    <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                      Modo desarrollo
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <FormProvider {...form}>
-                <form id="login-form" onSubmit={form.handleSubmit(onSubmit)}>
-                  <div
-                    className="space-y-3 px-4 pb-2 sm:px-6"
-                    style={{
-                      paddingBottom:
-                        "calc(var(--shell-public-footer-offset, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)))",
-                    }}
+                <FormProvider {...form}>
+                  <form
+                    id="login-form"
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-4"
                   >
                     <FormInput
                       label="Correo electrónico"
@@ -151,54 +146,50 @@ export default function LoginPage() {
                         {form.formState.errors.root.message}
                       </p>
                     )}
-                  </div>
-                </form>
-              </FormProvider>
-            </MobilePage.Card>
+
+                    <Button
+                      type="submit"
+                      form="login-form"
+                      className="h-12 w-full rounded-[18px] bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={form.formState.isSubmitting || !form.formState.isValid || !health.canLogin}
+                    >
+                      {form.formState.isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Iniciando sesión...
+                        </>
+                      ) : !health.canLogin ? (
+                        <>
+                          <ShieldAlert className="mr-2 h-4 w-4" />
+                          Requiere reparación
+                        </>
+                      ) : (
+                        "Iniciar sesión"
+                      )}
+                    </Button>
+
+                    {health.status === "warning" && health.warningMessage && (
+                      <div className="flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>{health.warningMessage}</span>
+                      </div>
+                    )}
+
+                    <p className="text-center text-sm text-muted-foreground">
+                      ¿No tienes cuenta?{" "}
+                      <Link
+                        to="/register"
+                        className="text-primary hover:text-primary/90 font-medium"
+                      >
+                        Regístrate
+                      </Link>
+                    </p>
+                  </form>
+                </FormProvider>
+              </div>
+            </div>
           </MobilePage.Root>
         </MobileShell.Content>
-
-        <MobileFixedFooter>
-          <div className="flex flex-col gap-3">
-            <Button
-              type="submit"
-              form="login-form"
-              className="h-12 w-full rounded-[18px] bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={form.formState.isSubmitting || !form.formState.isValid || !health.canLogin}
-            >
-              {form.formState.isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : !health.canLogin ? (
-                <>
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Requiere reparación
-                </>
-              ) : (
-                "Iniciar sesión"
-              )}
-            </Button>
-
-            {health.status === "warning" && health.warningMessage && (
-              <div className="flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                <AlertTriangle className="h-4 w-4" />
-                <span>{health.warningMessage}</span>
-              </div>
-            )}
-
-            <p className="text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta?{" "}
-              <Link
-                to="/register"
-                className="text-primary hover:text-primary/90 font-medium"
-              >
-                Regístrate
-              </Link>
-            </p>
-          </div>
-        </MobileFixedFooter>
 
         {/* Health Check Drawer */}
         <Drawer open={health.status === "critical"}>

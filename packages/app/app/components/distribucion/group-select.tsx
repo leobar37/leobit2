@@ -49,7 +49,7 @@ export function GroupSelect({
       <Card
         className={cn(
           "shell-card cursor-pointer rounded-3xl border-0 transition-colors",
-          !disabled && "hover:bg-white/90",
+          !disabled && "hover:bg-accent",
           disabled && "opacity-50 cursor-not-allowed",
         )}
         onClick={() => !disabled && setIsOpen(true)}
@@ -86,7 +86,7 @@ export function GroupSelect({
                     e.stopPropagation();
                     handleClearGroup();
                   }}
-                  className="rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-destructive"
+                  className="rounded-2xl text-muted-foreground hover:bg-accent hover:text-destructive"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -97,7 +97,7 @@ export function GroupSelect({
                 size="icon"
                 disabled={disabled}
                 className={cn(
-                  "rounded-2xl text-muted-foreground hover:bg-white/70 hover:text-foreground",
+                  "rounded-2xl text-muted-foreground hover:bg-accent hover:text-foreground",
                   isOpen && "bg-blue-100 text-blue-700",
                 )}
               >
@@ -148,12 +148,12 @@ export function GroupSelect({
                   className={cn(
                     "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                     value === group.id
-                      ? "border-blue-300 bg-blue-50/90"
-                      : "border-white/70 bg-white/60 hover:bg-white/82",
+                      ? "shell-card-muted border-blue-300 bg-blue-50/90 dark:border-blue-400/30 dark:bg-blue-500/12"
+                      : "border-border bg-card hover:bg-accent",
                   )}
                 >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100/80">
-                    <Users className="h-5 w-5 text-blue-600" />
+                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100/80 dark:bg-blue-500/14">
+                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-300" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{group.name}</p>

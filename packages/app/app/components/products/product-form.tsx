@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
+import { CategorySelect } from "@/components/products/category-select";
 import type { Product } from "@avileo/shared";
 import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
 
@@ -22,19 +23,13 @@ interface ProductFormProps {
 export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariants, variantCount }: ProductFormProps) {
   const isEditing = !!product;
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isValid },
-  } = useForm<ProductFormData>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     mode: "onChange",
     values: isEditing
       ? {
           name: product.name,
-          type: product.type as "pollo" | "huevo" | "otro",
+          categoryId: product.categoryId ?? null,
           unit: product.unit as "kg" | "unidad",
           basePrice: product.basePrice,
           isActive: product.isActive,
@@ -43,7 +38,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
       : undefined,
     defaultValues: {
       name: "",
-      type: "pollo",
+      categoryId: null,
       unit: "kg",
       basePrice: "",
       isActive: true,
@@ -51,7 +46,16 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
     },
   });
 
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid },
+  } = form;
+
   return (
+    <FormProvider {...form}>
     <Card className="border border-gray-100 shadow-none rounded-xl">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-base font-semibold">Información del Producto</CardTitle>
@@ -61,6 +65,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
           <Label htmlFor="name" className="text-sm">Nombre *</Label>
           <Input
             id="name"
+            data-testid="product-name-input"
             placeholder="Nombre del producto"
             {...register("name")}
             className="rounded-lg"
@@ -80,25 +85,18 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="type" className="text-sm">Tipo *</Label>
-          <select
-            id="type"
-            {...register("type")}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="pollo">Pollo</option>
-            <option value="huevo">Huevo</option>
-            <option value="otro">Otro</option>
-          </select>
-          {errors.type && (
-            <p className="text-xs text-red-500">{errors.type.message}</p>
-          )}
+          <CategorySelect
+            name="categoryId"
+            label="Categoría"
+            placeholder="Seleccionar categoría"
+          />
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="unit" className="text-sm">Unidad *</Label>
           <select
             id="unit"
+            data-testid="product-unit-select"
             {...register("unit")}
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
@@ -124,6 +122,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
           <Label htmlFor="basePrice" className="text-sm">Precio base (S/) *</Label>
           <Input
             id="basePrice"
+            data-testid="product-baseprice-input"
             placeholder="0.00"
             {...register("basePrice")}
             className="rounded-lg"
@@ -147,6 +146,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
 
         <div className="flex gap-2 pt-2">
           <Button
+            data-testid="save-product-button"
             onClick={handleSubmit(onSubmit)}
             disabled={isLoading || !isValid}
             className="flex-1 rounded-lg bg-orange-500 hover:bg-orange-600"
@@ -171,6 +171,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         </div>
       </CardContent>
     </Card>
+    </FormProvider>
   );
 }
 

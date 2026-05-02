@@ -1,27 +1,27 @@
 ---
 name: avileo
-description: Avileo - Offline-first chicken sales management system.
-  Use when working on the Avileo project, implementing sales features, offline
-  sync, database schema, or any code related to this chicken business management
-  app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7
-  frontend, Drizzle ORM, TanStack DB, and offline-first architecture.
+description: Avileo - Online-first chicken sales management system. Use when working
+  on the Avileo project, implementing sales features, database schema, or any
+  code related to this chicken business management app. Covers monorepo
+  structure, Bun/ElysiaJS backend, React Router v7 frontend, Drizzle ORM,
+  PostgreSQL, TanStack Query, and online-first architecture.
 ---
 
 # Avileo Project Reference
 
-> **Avileo** - Offline-first chicken sales management system for businesses selling chicken (live, dressed, cuts) and related products.
+> **Avileo** - Online-first chicken sales management system for businesses selling chicken (live, dressed, cuts) and related products.
 
 ## Project Overview
 
-Avileo is a comprehensive sales management system designed for chicken businesses that operates **offline-first**. It enables vendors to work in areas without internet coverage while keeping data synchronized when connectivity is available.
+Avileo is a comprehensive sales management system designed for chicken businesses. It operates as an online-first web application with PWA capabilities, serving vendors and administrators through a mobile-optimized interface.
 
 ### Key Characteristics
 
-- **Offline-First Architecture**: Works without internet, syncs when available
+- **Online-First Architecture**: Requires internet for full operation, with PWA caching for basic resilience
 - **Multi-Tenancy**: Single user can belong to multiple businesses
 - **Flexible Operation Modes**: Supports various business models
 - **Mobile-First**: Designed for vendors using mobile devices
-- **Real-time Dashboard**: Admin panel with sync status indicators
+- **Real-time Dashboard**: Admin panel with live data
 
 ### Business Problem Solved
 
@@ -30,16 +30,16 @@ Traditional chicken businesses operate manually:
 - Accounts receivable in paper notebooks
 - No tracking of who sells what
 - Difficult to know daily sales totals
-- **Vendors work in areas without internet coverage**
+- **Vendors need digital tools accessible from any device**
 
 ### Solution
 
-- Sell without internet - data stored locally (IndexedDB)
-- Automatic sync when connection returns
+- Web-based sales recording accessible from any device
 - Automatic price calculations (with tare subtraction)
 - Digital accounts receivable management
 - Inventory assignment to vendors (optional)
 - Real-time collection tracking
+- WhatsApp integration for notifications
 
 ## Project Structure
 
@@ -51,7 +51,7 @@ avileo/
 │   └── shared/           # Shared types & utilities (@avileo/shared)
 ├── docs/
 │   ├── technical/        # Architecture & database docs
-│   └── development/      # Development phases (01-10)
+│   └── development/      # Development phases
 ├── .claude/
 │   └── skills/avileo/    # This skill
 └── package.json          # Turborepo root
@@ -64,12 +64,11 @@ avileo/
 | **Runtime** | Bun | 1.1.38+ |
 | **Frontend** | React Router v7 | latest |
 | **Backend** | ElysiaJS | latest |
-| **Database** | PostgreSQL (Neon) | 16.x |
+| **Database** | PostgreSQL | 16.x |
 | **ORM** | Drizzle ORM | latest |
 | **Auth** | Better Auth | latest |
-| **State** | TanStack DB | latest |
-| **Cache** | TanStack Query | 5.x |
-| **Persistence** | IndexedDB | - |
+| **State (Server)** | TanStack Query | 5.x |
+| **State (Client)** | Jotai / Zustand | latest |
 
 ## Quick Reference
 
@@ -91,7 +90,6 @@ cd packages/shared && bun run build  # Build shared package
 ```bash
 cd packages/backend
 bun run db:generate  # Generate migration files
-drizzle-kit generate # Alternative
 bun run db:migrate   # Run pending migrations
 bun run db:push      # Push schema changes (dev only)
 ```
@@ -117,41 +115,43 @@ interface ConfiguracionSistema {
 
 ## Core Modules
 
-| Module | Description | Offline Support |
-|--------|-------------|-----------------|
-| **Authentication** | Login/logout with JWT | ⚠️ First login needs internet |
-| **Users & Roles** | Admin and vendor management | ❌ Admin only |
-| **Calculator** | Price calculations with tare | ✅ 100% offline |
-| **Sales** | Cash and credit sales | ✅ 100% offline |
-| **Customers** | Accounts receivable | ✅ 100% offline |
-| **Abonos** | Debt payments | ✅ 100% offline |
-| **Distribution** | Daily inventory assignment | ✅ 100% offline |
-| **Sync Engine** | Offline/online sync | ✅ Background sync |
+| Module | Description |
+|--------|-------------|
+| **Authentication** | Login/logout with JWT |
+| **Users & Roles** | Admin and vendor management |
+| **Calculator** | Price calculations with tare |
+| **Sales** | Cash and credit sales |
+| **Customers** | Accounts receivable |
+| **Abonos** | Debt payments |
+| **Distribution** | Daily inventory assignment |
+| **Purchases** | Buy inventory from suppliers |
+| **Products** | Product catalog with variants |
+| **Suppliers** | Vendor management |
+| **Visitas** | Customer visit tracking |
+| **Reports** | Dashboard and analytics |
+| **WhatsApp** | Notifications and templates |
+| **Team** | Staff invitations and management |
 
 ## Documentation Structure
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture, patterns, and offline-first design
-- **[DATABASE.md](DATABASE.md)** - Database schema, relations, and sync patterns
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture and patterns
+- **[DATABASE.md](DATABASE.md)** - Database schema, relations
 - **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
 - **[referencias/toolbar-actions.md](referencias/toolbar-actions.md)** - ToolbarActions component pattern
 
 ## Important Constraints
 
-### Limitations (Documented)
-1. Login requires internet (first time) - JWT cached 24-48h
-2. Admin data not instant - sees synced data only
-3. Simultaneous edit conflicts - "last wins" strategy
-4. IndexedDB capacity ~50-100 MB per origin
-5. No real-time sync - 30s interval when online
-6. Lost device = lost unsynced data
+### Limitations
+1. Login requires internet - JWT cached 24-48h
+2. Simultaneous edit conflicts - "last wins" strategy
+3. PWA provides basic caching but full functionality requires connection
 
 ### Business Contradictions Resolved
 | Contradiction | Resolution |
 |---------------|------------|
-| "Real-time dashboard" vs "No internet" | Dashboard shows last synced state + pending count |
-| "Instant cash closing" vs "Sync delay" | Closing calculated from local vendor data |
-| "Never lose sales" vs "Device failure" | Auto-sync every 30s + manual backup button |
+| "Real-time dashboard" vs "Mobile vendors" | Dashboard shows live data from server; vendors use mobile web app |
+| "Instant cash closing" vs "Multiple vendors" | Closing calculated from server data with vendor filtering |
 
 ## Key Files to Reference
 
@@ -165,20 +165,174 @@ interface ConfiguracionSistema {
 - `packages/backend/src/db/schema/` - Drizzle schema files
 - `packages/app/app/routes/` - Frontend routes
 - `packages/shared/src/index.ts` - Shared types
+- `packages/shared/src/transformers/` - Decimal/entity transformers (see below)
+
+## Utilities
+
+### Decimal Transformers (`packages/shared/src/transformers/`)
+
+3-level transformer system for converting between backend decimal strings and UI form values.
+
+**Level 1 — Core:** `createTransformer<T>(config)` factory
+**Level 2 — Decimal:** `decimalToNumber`, `decimalToString(n)` helpers
+**Level 3 — Entity:** Pre-built transformers per domain entity
+
+```typescript
+import { saleItemTransformer, decimalToNumber, decimalToString } from "@avileo/shared";
+
+// Entity transformer (recommended)
+const uiItem    = saleItemTransformer.toForm(backendItem);   // strings for forms
+const apiPayload = saleItemTransformer.toApi(formValues);    // numbers for API
+const numbers   = saleItemTransformer.toNumbers(item);       // all to number
+
+// Ad-hoc helpers
+const priceStr  = decimalToString(2)(12.5);  // "12.50"
+const priceNum  = decimalToNumber("12.50");  // 12.5
+```
+
+**Available entity transformers:** `saleTransformer`, `saleItemTransformer`, `purchaseItemTransformer`, `distribucionItemTransformer`.
+
+**Conventions:**
+- `toForm` → strings with fixed decimals (for inputs)
+- `toApi`  → numbers (for API payloads)
+- `toNumbers` → all configured fields to number
+- Uses `DECIMALS` standards from `packages/shared/src/standards/decimals`
+
+## Frontend Architecture Rules
+
+### Rule 1: Business Logic in Services, Not Hooks
+
+**Anti-pattern** — business logic in hooks:
+```typescript
+// ❌ BAD: Business logic in hook
+export function useCreateSale() {
+  return useMutation({
+    mutationFn: async ({ sale, items }) => {
+      if (!sale.customerId) throw new Error("Customer required");
+      const sellerId = business?.businessUserId;
+      if (!sellerId) throw new Error("Business seller required");
+      // ... more business rules
+    }
+  });
+}
+```
+
+**Correct pattern** — service handles business logic:
+```typescript
+// ✅ GOOD: Service handles business logic
+export class SaleService {
+  async createSale(input: CreateSaleInput): Promise<Sale> {
+    if (!input.customerId) throw new Error("Customer required");
+    // ... business rules in service
+  }
+}
+
+// Hook only orchestrates
+export function useCreateSale() {
+  return useMutation({
+    mutationFn: (input) => saleService.createSale(input)
+  });
+}
+```
+
+**Hook responsibilities**:
+- Query key management
+- `onSuccess`/`onError` callbacks (UI-side only)
+- Query invalidation
+- Connecting to API client
+
+### Rule 2: Service Composition Over Complex Inheritance
+
+**Anti-pattern** — reimplementing CRUD manually:
+```typescript
+// ❌ BAD: All CRUD manually in service
+export class ProductService {
+  async findAll() { /* manual query */ }
+  async create(data) { /* manual insert */ }
+  async update(id, data) { /* manual update */ }
+}
+```
+
+**Correct pattern** — extend generated or use API client:
+```typescript
+// ✅ GOOD: Use Eden Treaty API client or extend generated service
+export class ProductService {
+  async findByCategory(categoryId: string) {
+    // Custom method only, use api.products.get() for CRUD
+  }
+}
+```
+
+### Rule 3: Structured Logging Only
+
+**Anti-pattern** — raw console.log/error:
+```typescript
+// ❌ BAD: Raw console usage
+console.log("Sale created", sale);
+console.error("Failed to create", error);
+```
+
+**Correct pattern** — structured logging with tags:
+```typescript
+// ✅ GOOD: Tagged performance logs
+console.log("[Perf][SaleService] createDraft", { saleId: sale.id, totalMs });
+console.log("[Perf][useCreateDraftSale] mutationFn", { ... });
+
+// ✅ GOOD: Error logging
+console.error("[SaleService] createDraft failed", { error: error.message });
+```
+
+**Tags to use**:
+- `[Perf][ServiceName]` — performance measurements
+- `[Error][ServiceName]` — error conditions
+- `[API][ServiceName]` — API-related events
+
+### Rule 4: Domain Errors via throw, Hooks Handle
+
+**Anti-pattern** — catching and swallowing errors in service:
+```typescript
+// ❌ BAD: Swallowing errors in service
+try {
+  await api.sales.update(id, data);
+} catch (error) {
+  console.error(error);
+  // Error disappears here
+}
+```
+
+**Correct pattern** — let errors propagate:
+```typescript
+// ✅ GOOD: Service throws domain errors
+async confirmSale(id: string) {
+  const sale = await this.findById(id);
+  if (sale.status !== "draft") {
+    throw new Error("Only draft sales can be confirmed");
+  }
+  await api.sales.update(id, { status: "confirmed" });
+}
+
+// Hook handles error with onError
+useMutation({
+  mutationFn: (id) => saleService.confirmSale(id),
+  onError: (error) => {
+    showError("Error al confirmar", error.message);
+  }
+});
+```
 
 ## Glossary
 
 | Term | Definition |
 |------|------------|
-| **Offline-first** | App works without internet, syncs when possible |
-| **Sync** | Synchronize local data with server |
-| **IndexedDB** | Browser's local database |
 | **Tara** | Container weight subtracted from gross weight |
 | **Distribución del Día** | Daily inventory assignment to vendors (optional) |
 | **Abono** | Debt payment independent of sales |
 | **Modo Libre** | Sales recording without stock control |
+| **Punto de Venta** | Sales location/branch |
+| **Venta al Crédito** | Credit sale (accounts receivable) |
+| **Venta al Contado** | Cash sale |
 
 ---
 
-*Last updated: February 2026*
+*Last updated: May 2026*
 *For detailed information, see linked documentation files.*

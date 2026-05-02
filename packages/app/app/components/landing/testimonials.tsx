@@ -3,19 +3,19 @@ import { TestimonialCard } from "./testimonial-card";
 
 const testimonials = [
   {
-    quote: "Antes perdia ventas por no tener internet en el mercado. Ahora vendo tranquilo y todo se sincroniza cuando tengo wifi. Ha cambiado mi negocio.",
+    quote: "Ahora veo cuanto vendio cada vendedor sin esperar al cierre del dia. Tomo decisiones mas rapido y con numeros claros. Ha cambiado mi negocio.",
     author: "Juan Perez",
-    role: "Vendedor de pollo, Mercado Central"
+    role: "Propietario, Avicola El Dorado"
   },
   {
-    quote: "Puedo ver en tiempo real cuanto vendio cada vendedor. El control que tengo ahora sobre mi negocio es increible. Lo recomiendo totalmente.",
+    quote: "Antes llevaba clientes y deudas en un cuaderno. Con Avileo se quien debe, cuanto debe y que se cobro hoy. Mi cobranza esta bajo control.",
     author: "Maria Garcia",
-    role: "Propietaria, Avicola El Dorado"
+    role: "Propietaria, Avicola San Jose"
   },
   {
-    quote: "Trabajamos en zonas rurales donde no hay internet. Avileo nos permite vender sin preocupaciones y sincronizar cuando volvemos a la ciudad.",
+    quote: "El inventario ya no se me escapa. Asigno kilos, reviso ventas en tiempo real y cierro el dia con mas orden y menos perdidas.",
     author: "Carlos Rodriguez",
-    role: "Distribuidor, Zona Rural"
+    role: "Administrador, Pollo Delicia"
   }
 ];
 
@@ -31,7 +31,7 @@ const containerVariants = {
 
 export function TestimonialsSection() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/30">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/20">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -40,10 +40,10 @@ export function TestimonialsSection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             Lo que dicen nuestros clientes
           </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Empresarios que ya transformaron su negocio con Avileo.
           </p>
         </motion.div>
@@ -53,7 +53,7 @@ export function TestimonialsSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-3 gap-5"
         >
           {testimonials.map((testimonial, index) => (
             <TestimonialCard

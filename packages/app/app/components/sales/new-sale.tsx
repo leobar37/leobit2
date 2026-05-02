@@ -44,6 +44,7 @@ import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { useNewSaleContext } from "./new-sale-context";
 import { useToast } from "~/hooks/use-toast";
 import { useOnline } from "~/hooks/use-online";
+import { useProductCategories } from "~/hooks/use-product-categories";
 
 export function CustomerSection() {
   const { saleId, visitaId, sale, items } = useNewSaleContext();
@@ -131,11 +132,25 @@ const paymentModes: {
   },
 ];
 
-const productTypeLabels: Record<string, string> = {
-  pollo: "Pollo",
-  huevo: "Huevos",
-  otro: "Otros",
-};
+function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
+  if (mode === "a_cuenta") {
+    return {
+      title: "Selecciona un cliente",
+      description:
+        "A Cuenta crea una venta a crédito, por eso necesitas asociar un cliente antes de guardar.",
+    };
+  }
+
+  if (mode === "debe_todo") {
+    return {
+      title: "Selecciona un cliente",
+      description:
+        "Debe Todo crea una venta a crédito, por eso necesitas asociar un cliente antes de guardar.",
+    };
+  }
+
+  return null;
+}
 
 export function PaymentModeSection() {
   const { saleId, sale, items } = useNewSaleContext();
@@ -143,17 +158,47 @@ export function PaymentModeSection() {
   const { toast } = useToast();
 
   const calculations = useSaleCalculations(sale, items);
+  const [pendingPaymentMode, setPendingPaymentMode] = useState<PaymentMode | null>(null);
+
+  const visiblePaymentMode = pendingPaymentMode ?? sale?.paymentMode;
 
   // Define callback before guard clause to ensure hooks are always called in same order
   const handleUpdateAmountPaid = useCallback(
-    async (amount: string, balanceDue: string) => {
+    async (amount: string) => {
       if (!saleId) return;
-      await updateSale.mutateAsync({
-        id: saleId,
-        input: { amountPaid: parseFloat(amount), balanceDue: parseFloat(balanceDue) },
-      });
+
+      const amountPaid = parseFloat(amount) || 0;
+      const totalAmount = calculations.totalAmount;
+
+      if (amountPaid <= 0 || amountPaid > totalAmount) {
+        toast.error("Monto inválido", {
+          description: `El adelanto debe ser mayor a S/ 0 y menor o igual a S/ ${formatCurrency(totalAmount)}.`,
+        });
+        return;
+      }
+
+      try {
+        await updateSale.mutateAsync({
+          id: saleId,
+          input: {
+            paymentMode: "a_cuenta",
+            saleType: "credito",
+            totalAmount,
+            amountPaid,
+          },
+        });
+
+        setPendingPaymentMode(null);
+      } catch (error) {
+        toast.error("Error al guardar adelanto", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "No se pudo actualizar el monto pagado",
+        });
+      }
     },
-    [saleId, updateSale]
+    [saleId, calculations.totalAmount, updateSale, toast]
   );
 
   // Guard clause: ensure we have required data before rendering
@@ -167,6 +212,28 @@ export function PaymentModeSection() {
 
     const totalAmountNum = calculations.totalAmount;
     const nextSaleType = getSaleType(mode);
+    const requiresCustomer = nextSaleType === "credito";
+
+    if (requiresCustomer && !sale?.customerId) {
+      const message = getPaymentModeRequiresCustomerMessage(mode);
+
+      toast.error(message?.title ?? "Selecciona un cliente", {
+        description:
+          message?.description ??
+          "Las ventas a crédito necesitan un cliente asociado.",
+      });
+
+      return;
+    }
+
+    if (mode === "a_cuenta") {
+      setPendingPaymentMode("a_cuenta");
+      toast.info("Ingresa el adelanto", {
+        description: "El monto debe ser mayor a S/ 0 y menor o igual al total.",
+      });
+      return;
+    }
+
     const amountPaidNum = getAmountPaidValue(
       mode,
       totalAmountNum,
@@ -179,6 +246,8 @@ export function PaymentModeSection() {
     );
 
     try {
+      setPendingPaymentMode(null);
+
       await updateSale.mutateAsync({
         id: saleId,
         input: {
@@ -189,9 +258,12 @@ export function PaymentModeSection() {
           balanceDue: nextBalanceDue,
         },
       });
-    } catch {
+    } catch (error) {
       toast.error("Error al cambiar modo de pago", {
-        description: "No se pudo actualizar el modo de pago",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo actualizar el modo de pago",
       });
     }
   };
@@ -204,9 +276,10 @@ export function PaymentModeSection() {
             <button
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
+              disabled={updateSale.isPending}
               className={cn(
-                "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors",
-                sale?.paymentMode === mode.value
+                "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                visiblePaymentMode === mode.value
                   ? "bg-orange-500/12"
                   : "bg-white/[0.045] hover:bg-white/[0.07]",
               )}
@@ -214,7 +287,7 @@ export function PaymentModeSection() {
               <div
                 className={cn(
                   "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
-                  sale?.paymentMode === mode.value
+                  visiblePaymentMode === mode.value
                     ? "bg-orange-500 text-white shadow-sm"
                     : "bg-white/[0.06] text-muted-foreground",
                 )}
@@ -225,7 +298,7 @@ export function PaymentModeSection() {
                 <p
                   className={cn(
                     "font-medium",
-                    sale?.paymentMode === mode.value && "text-orange-300",
+                    visiblePaymentMode === mode.value && "text-orange-300",
                   )}
                 >
                   {mode.label}
@@ -234,7 +307,7 @@ export function PaymentModeSection() {
                   {mode.description}
                 </p>
               </div>
-              {sale?.paymentMode === mode.value && (
+              {visiblePaymentMode === mode.value && (
                 <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
                   <Check className="h-4 w-4 text-white" />
                 </div>
@@ -243,13 +316,19 @@ export function PaymentModeSection() {
           ))}
         </div>
 
-        {sale?.paymentMode === "a_cuenta" && saleId && (
+        {visiblePaymentMode === "a_cuenta" && saleId && (
           <AmountPaidInput
             saleId={saleId}
             totalAmount={calculations.totalAmount}
-            initialAmount={sale?.amountPaid || ""}
+            initialAmount={sale?.paymentMode === "a_cuenta" ? sale?.amountPaid || "" : ""}
             onUpdate={handleUpdateAmountPaid}
           />
+        )}
+
+        {pendingPaymentMode === "a_cuenta" && (
+          <p className="rounded-2xl bg-orange-500/10 px-3 py-2 text-sm text-orange-700 dark:text-orange-300">
+            Ingresa el adelanto para guardar este modo de pago.
+          </p>
         )}
 
         {sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
@@ -587,17 +666,13 @@ export function CalculatorContent({
     isLoading: isProductsLoading,
     isFetching: isProductsFetching,
   } = useProducts();
+  const { data: categories = [] } = useProductCategories();
   const selectedProduct = products.find((p) => p.id === selectedProductId);
   const activeProducts = useMemo(
     () => products.filter((product) => product.isActive),
     [products],
   );
   const showProductDiscovery = activeProducts.length > 8;
-  const productTypeFilters = useMemo(
-    () =>
-      Array.from(new Set(activeProducts.map((product) => product.type).filter(Boolean))),
-    [activeProducts],
-  );
   const filteredProducts = useMemo(() => {
     const normalizedSearch = productSearch.trim().toLowerCase();
 
@@ -608,7 +683,9 @@ export function CalculatorContent({
       const matchesFilter =
         productFilter === "all" ||
         product.unit === productFilter ||
-        product.type === productFilter;
+        (productFilter === "uncategorized"
+          ? product.categoryId === null
+          : product.categoryId === productFilter);
 
       return matchesSearch && matchesFilter;
     });
@@ -818,9 +895,10 @@ export function CalculatorContent({
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
                 <Input
-                  value={productSearch}
-                  onChange={(event) => setProductSearch(event.target.value)}
-                  placeholder="Buscar producto..."
+                  data-testid="sale-product-search-input"
+                   value={productSearch}
+                   onChange={(event) => setProductSearch(event.target.value)}
+                   placeholder="Buscar producto..."
                   className="h-11 rounded-2xl border-white/10 bg-white/[0.06] pl-10 pr-3 text-sm text-white shadow-none placeholder:text-white/45 focus:border-orange-500/40 focus:ring-orange-500/20"
                 />
               </div>
@@ -830,13 +908,15 @@ export function CalculatorContent({
                   { value: "all", label: "Todos" },
                   { value: "kg", label: "Por kilo" },
                   { value: "unidad", label: "Por unidad" },
-                  ...productTypeFilters.map((type) => ({
-                    value: type,
-                    label: productTypeLabels[type] ?? type,
+                  ...categories.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
                   })),
+                  { value: "uncategorized", label: "Sin categoría" },
                 ].map((filter) => (
                   <button
                     key={filter.value}
+                    data-testid="sale-product-filter-chip"
                     type="button"
                     onClick={() => setProductFilter(filter.value)}
                     className={cn(
@@ -892,6 +972,7 @@ export function CalculatorContent({
                 return (
                   <button
                     key={product.id}
+                    data-testid="sale-product-option"
                     type="button"
                     onClick={() => {
                       setSelectedProductId(product.id);

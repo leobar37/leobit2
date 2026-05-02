@@ -22,7 +22,14 @@ export const TEST_BUSINESS = {
   permitirVentaSinStock: false,
 };
 
+export const CATEGORIES = [
+  { name: "Pollo", color: "#f97316" },
+  { name: "Huevo", color: "#eab308" },
+  { name: "Otro", color: "#6b7280" },
+];
+
 // Productos para Peru: Pollo, Huevos, Menudencias
+// `type` is used as a category mapping hint during seeding
 export const PRODUCTS = [
   {
     name: "Pollo Entero",

@@ -9,12 +9,13 @@ import {
   CLIENT2_BUSINESS,
   CLIENT2_METADATA,
   CLIENT2_USER,
+  CATEGORIES,
   CUSTOMERS,
   PRODUCTS,
   SALES,
   toSeedKey,
 } from "./client2-data";
-import { repositories, services } from "./services";
+import { repositories, services, seedDefaultCategories } from "./services";
 import { validateCanonical, formatValidationReport } from "./validate-canonical";
 
 const FORCE_MODE = process.argv.includes("--force");
@@ -209,7 +210,10 @@ async function seedClient2Data(ctx: RequestContext) {
   await services.paymentMethodConfig.getConfig(ctx);
   console.log("✓ Payment methods configured");
 
-  const products = await seedProducts(ctx);
+  const categoryMap = await seedDefaultCategories(ctx, CATEGORIES);
+  console.log(`✓ Seeded ${categoryMap.size} categories`);
+
+  const products = await seedProducts(ctx, categoryMap);
   console.log(`✓ Seeded ${products.length} products with ${products.reduce((sum, product) => sum + product.variants.length, 0)} variants`);
 
   await seedInventory(ctx, products);
@@ -225,7 +229,7 @@ async function seedClient2Data(ctx: RequestContext) {
   console.log(`✓ Seeded ${abonosCount} abonos`);
 }
 
-async function seedProducts(ctx: RequestContext): Promise<SeedProductRef[]> {
+async function seedProducts(ctx: RequestContext, categoryMap: Map<string, string>): Promise<SeedProductRef[]> {
   const existing = await services.product.getProducts(ctx);
   const existingByName = new Map(existing.map((product) => [product.name, product]));
   const resolvedProducts: SeedProductRef[] = [];
@@ -236,12 +240,13 @@ async function seedProducts(ctx: RequestContext): Promise<SeedProductRef[]> {
 
   for (const productDef of PRODUCTS) {
     const existingProduct = existingByName.get(productDef.name);
+    const categoryId = categoryMap.get(productDef.type) ?? null;
 
     const product = existingProduct
       ? existingProduct
       : (await services.product.createProduct(ctx, {
           name: productDef.name,
-          type: productDef.type,
+          categoryId,
           unit: productDef.unit,
           basePrice: parseFloat(productDef.basePrice),
           isActive: productDef.isActive,
