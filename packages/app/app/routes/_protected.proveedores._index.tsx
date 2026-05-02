@@ -82,7 +82,7 @@ export default function ProveedoresPage() {
             placeholder="Buscar proveedor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-xl"
+            className="shell-search-field pl-10 pr-4"
           />
         </div>
 

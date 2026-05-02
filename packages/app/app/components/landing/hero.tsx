@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { CheckCircle, Shield, ArrowRight, Zap, Cloud } from "lucide-react";
+import { CheckCircle, Shield, ArrowRight, Cloud } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -13,17 +13,6 @@ export function HeroSection() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="inline-flex items-center gap-2 bg-orange-50 rounded-full px-4 py-2 mb-8"
-          >
-            <Zap className="w-4 h-4 text-orange-500" />
-            <span className="text-orange-500 text-sm font-medium">Sistema Online para Avicolas</span>
-          </motion.div>
-
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight tracking-tight">
             Controla tu negocio
             <br />

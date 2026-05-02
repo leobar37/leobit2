@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "~/lib/utils";
 
@@ -17,13 +17,24 @@ export const AmountPaidInput = memo(function AmountPaidInput({
 }: AmountPaidInputProps) {
   const [value, setValue] = useState(initialAmount || "");
   const [isUpdating, setIsUpdating] = useState(false);
+  const isFocusedRef = useRef(false);
 
-  // Sync with external changes
+  // Sync with external changes only when not focused
   useEffect(() => {
-    setValue(initialAmount || "");
+    if (!isFocusedRef.current) {
+      setValue(initialAmount || "");
+    }
   }, [initialAmount]);
 
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Allow only digits and at most one decimal point
+    const filtered = raw.replace(/[^0-9.]/g, "").replace(/(\.[^.]*)\./g, "$1");
+    setValue(filtered);
+  }, []);
+
   const handleBlur = useCallback(async () => {
+    isFocusedRef.current = false;
     const numValue = parseFloat(value) || 0;
 
     if (numValue <= 0 || numValue > totalAmount) {
@@ -37,6 +48,10 @@ export const AmountPaidInput = memo(function AmountPaidInput({
       setIsUpdating(false);
     }
   }, [value, totalAmount, onUpdate]);
+
+  const handleFocus = useCallback(() => {
+    isFocusedRef.current = true;
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -55,11 +70,12 @@ export const AmountPaidInput = memo(function AmountPaidInput({
     <div className="space-y-3 border-t pt-3 shell-divider">
       <label className="text-sm font-medium">Monto pagado (S/)</label>
       <Input
-        type="number"
-        min="0"
+        type="text"
+        inputMode="decimal"
         placeholder="0.00"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={isUpdating}

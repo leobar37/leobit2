@@ -31,6 +31,7 @@ import { whatsAppMessageRoutes } from "./api/whatsapp/messages";
 import { tagRoutes } from "./api/tags";
 import { productCategoryRoutes } from "./api/product-categories";
 import { puntoVentaRoutes } from "./api/puntos-venta";
+import { mediaRoutes } from "./api/media";
 import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -95,6 +96,7 @@ export const app = new Elysia()
   .use(tagRoutes)
   .use(productCategoryRoutes)
   .use(puntoVentaRoutes)
+  .use(mediaRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

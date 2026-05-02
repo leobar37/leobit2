@@ -117,7 +117,7 @@ const CategorySelect = forwardRef<HTMLDivElement, CategorySelectProps>(
                          placeholder="Buscar categoría..."
                          value={search}
                          onChange={(e) => setSearch(e.target.value)}
-                         className="pl-9 rounded-xl"
+                          className="shell-search-field pl-9 pr-4"
                        />
                     </div>
 

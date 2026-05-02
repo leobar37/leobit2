@@ -22,7 +22,7 @@ export function TutorialSearch({
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
-        className="pl-9 rounded-xl"
+        className="shell-search-field pl-9 pr-4"
       />
     </div>
   );

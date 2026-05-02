@@ -137,7 +137,7 @@ export default function WhatsAppHistoryPage() {
                       placeholder="Buscar por cliente o teléfono..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 rounded-xl"
+                      className="shell-search-field pl-10 pr-4"
                     />
                   </div>
                   <div className="flex gap-2">

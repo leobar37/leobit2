@@ -1,11 +1,11 @@
-import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CalculatorContent } from "~/components/sales/calculator/sale-calculator-content";
 import {
-  CalculatorContent,
+  useSaleCalculator,
   type CalculatorFooterActions,
-} from "~/components/sales/new-sale";
+} from "~/components/sales/calculator/sale-calculator-context";
 import { useNewSaleContext } from "~/components/sales/new-sale-context";
 import { MobileShell } from "~/components/mobile";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
@@ -43,10 +43,8 @@ function SalesCalculatorFooter({
 
 export default function SaleEditorCalculatorPage() {
   const navigate = useNavigate();
-  const { saleId, editingItemId, items } = useNewSaleContext();
-  const [footerActions, setFooterActions] = useState<CalculatorFooterActions | null>(null);
-  
-  const editingItem = editingItemId ? items.find((i) => i.id === editingItemId) : null;
+  const { saleId } = useNewSaleContext();
+  const { editing, footerActions } = useSaleCalculator();
 
   if (!saleId) {
     return <Navigate to="/ventas" replace />;
@@ -66,17 +64,13 @@ export default function SaleEditorCalculatorPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="ml-1 text-lg font-bold tracking-tight">
-            {editingItem ? "Editar Producto" : "Calculadora"}
+            {editing.isEditMode ? "Editar Producto" : "Calculadora"}
           </h1>
         </div>
       </MobileShell.Header>
 
       <MobileShell.Content className="flex flex-1 flex-col overflow-hidden px-0 py-0">
-        <CalculatorContent
-          key={editingItemId || "new"}
-          returnPath={returnPath}
-          onActionsChange={setFooterActions}
-        />
+        <CalculatorContent key={editing.item?.id || "new"} />
       </MobileShell.Content>
       <MobileShell.Footer>
         {footerActions ? <SalesCalculatorFooter actions={footerActions} /> : null}

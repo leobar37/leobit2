@@ -11,6 +11,7 @@ import { useBusiness } from "~/hooks/use-business";
 import { useToastError } from "~/hooks/use-toast-error";
 import { getSaleFinancialState } from "~/hooks/use-sale-calculations";
 import { decimalToNumber } from "@avileo/shared";
+import type { Customer } from "~/hooks/use-customers";
 
 export type SaleStatus = "draft" | "confirmed" | "active" | "delivered" | "cancelled";
 export type SaleType = "instant_sale" | "pre_order";
@@ -253,9 +254,15 @@ export function usePaginatedSales(query: SalePageQuery) {
 }
 
 /**
- * Get a single sale by ID with items
+ * Get a single sale by ID with items.
+ * Accepts an optional `select` to derive data without extra API calls.
  */
-export function useSale(id: string | null) {
+export function useSale<TData = SaleWithItems | null>(
+  id: string | null,
+  options?: {
+    select?: (sale: SaleWithItems | null) => TData;
+  },
+) {
   return useQuery({
     queryKey: id ? queryKeys.sales.detail(id) : ["sales", "detail"],
     queryFn: async (): Promise<SaleWithItems | null> => {
@@ -267,6 +274,26 @@ export function useSale(id: string | null) {
     staleTime: 30_000,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    select: options?.select,
+  });
+}
+
+/**
+ * Derive the item being edited from a sale's cached data.
+ * Uses the same query key as useSale so it stays in sync automatically.
+ */
+export function useSaleEditingItem(saleId: string | null, itemId: string | null) {
+  return useSale(saleId, {
+    select: (sale) => {
+      const editingItem = itemId
+        ? sale?.items.find((item) => item.id === itemId) ?? null
+        : null;
+
+      return {
+        editingItem,
+        isEditMode: !!editingItem,
+      };
+    },
   });
 }
 
@@ -552,37 +579,64 @@ export function useUpdateSale() {
         const response = await api.sales({ id }).patch(payload as any);
         extractData(response);
       },
-    onSuccess: async (_data, variables) => {
-      queryClient.setQueryData(
-        queryKeys.sales.detail(variables.id),
-        (previous: SaleWithItems | null | undefined) => {
-          if (!previous) return previous;
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: queryKeys.sales.detail(variables.id) });
+        const previousSale = queryClient.getQueryData<SaleWithItems>(queryKeys.sales.detail(variables.id));
 
-          const nextSaleType = variables.input.saleType ?? previous.saleType;
-          const nextTotalAmount = variables.input.totalAmount ?? decimalToNumber(previous.totalAmount);
-          const nextAmountPaid = variables.input.amountPaid ?? decimalToNumber(previous.amountPaid);
-          const { balanceDue } = getSaleFinancialState({
-            saleType: nextSaleType,
-            totalAmount: nextTotalAmount,
-            amountPaid: nextAmountPaid,
+        if (previousSale && variables.input.customerId !== undefined) {
+          const customersCache = queryClient.getQueryData<Customer[]>(queryKeys.customers.all) || [];
+          const customer = customersCache.find((c) => c.id === variables.input.customerId);
+
+          queryClient.setQueryData(queryKeys.sales.detail(variables.id), {
+            ...previousSale,
+            customerId: variables.input.customerId,
+            customer: customer
+              ? {
+                  id: customer.id,
+                  name: customer.name,
+                  dni: customer.dni,
+                  phone: customer.phone,
+                }
+              : null,
           });
-
-          return {
-            ...previous,
-            ...variables.input,
-            totalAmount: nextTotalAmount.toString(),
-            amountPaid: nextAmountPaid.toString(),
-            balanceDue: balanceDue.toString(),
-            updatedAt: new Date().toISOString(),
-          };
         }
-      );
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
-    },
-    onError: (_error, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(variables.id) });
-    },
-  });
+
+        return { previousSale };
+      },
+      onSuccess: async (_data, variables) => {
+        queryClient.setQueryData(
+          queryKeys.sales.detail(variables.id),
+          (previous: SaleWithItems | null | undefined) => {
+            if (!previous) return previous;
+
+            const nextSaleType = variables.input.saleType ?? previous.saleType;
+            const nextTotalAmount = variables.input.totalAmount ?? decimalToNumber(previous.totalAmount);
+            const nextAmountPaid = variables.input.amountPaid ?? decimalToNumber(previous.amountPaid);
+            const { balanceDue } = getSaleFinancialState({
+              saleType: nextSaleType,
+              totalAmount: nextTotalAmount,
+              amountPaid: nextAmountPaid,
+            });
+
+            return {
+              ...previous,
+              ...variables.input,
+              totalAmount: nextTotalAmount.toString(),
+              amountPaid: nextAmountPaid.toString(),
+              balanceDue: balanceDue.toString(),
+              updatedAt: new Date().toISOString(),
+            };
+          }
+        );
+        queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
+      },
+      onError: (_error, variables, context) => {
+        if (context?.previousSale) {
+          queryClient.setQueryData(queryKeys.sales.detail(variables.id), context.previousSale);
+        }
+        queryClient.invalidateQueries({ queryKey: queryKeys.sales.detail(variables.id) });
+      },
+    });
 }
 
 /**

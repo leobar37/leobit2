@@ -9,17 +9,11 @@ import {
   useUploadBusinessLogo,
 } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
-import {
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FormInput } from "@/components/forms/form-input";
 import { Switch } from "@/components/ui/switch";
 import { useRef, useState } from "react";
 import { FormPage } from "~/components/layout/form-page";
-import { MobilePage } from "~/components/mobile/mobile-page";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const updateBusinessSchema = z.object({
   name: z.string().min(2).max(100),
@@ -155,48 +149,49 @@ export default function EditBusinessPage() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
-        <MobilePage.Card variant="flat">
-          <CardHeader className="text-center">
-            <div className="relative inline-block">
-              <div
-                className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
-                onClick={handleLogoClick}
-              >
-                {isUploading ? (
-                  <Loader2 className="h-8 w-8 text-white animate-spin" />
-                ) : business.logoUrl ? (
-                  <img
-                    src={business.logoUrl}
-                    alt="Logo"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Route className="h-10 w-10 text-white" />
-                )}
-              </div>
-              <button
-                className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
-                onClick={handleLogoClick}
-                type="button"
-              >
-                <Camera className="h-4 w-4 text-orange-600" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+        <div className="text-center space-y-4">
+          <div className="relative inline-block">
+            <div
+              className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
+              onClick={handleLogoClick}
+            >
+              {isUploading ? (
+                <Loader2 className="h-8 w-8 text-white animate-spin" />
+              ) : business.logoUrl ? (
+                <img
+                  src={business.logoUrl}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Route className="h-10 w-10 text-white" />
+              )}
             </div>
-            <CardTitle className="mt-4">{business.name}</CardTitle>
-            <CardDescription>
+            <button
+              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
+              onClick={handleLogoClick}
+              type="button"
+            >
+              <Camera className="h-4 w-4 text-orange-600" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">{business.name}</h2>
+            <p className="text-sm text-muted-foreground">
               {business.role === "ADMIN_NEGOCIO" ? "Administrador" : "Vendedor"}
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
+        </div>
 
-          <CardContent>
-            <form id="business-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <form id="business-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormInput
                 label="Nombre del negocio"
                 error={form.formState.errors.name?.message}
@@ -271,9 +266,8 @@ export default function EditBusinessPage() {
                 </p>
               )}
             </form>
-          </CardContent>
-        </MobilePage.Card>
-      </div>
+          </div>
+        </div>
     </FormPage>
   );
 }

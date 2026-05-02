@@ -4,13 +4,6 @@ import { z } from "zod";
 import { Link } from "react-router";
 import { ArrowLeft, Moon, Save, Loader2, Sun, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useState } from "react";
 import { cn } from "~/lib/utils";
 import { MobileSlot, MobilePage } from "~/components/mobile";
@@ -82,18 +75,20 @@ export default function AppearanceConfigPage() {
       </MobileSlot>
 
       <MobilePage.Root maxWidth="md" className="space-y-4">
-        <MobilePage.Card variant="flat">
-          <CardHeader>
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4">
+        <div className="space-y-4">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto">
               <Moon className="h-8 w-8 text-indigo-600" />
             </div>
-            <CardTitle>Configuracion de Apariencia</CardTitle>
-            <CardDescription>
-              Personaliza el tema y la visualizacion de la aplicacion
-            </CardDescription>
-          </CardHeader>
+            <div>
+              <h2 className="text-xl font-semibold">Configuracion de Apariencia</h2>
+              <p className="text-sm text-muted-foreground">
+                Personaliza el tema y la visualizacion de la aplicacion
+              </p>
+            </div>
+          </div>
 
-          <CardContent>
+          <div>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
@@ -213,8 +208,8 @@ export default function AppearanceConfigPage() {
                 )}
               </Button>
             </form>
-          </CardContent>
-        </MobilePage.Card>
+          </div>
+        </div>
       </MobilePage.Root>
     </>
   );

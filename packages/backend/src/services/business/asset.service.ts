@@ -60,6 +60,32 @@ export class AssetService {
   }
 
   /**
+   * Batch resolve assets to metadata with URLs
+   */
+  async resolveBatch(
+    ctx: RequestContext,
+    ids: string[]
+  ): Promise<Map<string, { id: string; filename: string; mimeType: string; sizeBytes: number; url: string }>> {
+    if (ids.length === 0) return new Map();
+
+    const assets = await this.repository.findByIds(ctx, ids);
+    const result = new Map<string, { id: string; filename: string; mimeType: string; sizeBytes: number; url: string }>();
+
+    for (const asset of assets) {
+      const url = await r2Storage.getFileUrl(asset.storagePath);
+      result.set(asset.id, {
+        id: asset.id,
+        filename: asset.filename,
+        mimeType: asset.mimeType,
+        sizeBytes: asset.sizeBytes,
+        url,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Get all assets with URLs for gallery
    */
   async getAllWithUrls(ctx: RequestContext): Promise<Array<Asset & { url: string }>> {

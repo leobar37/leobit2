@@ -112,7 +112,7 @@ export function DistribucionItemSelector({
                 placeholder="Buscar producto..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 rounded-xl"
+                className="shell-search-field pl-9 pr-4"
               />
             </div>
 

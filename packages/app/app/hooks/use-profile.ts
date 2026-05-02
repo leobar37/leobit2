@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-import { useUploadFile } from "./use-files";
 
 export interface Profile {
   id: string;
@@ -65,18 +64,3 @@ export function useUpdateProfile() {
   });
 }
 
-export function useUploadAvatar() {
-  const queryClient = useQueryClient();
-  const uploadFile = useUploadFile();
-
-  return useMutation({
-    mutationFn: async (file: File) => {
-      const result = await uploadFile.mutateAsync(file);
-      await updateProfile({ avatarId: result.id });
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-    },
-  });
-}

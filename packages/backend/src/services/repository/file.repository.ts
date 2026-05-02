@@ -26,6 +26,7 @@ export class FileRepository {
     return db.query.files.findFirst({
       where: and(
         eq(files.id, id),
+        eq(files.businessId, ctx.businessId),
         isNull(files.deletedAt)
       ),
     });
@@ -33,10 +34,11 @@ export class FileRepository {
 
   async findByIds(ctx: RequestContext, ids: string[]): Promise<FileRecord[]> {
     if (ids.length === 0) return [];
-    
+
     return db.query.files.findMany({
       where: and(
         inArray(files.id, ids),
+        eq(files.businessId, ctx.businessId),
         isNull(files.deletedAt)
       ),
     });
@@ -80,6 +82,7 @@ export class FileRepository {
       })
       .where(and(
         eq(files.id, id),
+        eq(files.businessId, ctx.businessId),
         isNull(files.deletedAt)
       ));
   }

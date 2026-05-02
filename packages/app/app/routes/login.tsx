@@ -22,10 +22,8 @@ import { DEV_CREDENTIALS, isDevelopment } from "@/lib/dev-credentials";
 import {
   MobileShell,
   MobilePage,
-  MobileSlot,
   MobileSlotProvider,
 } from "~/components/mobile";
-import { ThemeToggle } from "~/components/theme";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -86,12 +84,6 @@ export default function LoginPage() {
   return (
     <MobileSlotProvider>
       <MobileShell.Root variant="public">
-        <MobileShell.Header />
-
-        <MobileSlot name="header:right" priority={10}>
-          <ThemeToggle />
-        </MobileSlot>
-
         <MobileShell.Content className="flex items-start justify-center sm:items-center">
           <MobilePage.Root maxWidth="sm" className="w-full">
             <div className="min-h-[100svh] px-4 pb-8 pt-6 sm:min-h-0 sm:px-6 sm:py-8">

@@ -167,7 +167,7 @@ export function PuntoVentaSelect({
                 placeholder="Buscar punto de venta..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="rounded-xl"
+                className="shell-search-field px-4"
               />
 
               <button

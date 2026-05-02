@@ -153,7 +153,7 @@ export function ProductVariantSelector({
             placeholder="Buscar producto..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-xl"
+            className="shell-search-field px-4"
           />
 
           {!selectedProductId ? (

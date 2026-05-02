@@ -129,7 +129,7 @@ export default function CustomersPage() {
               placeholder="Buscar cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="shell-field h-12 pl-11 pr-4"
+              className="shell-search-field pl-11 pr-4"
             />
           </div>
           <div className="w-full">

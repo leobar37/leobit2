@@ -9,7 +9,7 @@ import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
 import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
-import { toISODateString, now } from "../../lib/date-utils";
+import { toISODateString, now, parseDateString } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -140,7 +140,7 @@ export class SaleService {
       if (!data.deliveryDate) {
         throw new ValidationError("La fecha de entrega es requerida para pedidos programados");
       }
-      const deliveryDateObj = new Date(data.deliveryDate);
+      const deliveryDateObj = parseDateString(data.deliveryDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (deliveryDateObj < today) {
@@ -228,7 +228,7 @@ export class SaleService {
     }
 
     if (isDeliveryDateOnlyUpdate && data.deliveryDate) {
-      const deliveryDateObj = new Date(data.deliveryDate);
+      const deliveryDateObj = parseDateString(data.deliveryDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (deliveryDateObj < today) {

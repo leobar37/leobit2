@@ -15,13 +15,6 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -253,18 +246,20 @@ export default function PaymentMethodsConfigPage() {
 
       <main className="p-4 pb-24">
         <div className="max-w-md mx-auto space-y-4">
-          <Card className="border-0 shadow-lg rounded-3xl">
-            <CardHeader>
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-4">
+          <div className="space-y-4">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CreditCard className="h-8 w-8 text-purple-600" />
               </div>
-              <CardTitle>Configurar Métodos de Pago</CardTitle>
-              <CardDescription>
-                Activa y configura los métodos de pago que aceptas
-              </CardDescription>
-            </CardHeader>
+              <div>
+                <h2 className="text-xl font-semibold">Configurar Métodos de Pago</h2>
+                <p className="text-sm text-muted-foreground">
+                  Activa y configura los métodos de pago que aceptas
+                </p>
+              </div>
+            </div>
 
-            <CardContent className="space-y-4">
+            <div className="space-y-4">
               {METHOD_DEFINITIONS.map((methodDef) => {
                 const methodData = methods?.[methodDef.id] || { enabled: false };
                 const isEditing = editingMethod === methodDef.id;
@@ -444,8 +439,8 @@ export default function PaymentMethodsConfigPage() {
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
     </div>

@@ -7,3 +7,4 @@ export { FormFileUpload } from "./form-file-upload";
 export { FormFieldShell } from "./form-field-shell";
 export { FormDate } from "./form-date";
 export { FormSelect } from "./form-select";
+export { FormMediaField } from "./form-media-field";

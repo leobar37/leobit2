@@ -82,6 +82,32 @@ export class FileService {
   }
 
   /**
+   * Batch resolve files to metadata with URLs
+   */
+  async resolveBatch(
+    ctx: RequestContext,
+    ids: string[]
+  ): Promise<Map<string, { id: string; filename: string; mimeType: string; sizeBytes: number; url: string }>> {
+    if (ids.length === 0) return new Map();
+
+    const files = await this.repository.findByIds(ctx, ids);
+    const result = new Map<string, { id: string; filename: string; mimeType: string; sizeBytes: number; url: string }>();
+
+    for (const file of files) {
+      const url = await r2Storage.getFileUrl(file.storagePath);
+      result.set(file.id, {
+        id: file.id,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        url,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Soft delete file
    */
   async delete(ctx: RequestContext, id: string): Promise<void> {

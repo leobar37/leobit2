@@ -4,13 +4,6 @@ import { Link } from "react-router";
 import { ArrowLeft, CheckCircle, Loader2, Shield } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FormPassword } from "@/components/forms/form-password";
 import { useAuth } from "~/hooks/use-auth";
 import {
@@ -68,18 +61,20 @@ export default function SecurityPage() {
       </MobileSlot>
 
       <MobilePage.Root maxWidth="md" className="space-y-4">
-        <MobilePage.Card variant="flat">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 mx-auto bg-red-100 rounded-2xl flex items-center justify-center">
-                <Shield className="h-8 w-8 text-red-600" />
-              </div>
-              <CardTitle className="mt-4">Cambiar contraseña</CardTitle>
-              <CardDescription>
+        <div className="space-y-4">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-red-100 rounded-2xl flex items-center justify-center">
+              <Shield className="h-8 w-8 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Cambiar contraseña</h2>
+              <p className="text-sm text-muted-foreground">
                 Actualiza tu contraseña para mantener tu cuenta segura
-              </CardDescription>
-            </CardHeader>
+              </p>
+            </div>
+          </div>
 
-            <CardContent>
+          <div>
               {success && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
@@ -140,8 +135,8 @@ export default function SecurityPage() {
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </MobilePage.Card>
+            </div>
+          </div>
       </MobilePage.Root>
     </>
   );

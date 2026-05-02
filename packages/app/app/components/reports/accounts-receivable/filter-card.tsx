@@ -15,7 +15,7 @@ export function FilterCard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Buscar cliente..."
-            className="pl-10"
+            className="shell-search-field pl-10 pr-4"
             value={filters.search ?? ""}
             onChange={(e) => setSearch(e.target.value)}
           />

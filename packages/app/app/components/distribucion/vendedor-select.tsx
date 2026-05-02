@@ -147,7 +147,7 @@ export function VendedorSelect({
             placeholder="Buscar vendedor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-xl"
+            className="shell-search-field px-4"
           />
 
           <div className="space-y-2">

@@ -2,13 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Calculator, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -143,21 +136,20 @@ export default function FlagsConfigPage() {
       </MobileSlot>
 
       <MobilePage.Root maxWidth="md" className="space-y-4">
-        <MobilePage.Card variant="flat">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Calculator className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Calculadoras</CardTitle>
-                <CardDescription>
-                  Personaliza el comportamiento de las calculadoras
-                </CardDescription>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+              <Calculator className="h-5 w-5 text-orange-600" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold">Calculadoras</h2>
+              <p className="text-sm text-muted-foreground">
+                Personaliza el comportamiento de las calculadoras
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
             {localSettings && (
               <>
                 <CalculatorSection
@@ -188,8 +180,8 @@ export default function FlagsConfigPage() {
                 />
               </>
             )}
-          </CardContent>
-        </MobilePage.Card>
+          </div>
+        </div>
 
         <div className="flex gap-3">
           <Button

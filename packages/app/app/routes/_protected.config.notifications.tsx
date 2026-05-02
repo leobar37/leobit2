@@ -4,13 +4,6 @@ import { z } from "zod";
 import { Link } from "react-router";
 import { ArrowLeft, Bell, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { MobileSlot, MobilePage } from "~/components/mobile";
@@ -64,19 +57,21 @@ export default function NotificationsConfigPage() {
       </MobileSlot>
 
       <MobilePage.Root maxWidth="md" className="space-y-4">
-        <MobilePage.Card variant="flat">
-            <CardHeader>
-              <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4">
-                <Bell className="h-8 w-8 text-yellow-600" />
-              </div>
-              <CardTitle>Configuracion de Notificaciones</CardTitle>
-              <CardDescription>
+        <div className="space-y-4">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto">
+              <Bell className="h-8 w-8 text-yellow-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Configuracion de Notificaciones</h2>
+              <p className="text-sm text-muted-foreground">
                 Personaliza como y cuando recibes alertas
-              </CardDescription>
-            </CardHeader>
+              </p>
+            </div>
+          </div>
 
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                     Canales de notificacion
@@ -212,8 +207,8 @@ export default function NotificationsConfigPage() {
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </MobilePage.Card>
+            </div>
+          </div>
       </MobilePage.Root>
     </>
   );

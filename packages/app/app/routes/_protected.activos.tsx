@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { useAssets, useUploadAsset, useDeleteAsset, type Asset } from "~/hooks/use-assets";
-import { useFileUpload } from "~/hooks/use-file-upload";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 export default function ActivosPage() {
@@ -18,7 +17,6 @@ export default function ActivosPage() {
   const { data: assets, isLoading, error } = useAssets();
   const uploadAsset = useUploadAsset();
   const deleteAsset = useDeleteAsset();
-  const fileUpload = useFileUpload({ endpoint: "/assets/upload" });
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const filteredAssets = assets?.filter((asset) =>
@@ -41,11 +39,12 @@ export default function ActivosPage() {
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const result = await fileUpload.upload(selectedFile);
-
-    if (result.status === "synced") {
+    try {
+      await uploadAsset.mutateAsync(selectedFile);
       handleClear();
       setShowUploader(false);
+    } catch (error) {
+      console.error("Error uploading asset:", error);
     }
   };
 
@@ -87,8 +86,8 @@ export default function ActivosPage() {
               <FileUploader
                 file={selectedFile}
                 previewUrl={previewUrl}
-                status={fileUpload.isUploading ? "uploading" : fileUpload.isPending ? "pending" : "idle"}
-                error={fileUpload.isError ? "Error al subir" : null}
+                status={uploadAsset.isPending ? "uploading" : "idle"}
+                error={uploadAsset.isError ? "Error al subir" : null}
                 label="Nueva imagen"
                 helperText="Sube imágenes para usar en productos"
                 onFileSelect={handleFileSelect}
@@ -99,9 +98,9 @@ export default function ActivosPage() {
                   <Button
                     className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"
                     onClick={handleUpload}
-                    disabled={fileUpload.isUploading}
+                    disabled={uploadAsset.isPending}
                   >
-                    {fileUpload.isUploading ? (
+                    {uploadAsset.isPending ? (
                       <>
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                         Subiendo...
@@ -120,7 +119,7 @@ export default function ActivosPage() {
                       handleClear();
                       setShowUploader(false);
                     }}
-                    disabled={fileUpload.isUploading}
+                    disabled={uploadAsset.isPending}
                   >
                     Cancelar
                   </Button>
@@ -137,7 +136,7 @@ export default function ActivosPage() {
               placeholder="Buscar activos..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 rounded-xl"
+              className="shell-search-field pl-10 pr-4"
             />
           </div>
 

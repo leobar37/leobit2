@@ -37,12 +37,13 @@ function recalculateCachedSaleFinancials(
   };
 }
 
-export function useSale(id: string | null) {
-  const { data, ...rest } = useSaleBase(id);
-  return {
-    data: data ?? null,
-    ...rest,
-  };
+export function useSale<TData = SaleWithItems | null>(
+  id: string | null,
+  options?: {
+    select?: (sale: SaleWithItems | null) => TData;
+  },
+) {
+  return useSaleBase(id, options);
 }
 
 export function useSaleItems(saleId: string | null) {

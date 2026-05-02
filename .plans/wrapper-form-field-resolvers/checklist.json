@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "plan": "wrapper-form-field-resolvers",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create generic field resolver core",
+      "file": "tasks/01-create-field-resolver-core.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-009",
+        "FR-012",
+        "FR-013",
+        "NFR-001",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Add backend media resolver and tenant hardening",
+      "file": "tasks/02-add-backend-media-resolver.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-011",
+        "FR-012",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Create useWrapperForm with payload resolution methods",
+      "file": "tasks/03-create-use-wrapper-form.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-015",
+        "NFR-001",
+        "NFR-003",
+        "NFR-004",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Create generic form media field",
+      "file": "tasks/04-create-form-media-field.md",
+      "status": "completed",
+      "phase": "ui",
+      "dependencies": [
+        "T-001",
+        "T-003"
+      ],
+      "requirements": [
+        "FR-008",
+        "FR-010",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Migrate product and profile media flows",
+      "file": "tasks/05-migrate-product-profile-flows.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-014",
+        "FR-015",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Migrate payment purchase config and asset flows",
+      "file": "tasks/06-migrate-payment-purchase-config-flows.md",
+      "status": "completed",
+      "phase": "migration",
+      "dependencies": [
+        "T-002",
+        "T-003",
+        "T-004"
+      ],
+      "requirements": [
+        "FR-014",
+        "FR-015",
+        "NFR-005",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Add tests and clean up duplicated upload paths",
+      "file": "tasks/07-tests-and-cleanup.md",
+      "status": "completed",
+      "phase": "validation",
+      "dependencies": [
+        "T-005",
+        "T-006"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-014",
+        "NFR-001",
+        "NFR-002",
+        "NFR-004",
+        "NFR-006"
+      ]
+    }
+  ]
+}

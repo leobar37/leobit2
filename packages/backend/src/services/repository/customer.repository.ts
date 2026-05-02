@@ -29,6 +29,14 @@ export class CustomerRepository {
       return [];
     }
 
+    const searchCondition = filters?.search
+      ? sql`(
+          ${customers.name} ILIKE ${`%${filters.search}%`}
+          OR ${customers.phone} ILIKE ${`%${filters.search}%`}
+          OR ${customers.dni} ILIKE ${`%${filters.search}%`}
+        )`
+      : undefined;
+
     // If tagIds provided, filter using JOIN with customerTags to avoid N+1
     if (filters?.tagIds && filters.tagIds.length > 0) {
       // Join customerTags with customers to filter by businessId
@@ -51,9 +59,7 @@ export class CustomerRepository {
       return db.query.customers.findMany({
         where: and(
           eq(customers.businessId, ctx.businessId),
-          filters.search
-            ? like(customers.name, `%${filters.search}%`)
-            : undefined,
+          searchCondition,
           filters.customerIds && filters.customerIds.length > 0
             ? and(inArray(customers.id, ids), inArray(customers.id, filters.customerIds))
             : inArray(customers.id, ids)
@@ -67,9 +73,7 @@ export class CustomerRepository {
     const query = db.query.customers.findMany({
       where: and(
         eq(customers.businessId, ctx.businessId),
-        filters?.search
-          ? like(customers.name, `%${filters.search}%`)
-          : undefined,
+        searchCondition,
         // Filter by specific customer IDs if provided
         filters?.customerIds && filters.customerIds.length > 0
           ? inArray(customers.id, filters.customerIds)

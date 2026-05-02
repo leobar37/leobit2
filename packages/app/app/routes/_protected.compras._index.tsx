@@ -102,7 +102,7 @@ export default function ComprasPage() {
             placeholder="Buscar compra..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-12 rounded-[20px] border-stone-200/80 bg-white/75 pl-11 pr-4 shadow-[0_1px_6px_rgba(15,23,42,0.02)] placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200"
+            className="shell-search-field pl-11 pr-4"
           />
         </div>
 

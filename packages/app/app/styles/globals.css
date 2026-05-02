@@ -210,6 +210,25 @@
     box-shadow: var(--highlight-top-soft);
   }
 
+  .shell-search-field {
+    height: 3rem;
+    border-radius: 20px;
+    background: var(--surface-highlight);
+    border: 1px solid var(--border-color-strong);
+    box-shadow: var(--highlight-top-soft), var(--shadow-sm);
+    color: hsl(var(--foreground));
+  }
+
+  .shell-search-field::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.78;
+  }
+
+  .shell-search-field:focus-visible {
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 1px var(--focus-ring), var(--highlight-top-soft), var(--shadow-sm);
+  }
+
   .shell-divider {
     border-color: var(--divider-color);
   }

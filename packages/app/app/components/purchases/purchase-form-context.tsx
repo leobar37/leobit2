@@ -4,15 +4,16 @@
  */
 
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { useForm, FormProvider, type UseFormReturn } from "react-hook-form";
+import { FormProvider, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBusiness } from "~/hooks/use-business";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
-import { useUploadFile } from "~/hooks/use-files";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { purchaseItemTransformer } from "@avileo/shared";
+import { useWrapperForm } from "~/hooks/use-wrapper-form";
+import { fileField } from "~/lib/forms/media-field-resolvers";
 
 /** Purchase status from API */
 type PurchaseStatus = "pending" | "received" | "cancelled";
@@ -86,6 +87,7 @@ interface PurchaseFormValues {
   purchaseDate: string;
   invoiceNumber: string;
   notes: string;
+  receiptImageId?: string | File | null;
 }
 
 interface PurchaseFormContextType {
@@ -169,7 +171,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const [localItems, setLocalItems] = useState<PurchaseItem[]>([]);
   const [localSupplier, setLocalSupplier] = useState<Supplier | null>(null);
 
-  const form = useForm<PurchaseFormValues>({
+  const form = useWrapperForm<PurchaseFormValues>({
     defaultValues: {
       purchaseDate: purchase?.purchaseDate
         ? purchase.purchaseDate
@@ -183,6 +185,9 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
+    },
+    fields: {
+      receiptImageId: fileField(),
     },
   });
 
@@ -271,15 +276,17 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const handleReceiptSelect = useCallback((file: File) => {
     setReceiptFile(file);
     setReceiptPreview(URL.createObjectURL(file));
+    form.setValue("receiptImageId", file as unknown as string);
     setFileUploadStatus({ isUploading: false, isPending: true, isError: false });
-  }, []);
+  }, [form]);
 
   const handleReceiptClear = useCallback(() => {
     if (receiptPreview) URL.revokeObjectURL(receiptPreview);
     setReceiptFile(null);
     setReceiptPreview(null);
+    form.setValue("receiptImageId", undefined);
     setFileUploadStatus({ isUploading: false, isPending: false, isError: false });
-  }, [receiptPreview]);
+  }, [receiptPreview, form]);
 
   const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
 
@@ -290,10 +297,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const isFormValid =
     items.length > 0 && effectiveSupplier !== null && !!form.getValues("purchaseDate");
 
-  const uploadReceiptFile = useUploadFile({
-    entityType: "order",
-    fieldName: "receiptImageId",
-  });
+
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -302,7 +306,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         // Field/item edits are not supported.
         if (receiptFile) {
           // Upload receipt but note API cannot attach it to existing purchase
-          await uploadReceiptFile.mutateAsync(receiptFile);
+          await form.resolveField("receiptImageId", receiptFile as unknown as string);
         }
         return purchase.id;
       }
@@ -318,10 +322,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       // Upload receipt if provided
       let receiptImageId: string | undefined;
       if (receiptFile) {
-        const result = await uploadReceiptFile.mutateAsync(receiptFile);
-        receiptImageId = (result as { isOffline?: boolean }).isOffline
-          ? undefined
-          : (result as { id: string }).id;
+        const resolved = await form.resolveField("receiptImageId", receiptFile as unknown as string);
+        receiptImageId = typeof resolved === "string" ? resolved : undefined;
       }
 
       const input: CreatePurchaseInput = {

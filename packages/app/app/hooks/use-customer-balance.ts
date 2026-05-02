@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { useAccountsReceivable } from "./use-accounts-receivable";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 
 export interface CustomerBalance {
   totalSales: number;
@@ -8,30 +9,17 @@ export interface CustomerBalance {
 }
 
 export function useCustomerBalance(customerId: string | null) {
-  const { data = [], isLoading } = useAccountsReceivable(
-    customerId ? { customerId } : {}
-  );
-
-  const balance = useMemo<CustomerBalance>(() => {
-    const account = data[0];
-
-    if (!account) {
-      return {
-        totalSales: 0,
-        totalPayments: 0,
-        balanceDue: 0,
-      };
-    }
-
-    return {
-      totalSales: account.totalSales,
-      totalPayments: account.totalPayments,
-      balanceDue: account.totalDebt,
-    };
-  }, [data]);
+  const { data, isLoading } = useQuery({
+    queryKey: ["customers", customerId, "balance"],
+    queryFn: async () => {
+      const response = await api.customers({ id: customerId! }).balance.get();
+      return extractData<CustomerBalance>(response);
+    },
+    enabled: !!customerId,
+  });
 
   return {
-    data: balance,
+    data: data ?? { totalSales: 0, totalPayments: 0, balanceDue: 0 },
     isLoading,
   };
 }

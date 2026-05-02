@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { User, X, ChevronDown, TrendingUp, Plus } from "lucide-react";
+import { useDebounce } from "~/hooks/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +37,9 @@ export function CustomerSelect({
 }: CustomerSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 250);
   const { data: customers = [], isLoading } = useCustomers(
-    searchQuery ? { search: searchQuery } : undefined,
+    debouncedSearch ? { search: debouncedSearch } : undefined,
   );
   const { data: balanceData } = useCustomerBalance(value);
   const quickCustomerModal = useQuickCustomerModal();
@@ -153,7 +155,7 @@ export function CustomerSelect({
             placeholder="Buscar cliente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-xl"
+            className="shell-search-field px-4"
           />
 
           {/* Create button - always visible at top */}

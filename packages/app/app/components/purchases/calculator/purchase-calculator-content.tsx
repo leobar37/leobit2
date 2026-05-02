@@ -118,7 +118,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
         setSelectedVariantId(variant.id);
         // Pre-fill quantity after a short delay to ensure calculator is ready
         setTimeout(() => {
-          setFieldValue("kilos", firstItem.quantity);
+          setFieldValue("quantity", firstItem.quantity);
         }, 150);
       }
     }
@@ -306,7 +306,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                   label="Kilos netos"
                   value={values.quantity}
                   placeholder="0.000"
-                  onChange={(value) => setFieldValue("kilos", value)}
+                  onChange={(value) => setFieldValue("quantity", value)}
                   fieldType="quantity"
                   isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
@@ -317,7 +317,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                   label="Precio por kg (S/)"
                   value={values.price}
                   placeholder={selectedVariant?.price || "0.00"}
-                  onChange={(value) => setFieldValue("pricePerKg", value)}
+                  onChange={(value) => setFieldValue("price", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
@@ -328,14 +328,14 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                       : undefined
                   }
                   helperValue={selectedVariant?.price}
-                  onApplyHelperValue={(value) => setFieldValue("pricePerKg", value)}
+                  onApplyHelperValue={(value) => setFieldValue("price", value)}
                 />
                 <CalculatorInput
                   name="totalAmount"
                   label="Total (S/)"
                   value={values.total}
                   placeholder="0.00"
-                  onChange={(value) => setFieldValue("totalAmount", value)}
+                  onChange={(value) => setFieldValue("total", value)}
                   fieldType="total"
                   isAutoCalculateTarget={isFieldAutoCalculated("total")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("total")}
@@ -350,7 +350,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                   label="Packs"
                   value={values.quantity}
                   placeholder="0"
-                  onChange={(value) => setFieldValue("packs", value)}
+                  onChange={(value) => setFieldValue("quantity", value)}
                   fieldType="quantity"
                   isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("quantity")}
@@ -361,7 +361,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                   label="Precio por pack (S/)"
                   value={values.price}
                   placeholder={selectedVariant?.price || "0.00"}
-                  onChange={(value) => setFieldValue("pricePerPack", value)}
+                  onChange={(value) => setFieldValue("price", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("price")}
@@ -372,14 +372,14 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
                       : undefined
                   }
                   helperValue={selectedVariant?.price}
-                  onApplyHelperValue={(value) => setFieldValue("pricePerPack", value)}
+                  onApplyHelperValue={(value) => setFieldValue("price", value)}
                 />
                 <CalculatorInput
                   name="totalAmount"
                   label="Total (S/)"
                   value={values.total}
                   placeholder="0.00"
-                  onChange={(value) => setFieldValue("totalAmount", value)}
+                  onChange={(value) => setFieldValue("total", value)}
                   fieldType="total"
                   isAutoCalculateTarget={isFieldAutoCalculated("total")}
                   onToggleAutoCalculate={() => toggleAutoCalculateField("total")}

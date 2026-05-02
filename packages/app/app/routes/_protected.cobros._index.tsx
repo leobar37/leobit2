@@ -37,7 +37,7 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
             <div className="flex items-center gap-2 mb-1">
               <MinimalCardMedia 
                 icon={User} 
-                iconColor="text-red-600" 
+                iconColor="text-destructive" 
                 size="sm" 
               />
               <div className="flex-1 min-w-0">
@@ -60,8 +60,8 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
             </div>
           </div>
 
-          <div className="text-right ml-3">
-            <p className="text-xl font-bold text-red-600">
+            <div className="text-right ml-3">
+            <p className="text-xl font-bold text-destructive">
               S/ {formatCurrency(account.totalDebt)}
             </p>
             <Button
@@ -118,7 +118,7 @@ export default function CobrosPage() {
             <p className="text-sm text-muted-foreground">Total por cobrar</p>
             <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(totalDebt)}</p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-red-500/14 dark:text-red-300">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-destructive/15 dark:text-destructive-foreground">
             <Wallet className="h-5 w-5" />
           </div>
         </div>
@@ -134,7 +134,7 @@ export default function CobrosPage() {
           placeholder="Buscar cliente..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="shell-field pl-10"
+          className="shell-search-field pl-10 pr-4"
         />
       </div>
 

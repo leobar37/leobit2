@@ -81,7 +81,7 @@ export function useCustomers(filters?: CustomerSearchFilters) {
       const response = await api.customers.get({
         query: {
           search: filters?.search,
-          limit: filters?.limit?.toString(),
+          limit: (filters?.limit ?? 20).toString(),
           offset: filters?.offset?.toString(),
           tagIds: filters?.tagIds?.join(","),
         },

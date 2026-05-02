@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Package, Loader2, Save, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,13 +10,15 @@ import { FormPage } from "~/components/layout/form-page";
 import { MobilePage } from "~/components/mobile/mobile-page";
 import { ProductFormContent } from "~/components/products/product-form-content";
 import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
+import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
+import { assetField } from "~/lib/forms/media-field-resolvers";
 
 export default function NuevoProductoPage() {
   const navigate = useNavigate();
   const createProduct = useCreateProduct();
   const [hasVariants, setHasVariants] = useState(false);
 
-  const form = useForm<ProductFormData>({
+  const form = useWrapperForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     mode: "onChange",
     defaultValues: {
@@ -27,6 +28,9 @@ export default function NuevoProductoPage() {
       basePrice: "",
       isActive: true,
       imageId: undefined,
+    },
+    fields: {
+      imageId: assetField(),
     },
   });
 
@@ -56,7 +60,7 @@ export default function NuevoProductoPage() {
       icon={Package}
       toolbar={
         <Button
-          onClick={form.handleSubmit(handleSubmit)}
+          onClick={form.handleResolvedSubmit(handleSubmit)}
           disabled={createProduct.isPending || !isValid}
           data-testid="save-product-button"
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
@@ -75,7 +79,7 @@ export default function NuevoProductoPage() {
         </Button>
       }
     >
-      <FormProvider {...form}>
+      <WrapperFormProvider form={form}>
         <div className="space-y-4">
           <ProductFormContent form={form} />
 
@@ -112,7 +116,7 @@ export default function NuevoProductoPage() {
             </CardContent>
           </MobilePage.Card>
         </div>
-      </FormProvider>
+      </WrapperFormProvider>
     </FormPage>
   );
 }

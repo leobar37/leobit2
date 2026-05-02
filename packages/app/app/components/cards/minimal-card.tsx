@@ -8,17 +8,17 @@ const minimalCardVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-white border-[0.5px] border-gray-200",
-        outlined: "bg-transparent border-[0.5px] border-gray-200",
+        default: "bg-card border border-border",
+        outlined: "bg-transparent border border-border",
         filled: "border-0",
         ghost: "bg-transparent border-0",
       },
       tone: {
-        neutral: "bg-gray-50/80",
-        primary: "bg-orange-50/80",
-        success: "bg-green-50/80",
-        warning: "bg-amber-50/80",
-        danger: "bg-red-50/80",
+        neutral: "bg-muted/80",
+        primary: "bg-primary/10",
+        success: "bg-emerald-500/10 dark:bg-emerald-500/15",
+        warning: "bg-amber-500/10 dark:bg-amber-500/15",
+        danger: "bg-red-500/10 dark:bg-red-500/15",
       },
       radius: {
         sm: "rounded-sm",
@@ -44,12 +44,12 @@ const minimalCardVariants = cva(
       {
         variant: ["default", "outlined"],
         interactive: true,
-        className: "hover:bg-gray-50/80",
+        className: "hover:bg-accent/50",
       },
       {
         variant: ["default", "outlined"],
         clickable: true,
-        className: "hover:bg-gray-50/80",
+        className: "hover:bg-accent/50",
       },
       {
         variant: "filled",
@@ -64,7 +64,7 @@ const minimalCardVariants = cva(
       {
         variant: "ghost",
         interactive: true,
-        className: "hover:bg-gray-100/50",
+        className: "hover:bg-accent/50",
       },
     ],
     defaultVariants: {
@@ -130,7 +130,7 @@ const MinimalCardMedia = React.forwardRef<
   if (Icon) {
     return (
       <div ref={ref} className={cn("flex items-center justify-center", className)} {...props}>
-        <Icon className={cn(sizeClasses[size], iconColor || "text-gray-600")} />
+        <Icon className={cn(sizeClasses[size], iconColor || "text-muted-foreground")} />
       </div>
     );
   }

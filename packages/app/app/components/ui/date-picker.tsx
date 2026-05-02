@@ -78,7 +78,8 @@ export function DatePicker({
         data-testid="date-picker-trigger"
         className={cn(
           "w-full justify-start text-left font-normal rounded-xl h-12 px-4",
-          "bg-white border-gray-200 hover:bg-gray-50 hover:border-orange-300",
+          "bg-background border-border hover:bg-accent hover:border-orange-300",
+          "dark:hover:border-orange-500/50",
           "transition-colors",
           !value && "text-muted-foreground"
         )}
@@ -94,9 +95,9 @@ export function DatePicker({
       
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="w-full rounded-t-[24px] flex flex-col">
-          <DrawerHeader className="border-b border-gray-100 px-4 pb-3 pt-2 flex-shrink-0">
+          <DrawerHeader className="border-b border-border px-4 pb-3 pt-2 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DrawerTitle className="text-lg font-semibold text-gray-900">
+              <DrawerTitle className="text-lg font-semibold text-foreground">
                 {label || "Seleccionar fecha"}
               </DrawerTitle>
               <Button
@@ -106,7 +107,7 @@ export function DatePicker({
                 onClick={() => setOpen(false)}
                 className="rounded-full h-9 w-9"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </Button>
             </div>
             <DrawerDescription className="text-left text-sm text-muted-foreground">
@@ -125,7 +126,8 @@ export function DatePicker({
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",
-                  "text-gray-700 font-medium",
+                  "dark:border-orange-500/30 dark:hover:border-orange-400 dark:hover:bg-orange-500/10",
+                  "text-foreground font-medium",
                   !canSelectFirst && "opacity-50 cursor-not-allowed"
                 )}
               >
@@ -141,7 +143,8 @@ export function DatePicker({
                 className={cn(
                   "rounded-xl h-12 border-2",
                   "border-orange-200 hover:border-orange-500 hover:bg-orange-50",
-                  "text-gray-700 font-medium",
+                  "dark:border-orange-500/30 dark:hover:border-orange-400 dark:hover:bg-orange-500/10",
+                  "text-foreground font-medium",
                   !canSelectSecond && "opacity-50 cursor-not-allowed"
                 )}
               >
@@ -152,7 +155,7 @@ export function DatePicker({
           </div>
 
           <div className="overflow-y-auto flex-1">
-            <div className="p-4 bg-white">
+            <div className="p-4 bg-background">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -161,14 +164,15 @@ export function DatePicker({
                 initialFocus
                 className={cn(
                   "border-0 w-full",
-                  "[&_.rdp-caption]:text-gray-900",
+                  "[&_.rdp-caption]:text-foreground",
                   "[&_.rdp-caption]:font-semibold",
                   "[&_.rdp-caption]:text-lg",
                   "[&_.rdp-nav_button]:w-9",
                   "[&_.rdp-nav_button]:h-9",
                   "[&_.rdp-nav_button]:rounded-full",
                   "[&_.rdp-nav_button]:hover:bg-orange-50",
-                  "[&_.rdp-head_cell]:text-gray-500",
+                  "[&_.rdp-nav_button]:dark:hover:bg-orange-500/10",
+                  "[&_.rdp-head_cell]:text-muted-foreground",
                   "[&_.rdp-head_cell]:font-medium",
                   "[&_.rdp-head_cell]:text-sm",
                   "[&_.rdp-head_cell]:w-full",
@@ -183,7 +187,9 @@ export function DatePicker({
                   "[&_.rdp-button]:text-base",
                   "[&_.rdp-button]:font-normal",
                   "[&_.rdp-day_today]:bg-orange-100",
+                  "[&_.rdp-day_today]:dark:bg-orange-500/20",
                   "[&_.rdp-day_today]:text-orange-700",
+                  "[&_.rdp-day_today]:dark:text-orange-300",
                   "[&_.rdp-day_today]:font-semibold",
                   "[&_.rdp-day_today]:rounded-full",
                   "[&_.rdp-day_selected]:bg-orange-500",
@@ -192,10 +198,11 @@ export function DatePicker({
                   "[&_.rdp-day_selected]:rounded-full",
                   "[&_.rdp-day_selected:hover]:bg-orange-600",
                   "[&_.rdp-button:hover:not(.rdp-day_selected)]:bg-orange-50",
-                  "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-gray-900",
+                  "[&_.rdp-button:hover:not(.rdp-day_selected)]:dark:bg-orange-500/10",
+                  "[&_.rdp-button:hover:not(.rdp-day_selected)]:text-foreground",
                   "[&_.rdp-disabled]:opacity-30",
                   "[&_.rdp-disabled]:cursor-not-allowed",
-                  "[&_.rdp-day_outside]:text-gray-300",
+                  "[&_.rdp-day_outside]:text-muted-foreground/50",
                   "[&_.rdp-table]:w-full"
                 )}
               />
@@ -207,7 +214,7 @@ export function DatePicker({
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="w-full rounded-xl h-12 border-gray-200 text-gray-600 hover:bg-gray-50"
+              className="w-full rounded-xl h-12 border-border text-muted-foreground hover:bg-accent"
             >
               Cancelar
             </Button>

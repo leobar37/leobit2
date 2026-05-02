@@ -105,7 +105,7 @@ export default function SalesPage() {
             placeholder="Buscar venta, cliente o producto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="shell-field h-12 rounded-[20px] pl-11 pr-4 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-orange-200 dark:focus-visible:ring-orange-400/40"
+            className="shell-search-field pl-11 pr-4"
           />
         </div>
 

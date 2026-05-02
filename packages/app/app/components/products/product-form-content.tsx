@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign } from "lucide-react";
-import { AssetPicker } from "@/components/assets/asset-picker";
+import { FormMediaField } from "~/components/forms/form-media-field";
 import { CategorySelect } from "@/components/products/category-select";
 import type { Product } from "@avileo/shared";
 import type { UseFormReturn } from "react-hook-form";
@@ -16,8 +16,6 @@ interface ProductFormContentProps {
 export function ProductFormContent({ form, product }: ProductFormContentProps) {
   const {
     register,
-    watch,
-    setValue,
     formState: { errors },
   } = form;
 
@@ -47,11 +45,9 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
         </div>
 
         <div className="space-y-2">
-          <Label>Imagen del producto</Label>
-          <AssetPicker
-            value={watch("imageId")}
-            onChange={(id) => setValue("imageId", id)}
-            placeholder="Seleccionar imagen"
+          <FormMediaField
+            name="imageId"
+            label="Imagen del producto"
           />
         </div>
 

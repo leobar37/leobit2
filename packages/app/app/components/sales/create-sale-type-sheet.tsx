@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, ShoppingCart, Loader2 } from "lucide-react";
+import { Calendar, ShoppingCart, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateForInput } from "~/lib/utils";
 import {
@@ -16,6 +16,7 @@ import { useCreateDraftSale } from "~/hooks/use-sales";
 import { useBusiness } from "~/hooks/use-business";
 import { useNavigate } from "react-router";
 import { cn } from "~/lib/utils";
+import { addDays, formatDisplayDate, isSameDay } from "~/lib/date-utils";
 
 interface CreateSaleTypeSheetProps {
   open: boolean;
@@ -110,24 +111,30 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
   const { data: business } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [deliveryDate, setDeliveryDate] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Default to tomorrow for pre-orders
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  const [deliveryDate, setDeliveryDate] = useState(formatDateForInput(tomorrow));
+
+  const isToday = isSameDay(deliveryDate, today);
+  const isTomorrow = isSameDay(deliveryDate, tomorrow);
+
+  const getDateLabel = () => {
+    if (isToday) return `Hoy, ${formatDisplayDate(deliveryDate)}`;
+    if (isTomorrow) return `Mañana, ${formatDisplayDate(deliveryDate)}`;
+    return formatDisplayDate(deliveryDate);
+  };
+
   const handleSelectProgramar = () => {
-    setDeliveryDate(formatDateForInput(new Date()));
+    // Always reset to tomorrow when opening
+    setDeliveryDate(formatDateForInput(addDays(new Date(), 1)));
     setShowDatePicker(true);
   };
 
   const handleConfirmProgramar = async () => {
-    // Prevent duplicate creation from rapid clicks
-    if (createDraftSale.isPending || loading) {
-      return;
-    }
-
-    if (!deliveryDate) {
-      toast.error("Selecciona una fecha de entrega");
-      return;
-    }
+    if (createDraftSale.isPending || loading) return;
 
     if (!business?.businessUserId) {
       toast.error("Error al crear venta", {
@@ -152,6 +159,11 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuickSelect = (days: number) => {
+    const date = addDays(new Date(), days);
+    setDeliveryDate(formatDateForInput(date));
   };
 
   return (
@@ -192,15 +204,62 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
               Selecciona la fecha de entrega para este pedido
             </SheetDescription>
           </SheetHeader>
-          <div className="py-4">
+
+          <div className="py-4 space-y-3">
+            {/* Quick shortcuts */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleQuickSelect(0)}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors",
+                  isToday
+                    ? "border-orange-500 bg-orange-50 text-orange-700 dark:border-orange-500 dark:bg-orange-500/15 dark:text-orange-300"
+                    : "border-border bg-background text-foreground hover:border-orange-300 hover:bg-accent dark:hover:border-orange-500/50"
+                )}
+              >
+                {isToday && <Check className="h-4 w-4" />}
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickSelect(1)}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors",
+                  isTomorrow
+                    ? "border-orange-500 bg-orange-50 text-orange-700 dark:border-orange-500 dark:bg-orange-500/15 dark:text-orange-300"
+                    : "border-border bg-background text-foreground hover:border-orange-300 hover:bg-accent dark:hover:border-orange-500/50"
+                )}
+              >
+                {isTomorrow && <Check className="h-4 w-4" />}
+                Mañana
+              </button>
+            </div>
+
+            {/* Selected date display */}
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-accent/50 px-4 py-3">
+              <Calendar className="h-5 w-5 text-orange-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {getDateLabel()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Fecha de entrega seleccionada
+                </p>
+              </div>
+            </div>
+
+            {/* DatePicker for custom date */}
             <DatePicker
               value={deliveryDate}
               onChange={setDeliveryDate}
-              label="Fecha de entrega"
-              placeholder="Selecciona la fecha de entrega"
+              label="O selecciona otra fecha"
+              placeholder="Seleccionar fecha"
               minDate={formatDateForInput(new Date())}
+              quickActionLabels={["Hoy", "Mañana"]}
             />
           </div>
+
           <SheetFooter className="flex-row-reverse gap-2">
             <Button
               onClick={handleConfirmProgramar}
