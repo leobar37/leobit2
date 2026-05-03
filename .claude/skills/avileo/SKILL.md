@@ -139,6 +139,7 @@ interface ConfiguracionSistema {
 - **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
 - **[referencias/toolbar-actions.md](referencias/toolbar-actions.md)** - ToolbarActions component pattern
+- **[referencias/file-upload-pattern.md](referencias/file-upload-pattern.md)** - File upload pattern with mobile camera support and payment proof integration
 
 ## Important Constraints
 
@@ -166,6 +167,9 @@ interface ConfiguracionSistema {
 - `packages/app/app/routes/` - Frontend routes
 - `packages/shared/src/index.ts` - Shared types
 - `packages/shared/src/transformers/` - Decimal/entity transformers (see below)
+- `packages/app/app/components/forms/form-media-field.tsx` - File upload component with mobile camera support
+- `packages/app/app/components/ui/camera-gallery-drawer.tsx` - Mobile camera/gallery drawer
+- `packages/app/app/hooks/use-files.ts` - File operations and validation hooks
 
 ## Utilities
 
@@ -335,4 +339,5 @@ useMutation({
 ---
 
 *Last updated: May 2026*
+*Added: File upload pattern documentation with mobile camera support*
 *For detailed information, see linked documentation files.*

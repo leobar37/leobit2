@@ -148,18 +148,48 @@ export function useCreatePurchase() {
 
 /**
  * Create a draft purchase (for immediate editing)
- * @deprecated The API does not support draft purchases. Use useCreatePurchase instead.
  */
 export function useCreateDraftPurchase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (_input?: CreatePurchaseInput): Promise<Purchase> => {
-      throw new Error("Draft purchases are not supported by the API. Use useCreatePurchase instead.");
+    mutationFn: async (input?: Partial<CreatePurchaseInput>): Promise<Purchase> => {
+      const today = new Date().toISOString().split("T")[0];
+      const response = await api.purchases.post({
+        supplierId: input?.supplierId ?? "",
+        purchaseDate: input?.purchaseDate ?? today,
+        invoiceNumber: input?.invoiceNumber,
+        receiptImageId: input?.receiptImageId,
+        notes: input?.notes,
+        status: "draft",
+        items: [],
+      });
+      return extractData<Purchase>(response);
     },
-    onSuccess: () => {
+    onSuccess: (purchase) => {
+      queryClient.setQueryData(queryKeys.purchases.detail(purchase.id), {
+        ...purchase,
+        items: [],
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
-      queryClient.invalidateQueries({ queryKey: ["purchases", "drafts"] });
+    },
+  });
+}
+
+/**
+ * Confirm a draft purchase (draft -> pending)
+ */
+export function useConfirmPurchase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const response = await api.purchases({ id }).confirm.post();
+      extractData(response);
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.purchases.all });
     },
   });
 }

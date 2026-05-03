@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { useSales } from "./use-sales";
-import { useOnline } from "~/hooks/use-online";
+
 
 interface CustomerHistory {
   totalPurchases: number;
@@ -60,7 +60,7 @@ const QUERY_KEYS = {
 } as const;
 
 export function useSaleAnalysis(saleId: string | null) {
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const { data: allSales = [] } = useSales();
 
   return useQuery({
@@ -81,10 +81,10 @@ export function useSaleAnalysis(saleId: string | null) {
         }
       }
 
-      // Offline fallback: calculate from local sales data
+      // Calculate from local sales data
       if (!sale) return null;
 
-      // Calculate customer history (always available offline)
+      // Calculate customer history
       const customerSales = allSales.filter(
         (s) =>
           s.customerId === sale.customerId &&
@@ -112,7 +112,7 @@ export function useSaleAnalysis(saleId: string | null) {
             : null,
       };
 
-      // Calculate payment status (always available offline)
+      // Calculate payment status
       const totalAmount = parseFloat(sale.totalAmount ?? "0");
       const amountPaid = parseFloat(sale.amountPaid ?? "0");
       const balanceDue = parseFloat(sale.balanceDue ?? "0");
@@ -128,7 +128,7 @@ export function useSaleAnalysis(saleId: string | null) {
           balanceDue <= 0 ? "paid" : amountPaid > 0 ? "partial" : "pending",
       };
 
-      // Profit analysis not available offline (no costPriceSnapshot)
+      // Profit analysis not available (no costPriceSnapshot)
       return {
         sale: {
           id: sale.id,

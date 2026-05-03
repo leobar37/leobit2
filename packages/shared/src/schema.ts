@@ -23,12 +23,6 @@ import { relations } from "drizzle-orm";
 // Enums como const para type safety
 // ============================================================================
 
-export const SyncStatus = {
-  PENDING: "pending",
-  SYNCED: "synced",
-  ERROR: "error",
-} as const;
-
 export const SaleType = {
   CONTADO: "contado",
   CREDITO: "credito",
@@ -133,8 +127,6 @@ export const customers = pgTable(
     address: text("address"),
     notes: text("notes"),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     businessId: uuid("business_id").notNull(),
     createdBy: uuid("created_by"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -144,7 +136,6 @@ export const customers = pgTable(
     index("idx_customers_name").on(table.name),
     index("idx_customers_dni").on(table.dni),
     index("idx_customers_business_id").on(table.businessId),
-    index("idx_customers_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -178,8 +169,6 @@ export const sales = pgTable(
     status: text("status").notNull().default(SaleStatus.DRAFT),
     version: integer("version").notNull().default(1),
     allowCustomerEdit: boolean("allow_customer_edit").notNull().default(true),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     cancelledAt: timestamp("cancelled_at"),
     cancelledBy: uuid("cancelled_by"),
     cancelReason: text("cancel_reason"),
@@ -198,7 +187,6 @@ export const sales = pgTable(
     index("idx_sales_business_id").on(table.businessId),
     index("idx_sales_customer_id").on(table.customerId),
     index("idx_sales_seller_id").on(table.sellerId),
-    index("idx_sales_sync_status").on(table.syncStatus),
     index("idx_sales_status").on(table.status),
     index("idx_sales_sale_date").on(table.saleDate),
   ]
@@ -231,8 +219,6 @@ export const saleItems = pgTable(
     costPriceSnapshot: decimal("cost_price_snapshot", { precision: 10, scale: 2 }),
     isModified: boolean("is_modified").notNull().default(false),
     originalQuantity: decimal("original_quantity", { precision: 10, scale: 3 }),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -240,7 +226,6 @@ export const saleItems = pgTable(
     index("idx_sale_items_business_id").on(table.businessId),
     index("idx_sale_items_sale_id").on(table.saleId),
     index("idx_sale_items_product_id").on(table.productId),
-    index("idx_sale_items_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -264,8 +249,6 @@ export const abonos = pgTable(
     referenceNumber: varchar("reference_number", { length: 50 }),
     proofImageId: uuid("proof_image_id"),
     notes: text("notes"),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -273,7 +256,6 @@ export const abonos = pgTable(
   (table) => [
     index("idx_abonos_customer_id").on(table.customerId),
     index("idx_abonos_business_id").on(table.businessId),
-    index("idx_abonos_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -299,8 +281,6 @@ export const products = pgTable(
     hasVariants: boolean("has_variants").notNull().default(false),
     imageId: uuid("image_id"),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -308,7 +288,6 @@ export const products = pgTable(
     index("idx_products_business_id").on(table.businessId),
     index("idx_products_type").on(table.type),
     index("idx_products_category_id").on(table.categoryId),
-    index("idx_products_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -327,15 +306,12 @@ export const productCategories = pgTable(
     color: varchar("color", { length: 20 }).notNull().default("#f97316"),
     businessId: uuid("business_id").notNull(),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_product_categories_business_id").on(table.businessId),
     index("idx_product_categories_name").on(table.name),
-    index("idx_product_categories_sync_status").on(table.syncStatus),
     index("idx_product_categories_updated_at").on(table.updatedAt),
   ]
 );
@@ -363,8 +339,6 @@ export const productVariants = pgTable(
     lowStockThreshold: decimal("low_stock_threshold", { precision: 10, scale: 3 }).notNull().default("10"),
     criticalStockThreshold: decimal("critical_stock_threshold", { precision: 10, scale: 3 }).notNull().default("5"),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -416,14 +390,11 @@ export const suppliers = pgTable(
     email: varchar("email", { length: 255 }),
     notes: text("notes"),
     isActive: boolean("is_active").notNull().default(true),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_suppliers_business_id").on(table.businessId),
-    index("idx_suppliers_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -447,15 +418,12 @@ export const purchases = pgTable(
     receiptImageId: uuid("receipt_image_id"),
     notes: text("notes"),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_purchases_business_id").on(table.businessId),
     index("idx_purchases_supplier_id").on(table.supplierId),
-    index("idx_purchases_sync_status").on(table.syncStatus),
   ]
 );
 
@@ -479,8 +447,6 @@ export const purchaseItems = pgTable(
     unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
     totalCost: decimal("total_cost", { precision: 12, scale: 2 }).notNull(),
     version: integer("version").notNull().default(1),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -512,15 +478,12 @@ export const distribuciones = pgTable(
     modo: text("modo").notNull().default("estricto"),
     closedAt: timestamp("closed_at"),
     closedBy: uuid("closed_by"),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_distribuciones_business_id").on(table.businessId),
     index("idx_distribuciones_vendedor_id").on(table.vendedorId),
-    index("idx_distribuciones_sync_status").on(table.syncStatus),
     index("idx_distribuciones_punto_venta_id").on(table.puntoVentaId),
   ]
 );
@@ -542,8 +505,6 @@ export const distribucionItems = pgTable(
     cantidadAsignada: decimal("cantidad_asignada", { precision: 10, scale: 3 }).notNull(),
     cantidadVendida: decimal("cantidad_vendida", { precision: 10, scale: 3 }).notNull().default("0"),
     unidad: text("unidad").notNull().default(ProductUnit.KG),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -664,8 +625,6 @@ export const tags = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     color: varchar("color", { length: 20 }).notNull().default("#f97316"),
     businessId: uuid("business_id").notNull(),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -689,8 +648,6 @@ export const customerTags = pgTable(
     tagId: uuid("tag_id").notNull(),
     assignedAt: timestamp("assigned_at").notNull().defaultNow(),
     assignedBy: uuid("assigned_by"),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -698,7 +655,6 @@ export const customerTags = pgTable(
   (table) => [
     index("idx_customer_tags_customer_id").on(table.customerId),
     index("idx_customer_tags_tag_id").on(table.tagId),
-    index("idx_customer_tags_sync_status").on(table.syncStatus),
     index("idx_customer_tags_updated_at").on(table.updatedAt),
   ]
 );
@@ -735,8 +691,6 @@ export const customerGroups = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     businessId: uuid("business_id").notNull(),
     name: varchar("name", { length: 100 }).notNull(),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -762,8 +716,6 @@ export const customerGroupMembers = pgTable(
     customerId: uuid("customer_id").notNull(),
     addedAt: timestamp("added_at").notNull().defaultNow(),
     addedBy: uuid("added_by"),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -772,7 +724,6 @@ export const customerGroupMembers = pgTable(
     index("idx_customer_group_members_business_id").on(table.businessId),
     index("idx_customer_group_members_group_id").on(table.groupId),
     index("idx_customer_group_members_customer_id").on(table.customerId),
-    index("idx_customer_group_members_sync_status").on(table.syncStatus),
     index("idx_customer_group_members_updated_at").on(table.updatedAt),
   ]
 );
@@ -795,8 +746,6 @@ export const visitas = pgTable(
     status: text("status").notNull().default(VisitaStatus.PENDIENTE),
     motivoNoCompra: varchar("motivo_no_compra", { length: 255 }),
     saleId: uuid("sale_id"),
-    syncStatus: text("sync_status").notNull().default(SyncStatus.SYNCED),
-    syncAttempts: integer("sync_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -807,7 +756,6 @@ export const visitas = pgTable(
     index("idx_visitas_vendedor_id").on(table.vendedorId),
     index("idx_visitas_status").on(table.status),
     index("idx_visitas_sale_id").on(table.saleId),
-    index("idx_visitas_sync_status").on(table.syncStatus),
     index("idx_visitas_created_at").on(table.createdAt),
   ]
 );

@@ -62,8 +62,6 @@ components/
 ├── distribucion/          # Distribution management
 │   └── distribucion-table.tsx # Distribution table with actions
 │
-└── sync/                  # Offline sync components
-    └── sync-status.tsx    # Network status indicator with context
 ```
 
 ## Coding Patterns & Conventions
@@ -393,7 +391,6 @@ The `/frontend` skill has a more complete pattern in `patterns/create-modal.md` 
 | `forms/form-input.tsx` | Compound input with label and error display |
 | `forms/form-password.tsx` | Password input with visibility toggle button |
 | `customers/customer-form.tsx` | Customer creation form with react-hook-form + zod validation |
-| `sync/sync-status.tsx` | Offline sync indicator with Context provider and hook |
 
 ### Related Files (outside components/)
 

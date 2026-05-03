@@ -64,7 +64,6 @@ async function fixSaleTokens() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_sale_tokens_expires_at ON sale_tokens(expires_at)`);
     console.log("✓ Indexes created");
 
-    // Set REPLICA IDENTITY for ElectricSQL
     console.log("Setting REPLICA IDENTITY FULL...");
     await db.execute(sql`ALTER TABLE sale_tokens REPLICA IDENTITY FULL`);
     console.log("✓ REPLICA IDENTITY set");

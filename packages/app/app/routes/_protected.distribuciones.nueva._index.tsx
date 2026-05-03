@@ -8,7 +8,7 @@ import { useToastError } from "~/hooks/use-toast-error";
 import { getToday } from "~/lib/date-utils";
 import { useSearchParams, useNavigate } from "react-router";
 import { FormPage } from "~/components/layout/form-page";
-import { useOnline } from "~/hooks/use-online";
+
 import { useToast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
 
@@ -20,7 +20,7 @@ export default function NuevaDistribucionPage() {
   const formRef = useRef<CreateDistribucionFormRef>(null);
   const [isValid, setIsValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const { toast } = useToast();
 
   const fechaFromUrl = searchParams.get("fecha");

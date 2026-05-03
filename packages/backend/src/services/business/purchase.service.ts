@@ -29,7 +29,7 @@ export interface CreatePurchaseInput {
   invoiceNumber?: string;
   receiptImageId?: string;
   notes?: string;
-  status?: "pending" | "received" | "cancelled";
+  status?: "draft" | "pending" | "received" | "cancelled";
   items: CreatePurchaseItemInput[];
 }
 
@@ -81,13 +81,17 @@ export class PurchaseService {
       throw new ForbiddenError("No tiene permisos para crear compras");
     }
 
-    if (!data.items || data.items.length === 0) {
+    const isDraft = data.status === "draft";
+
+    if (!isDraft && (!data.items || data.items.length === 0)) {
       throw new ValidationError("La compra debe tener al menos un ítem");
     }
 
-    const supplier = await this.supplierRepo.findById(ctx, data.supplierId);
-    if (!supplier) {
-      throw new NotFoundError("Proveedor");
+    if (!isDraft || data.supplierId) {
+      const supplier = await this.supplierRepo.findById(ctx, data.supplierId);
+      if (!supplier) {
+        throw new NotFoundError("Proveedor");
+      }
     }
 
     if (data.receiptImageId) {
@@ -100,7 +104,7 @@ export class PurchaseService {
     let totalAmount = 0;
     const validatedItems: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt">[] = [];
 
-    for (const item of data.items) {
+    for (const item of data.items || []) {
       let finalQuantity: number;
       let finalVariantId: string | null = item.variantId || null;
       let finalUnitCost = item.unitCost;
@@ -157,6 +161,42 @@ export class PurchaseService {
 
     return {
       data: purchase,
+      txid: Date.now(),
+    };
+  }
+
+  async confirmPurchase(
+    ctx: RequestContext,
+    id: string
+  ): Promise<MutationResult<PurchaseWithItems>> {
+    if (!ctx.hasPermission("purchases.write")) {
+      throw new ForbiddenError("No tiene permisos para modificar compras");
+    }
+
+    const existing = await this.repository.findById(ctx, id);
+    if (!existing) {
+      throw new NotFoundError("Compra");
+    }
+
+    if (existing.status !== "draft") {
+      throw new ValidationError("Solo las compras en borrador pueden ser confirmadas");
+    }
+
+    if (!existing.supplierId) {
+      throw new ValidationError("Se requiere un proveedor para confirmar la compra");
+    }
+
+    if (!existing.items || existing.items.length === 0) {
+      throw new ValidationError("La compra debe tener al menos un ítem para confirmar");
+    }
+
+    const updated = await this.repository.updateStatus(ctx, id, "pending");
+    if (!updated) {
+      throw new NotFoundError("Compra");
+    }
+
+    return {
+      data: { ...existing, status: "pending" },
       txid: Date.now(),
     };
   }

@@ -118,7 +118,7 @@ const FormSelect = forwardRef<HTMLDivElement, FormSelectProps>(
                               "flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-colors",
                               "hover:bg-accent focus-visible:outline-none focus-visible:bg-accent",
                               isSelected
-                                ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/12 dark:text-orange-300"
+                                ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/20 dark:text-orange-300"
                                 : "text-foreground"
                             )}
                           >

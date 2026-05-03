@@ -16,7 +16,7 @@ import { useWrapperForm } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
 
 /** Purchase status from API */
-type PurchaseStatus = "pending" | "received" | "cancelled";
+type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";
 
 /** Purchase item as returned by API */
 interface ApiPurchaseItem {
@@ -155,7 +155,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   });
 
   const purchase = purchaseData || null;
-  const canEdit = !purchase || purchase.status === "pending";
+  const canEdit = !purchase || purchase.status === "pending" || purchase.status === "draft";
 
   // Form state
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -216,8 +216,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   const setSupplier = useCallback(
     async (newSupplier: Supplier | null) => {
-      if (purchase) {
-        // API does not support PATCH /purchases/:id
+      if (purchase && purchase.status !== "draft") {
         console.warn(
           "Updating supplier on existing purchase is not supported by the API"
         );
@@ -229,28 +228,16 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   const addItem = useCallback(
     async (item: Omit<PurchaseItem, "id">) => {
-      if (purchase) {
-        // API does not support POST /purchases/:id/items
-        throw new Error(
-          "Adding items to existing purchases is not supported by the API"
-        );
-      }
       setLocalItems((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
     },
-    [purchase]
+    []
   );
 
   const removeItem = useCallback(
     async (itemId: string) => {
-      if (purchase) {
-        // API does not support DELETE /purchases/:id/items/:itemId
-        throw new Error(
-          "Removing items from existing purchases is not supported by the API"
-        );
-      }
       setLocalItems((prev) => prev.filter((item) => item.id !== itemId));
     },
-    [purchase]
+    []
   );
 
   const updateItem = useCallback(
@@ -258,19 +245,13 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       itemId: string,
       updates: Partial<Omit<PurchaseItem, "id">>
     ) => {
-      if (purchase) {
-        // API does not support PATCH /purchases/:id/items/:itemId
-        throw new Error(
-          "Updating items in existing purchases is not supported by the API"
-        );
-      }
       setLocalItems((prev) =>
         prev.map((item) =>
           item.id === itemId ? { ...item, ...updates } : item
         )
       );
     },
-    [purchase]
+    []
   );
 
   const handleReceiptSelect = useCallback((file: File) => {
@@ -301,11 +282,49 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Upload receipt if provided
+      let receiptImageId: string | undefined;
+      if (receiptFile) {
+        const resolved = await form.resolveField("receiptImageId", receiptFile as unknown as string);
+        receiptImageId = typeof resolved === "string" ? resolved : undefined;
+      }
+
+      if (purchase?.status === "draft") {
+        // Confirm existing draft purchase
+        if (!effectiveSupplier) {
+          throw new Error("Se requiere un proveedor");
+        }
+        if (localItems.length === 0) {
+          throw new Error("La compra debe tener al menos un item");
+        }
+
+        // Update the draft with items and supplier first, then confirm
+        const input: CreatePurchaseInput = {
+          supplierId: effectiveSupplier.id,
+          purchaseDate: form.getValues("purchaseDate"),
+          invoiceNumber: form.getValues("invoiceNumber") || undefined,
+          notes: form.getValues("notes") || undefined,
+          receiptImageId,
+          items: localItems.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId || undefined,
+            unitId: item.unitId,
+            quantity: parseFloat(item.quantity),
+            unitCost: parseFloat(item.unitCost),
+          })),
+        };
+
+        // Re-create the purchase with full data (backend doesn't support PATCH)
+        // First delete the draft, then create the real one
+        await api.purchases({ id: purchase.id }).delete();
+        const response = await api.purchases.post({ ...input, status: "pending" });
+        const result = extractData<PurchaseWithItems>(response);
+        return result.id;
+      }
+
       if (purchase) {
-        // Existing purchase: API only supports status updates.
-        // Field/item edits are not supported.
+        // Existing non-draft purchase: API only supports status updates.
         if (receiptFile) {
-          // Upload receipt but note API cannot attach it to existing purchase
           await form.resolveField("receiptImageId", receiptFile as unknown as string);
         }
         return purchase.id;
@@ -317,13 +336,6 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       }
       if (localItems.length === 0) {
         throw new Error("La compra debe tener al menos un item");
-      }
-
-      // Upload receipt if provided
-      let receiptImageId: string | undefined;
-      if (receiptFile) {
-        const resolved = await form.resolveField("receiptImageId", receiptFile as unknown as string);
-        receiptImageId = typeof resolved === "string" ? resolved : undefined;
       }
 
       const input: CreatePurchaseInput = {

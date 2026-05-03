@@ -25,7 +25,7 @@ export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
       title="Pago"
       icon={<CreditCard className="h-4 w-4" />}
       action={
-        <Badge className="rounded-md bg-white/80 px-2 text-foreground shadow-none">
+        <Badge variant="outline" className="rounded-md px-2">
           {sale.saleType === "credito" ? "Crédito" : "Contado"}
         </Badge>
       }
@@ -48,14 +48,14 @@ export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
           <span
             className={cn(
               "text-sm font-semibold",
-              dueAmount > 0 ? "text-red-600" : "text-emerald-600"
+              dueAmount > 0 ? "text-red-500 dark:text-red-300" : "text-emerald-600 dark:text-emerald-400"
             )}
           >
             {dueAmount > 0 ? "Pendiente" : "Estado"}
           </span>
 
           {dueAmount > 0 ? (
-            <span className="text-lg font-semibold text-red-600">
+            <span className="text-lg font-semibold text-red-500 dark:text-red-300">
               S/ {formatCurrency(dueAmount)}
             </span>
           ) : (

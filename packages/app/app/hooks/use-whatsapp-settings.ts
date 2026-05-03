@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-import { useOfflineAwareMutation } from "./use-offline-aware-mutation";
 
 const WHATSAPP_SETTINGS_KEY = ["whatsapp", "settings"];
 const WHATSAPP_STATUS_KEY = ["whatsapp", "status"];
@@ -76,9 +75,8 @@ export function useWhatsAppSettings() {
 export function useConnectWhatsApp() {
   const queryClient = useQueryClient();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: connectWhatsApp,
-    offlineMessage: "Se requiere conexión a internet para vincular WhatsApp",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WHATSAPP_STATUS_KEY });
       queryClient.invalidateQueries({ queryKey: WHATSAPP_SETTINGS_KEY });
@@ -89,9 +87,8 @@ export function useConnectWhatsApp() {
 export function useDisconnectWhatsApp() {
   const queryClient = useQueryClient();
 
-  return useOfflineAwareMutation({
+  return useMutation({
     mutationFn: disconnectWhatsApp,
-    offlineMessage: "Se requiere conexión a internet para desvincular WhatsApp",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WHATSAPP_STATUS_KEY });
       queryClient.invalidateQueries({ queryKey: WHATSAPP_SETTINGS_KEY });

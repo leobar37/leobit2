@@ -128,6 +128,9 @@ export function useFinalizeSale() {
       deliveryItems,
       amountPaid,
       paymentMode,
+      paymentMethod,
+      referenceNumber,
+      proofImageId,
     }: {
       id: string;
       type: string;
@@ -141,6 +144,9 @@ export function useFinalizeSale() {
       }>;
       amountPaid?: number;
       paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+      paymentMethod?: string;
+      referenceNumber?: string;
+      proofImageId?: string;
     }) => {
       if (isDeliveryMode) {
         for (const item of deliveryItems || []) {
@@ -163,7 +169,14 @@ export function useFinalizeSale() {
         return;
       }
 
-      const response = await api.sales({ id }).confirm.post({});
+      const confirmPayload: Record<string, unknown> = {};
+      if (paymentMode === "a_cuenta" && paymentMethod) {
+        confirmPayload.paymentMethod = paymentMethod;
+        confirmPayload.referenceNumber = referenceNumber;
+        confirmPayload.proofImageId = proofImageId;
+      }
+
+      const response = await api.sales({ id }).confirm.post(confirmPayload);
       extractData(response);
     },
     onSettled: async (_data, _error) => {

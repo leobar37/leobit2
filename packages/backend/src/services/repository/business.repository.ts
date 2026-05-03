@@ -73,6 +73,8 @@ export class BusinessRepository {
       controlKilos?: boolean;
       usarDistribucion?: boolean;
       permitirVentaSinStock?: boolean;
+      publicCatalogEnabled?: boolean;
+      publicCatalogSlug?: string | null;
     }
   ): Promise<Business | undefined> {
     const [business] = await db
@@ -87,6 +89,8 @@ export class BusinessRepository {
         ...(data.controlKilos !== undefined && { controlKilos: data.controlKilos }),
         ...(data.usarDistribucion !== undefined && { usarDistribucion: data.usarDistribucion }),
         ...(data.permitirVentaSinStock !== undefined && { permitirVentaSinStock: data.permitirVentaSinStock }),
+        ...(data.publicCatalogEnabled !== undefined && { publicCatalogEnabled: data.publicCatalogEnabled }),
+        ...(data.publicCatalogSlug !== undefined && { publicCatalogSlug: data.publicCatalogSlug }),
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, id))

@@ -17,6 +17,22 @@ import { businesses, defaultCalculatorSettings } from "../../db/schema/businesse
 import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 
+function normalizePublicCatalogSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+}
+
+function buildDefaultPublicCatalogSlug(name: string, id: string): string {
+  const base = normalizePublicCatalogSlug(name) || "catalogo";
+  return `${base}-${id.slice(0, 8)}`.slice(0, 100);
+}
+
 export class BusinessService {
   constructor(
     private repository: BusinessRepository,
@@ -41,6 +57,8 @@ export class BusinessService {
       phone: membership.business.phone,
       email: membership.business.email,
       logoUrl: membership.business.logoUrl,
+      publicCatalogEnabled: membership.business.publicCatalogEnabled,
+      publicCatalogSlug: membership.business.publicCatalogSlug,
       modoOperacion: membership.business.modoOperacion,
       usarDistribucion: membership.business.usarDistribucion,
       permitirVentaSinStock: membership.business.permitirVentaSinStock,
@@ -100,7 +118,11 @@ export class BusinessService {
 
     await this.seedDefaultTemplates(workerCtx);
 
-    return business;
+    const updatedBusiness = await this.repository.update(workerCtx as RequestContext, business.id, {
+      publicCatalogSlug: buildDefaultPublicCatalogSlug(business.name, business.id),
+    });
+
+    return updatedBusiness ?? business;
   }
 
   async updateBusiness(
@@ -114,6 +136,8 @@ export class BusinessService {
       email?: string;
       usarDistribucion?: boolean;
       permitirVentaSinStock?: boolean;
+      publicCatalogEnabled?: boolean;
+      publicCatalogSlug?: string | null;
     }
   ) {
     if (!ctx.isAdmin()) {
@@ -129,6 +153,30 @@ export class BusinessService {
       throw new NotFoundError("Negocio");
     }
 
+    const publicCatalogSlug =
+      data.publicCatalogSlug === undefined
+        ? undefined
+        : data.publicCatalogSlug
+          ? normalizePublicCatalogSlug(data.publicCatalogSlug)
+          : null;
+
+    if (data.publicCatalogEnabled && !publicCatalogSlug && !existing.publicCatalogSlug) {
+      throw new ValidationError("Configura una URL pública para activar el catálogo");
+    }
+
+    if (publicCatalogSlug !== undefined && publicCatalogSlug !== null && publicCatalogSlug.length < 3) {
+      throw new ValidationError("La URL pública debe tener al menos 3 caracteres");
+    }
+
+    if (publicCatalogSlug) {
+      const duplicate = await db.query.businesses.findFirst({
+        where: eq(businesses.publicCatalogSlug, publicCatalogSlug),
+      });
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictError("Esta URL pública ya está en uso");
+      }
+    }
+
     const business = await this.repository.update(ctx, id, {
       name: data.name,
       ruc: data.ruc,
@@ -137,6 +185,8 @@ export class BusinessService {
       email: data.email,
       usarDistribucion: data.usarDistribucion,
       permitirVentaSinStock: data.permitirVentaSinStock,
+      publicCatalogEnabled: data.publicCatalogEnabled,
+      publicCatalogSlug,
     });
 
     return business;

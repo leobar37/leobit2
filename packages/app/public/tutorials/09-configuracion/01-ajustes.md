@@ -246,4 +246,3 @@ En cualquier momento puedes:
 
 **Anterior**: [Cierre del día ←](../08-cierre/01-cierre-diario.md)
 
-**Siguiente**: [Trabajar sin internet →](../10-offline/01-trabajar-sin-internet.md)

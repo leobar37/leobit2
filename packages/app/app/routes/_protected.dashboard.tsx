@@ -9,8 +9,6 @@ import {
   DollarSign,
   Weight,
   CreditCard,
-  WifiOff,
-  CloudOff,
   TrendingUp,
   Package,
 } from "lucide-react";
@@ -55,7 +53,6 @@ export default function DashboardPage() {
   const { data: products = [] } = useProducts();
   const { data: sales = [] } = useSales();
 
-  const isOnline = navigator.onLine;
   const hasProducts = products.length > 0;
   const hasSales = sales.length > 0;
 
@@ -83,14 +80,6 @@ export default function DashboardPage() {
         userName={user?.name?.split(" ")[0]}
         onCreateSale={() => setCreateSheetOpen(true)}
       />
-
-      {/* Offline Status Indicators */}
-      {!isOnline && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-100/80 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-          <WifiOff className="h-4 w-4" />
-          Sin conexión - mostrando datos locales
-        </div>
-      )}
 
       {/* Selector de Período */}
       <PeriodSelector value={period} onChange={setPeriod} />

@@ -59,7 +59,7 @@
           "title": "Cómo hacer una venta",
           "description": "Guía completa del proceso de venta paso a paso",
           "file": "02-ventas/02-nueva-venta.md",
-          "tags": ["ventas", "core", "offline"],
+          "tags": ["ventas", "core"],
           "roles": ["vendedor"],
           "estimatedReadTime": 8
         },
@@ -95,7 +95,7 @@
           "title": "Gestionar clientes",
           "description": "Crear, editar y buscar clientes en el sistema",
           "file": "03-clientes/01-gestion-clientes.md",
-          "tags": ["clientes", "crud", "offline"],
+          "tags": ["clientes", "crud"],
           "roles": ["vendedor", "admin"],
           "estimatedReadTime": 6
         },
@@ -219,23 +219,5 @@
         }
       ]
     },
-    {
-      "id": "offline",
-      "title": "Trabajo Offline",
-      "icon": "WifiOff",
-      "order": 10,
-      "description": "Cómo usar el sistema sin conexión a internet",
-      "tutorials": [
-        {
-          "slug": "trabajar-sin-internet",
-          "title": "Trabajar sin internet",
-          "description": "Guía completa del modo offline y sincronización",
-          "file": "10-offline/01-trabajar-sin-internet.md",
-          "tags": ["offline", "sincronizacion"],
-          "roles": ["vendedor", "admin"],
-          "estimatedReadTime": 8
-        }
-      ]
-    }
   ]
 }

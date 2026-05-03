@@ -18,7 +18,6 @@ import {
   type Visita,
 } from "~/hooks/use-visitas";
 import { useCustomerGroups } from "~/hooks/use-grupos";
-import { isOnline } from "~/lib/is-online";
 import { useVisitaDialogs } from "~/hooks/use-visita-dialogs";
 import { VisitaCard } from "~/components/visitas/visita-card";
 import { SelectionDialog } from "~/components/visitas/selection-dialog";
@@ -155,10 +154,6 @@ export default function VisitasPage() {
 
   async function handleGenerateSale(visita: Visita) {
     if (!visita.customer) return;
-
-    if (!isOnline()) {
-      toast.info("Creando venta en modo offline. Se sincronizará cuando haya conexión.");
-    }
 
     try {
       const sale = await createDraftSale.mutateAsync({

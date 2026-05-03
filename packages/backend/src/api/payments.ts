@@ -60,6 +60,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
         notes: t.Optional(t.String()),
         proofImageId: t.Optional(t.String()),
         referenceNumber: t.Optional(t.String()),
+        relatedSaleId: t.Optional(t.String()),
       }),
     }
   )

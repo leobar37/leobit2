@@ -33,38 +33,38 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
           ? "A cuenta"
           : "Sin deuda";
 
-  const getWorkflowBadgeStyles = () => {
+  const getWorkflowBadgeVariant = () => {
     switch (sale.status) {
       case "draft":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "warning";
       case "active":
-        return "bg-green-100 text-green-700 border-green-200";
+        return "success";
       case "confirmed":
-        return "bg-blue-100 text-blue-700 border-blue-200";
+        return "info";
       case "delivered":
-        return "bg-purple-100 text-purple-700 border-purple-200";
+        return "purple";
       case "cancelled":
-        return "bg-red-100 text-red-700 border-red-200";
+        return "danger";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+        return "secondary";
     }
   };
 
-  const getPaymentBadgeStyles = () => {
+  const getPaymentBadgeVariant = () => {
     if (sale.saleType === "contado") {
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      return "success";
     }
     if (paidAmount <= 0) {
-      return "bg-red-100 text-red-700 border-red-200";
+      return "danger";
     }
     if (dueAmount > 0) {
-      return "bg-blue-100 text-blue-700 border-blue-200";
+      return "info";
     }
-    return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    return "success";
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white/68">
+    <section className="overflow-hidden rounded-2xl shell-card-flat">
       <div className="space-y-4 p-4">
         <div className="flex items-start gap-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50">
@@ -100,23 +100,23 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
 
             <div className="mt-3 flex flex-wrap gap-1.5">
               <Badge
-                variant="outline"
-                className={`rounded-md border px-2 py-0.5 text-xs font-medium ${getWorkflowBadgeStyles()}`}
+                variant={getWorkflowBadgeVariant() as any}
+                className="rounded-md px-2 py-0.5 text-xs font-medium"
               >
                 {saleWorkflowStatus}
               </Badge>
 
               <Badge
-                variant="outline"
-                className={`rounded-md border px-2 py-0.5 text-xs font-medium ${getPaymentBadgeStyles()}`}
+                variant={getPaymentBadgeVariant() as any}
+                className="rounded-md px-2 py-0.5 text-xs font-medium"
               >
                 {saleStatus}
               </Badge>
 
               {sale.saleType === "credito" && (
                 <Badge
-                  variant="outline"
-                  className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700"
+                  variant="primary"
+                  className="rounded-md px-2 py-0.5 text-xs font-medium"
                 >
                   Crédito
                 </Badge>
@@ -138,11 +138,11 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
             <p className="text-xs text-muted-foreground">
               {sale.saleType === "credito" ? "Saldo pendiente" : "Estado"}
             </p>
-            <p
+             <p
               className={`mt-1 text-lg font-semibold ${
                 sale.saleType === "credito" && dueAmount > 0
-                  ? "text-red-600"
-                  : "text-emerald-600"
+                  ? "text-red-500 dark:text-red-300"
+                  : "text-emerald-600 dark:text-emerald-400"
               }`}
             >
               {sale.saleType === "credito"

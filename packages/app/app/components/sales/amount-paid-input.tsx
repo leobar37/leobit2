@@ -1,6 +1,8 @@
-import { memo, useState, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback } from "react";
+import { Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "~/lib/utils";
+import { useOptimisticField } from "~/hooks/use-optimistic-field";
 
 interface AmountPaidInputProps {
   saleId: string;
@@ -10,48 +12,36 @@ interface AmountPaidInputProps {
 }
 
 export const AmountPaidInput = memo(function AmountPaidInput({
-  saleId,
   totalAmount,
   initialAmount,
   onUpdate,
 }: AmountPaidInputProps) {
-  const [value, setValue] = useState(initialAmount || "");
-  const [isUpdating, setIsUpdating] = useState(false);
-  const isFocusedRef = useRef(false);
+  const optimistic = useOptimisticField({
+    initialValue: initialAmount || "",
+    onUpdate,
+    debounceMs: 400,
+  });
 
-  // Sync with external changes only when not focused
-  useEffect(() => {
-    if (!isFocusedRef.current) {
-      setValue(initialAmount || "");
-    }
-  }, [initialAmount]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      const filtered = raw
+        .replace(/[^0-9.]/g, "")
+        .replace(/(\.[^.]*)\./g, "$1");
+      optimistic.setValue(filtered);
+    },
+    [optimistic]
+  );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    // Allow only digits and at most one decimal point
-    const filtered = raw.replace(/[^0-9.]/g, "").replace(/(\.[^.]*)\./g, "$1");
-    setValue(filtered);
-  }, []);
-
-  const handleBlur = useCallback(async () => {
-    isFocusedRef.current = false;
-    const numValue = parseFloat(value) || 0;
+  const handleBlur = useCallback(() => {
+    const numValue = parseFloat(optimistic.value) || 0;
 
     if (numValue <= 0 || numValue > totalAmount) {
       return;
     }
 
-    setIsUpdating(true);
-    try {
-      await onUpdate(value);
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [value, totalAmount, onUpdate]);
-
-  const handleFocus = useCallback(() => {
-    isFocusedRef.current = true;
-  }, []);
+    optimistic.flush();
+  }, [optimistic, totalAmount]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -62,28 +52,40 @@ export const AmountPaidInput = memo(function AmountPaidInput({
     []
   );
 
-  const numValue = parseFloat(value) || 0;
+  const numValue = parseFloat(optimistic.value) || 0;
   const isValid = numValue > 0 && numValue <= totalAmount;
-  const showError = value !== "" && !isValid;
+  const showError = optimistic.value !== "" && !isValid;
 
   return (
     <div className="space-y-3 border-t pt-3 shell-divider">
-      <label className="text-sm font-medium">Monto pagado (S/)</label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium">Monto pagado (S/)</label>
+        {optimistic.isSaving ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Guardando
+          </span>
+        ) : optimistic.lastSavedValue === optimistic.value && optimistic.value !== "" ? (
+          <span className="flex items-center gap-1 text-xs text-green-600">
+            <Check className="h-3 w-3" />
+            Guardado
+          </span>
+        ) : null}
+      </div>
       <Input
         type="text"
         inputMode="decimal"
         placeholder="0.00"
-        value={value}
+        value={optimistic.value}
         onChange={handleChange}
-        onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        disabled={isUpdating}
         className="rounded-2xl border-white/70 bg-white/72 text-lg shadow-sm"
       />
       {showError && (
         <p className="text-sm text-red-500">
-          El monto debe ser mayor a 0 y menor o igual a S/ {formatCurrency(totalAmount)}
+          El monto debe ser mayor a 0 y menor o igual a S/{" "}
+          {formatCurrency(totalAmount)}
         </p>
       )}
       <div className="flex justify-between text-sm">

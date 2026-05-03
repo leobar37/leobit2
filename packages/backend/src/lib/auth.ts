@@ -19,7 +19,7 @@ export const auth = betterAuth({
     autoSignIn: true,
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 365, // 1 year - essentially no expiration for offline-first app
+    expiresIn: 60 * 60 * 24 * 365, // 1 year
     updateAge: 60 * 60 * 24, // 1 day
     cookieCache: {
       enabled: false,

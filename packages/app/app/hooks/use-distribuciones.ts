@@ -56,6 +56,7 @@ export interface CreateDistribucionInput {
   puntoVentaId?: string;
   notaCreacion?: string;
   fecha?: string;
+  groupId?: string;
   items?: CreateDistribucionItemInput[];
 }
 

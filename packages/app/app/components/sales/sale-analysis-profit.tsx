@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Package, DollarSign, Percent } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, Package, Percent } from "lucide-react";
 import { formatCurrency, formatNumber } from "~/lib/utils";
 
 interface ProfitItem {
@@ -46,15 +46,13 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
 
   return (
     <div className="space-y-4">
-      <Card className="shell-card-flat rounded-[28px]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-orange-500" />
-            Rentabilidad Total
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-[20px]">
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="h-5 w-5 text-orange-500" />
+          <h3 className="text-lg font-semibold">Rentabilidad Total</h3>
+        </div>
+        <div className="space-y-4">
+          <div className="text-center p-4 bg-muted/40 rounded-[20px]">
             <p className="text-sm text-muted-foreground mb-1">Ganancia Total</p>
             <p
               className={`text-3xl font-bold ${
@@ -72,35 +70,33 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="shell-block-muted rounded-[20px] p-3">
+            <div className="bg-muted/40 rounded-[20px] p-3">
               <p className="text-xs text-muted-foreground">Ingresos</p>
               <p className="text-lg font-semibold">
                 S/ {formatCurrency(summary.totalRevenue)}
               </p>
             </div>
-            <div className="shell-block-muted rounded-[20px] p-3">
+            <div className="bg-muted/40 rounded-[20px] p-3">
               <p className="text-xs text-muted-foreground">Costos</p>
               <p className="text-lg font-semibold text-red-600">
                 S/ {formatCurrency(summary.totalCost)}
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {items.length > 0 && (
-        <Card className="shell-card-flat rounded-[28px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-orange-500" />
-              Por Producto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-orange-500" />
+            <h3 className="text-lg font-semibold">Por Producto</h3>
+          </div>
+          <div className="space-y-3">
             {items.map((item, index) => (
               <div
                 key={index}
-                className="shell-card-soft rounded-[20px] p-3 space-y-2"
+                className="bg-muted/40 rounded-[20px] p-3 space-y-2"
               >
                 <p className="font-medium truncate">{item.productName}</p>
 
@@ -147,8 +143,8 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );

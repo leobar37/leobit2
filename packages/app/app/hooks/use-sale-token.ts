@@ -133,16 +133,31 @@ export function useToggleSaleToken() {
 
 // Build share URL
 export function useBuildSaleShareUrl() {
-  return (token: string): string => {
+  return (slug: string, token: string): string => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/venta/${token}`;
+    return `${window.location.origin}/venta/${slug}?token=${token}`;
+  };
+}
+
+// Build receipt/detail URL
+export function useBuildSaleDetailUrl() {
+  return (slug: string, token: string): string => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/venta/${slug}/detalle?token=${token}`;
   };
 }
 
 // Build WhatsApp message
 export function useBuildWhatsAppMessage() {
-  return (url: string, saleId: string): string => {
+  return (url: string, _saleId: string): string => {
     return `Hola! Te comparto el enlace para revisar tu pedido:\n\n${url}\n\nPuedes modificar los productos mientras esté en borrador.`;
+  };
+}
+
+// Build receipt WhatsApp message
+export function useBuildReceiptMessage() {
+  return (url: string): string => {
+    return `Hola! Te comparto el detalle de tu compra:\n\n${url}\n\nGracias por tu preferencia!`;
   };
 }
 
@@ -195,14 +210,18 @@ export function useCopyToClipboard() {
 // Combined hook for sharing
 export function useShareSale() {
   const buildUrl = useBuildSaleShareUrl();
+  const buildDetailUrl = useBuildSaleDetailUrl();
   const buildMessage = useBuildWhatsAppMessage();
+  const buildReceiptMsg = useBuildReceiptMessage();
   const shareWhatsApp = useShareViaWhatsApp();
   const shareNative = useShareNative();
   const copyToClipboard = useCopyToClipboard();
 
   return {
     buildUrl,
+    buildDetailUrl,
     buildMessage,
+    buildReceiptMsg,
     shareWhatsApp,
     shareNative,
     copyToClipboard,

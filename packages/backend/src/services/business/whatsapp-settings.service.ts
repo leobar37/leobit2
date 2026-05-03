@@ -137,7 +137,7 @@ export class WhatsAppSettingsService {
         };
       } catch (error) {
         console.error("Failed to get WhatsApp status:", error);
-        // Fall through to return offline state
+        // Fall through to return disconnected state
       }
     }
 

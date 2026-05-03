@@ -625,10 +625,8 @@ if (error) throw new Error(String(error.value));
 return data as unknown as Customer[];
 ```
 
-#### 3. Offline-First Considerations
 
 ```typescript
-// All vendor screens must work offline
 // - Data is cached via TanStack Query
 // - Sync status shown via SyncProvider
 // - ElectricProvider manages sync state
@@ -645,13 +643,9 @@ if (!data?.length) return <EmptyState />;
 Features that require internet (e.g., WhatsApp, external APIs) must check connectivity and provide user feedback:
 
 ```typescript
-// 1. Use useOfflineAwareMutation in hooks
-import { useOfflineAwareMutation } from "~/hooks/use-offline-aware-mutation";
 
 export function useSendWhatsAppMessage() {
-  return useOfflineAwareMutation({
     mutationFn: sendWhatsAppMessage,
-    offlineMessage: "Se requiere conexión a internet para enviar mensajes de WhatsApp",
     onSuccess: () => {
       // Invalidate queries
     },
@@ -661,17 +655,13 @@ export function useSendWhatsAppMessage() {
 // 2. Use useSync in components for UI feedback
 import { useSync } from "~/components/sync/sync-status";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { WifiOff } from "lucide-react";
 
 export function WhatsAppConfigPage() {
-  const { isOnline } = useSync();
   const connectMutation = useConnectWhatsApp();
 
   return (
     <div>
-      {!isOnline && (
         <Alert variant="destructive">
-          <WifiOff className="h-4 w-4" />
           <AlertDescription>
             Conéctate a internet para vincular WhatsApp
           </AlertDescription>
@@ -680,9 +670,7 @@ export function WhatsAppConfigPage() {
 
       <Button
         onClick={handleConnect}
-        disabled={connectMutation.isPending || !isOnline}
       >
-        {isOnline ? "Conectar WhatsApp" : "Sin conexión"}
       </Button>
     </div>
   );
@@ -690,10 +678,6 @@ export function WhatsAppConfigPage() {
 ```
 
 **Checklist for online-only features:**
-- Use `useOfflineAwareMutation` in mutation hooks
-- Use `useSync()` to get `isOnline` state in components
-- Disable buttons when offline: `disabled={!isOnline}`
-- Show `Alert` with `WifiOff` icon when offline
 - Message format: `"Se requiere conexión a internet para [acción]"`
 
 #### 5. Form Error Handling
@@ -740,7 +724,6 @@ className={cn(
 - Don't use `as any` or `@ts-ignore` without justification
 - Don't forget to handle error states
 - Don't use `alert()` or `confirm()` - use Dialog component
-- Don't forget offline state handling for online-only features (WhatsApp, external APIs)
 
 ### Route Naming Conventions
 
@@ -759,7 +742,6 @@ className={cn(
 ### Sync Status Pattern
 
 Tables with sync capability have these fields:
-- `syncStatus`: `"pending" | "synced" | "error"`
 - `createdAt`, `updatedAt`: Date fields
 
 ### Related Documentation

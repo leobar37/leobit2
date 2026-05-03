@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, ShoppingCart, Calendar, DollarSign } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, ShoppingCart, Calendar } from "lucide-react";
 import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 
@@ -31,20 +31,18 @@ export function SaleAnalysisCustomerHistory({
 
   return (
     <div className="space-y-4">
-      <Card className="shell-card-flat rounded-[28px]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-orange-500" />
-            Historial de Compras
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <ShoppingCart className="h-5 w-5 text-orange-500" />
+          <h3 className="text-lg font-semibold">Historial de Compras</h3>
+        </div>
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="shell-block-muted rounded-[20px] p-4">
+            <div className="bg-muted/40 rounded-[20px] p-4">
               <p className="text-xs text-muted-foreground">Total de compras</p>
               <p className="text-2xl font-bold">{customerHistory.totalPurchases}</p>
             </div>
-            <div className="shell-block-muted rounded-[20px] p-4">
+            <div className="bg-muted/40 rounded-[20px] p-4">
               <p className="text-xs text-muted-foreground">Total gastado</p>
               <p className="text-2xl font-bold text-green-600">
                 S/ {formatCurrency(customerHistory.totalSpent)}
@@ -53,13 +51,13 @@ export function SaleAnalysisCustomerHistory({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="shell-block-muted rounded-[20px] p-4">
+            <div className="bg-muted/40 rounded-[20px] p-4">
               <p className="text-xs text-muted-foreground">Promedio por compra</p>
               <p className="text-lg font-semibold">
                 S/ {formatCurrency(customerHistory.averageSaleAmount)}
               </p>
             </div>
-            <div className="shell-block-muted rounded-[20px] p-4">
+            <div className="bg-muted/40 rounded-[20px] p-4">
               <p className="text-xs text-muted-foreground">Última compra</p>
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -71,8 +69,8 @@ export function SaleAnalysisCustomerHistory({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {customerHistory.totalPurchases > 1 && (
         <Card className="shell-card-flat rounded-[28px] border-orange-200 bg-orange-50/50">

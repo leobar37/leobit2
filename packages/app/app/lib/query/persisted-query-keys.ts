@@ -23,4 +23,5 @@ export const PERSISTED_REMOTE_QUERY_KEYS = {
   puntosVenta: withPersistedRemotePrefix(["puntos-venta"] as const),
   puntosVentaActive: withPersistedRemotePrefix(["puntos-venta", "active"] as const),
   puntoVenta: (id: string) => withPersistedRemotePrefix(["puntos-venta", id] as const),
+  paymentMethodsConfig: withPersistedRemotePrefix(["payment-methods-config"] as const),
 } as const;

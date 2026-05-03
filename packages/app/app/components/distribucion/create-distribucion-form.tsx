@@ -10,6 +10,8 @@ import { GroupSelect } from "./group-select";
 import { PuntoVentaSelect } from "./punto-venta-select";
 import { type PuntoVenta } from "~/hooks/use-puntos-venta";
 import { DistribucionItemEditor } from "./distribucion-item-editor";
+import { useTeam } from "~/hooks/use-team";
+import { useAuth } from "~/hooks/use-auth";
 
 interface CreateDistribucionFormProps {
   onSubmit: (data: CreateDistribucionInput) => void;
@@ -23,7 +25,25 @@ export interface CreateDistribucionFormRef {
 
 export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, CreateDistribucionFormProps>(
   function CreateDistribucionForm({ onSubmit, isPending = false, onValidityChange }, ref) {
+    const { data: team = [] } = useTeam();
+    const { user } = useAuth();
     const [selectedVendedor, setSelectedVendedor] = useState<VendedorOption | null>(null);
+
+    // Auto-select current user as default vendedor
+    useEffect(() => {
+      if (selectedVendedor || team.length === 0) return;
+      const currentMember = team.find((m) => m.userId === user?.id);
+      if (!currentMember) return;
+      const isVendedor = currentMember.role === "VENDEDOR" || currentMember.role === "ADMIN_NEGOCIO";
+      if (isVendedor && currentMember.isActive) {
+        setSelectedVendedor({
+          id: currentMember.id,
+          name: currentMember.name,
+          role: currentMember.role,
+          userId: currentMember.userId,
+        });
+      }
+    }, [team, user?.id]);
     const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
     const [notaCreacion, setNotaCreacion] = useState("");
@@ -45,6 +65,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVenta: selectedPuntoVenta.name,
         puntoVentaId: selectedPuntoVenta.id,
         notaCreacion: notaCreacion.trim() || undefined,
+        groupId: selectedGroup?.id,
         items: assignItems ? items : undefined,
       });
     };

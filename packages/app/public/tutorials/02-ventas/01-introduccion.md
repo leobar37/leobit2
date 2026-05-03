@@ -70,7 +70,6 @@ Desde el módulo de ventas puedes ver:
 - Ventas por cliente
 - Estadísticas de ventas (admin)
 
-## Funciona offline
 
 > 💡 **Tip**: Puedes registrar ventas incluso sin internet. El sistema las guarda localmente y las sincroniza cuando recuperes conexión.
 

@@ -182,7 +182,12 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       const result = await saleService.confirmSale(
         ctx as RequestContext,
         params.id,
-        body.baseVersion
+        body.baseVersion,
+        {
+          paymentMethod: body.paymentMethod,
+          referenceNumber: body.referenceNumber,
+          proofImageId: body.proofImageId,
+        }
       );
       return { success: true, data: result.data, txid: result.txid };
     },
@@ -192,6 +197,15 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
       body: t.Object({
         baseVersion: t.Optional(t.Number()),
+        paymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+          t.Literal("tarjeta"),
+        ])),
+        referenceNumber: t.Optional(t.String()),
+        proofImageId: t.Optional(t.String()),
       }),
     }
   )

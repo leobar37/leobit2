@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from "react-router";
 import { formatNumber } from "~/lib/utils";
-import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone, WifiOff } from "lucide-react";
+import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -13,7 +13,6 @@ import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import { validateFile } from "~/hooks/use-files";
-import { isOnline } from "~/lib/is-online";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { calculateBalanceDue, formatCurrency, parseAmount } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
@@ -410,15 +409,6 @@ export default function NuevoCobroPage() {
                 />
               </div>
             )}
-
-            {!isOnline() ? (
-              <div className="shell-block-muted flex gap-2 rounded-[16px] px-3 py-2 text-sm text-amber-700">
-                <WifiOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                <span>
-                  El abono se guardará sin conexión. La captura requiere internet y no se subirá ahora.
-                </span>
-              </div>
-            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notas (opcional)</Label>

@@ -18,8 +18,10 @@ export class CustomerService {
       search?: string;
       limit?: number;
       offset?: number;
-      customerIds?: string[]; // Filter by specific customer IDs (from tag filter)
-      tagIds?: string[]; // Filter by tags — handled in repository to avoid N+1
+      customerIds?: string[];
+      tagIds?: string[];
+      sortBy?: "name" | "lastSaleDate" | "debt" | "createdAt";
+      sortOrder?: "asc" | "desc";
     }
   ) {
     if (!ctx.hasPermission("customers.read")) {

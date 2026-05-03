@@ -32,7 +32,6 @@ export interface Sale {
   netWeight: string | null;
   deliveryDate: string | null;
   orderDate: string | null;
-  syncStatus: "pending" | "synced" | "error";
   status: "draft" | "active" | "confirmed" | "delivered" | "cancelled";
   saleDate: string;
   createdAt: string;
@@ -51,7 +50,6 @@ export interface SaleOverrides {
   sellerId?: string;
   saleType?: "contado" | "credito";
   status?: "draft" | "active" | "confirmed" | "delivered" | "cancelled";
-  syncStatus?: "pending" | "synced" | "error";
   type?: "instant_sale" | "pre_order";
 }
 
@@ -151,7 +149,6 @@ export function generateSale(index: number, overrides?: SaleOverrides): Sale {
     netWeight: saleType === "contado" ? faker.number.float({ min: 1, max: 20, fractionDigits: 3 }).toString() : null,
     deliveryDate: null,
     orderDate: null,
-    syncStatus: overrides?.syncStatus ?? faker.helpers.arrayElement(["pending", "synced", "error"]),
     status,
     saleDate: faker.date.between({ from: pastDate, to: now }).toISOString(),
     createdAt: pastDate.toISOString(),

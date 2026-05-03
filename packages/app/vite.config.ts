@@ -32,8 +32,6 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: "autoUpdate",
-      // Enable in dev for offline testing
-      disable: false,
       devOptions: {
         enabled: false, // Disable SW in dev to avoid intercepting API requests
         type: "module",
@@ -129,7 +127,7 @@ export default defineConfig({
       manifest: {
         name: "Avileo",
         short_name: "Avileo",
-        description: "Sistema de ventas de pollo - Offline first",
+        description: "Sistema de ventas de pollo",
         theme_color: "#f97316",
         background_color: "#0a0a0f",
         display: "standalone",

@@ -139,7 +139,6 @@ Si te equivocaste al registrar:
 
 > ⚠️ **Importante**: Solo puedes editar abonos del día actual. Abonos antiguos requieren ajuste por administrador.
 
-## Trabajar offline
 
 Puedes registrar abonos sin internet:
 

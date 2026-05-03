@@ -21,7 +21,6 @@ interface Customer {
   businessId: string;
   createdAt: string;
   updatedAt: string;
-  syncStatus: "pending" | "synced" | "error";
 }
 
 interface ProductVariant {
@@ -71,7 +70,6 @@ interface Sale {
   balanceDue: string;
   tara: string;
   netWeight: string | null;
-  syncStatus: "pending" | "synced" | "error";
   saleDate: string;
   createdAt: string;
   items: SaleItem[];
@@ -122,7 +120,6 @@ let customers: Customer[] = [
     businessId: "biz-1",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
-    syncStatus: "synced",
   },
   {
     id: "cust-2",
@@ -134,7 +131,6 @@ let customers: Customer[] = [
     businessId: "biz-1",
     createdAt: "2024-01-02T00:00:00Z",
     updatedAt: "2024-01-02T00:00:00Z",
-    syncStatus: "synced",
   },
   {
     id: "cust-3",
@@ -146,7 +142,6 @@ let customers: Customer[] = [
     businessId: "biz-1",
     createdAt: "2024-01-03T00:00:00Z",
     updatedAt: "2024-01-03T00:00:00Z",
-    syncStatus: "synced",
   },
   {
     id: "cust-4",
@@ -158,7 +153,6 @@ let customers: Customer[] = [
     businessId: "biz-1",
     createdAt: "2024-01-04T00:00:00Z",
     updatedAt: "2024-01-04T00:00:00Z",
-    syncStatus: "synced",
   },
   {
     id: "cust-5",
@@ -170,7 +164,6 @@ let customers: Customer[] = [
     businessId: "biz-1",
     createdAt: "2024-01-05T00:00:00Z",
     updatedAt: "2024-01-05T00:00:00Z",
-    syncStatus: "synced",
   },
 ];
 
@@ -439,7 +432,6 @@ export const handlers = [
       businessId: "biz-1",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      syncStatus: "synced",
     };
     customers.push(newCustomer);
     return HttpResponse.json({
@@ -566,7 +558,6 @@ export const handlers = [
       balanceDue: balanceDue.toFixed(2),
       tara: (body.tara || 0).toFixed(3),
       netWeight: body.netWeight ? body.netWeight.toFixed(3) : null,
-      syncStatus: "synced",
       saleDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       items: body.items,

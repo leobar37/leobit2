@@ -53,6 +53,7 @@ export class PaymentService {
       notes?: string;
       proofImageId?: string;
       referenceNumber?: string;
+      relatedSaleId?: string;
     }
   ): Promise<MutationResult<Abono>> {
     if (!ctx.hasPermission("customers.write")) {
@@ -88,6 +89,7 @@ export class PaymentService {
         notes: data.notes,
         proofImageId: data.proofImageId,
         referenceNumber: data.referenceNumber,
+        relatedSaleId: data.relatedSaleId,
       }, tx);
 
       return {

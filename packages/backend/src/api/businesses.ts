@@ -131,6 +131,8 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         email: body.email,
         usarDistribucion: body.usarDistribucion,
         permitirVentaSinStock: body.permitirVentaSinStock,
+        publicCatalogEnabled: body.publicCatalogEnabled,
+        publicCatalogSlug: body.publicCatalogSlug,
       });
 
       return {
@@ -150,6 +152,8 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         email: t.Optional(t.String({ format: "email" })),
         usarDistribucion: t.Optional(t.Boolean()),
         permitirVentaSinStock: t.Optional(t.Boolean()),
+        publicCatalogEnabled: t.Optional(t.Boolean()),
+        publicCatalogSlug: t.Optional(t.Nullable(t.String({ minLength: 3, maxLength: 100 }))),
       }),
     }
   )

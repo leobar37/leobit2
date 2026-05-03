@@ -23,6 +23,8 @@ const updateBusinessSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   usarDistribucion: z.boolean(),
   permitirVentaSinStock: z.boolean(),
+  publicCatalogEnabled: z.boolean(),
+  publicCatalogSlug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).or(z.literal("")),
 });
 
 type UpdateBusinessFormData = z.infer<typeof updateBusinessSchema>;
@@ -45,6 +47,8 @@ export default function EditBusinessPage() {
       email: "",
       usarDistribucion: true,
       permitirVentaSinStock: false,
+      publicCatalogEnabled: false,
+      publicCatalogSlug: "",
     },
     values: business
       ? {
@@ -55,6 +59,8 @@ export default function EditBusinessPage() {
           email: business.email || "",
           usarDistribucion: business.usarDistribucion,
           permitirVentaSinStock: business.permitirVentaSinStock,
+          publicCatalogEnabled: business.publicCatalogEnabled,
+          publicCatalogSlug: business.publicCatalogSlug || "",
         }
       : undefined,
   });
@@ -73,6 +79,8 @@ export default function EditBusinessPage() {
           email: data.email || undefined,
           usarDistribucion: data.usarDistribucion,
           permitirVentaSinStock: data.permitirVentaSinStock,
+          publicCatalogEnabled: data.publicCatalogEnabled,
+          publicCatalogSlug: data.publicCatalogSlug || null,
         },
       });
     } catch (error) {
@@ -125,6 +133,10 @@ export default function EditBusinessPage() {
       </div>
     );
   }
+
+  const publicCatalogUrl = business.publicCatalogSlug && typeof window !== "undefined"
+    ? `${window.location.origin}/venta/${business.publicCatalogSlug}`
+    : "";
 
   return (
     <FormPage
@@ -258,6 +270,34 @@ export default function EditBusinessPage() {
                     </div>
                   )}
                 />
+
+                <Controller
+                  name="publicCatalogEnabled"
+                  control={form.control}
+                  render={({ field }) => (
+                    <div className="mb-4">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        label="Catálogo público"
+                        description="Permite que clientes creen pedidos desde un enlace público"
+                      />
+                    </div>
+                  )}
+                />
+
+                <FormInput
+                  label="URL pública"
+                  description="Solo letras, números y guiones. Ejemplo: polleria-leo"
+                  error={form.formState.errors.publicCatalogSlug?.message}
+                  register={form.register("publicCatalogSlug")}
+                />
+
+                {publicCatalogUrl && (
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-3 text-sm text-orange-800">
+                    Enlace: <span className="font-semibold">{publicCatalogUrl}</span>
+                  </div>
+                )}
               </div>
 
               {form.formState.errors.root && (

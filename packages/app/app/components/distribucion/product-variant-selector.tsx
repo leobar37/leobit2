@@ -218,7 +218,7 @@ export function ProductVariantSelector({
                       className={cn(
                         "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                         selectedVariantId === variant.id
-                          ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-400/30 dark:bg-orange-500/12"
+                          ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-500/40 dark:bg-orange-500/20"
                           : "border-border bg-card hover:bg-accent",
                       )}
                     >

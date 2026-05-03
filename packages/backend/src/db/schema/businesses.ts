@@ -13,9 +13,10 @@ import {
   timestamp,
   date,
   index,
+  uniqueIndex,
   jsonb,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { businessUserRoleEnum } from "./enums";
 
 import type { BusinessCalculatorSettings } from "@avileo/shared";
@@ -48,6 +49,10 @@ export const businesses = pgTable(
     email: varchar("email", { length: 100 }),
     logoUrl: varchar("logo_url", { length: 255 }),
 
+    // Public customer catalog
+    publicCatalogEnabled: boolean("public_catalog_enabled").notNull().default(false),
+    publicCatalogSlug: varchar("public_catalog_slug", { length: 100 }),
+
     // Feature flags específicos del negocio (override de system_config)
     controlKilos: boolean("control_kilos").default(true),
     usarDistribucion: boolean("usar_distribucion").default(true),
@@ -66,6 +71,9 @@ export const businesses = pgTable(
     index("idx_businesses_name").on(table.name),
     index("idx_businesses_ruc").on(table.ruc),
     index("idx_businesses_is_active").on(table.isActive),
+    uniqueIndex("ux_businesses_public_catalog_slug_ci").on(
+      sql`lower(${table.publicCatalogSlug})`
+    ),
   ]
 );
 

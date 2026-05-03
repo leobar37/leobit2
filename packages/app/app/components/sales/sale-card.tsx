@@ -117,17 +117,15 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
               <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
                 <Badge
                   variant={isDraft ? "warning" : "success"}
-                  className={cn(
-                    "rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none shadow-none"
-                  )}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
                 >
                   {saleStatusLabel[sale.status]}
                 </Badge>
 
                 {hasBalanceDue && (
                   <Badge
-                    variant="warning"
-                    className="rounded-full border-0 px-2.5 py-1 text-[11px] font-semibold leading-none shadow-none"
+                    variant="danger"
+                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
                   >
                     Debe S/ {formatCurrency(sale.balanceDue)}
                   </Badge>

@@ -1,6 +1,6 @@
 /**
  * Customers Schema
- * Clientes del sistema con soporte offline-first
+ * Clientes del sistema
  */
 import {
   pgTable,

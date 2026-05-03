@@ -4,7 +4,7 @@
 
 ## Overview
 
-This directory contains all Drizzle ORM table definitions. Schema files define database tables, relations, and types for the offline-first chicken sales management system.
+This directory contains all Drizzle ORM table definitions. Schema files define database tables, relations, and types for the online chicken sales management system.
 
 ## Schema File Organization
 
@@ -23,7 +23,6 @@ db/schema/
 ├── distribucion.ts             # Distribution records
 ├── tags.ts                     # Customer tags
 ├── closings.ts                 # Daily closing reports
-├── sync-operations.ts          # Offline sync queue
 ├── files.ts                    # File attachments
 ├── assets.ts                   # Business assets
 ├── whatsapp-templates.ts       # WhatsApp message templates
@@ -50,7 +49,6 @@ import { pgTable, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
 // 1. Define enums (if needed)
-export const syncStatusEnum = pgEnum("sync_status", ["pending", "synced", "error"]);
 
 // 2. Define table
 export const customers = pgTable("customers", {
@@ -68,9 +66,6 @@ export const customers = pgTable("customers", {
   createdBy: text("created_by").references(() => businessUsers.id),
   updatedBy: text("updated_by").references(() => businessUsers.id),
   
-  // Sync status for offline support
-  syncStatus: syncStatusEnum("sync_status").default("pending"),
-  syncAttempts: integer("sync_attempts").default(0),
   
   // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -121,21 +116,16 @@ createdBy: text("created_by").references(() => businessUsers.id),
 sellerId: text("seller_id").references(() => users.id),
 ```
 
-### 3. Sync Status Fields (Offline Tables)
 
-Tables that sync offline MUST have these fields:
 
 ```typescript
 {
-  syncStatus: syncStatusEnum("sync_status").default("pending"),
-  syncAttempts: integer("sync_attempts").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }
 ```
 
 **Sync Status Values:**
-- `"pending"` - Created/updated offline, waiting to sync
 - `"synced"` - Confirmed synced with backend
 - `"error"` - Sync failed after retries
 
@@ -242,7 +232,6 @@ export const customers = pgTable("customers", {
 }, (table) => ({
   businessIdx: index("customers_business_idx").on(table.businessId),
   phoneIdx: index("customers_phone_idx").on(table.phone),
-  syncStatusIdx: index("customers_sync_idx").on(table.syncStatus),
 }));
 ```
 
@@ -270,7 +259,6 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
 ### DO:
 - Always include `businessId` for multi-tenancy
 - Use CUID2 for primary keys
-- Add `syncStatus` + `syncAttempts` for offline tables
 - Point operational FKs to `business_users.id`
 - Define relations for nested queries
 - Create indexes for filtered columns

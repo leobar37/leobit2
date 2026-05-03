@@ -13,7 +13,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createModal } from "~/lib/modal/create-modal";
 import { cn } from "~/lib/utils";
-import { useOnline } from "~/hooks/use-online";
+
 import {
   useCustomerGroups,
   useCreateCustomerGroup,
@@ -30,7 +30,7 @@ function BulkGroupAssignmentDrawerContent({
   customerIds,
   onAssigned,
 }: BulkGroupAssignmentData & { close: () => void }) {
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const { data: groups = [], isLoading } = useCustomerGroups();
   const createGroup = useCreateCustomerGroup();
   const addMembers = useAddMembersToGroup();
@@ -73,7 +73,10 @@ function BulkGroupAssignmentDrawerContent({
       setSelectedGroupIds((prev) => new Set(prev).add(createdGroup.id));
       setNewGroupName("");
       setIsCreateExpanded(false);
-      toast.success("Grupo creado y seleccionado");
+
+      onAssigned?.();
+      close();
+      toast.success("Grupo creado y clientes agregados");
     } catch (error) {
       // Error toast is handled by the mutation hook
     }
@@ -145,7 +148,7 @@ function BulkGroupAssignmentDrawerContent({
                 Cargando grupos...
               </p>
             ) : sortedGroups.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
                 Aún no hay grupos. Crea el primero para empezar.
               </p>
             ) : (
@@ -161,8 +164,8 @@ function BulkGroupAssignmentDrawerContent({
                     className={cn(
                       "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                       isSelected
-                        ? "border-orange-300 bg-orange-50"
-                        : "border-stone-200 bg-white hover:border-orange-200 hover:bg-orange-50/40",
+                        ? "border-orange-500/40 bg-orange-500/10"
+                        : "border-border bg-card hover:border-orange-500/30 hover:bg-orange-500/5",
                       !isOnline && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -171,13 +174,13 @@ function BulkGroupAssignmentDrawerContent({
                         "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors",
                         isSelected
                           ? "border-orange-500 bg-orange-500 text-white"
-                          : "border-stone-300 bg-white"
+                          : "border-muted-foreground/25 bg-background"
                       )}
                     >
                       {isSelected && <Check className="h-3 w-3" />}
                     </div>
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">
                         <Users className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
@@ -193,7 +196,7 @@ function BulkGroupAssignmentDrawerContent({
             )}
           </div>
 
-          <div className="rounded-2xl border border-stone-200 bg-white">
+          <div className="rounded-2xl border border-border bg-card">
             <button
               type="button"
               onClick={() => setIsCreateExpanded((prev) => !prev)}
@@ -203,7 +206,7 @@ function BulkGroupAssignmentDrawerContent({
                 !isOnline && "opacity-50 cursor-not-allowed"
               )}
             >
-              <span className="flex items-center gap-2 font-medium text-orange-700">
+              <span className="flex items-center gap-2 font-medium text-orange-600 dark:text-orange-400">
                 <Plus className="h-4 w-4" />
                 Crear nuevo grupo
               </span>
@@ -216,7 +219,7 @@ function BulkGroupAssignmentDrawerContent({
             </button>
 
             {isCreateExpanded && (
-              <div className="space-y-3 border-t border-stone-100 px-4 py-4">
+              <div className="space-y-3 border-t border-border px-4 py-4">
                 <Input
                   placeholder="Nombre del grupo"
                   value={newGroupName}

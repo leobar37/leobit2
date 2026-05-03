@@ -323,6 +323,13 @@
       "when": 1745856000000,
       "tag": "0061_drop_sync_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1777766400000,
+      "tag": "0062_add_public_catalog_settings",
+      "breakpoints": true
     }
   ]
 }

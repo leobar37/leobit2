@@ -4,6 +4,8 @@ import { RequestContext } from "../context/request-context";
 
 export const contextPlugin = new Elysia({ name: "context" })
   .resolve({ as: "scoped" }, async ({ request, set }) => {
+    // Better Auth's getSession supports both cookie and bearer token auth.
+    // The bearer plugin automatically reads the JWT from Authorization header.
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {

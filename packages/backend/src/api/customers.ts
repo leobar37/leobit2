@@ -20,6 +20,8 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         limit: query.limit ? parseInt(query.limit) : undefined,
         offset: query.offset ? parseInt(query.offset) : undefined,
         tagIds: tagIds && tagIds.length > 0 ? tagIds : undefined,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       });
       return { success: true, data: customers };
     },
@@ -29,6 +31,8 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
         tagIds: t.Optional(t.String()),
+        sortBy: t.Optional(t.Union([t.Literal("name"), t.Literal("lastSaleDate"), t.Literal("debt"), t.Literal("createdAt")])),
+        sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
       }),
     }
   )

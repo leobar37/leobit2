@@ -172,7 +172,7 @@ export function CustomerSelect({
             className={cn(
               "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
               searchQuery && customers.length === 0
-                ? "border-orange-300 bg-orange-50/70 hover:bg-orange-50 dark:border-orange-400/30 dark:bg-orange-500/12 dark:hover:bg-orange-500/18"
+                ? "border-orange-300 bg-orange-50/70 hover:bg-orange-50 dark:border-orange-500/40 dark:bg-orange-500/20 dark:hover:bg-orange-500/28"
                 : "border-dashed border-orange-300/60 hover:bg-orange-50/30 dark:border-orange-400/20 dark:hover:bg-orange-500/10",
             )}
           >
@@ -211,7 +211,7 @@ export function CustomerSelect({
                   className={cn(
                     "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
                     value === customer.id
-                      ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-400/30 dark:bg-orange-500/12"
+                      ? "shell-card-muted border-orange-300 bg-orange-50/90 dark:border-orange-500/40 dark:bg-orange-500/20"
                       : "border-border bg-card hover:bg-accent",
                   )}
                 >

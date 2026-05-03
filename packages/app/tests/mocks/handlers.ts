@@ -20,7 +20,6 @@ export interface Customer {
 	businessId: string;
 	createdAt: string;
 	updatedAt: string;
-	syncStatus: "pending" | "synced" | "error";
 }
 
 export interface Product {
@@ -64,7 +63,6 @@ let customers: Customer[] = [
 		businessId: "biz-1",
 		createdAt: "2024-01-01T00:00:00Z",
 		updatedAt: "2024-01-01T00:00:00Z",
-		syncStatus: "synced",
 	},
 	{
 		id: "cust-2",
@@ -73,7 +71,6 @@ let customers: Customer[] = [
 		businessId: "biz-1",
 		createdAt: "2024-01-02T00:00:00Z",
 		updatedAt: "2024-01-02T00:00:00Z",
-		syncStatus: "synced",
 	},
 ];
 
@@ -140,7 +137,6 @@ export const handlers = [
 			businessId: "biz-1",
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
-			syncStatus: "pending",
 		};
 		customers.push(newCustomer);
 		return HttpResponse.json({
@@ -233,7 +229,6 @@ export function resetData() {
 			businessId: "biz-1",
 			createdAt: "2024-01-01T00:00:00Z",
 			updatedAt: "2024-01-01T00:00:00Z",
-			syncStatus: "synced",
 		},
 	];
 	products = [

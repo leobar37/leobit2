@@ -1,8 +1,12 @@
 import * as React from "react";
+import { useState, useRef, useCallback } from "react";
 import { useController } from "react-hook-form";
 import { cn } from "~/lib/utils";
-import { Upload, X, ImageIcon, AlertCircle } from "lucide-react";
+import { Upload, X, ImageIcon, AlertCircle, Camera } from "lucide-react";
 import { useWrapperFormContext } from "~/hooks/use-wrapper-form";
+import { CameraGalleryDrawer } from "~/components/ui/camera-gallery-drawer";
+import { useMobile } from "~/hooks/use-mobile";
+import { validateFile } from "~/hooks/use-files";
 
 export interface FormMediaFieldProps {
   name: string;
@@ -21,8 +25,11 @@ export function FormMediaField({
 }: FormMediaFieldProps) {
   const wrapperForm = useWrapperFormContext();
   const resolver = wrapperForm?.getFieldResolver(name);
-
   const control = wrapperForm?.control;
+  const isMobile = useMobile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const {
     field: { value, onChange },
@@ -49,27 +56,54 @@ export function FormMediaField({
     }
   }, [value]);
 
+  const processFile = useCallback(
+    (file: File) => {
+      const validation = validateFile(file);
+      if (validation) {
+        setValidationError(validation);
+        return;
+      }
+
+      setValidationError(null);
+      onChange(file);
+    },
+    [onChange]
+  );
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onChange(file);
+    processFile(file);
+    e.target.value = "";
+  };
+
+  const handleDrawerFileSelect = (file: File) => {
+    processFile(file);
+  };
+
+  const handleUploadClick = () => {
+    if (isMobile) {
+      setDrawerOpen(true);
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleClear = () => {
     onChange(null);
     setPreview(null);
+    setValidationError(null);
   };
 
   const inputId = `media-field-${name}`;
-
   const isAsset = resolver?.kind === "asset";
-  const isFile = resolver?.kind === "file";
   const hasResolver = !!resolver;
+  const displayError = error?.message || validationError;
 
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium">
+        <label className="text-sm font-medium">
           {label}
         </label>
       )}
@@ -83,64 +117,72 @@ export function FormMediaField({
 
       <div className="relative">
         {preview ? (
-          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+          <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-muted">
             <img
               src={preview}
-              alt="Preview"
-              className="w-full h-full object-contain"
+              alt="Vista previa"
+              className="w-full h-full object-cover"
             />
             {!disabled && (
               <button
                 type="button"
                 onClick={handleClear}
-                className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors shadow-lg"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         ) : (
-          <label
-            htmlFor={inputId}
+          <button
+            type="button"
+            onClick={handleUploadClick}
+            disabled={disabled}
             className={cn(
-              "flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed cursor-pointer transition-colors",
+              "w-full h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-colors",
               disabled
-                ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-                : "border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-600"
+                ? "border-muted bg-muted/50 text-muted-foreground cursor-not-allowed"
+                : "border-border bg-card hover:bg-accent text-muted-foreground hover:text-foreground"
             )}
           >
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              {isAsset ? (
-                <ImageIcon className="w-8 h-8 mb-2" />
-              ) : (
-                <Upload className="w-8 h-8 mb-2" />
-              )}
-              <p className="text-sm">
-                {isAsset
-                  ? "Haz clic para seleccionar imagen"
-                  : "Haz clic para subir archivo"}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {isAsset
-                  ? "Selecciona o sube una imagen"
-                  : "Sube un archivo"}
-              </p>
-            </div>
-            <input
-              id={inputId}
-              type="file"
-              accept={accept || "image/*"}
-              disabled={disabled}
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
+            {isMobile ? (
+              <Camera className="w-6 h-6" />
+            ) : isAsset ? (
+              <ImageIcon className="w-6 h-6" />
+            ) : (
+              <Upload className="w-6 h-6" />
+            )}
+            <span className="text-sm font-medium">
+              {isMobile ? "Tomar foto o subir" : isAsset ? "Seleccionar imagen" : "Subir archivo"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {isMobile ? "Toca para abrir opciones" : "Haz clic para seleccionar"}
+            </span>
+          </button>
         )}
+
+        <input
+          ref={fileInputRef}
+          id={inputId}
+          type="file"
+          accept={accept || "image/*"}
+          disabled={disabled}
+          onChange={handleFileChange}
+          className="hidden"
+        />
       </div>
 
-      {error && (
-        <p className="text-sm text-red-500">{error.message}</p>
+      {displayError && (
+        <p className="text-sm text-red-500">{displayError}</p>
       )}
+
+      <CameraGalleryDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onFileSelect={handleDrawerFileSelect}
+        accept={accept || "image/jpeg,image/jpg,image/png,image/webp"}
+        title={label || "Adjuntar imagen"}
+      />
     </div>
   );
 }

@@ -19,13 +19,17 @@ const badgeVariants = cva(
         shell:
           "border-stone-200/70 bg-stone-100/90 text-stone-700 shadow-none dark:border-white/10 dark:bg-white/8 dark:text-white/75",
         success:
-          "border-transparent bg-emerald-100 text-emerald-800 shadow-none dark:bg-emerald-500/16 dark:text-emerald-300",
+          "border-transparent bg-emerald-100 text-emerald-800 shadow-none dark:bg-emerald-500/22 dark:text-emerald-300",
         warning:
-          "border-transparent bg-amber-100 text-amber-800 shadow-none dark:bg-amber-500/16 dark:text-amber-300",
+          "border-transparent bg-amber-100 text-amber-800 shadow-none dark:bg-amber-500/22 dark:text-amber-300",
         danger:
-          "border-transparent bg-red-100 text-red-700 shadow-none dark:bg-red-500/16 dark:text-red-300",
+          "border-transparent bg-red-100 text-red-700 shadow-none dark:bg-red-500/22 dark:text-red-300",
         info:
-          "border-transparent bg-sky-100 text-sky-700 shadow-none dark:bg-sky-500/16 dark:text-sky-300",
+          "border-transparent bg-sky-100 text-sky-700 shadow-none dark:bg-sky-500/22 dark:text-sky-300",
+        primary:
+          "border-transparent bg-orange-100 text-orange-800 shadow-none dark:bg-orange-500/22 dark:text-orange-300",
+        purple:
+          "border-transparent bg-purple-100 text-purple-800 shadow-none dark:bg-purple-500/22 dark:text-purple-300",
       },
     },
     defaultVariants: {

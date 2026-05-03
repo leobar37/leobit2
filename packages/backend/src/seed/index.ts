@@ -360,8 +360,8 @@ async function seedRealProducts(
 
     // Insertar producto con ID preservado usando SQL directo
     await db.execute(`
-      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at, sync_status, sync_attempts${categoryColumn})
-      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW(), 'synced', 0${categoryValue})
+      INSERT INTO products (id, business_id, name, type, unit, base_price, is_active, created_at${categoryColumn})
+      VALUES ('${productDef.id}', '${ctx.businessId}', '${productDef.name.replace(/'/g, "''")}', '${productDef.type}', '${productDef.unit}', '0', ${productDef.isActive}, NOW()${categoryValue})
       ON CONFLICT (id) DO NOTHING
     `);
 
@@ -376,8 +376,8 @@ async function seedRealProducts(
     for (const variantDef of variantsDef) {
       // Insertar variante con ID preservado
       await db.execute(`
-        INSERT INTO product_variants (id, product_id, business_id, name, sku, unit_quantity, price, is_active, created_at, updated_at, sync_status, sync_attempts)
-        VALUES ('${variantDef.id}', '${productDef.id}', '${ctx.businessId}', '${variantDef.name.replace(/'/g, "''")}', '${variantDef.sku}', ${variantDef.unitQuantity}, ${variantDef.price}, true, NOW(), NOW(), 'synced', 0)
+        INSERT INTO product_variants (id, product_id, business_id, name, sku, unit_quantity, price, is_active, created_at, updated_at)
+        VALUES ('${variantDef.id}', '${productDef.id}', '${ctx.businessId}', '${variantDef.name.replace(/'/g, "''")}', '${variantDef.sku}', ${variantDef.unitQuantity}, ${variantDef.price}, true, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING
       `);
 
@@ -469,8 +469,6 @@ async function seedRealSales(ctx: RequestContext, salesData: any[]) {
       status: sale.status,
       version: sale.version,
       allowCustomerEdit: sale.allowCustomerEdit,
-      syncStatus: sale.syncStatus || "synced",
-      syncAttempts: sale.syncAttempts || 0,
       cancelledAt: sale.cancelledAt,
       cancelledBy: sale.cancelledBy,
       cancelReason: sale.cancelReason,
@@ -542,8 +540,6 @@ async function seedRealAbonos(ctx: RequestContext, abonosData: any[]) {
       proofImageId: abono.proofImageId,
       referenceNumber: abono.referenceNumber,
       relatedSaleId: abono.relatedSaleId,
-      syncStatus: abono.syncStatus || "synced",
-      syncAttempts: abono.syncAttempts || 0,
       createdAt: new Date(abono.createdAt),
     });
   }

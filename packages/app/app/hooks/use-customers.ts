@@ -19,6 +19,8 @@ export interface Customer {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  totalDebt?: number;
+  lastSaleDate?: string | null;
 }
 
 export interface PaginatedCustomersResult {
@@ -33,12 +35,16 @@ export interface CustomerSearchFilters {
   tagIds?: string[];
 }
 
+import type { CustomerSortField, SortOrder } from "~/hooks/use-customer-sort";
+
 export interface CustomerPageQuery {
   search?: string;
   limit?: number;
   offset?: number;
   tagIds?: string[];
   groupIds?: string[];
+  sortBy?: CustomerSortField;
+  sortOrder?: SortOrder;
 }
 
 export interface CreateCustomerInput {
@@ -104,6 +110,8 @@ export function usePaginatedCustomers(query: CustomerPageQuery) {
           limit: query.limit?.toString(),
           offset: query.offset?.toString(),
           tagIds: query.tagIds?.join(","),
+          sortBy: query.sortBy,
+          sortOrder: query.sortOrder,
         },
       });
       const data = extractData<Customer[]>(response);

@@ -376,7 +376,12 @@ export class SaleService {
   async confirmSale(
     ctx: RequestContext,
     id: string,
-    baseVersion?: number
+    baseVersion?: number,
+    paymentData?: {
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
+      referenceNumber?: string;
+      proofImageId?: string;
+    }
   ): Promise<MutationResult<Sale>> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
@@ -424,6 +429,25 @@ export class SaleService {
         { status: "active" },
         tx
       );
+
+      // If sale is "a cuenta" (partial payment), create a payment record
+      const amountPaid = Number.parseFloat(confirmedSale.amountPaid);
+      const totalAmount = Number.parseFloat(confirmedSale.totalAmount);
+      if (
+        amountPaid > 0 &&
+        amountPaid < totalAmount &&
+        confirmedSale.customerId &&
+        paymentData?.paymentMethod
+      ) {
+        await this.paymentRepository.create(ctx, {
+          customerId: confirmedSale.customerId,
+          amount: amountPaid.toFixed(2),
+          paymentMethod: paymentData.paymentMethod,
+          referenceNumber: paymentData.referenceNumber,
+          proofImageId: paymentData.proofImageId,
+          relatedSaleId: confirmedSale.id,
+        }, tx);
+      }
 
       return {
         data: confirmedSale,

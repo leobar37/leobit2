@@ -4,7 +4,7 @@
 
 ## Overview
 
-Backend API server for Avileo - an offline-first chicken sales management system. Built with ElysiaJS, Drizzle ORM, and PostgreSQL.
+Backend API server for Avileo - an online chicken sales management system. Built with ElysiaJS, Drizzle ORM, and PostgreSQL.
 
 ## Tech Stack
 
@@ -197,11 +197,8 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
 
 ### Sync Status Pattern
 
-Tables that sync offline have these fields:
 
 ```typescript
-syncStatus: pgEnum("sync_status", ["pending", "synced", "error"]),
-syncAttempts: integer("sync_attempts").default(0),
 ```
 
 ### FK Pattern

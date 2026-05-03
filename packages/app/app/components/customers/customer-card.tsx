@@ -1,14 +1,28 @@
-import { User, Phone, MapPin, CreditCard, Check, Users } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, Check, Users, CalendarDays, Banknote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
-import type { Customer } from "@avileo/shared";
+import { formatCurrency } from "~/lib/utils";
+import { formatRecentDateTime } from "~/lib/date-utils";
 
 import { useCustomerGroupsWithDetails, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerTagsWithDetails, type CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";
 import { TagBadge } from "~/components/tags";
 
 interface CustomerCardProps {
-  customer: Customer;
+  customer: {
+    id: string;
+    name: string;
+    dni?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    notes?: string | null;
+    businessId?: string;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+    totalDebt?: number;
+    lastSaleDate?: string | null;
+  };
   showDebt?: boolean;
   showTags?: boolean;
   compact?: boolean;
@@ -62,7 +76,7 @@ export function CustomerCard({
         "rounded-[24px] border px-4 py-4 transition-colors",
         selectable || onNavigate ? "cursor-pointer" : "",
         selected
-          ? "border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)] dark:border-orange-400/30 dark:bg-orange-500/12 dark:shadow-[0_10px_30px_rgba(249,115,22,0.12)]"
+          ? "border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)] dark:border-orange-500/40 dark:bg-orange-500/20 dark:shadow-[0_10px_30px_rgba(249,115,22,0.15)]"
           : "shell-card-flat border-stone-200/85 hover:border-stone-300/90 hover:bg-white/90 dark:border-white/10 dark:hover:border-white/15 dark:hover:bg-white/[0.08]"
       )}
       onClick={handleCardClick}
@@ -76,7 +90,7 @@ export function CustomerCard({
               className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                 selected
                   ? "bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)]"
-                  : "bg-orange-100 text-orange-600 dark:bg-orange-500/14 dark:text-orange-300"
+                  : "bg-orange-100 text-orange-600 dark:bg-orange-500/25 dark:text-orange-300"
               }`}
             >
               {selected ? (
@@ -86,7 +100,7 @@ export function CustomerCard({
               )}
             </button>
           ) : (
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/14 dark:text-orange-300">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/25 dark:text-orange-300">
               <User className="h-5 w-5" />
             </div>
           )}
@@ -122,8 +136,8 @@ export function CustomerCard({
                     key={group.id}
                     variant="outline"
                     className={cn(
-                      "h-5 rounded-full border-orange-200 bg-orange-50/90 px-1.5 text-[10px] font-medium text-orange-700 shadow-none dark:border-orange-500/20 dark:bg-orange-500/14 dark:text-orange-200",
-                      selected && "border-orange-300 bg-white text-orange-800 dark:border-orange-400/30 dark:bg-orange-500/18 dark:text-orange-100"
+                      "h-5 rounded-full border-orange-200 bg-orange-50 px-1.5 text-[10px] font-medium text-orange-700 shadow-none dark:border-orange-400/30 dark:bg-orange-500/25 dark:text-orange-200",
+                      selected && "border-orange-300 bg-white text-orange-800 dark:border-orange-400/40 dark:bg-orange-500/30 dark:text-orange-100"
                     )}
                   >
                     <Users className="mr-1 h-3 w-3" />
@@ -135,6 +149,31 @@ export function CustomerCard({
                     +{customerGroups.length - 2} grupos
                   </span>
                 )}
+              </div>
+            )}
+
+            {showDebt && (customer.totalDebt ?? 0) > 0 && (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-5 rounded-full border-red-200 bg-red-50 px-1.5 text-[10px] font-medium text-red-600 shadow-none dark:border-red-400/30 dark:bg-red-500/25 dark:text-red-200",
+                    selected && "border-red-300 bg-white text-red-700 dark:border-red-400/40 dark:bg-red-500/30 dark:text-red-100"
+                  )}
+                >
+                  <Banknote className="mr-1 h-3 w-3" />
+                  Debe S/ {formatCurrency(customer.totalDebt!.toFixed(2))}
+                </Badge>
+              </div>
+            )}
+
+            {customer.lastSaleDate && (
+              <div className={cn(
+                "mt-1 flex items-center gap-1.5 text-xs",
+                selected ? "text-orange-700/80 dark:text-orange-200/80" : "text-muted-foreground/80"
+              )}>
+                <CalendarDays className="h-3 w-3" />
+                <span>Última compra: {formatRecentDateTime(new Date(customer.lastSaleDate))}</span>
               </div>
             )}
 

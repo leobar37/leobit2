@@ -1,12 +1,48 @@
-// @ts-nocheck - Backend file
 import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { businessUsers, businessUserRoleEnum } from "../db/schema";
 import { ForbiddenError } from "../errors";
 import type { BusinessCalculatorSettings } from "@avileo/shared";
 import { defaultCalculatorSettings } from "../db/schema/businesses";
+import { TTLCache } from "../lib/cache";
 
 type BusinessUserRole = typeof businessUserRoleEnum.enumValues[number];
+
+/**
+ * Cache key: userId:businessId (or userId:"default" when no target business)
+ */
+function buildCacheKey(userId: string, businessId?: string | null): string {
+  return `${userId}:${businessId ?? "default"}`;
+}
+
+/**
+ * Plain data object cached to avoid mutability issues.
+ * A new RequestContext instance is created on each cache hit.
+ */
+interface CachedContextData {
+  userId: string;
+  email: string;
+  name: string | undefined;
+  businessId: string;
+  businessUserId: string;
+  role: BusinessUserRole;
+  salesPoint: string | null;
+  permissions: Permission[];
+  isAuthenticated: boolean;
+  isActive: boolean;
+  calculatorSettings: BusinessCalculatorSettings;
+  sessionId?: string;
+}
+
+/**
+ * Cache for RequestContext data.
+ * TTL: 5 minutes with 30s jitter. Max 500 entries (LRU eviction).
+ */
+const contextCache = new TTLCache<string, CachedContextData>({
+  defaultTtlMs: 5 * 60 * 1000,
+  maxSize: 500,
+  jitterMs: 30_000,
+});
 
 /**
  * Permisos disponibles en el sistema
@@ -65,7 +101,7 @@ export const ROLE_PERMISSIONS: Record<BusinessUserRole, Permission[]> = {
  *
  * Reglas:
  * 1. SIEMPRE va como primer parámetro en repositories y services
- * 2. Se construye una vez por request (cached en el plugin)
+ * 2. Se construye una vez por request (cached cross-request en memoria con TTL)
  * 3. Contiene businessId para filtrado multi-tenant
  */
 export class RequestContext {
@@ -140,7 +176,8 @@ export class RequestContext {
 
   /**
    * Factory: Crear desde sesión de Better Auth
-   * Consulta business_users para obtener el contexto del negocio
+   * Consulta business_users para obtener el contexto del negocio.
+   * Usa cache en memoria con TTL de 5 minutos para evitar queries repetidas.
    *
    * @param session - Better Auth session
    * @param targetBusinessId - Optional specific business ID to use (for multi-business users)
@@ -153,6 +190,25 @@ export class RequestContext {
     targetBusinessId?: string | null
   ): Promise<RequestContext> {
     const { user, session: sess } = session;
+    const cacheKey = buildCacheKey(user.id, targetBusinessId);
+
+    const cached = contextCache.get(cacheKey);
+    if (cached) {
+      return new RequestContext(
+        cached.userId,
+        cached.email,
+        cached.name,
+        cached.businessId,
+        cached.businessUserId,
+        cached.role,
+        cached.salesPoint,
+        cached.permissions,
+        cached.isAuthenticated,
+        cached.isActive,
+        cached.calculatorSettings,
+        cached.sessionId
+      );
+    }
 
     let membership;
 
@@ -185,22 +241,62 @@ export class RequestContext {
     const permissions = ROLE_PERMISSIONS[membership.role] || [];
 
     // Get calculator settings from business or use defaults
-    const calculatorSettings = membership.business?.calculatorSettings || defaultCalculatorSettings;
+    // Note: Drizzle's `with` can return business as array in type inference,
+    // but at runtime it's a single object due to `findFirst`.
+    const businessRecord = membership.business as { calculatorSettings?: BusinessCalculatorSettings } | undefined;
+    const calculatorSettings = businessRecord?.calculatorSettings || defaultCalculatorSettings;
+
+    const data: CachedContextData = {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      businessId: membership.businessId,
+      businessUserId: membership.id,
+      role: membership.role,
+      salesPoint: membership.salesPoint,
+      permissions,
+      isAuthenticated: true,
+      isActive: membership.isActive,
+      calculatorSettings,
+      sessionId: sess.id,
+    };
+
+    contextCache.set(cacheKey, data);
 
     return new RequestContext(
-      user.id,
-      user.email,
-      user.name,
-      membership.businessId,
-      membership.id,
-      membership.role,
-      membership.salesPoint,
-      permissions,
-      true, // isAuthenticated
-      membership.isActive,
-      calculatorSettings,
-      sess.id
+      data.userId,
+      data.email,
+      data.name,
+      data.businessId,
+      data.businessUserId,
+      data.role,
+      data.salesPoint,
+      data.permissions,
+      data.isAuthenticated,
+      data.isActive,
+      data.calculatorSettings,
+      data.sessionId
     );
+  }
+
+  /**
+   * Invalidate ALL cache entries for a specific user across all businesses.
+   * Call when membership/role data changes (e.g., user deactivated, role changed).
+   */
+  static invalidateCache(userId: string): void {
+    const prefix = `${userId}:`;
+    for (const key of contextCache.keys()) {
+      if (key.startsWith(prefix)) {
+        contextCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Get cache stats for monitoring/debugging.
+   */
+  static cacheStats(): { size: number } {
+    return { size: contextCache.size() };
   }
 
   /**

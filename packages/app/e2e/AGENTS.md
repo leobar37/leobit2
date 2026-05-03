@@ -99,8 +99,6 @@ bun run test:e2e:msw
 await page.click('[data-testid="submit-login"]');
 ```
 
-### 2. Handle offline scenarios
-Tests should verify offline functionality works correctly.
 
 ### 3. Mobile viewport testing
 Primary viewport: 390x844 (iPhone 14)

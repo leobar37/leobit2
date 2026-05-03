@@ -124,12 +124,36 @@ export function useCreateCustomerGroup() {
 
       return group;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
-      toast.success("Grupo creado correctamente");
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.customerGroups.all });
+      const previousGroups = queryClient.getQueryData<CustomerGroup[]>(queryKeys.customerGroups.all);
+
+      const optimisticGroup: CustomerGroup = {
+        id: `temp-${Date.now()}`,
+        name: input.name,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        memberCount: input.customerIds?.length ?? 0,
+      };
+
+      queryClient.setQueryData<CustomerGroup[]>(queryKeys.customerGroups.all, (old) => {
+        return old ? [...old, optimisticGroup] : [optimisticGroup];
+      });
+
+      return { previousGroups, optimisticGroup };
     },
-    onError: (error) => {
-      toast.error(`Error al crear grupo: ${error.message}`);
+    onSuccess: (group, _input, context) => {
+      queryClient.setQueryData<CustomerGroup[]>(queryKeys.customerGroups.all, (old) => {
+        if (!old) return [group];
+        return old.map((g) => (g.id === context?.optimisticGroup.id ? group : g));
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerGroups.all });
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previousGroups) {
+        queryClient.setQueryData(queryKeys.customerGroups.all, context.previousGroups);
+      }
+      toast.error("Error al crear grupo");
     },
   });
 }

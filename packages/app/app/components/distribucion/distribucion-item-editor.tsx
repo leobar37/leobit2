@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Package, Trash2, Plus, AlertCircle } from "lucide-react";
+import { Package, Trash2, Plus, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NumericInput } from "@/components/ui/numeric-input";
@@ -84,13 +84,13 @@ export function DistribucionItemEditor({
               <div
                 key={`${item.variantId}-${index}`}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl bg-white",
+                  "flex items-center gap-3 p-3 rounded-xl bg-card",
                   "border border-border/50",
                   readOnly && "opacity-75"
                 )}
               >
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80">
-                  <Package className="h-5 w-5 text-orange-600" />
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/15">
+                  <Package className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -142,13 +142,21 @@ export function DistribucionItemEditor({
 
         {/* Summary */}
         {items.length > 0 && (
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <span className="text-sm text-muted-foreground">
-              Total asignado
-            </span>
-            <span className="font-semibold">
-              {formatKilos(totalAsignado, 1)} kg
-            </span>
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Total asignado
+              </span>
+              <span className="font-semibold">
+                {formatKilos(totalAsignado, 1)} kg
+              </span>
+            </div>
+            <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-orange-500" />
+              <span>
+                Cantidades referenciales — aun no hay control de unidades
+              </span>
+            </div>
           </div>
         )}
 

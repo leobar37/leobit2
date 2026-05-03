@@ -52,7 +52,8 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         invoiceNumber: body.invoiceNumber,
         receiptImageId: body.receiptImageId,
         notes: body.notes,
-        items: body.items,
+        status: body.status,
+        items: body.items ?? [],
       });
       return { success: true, data: result.data, txid: result.txid };
     },
@@ -63,7 +64,13 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         invoiceNumber: t.Optional(t.String()),
         receiptImageId: t.Optional(t.String()),
         notes: t.Optional(t.String()),
-        items: t.Array(
+        status: t.Optional(t.Union([
+          t.Literal("draft"),
+          t.Literal("pending"),
+          t.Literal("received"),
+          t.Literal("cancelled"),
+        ])),
+        items: t.Optional(t.Array(
           t.Object({
             productId: t.String(),
             variantId: t.Optional(t.String()),
@@ -72,7 +79,19 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
             quantity: t.Number({ minimum: 0.001 }),
             unitCost: t.Number({ minimum: 0 }),
           })
-        ),
+        )),
+      }),
+    }
+  )
+  .post(
+    "/:id/confirm",
+    async ({ purchaseService, ctx, params }) => {
+      const result = await purchaseService.confirmPurchase(ctx as RequestContext, params.id);
+      return { success: true, data: result.data, txid: result.txid };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
       }),
     }
   )

@@ -1,6 +1,6 @@
 # Avileo
 
-Offline-first chicken sales management system.
+Online chicken sales management system.
 
 ## Requirements
 - Bun 1.1.38+

@@ -171,7 +171,7 @@ export function CustomerFilterPopover({
                       className={cn(
                         "w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors",
                         isSelected
-                          ? "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/14 dark:text-orange-100"
+                          ? "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/20 dark:text-orange-100"
                           : "border-stone-200/80 bg-white hover:bg-stone-50 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
                       )}
                     >

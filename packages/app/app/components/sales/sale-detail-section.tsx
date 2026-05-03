@@ -35,7 +35,7 @@ export function SaleDetailSection({
 
       <div
         className={cn(
-          "overflow-hidden rounded-2xl border border-stone-200/80 bg-white/60",
+          "overflow-hidden rounded-2xl bg-muted/40",
           contentClassName
         )}
       >

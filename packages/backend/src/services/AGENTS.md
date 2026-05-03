@@ -20,7 +20,6 @@ services/
 ├── business/             # Business logic layer
 │   ├── order.service.ts
 │   ├── sale.service.ts
-│   └── sync.service.ts
 └── types.ts              # Shared service types
 ```
 
@@ -277,10 +276,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
 
 ## Sync Service
 
-Special service for handling offline sync:
 
 ```typescript
-// services/business/sync.service.ts
 export class SyncService {
   constructor(
     private customerRepo: CustomerRepository,

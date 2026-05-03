@@ -32,7 +32,7 @@ import { FormDate } from "@/components/forms/form-date";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { MobileShell } from "~/components/mobile";
-import { useOnline } from "~/hooks/use-online";
+
 import { useTeam } from "~/hooks/use-team";
 import { useState } from "react";
 
@@ -66,7 +66,7 @@ export default function DistribucionesPage() {
   const closeMutation = useCloseDistribucion();
   const deleteMutation = useDeleteDistribucion();
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [closingDistribucion, setClosingDistribucion] = useState<Distribucion | null>(null);

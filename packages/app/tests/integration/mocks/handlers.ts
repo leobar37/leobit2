@@ -22,7 +22,6 @@ export const mockCustomers = [
     businessId: "biz-1",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
-    syncStatus: "synced",
   },
   {
     id: "cust-2",
@@ -34,7 +33,6 @@ export const mockCustomers = [
     businessId: "biz-1",
     createdAt: "2024-01-02T00:00:00Z",
     updatedAt: "2024-01-02T00:00:00Z",
-    syncStatus: "synced",
   },
 ];
 
@@ -154,7 +152,6 @@ export const integrationHandlers = [
       businessId: "biz-1",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      syncStatus: "synced",
     };
     mockCustomers.push(newCustomer);
     return HttpResponse.json({ data: newCustomer });
@@ -243,7 +240,6 @@ export function resetIntegrationMocks() {
       businessId: "biz-1",
       createdAt: "2024-01-01T00:00:00Z",
       updatedAt: "2024-01-01T00:00:00Z",
-      syncStatus: "synced",
     },
     {
       id: "cust-2",
@@ -255,7 +251,6 @@ export function resetIntegrationMocks() {
       businessId: "biz-1",
       createdAt: "2024-01-02T00:00:00Z",
       updatedAt: "2024-01-02T00:00:00Z",
-      syncStatus: "synced",
     }
   );
 }

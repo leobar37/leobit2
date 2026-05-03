@@ -32,7 +32,7 @@ import {
   useDisconnectWhatsApp,
   type WhatsAppConnectResult,
 } from "~/hooks/use-whatsapp-settings";
-import { useOnline } from "~/hooks/use-online";
+
 
 export default function WhatsAppConfigPage() {
   const [qrData, setQrData] = useState<WhatsAppConnectResult | null>(null);
@@ -43,7 +43,7 @@ export default function WhatsAppConfigPage() {
   );
   const connectMutation = useConnectWhatsApp();
   const disconnectMutation = useDisconnectWhatsApp();
-  const { isOnline } = useOnline();
+  const isOnline = true;
 
   useEffect(() => {
     if (status?.isConnected && isPolling) {

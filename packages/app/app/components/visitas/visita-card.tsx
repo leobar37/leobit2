@@ -1,36 +1,39 @@
 import { Clock, CheckCircle, XCircle, X, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "~/lib/utils";
 import type { Visita } from "~/hooks/use-visitas";
 
 export type VisitaStatus = "pendiente" | "compro" | "no_compra";
 
 interface StatusConfig {
-  bg: string;
-  border: string;
-  text: string;
   icon: React.ComponentType<{ className?: string }>;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  leftBar: string;
 }
 
 const statusConfig: Record<VisitaStatus, StatusConfig> = {
   pendiente: {
-    bg: "bg-yellow-50",
-    border: "border-yellow-200",
-    text: "text-yellow-700",
     icon: Clock,
+    badgeBg: "bg-yellow-500/10 dark:bg-yellow-500/15",
+    badgeText: "text-yellow-700 dark:text-yellow-300",
+    badgeBorder: "border-yellow-500/20 dark:border-yellow-400/30",
+    leftBar: "bg-yellow-500",
   },
   compro: {
-    bg: "bg-green-50",
-    border: "border-green-200",
-    text: "text-green-700",
     icon: CheckCircle,
+    badgeBg: "bg-green-500/10 dark:bg-green-500/15",
+    badgeText: "text-green-700 dark:text-green-300",
+    badgeBorder: "border-green-500/20 dark:border-green-400/30",
+    leftBar: "bg-green-500",
   },
   no_compra: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-700",
     icon: XCircle,
+    badgeBg: "bg-red-500/10 dark:bg-red-500/15",
+    badgeText: "text-red-700 dark:text-red-300",
+    badgeBorder: "border-red-500/20 dark:border-red-400/30",
+    leftBar: "bg-red-500",
   },
 };
 
@@ -55,16 +58,16 @@ export function VisitaCard({
   const StatusIcon = config.icon;
 
   return (
-    <Card
+    <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-colors",
-        config.border
+        "shell-card-flat relative overflow-hidden rounded-[24px] border p-4 transition-colors",
+        "border-stone-200/85 dark:border-white/10"
       )}
     >
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1",
-          config.bg.replace("bg-", "bg-")
+          config.leftBar
         )}
       />
 
@@ -79,7 +82,7 @@ export function VisitaCard({
             </p>
           )}
           {visita.motivoNoCompra && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
               Motivo: {visita.motivoNoCompra}
             </p>
           )}
@@ -87,9 +90,10 @@ export function VisitaCard({
 
         <div
           className={cn(
-            "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
-            config.bg,
-            config.text
+            "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
+            config.badgeBg,
+            config.badgeText,
+            config.badgeBorder
           )}
         >
           <StatusIcon className="h-3 w-3" />
@@ -102,7 +106,7 @@ export function VisitaCard({
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+            className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
             onClick={() => onMarkAsNotPurchased(visita)}
           >
             <X className="mr-1 h-4 w-4" />
@@ -110,7 +114,7 @@ export function VisitaCard({
           </Button>
           <Button
             size="sm"
-            className="flex-1 border-orange-200 bg-orange-500 text-white hover:bg-orange-600"
+            className="flex-1 bg-orange-500 text-white hover:bg-orange-600"
             onClick={() => onGenerateSale(visita)}
           >
             <ShoppingCart className="mr-1 h-4 w-4" />
@@ -118,6 +122,6 @@ export function VisitaCard({
           </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

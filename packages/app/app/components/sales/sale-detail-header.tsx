@@ -28,7 +28,7 @@ interface SaleDetailHeaderProps {
 export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailHeaderProps) {
   const { open } = useCancelSaleDialog();
 
-  const canShare = sale?.status === "draft" || sale?.status === "confirmed";
+  const canShare = sale?.status === "draft" || sale?.status === "confirmed" || sale?.status === "active" || sale?.status === "delivered";
   const canReschedule = sale?.type === "pre_order" && sale?.status === "draft";
 
   return (
@@ -37,7 +37,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
         <Button
           variant="ghost"
           size="icon"
-          className="-ml-2 shrink-0 rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+          className="-ml-2 shrink-0 rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
           onClick={onBack}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -58,7 +58,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
                   title="Reprogramar entrega"
                 >
                   <Calendar className="h-4 w-4" />
@@ -75,7 +75,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
                   title="Compartir venta"
                 >
                   <Share2 className="h-4 w-4" />
@@ -89,7 +89,7 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                  className="rounded-xl text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
                   title="Más acciones"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -97,14 +97,14 @@ export function SaleDetailHeader({ canCancel, onBack, sale, title }: SaleDetailH
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-48 rounded-xl border-stone-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur"
+                className="w-48 rounded-xl border border-border bg-popover p-1.5 shadow-lg backdrop-blur text-popover-foreground"
               >
                 <DropdownMenuItem
                   onSelect={(event) => {
                     event.preventDefault();
                     open();
                   }}
-                  className="gap-2 rounded-lg text-red-600 focus:bg-red-50 focus:text-red-700"
+                  className="gap-2 rounded-lg text-red-600 focus:bg-red-50 focus:text-red-700 dark:text-red-400 dark:focus:bg-red-500/15 dark:focus:text-red-300"
                 >
                   <XCircle className="h-4 w-4" />
                   Cancelar venta

@@ -1,9 +1,18 @@
-import { eq, and, desc, like, sql, inArray, ne, count } from "drizzle-orm";
+import { eq, and, desc, asc, like, sql, inArray, ne, count } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { customers, sales, abonos, customerTags, type Customer, type NewCustomer } from "../../db/schema";
+import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import { saleStatusEnum } from "../../db/schema/enums";
 import type { DbTransaction } from "../../lib/txid";
+import {
+  buildSearchCondition,
+  resolveTagCustomerIds,
+  mergeCustomerIdFilters,
+  buildCustomerMetrics,
+  buildCustomerSort,
+  buildAbonosLateralJoin,
+  buildPagination,
+  type CustomerListFilters,
+} from "./customer.query-builder";
 
 export interface AccountsReceivableItem {
   customer: Customer;
@@ -13,78 +22,73 @@ export interface AccountsReceivableItem {
   lastSaleDate: Date | null;
 }
 
+export interface CustomerWithMetrics extends Customer {
+  totalDebt: number;
+  lastSaleDate: Date | null;
+}
+
 export class CustomerRepository {
   async findMany(
     ctx: RequestContext,
-    filters?: {
-      search?: string;
-      limit?: number;
-      offset?: number;
-      customerIds?: string[]; // Filter by specific IDs (from tag filter)
-      tagIds?: string[]; // Filter by tags — uses JOIN internally to avoid N+1
-    }
-  ): Promise<Customer[]> {
-    // If customerIds provided but empty, return empty array
+    filters?: CustomerListFilters
+  ): Promise<CustomerWithMetrics[]> {
+    // Early return for empty explicit filter
     if (filters?.customerIds && filters.customerIds.length === 0) {
       return [];
     }
 
-    const searchCondition = filters?.search
-      ? sql`(
-          ${customers.name} ILIKE ${`%${filters.search}%`}
-          OR ${customers.phone} ILIKE ${`%${filters.search}%`}
-          OR ${customers.dni} ILIKE ${`%${filters.search}%`}
-        )`
-      : undefined;
+    // Resolve filters
+    const tagCustomerIds = await resolveTagCustomerIds(ctx, filters?.tagIds);
+    const customerIdsFilter = mergeCustomerIdFilters(
+      filters?.customerIds,
+      tagCustomerIds
+    );
 
-    // If tagIds provided, filter using JOIN with customerTags to avoid N+1
-    if (filters?.tagIds && filters.tagIds.length > 0) {
-      // Join customerTags with customers to filter by businessId
-      const tagCustomerIds = await db
-        .select({ customerId: customerTags.customerId })
-        .from(customerTags)
-        .innerJoin(customers, eq(customerTags.customerId, customers.id))
-        .where(
-          and(
-            inArray(customerTags.tagId, filters.tagIds),
-            eq(customers.businessId, ctx.businessId)
-          )
-        )
-        .groupBy(customerTags.customerId)
-        .having(sql`count(distinct ${customerTags.tagId}) = ${filters.tagIds.length}`);
-
-      const ids = tagCustomerIds.map(r => r.customerId);
-      if (ids.length === 0) return [];
-
-      return db.query.customers.findMany({
-        where: and(
-          eq(customers.businessId, ctx.businessId),
-          searchCondition,
-          filters.customerIds && filters.customerIds.length > 0
-            ? and(inArray(customers.id, ids), inArray(customers.id, filters.customerIds))
-            : inArray(customers.id, ids)
-        ),
-        orderBy: desc(customers.createdAt),
-        limit: filters.limit,
-        offset: filters.offset,
-      });
+    // Empty intersection
+    if (customerIdsFilter?.length === 0) {
+      return [];
     }
 
-    const query = db.query.customers.findMany({
-      where: and(
+    const searchCondition = buildSearchCondition(filters?.search);
+    const metrics = buildCustomerMetrics();
+    const orderBy = buildCustomerSort(
+      filters?.sortBy ?? "createdAt",
+      filters?.sortOrder ?? "desc"
+    );
+    const { limit, offset } = buildPagination(filters);
+
+    const rows = await db
+      .select({
+        customer: customers,
+        totalDebt: metrics.totalDebt,
+        lastSaleDate: metrics.lastSaleDate,
+      })
+      .from(customers)
+      .leftJoin(sales, and(
+        eq(sales.customerId, customers.id),
+        eq(sales.businessId, ctx.businessId)
+      ))
+      .leftJoin(
+        buildAbonosLateralJoin(ctx.businessId),
+        sql`true`
+      )
+      .where(and(
         eq(customers.businessId, ctx.businessId),
         searchCondition,
-        // Filter by specific customer IDs if provided
-        filters?.customerIds && filters.customerIds.length > 0
-          ? inArray(customers.id, filters.customerIds)
+        customerIdsFilter
+          ? inArray(customers.id, customerIdsFilter)
           : undefined
-      ),
-      orderBy: desc(customers.createdAt),
-      limit: filters?.limit,
-      offset: filters?.offset,
-    });
+      ))
+      .groupBy(customers.id, sql`abonos_lateral.total_paid`)
+      .orderBy(orderBy)
+      .limit(limit)
+      .offset(offset);
 
-    return query;
+    return rows.map((row) => ({
+      ...row.customer,
+      totalDebt: Number(row.totalDebt),
+      lastSaleDate: row.lastSaleDate,
+    }));
   }
 
   async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<Customer | undefined> {

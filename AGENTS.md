@@ -11,7 +11,7 @@
 
 **Avileo**: Offline-first chicken sales management system for mobile vendors.
 - **Stack**: Bun + ElysiaJS + Drizzle + PostgreSQL + React Router v7 + TanStack
-- **Architecture**: Mobile-first, offline-first with PGlite (PostgreSQL in WASM) + custom REST sync
+- **Architecture**: Mobile-first, online with PostgreSQL (PostgreSQL in WASM) + custom REST sync
 - **Multi-tenancy**: Users can belong to multiple businesses
 
 | Aspect | Technology |
@@ -20,7 +20,7 @@
 | **Backend** | ElysiaJS + Drizzle ORM + PostgreSQL (Neon) |
 | **Frontend** | React Router v7 + React 19 + Vite |
 | **Auth** | Better Auth (JWT) |
-| **Offline** | PGlite + custom REST sync (push/pull) |
+| **Offline** | PostgreSQL + custom REST sync (push/pull) |
 | **Monorepo** | Bun workspaces + Turbo |
 | **Deployment** | Docker + Dokploy (self-hosted PaaS) |
 
@@ -39,15 +39,15 @@ packages/
 |---------|-----------|-------|
 | Root | This file | Project-wide conventions |
 | `@avileo/backend` | `packages/backend/AGENTS.md` | ElysiaJS, Drizzle, RequestContext |
-| `@avileo/app` | `packages/app/AGENTS.md` | React Router v7, TanStack, offline-first |
+| `@avileo/app` | `packages/app/AGENTS.md` | React Router v7, TanStack, online |
 | `@avileo/shared` | `packages/shared/src/AGENTS.md` | Shared schema, enums, sync config |
 | `app/components` | `packages/app/app/components/AGENTS.md` | UI primitives, forms, shadcn/ui |
 | `app/routes` | `packages/app/app/routes/AGENTS.md` | File-based routing conventions |
 | `app/hooks` | `packages/app/app/hooks/AGENTS.md` | Custom React hooks patterns |
 | `app/lib/db` | `packages/app/app/lib/db/AGENTS.md` | Zod entity schemas |
-| `app/lib/services` | `packages/app/app/lib/services/AGENTS.md` | BaseService + PGlite local-first services |
+| `app/lib/services` | `packages/app/app/lib/services/AGENTS.md` | BaseService + PostgreSQL local-first services |
 | `app/lib/sales` | `packages/app/app/lib/sales/AGENTS.md` | POS business logic |
-| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | PGlite sync engine |
+| `app/lib/sync` | `packages/app/app/lib/sync/AGENTS.md` | PostgreSQL sync engine |
 | `app/e2e` | `packages/app/e2e/AGENTS.md` | E2E testing patterns |
 | `backend/services` | `packages/backend/src/services/AGENTS.md` | Repository/service layer |
 | `backend/services/sync` | `packages/backend/src/services/sync/AGENTS.md` | Sync handlers + framework |
@@ -141,7 +141,7 @@ async findById(id: string, ctx: RequestContext)
 | **File-based Routing** | Routes auto-generated from filenames via `flatRoutes()` | 404 errors |
 | **Protected Routes** | `_protected.*` prefix for auth pages | Missing auth guard |
 | **Index Convention** | Use `._index.tsx` suffix for parent routes with children | Nested route conflicts |
-| **Offline-first** | ALL writes go through local PGlite + sync queue | Data loss |
+| **Offline-first** | ALL writes go through local PostgreSQL + sync queue | Data loss |
 
 ### Database (Drizzle)
 
@@ -152,7 +152,7 @@ async findById(id: string, ctx: RequestContext)
 
 ### Sync Architecture
 
-- **Local DB**: PGlite (PostgreSQL in WASM) on device
+- **Local DB**: PostgreSQL (PostgreSQL in WASM) on device
 - **Push**: Client enqueues operations → batch POST to `/sync/batch`
 - **Pull**: 3-stage strategy (CRITICAL → RECENT_SALES → HISTORICAL)
 - **Handlers**: 14 entity handlers on backend extend `BaseSyncHandler`
@@ -196,7 +196,7 @@ async findById(id: string, ctx: RequestContext)
 | `frontend` | React components, forms, UI |
 | `bun-elysia` | ElysiaJS backend patterns |
 | `e2e-testing` | Playwright E2E tests |
-| `pglite-electric-hybrid` | PGlite + ElectricSQL hybrid sync |
+| `pglite-electric-hybrid` | PostgreSQL + ElectricSQL hybrid sync |
 
 ## Decision Matrix
 
@@ -212,7 +212,7 @@ async findById(id: string, ctx: RequestContext)
 ## UI Development Rules
 
 1. **Mobile-first**: Design for 320px-428px viewport
-2. **Offline-first**: All vendor screens work 100% offline via PGlite
+2. **Offline-first**: All vendor screens work 100% offline via PostgreSQL
 3. **Orange primary**: `#f97316` for buttons, accents
 4. **Shell tokens**: `app-shell`, `shell-surface`, `shell-card-flat`, `shell-card-soft`, `shell-block-muted`, `shell-field`
 5. **Bottom nav**: Mobile uses 4-item bottom navigation

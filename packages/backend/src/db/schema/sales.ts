@@ -1,7 +1,7 @@
 // @ts-nocheck - Backend file
 /**
  * Sales Schema
- * Ventas e items de venta con soporte offline-first
+ * Ventas e items de venta
  * Unificado: soporta ventas instantáneas (instant_sale) y pedidos (pre_order)
  */
 import {
@@ -133,7 +133,7 @@ export const saleItems = pgTable(
       .notNull()
       .references(() => productVariants.id),
 
-    // Item details - productName denormalizado para offline
+    // Item details - productName snapshot
     productName: varchar("product_name", { length: 255 }).notNull(),
     variantName: varchar("variant_name", { length: 50 }).notNull(), // snapshot legible
 

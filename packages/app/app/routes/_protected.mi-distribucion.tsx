@@ -17,7 +17,7 @@ import { formatKilos, formatCurrency } from "~/lib/utils";
 import { BusinessUserRole, decimalToNumber } from "@avileo/shared";
 import { useMemo, useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useOnline } from "~/hooks/use-online";
+
 import { createModal } from "~/lib/modal/create-modal";
 import { Loader2 } from "lucide-react";
 import type { DistribucionWithItems } from "~/hooks/use-distribuciones";
@@ -31,7 +31,7 @@ function CierreConfirmContent({
   close,
   distribucionId,
 }: { close: () => void } & CierreConfirmData) {
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const closeDistribucion = useCloseDistribucion();
   const [notaCierre, setNotaCierre] = useState("");
 
@@ -114,7 +114,7 @@ export default function MiDistribucionPage() {
   const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const createSale = useCreateSale();
   const cierreConfirm = useCierreConfirmDialog();
 

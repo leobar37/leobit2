@@ -53,7 +53,6 @@ En la parte superior de la pantalla verás:
 |--------|-------------|
 | 🟢 Verde | Conectado y sincronizado |
 | 🟡 Amarillo | Sincronizando... |
-| 🔴 Rojo | Sin conexión (trabajando offline) |
 
 > 💡 **Tip**: Puedes tocar el indicador para forzar una sincronización manual.
 

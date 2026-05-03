@@ -1,33 +1,31 @@
 /**
- * Hooks for public sale access (customer view via token)
- * Allows customers to view and edit sales via shared token
+ * Hooks for the unified public sale catalog.
  */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, extractData } from "~/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
-// Types
-interface PublicSaleItem {
+export interface PublicSaleItem {
   id: string;
   productId: string;
   variantId: string;
   productName: string;
   variantName: string;
-  quantity?: string;
-  orderedQuantity?: string;
-  deliveredQuantity?: string;
-  unitPrice?: string;
-  unitPriceQuoted?: string;
-  unitPriceFinal?: string;
+  quantity?: string | null;
+  orderedQuantity?: string | null;
+  deliveredQuantity?: string | null;
+  unitPrice?: string | null;
+  unitPriceQuoted?: string | null;
+  unitPriceFinal?: string | null;
   subtotal: string;
 }
 
-interface PublicSale {
+export interface PublicSale {
   id: string;
   type: "instant_sale" | "pre_order";
   saleDate: string;
-  deliveryDate?: string;
-  orderDate?: string;
+  deliveryDate?: string | null;
+  orderDate?: string | null;
   status: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
   saleType: "contado" | "credito";
   totalAmount: string;
@@ -51,83 +49,129 @@ export interface PublicCatalogProduct {
   name: string;
   type: string;
   unit: string;
+  imageId: string | null;
   variants: PublicCatalogVariant[];
 }
 
-// Get public sale by token
-export function usePublicSale(token: string | undefined) {
+export interface PublicCatalogBusiness {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  logoUrl: string | null;
+  publicCatalogSlug: string | null;
+  publicCatalogEnabled: boolean;
+}
+
+export interface PublicSalePageData {
+  business: PublicCatalogBusiness;
+  catalog: PublicCatalogProduct[];
+  sale: PublicSale | null;
+}
+
+export interface PublicCartItemInput {
+  productId: string;
+  variantId: string;
+  quantity: number;
+}
+
+export const publicSaleKeys = {
+  page: (slug: string | undefined, token?: string | null) => ["public-sale-page", slug, token ?? null] as const,
+  detail: (slug: string | undefined, token?: string | null) => ["public-sale-detail", slug, token ?? null] as const,
+};
+
+export interface PublicSaleDetailItem {
+  productName: string;
+  variantName: string;
+  quantity: string | null;
+  unitPrice: string | null;
+  subtotal: string;
+}
+
+export interface PublicSaleDetailPayment {
+  amount: string;
+  paymentDate: string | null;
+  method: string;
+}
+
+export interface PublicSaleDetailBusiness {
+  name: string;
+  phone: string | null;
+  address: string | null;
+  logoUrl: string | null;
+}
+
+export interface PublicSaleDetail {
+  id: string;
+  status: string;
+  saleType: "contado" | "credito";
+  totalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  saleDate: string | null;
+  deliveryDate: string | null;
+  items: PublicSaleDetailItem[];
+  payments: PublicSaleDetailPayment[];
+}
+
+export interface PublicSaleDetailData {
+  business: PublicSaleDetailBusiness;
+  sale: PublicSaleDetail;
+}
+
+function getErrorMessage(errorValue: unknown): string {
+  if (typeof errorValue === "string") return errorValue;
+  if (errorValue && typeof errorValue === "object" && "message" in errorValue) {
+    const message = (errorValue as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "No se pudo completar la operación";
+}
+
+export function usePublicSalePage(slug: string | undefined, token?: string | null) {
   return useQuery({
-    queryKey: ["public-sale", token],
+    queryKey: publicSaleKeys.page(slug, token),
     queryFn: async () => {
-      if (!token) throw new Error("Token requerido");
-      const response = await api["public"].venta({ token }).get();
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
-      return response.data?.data as unknown as PublicSale;
+      if (!slug) throw new Error("Catálogo requerido");
+      const response = await api["public"].venta({ slug }).get({
+        query: token ? { token } : {},
+      });
+      return extractData<PublicSalePageData>(response, "No se pudo cargar el catálogo");
     },
-    enabled: !!token,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!slug,
+    refetchInterval: token ? 30000 : false,
   });
 }
 
-export function usePublicCatalog(token: string | undefined) {
-  return useQuery({
-    queryKey: ["public-sale", token, "catalog"],
-    queryFn: async () => {
-      if (!token) throw new Error("Token requerido");
-      const response = await api["public"].venta({ token }).catalogo.get();
-      return extractData(response, "No se pudo cargar el catálogo") as PublicCatalogProduct[];
-    },
-    enabled: !!token,
-  });
-}
-
-export function usePublicVariants(
-  token: string | undefined,
-  productId: string | null
-) {
-  return useQuery({
-    queryKey: ["public-sale", token, "catalog", productId, "variants"],
-    queryFn: async () => {
-      if (!token || !productId) return [];
-      const response = await api["public"].venta({ token }).catalogo.get();
-      const catalog = extractData(response, "No se pudo cargar las variantes") as PublicCatalogProduct[];
-      return catalog.find((product) => product.id === productId)?.variants ?? [];
-    },
-    enabled: !!token && !!productId,
-  });
-}
-
-// Add item to public sale
 export function useAddItemToPublicSale() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
+      slug,
       token,
       productId,
       variantId,
       quantity,
     }: {
+      slug: string;
       token: string;
       productId: string;
       variantId: string;
       quantity: number;
     }) => {
-      const response = await api["public"].venta({ token }).items.post({
+      const response = await api["public"].venta({ slug }).items.post({
+        token,
         productId,
         variantId,
         quantity,
       });
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
+      if (response.error) throw new Error(getErrorMessage(response.error.value));
       return response.data?.data as unknown as PublicSale;
     },
-    onSuccess: (_, { token }) => {
-      queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
+    onSuccess: (_, { slug, token }) => {
+      queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });
       toast.success("Producto agregado", {
         description: "El producto fue agregado a tu pedido",
       });
@@ -140,34 +184,34 @@ export function useAddItemToPublicSale() {
   });
 }
 
-// Update item quantity in public sale
 export function useUpdatePublicSaleItem() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
+      slug,
       token,
       itemId,
       quantity,
       baseVersion,
     }: {
+      slug: string;
       token: string;
       itemId: string;
       quantity: number;
       baseVersion: number;
     }) => {
-      const response = await api["public"].venta({ token }).items({ itemId }).patch({
+      const response = await api["public"].venta({ slug }).items({ itemId }).patch({
+        token,
         quantity,
         baseVersion,
       });
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
-      return response.data?.data as { id: string; status: string; totalAmount: string; version: number; items: PublicSaleItem[] };
+      if (response.error) throw new Error(getErrorMessage(response.error.value));
+      return response.data?.data as unknown as PublicSale;
     },
-    onSuccess: (_, { token }) => {
-      queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
+    onSuccess: (_, { slug, token }) => {
+      queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });
     },
     onError: (error) => {
       toast.error("Error", {
@@ -177,31 +221,31 @@ export function useUpdatePublicSaleItem() {
   });
 }
 
-// Delete item from public sale
 export function useDeletePublicSaleItem() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
+      slug,
       token,
       itemId,
       baseVersion,
     }: {
+      slug: string;
       token: string;
       itemId: string;
       baseVersion: number;
     }) => {
-      const response = await api["public"].venta({ token }).items({ itemId }).delete({
+      const response = await api["public"].venta({ slug }).items({ itemId }).delete({
+        token,
         baseVersion,
       });
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
+      if (response.error) throw new Error(getErrorMessage(response.error.value));
       return response.data?.data as { message: string };
     },
-    onSuccess: (_, { token }) => {
-      queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
+    onSuccess: (_, { slug, token }) => {
+      queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });
       toast.success("Producto eliminado", {
         description: "El producto fue eliminado de tu pedido",
       });
@@ -214,38 +258,41 @@ export function useDeletePublicSaleItem() {
   });
 }
 
-// Confirm public sale
 export function useConfirmPublicSale() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
+      slug,
       token,
       customerName,
       customerPhone,
       deliveryDate,
       notes,
+      items,
     }: {
-      token: string;
+      slug: string;
+      token?: string | null;
       customerName: string;
       customerPhone: string;
       deliveryDate: string;
       notes?: string;
+      items?: PublicCartItemInput[];
     }) => {
-      const response = await api["public"].venta({ token }).confirmar.post({
+      const response = await api["public"].venta({ slug }).confirmar.post({
+        ...(token ? { token } : {}),
         customerName,
         customerPhone,
         deliveryDate,
         notes,
+        items,
       });
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
-      return response.data?.data as { message: string; saleId: string };
+      if (response.error) throw new Error(getErrorMessage(response.error.value));
+      return response.data?.data as { message: string; saleId: string; status: string };
     },
-    onSuccess: (_, { token }) => {
-      queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
+    onSuccess: (_, { slug, token }) => {
+      queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });
       toast.success("Pedido confirmado", {
         description: "Tu pedido ha sido confirmado exitosamente",
       });
@@ -258,21 +305,18 @@ export function useConfirmPublicSale() {
   });
 }
 
-// Cancel public sale
 export function useCancelPublicSale() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ token }: { token: string }) => {
-      const response = await api["public"].venta({ token }).cancel.post();
-      if (response.error) {
-        throw new Error(String(response.error.value));
-      }
+    mutationFn: async ({ slug, token }: { slug: string; token: string }) => {
+      const response = await api["public"].venta({ slug }).cancel.post({ token });
+      if (response.error) throw new Error(getErrorMessage(response.error.value));
       return response.data?.data as { message: string; saleId: string };
     },
-    onSuccess: (_, { token }) => {
-      queryClient.invalidateQueries({ queryKey: ["public-sale", token] });
+    onSuccess: (_, { slug, token }) => {
+      queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });
       toast.success("Pedido cancelado", {
         description: "Tu pedido ha sido cancelado",
       });
@@ -282,5 +326,19 @@ export function useCancelPublicSale() {
         description: error.message || "No se pudo cancelar el pedido",
       });
     },
+  });
+}
+
+export function usePublicSaleDetail(slug: string | undefined, token: string | undefined) {
+  return useQuery({
+    queryKey: publicSaleKeys.detail(slug, token),
+    queryFn: async () => {
+      if (!slug || !token) throw new Error("Slug y token requeridos");
+      const response = await api["public"].venta({ slug }).detalle.get({
+        query: { token },
+      });
+      return extractData<PublicSaleDetailData>(response, "No se pudo cargar el detalle de la venta");
+    },
+    enabled: !!slug && !!token,
   });
 }

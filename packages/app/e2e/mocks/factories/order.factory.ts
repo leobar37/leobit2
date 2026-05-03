@@ -37,8 +37,6 @@ export interface Order {
   advanceProofImageId: string | null;
   totalAmount: string;
   version: number;
-  syncStatus: "pending" | "synced" | "error";
-  syncAttempts: number;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
@@ -57,7 +55,6 @@ export interface OrderOverrides {
   status?: "draft" | "confirmed" | "cancelled" | "delivered";
   paymentIntent?: "contado" | "credito";
   paymentStatus?: "sin_pago" | "adelanto_parcial" | "pagado_total" | "saldo_pendiente";
-  syncStatus?: "pending" | "synced" | "error";
 }
 
 // ============================================================================
@@ -213,8 +210,6 @@ export function generateOrder(index: number, overrides?: OrderOverrides): Order 
     advanceProofImageId: null,
     totalAmount: totalAmount.toFixed(2),
     version: status === "delivered" ? 3 : status === "confirmed" ? 2 : 1,
-    syncStatus: overrides?.syncStatus ?? faker.helpers.arrayElement(["pending", "synced", "error"]),
-    syncAttempts: 0,
     createdAt: pastDate.toISOString(),
     updatedAt: faker.date.between({ from: pastDate, to: now }).toISOString(),
     items,

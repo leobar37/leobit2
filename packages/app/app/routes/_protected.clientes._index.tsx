@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Plus, Search, User, Tags, Check, Users, MoreHorizontal } from "lucide-react";
+import { Plus, Search, User, Tags, Check, Users, MoreHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownZA, CalendarDays, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,8 +14,10 @@ import type { CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-deta
 import { usePaginatedCustomers, useCustomerTagsSummary } from "~/hooks/use-customers";
 import { useCustomerGroupsSummary, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerFilters } from "~/hooks/use-customer-filters";
+import { useCustomerSort } from "~/hooks/use-customer-sort";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { MobileShell } from "~/components/mobile";
+import { cn } from "~/lib/utils";
 import { BulkCustomerTagsModal, useBulkCustomerTagsModal } from "~/components/customers/bulk-tag-assignment-drawer";
 import {
   BulkGroupAssignmentDrawer,
@@ -25,10 +27,28 @@ import { CustomerFilterPopover } from "~/components/customers/customer-filter-po
 import { CustomerCard } from "~/components/customers/customer-card";
 import { QuickTagModal, useQuickTagModal } from "~/components/tags";
 
+interface SortOption {
+  label: string;
+  sortBy: "name" | "lastSaleDate" | "debt" | "createdAt";
+  sortOrder: "asc" | "desc";
+  icon: React.ReactNode;
+}
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Nombre A-Z", sortBy: "name", sortOrder: "asc", icon: <ArrowUpAZ className="h-4 w-4" /> },
+  { label: "Nombre Z-A", sortBy: "name", sortOrder: "desc", icon: <ArrowDownZA className="h-4 w-4" /> },
+  { label: "Más reciente", sortBy: "createdAt", sortOrder: "desc", icon: <CalendarDays className="h-4 w-4" /> },
+  { label: "Más antiguo", sortBy: "createdAt", sortOrder: "asc", icon: <CalendarDays className="h-4 w-4" /> },
+  { label: "Mayor deuda", sortBy: "debt", sortOrder: "desc", icon: <Banknote className="h-4 w-4" /> },
+  { label: "Menor deuda", sortBy: "debt", sortOrder: "asc", icon: <Banknote className="h-4 w-4" /> },
+  { label: "Última compra", sortBy: "lastSaleDate", sortOrder: "desc", icon: <CalendarDays className="h-4 w-4" /> },
+];
+
 export default function CustomersPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
+  const { field: sortBy, order: sortOrder, toggleSort } = useCustomerSort();
   const bulkTagsModal = useBulkCustomerTagsModal();
   const bulkGroupsDrawer = useBulkGroupAssignmentDrawer();
   const quickTagModal = useQuickTagModal();
@@ -53,7 +73,13 @@ export default function CustomersPage() {
     groupIds,
     limit: pageSize,
     offset,
+    sortBy,
+    sortOrder,
   });
+
+  const activeSortLabel = SORT_OPTIONS.find(
+    (o) => o.sortBy === sortBy && o.sortOrder === sortOrder
+  )?.label ?? "Ordenar";
 
   const customers = customersPage?.items ?? [];
   const totalCustomers = customersPage?.total ?? 0;
@@ -91,7 +117,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, tagIds, groupIds]);
+  }, [search, tagIds, groupIds, sortBy, sortOrder]);
 
   const toggleCustomerSelection = (customerId: string) => {
     setSelectedCustomerIds((prev) => {
@@ -132,14 +158,51 @@ export default function CustomersPage() {
               className="shell-search-field pl-11 pr-4"
             />
           </div>
-          <div className="w-full">
-            <CustomerFilterPopover
-              selectedTagIds={tagIds}
-              onTagIdsChange={setTagIds}
-              selectedGroupIds={groupIds}
-              onGroupIdsChange={setGroupIds}
-              onCreateClick={() => quickTagModal.open()}
-            />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <CustomerFilterPopover
+                selectedTagIds={tagIds}
+                onTagIdsChange={setTagIds}
+                selectedGroupIds={groupIds}
+                onGroupIdsChange={setGroupIds}
+                onCreateClick={() => quickTagModal.open()}
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 rounded-xl border-stone-200/80 text-muted-foreground hover:bg-stone-50 dark:border-white/10 dark:hover:bg-white/[0.08]"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">{activeSortLabel}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-52 rounded-xl border-stone-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur dark:border-white/10 dark:bg-[#171922]/95"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={`${option.sortBy}-${option.sortOrder}`}
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      toggleSort(option.sortBy);
+                    }}
+                    className={cn(
+                      "gap-2 rounded-lg",
+                      sortBy === option.sortBy && sortOrder === option.sortOrder
+                        ? "bg-orange-50 text-orange-700 focus:bg-orange-50 focus:text-orange-700 dark:bg-orange-500/14 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-200"
+                        : "text-foreground focus:bg-accent focus:text-foreground"
+                    )}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -229,13 +292,14 @@ export default function CustomersPage() {
             {customers.map((customer) => (
               <CustomerCard
                 key={customer.id}
-                customer={customer as unknown as import("@avileo/shared").Customer}
+                customer={customer}
                 compact
                 selectable
                 selected={selectedCustomerIds.has(customer.id)}
                 onSelect={() => toggleCustomerSelection(customer.id)}
                 onNavigate={() => navigate(`/clientes/${customer.id}`)}
                 showTags
+                showDebt
                 preloadedTags={tagsByCustomerId.get(customer.id) ?? []}
                 preloadedGroups={groupsByCustomerId.get(customer.id) ?? []}
               />

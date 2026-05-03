@@ -12,7 +12,6 @@ Si es la primera vez que usas Avileo:
 4. Crea una **contraseña segura** (mínimo 8 caracteres)
 5. Toca **"Registrarse"**
 
-> ⚠️ **Importante**: Debes tener conexión a internet para crear tu cuenta. Una vez creada, puedes trabajar offline.
 
 ## Iniciar sesión
 

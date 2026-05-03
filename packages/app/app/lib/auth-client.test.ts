@@ -64,23 +64,4 @@ describe("refreshSession", () => {
     expect(queryClient.getQueryData(PERSISTED_REMOTE_QUERY_KEYS.authSession)).toBeUndefined();
   });
 
-  it("returns cached session while offline without network call", async () => {
-    Object.defineProperty(globalThis, "navigator", {
-      configurable: true,
-      value: { onLine: false },
-    });
-
-    queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.authSession, {
-      user: { id: "cached-user" },
-      session: { id: "cached-session" },
-    });
-
-    const result = await refreshSession();
-
-    expect(getSessionMock).not.toHaveBeenCalled();
-    expect(result).toEqual({
-      user: { id: "cached-user" },
-      session: { id: "cached-session" },
-    });
-  });
 });

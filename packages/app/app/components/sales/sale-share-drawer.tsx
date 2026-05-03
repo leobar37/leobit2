@@ -3,7 +3,7 @@
  * Drawer for sharing sales with customers via token/URL
  */
 import { useState } from "react";
-import { Share2, Copy, RefreshCw, MessageCircle, X } from "lucide-react";
+import { Share2, Copy, RefreshCw, MessageCircle, X, Smartphone, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import {
   Drawer,
@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {
   useSaleToken,
@@ -24,8 +25,9 @@ import {
   useToggleSaleToken,
   useShareSale,
 } from "~/hooks/use-sale-token";
+import { useBusiness } from "~/hooks/use-business";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import { useOnline } from "~/hooks/use-online";
+
 
 interface SaleShareDrawerProps {
   saleId: string;
@@ -45,12 +47,27 @@ export function SaleShareDrawer({
   const generateToken = useGenerateSaleToken();
   const regenerateToken = useRegenerateSaleToken();
   const toggleToken = useToggleSaleToken();
-  const { buildUrl, buildMessage, copyToClipboard } = useShareSale();
+  const { data: business } = useBusiness();
+  const { buildUrl, buildDetailUrl, buildMessage, buildReceiptMsg, copyToClipboard } = useShareSale();
   const { confirm, ConfirmDialog } = useConfirmDialog();
-  const { isOnline } = useOnline();
+  const isOnline = true;
 
-  const shareUrl = tokenData?.token ? buildUrl(tokenData.token) : "";
-  const whatsappMessage = tokenData?.token ? buildMessage(shareUrl, saleId) : "";
+  const publicCatalogSlug = (business as { publicCatalogSlug?: string | null } | undefined)?.publicCatalogSlug;
+
+  const isFinalized = ["active", "delivered", "confirmed"].includes(saleStatus);
+  const canShareOrder = saleStatus === "draft" || saleStatus === "confirmed";
+
+  // Order share URL (for editing)
+  const orderUrl = tokenData?.token && publicCatalogSlug
+    ? buildUrl(publicCatalogSlug, tokenData.token)
+    : "";
+  // Receipt/detail share URL (read-only)
+  const receiptUrl = tokenData?.token && publicCatalogSlug
+    ? buildDetailUrl(publicCatalogSlug, tokenData.token)
+    : "";
+
+  const orderMessage = tokenData?.token ? buildMessage(orderUrl, saleId) : "";
+  const receiptMessage = tokenData?.token ? buildReceiptMsg(receiptUrl) : "";
 
   const handleGenerate = async () => {
     if (!isOnline) {
@@ -87,17 +104,30 @@ export function SaleShareDrawer({
     toggleToken.mutate({ saleId, isActive: checked });
   };
 
-  const handleCopy = () => {
-    copyToClipboard(shareUrl);
+  const handleCopy = (url: string) => {
+    copyToClipboard(url);
   };
 
-  const handleWhatsApp = () => {
-    // Open WhatsApp with pre-filled message (without phone)
-    const url = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+  const handleWhatsApp = (message: string) => {
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
 
-  const canShare = saleStatus === "draft" || saleStatus === "confirmed";
+  const handleNativeShare = async (title: string, text: string, url: string) => {
+    if (!navigator.share) {
+      toast.error("No soportado", {
+        description: "Tu navegador no soporta compartir nativo",
+      });
+      return;
+    }
+    try {
+      await navigator.share({ title, text, url });
+    } catch {
+      // User cancelled - ignore silently
+    }
+  };
+
+  const canShare = canShareOrder || isFinalized;
 
   const triggerElement = trigger || (
     <span className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-2">
@@ -132,7 +162,7 @@ export function SaleShareDrawer({
         <div className="p-4 overflow-y-auto">
           {!canShare ? (
             <div className="py-4 text-center text-muted-foreground">
-              Solo se pueden compartir ventas en borrador o confirmadas.
+              Solo se pueden compartir ventas en borrador, confirmadas o finalizadas.
             </div>
           ) : !tokenData ? (
             <div className="py-6 text-center space-y-4">
@@ -151,74 +181,195 @@ export function SaleShareDrawer({
             <div className="space-y-6">
               {/* Token Status Toggle */}
               <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="token-status" className="text-base">
-                    {tokenData.isActive ? "Enlace activo" : "Enlace desactivado"}
-                  </Label>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="token-status" className="text-base">
+                      {tokenData.isActive ? "Enlace activo" : "Enlace desactivado"}
+                    </Label>
+                    <Badge variant={tokenData.isActive ? "success" : "danger"}>
+                      {tokenData.isActive ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {tokenData.isActive
-                      ? "El cliente puede editar la venta"
+                      ? "El cliente puede ver la venta"
                       : "El cliente no puede acceder"}
                   </p>
+                  {tokenData.createdAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Creado: {new Date(tokenData.createdAt).toLocaleString("es-PE")}
+                    </p>
+                  )}
                 </div>
                 <Switch
                   id="token-status"
                   checked={tokenData.isActive}
                   onCheckedChange={handleToggle}
-                  disabled={toggleToken.isPending || !allowCustomerEdit}
+                  disabled={toggleToken.isPending}
                 />
               </div>
 
-              {!allowCustomerEdit && (
+              {!publicCatalogSlug && (
                 <p className="text-sm text-amber-600">
-                  La edición por cliente está deshabilitada para esta venta.
+                  Configura la URL pública del negocio para generar enlaces de pedidos.
                 </p>
               )}
 
-              {/* QR Code */}
-              {tokenData.isActive && (
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="rounded-lg border p-4 bg-white">
-                    <QRCodeSVG value={shareUrl} size={200} />
+              {/* Finalized sale: Receipt share */}
+              {isFinalized && tokenData.isActive && (
+                <div className="space-y-4 rounded-lg border border-border bg-muted/40 p-4">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5 text-orange-500" />
+                    <h3 className="font-semibold">Compartir comprobante</h3>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Escanea el código QR para abrir la venta
+                  <p className="text-sm text-muted-foreground">
+                    El cliente podrá ver el detalle de su compra (solo lectura).
                   </p>
-                </div>
-              )}
 
-              {/* Share URL */}
-              {tokenData.isActive && (
-                <div className="space-y-2">
-                  <Label>Enlace para compartir</Label>
+                  {/* Receipt QR */}
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="rounded-lg border border-border p-4 bg-background">
+                      <QRCodeSVG value={receiptUrl} size={200} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Escanea para ver el comprobante
+                    </p>
+                  </div>
+
+                  {/* Receipt URL */}
+                  <div className="space-y-2">
+                    <Label>Enlace del comprobante</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={receiptUrl}
+                        readOnly
+                        className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleCopy(receiptUrl)}
+                        disabled={!receiptUrl}
+                        title="Copiar enlace"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Receipt Share Buttons */}
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={shareUrl}
-                      readOnly
-                      className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm"
-                    />
+                    {typeof navigator !== "undefined" && "share" in navigator && (
+                      <Button
+                        onClick={() => handleNativeShare("Comprobante de compra", receiptMessage, receiptUrl)}
+                        disabled={!receiptUrl}
+                        variant="outline"
+                        className="flex-1 gap-2"
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        Compartir
+                      </Button>
+                    )}
                     <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleCopy}
-                      title="Copiar enlace"
+                      onClick={() => handleWhatsApp(receiptMessage)}
+                      disabled={!receiptUrl}
+                      className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
                     >
-                      <Copy className="h-4 w-4" />
+                      <MessageCircle className="h-4 w-4" />
+                      WhatsApp
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* Share Buttons */}
-              {tokenData.isActive && (
-                <div className="flex gap-2">
+              {/* Draft/Confirmed: Order share (editable) */}
+              {canShareOrder && tokenData.isActive && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="flex items-center gap-2">
+                    <Share2 className="h-5 w-5 text-orange-600" />
+                    <h3 className="font-semibold">Compartir pedido</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    El cliente puede revisar y modificar su pedido.
+                  </p>
+
+                  {!allowCustomerEdit && (
+                    <p className="text-sm text-amber-600">
+                      La edición por cliente está deshabilitada para esta venta.
+                    </p>
+                  )}
+
+                  {/* Order QR */}
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="rounded-lg border p-4 bg-white">
+                      <QRCodeSVG value={orderUrl} size={200} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Escanea el código QR para abrir el pedido
+                    </p>
+                  </div>
+
+                  {/* Order URL */}
+                  <div className="space-y-2">
+                    <Label>Enlace del pedido</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={orderUrl}
+                        readOnly
+                        className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleCopy(orderUrl)}
+                        disabled={!orderUrl}
+                        title="Copiar enlace"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Order Share Buttons */}
+                  <div className="flex gap-2">
+                    {typeof navigator !== "undefined" && "share" in navigator && (
+                      <Button
+                        onClick={() => handleNativeShare("Revisa tu pedido", orderMessage, orderUrl)}
+                        disabled={!orderUrl}
+                        variant="outline"
+                        className="flex-1 gap-2"
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        Compartir
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => handleWhatsApp(orderMessage)}
+                      disabled={!orderUrl}
+                      className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Disabled state CTA */}
+              {!tokenData.isActive && (
+                <div className="rounded-lg border border-dashed border-muted-foreground/30 p-6 text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    El enlace está desactivado. Actívalo para que el cliente pueda acceder.
+                  </p>
                   <Button
-                    onClick={handleWhatsApp}
-                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                    onClick={() => handleToggle(true)}
+                    disabled={toggleToken.isPending}
+                    className="gap-2"
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
+                    <Share2 className="h-4 w-4" />
+                    Activar enlace
                   </Button>
                 </div>
               )}

@@ -14,12 +14,10 @@ export interface Customer {
   businessId: string;
   createdAt: string;
   updatedAt: string;
-  syncStatus: "pending" | "synced" | "error";
 }
 
 export interface CustomerOverrides {
   businessId?: string;
-  syncStatus?: "pending" | "synced" | "error";
 }
 
 // ============================================================================
@@ -42,7 +40,6 @@ export function generateCustomer(index: number, overrides?: CustomerOverrides): 
     businessId: overrides?.businessId ?? BUSINESS_ID,
     createdAt: pastDate.toISOString(),
     updatedAt: faker.date.between({ from: pastDate, to: new Date() }).toISOString(),
-    syncStatus: overrides?.syncStatus ?? faker.helpers.arrayElement(["pending", "synced", "error"]),
   };
 }
 

@@ -18,7 +18,7 @@ import { useToastError } from "~/hooks/use-toast-error";
 import { Loader2 } from "lucide-react";
 import { useDistribucionParams } from "~/hooks/use-distribucion-params";
 import { useBusiness } from "@/hooks/use-business";
-import { useOnline } from "~/hooks/use-online";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function EditarDistribucionPage() {
@@ -30,7 +30,7 @@ export default function EditarDistribucionPage() {
   const closeMutation = useCloseDistribucion();
   const { data: business } = useBusiness();
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
-  const { isOnline } = useOnline();
+  const isOnline = true;
   const [isCloseDrawerOpen, setIsCloseDrawerOpen] = useState(false);
   const [notaCierre, setNotaCierre] = useState("");
 

@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { toast } from "sonner";
+import { FormProvider } from "react-hook-form";
 import {
   ArrowLeft,
   CreditCard,
@@ -10,20 +9,14 @@ import {
   Building2,
   Wallet,
   QrCode,
-  Upload,
-  X,
-  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  usePaymentMethodsConfig,
-  useUpdatePaymentMethodsConfig,
-  type PaymentMethodsConfig,
-} from "~/hooks/use-payment-methods-config";
-import { useUploadFile, validateFile } from "~/hooks/use-files";
+import { MobileShell } from "~/components/mobile/mobile-shell";
+import { MobileSlot } from "~/components/mobile/mobile-slots";
+import { MobilePage } from "~/components/mobile/mobile-page";
+import { MobileFixedFooter } from "~/components/mobile/mobile-fixed-footer";
+import { PaymentMethodCard } from "~/components/payments/payment-method-card";
+import { usePaymentMethodsForm } from "~/hooks/use-payment-methods-form";
 
 const METHOD_DEFINITIONS = [
   {
@@ -63,165 +56,8 @@ const METHOD_DEFINITIONS = [
   },
 ];
 
-interface QRUploadProps {
-  methodId: string;
-  qrImageUrl?: string;
-  onQRImageChange: (methodId: string, url: string | undefined) => void;
-}
-
-function QRImageUpload({ methodId, qrImageUrl, onQRImageChange }: QRUploadProps) {
-  const uploadFile = useUploadFile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validationError = validateFile(file);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const result = await uploadFile.mutateAsync(file);
-      const fileUrl = `/api/files/${result.id}`;
-      onQRImageChange(methodId, fileUrl);
-      toast.success("Código QR subido correctamente");
-    } catch (error) {
-      toast.error("Error al subir el código QR");
-      console.error(error);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleRemove = () => {
-    onQRImageChange(methodId, undefined);
-  };
-
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Código QR (opcional)</label>
-      
-      {qrImageUrl ? (
-        <div className="relative">
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
-            <img
-              src={qrImageUrl}
-              alt="Código QR"
-              className="max-h-48 mx-auto object-contain"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="absolute top-2 right-2 rounded-full h-8 w-8 p-0"
-            onClick={handleRemove}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Los clientes podrán escanear este código para pagar
-          </p>
-        </div>
-      ) : (
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <div className="flex flex-col items-center gap-2">
-            {isUploading ? (
-              <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
-            ) : (
-              <>
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                  <Upload className="h-6 w-6 text-orange-600" />
-                </div>
-                <span className="text-sm font-medium text-muted-foreground">
-                  Subir código QR
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  JPG, PNG o WEBP (máx. 5MB)
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function PaymentMethodsConfigPage() {
-  const { data: config, isLoading } = usePaymentMethodsConfig();
-  const updateMutation = useUpdatePaymentMethodsConfig();
-  
-  const [methods, setMethods] = useState<PaymentMethodsConfig["methods"] | null>(null);
-  const [editingMethod, setEditingMethod] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (config?.methods) {
-      setMethods(config.methods);
-    }
-  }, [config]);
-
-  const toggleMethod = (id: string) => {
-    setMethods((prev) => {
-      if (!prev) return prev;
-      const method = prev[id as keyof typeof prev];
-      if (!method) return prev;
-      return {
-        ...prev,
-        [id]: { ...method, enabled: !method.enabled },
-      };
-    });
-  };
-
-  const updateMethodDetails = (id: string, field: string, value: string | undefined) => {
-    setMethods((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [id]: { ...prev[id as keyof typeof prev], [field]: value },
-      };
-    });
-  };
-
-  const handleQRImageChange = (methodId: string, url: string | undefined) => {
-    setMethods((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [methodId]: { ...prev[methodId as keyof typeof prev], qrImageUrl: url },
-      };
-    });
-  };
-
-  const handleSave = async () => {
-    if (!methods) return;
-    try {
-      await updateMutation.mutateAsync(methods);
-      toast.success("Métodos de pago guardados correctamente");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido";
-      toast.error(message || "Error al guardar los métodos de pago");
-      console.error(error);
-    }
-  };
+  const { form, onSubmit, isLoading, isPending, isDirty } = usePaymentMethodsForm();
 
   if (isLoading) {
     return (
@@ -232,217 +68,75 @@ export default function PaymentMethodsConfigPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          <Link to="/config">
-            <Button variant="ghost" size="icon" className="rounded-xl mr-3">
+    <FormProvider {...form}>
+      <form onSubmit={onSubmit}>
+        <MobileShell.Root variant="protected">
+          <MobileShell.BackButton>
+            <Link
+              to="/config"
+              className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
+            >
               <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <span className="font-bold text-lg text-foreground">Métodos de Pago</span>
-        </div>
-      </header>
+            </Link>
+          </MobileShell.BackButton>
 
-      <main className="p-4 pb-24">
-        <div className="max-w-md mx-auto space-y-4">
-          <div className="space-y-4">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto">
-                <CreditCard className="h-8 w-8 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">Configurar Métodos de Pago</h2>
-                <p className="text-sm text-muted-foreground">
-                  Activa y configura los métodos de pago que aceptas
-                </p>
-              </div>
+          <MobileSlot name="header:center" priority={10}>
+            <div className="flex min-w-0 items-center gap-2 flex-1">
+              <CreditCard className="h-5 w-5 text-orange-600 shrink-0" />
+              <h1 className="font-bold text-lg truncate">Métodos de Pago</h1>
             </div>
+          </MobileSlot>
 
-            <div className="space-y-4">
-              {METHOD_DEFINITIONS.map((methodDef) => {
-                const methodData = methods?.[methodDef.id] || { enabled: false };
-                const isEditing = editingMethod === methodDef.id;
-
-                return (
-                  <div
-                    key={methodDef.id}
-                    className={`p-4 rounded-2xl border-2 transition-all ${
-                      methodData.enabled
-                        ? "border-orange-200 bg-orange-50/50"
-                        : "border-gray-100 bg-gray-50/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-10 h-10 ${methodDef.bgColor} rounded-xl flex items-center justify-center`}
-                        >
-                          <methodDef.icon
-                            className={`h-5 w-5 ${methodDef.color}`}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{methodDef.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {methodData.enabled ? "Activo" : "Desactivado"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {methodData.enabled && methodDef.id !== "efectivo" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-lg"
-                            onClick={() =>
-                              setEditingMethod(isEditing ? null : methodDef.id)
-                            }
-                          >
-                            {isEditing ? "Cerrar" : "Configurar"}
-                          </Button>
-                        )}
-                        <Switch
-                          checked={methodData.enabled}
-                          onCheckedChange={() => toggleMethod(methodDef.id)}
-                        />
-                      </div>
-                    </div>
-
-                    {isEditing && methodData.enabled && (
-                      <div className="mt-4 pt-4 border-t border-orange-200 space-y-3">
-                        {(methodDef.id === "yape" || methodDef.id === "plin") && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>Número de celular</Label>
-                              <Input
-                                placeholder="999 999 999"
-                                value={methodData.phone || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "phone",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Nombre del titular</Label>
-                              <Input
-                                placeholder="Nombre completo"
-                                value={methodData.accountName || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "accountName",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                            <QRImageUpload
-                              methodId={methodDef.id}
-                              qrImageUrl={methodData.qrImageUrl}
-                              onQRImageChange={handleQRImageChange}
-                            />
-                          </>
-                        )}
-
-                        {methodDef.id === "transferencia" && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>Banco</Label>
-                              <Input
-                                placeholder="Nombre del banco"
-                                value={methodData.bank || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "bank",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Número de cuenta</Label>
-                              <Input
-                                placeholder="0000 0000 0000 0000"
-                                value={methodData.accountNumber || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "accountNumber",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>CCI (Código de Cuenta Interbancario)</Label>
-                              <Input
-                                placeholder="00200000000000000000"
-                                value={methodData.cci || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "cci",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Titular de la cuenta</Label>
-                              <Input
-                                placeholder="Nombre completo"
-                                value={methodData.accountName || ""}
-                                onChange={(e) =>
-                                  updateMethodDetails(
-                                    methodDef.id,
-                                    "accountName",
-                                    e.target.value
-                                  )
-                                }
-                                className="shell-field h-12 rounded-[16px] px-4"
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+          <MobileShell.Content>
+            <MobilePage.Root maxWidth="md">
+              <div className="space-y-6">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto">
+                    <CreditCard className="h-8 w-8 text-purple-600" />
                   </div>
-                );
-              })}
+                  <div>
+                    <h2 className="text-xl font-semibold">Configurar Métodos de Pago</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Activa y configura los métodos de pago que aceptas
+                    </p>
+                  </div>
+                </div>
 
+                <div className="space-y-4">
+                  {METHOD_DEFINITIONS.map((definition) => (
+                    <PaymentMethodCard
+                      key={definition.id}
+                      definition={definition}
+                    />
+                  ))}
+                </div>
+              </div>
+            </MobilePage.Root>
+          </MobileShell.Content>
+
+          <MobileFixedFooter aboveNav>
+            <MobilePage.Root maxWidth="md">
               <Button
-                onClick={handleSave}
-                disabled={updateMutation.isPending}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
+                type="submit"
+                disabled={isPending || !isDirty}
+                className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
               >
-                {updateMutation.isPending ? (
+                {isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Guardando...
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="mr-2 h-5 w-5" />
                     Guardar cambios
                   </>
                 )}
               </Button>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+            </MobilePage.Root>
+          </MobileFixedFooter>
+        </MobileShell.Root>
+      </form>
+    </FormProvider>
   );
 }

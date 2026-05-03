@@ -110,16 +110,12 @@ Para estos casos, puedes:
 - Dejar el cliente inactivo (si implementas estados)
 - Agregar nota: "Ya no es cliente"
 
-## Trabajar offline
 
-El módulo de clientes funciona **100% offline**:
 
 - Creas clientes sin internet
 - Se guardan localmente
 - Se sincronizan cuando hay conexión
-- Puedes hacer ventas a clientes creados offline
 
-> 💡 **Tip**: Si creas un cliente offline y luego haces una venta, ambas se sincronizarán juntas manteniendo la relación.
 
 ## Exportar clientes (solo admin)
 

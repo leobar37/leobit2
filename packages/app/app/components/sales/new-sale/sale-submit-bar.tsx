@@ -6,14 +6,14 @@ import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { formatCurrency, cn } from "~/lib/utils";
 import { useNewSaleContext } from "../new-sale-context";
 import { useToast } from "~/hooks/use-toast";
-import { useOnline } from "~/hooks/use-online";
+
 
 export function SaleSubmitBar() {
   const navigate = useNavigate();
-  const { saleId, returnTo, sale, items } = useNewSaleContext();
+  const { saleId, returnTo, sale, items, paymentMethod, referenceNumber, proofImageId } = useNewSaleContext();
   const { toast } = useToast();
   const finalizeSale = useFinalizeSale();
-  const { isOnline } = useOnline();
+  const isOnline = true;
 
   const calculations = useSaleCalculations(sale, items);
 
@@ -52,6 +52,10 @@ export function SaleSubmitBar() {
           id: saleId,
           type: sale.type,
           version: sale.version,
+          paymentMode: sale.paymentMode || undefined,
+          paymentMethod: paymentMethod || undefined,
+          referenceNumber: referenceNumber || undefined,
+          proofImageId: proofImageId || undefined,
         });
       }
 

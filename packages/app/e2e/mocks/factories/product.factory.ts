@@ -29,13 +29,11 @@ export interface Product {
   hasVariants: boolean;
   createdAt: string;
   updatedAt: string;
-  syncStatus: "pending" | "synced" | "error";
   variants?: ProductVariant[];
 }
 
 export interface ProductOverrides {
   businessId?: string;
-  syncStatus?: "pending" | "synced" | "error";
   hasVariants?: boolean;
   type?: "pollo" | "huevo" | "otro";
   categoryId?: string | null;
@@ -158,7 +156,6 @@ export function generateProduct(index: number, overrides?: ProductOverrides): Pr
     hasVariants,
     createdAt: pastDate.toISOString(),
     updatedAt: faker.date.between({ from: pastDate, to: now }).toISOString(),
-    syncStatus: overrides?.syncStatus ?? faker.helpers.arrayElement(["pending", "synced", "error"]),
   };
 
   // Generate 2 variants for products that have variants

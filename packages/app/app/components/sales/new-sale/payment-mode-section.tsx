@@ -1,7 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CreditCard, Wallet, Receipt, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AmountPaidInput } from "~/components/sales/amount-paid-input";
+import { FormMediaField } from "~/components/forms/form-media-field";
 import { useUpdateSale } from "~/hooks/use-sales";
 import {
   getAmountPaidValue,
@@ -13,6 +16,8 @@ import { formatCurrency, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useNewSaleContext } from "../new-sale-context";
 import { useToast } from "~/hooks/use-toast";
+import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
+import { fileField } from "~/lib/forms/media-field-resolvers";
 
 const paymentModes: {
   value: PaymentMode;
@@ -40,6 +45,14 @@ const paymentModes: {
   },
 ];
 
+const paymentMethodOptions = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "yape", label: "Yape" },
+  { value: "plin", label: "Plin" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "tarjeta", label: "Tarjeta" },
+];
+
 function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
   if (mode === "a_cuenta") {
     return {
@@ -61,7 +74,7 @@ function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
 }
 
 export function PaymentModeSection() {
-  const { saleId, sale, items } = useNewSaleContext();
+  const { saleId, sale, items, paymentMethod, setPaymentMethod, referenceNumber, setReferenceNumber, proofImageId, setProofImageId } = useNewSaleContext();
   const updateSale = useUpdateSale();
   const { toast } = useToast();
 
@@ -69,6 +82,22 @@ export function PaymentModeSection() {
   const [pendingPaymentMode, setPendingPaymentMode] = useState<PaymentMode | null>(null);
 
   const visiblePaymentMode = pendingPaymentMode ?? sale?.paymentMode;
+
+  const wrapperForm = useWrapperForm({
+    defaultValues: {
+      proofImageId: proofImageId || undefined,
+    },
+    fields: {
+      proofImageId: fileField(),
+    },
+  });
+
+  const watchedProofImageId = wrapperForm.watch("proofImageId");
+  useEffect(() => {
+    if (watchedProofImageId !== proofImageId) {
+      setProofImageId(watchedProofImageId || null);
+    }
+  }, [watchedProofImageId, proofImageId, setProofImageId]);
 
   const handleUpdateAmountPaid = useCallback(
     async (amount: string) => {
@@ -133,6 +162,10 @@ export function PaymentModeSection() {
       return;
     }
 
+    setPaymentMethod(null);
+    setReferenceNumber("");
+    setProofImageId(null);
+
     const amountPaidNum = getAmountPaidValue(
       mode,
       totalAmountNum,
@@ -166,6 +199,8 @@ export function PaymentModeSection() {
       });
     }
   };
+
+  const showPaymentDetails = visiblePaymentMode === "a_cuenta" && sale?.paymentMode === "a_cuenta";
 
   return (
     <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
@@ -222,6 +257,57 @@ export function PaymentModeSection() {
             initialAmount={sale?.paymentMode === "a_cuenta" ? sale?.amountPaid || "" : ""}
             onUpdate={handleUpdateAmountPaid}
           />
+        )}
+
+        {showPaymentDetails && (
+          <WrapperFormProvider form={wrapperForm}>
+            <div className="space-y-4 border-t pt-3 shell-divider">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Método de pago</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {paymentMethodOptions.map((method) => (
+                    <button
+                      key={method.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(method.value)}
+                      className={cn(
+                        "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                        paymentMethod === method.value
+                          ? "bg-orange-500 text-white"
+                          : "bg-white/[0.06] text-muted-foreground hover:bg-white/[0.1]"
+                      )}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMethod && paymentMethod !== "efectivo" && (
+                <div className="space-y-2">
+                  <Label htmlFor="reference" className="text-sm font-medium">
+                    Número de operación (opcional)
+                  </Label>
+                  <Input
+                    id="reference"
+                    placeholder="Ej: 123456"
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    className="rounded-2xl"
+                  />
+                </div>
+              )}
+
+              {paymentMethod && paymentMethod !== "efectivo" && (
+                <div className="space-y-2">
+                  <FormMediaField
+                    name="proofImageId"
+                    label="Comprobante de pago (opcional)"
+                  />
+                </div>
+              )}
+            </div>
+          </WrapperFormProvider>
         )}
 
         {pendingPaymentMode === "a_cuenta" && (

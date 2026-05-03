@@ -32,9 +32,7 @@ export default function ProtectedLayout() {
         return;
       }
 
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        console.warn("[ProtectedLayout] Session refresh skipped while offline");
-      }
+
     };
 
     const interval = setInterval(checkSession, SESSION_REFRESH_INTERVAL_MS);

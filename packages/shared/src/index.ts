@@ -23,12 +23,6 @@ export const PaymentMethod = {
   SALDO: "saldo",
 } as const;
 
-export const SyncStatus = {
-  PENDING: "pending",
-  SYNCED: "synced",
-  ERROR: "error",
-} as const;
-
 export const ProductType = {
   POLLO: "pollo",
   HUEVO: "huevo",
@@ -70,6 +64,8 @@ export interface Business {
   phone: string | null;
   email: string | null;
   logoUrl: string | null;
+  publicCatalogEnabled: boolean;
+  publicCatalogSlug: string | null;
   modoOperacion: string | null;
   usarDistribucion: boolean;
   permitirVentaSinStock: boolean;
@@ -96,6 +92,8 @@ export interface UpdateBusinessInput {
   email?: string;
   usarDistribucion?: boolean;
   permitirVentaSinStock?: boolean;
+  publicCatalogEnabled?: boolean;
+  publicCatalogSlug?: string | null;
 }
 
 export const InvitationStatus = {
@@ -140,8 +138,6 @@ export interface ProductVariantDTO {
   price: string;
   sortOrder: number;
   isActive: boolean;
-  syncStatus: "pending" | "synced" | "error";
-  syncAttempts: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -276,8 +272,6 @@ export interface Order {
   advanceProofImageId: string | null;
   totalAmount: string;
   version: number;
-  syncStatus: "pending" | "synced" | "error";
-  syncAttempts: number;
   createdAt: string;
   updatedAt: string;
   items?: OrderItem[];
@@ -368,22 +362,6 @@ export type {
   NewVariantInventory,
 } from "./schema";
 
-// Staged sync exports
-export {
-  SYNC_STAGES,
-  type SyncStage,
-  type SyncStageConfig,
-  type StageBehaviorConfig,
-  type SyncStageState,
-  type SyncStageEvent,
-  getEntitiesForStage,
-  getAllStagedEntities,
-  isEntityInStage,
-  getStageForEntity,
-  createSyncStageMachine,
-  syncStageMachine,
-} from "./sync-stages";
-
 // State machine exports
 export {
   createStateMachine,
@@ -396,10 +374,6 @@ export {
 // Sync utilities for frontend
 import { createId } from "@paralleldrive/cuid2";
 export { createId };
-
-export function generateSyncGroupId(): string {
-  return createId();
-}
 
 export function generateIdempotencyKey(): string {
   return createId();
