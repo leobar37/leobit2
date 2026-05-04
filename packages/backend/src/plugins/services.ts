@@ -52,6 +52,10 @@ import { CustomerGroupRepository } from "../services/repository/customer-group.r
 import { CustomerGroupService } from "../services/business/customer-group.service";
 import { VisitaRepository } from "../services/repository/visita.repository";
 import { VisitaService } from "../services/business/visita.service";
+import { ExpenseRepository } from "../services/repository/expense.repository";
+import { ExpenseService } from "../services/business/expense.service";
+import { ExpenseCategoryRepository } from "../services/repository/expense-category.repository";
+import { ExpenseCategoryService } from "../services/business/expense-category.service";
 import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
@@ -82,6 +86,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerTagRepo = new CustomerTagRepository();
     const customerGroupRepo = new CustomerGroupRepository();
     const visitaRepo = new VisitaRepository();
+    const expenseRepo = new ExpenseRepository();
+    const expenseCategoryRepo = new ExpenseCategoryRepository();
 
     // Initialize state machines with their transitions
     initializeStateMachines({});
@@ -118,6 +124,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
     const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo);
     const puntoVentaRepo = new PuntoVentaRepository();
+    const expenseService = new ExpenseService(expenseRepo, expenseCategoryRepo);
+    const expenseCategoryService = new ExpenseCategoryService(expenseCategoryRepo, expenseRepo);
 
     return {
       businessRepo,
@@ -172,5 +180,9 @@ export const servicesPlugin = new Elysia({ name: "services" })
       visitaRepo,
       visitaService,
       puntoVentaRepo,
+      expenseRepo,
+      expenseService,
+      expenseCategoryRepo,
+      expenseCategoryService,
     };
   });

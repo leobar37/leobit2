@@ -99,4 +99,14 @@ export const queryKeys = {
     accountsReceivableTotal: (filters: object) =>
       ["reports", "accounts-receivable", "total", filters] as const,
   },
+  expenses: {
+    all: ["expenses"] as const,
+    list: (filters: object) => ["expenses", "list", filters] as const,
+    detail: (id: string) => ["expenses", "detail", id] as const,
+    byDistribucion: (id: string) => ["expenses", "distribucion", id] as const,
+  },
+  expenseCategories: {
+    all: ["expense-categories"] as const,
+    active: ["expense-categories", "active"] as const,
+  },
 } as const;
