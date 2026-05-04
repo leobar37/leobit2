@@ -335,8 +335,7 @@ avileo/
 │   │   │   ├── api/         # API routes
 │   │   │   ├── services/
 │   │   │   │   ├── repository/  # Data access
-│   │   │   │   ├── business/    # Business logic
-│   │   │   │   └── sync/        # Sync handlers
+│   │   │   │   └── business/    # Business logic
 │   │   │   └── index.ts
 │   │   ├── drizzle.config.ts
 │   │   └── package.json

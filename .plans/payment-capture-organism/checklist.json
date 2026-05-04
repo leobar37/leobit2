@@ -1,0 +1,60 @@
+{
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Backend: Payment Draft Support",
+      "status": "pending",
+      "files": [
+        "packages/backend/src/db/schema/payments.ts",
+        "packages/backend/src/api/payments.ts"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "FormPaymentCapture RHF Component",
+      "status": "pending",
+      "files": [
+        "packages/app/app/components/payments/form-payment-capture.tsx",
+        "packages/app/app/components/payments/payment-capture.tsx",
+        "packages/app/app/hooks/use-payments.ts"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "PaymentCaptureDrawer UI",
+      "status": "pending",
+      "files": [
+        "packages/app/app/components/payments/payment-capture-drawer.tsx",
+        "packages/app/app/components/payments/payment-method-selector.tsx",
+        "packages/app/app/components/payments/payment-method-info.tsx",
+        "packages/app/app/components/payments/proof-capture.tsx",
+        "packages/app/app/components/payments/payment-summary.tsx"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Integrate into Sales Flow",
+      "status": "pending",
+      "files": [
+        "packages/app/app/components/sales/new-sale/payment-mode-section.tsx",
+        "packages/app/app/components/sales/new-sale-context.tsx"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Integrate into Payments Flow (Cobros)",
+      "status": "pending",
+      "files": [
+        "packages/app/app/routes/_protected.cobros.nuevo.tsx"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Tests and Cleanup",
+      "status": "pending",
+      "files": [
+        "packages/app/app/components/payments/__tests__/"
+      ]
+    }
+  ]
+}
