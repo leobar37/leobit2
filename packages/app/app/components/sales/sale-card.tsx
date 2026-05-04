@@ -68,7 +68,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         onClick={onClick}
         className="cursor-pointer"
       >
-        <Card className="shell-card-flat w-full rounded-[24px] transition-colors hover:border-stone-300/90 dark:hover:border-white/15">
+        <Card className="shell-card-flat w-full rounded-2xl border-0 transition-colors">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -134,7 +134,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
             </div>
 
             <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
-              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-full px-2.5 py-1.5">
+              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5">
                 <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/15 dark:text-orange-300">
                   <User className="h-3.5 w-3.5" />
                 </div>
@@ -143,7 +143,7 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
                 </span>
               </div>
 
-              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-full px-2.5 py-1.5 sm:justify-end">
+              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 sm:justify-end">
                 <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/15 dark:text-blue-300">
                   <CalendarDays className="h-3.5 w-3.5" />
                 </div>

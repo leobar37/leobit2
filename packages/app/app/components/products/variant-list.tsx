@@ -23,7 +23,7 @@ export function VariantList({
   const sortedVariants = [...variants].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl bg-white">
+    <Card className="shell-card-flat rounded-[22px] border-0 bg-card/80 shadow-none dark:bg-[#151821]">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
           <Package className="h-5 w-5 text-orange-500" />
@@ -65,10 +65,10 @@ export function VariantList({
           sortedVariants.map((variant) => (
             <div
               key={variant.id}
-              className={`flex items-center gap-3 p-4 rounded-2xl border border-gray-100 transition-all ${
+              className={`flex items-center gap-3 rounded-2xl border p-4 transition-all ${
                 variant.isActive
-                  ? "bg-white hover:border-orange-200 hover:shadow-sm"
-                  : "bg-gray-50/50 opacity-70"
+                  ? "border-border bg-background/70 hover:border-orange-500/30 hover:bg-accent/40"
+                  : "border-border bg-muted/40 opacity-70"
               }`}
             >
                <div className="flex-1 min-w-0">
@@ -81,7 +81,7 @@ export function VariantList({
                       )}
                     </div>
                     {variant.sku && (
-                      <p className="text-xs text-gray-500 mb-2">SKU: {variant.sku}</p>
+                      <p className="mb-2 text-xs text-muted-foreground">SKU: {variant.sku}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
@@ -90,7 +90,8 @@ export function VariantList({
                         variant="ghost"
                         size="icon"
                         onClick={() => onEdit(variant)}
-                        className="h-8 w-8 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg"
+                        aria-label={`Editar variante ${variant.name}`}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-orange-500/10 hover:text-orange-600"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -100,7 +101,8 @@ export function VariantList({
                         variant="ghost"
                         size="icon"
                         onClick={() => onDelete(variant.id)}
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        aria-label={`Desactivar variante ${variant.name}`}
+                        className="h-8 w-8 rounded-lg text-red-500 hover:bg-destructive/10 hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -112,8 +114,8 @@ export function VariantList({
                   <span className="text-orange-500 font-bold">
                     S/ {variant.price}
                   </span>
-                  <span className="text-gray-500">
-                    Cant: <span className="text-gray-700 font-medium">{variant.unitQuantity}</span>
+                  <span className="text-muted-foreground">
+                    Cant: <span className="font-medium text-foreground">{variant.unitQuantity}</span>
                   </span>
 
                 </div>

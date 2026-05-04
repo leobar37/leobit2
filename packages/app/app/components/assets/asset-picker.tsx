@@ -3,6 +3,7 @@ import { X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
@@ -73,16 +74,29 @@ export function AssetPicker({
             <ImageIcon className="h-8 w-8 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{placeholder}</span>
           </DrawerTrigger>
-          <DrawerContent className="max-h-[85vh]">
-            <DrawerHeader className="px-4 pb-3 pt-2">
+          <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden">
+            <DrawerHeader className="relative px-4 pb-3 pr-14 pt-2 text-left">
               <DrawerTitle>Galería de imágenes</DrawerTitle>
+              <DrawerClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 top-2 h-9 w-9 rounded-full"
+                  aria-label="Cerrar galería"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
             </DrawerHeader>
-            <AssetGallery
-              onSelect={handleSelect}
-              selectedId={value}
-              allowUpload={true}
-              allowDelete={true}
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+              <AssetGallery
+                onSelect={handleSelect}
+                selectedId={value}
+                allowUpload={true}
+                allowDelete={true}
+              />
+            </div>
           </DrawerContent>
         </Drawer>
       )}

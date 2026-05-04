@@ -7,7 +7,6 @@ import {
   Trash2,
   Plus,
   AlertCircle,
-  X,
   Settings2,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -35,6 +34,7 @@ import {
   useDeleteProductCategory,
   type ProductCategory,
 } from "~/hooks/use-product-categories";
+import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { categorySchema, type CategoryFormData } from "~/lib/schemas/category-schema";
 import {
   CATEGORY_PRESET_COLORS,
@@ -57,6 +57,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
   const createCategory = useCreateProductCategory();
   const updateCategory = useUpdateProductCategory();
   const deleteCategory = useDeleteProductCategory();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [mode, setMode] = useState<ManagerMode>({ type: "list" });
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
 
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       color: DEFAULT_CATEGORY_COLOR,
@@ -111,6 +113,16 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
 
   const handleDelete = async (category: ProductCategory) => {
     setDeleteError(null);
+    const confirmed = await confirm({
+      title: "Eliminar categoría",
+      description: `¿Quieres eliminar "${category.name}"? Si tiene productos asignados, la app te pedirá reasignarlos primero.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
     try {
       await deleteCategory.mutateAsync(category.id);
     } catch (err) {
@@ -152,7 +164,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
         }
         onOpenChange(val);
       }}>
-        <SheetContent side="bottom" className="rounded-t-[20px] max-h-[85vh] flex flex-col">
+        <SheetContent side="bottom" className="flex max-h-[85vh] flex-col rounded-t-[20px] border-border bg-background">
           <SheetHeader className="text-left pb-2">
             <SheetTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-orange-500" />
@@ -196,7 +208,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
             )}
           </div>
 
-          <div className="border-t px-6 py-4">
+          <div className="border-t border-border px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -217,7 +229,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
           if (!val) handleFormClose();
         }}
       >
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="rounded-2xl border-border bg-background sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {mode.type === "create" ? "Nueva categoría" : "Editar categoría"}
@@ -240,12 +252,12 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
                     <button
                       key={color}
                       type="button"
-                      onClick={() => form.setValue("color", color)}
+                      onClick={() => form.setValue("color", color, { shouldValidate: true, shouldDirty: true })}
                       className={cn(
-                        "w-8 h-8 rounded-full border-2 transition-transform",
+                        "h-8 w-8 rounded-full border-2 transition-transform",
                         form.watch("color") === color
                           ? "border-foreground scale-110"
-                          : "border-transparent"
+                          : "border-border"
                       )}
                       style={{ backgroundColor: color }}
                       aria-label={`Color ${color}`}
@@ -280,6 +292,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
           </FormProvider>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog />
     </>
   );
 }
@@ -303,7 +316,7 @@ function CategoryListItem({
     <div
       className={cn(
         "flex items-center gap-3 rounded-xl px-3 py-3",
-        "bg-muted/50 hover:bg-muted transition-colors"
+        "bg-muted/50 transition-colors hover:bg-muted"
       )}
     >
       <span
@@ -318,7 +331,7 @@ function CategoryListItem({
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-accent transition-colors"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-accent"
           aria-label={`Editar ${category.name}`}
         >
           <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -327,7 +340,7 @@ function CategoryListItem({
           type="button"
           onClick={onDelete}
           disabled={isDeleting}
-          className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-destructive/10 disabled:opacity-50"
           aria-label={`Eliminar ${category.name}`}
         >
           <Trash2 className="h-4 w-4 text-red-500" />

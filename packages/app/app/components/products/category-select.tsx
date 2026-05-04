@@ -1,10 +1,9 @@
 import { forwardRef, useMemo, useState } from "react";
 import { Controller, useFormContext, type Control } from "react-hook-form";
-import { Check, Plus, Search } from "lucide-react";
+import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppDrawer } from "@/components/ui/app-drawer";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FormFieldShell } from "@/components/forms/form-field-shell";
@@ -73,6 +72,7 @@ const CategorySelect = forwardRef<HTMLDivElement, CategorySelectProps>(
 
     const createForm = useForm<CategoryFormData>({
       resolver: zodResolver(categorySchema),
+      mode: "onChange",
       defaultValues: { name: "", color: DEFAULT_CATEGORY_COLOR },
     });
 
@@ -85,15 +85,15 @@ const CategorySelect = forwardRef<HTMLDivElement, CategorySelectProps>(
 
           const handleSelect = (categoryId: string | null) => {
             field.onChange(categoryId);
-            setDrawerOpen(false);
+            window.setTimeout(() => setDrawerOpen(false), 0);
           };
 
           const handleCreateSubmit = async (data: CategoryFormData) => {
             const newCategory = await createCategory.mutateAsync(data);
             field.onChange(newCategory.id);
             setCreateDialogOpen(false);
-            setDrawerOpen(false);
             createForm.reset();
+            window.setTimeout(() => setDrawerOpen(false), 0);
           };
 
           return (
@@ -109,160 +109,158 @@ const CategorySelect = forwardRef<HTMLDivElement, CategorySelectProps>(
               <AppDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                 <AppDrawer.Header title={label} />
                 <AppDrawer.Body scrollable>
-                  <div className="flex flex-col gap-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                       <Input
-                         data-testid="product-category-search-input"
-                         placeholder="Buscar categoría..."
-                         value={search}
-                         onChange={(e) => setSearch(e.target.value)}
-                          className="shell-search-field pl-9 pr-4"
-                       />
-                    </div>
-
-                    <button
-                      data-testid="product-category-option-none"
-                      type="button"
-                      onClick={() => handleSelect(null)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors",
-                        "hover:bg-accent focus-visible:outline-none focus-visible:bg-accent",
-                        field.value === null || field.value === undefined || field.value === ""
-                          ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/20 dark:text-orange-300"
-                          : "text-foreground"
-                      )}
-                    >
-                      <span className="w-3 h-3 rounded-full border border-muted-foreground bg-transparent flex-shrink-0" />
-                      <span className="flex-1">Sin categoría</span>
-                      {(field.value === null ||
-                        field.value === undefined ||
-                        field.value === "") && (
-                        <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                      )}
-                    </button>
-
-                    <div className="flex flex-col gap-1">
-                      {isLoading && (
-                        <p className="text-sm text-muted-foreground px-4 py-2">
-                          Cargando...
-                        </p>
-                      )}
-                      {!isLoading && filteredCategories.length === 0 && (
-                        <p className="text-sm text-muted-foreground px-4 py-2">
-                          No se encontraron categorías
-                        </p>
-                      )}
-                      <ScrollArea className="h-full">
-                        {filteredCategories.map((category) => {
-                          const isSelected = field.value === category.id;
-                          return (
-                            <button
-                              key={category.id}
-                              data-testid="product-category-option"
-                              type="button"
-                              onClick={() => handleSelect(category.id)}
-                              className={cn(
-                                "flex items-center gap-3 w-full rounded-xl px-4 py-3 text-left text-sm transition-colors",
-                                "hover:bg-accent focus-visible:outline-none focus-visible:bg-accent",
-                                isSelected
-                                  ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/20 dark:text-orange-300"
-                                  : "text-foreground"
-                              )}
-                            >
-                              <span
-                                className="w-3 h-3 rounded-full flex-shrink-0"
-                                style={{
-                                  backgroundColor: getCategoryColor(category.color),
-                                }}
+                  {createDialogOpen ? (
+                    <FormProvider {...createForm}>
+                      <form
+                        data-testid="product-category-create-dialog"
+                        onSubmit={createForm.handleSubmit(handleCreateSubmit)}
+                        className="space-y-4"
+                      >
+                        <FormInput
+                          name="name"
+                          label="Nombre"
+                          placeholder="Nombre de la categoría"
+                        />
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Color</label>
+                          <div className="flex flex-wrap gap-2">
+                            {CATEGORY_PRESET_COLORS.map((color) => (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => createForm.setValue("color", color, { shouldValidate: true, shouldDirty: true })}
+                                className={cn(
+                                  "w-8 h-8 rounded-full border-2 transition-transform",
+                                  createForm.watch("color") === color
+                                    ? "border-foreground scale-110"
+                                    : "border-border"
+                                )}
+                                style={{ backgroundColor: color }}
+                                aria-label={`Color ${color}`}
                               />
-                              <span className="flex-1">{category.name}</span>
-                              {isSelected && (
-                                <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </ScrollArea>
-                    </div>
-                  </div>
-                </AppDrawer.Body>
-                <AppDrawer.Footer>
-                  <Button
-                    data-testid="product-category-create-button"
-                    type="button"
-                    variant="outline"
-                    className="w-full rounded-xl"
-                    onClick={() => setCreateDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nueva categoría
-                  </Button>
-                </AppDrawer.Footer>
-              </AppDrawer>
-
-              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogContent data-testid="product-category-create-dialog" className="rounded-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Nueva categoría</DialogTitle>
-                  </DialogHeader>
-                  <FormProvider {...createForm}>
-                    <form
-                      onSubmit={createForm.handleSubmit(handleCreateSubmit)}
-                      className="space-y-4"
-                    >
-                      <FormInput
-                        name="name"
-                        label="Nombre"
-                        placeholder="Nombre de la categoría"
-                      />
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Color</label>
-                        <div className="flex flex-wrap gap-2">
-                          {CATEGORY_PRESET_COLORS.map((color) => (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => createForm.setValue("color", color)}
-                              className={cn(
-                                "w-8 h-8 rounded-full border-2 transition-transform",
-                                createForm.watch("color") === color
-                                  ? "border-foreground scale-110"
-                                  : "border-transparent"
-                              )}
-                              style={{ backgroundColor: color }}
-                              aria-label={`Color ${color}`}
-                            />
-                          ))}
+                            ))}
+                          </div>
                         </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            data-testid="product-category-save-button"
+                            type="submit"
+                            disabled={createCategory.isPending}
+                            className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
+                          >
+                            {createCategory.isPending
+                              ? "Guardando..."
+                              : "Guardar"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => {
+                              setCreateDialogOpen(false);
+                              createForm.reset();
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </form>
+                    </FormProvider>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          data-testid="product-category-search-input"
+                          placeholder="Buscar categoría..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="shell-search-field pl-9 pr-4"
+                        />
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          data-testid="product-category-save-button"
-                          type="submit"
-                          disabled={createCategory.isPending}
-                          className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
-                        >
-                          {createCategory.isPending
-                            ? "Guardando..."
-                            : "Guardar"}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-xl"
-                          onClick={() => {
-                            setCreateDialogOpen(false);
-                            createForm.reset();
-                          }}
-                        >
-                          Cancelar
-                        </Button>
+
+                      <button
+                        data-testid="product-category-option-none"
+                        type="button"
+                        onClick={() => handleSelect(null)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors",
+                          "hover:bg-accent focus-visible:outline-none focus-visible:bg-accent",
+                          field.value === null || field.value === undefined || field.value === ""
+                            ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/20 dark:text-orange-300"
+                            : "text-foreground"
+                        )}
+                      >
+                        <span className="w-3 h-3 rounded-full border border-muted-foreground bg-transparent flex-shrink-0" />
+                        <span className="flex-1">Sin categoría</span>
+                        {(field.value === null ||
+                          field.value === undefined ||
+                          field.value === "") && (
+                          <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                        )}
+                      </button>
+
+                      <div className="flex flex-col gap-1">
+                        {isLoading && (
+                          <p className="text-sm text-muted-foreground px-4 py-2">
+                            Cargando...
+                          </p>
+                        )}
+                        {!isLoading && filteredCategories.length === 0 && (
+                          <p className="text-sm text-muted-foreground px-4 py-2">
+                            No se encontraron categorías
+                          </p>
+                        )}
+                        <ScrollArea className="h-full">
+                          {filteredCategories.map((category) => {
+                            const isSelected = field.value === category.id;
+                            return (
+                              <button
+                                key={category.id}
+                                data-testid="product-category-option"
+                                type="button"
+                                onClick={() => handleSelect(category.id)}
+                                className={cn(
+                                  "flex items-center gap-3 w-full rounded-xl px-4 py-3 text-left text-sm transition-colors",
+                                  "hover:bg-accent focus-visible:outline-none focus-visible:bg-accent",
+                                  isSelected
+                                    ? "bg-orange-50 text-orange-600 font-medium dark:bg-orange-500/20 dark:text-orange-300"
+                                    : "text-foreground"
+                                )}
+                              >
+                                <span
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{
+                                    backgroundColor: getCategoryColor(category.color),
+                                  }}
+                                />
+                                <span className="flex-1">{category.name}</span>
+                                {isSelected && (
+                                  <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </ScrollArea>
                       </div>
-                    </form>
-                  </FormProvider>
-                </DialogContent>
-              </Dialog>
+                    </div>
+                  )}
+                </AppDrawer.Body>
+                {!createDialogOpen && (
+                  <AppDrawer.Footer>
+                    <Button
+                      data-testid="product-category-create-button"
+                      type="button"
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      onClick={() => setCreateDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nueva categoría
+                    </Button>
+                  </AppDrawer.Footer>
+                )}
+              </AppDrawer>
             </div>
           );
         }}
@@ -319,17 +317,7 @@ function CategorySelectTrigger({
         ) : (
           <span className="flex-1 text-muted-foreground">{placeholder}</span>
         )}
-        <svg
-          className="h-4 w-4 text-muted-foreground flex-shrink-0"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-          />
-        </svg>
+        <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
       </button>
     </FormFieldShell>
   );

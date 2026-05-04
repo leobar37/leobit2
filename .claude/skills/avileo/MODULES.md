@@ -12,8 +12,12 @@
 6. [Customers & Abonos (M6)](#customers--abonos-m6)
 7. [Distribution (M3)](#distribution-m3)
 8. [Inventory (M7)](#inventory-m7)
-9. [Sync Engine (M8)](#sync-engine-m8)
-10. [System Configuration](#system-configuration)
+9. [Purchases & Suppliers (M7b)](#purchases--suppliers-m7b)
+10. [Cierre del Dia (M9)](#cierre-del-dia-m9)
+11. [Public Catalog (M10)](#public-catalog-m10)
+12. [Payment Methods (M11)](#payment-methods-m11)
+13. [WhatsApp Integration (M12)](#whatsapp-integration-m12)
+14. [System Configuration](#system-configuration)
 
 ---
 
@@ -21,29 +25,30 @@
 
 ### Module Priority Matrix
 
-| ID | Module | Priority | Description | Offline Support |
-|----|--------|----------|-------------|-----------------|
-| M1 | Authentication | CORE | Login, logout, JWT | ⚠️ First login needs internet |
-| M2 | Users & Roles | CORE | CRUD users, permissions | ❌ Admin only |
-| M3 | Distribution | CONFIGURABLE | Assign inventory to vendors | ✅ 100% offline |
-| M4 | Calculator | CORE | Price calculations with tare | ✅ 100% offline |
-| M5 | Sales | CORE | Cash and credit sales | ✅ 100% offline |
-| M6 | Customers & Abonos | CORE | Accounts receivable, payments | ✅ 100% offline |
-| M7 | Inventory | CONFIGURABLE | Stock control | ✅ 100% offline |
-| M8 | Sync Engine | CORE | Offline/online sync | ✅ Background sync |
-| M9 | Catalog | V2 | Products for orders | Planned |
-| M10 | Orders | V2 | Online ordering | Planned |
-| M11 | Reports | V2 | Statistics | Planned |
-| M12 | Collection | FUTURE | Supplier purchases | Future |
+| ID | Module | Priority | Description |
+|----|--------|----------|-------------|
+| M1 | Authentication | CORE | Login, logout, JWT |
+| M2 | Users & Roles | CORE | CRUD users, permissions |
+| M3 | Distribution | CONFIGURABLE | Assign inventory to vendors |
+| M4 | Calculator | CORE | Price calculations with tare |
+| M5 | Sales | CORE | Cash and credit sales |
+| M6 | Customers & Abonos | CORE | Accounts receivable, payments |
+| M7 | Inventory | CONFIGURABLE | Stock control |
+| M7b | Purchases | CONFIGURABLE | Supplier purchases |
+| M9 | Cierre | CORE | Daily closing reports |
+| M10 | Public Catalog | V2 | Customer pre-order page |
+| M11 | Payment Methods | V2 | Configurable payment methods |
+| M12 | WhatsApp | V2 | Templates and messaging |
+| M13 | Reports | V2 | Statistics |
 
 ### Operation Mode Impact
 
 | Mode | Distribution | Stock Control | Sales Validation |
 |------|--------------|---------------|------------------|
-| **Inventario Propio** | ✅ Active | ✅ Yes | ✅ Stock check |
-| **Sin Inventario** | ❌ Hidden | ❌ No | ❌ No validation |
-| **Pedidos** | ❌ Hidden | ⚠️ Orders | ✅ Against order |
-| **Mixto** | ✅ Configurable | ✅ Configurable | ✅ Configurable |
+| **Inventario Propio** | Active | Yes | Stock check |
+| **Sin Inventario** | Hidden | No | No validation |
+| **Pedidos** | Hidden | Orders | Against order |
+| **Mixto** | Configurable | Configurable | Configurable |
 
 ---
 
@@ -65,39 +70,17 @@ Login, logout, and secure session management.
 - Inputs: `username`, `password`
 - Outputs: `jwt_token`, `user_data`, `session_id`
 
-### Offline Behavior
-
-**First Login:**
-- Requires internet connection
-- Validates credentials with server
-- Receives JWT token
-- Caches token locally (IndexedDB)
-
-**Subsequent Access:**
-- Reads JWT from local cache
-- Validates locally (expiration check)
-- Works completely offline
-- Silent refresh when online
-
 ### Flow
 
 ```
-FIRST LOGIN (Internet Required)
+LOGIN (Internet Required)
 
 1. User enters credentials
 2. POST /api/auth/login
 3. Better Auth validates
 4. Returns JWT + user data
-5. Store in IndexedDB
+5. Store in localStorage/IndexedDB
 6. Redirect to dashboard
-
-SUBSEQUENT ACCESS (Offline OK)
-
-1. App starts
-2. Check IndexedDB for token
-3. Validate expiration
-4. If valid → Allow access
-5. If expired → Redirect to login
 ```
 
 ---
@@ -127,21 +110,6 @@ User CRUD and role-based permission control. **Only ADMIN can create users.**
 | Commission | No | Commission % per sale |
 | Status | Yes | Active/Inactive |
 
-### User Creation Flow
-
-```
-ADMIN CREATES USER
-
-1. Admin accesses "User Management"
-2. Click "New User"
-3. Fill data: name, DNI, email, phone
-4. Select role: Vendedor or Admin
-5. Configure sales point (if vendor)
-6. System generates automatic password
-7. Send email with credentials
-8. User changes password on first login
-```
-
 ### Multi-Tenancy
 
 Users can belong to multiple businesses via `business_users` table:
@@ -166,9 +134,9 @@ Intelligent chicken price calculations with tare subtraction.
 Net Kilos = Gross Kilos - Tare
 
 Calculate any 2 values, get the 3rd:
-- Know: Total Amount + Price/kg → Calculate Kilos
-- Know: Total Amount + Kilos → Calculate Price/kg  
-- Know: Price/kg + Kilos → Calculate Total Amount
+- Know: Total Amount + Price/kg -> Calculate Kilos
+- Know: Total Amount + Kilos -> Calculate Price/kg  
+- Know: Price/kg + Kilos -> Calculate Total Amount
 ```
 
 ### Use Cases
@@ -199,7 +167,7 @@ Tare: 0.5 kg
 Price per kg: S/ 16
 
 Net Kilos = 15 - 0.5 = 14.5 kg
-Total = 14.5 × 16 = S/ 232
+Total = 14.5 x 16 = S/ 232
 ```
 
 ### UI Behavior
@@ -207,21 +175,20 @@ Total = 14.5 × 16 = S/ 232
 - Input any 2 fields, 3rd calculates automatically
 - Configurable price per kg (per business)
 - Tare saved per vendor preference
-- Works 100% offline
 
 ---
 
 ## Sales (M5)
 
 ### Purpose
-Register cash and credit sales. Works **100% offline**.
+Register cash and credit sales.
 
 ### Sale Types
 
 | Type | Description | Payment |
 |------|-------------|---------|
 | **Contado** | Cash sale | Full payment at sale |
-| **Crédito** | Credit sale | Partial or no payment, tracked as debt |
+| **Credito** | Credit sale | Partial or no payment, tracked as debt |
 
 ### Features
 
@@ -229,8 +196,7 @@ Register cash and credit sales. Works **100% offline**.
 - [x] Credit sales
 - [x] **Sales without customer** (generic customer)
 - [x] Multiple products per sale
-- [x] Local save when offline
-- [x] Automatic sync when online
+- [x] Sale without distribution (if config allows)
 
 ### Sale Without Customer
 
@@ -243,33 +209,6 @@ Register cash and credit sales. Works **100% offline**.
 - `client_id` = NULL
 - Reports show as "Generic Customer" or "No name"
 - Still tracked in sales totals
-
-### Offline Flow
-
-```
-VENDOR REGISTERS SALE (No Internet)
-
-1. Complete sale form
-2. Select customer (optional)
-3. Add products
-4. Calculate total
-5. Click "Register"
-        ↓
-6. TanStack DB saves to memory
-7. IndexedDB persists locally
-8. SyncEngine detects: NO internet
-9. Add to pending queue
-10. Show: "✅ Sale saved. Will sync later."
-
-WHEN INTERNET RETURNS
-
-1. Browser detects 'online'
-2. SyncEngine.processQueue()
-3. POST /api/sales
-4. Server confirms
-5. Update status to 'synced'
-6. UI shows: "🟢 Synchronized"
-```
 
 ### Sale Data Structure
 
@@ -286,8 +225,6 @@ interface Sale {
   balance_due: Decimal;        // Outstanding balance
   tara: Decimal;               // Tare in kg
   net_weight: Decimal;         // Net weight
-  sync_status: 'pending' | 'synced' | 'error';
-  sync_attempts: number;
   sale_date: Timestamp;
   items: SaleItem[];
 }
@@ -306,7 +243,7 @@ interface SaleItem {
 ## Customers & Abonos (M6)
 
 ### Purpose
-Accounts receivable management and debt payments. Works **100% offline**.
+Accounts receivable management and debt payments.
 
 ### Customer Features
 
@@ -348,9 +285,9 @@ Outstanding Balance = SUM(credit sales) - SUM(abonos)
 
 **Example:**
 ```
-Customer: Juan Pérez
+Customer: Juan Perez
 
-Sales (Crédito):
+Sales (Credito):
 ├── Sale #1: S/ 150 (pending)
 ├── Sale #2: S/ 200 (pending)
 └── Total Debt: S/ 350
@@ -373,15 +310,9 @@ CUSTOMER COMES TO PAY
 3. Enters payment amount (S/ 100)
 4. Selects payment method
 5. System calculates: 200 - 100 = S/ 100 new debt
-6. Saves locally (offline)
+6. Saves to server
 7. Prints receipt
 8. Customer receives proof
-
-WHEN ONLINE
-
-1. Sync abono to server
-2. Update customer balance
-3. Confirm sync status
 ```
 
 ---
@@ -393,12 +324,12 @@ Daily inventory assignment to vendors. **Optional module** based on operation mo
 
 ### When to Use
 
-✅ **Use when:**
+**Use when:**
 - You have own inventory
 - Want to control how much each vendor gets
 - Want to track vendor performance vs assignment
 
-❌ **Don't use when:**
+**Don't use when:**
 - Commission-based sales
 - No stock control needed
 
@@ -428,22 +359,22 @@ A vendor can sell from:
 Morning: 150 kg of chicken arrives
 
 Distribution:
-├── Dist #1: Juan P. → Carro A → 50 kg
-├── Dist #2: Pedro R. → Casa → 40 kg
-└── Dist #3: María G. → Local Centro → 60 kg
+├── Dist #1: Juan P. -> Carro A -> 50 kg
+├── Dist #2: Pedro R. -> Casa -> 40 kg
+└── Dist #3: Maria G. -> Local Centro -> 60 kg
 
 End of Day:
-├── Juan sold: 45 kg → 5 kg remaining
-├── Pedro sold: 40 kg → 0 kg remaining
-└── María sold: 55 kg → 5 kg (over-assigned)
+├── Juan sold: 45 kg -> 5 kg remaining
+├── Pedro sold: 40 kg -> 0 kg remaining
+└── Maria sold: 55 kg -> 5 kg (over-assigned)
 ```
 
 ### Example without Distribution
 
 ```
 Vendors sell freely, system only records:
-├── Juan sold: 30 kg → Recorded
-├── María sold: 45 kg → Recorded
+├── Juan sold: 30 kg -> Recorded
+├── Maria sold: 45 kg -> Recorded
 └── (No control of assigned amounts)
 ```
 
@@ -463,11 +394,11 @@ Vendor can:
 ### Performance Tracking
 
 ```
-Vendor Performance = (Kilos Sold / Kilos Assigned) × 100
+Vendor Performance = (Kilos Sold / Kilos Assigned) x 100
 
 Juan: 45/50 = 90%
 Pedro: 40/40 = 100%
-María: 55/60 = 92%
+Maria: 55/60 = 92%
 ```
 
 ---
@@ -525,80 +456,160 @@ Stock control for products. **Optional** based on operation mode.
 
 ---
 
-## Sync Engine (M8)
+## Purchases & Suppliers (M7b)
 
 ### Purpose
-Motor de sincronización offline/online.
+Track inventory purchases from suppliers.
+
+### Suppliers
+
+| Field | Description |
+|-------|-------------|
+| Name | Supplier name |
+| Type | generic, regular, internal |
+| RUC | Tax ID |
+| Phone | Contact |
+| Email | Contact |
+
+### Purchase Status
+
+| Status | Description |
+|--------|-------------|
+| **draft** | Draft purchase |
+| **pending** | Ordered, awaiting delivery |
+| **received** | Delivered and processed |
+| **cancelled** | Cancelled |
+
+### Purchase Flow
+
+```
+1. Create purchase draft
+   |-- Select supplier
+   |-- Add items (product + variant + quantity + unit cost)
+
+2. Confirm purchase
+   |-- Status: pending
+
+3. Receive inventory
+   |-- Status: received
+   |-- Add to variant inventory
+
+4. Optional: Upload receipt image
+```
+
+---
+
+## Cierre del Dia (M9)
+
+### Purpose
+Daily closing report by vendor. Summarizes sales, payments, and distribution performance.
+
+### Data Included
+
+- Total sales (cash + credit)
+- Total abonos collected
+- Distribution performance (assigned vs sold)
+- Cash balance
+
+### Flow
+
+```
+VENDOR CLOSES DAY
+
+1. Vendor accesses "Cierre"
+2. System calculates from server data:
+   |-- Total ventas
+   |-- Total cobros
+   |-- Balance
+3. Vendor confirms
+4. System marks distribution as "cerrado"
+```
+
+---
+
+## Public Catalog (M10)
+
+### Purpose
+Customer-facing page for pre-orders. Business enables public catalog and shares link.
 
 ### Features
 
-- [x] Detect connection status
-- [x] Queue operations when offline
-- [x] Retry with exponential backoff
-- [x] Resolve simple conflicts
-- [x] Show sync status in UI
-- [x] Persist queue in IndexedDB
+- [x] Public product catalog (no auth required)
+- [x] Customer places pre-order
+- [x] Business receives order notification
+- [x] Token-based access (sale tokens)
 
-### Sync Status Indicators
+### Flow
 
 ```
-🟢 Online - Everything synchronized
-🟡 3 operations pending - Will auto-sync
-🔴 Offline - Working offline, data safe
-⚠️ Sync error - Tap to retry
+BUSINESS ENABLES CATALOG
+
+1. Admin enables "public_catalog_enabled"
+2. Sets "public_catalog_slug" (e.g., "mi-negocio")
+3. Shares link: /venta/mi-negocio
+
+CUSTOMER PLACES ORDER
+
+1. Customer visits public catalog
+2. Browses products with variants
+3. Selects items, enters contact info
+4. Submits pre-order
+5. Business receives notification
 ```
 
-### Retry Strategy
+---
 
-```
-Attempt 1: Immediate
-Attempt 2: After 2 seconds
-Attempt 3: After 4 seconds
-Attempt 4: After 8 seconds
-Maximum: 3-5 attempts, then mark as error
-```
+## Payment Methods (M11)
 
-### Conflict Resolution
+### Purpose
+Configurable payment methods per business. Admin enables/disables methods and configures details.
 
-**Strategy:** "Last write wins"
+### Supported Methods
 
-**Example:**
-```
-Vendor A edits Customer X at 10:00 (offline)
-Vendor B edits Customer X at 10:05 (offline)
+| Method | Configurable Fields |
+|--------|---------------------|
+| **Efectivo** | enabled |
+| **Yape** | enabled, phone, QR image |
+| **Plin** | enabled, phone, QR image |
+| **Transferencia** | enabled, account number, account name, bank, CCI |
+| **Tarjeta** | enabled |
 
-Both sync at 11:00:
-1. Vendor A's edit applies
-2. Vendor B's edit applies (overwrites A)
-3. System shows: "Updated by another user"
-```
-
-### Sync Queue Structure
+### Configuration
 
 ```typescript
-interface SyncQueueItem {
-  id: UUID;
-  operation_type: 'create' | 'update' | 'delete';
-  collection: 'ventas' | 'clientes' | 'abonos' | 'distribuciones';
-  data: object;
-  created_at: Timestamp;
-  attempts: number;
-  last_error?: string;
+interface PaymentMethodConfig {
+  enabled: boolean;
+  phone?: string;
+  accountNumber?: string;
+  accountName?: string;
+  bank?: string;
+  cci?: string;
+  qrImageUrl?: string;
 }
 ```
 
-### Connection Detection
+---
 
-```typescript
-// Browser events
-window.addEventListener('online', () => {
-  syncEngine.processQueue();
-});
+## WhatsApp Integration (M12)
 
-window.addEventListener('offline', () => {
-  syncEngine.pause();
-});
-```
+### Purpose
+Send notifications and messages to customers via WhatsApp.
+
+### Features
+
+- [x] Message templates (cobranza, ventas, agradecimiento, entrega)
+- [x] Per-user WhatsApp settings
+- [x] Message history tracking
+
+### Templates
+
+| Category | Use Case |
+|----------|----------|
+| **cobranza** | Payment reminders |
+| **ventas** | Sale confirmations |
+| **agradecimiento** | Thank you messages |
+| **entrega** | Delivery notifications |
+| **otros** | Custom messages |
 
 ---
 
@@ -612,28 +623,17 @@ window.addEventListener('offline', () => {
 | `control_kilos` | true/false | Track stock |
 | `usar_distribucion` | true/false | Use daily distribution |
 | `permitir_venta_sin_stock` | true/false | Allow sales without assigned stock |
+| `public_catalog_enabled` | true/false | Enable public customer catalog |
+| `public_catalog_slug` | string | URL slug for public catalog |
 
 ### Mode Impact on UI
 
-| Mode | Vendor Dashboard | New Sale | Distribution |
-|------|-----------------|----------|--------------|
-| **Inventario Propio** | Shows assigned kilos | Validates stock | ✅ Active |
-| **Sin Inventario** | Shows sales summary only | No stock validation | ❌ Hidden |
-| **Pedidos** | Pending orders | Against registered order | ❌ Hidden |
-
-### Configuration UI
-
-**Admin Panel:**
-```
-⚙️ System Configuration
-
-Operation Mode: [Inventario Propio ▼]
-├── Control Kilos: [✓]
-├── Use Distribution: [✓]
-└── Allow Sale Without Stock: [✓]
-
-[Save Configuration]
-```
+| Mode | Vendor Dashboard | New Sale | Distribution | Public Catalog |
+|------|-----------------|----------|--------------|----------------|
+| **Inventario Propio** | Shows assigned kilos | Validates stock | Active | Optional |
+| **Sin Inventario** | Shows sales summary only | No stock validation | Hidden | Optional |
+| **Pedidos** | Pending orders | Against registered order | Hidden | Active |
+| **Mixto** | Configurable | Configurable | Configurable | Optional |
 
 ---
 
@@ -646,17 +646,17 @@ Operation Mode: [Inventario Propio ▼]
          - Weigh and prepare
 
 06:00 AM - Create distributions
-         ├── Juan: Carro A - 50 kg
-         ├── Pedro: Casa - 40 kg
-         └── María: Local - 60 kg
+         |-- Juan: Carro A - 50 kg
+         |-- Pedro: Casa - 40 kg
+         |-- Maria: Local - 60 kg
 
-09:00 AM - Vendors start selling (offline)
-         - Each sale saved locally
+09:00 AM - Vendors start selling
+         - Each sale recorded via API
 
-02:00 PM - Juan connects to WiFi
-         - Auto-syncs 15 sales
+02:00 PM - Admin sees live data
+         - All sales visible in dashboard
 
-06:00 PM - All vendors sync
+06:00 PM - All vendors finish
          - Admin sees complete data
 
 07:00 PM - Close day
@@ -669,33 +669,13 @@ Operation Mode: [Inventario Propio ▼]
 ```
 08:00 AM - Vendors arrive
 
-09:00 AM - Start selling (comission-based)
+09:00 AM - Start selling (commission-based)
          - No distribution needed
          - Just record sales
 
-06:00 PM - Vendors sync sales
-
-07:00 PM - Admin reviews
+06:00 PM - Admin reviews
          - Calculate commissions
          - Generate reports
-```
-
-### Scenario 3: Offline for 3 Days
-
-```
-Day 1: No internet in area
-       ├── 20 sales recorded locally
-       └── All data safe
-
-Day 2: Still no internet
-       ├── 25 more sales
-       └── Queue grows
-
-Day 3: Vendor finds WiFi
-       ├── 45 sales sync at once
-       └── Server processes batch
-
-Result: No data lost
 ```
 
 ---
@@ -703,26 +683,20 @@ Result: No data lost
 ## Business Rules Summary
 
 ### Sales
-- ✅ Can sell without customer
-- ✅ Can sell without distribution (if config allows)
-- ✅ Credit sales track debt automatically
-- ✅ Cash sales complete immediately
+- Can sell without customer
+- Can sell without distribution (if config allows)
+- Credit sales track debt automatically
+- Cash sales complete immediately
 
 ### Customers
-- ✅ Debt calculated automatically (sales - abonos)
-- ✅ Can pay without buying (abono only)
-- ✅ Search works offline (cached data)
+- Debt calculated automatically (sales - abonos)
+- Can pay without buying (abono only)
+- Search works via API
 
 ### Distribution
-- ✅ Optional based on mode
-- ✅ Tracks vendor performance
-- ✅ Can sell more than assigned (over-sale)
-
-### Sync
-- ✅ Works offline for days
-- ✅ Auto-syncs when online
-- ✅ Retry with backoff on error
-- ✅ Queue persists across sessions
+- Optional based on mode
+- Tracks vendor performance
+- Can sell more than assigned (over-sale)
 
 ---
 

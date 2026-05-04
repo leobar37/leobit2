@@ -9,6 +9,7 @@ interface MetricCardProps {
   icon: LucideIcon;
   iconColor?: string;
   className?: string;
+  featured?: boolean;
 }
 
 export function MetricCard({
@@ -19,6 +20,7 @@ export function MetricCard({
   icon: Icon,
   iconColor = "text-orange-600",
   className,
+  featured = false,
 }: MetricCardProps) {
   const isPositive = change !== undefined && change >= 0;
   const showChange = change !== undefined && change !== 0;
@@ -26,23 +28,26 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "shell-card-flat rounded-[24px] p-4",
+        "shell-card-flat rounded-[26px] border-0 bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
+        featured && "bg-white dark:bg-[#171a22]",
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <p className="text-2xl font-bold text-foreground mt-1 truncate">
+        <div className="min-w-0 flex-1">
+          <p className={cn("font-medium text-muted-foreground", featured ? "text-sm" : "text-sm")}>
+            {title}
+          </p>
+          <p className={cn("mt-1 truncate font-semibold tracking-tight text-foreground", featured ? "text-[1.95rem]" : "text-[1.8rem]")}>
             {value}
           </p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
           )}
           {showChange && (
             <div
               className={cn(
-                "flex items-center gap-1 mt-2 text-xs font-medium",
+                "mt-3 flex items-center gap-1 text-xs font-medium",
                 isPositive ? "text-green-600" : "text-red-600"
               )}
             >
@@ -64,13 +69,13 @@ export function MetricCard({
         <div
           className={cn(
             "ml-3 shrink-0 rounded-[18px] p-2.5",
-            iconColor === "text-green-600" && "bg-emerald-100 dark:bg-emerald-500/15",
-            iconColor === "text-blue-600" && "bg-blue-100 dark:bg-blue-500/15",
-            iconColor === "text-red-600" && "bg-red-100 dark:bg-red-500/15",
-            iconColor === "text-orange-600" && "bg-orange-100 dark:bg-orange-500/15"
+            iconColor === "text-green-600" && "bg-emerald-100/80 dark:bg-emerald-500/12",
+            iconColor === "text-blue-600" && "bg-blue-100/80 dark:bg-blue-500/12",
+            iconColor === "text-red-600" && "bg-red-100/80 dark:bg-red-500/12",
+            iconColor === "text-orange-600" && "bg-orange-100/80 dark:bg-orange-500/12"
           )}
         >
-          <Icon className={cn("h-5 w-5", iconColor)} />
+          <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
         </div>
       </div>
     </div>

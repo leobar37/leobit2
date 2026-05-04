@@ -25,23 +25,23 @@ The project is organized into **10 incremental phases**. Each phase is an indepe
 Timeline: 5 weeks (25-35 working days)
 
 Week 1: [01-Auth] [02-Users]
-Week 2: [03-Core-Offline] [04-Sales]
+Week 2: [03-Core-API] [04-Sales]
 Week 3: [05-Customers] [06-Calculator]
-Week 4: [07-Inventory] [08-Sync]
+Week 4: [07-Inventory] [08-Purchases]
 Week 5: [09-Reports] [10-Config]
 ```
 
 ### Phase 1: Authentication (3-4 days)
 
-**Objective:** Login/logout with JWT
+**Objective:** Login/logout with JWT via Better Auth
 
-**Deliverable:** Functional login screen that stores token
+**Deliverable:** Functional login screen
 
 **Key Tasks:**
 - Setup Better Auth
 - Create login form
 - JWT token handling
-- Token persistence (IndexedDB)
+- Session persistence
 
 **Dependencies:** None
 
@@ -49,31 +49,33 @@ Week 5: [09-Reports] [10-Config]
 
 ### Phase 2: Users (4-5 days)
 
-**Objective:** User CRUD and role management
+**Objective:** User CRUD, role management, and staff invitations
 
-**Deliverable:** Admin panel to create/edit users with roles
+**Deliverable:** Admin panel to create/edit users with roles, invitation system
 
 **Key Tasks:**
 - User creation form
-- Role assignment (ADMIN, VENDEDOR)
+- Role assignment (ADMIN_NEGOCIO, VENDEDOR)
 - User listing
 - Sales point assignment
+- Staff invitation flow (send email → accept token)
 
 **Dependencies:** Phase 1
 
 ---
 
-### Phase 3: Core Offline (5-7 days)
+### Phase 3: Core API (5-7 days)
 
-**Objective:** Base offline infrastructure
+**Objective:** Base API infrastructure
 
-**Deliverable:** App that stores data locally and works without internet
+**Deliverable:** REST API with all core endpoints
 
 **Key Tasks:**
-- IndexedDB setup
-- TanStack DB configuration
-- Local persistence
-- Connection detection
+- ElysiaJS server setup
+- Drizzle ORM configuration
+- RequestContext pattern
+- Error handling
+- Multi-tenancy middleware
 
 **Dependencies:** Phase 1, 2
 
@@ -81,31 +83,33 @@ Week 5: [09-Reports] [10-Config]
 
 ### Phase 4: Sales (5-6 days)
 
-**Objective:** Sale registration
+**Objective:** Sale registration (instant_sales and pre_orders)
 
-**Deliverable:** Sale screen that stores offline
+**Deliverable:** Sale screen with unified sales table
 
 **Key Tasks:**
 - Sale form (cash/credit)
-- Multiple products
-- Offline storage
+- Multiple products with variants
 - Sale without customer
+- Pre-order support (delivery date, customer edit)
+- Cancellation with refund tracking
 
 **Dependencies:** Phase 3
 
 ---
 
-### Phase 5: Customers & Abonos (4-5 days)
+### Phase 5: Customers, Tags & Abonos (4-5 days)
 
-**Objective:** Customer management and debt payments
+**Objective:** Customer management, segmentation, and debt payments
 
-**Deliverable:** Customer CRUD + abono registration
+**Deliverable:** Customer CRUD + abono registration + tags/groups
 
 **Key Tasks:**
 - Customer CRUD
 - Debt calculation
-- Abono registration
-- Offline support
+- Abono registration (independent of sales)
+- Payment proof upload (camera/gallery)
+- Tags and groups for segmentation
 
 **Dependencies:** Phase 3, 4
 
@@ -113,79 +117,87 @@ Week 5: [09-Reports] [10-Config]
 
 ### Phase 6: Calculator (2-3 days)
 
-**Objective:** Price calculator
+**Objective:** Price calculator with tare
 
-**Deliverable:** 100% functional offline calculator
+**Deliverable:** 100% functional calculator
 
 **Key Tasks:**
 - Calculate any 2 values, get 3rd
 - Tare subtraction
 - Configurable price per kg
-- Works offline
+- Context-aware (sales, orders, purchases)
 
 **Dependencies:** None (can be done in parallel)
 
 ---
 
-### Phase 7: Inventory & Distribution (4-5 days)
+### Phase 7: Inventory, Distribution & Purchases (4-5 days)
 
-**Objective:** Stock control and daily assignment
+**Objective:** Stock control, daily assignment, and supplier purchases
 
-**Deliverable:** Distribution panel + kilo control
+**Deliverable:** Distribution panel + kilo control + purchase flow
 
 **Key Tasks:**
-- Product catalog
-- Inventory tracking
-- Daily distribution
+- Product catalog with variants and categories
+- Inventory tracking (variant_inventory)
+- Daily distribution to vendors
+- Distribution closing (cierre)
+- Visitas tracking
+- Purchase orders from suppliers
+- Supplier management
 - Performance tracking
 
 **Dependencies:** Phase 2, 3
 
 ---
 
-### Phase 8: Sync Engine (5-7 days)
+### Phase 8: Public Catalog & Payment Methods (3-4 days)
 
-**Objective:** Offline/online sync motor
+**Objective:** Public customer catalog and configurable payment methods
 
-**Deliverable:** Auto-sync when online, operation queue
+**Deliverable:** Public pre-order page + payment configuration
 
 **Key Tasks:**
-- Sync queue
-- Retry logic
-- Conflict resolution
-- Status indicators
+- Public catalog enable/disable
+- Catalog slug configuration
+- Customer pre-order flow
+- Payment methods configuration per business
+- QR code upload for Yape/Plin
 
-**Dependencies:** Phase 3, 4, 5
+**Dependencies:** Phase 4, 7
 
 ---
 
-### Phase 9: Reports (4-5 days)
+### Phase 9: Reports & Cierre (4-5 days)
 
-**Objective:** Statistics and reports for admin
+**Objective:** Statistics, reports, and daily closing
 
-**Deliverable:** Dashboard with charts and exportable reports
+**Deliverable:** Dashboard with charts, cierre del dia, exportable reports
 
 **Key Tasks:**
 - Sales reports
 - Vendor performance
 - Debt reports
+- Daily closing (cierre)
 - Export to Excel/PDF
 
-**Dependencies:** Phase 4, 5, 8
+**Dependencies:** Phase 4, 5, 7
 
 ---
 
-### Phase 10: Configuration (3-4 days)
+### Phase 10: Configuration & WhatsApp (3-4 days)
 
-**Objective:** System configuration
+**Objective:** System configuration and WhatsApp integration
 
-**Deliverable:** Flexible configuration panel
+**Deliverable:** Flexible configuration panel + WhatsApp messaging
 
 **Key Tasks:**
 - Operation mode selector
 - Price configuration
 - Business settings
 - Permission configuration
+- WhatsApp templates
+- Message sending
 
 **Dependencies:** All previous
 
@@ -225,6 +237,12 @@ bun run typecheck
 
 # Preview production build
 bun run preview
+
+# Run tests
+bun test
+
+# Run E2E tests
+bun run test:e2e
 ```
 
 ### Backend (@avileo/backend)
@@ -250,6 +268,13 @@ drizzle-kit push       # Alternative
 
 bun run db:studio      # Open Drizzle Studio
 drizzle-kit studio     # Alternative
+
+bun run db:reset       # Reset database (keeps demo user)
+bun run db:seed:demo   # Seed demo account data
+
+# Tests
+bun test
+bun run test:e2e
 ```
 
 ### Shared Package (@avileo/shared)
@@ -287,11 +312,15 @@ avileo/
 │   │   ├── app/
 │   │   │   ├── routes/      # File-based routing
 │   │   │   │   ├── _index.tsx
-│   │   │   │   ├── sales.tsx
+│   │   │   │   ├── _protected.*
+│   │   │   │   ├── venta.$slug._index.tsx  # Public catalog
 │   │   │   │   └── ...
 │   │   │   ├── components/  # React components
 │   │   │   ├── hooks/       # Custom hooks
-│   │   │   ├── lib/         # Utilities
+│   │   │   ├── lib/
+│   │   │   │   ├── db/      # Zod entity schemas
+│   │   │   │   ├── api-client.ts  # Eden Treaty client
+│   │   │   │   └── ...
 │   │   │   └── root.tsx     # Root layout
 │   │   ├── public/          # Static assets
 │   │   ├── package.json
@@ -300,23 +329,30 @@ avileo/
 │   ├── backend/             # Backend (@avileo/backend)
 │   │   ├── src/
 │   │   │   ├── db/
-│   │   │   │   ├── schema/  # Drizzle schema
+│   │   │   │   ├── schema/  # Drizzle schema (25+ tables)
 │   │   │   │   └── lib/
 │   │   │   │       └── db.ts
-│   │   │   ├── routes/      # API routes
+│   │   │   ├── api/         # API routes
+│   │   │   ├── services/
+│   │   │   │   ├── repository/  # Data access
+│   │   │   │   ├── business/    # Business logic
+│   │   │   │   └── sync/        # Sync handlers
 │   │   │   └── index.ts
 │   │   ├── drizzle.config.ts
 │   │   └── package.json
 │   │
 │   └── shared/              # Shared (@avileo/shared)
 │       ├── src/
-│       │   └── index.ts     # Shared exports
+│       │   ├── schema.ts    # Shared Zod schemas
+│       │   └── transformers/ # Decimal transformers
 │       ├── package.json
 │       └── tsup.config.ts
 │
 ├── docs/                    # Documentation
 │   ├── technical/           # Architecture docs
-│   └── development/         # Phase guides (01-10)
+│   ├── development/         # Phase guides (01-10)
+│   ├── screens/             # UI patterns, mobile list pattern
+│   └── OVERVIEW-FLUJOS.md   # Implementation status
 │
 ├── .claude/
 │   └── skills/
@@ -379,6 +415,7 @@ import type { ApiResponse } from "@avileo/shared";
 | Constants | UPPER_SNAKE_CASE | `API_URL` |
 | Types | PascalCase | `UserData` |
 | Database tables | snake_case | `user_profiles` |
+| Files | kebab-case.ts | `customer-card.tsx` |
 
 ### Error Handling
 
@@ -419,7 +456,8 @@ const response: ApiResponse<User> = {
 ```
 feature/M1-authentication
 feature/M4-calculator
-fix/sync-engine-retry
+feature/M7b-purchases-suppliers
+fix/api-error-handling
 hotfix/database-connection
 ```
 
@@ -427,10 +465,10 @@ hotfix/database-connection
 
 ```
 feat: add login form
-feat: implement offline sync
-fix: resolve sync queue bug
+feat: implement purchase flow and supplier management
+fix: resolve API error bug
 docs: update API documentation
-refactor: simplify sync engine
+refactor: simplify service layer
 ```
 
 ### Pull Request Template
@@ -442,7 +480,7 @@ refactor: simplify sync engine
 ## Testing
 - [ ] Unit tests pass
 - [ ] Manual testing completed
-- [ ] Offline mode tested
+- [ ] API integration tested
 
 ## Checklist
 - [ ] Code follows style guidelines
@@ -483,10 +521,10 @@ bunx playwright test
 ### Test Scenarios
 
 **Critical Paths:**
-1. Login → Create sale → Sync → Verify on server
-2. Offline sale → Go online → Auto-sync
-3. Multiple offline sales → Batch sync
-4. Conflict resolution (simultaneous edits)
+1. Login → Create sale → Verify on server
+2. Purchase flow → Receive inventory → Verify stock
+3. Public catalog → Place pre-order → Verify on admin
+4. Customer payment → Verify balance update
 
 ---
 
@@ -519,7 +557,10 @@ cp .env.example .env
 cd packages/backend
 bun run db:migrate
 
-# 6. Start development
+# 6. Seed demo data (optional)
+bun run db:seed:demo
+
+# 7. Start development
 bun run dev
 ```
 
@@ -527,7 +568,7 @@ bun run dev
 
 ```bash
 # Database (Neon PostgreSQL)
-database_url="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+database_url="postgresql://.../db?sslmode=require"
 
 # JWT
 JWT_SECRET="min-32-characters-secret-key"
@@ -555,7 +596,7 @@ BETTER_AUTH_URL="http://localhost:3000"
 docker run -d \
   --name avileo-db \
   -e POSTGRES_USER=avileo \
-  -e POSTGRES_PASSWORD=avileo123 \
+  -e POSTGRES_PASSWORD=********* \
   -e POSTGRES_DB=avileo \
   -p 5432:5432 \
   postgres:16-alpine
@@ -573,12 +614,6 @@ docker run -d \
 # Verify tsconfig.json paths
 ```
 
-**Error: "Prisma Client not found"**
-```bash
-cd packages/backend
-bun run db:generate
-```
-
 **Error: "Database connection failed"**
 ```bash
 # Check PostgreSQL is running
@@ -588,10 +623,10 @@ docker ps
 # Ensure sslmode=require for Neon
 ```
 
-**Error: "Sync not working"**
+**Error: "API call failed"**
 ```bash
-# Check browser console for errors
-# Verify IndexedDB permissions
+# Check backend is running
+# Verify CORS settings
 # Check network tab for failed requests
 ```
 
@@ -622,10 +657,7 @@ bun install
 
 # Reset database
 cd packages/backend
-bun run db:push
-
-# Clear IndexedDB (browser)
-# DevTools → Application → IndexedDB → Delete database
+bun run db:reset
 ```
 
 ---
@@ -669,6 +701,7 @@ BETTER_AUTH_URL="https://api.avileo.com"
 - Railway
 - Render
 - Fly.io
+- Dokploy (self-hosted)
 
 **Database:**
 - Neon (PostgreSQL)
@@ -688,7 +721,9 @@ BETTER_AUTH_URL="https://api.avileo.com"
 ### Project Docs
 - `docs/technical/readme.md` - Technical plan
 - `docs/technical/database.md` - Database schema
-- `docs/development/readme.md` - Development phases
+- `docs/development/readme.md` - Development roadmap
+- `docs/screens/mobile-list-pattern.md` - Mobile UI patterns
+- `docs/OVERVIEW-FLUJOS.md` - Implementation status
 - `AGENTS.md` - Project conventions
 
 ---

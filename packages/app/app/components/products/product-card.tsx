@@ -2,7 +2,7 @@ import { DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
-import type { Product } from "@avileo/shared";
+import type { Product } from "~/hooks/use-products";
 import { getCategoryColor } from "~/lib/utils/category-colors";
 
 interface ProductCardProps {
@@ -15,7 +15,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
 
   return (
     <Card 
-      className={`shell-card-flat cursor-pointer rounded-[24px] transition-colors hover:border-stone-300/90 ${!product.isActive ? "opacity-60" : ""}`}
+      className={`shell-card-flat cursor-pointer rounded-[22px] border-0 bg-card/80 transition-colors hover:bg-accent/40 dark:bg-[#151821] dark:hover:bg-[#1a1d26] ${!product.isActive ? "opacity-60" : ""}`}
       onClick={onClick}
     >
       <CardContent className="p-4">
@@ -34,7 +34,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
               </h3>
               <Badge
                 variant="secondary"
-                className="rounded-full border-0 px-2.5 py-1 text-xs font-medium"
+                className="rounded-full border-0 bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
                 style={category ? {
                   backgroundColor: `${getCategoryColor(category.color)}20`,
                   color: getCategoryColor(category.color),
@@ -55,8 +55,8 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
                 variant="secondary" 
                 className={`rounded-full border-0 px-2.5 py-1 text-xs font-medium ${
                   product.isActive
-                    ? "bg-green-100/90 text-green-700"
-                    : "bg-stone-100 text-stone-500"
+                    ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {product.isActive ? "Activo" : "Inactivo"}

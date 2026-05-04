@@ -102,7 +102,7 @@ export default function ProductsPage() {
               className={cn(
                 "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
                 selectedCategoryId === "uncategorized"
-                  ? "bg-gray-500 text-white"
+                  ? "bg-foreground text-background"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >

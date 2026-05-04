@@ -109,6 +109,8 @@ export function useCreateVariant() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.variants.byProduct(variables.productId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(variables.productId) });
     },
   });
 }
@@ -177,8 +179,9 @@ export function useReorderVariants() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.variants.byProduct(variables.productId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(variables.productId) });
     },
   });
 }
-
 

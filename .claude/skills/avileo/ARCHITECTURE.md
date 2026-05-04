@@ -1,15 +1,14 @@
 # Avileo Architecture
 
-> Technical architecture and patterns for the offline-first chicken sales management system.
+> Technical architecture and patterns for the online-first chicken sales management system.
 
 ## Table of Contents
 
 1. [System Architecture](#system-architecture)
-2. [Offline-First Design](#offline-first-design)
-3. [Technology Stack](#technology-stack)
-4. [Package Structure](#package-structure)
-5. [Data Flow](#data-flow)
-6. [Code Patterns](#code-patterns)
+2. [Technology Stack](#technology-stack)
+3. [Package Structure](#package-structure)
+4. [Data Flow](#data-flow)
+5. [Code Patterns](#code-patterns)
 
 ---
 
@@ -24,125 +23,43 @@
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │  REACT APP (React Router v7)                                │    │
 │  │  ├─ UI Components (shadcn/ui)                               │    │
-│  │  ├─ TanStack Query (HTTP cache)                            │    │
-│  │  └─ TanStack DB (Reactive state)                           │    │
+│  │  ├─ TanStack Query (Server state, caching)                 │    │
+│  │  └─ Jotai (Client state, modals)                           │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                              │                                       │
 │  ┌───────────────────────────▼─────────────────────────────────┐    │
-│  │  TANSTACK DB COLLECTIONS                                     │    │
-│  │  ├─ ventasCollection                                         │    │
-│  │  ├─ clientesCollection                                       │    │
-│  │  ├─ inventarioCollection                                     │    │
-│  │  └─ syncQueueCollection (Operation queue)                  │    │
+│  │  EDEN TREATY API CLIENT                                      │    │
+│  │  ├─ Type-safe API calls to Elysia backend                   │    │
+│  │  └─ Automatic request/response typing                       │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                              │                                       │
 │  ┌───────────────────────────▼─────────────────────────────────┐    │
-│  │  INDEXEDDB (Local Persistence)                              │    │
-│  │  ├─ Auto-saves collections                                  │    │
-│  │  ├─ Loads on app startup                                    │    │
-│  │  └─ Capacity: ~50-100 MB per origin                         │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│  ┌───────────────────────────▼─────────────────────────────────┐    │
-│  │  SYNC ENGINE (Custom Implementation)                        │    │
-│  │  ├─ Detects collection changes                              │    │
-│  │  ├─ Online: sends to server                                 │    │
-│  │  ├─ Offline: saves to queue                                 │    │
-│  │  └─ Exponential backoff retry                               │    │
+│  │  PWA CACHE (Optional)                                        │    │
+│  │  ├─ Basic asset caching                                     │    │
+│  │  └─ Limited offline resilience                              │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ┌───────────────┴───────────────┐
                     │      CONNECTION (HTTP/REST)   │
-                    │      (When available)         │
+                    │      (Required for operation) │
                     └───────────────┬───────────────┘
                                     │
 ┌───────────────────────────────────▼─────────────────────────────────┐
 │                         SERVER (Cloud)                               │
 │  ├─ API REST (ElysiaJS + Bun)                                       │
 │  ├─ PostgreSQL (Neon) - Source of truth                             │
-│  └─ WebSocket optional (real-time sync)                             │
+│  └─ Better Auth - Authentication                                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Architecture Principles
 
-1. **Offline-First**: App works without internet by default
-2. **Optimistic UI**: Updates UI immediately, syncs in background
-3. **Eventual Consistency**: Data converges when connectivity returns
-4. **Multi-Tenancy**: Single user, multiple businesses
-5. **Flexible Modes**: Adaptable to different business models
-
----
-
-## Offline-First Design
-
-### Core Concept
-
-The application is designed to function **100% without internet**. Network connectivity is treated as an enhancement, not a requirement.
-
-### Data Storage Stack
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **UI State** | React + TanStack DB | Reactive collections |
-| **Local Cache** | TanStack Query | HTTP response cache |
-| **Persistent Storage** | IndexedDB + idb-keyval | Long-term local storage |
-| **Sync Queue** | Custom Sync Engine | Pending operations |
-
-### Offline Data Flow
-
-```
-VENDOR MAKES A SALE (No Internet)
-
-1. Completes sale form
-2. Clicks "Register"
-        ↓
-3. TanStack DB saves to memory (UI updates)
-        ↓
-4. IndexedDB persists locally (automatic)
-        ↓
-5. SyncEngine detects: NO internet
-        ↓
-6. Saves to pending operations queue
-        ↓
-7. Shows: "✅ Sale saved. Will sync later."
-
-─────────────────────────────────────────
-
-WHEN INTERNET RETURNS
-
-1. Browser detects 'online' event
-2. SyncEngine.processQueue() runs
-3. Sends pending operations (FIFO order)
-4. Server confirms each operation
-5. Updates status to 'synced'
-6. UI shows: "🟢 Synchronized"
-```
-
-### Sync Strategy
-
-**Retry Strategy (Exponential Backoff):**
-```
-Attempt 1: Immediate
-Attempt 2: After 2 seconds
-Attempt 3: After 4 seconds
-Attempt 4: After 8 seconds
-Maximum: 3-5 attempts, then mark as error
-```
-
-**Conflict Resolution:**
-- Strategy: "Last write wins"
-- Notification shown when conflict detected
-- Manual resolution for critical conflicts
-
-### Offline Duration Support
-
-| Scenario | Offline Duration | Data Stored |
-|----------|-----------------|-------------|
-| Normal operation | Full days | ~10-20 sales/day = < 1 MB |
-| High demand | 1 week | ~100 sales = ~5 MB |
-| Technical limit | ~1 month | 50-100 MB (IndexedDB limit) |
+1. **Online-First**: Full functionality requires internet connection
+2. **Optimistic UI**: Updates UI immediately, confirms with server
+3. **Multi-Tenancy**: Single user, multiple businesses
+4. **Flexible Modes**: Adaptable to different business models
+5. **Unified Sales**: Single `sales` table for both instant sales and pre-orders
 
 ---
 
@@ -157,9 +74,10 @@ Maximum: 3-5 attempts, then mark as error
 | **Vite** | 5.x | Build tool |
 | **Tailwind CSS** | 3.x | Styling |
 | **shadcn/ui** | latest | UI components |
-| **TanStack DB** | latest | Reactive collections |
-| **TanStack Query** | 5.x | HTTP cache |
+| **TanStack Query** | 5.x | Server state, caching |
+| **Jotai** | latest | Client state |
 | **Better Auth** | latest | Authentication |
+| **Eden Treaty** | latest | Type-safe API client |
 | **Framer Motion** | 11.x | Animations |
 | **Lucide React** | latest | Icons |
 
@@ -181,6 +99,7 @@ Maximum: 3-5 attempts, then mark as error
 | **TypeScript** | Shared types |
 | **tsup** | Build tool |
 | **Zod schemas** | Validation schemas |
+| **Decimal transformers** | Backend ↔ UI conversion |
 
 ---
 
@@ -195,11 +114,15 @@ avileo/
 │   │   ├── app/
 │   │   │   ├── routes/          # File-based routing
 │   │   │   │   ├── _index.tsx   # Home route
-│   │   │   │   ├── sales.tsx    # Sales routes
+│   │   │   │   ├── _protected.* # Protected routes
+│   │   │   │   ├── venta.$slug  # Public catalog
 │   │   │   │   └── ...
 │   │   │   ├── components/      # React components
 │   │   │   ├── hooks/           # Custom hooks
-│   │   │   ├── lib/             # Utilities
+│   │   │   ├── lib/
+│   │   │   │   ├── db/          # Zod entity schemas
+│   │   │   │   ├── api-client.ts # Eden Treaty client
+│   │   │   │   └── ...
 │   │   │   └── root.tsx         # Root layout
 │   │   ├── package.json
 │   │   └── vite.config.ts
@@ -207,27 +130,31 @@ avileo/
 │   ├── backend/
 │   │   ├── src/
 │   │   │   ├── db/
-│   │   │   │   ├── schema/      # Drizzle schema files
+│   │   │   │   ├── schema/      # Drizzle schema files (25+ tables)
 │   │   │   │   │   ├── enums.ts
-│   │   │   │   │   ├── user-profiles.ts
 │   │   │   │   │   ├── businesses.ts
 │   │   │   │   │   ├── customers.ts
 │   │   │   │   │   ├── sales.ts
 │   │   │   │   │   ├── payments.ts
 │   │   │   │   │   ├── inventory.ts
-│   │   │   │   │   ├── config.ts
-│   │   │   │   │   ├── relations.ts
-│   │   │   │   │   └── index.ts
+│   │   │   │   │   ├── purchases.ts
+│   │   │   │   │   ├── suppliers.ts
+│   │   │   │   │   └── ...
 │   │   │   │   └── lib/
 │   │   │   │       └── db.ts    # Database connection
-│   │   │   ├── routes/          # API routes
+│   │   │   ├── api/             # API routes
+│   │   │   ├── services/        # Repository + business layer
+│   │   │   │   ├── repository/  # Data access
+│   │   │   │   ├── business/    # Business logic
+│   │   │   │   └── sync/        # Sync handlers
 │   │   │   └── index.ts         # Entry point
 │   │   ├── drizzle.config.ts
 │   │   └── package.json
 │   │
 │   └── shared/
 │       ├── src/
-│       │   └── index.ts         # Shared types & exports
+│       │   ├── schema.ts        # Shared Zod schemas
+│       │   └── transformers/    # Decimal transformers
 │       ├── package.json
 │       └── tsup.config.ts
 │
@@ -248,6 +175,7 @@ import { users } from "../db/schema/users";
 ```typescript
 // Use ~/* or @/* for app imports
 import { Component } from "~/components/Button";
+import { useAuth } from "~/hooks/useAuth";
 ```
 
 **Cross-package:**
@@ -260,40 +188,25 @@ import type { ApiResponse } from "@avileo/shared";
 
 ## Data Flow
 
-### Sale Creation Flow (Offline)
+### Sale Creation Flow
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Vendor    │───▶│  React UI   │───▶│ TanStack DB │───▶│  IndexedDB  │
-│   Action    │    │   Form      │    │  Collection │    │  Storage    │
+│   Vendor    │───▶│  React UI   │───▶│   API Call  │───▶│   Elysia    │
+│   Action    │    │   Form      │    │  (Eden)     │    │   Backend   │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
                                                           │
                                                           ▼
                                                    ┌─────────────┐
-                                                   │  Sync Queue │
-                                                   │  (pending)  │
+                                                   │ PostgreSQL  │
+                                                   │   (Neon)    │
                                                    └─────────────┘
-```
-
-### Sync Flow (When Online)
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Sync Queue  │───▶│   Sync      │───▶│   Elysia    │───▶│ PostgreSQL  │
-│ (pending)   │    │   Engine    │    │   API       │    │   (Neon)    │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-       │                                                       │
-       │         ┌─────────────┐                               │
-       └────────▶│   Update    │◀──────────────────────────────┘
-                 │   Status    │
-                 │  (synced)   │
-                 └─────────────┘
 ```
 
 ### Authentication Flow
 
 ```
-First Login (Requires Internet):
+Login (Requires Internet):
 ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
 │  User   │───▶│  Login  │───▶│ Better  │───▶│  JWT    │
 │         │    │  Form   │    │  Auth   │    │  Token  │
@@ -301,21 +214,23 @@ First Login (Requires Internet):
                                                    │
                                                    ▼
                                             ┌─────────┐
-                                            │ IndexedDB
-                                            │ (cache) │
+                                            │  Server │
+                                            │  (Neon) │
                                             └─────────┘
+```
 
-Subsequent Access (Offline):
-┌─────────┐    ┌─────────┐    ┌─────────┐
-│  User   │───▶│  Check  │───▶│  JWT    │
-│         │    │  Cache  │    │  Valid  │
-└─────────┘    └─────────┘    └────┬────┘
-                                   │
-                                   ▼
-                            ┌─────────┐
-                            │  Allow  │
-                            │  Access │
-                            └─────────┘
+### Data Fetching Flow (TanStack Query)
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  React UI   │───▶│  useQuery   │───▶│  Eden API   │
+│             │    │  (cache)    │    │  Client     │
+└─────────────┘    └─────────────┘    └──────┬──────┘
+       │                                     │
+       │         ┌─────────────┐             │
+       └────────▶│   Display   │◀────────────┘
+                 │   Data      │
+                 └─────────────┘
 ```
 
 ---
@@ -344,7 +259,7 @@ return new Response(
 ### Backend Route Pattern (ElysiaJS)
 
 ```typescript
-// packages/backend/src/routes/sales.ts
+// packages/backend/src/api/sales.ts
 import { Elysia } from "elysia";
 import { db } from "../lib/db";
 import { sales } from "../db/schema/sales";
@@ -379,25 +294,23 @@ export default function SalesPage({ loaderData }: Route.ComponentProps) {
 }
 ```
 
-### Offline Collection Pattern
+### Data Fetching Pattern (TanStack Query + Eden)
 
 ```typescript
-// Using TanStack DB for reactive offline collections
-import { collection } from "@tanstack/db";
+// hooks/use-customers.ts
+import { useQuery } from "@tanstack/react-query";
+import { api } from "~/lib/api-client";
 
-const ventasCollection = collection({
-  id: "ventas",
-  schema: ventaSchema,
-  persistence: {
-    type: "indexeddb",
-    dbName: "avileo-db",
-  },
-  sync: {
-    enabled: true,
-    endpoint: "/api/sales",
-    strategy: "queue", // Queue when offline
-  },
-});
+export function useCustomers() {
+  return useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await api.customers.get();
+      if (error) throw new Error(String(error.value));
+      return data as unknown as Customer[];
+    },
+  });
+}
 ```
 
 ### Error Handling Pattern
@@ -405,8 +318,8 @@ const ventasCollection = collection({
 ```typescript
 // Backend structured error
 return new Response(
-  JSON.stringify({ 
-    success: false, 
+  JSON.stringify({
+    success: false,
     error: "Invalid sale data",
     code: "SALE_VALIDATION_ERROR"
   }),
@@ -426,7 +339,7 @@ return new Response(
 
 ```bash
 # Database
-database_url="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+database_url="postgresql://.../db?sslmode=require"
 
 # JWT
 JWT_SECRET="min-32-characters-secret-key"
@@ -445,26 +358,20 @@ BETTER_AUTH_URL="http://localhost:3000"
 **Neon PostgreSQL:**
 - Always use `sslmode=require`
 - Connection pooling recommended for serverless
-- Read replicas for reporting queries
 
 ---
 
 ## Performance Considerations
 
-### Offline Storage Limits
-- IndexedDB: 50-100 MB per origin
-- Sufficient for weeks of operation
-- Automatic cleanup of synced data (configurable)
-
-### Sync Optimization
-- Batch operations when possible
-- Compression for large payloads
-- Delta sync (only changed fields)
-
 ### Bundle Size
 - Tree-shaking with Vite
 - Lazy load routes
 - Dynamic imports for heavy components
+
+### API Optimization
+- TanStack Query caching
+- Pagination for large lists
+- Optimistic updates
 
 ---
 
@@ -481,7 +388,7 @@ BETTER_AUTH_URL="http://localhost:3000"
 - Resource ownership validation
 
 ### Data Protection
-- Passwords hashed with bcrypt
+- Passwords hashed with bcrypt (Better Auth)
 - Input validation with Zod
 - SQL injection protection (Drizzle ORM)
 - XSS protection (React escapes by default)

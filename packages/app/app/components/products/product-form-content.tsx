@@ -20,7 +20,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
   } = form;
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl">
+    <Card className="shell-card-flat rounded-[22px] border-0 bg-card/80 shadow-none dark:bg-[#151821]">
       <CardHeader>
         <CardTitle className="text-xl">
           {product ? "Editar Producto" : "Información del Producto"}
@@ -37,7 +37,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
             data-testid="product-name-input"
             placeholder="Nombre del producto"
             {...register("name")}
-            className="rounded-xl"
+            className="shell-field rounded-xl"
           />
           {errors.name && (
             <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -68,7 +68,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
             id="unit"
             data-testid="product-unit-select"
             {...register("unit")}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="shell-field h-11 w-full rounded-xl px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             <option value="kg">Kilogramo (kg)</option>
             <option value="unidad">Unidad</option>
@@ -88,7 +88,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
             data-testid="product-baseprice-input"
             placeholder="0.00"
             {...register("basePrice")}
-            className="rounded-xl"
+            className="shell-field rounded-xl"
           />
           {errors.basePrice && (
             <p className="text-sm text-red-500">{errors.basePrice.message}</p>
@@ -101,7 +101,7 @@ export function ProductFormContent({ form, product }: ProductFormContentProps) {
               id="isActive"
               type="checkbox"
               {...register("isActive")}
-              className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+              className="h-4 w-4 rounded border-border text-orange-500 focus:ring-orange-500"
             />
             <span>Activo</span>
           </Label>

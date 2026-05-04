@@ -85,7 +85,7 @@ export function createModal<TProps extends object>(
       if (isMobile) {
         return (
           <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-            <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
+            <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden p-0">
               {content}
             </DrawerContent>
           </Drawer>
@@ -106,7 +106,7 @@ export function createModal<TProps extends object>(
     if (config.type === "drawer") {
       return (
         <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-          <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
+          <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden p-0">
             {content}
           </DrawerContent>
         </Drawer>
@@ -129,7 +129,7 @@ export function createModal<TProps extends object>(
     // Default to drawer for mobile-first approach
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && close()}>
-        <DrawerContent className="flex flex-col overflow-hidden p-0 max-h-[85vh]">
+        <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden p-0">
           {content}
         </DrawerContent>
       </Drawer>

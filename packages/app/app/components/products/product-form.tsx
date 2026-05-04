@@ -53,10 +53,13 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
     setValue,
     formState: { errors, isValid },
   } = form;
+  const saveDisabledReason = !isValid
+    ? "Completa nombre, unidad y precio para guardar."
+    : null;
 
   return (
     <FormProvider {...form}>
-    <Card className="border border-gray-100 shadow-none rounded-xl">
+    <Card className="shell-card-flat rounded-[22px] border-0 bg-card/80 shadow-none dark:bg-[#151821]">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-base font-semibold">Información del Producto</CardTitle>
       </CardHeader>
@@ -68,7 +71,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             data-testid="product-name-input"
             placeholder="Nombre del producto"
             {...register("name")}
-            className="rounded-lg"
+            className="shell-field rounded-xl"
           />
           {errors.name && (
             <p className="text-xs text-red-500">{errors.name.message}</p>
@@ -79,7 +82,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
           <Label className="text-sm">Imagen del producto</Label>
           <AssetPicker
             value={watch("imageId")}
-            onChange={(id) => setValue("imageId", id)}
+            onChange={(id) => setValue("imageId", id, { shouldDirty: true })}
             placeholder="Seleccionar imagen"
           />
         </div>
@@ -98,7 +101,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             id="unit"
             data-testid="product-unit-select"
             {...register("unit")}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="shell-field h-11 w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="kg">Kilogramo (kg)</option>
             <option value="unidad">Unidad</option>
@@ -109,9 +112,9 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         </div>
 
         {hasVariants && (
-          <Alert className="bg-orange-50 border-orange-200 rounded-lg">
+          <Alert className="rounded-xl border-orange-500/20 bg-orange-500/10">
             <Info className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-xs text-orange-800">
+            <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
               Este producto tiene {variantCount} {variantCount === 1 ? "variante" : "variantes"} con precios propios.
               El precio base solo se usa como referencia.
             </AlertDescription>
@@ -125,7 +128,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             data-testid="product-baseprice-input"
             placeholder="0.00"
             {...register("basePrice")}
-            className="rounded-lg"
+            className="shell-field rounded-xl"
           />
           {errors.basePrice && (
             <p className="text-xs text-red-500">{errors.basePrice.message}</p>
@@ -138,7 +141,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
               id="isActive"
               type="checkbox"
               {...register("isActive")}
-              className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+              className="h-4 w-4 rounded border-border text-orange-500 focus:ring-orange-500"
             />
             <span className="text-sm">Activo</span>
           </Label>
@@ -146,10 +149,11 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
 
         <div className="flex gap-2 pt-2">
           <Button
+            type="button"
             data-testid="save-product-button"
             onClick={handleSubmit(onSubmit)}
             disabled={isLoading || !isValid}
-            className="flex-1 rounded-lg bg-orange-500 hover:bg-orange-600"
+            className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600"
           >
             {isLoading
               ? "Guardando..."
@@ -162,13 +166,16 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             <Button
               type="button"
               variant="outline"
-              className="rounded-lg"
+              className="rounded-xl"
               onClick={onCancel}
             >
               Cancelar
             </Button>
           )}
         </div>
+        {saveDisabledReason && (
+          <p className="text-xs text-muted-foreground">{saveDisabledReason}</p>
+        )}
       </CardContent>
     </Card>
     </FormProvider>

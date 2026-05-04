@@ -62,102 +62,14 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
   });
 
   return (
-    <Card className="border-0 shadow-lg rounded-3xl">
+    <Card className="shell-card-flat rounded-[22px] border-0 bg-card/80 shadow-none dark:bg-[#151821]">
       <CardHeader>
         <CardTitle className="text-xl">
           {isEditing ? "Editar Variante" : "Nueva Variante"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Nombre *
-          </Label>
-          <Input
-            id="name"
-            data-testid="variant-name-input"
-            placeholder="Ej: Jaba 30 unidades"
-            {...register("name")}
-            className="rounded-xl"
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500">{errors.name.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="sku" className="flex items-center gap-2">
-            <Hash className="h-4 w-4" />
-            SKU (opcional)
-          </Label>
-          <Input
-            id="sku"
-            data-testid="variant-sku-input"
-            placeholder="Ej: SKU-001"
-            {...register("sku")}
-            className="rounded-xl"
-          />
-          {errors.sku && (
-            <p className="text-sm text-red-500">{errors.sku.message}</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="unitQuantity" className="flex items-center gap-2">
-              <Scale className="h-4 w-4" />
-              Cantidad Unit. *
-            </Label>
-            <NumericInput
-              id="unitQuantity"
-              data-testid="variant-unitquantity-input"
-              decimals={3}
-              {...register("unitQuantity", {
-                setValueAs: (value) =>
-                  value === "" ? undefined : Number.parseFloat(value),
-              })}
-              className="rounded-xl"
-            />
-            {errors.unitQuantity && (
-              <p className="text-sm text-red-500">{errors.unitQuantity.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="price" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Precio (S/) *
-            </Label>
-            <NumericInput
-              id="price"
-              data-testid="variant-price-input"
-              decimals={2}
-              {...register("price", {
-                setValueAs: (value) =>
-                  value === "" ? undefined : Number.parseFloat(value),
-              })}
-              className="rounded-xl"
-            />
-            {errors.price && (
-              <p className="text-sm text-red-500">{errors.price.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">
-            <input
-              id="isActive"
-              type="checkbox"
-              {...register("isActive")}
-              className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-            />
-            <span>Activo</span>
-          </Label>
-        </div>
-
-        <div className="flex gap-3 pt-4">
+        <div className="flex gap-3">
           <Button
             type="button"
             onClick={handleSubmit(onSubmit)}
@@ -184,6 +96,95 @@ export function VariantForm({ onSubmit, onCancel, isLoading, variant }: VariantF
             </Button>
           )}
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="name" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Nombre *
+          </Label>
+          <Input
+            id="name"
+            data-testid="variant-name-input"
+            placeholder="Ej: Jaba 30 unidades"
+            {...register("name")}
+            className="shell-field rounded-xl"
+          />
+          {errors.name && (
+            <p className="text-sm text-red-500">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sku" className="flex items-center gap-2">
+            <Hash className="h-4 w-4" />
+            SKU (opcional)
+          </Label>
+          <Input
+            id="sku"
+            data-testid="variant-sku-input"
+            placeholder="Ej: SKU-001"
+            {...register("sku")}
+            className="shell-field rounded-xl"
+          />
+          {errors.sku && (
+            <p className="text-sm text-red-500">{errors.sku.message}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="unitQuantity" className="flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Cantidad Unit. *
+            </Label>
+            <NumericInput
+              id="unitQuantity"
+              data-testid="variant-unitquantity-input"
+              decimals={3}
+              {...register("unitQuantity", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number.parseFloat(value),
+              })}
+              className="shell-field rounded-xl"
+            />
+            {errors.unitQuantity && (
+              <p className="text-sm text-red-500">{errors.unitQuantity.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="price" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Precio (S/) *
+            </Label>
+            <NumericInput
+              id="price"
+              data-testid="variant-price-input"
+              decimals={2}
+              {...register("price", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number.parseFloat(value),
+              })}
+              className="shell-field rounded-xl"
+            />
+            {errors.price && (
+              <p className="text-sm text-red-500">{errors.price.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">
+            <input
+              id="isActive"
+              type="checkbox"
+              {...register("isActive")}
+              className="h-4 w-4 rounded border-border text-orange-500 focus:ring-orange-500"
+            />
+            <span>Activo</span>
+          </Label>
+        </div>
+
       </CardContent>
     </Card>
   );

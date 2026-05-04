@@ -68,24 +68,25 @@ export default function ProductDetailPage() {
     if (!id) return;
 
     try {
-      // For simple products (no variants), update the variant price directly
-      // This generates a single sync operation instead of two
-      if (isSimpleProduct && variants && variants.length > 0) {
-        const variantId = variants[0].id;
-        await updateVariant.mutateAsync({
-          id: variantId,
-          input: { price: data.basePrice },
-        });
-        toast.success("Producto actualizado");
-        navigate(`/productos/${id}`);
-        return;
-      }
-
-      // For products with variants, basePrice is just a reference - no need to update
       await updateProduct.mutateAsync({
         id,
         input: data,
       });
+
+      if (isSimpleProduct && variants && variants.length > 0) {
+        const variantId = variants[0].id;
+        await updateVariant.mutateAsync({
+          id: variantId,
+          input: {
+            name: data.name,
+            unitQuantity: 1,
+            price: Number.parseFloat(data.basePrice),
+            isActive: data.isActive,
+          },
+        });
+        await refetchVariants();
+      }
+
       toast.success("Producto actualizado");
       navigate(`/productos/${id}`);
     } catch (error) {
@@ -94,16 +95,15 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleVariantSubmit = async (data: VariantFormData) => {
+  const handleVariantSubmit = async (data: VariantFormData, variantId?: string) => {
     if (!id) return;
 
-    const isEditing = variantModal.data?.isEditing;
-    const editingVariantId = variantModal.data?.variant?.id;
+    const isEditing = !!variantId;
 
     try {
-      if (isEditing && editingVariantId) {
+      if (variantId) {
         await updateVariant.mutateAsync({
-          id: editingVariantId,
+          id: variantId,
           input: {
             name: data.name,
             sku: data.sku,
@@ -127,7 +127,7 @@ export default function ProductDetailPage() {
         toast.success("Variante creada");
       }
 
-      refetchVariants();
+      await refetchVariants();
     } catch (error) {
       console.error("Error saving variant:", error);
       toast.error(isEditing ? "Error al actualizar la variante" : "Error al crear la variante");
@@ -137,7 +137,7 @@ export default function ProductDetailPage() {
   const handleVariantEdit = (variant: ProductVariant) => {
     variantModal.open({
       variant,
-      onSubmit: handleVariantSubmit,
+      onSubmit: (data) => handleVariantSubmit(data, variant.id),
       isLoading: createVariant.isPending || updateVariant.isPending,
       isEditing: true,
     });
@@ -145,7 +145,7 @@ export default function ProductDetailPage() {
 
   const handleVariantAdd = () => {
     variantModal.open({
-      onSubmit: handleVariantSubmit,
+      onSubmit: (data) => handleVariantSubmit(data),
       isLoading: createVariant.isPending || updateVariant.isPending,
       isEditing: false,
     });
@@ -163,7 +163,7 @@ export default function ProductDetailPage() {
       try {
         await deactivateVariant.mutateAsync(variantId);
         toast.success("Variante desactivada");
-        refetchVariants();
+        await refetchVariants();
       } catch (error) {
         console.error("Error deactivating variant:", error);
         toast.error("Error al desactivar la variante");
@@ -175,7 +175,7 @@ export default function ProductDetailPage() {
     if (!id) return;
     try {
       await reorderVariants.mutateAsync({ productId: id, variantIds });
-      refetchVariants();
+      await refetchVariants();
     } catch (error) {
       console.error("Error reordering variants:", error);
       toast.error("Error al reordenar las variantes");
@@ -238,7 +238,7 @@ export default function ProductDetailPage() {
               {product.category.name}
             </Badge>
           ) : (
-            <Badge className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-700">
+            <Badge className="bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
               Sin categoría
             </Badge>
           )}
@@ -248,13 +248,13 @@ export default function ProductDetailPage() {
       <MobileSlot name="header:right" priority={10}>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-semibold text-orange-600 text-sm">S/ {product.basePrice}</span>
-          <span className="text-gray-300">|</span>
+          <span className="text-border">|</span>
           <Badge
             variant={product.isActive ? "default" : "secondary"}
             className={`text-[10px] px-1.5 py-0 ${
               product.isActive
-                ? "bg-green-100 text-green-700 hover:bg-green-100"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                ? "bg-emerald-500/12 text-emerald-700 hover:bg-emerald-500/12 dark:text-emerald-300"
+                : "bg-muted text-muted-foreground hover:bg-muted"
             }`}
           >
             {product.isActive ? "Activo" : "Inactivo"}
@@ -273,7 +273,7 @@ export default function ProductDetailPage() {
         />
 
         {/* Variants Toggle */}
-        <div className="rounded-xl border border-gray-100 bg-white p-3">
+        <div className="rounded-[22px] border-0 bg-card/80 p-3 shadow-none dark:bg-[#151821]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Layers className="h-4 w-4 text-orange-500" />
@@ -297,7 +297,7 @@ export default function ProductDetailPage() {
                 disabled={hasMultipleVariants}
                 className="sr-only peer"
               />
-              <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+              <div className="peer h-5 w-10 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:cursor-not-allowed peer-disabled:opacity-50"></div>
             </label>
           </div>
         </div>

@@ -13,7 +13,7 @@ description: Avileo - Online-first chicken sales management system. Use when wor
 
 ## Project Overview
 
-Avileo is a comprehensive sales management system designed for chicken businesses. It operates as an online-first web application with PWA capabilities, serving vendors and administrators through a mobile-optimized interface.
+Avileo is a comprehensive sales management system designed for chicken businesses. It operates as an **online-first** web application with PWA capabilities, serving vendors and administrators through a mobile-optimized interface.
 
 ### Key Characteristics
 
@@ -22,6 +22,7 @@ Avileo is a comprehensive sales management system designed for chicken businesse
 - **Flexible Operation Modes**: Supports various business models
 - **Mobile-First**: Designed for vendors using mobile devices
 - **Real-time Dashboard**: Admin panel with live data
+- **Unified Sales**: Single `sales` table supports both instant sales (`instant_sale`) and pre-orders (`pre_order`)
 
 ### Business Problem Solved
 
@@ -40,6 +41,7 @@ Traditional chicken businesses operate manually:
 - Inventory assignment to vendors (optional)
 - Real-time collection tracking
 - WhatsApp integration for notifications
+- Public catalog for customer pre-orders
 
 ## Project Structure
 
@@ -51,7 +53,8 @@ avileo/
 │   └── shared/           # Shared types & utilities (@avileo/shared)
 ├── docs/
 │   ├── technical/        # Architecture & database docs
-│   └── development/      # Development phases
+│   ├── development/      # Development phases
+│   └── screens/          # UI patterns, mobile list pattern
 ├── .claude/
 │   └── skills/avileo/    # This skill
 └── package.json          # Turborepo root
@@ -68,7 +71,10 @@ avileo/
 | **ORM** | Drizzle ORM | latest |
 | **Auth** | Better Auth | latest |
 | **State (Server)** | TanStack Query | 5.x |
-| **State (Client)** | Jotai / Zustand | latest |
+| **State (Client)** | Jotai | latest |
+| **API Client** | Eden Treaty | latest |
+| **Styling** | Tailwind CSS | 3.x |
+| **UI** | shadcn/ui | latest |
 
 ## Quick Reference
 
@@ -92,6 +98,17 @@ cd packages/backend
 bun run db:generate  # Generate migration files
 bun run db:migrate   # Run pending migrations
 bun run db:push      # Push schema changes (dev only)
+bun run db:reset     # Reset database (keeps demo user)
+bun run db:seed:demo # Seed demo account data
+bun run db:studio    # Open Drizzle Studio
+```
+
+### Testing Commands
+```bash
+cd packages/app && bun test              # Vitest unit tests
+cd packages/app && bun run test:e2e      # Playwright E2E tests
+cd packages/backend && bun test          # Backend unit tests
+cd packages/backend && bun run test:e2e  # Backend E2E tests
 ```
 
 ## Operation Modes
@@ -105,41 +122,45 @@ The system supports 4 modes configurable per business:
 
 ### Mode Configuration
 ```typescript
-interface ConfiguracionSistema {
-  modo_operacion: 'inventario_propio' | 'sin_inventario' | 'pedidos' | 'mixto';
-  control_kilos: boolean;        // Track stock
-  usar_distribucion: boolean;    // Use daily distribution
-  permitir_venta_sin_stock: boolean; // Allow sales without assigned stock
+interface BusinessConfig {
+  controlKilos: boolean;        // Track stock
+  usarDistribucion: boolean;    // Use daily distribution
+  permitirVentaSinStock: boolean; // Allow sales without assigned stock
+  publicCatalogEnabled: boolean;  // Enable public customer catalog
 }
 ```
 
 ## Core Modules
 
-| Module | Description |
-|--------|-------------|
-| **Authentication** | Login/logout with JWT |
-| **Users & Roles** | Admin and vendor management |
-| **Calculator** | Price calculations with tare |
-| **Sales** | Cash and credit sales |
-| **Customers** | Accounts receivable |
-| **Abonos** | Debt payments |
-| **Distribution** | Daily inventory assignment |
-| **Purchases** | Buy inventory from suppliers |
-| **Products** | Product catalog with variants |
-| **Suppliers** | Vendor management |
-| **Visitas** | Customer visit tracking |
-| **Reports** | Dashboard and analytics |
-| **WhatsApp** | Notifications and templates |
-| **Team** | Staff invitations and management |
+| Module | Description | Status |
+|--------|-------------|--------|
+| **Authentication** | Login/logout with JWT (Better Auth) | ✅ |
+| **Users & Roles** | Admin and vendor management, staff invitations | ✅ |
+| **Calculator** | Price calculations with tare (sales, orders, purchases) | ✅ |
+| **Sales** | Cash and credit sales, unified with pre-orders | ✅ |
+| **Customers** | Accounts receivable, tags, groups | ✅ |
+| **Abonos** | Debt payments, linked to sales | ✅ |
+| **Distribution** | Daily inventory assignment to vendors | ✅ |
+| **Purchases** | Buy inventory from suppliers | ✅ |
+| **Products** | Product catalog with variants, categories, units | ✅ |
+| **Suppliers** | Vendor/supplier management | ✅ |
+| **Visitas** | Customer visit tracking linked to distributions | ✅ |
+| **Cierre** | Daily closing reports | ✅ |
+| **Public Catalog** | Customer-facing pre-order page | ✅ |
+| **Payment Methods** | Configurable payment methods per business | ✅ |
+| **WhatsApp** | Templates and messaging | ✅ |
+| **Reports** | Dashboard and analytics | ⚠️ Partial |
 
 ## Documentation Structure
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture and patterns
-- **[DATABASE.md](DATABASE.md)** - Database schema, relations
+- **[DATABASE.md](DATABASE.md)** - Database schema, relations, enums
 - **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
 - **[referencias/toolbar-actions.md](referencias/toolbar-actions.md)** - ToolbarActions component pattern
-- **[referencias/file-upload-pattern.md](referencias/file-upload-pattern.md)** - File upload pattern with mobile camera support and payment proof integration
+- **[referencias/file-upload-pattern.md](referencias/file-upload-pattern.md)** - File upload with mobile camera support
+- **[referencias/public-catalog-pattern.md](referencias/public-catalog-pattern.md)** - Public catalog pattern
+- **[referencias/cierre-pattern.md](referencias/cierre-pattern.md)** - Cierre del dia pattern
 
 ## Important Constraints
 
@@ -160,16 +181,16 @@ interface ConfiguracionSistema {
 - `docs/technical/readme.md` - Main technical plan
 - `docs/technical/database.md` - Complete ER diagram
 - `docs/development/readme.md` - Development roadmap
+- `docs/screens/mobile-list-pattern.md` - Mobile UI patterns
+- `docs/OVERVIEW-FLUJOS.md` - Implementation status per screen
 - `AGENTS.md` - Project conventions and commands
 
 ### Code
 - `packages/backend/src/db/schema/` - Drizzle schema files
 - `packages/app/app/routes/` - Frontend routes
 - `packages/shared/src/index.ts` - Shared types
-- `packages/shared/src/transformers/` - Decimal/entity transformers (see below)
-- `packages/app/app/components/forms/form-media-field.tsx` - File upload component with mobile camera support
-- `packages/app/app/components/ui/camera-gallery-drawer.tsx` - Mobile camera/gallery drawer
-- `packages/app/app/hooks/use-files.ts` - File operations and validation hooks
+- `packages/shared/src/transformers/` - Decimal/entity transformers
+- `packages/app/app/lib/api-client.ts` - Eden Treaty API client
 
 ## Utilities
 
@@ -329,15 +350,18 @@ useMutation({
 | Term | Definition |
 |------|------------|
 | **Tara** | Container weight subtracted from gross weight |
-| **Distribución del Día** | Daily inventory assignment to vendors (optional) |
+| **Distribucion del Dia** | Daily inventory assignment to vendors (optional) |
 | **Abono** | Debt payment independent of sales |
 | **Modo Libre** | Sales recording without stock control |
 | **Punto de Venta** | Sales location/branch |
-| **Venta al Crédito** | Credit sale (accounts receivable) |
+| **Venta al Credito** | Credit sale (accounts receivable) |
 | **Venta al Contado** | Cash sale |
+| **Pre-orden / Pedido** | Pre-order for future delivery |
+| **Cierre** | Daily closing report by vendor |
+| **Visita** | Customer visit tracking during distribution |
+| **Variante** | Product variant (e.g., "1kg", "Medio") |
 
 ---
 
 *Last updated: May 2026*
-*Added: File upload pattern documentation with mobile camera support*
 *For detailed information, see linked documentation files.*

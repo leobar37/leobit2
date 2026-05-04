@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Package, Loader2, Save, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { useCreateProduct } from "~/hooks/use-products";
 import { FormPage } from "~/components/layout/form-page";
 import { MobilePage } from "~/components/mobile/mobile-page";
@@ -51,7 +51,10 @@ export default function NuevoProductoPage() {
     }
   };
 
-  const { isValid } = form.formState;
+  const nameValue = form.watch("name");
+  const basePriceValue = form.watch("basePrice");
+  const canSubmit =
+    nameValue.trim().length >= 2 && basePriceValue.trim().length > 0;
 
   return (
     <FormPage
@@ -61,7 +64,7 @@ export default function NuevoProductoPage() {
       toolbar={
         <Button
           onClick={form.handleResolvedSubmit(handleSubmit)}
-          disabled={createProduct.isPending || !isValid}
+          disabled={createProduct.isPending || !canSubmit}
           data-testid="save-product-button"
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
@@ -84,11 +87,11 @@ export default function NuevoProductoPage() {
           <ProductFormContent form={form} />
 
           {/* Variants Toggle Card */}
-          <MobilePage.Card variant="flat" className="rounded-3xl">
+          <MobilePage.Card variant="flat" className="rounded-[22px] border-0 bg-card/80 dark:bg-[#151821]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
                     <Layers className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
@@ -110,7 +113,7 @@ export default function NuevoProductoPage() {
                     onChange={(e) => setHasVariants(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300"></div>
                 </label>
               </div>
             </CardContent>

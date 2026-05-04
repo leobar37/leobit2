@@ -68,6 +68,7 @@ export function useCreateProductCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.productCategories.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
@@ -89,11 +90,13 @@ export function useUpdateProductCategory() {
       const response = await api["product-categories"]({ id }).put(input);
       return extractData<ProductCategory>(response);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (category, variables) => {
+      queryClient.setQueryData(queryKeys.productCategories.detail(variables.id), category);
       queryClient.invalidateQueries({
         queryKey: queryKeys.productCategories.detail(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.productCategories.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }
@@ -114,6 +117,7 @@ export function useDeleteProductCategory() {
         queryKey: queryKeys.productCategories.detail(id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.productCategories.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
     },
   });
 }

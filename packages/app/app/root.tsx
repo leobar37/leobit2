@@ -224,7 +224,7 @@ function NotFoundPage() {
         <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300" />
 
         <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] bg-white shadow-[0_16px_40px_rgba(249,115,22,0.18)] ring-1 ring-orange-100">
-          <img src="/logo.svg" alt="Avileo" className="h-14 w-14" />
+          <TriangleAlert className="h-10 w-10 text-orange-500" aria-hidden="true" />
         </div>
 
         <div className="mx-auto mb-4 inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">

@@ -16,10 +16,10 @@ interface WeeklySalesChartProps {
 }
 
 const CHART_TITLES: Record<PeriodType, string> = {
-  day: "Ventas por hora",
-  week: "Ventas de la semana",
-  month: "Ventas del mes",
-  range: "Ventas del rango",
+  day: "Actividad por hora",
+  week: "Actividad de la semana",
+  month: "Actividad del mes",
+  range: "Actividad del rango",
 };
 
 function getTickInterval(periodType: PeriodType, labelCount: number) {
@@ -59,7 +59,7 @@ export function WeeklySalesChart({
       : false;
 
   return (
-    <div className="shell-card-flat rounded-[24px] p-4">
+    <div className="shell-card-flat rounded-[24px] bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
       <h3 className="text-sm font-semibold text-foreground mb-4">
         {CHART_TITLES[periodType]}
       </h3>
@@ -90,7 +90,7 @@ export function WeeklySalesChart({
               width={38}
             />
             <Tooltip
-              formatter={(value) => [formatCurrency(Number(value)), "Ventas"]}
+              formatter={(value) => [formatCurrency(Number(value)), "Actividad"]}
               labelFormatter={(value) =>
                 formatXAxisLabel(String(value), periodType)
               }

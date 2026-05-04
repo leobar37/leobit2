@@ -51,27 +51,6 @@ export interface UpdateProductInput {
   imageId?: string | null;
 }
 
-export interface CreateProductInput {
-  name: string;
-  type?: "pollo" | "huevo" | "otro";
-  unit: "kg" | "unidad";
-  basePrice: string;
-  costPrice?: string;
-  isActive?: boolean;
-  imageId?: string;
-  hasVariants?: boolean;
-}
-
-export interface UpdateProductInput {
-  name?: string;
-  type?: "pollo" | "huevo" | "otro";
-  unit?: "kg" | "unidad";
-  basePrice?: string;
-  costPrice?: string;
-  isActive?: boolean;
-  imageId?: string | null;
-}
-
 /**
  * Get all products for the current business
  */
@@ -134,7 +113,8 @@ export function useUpdateProduct() {
       const response = await api.products({ id }).put(input);
       return extractData<Product>(response);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (product, variables) => {
+      queryClient.setQueryData(queryKeys.products.detail(variables.id), product);
       queryClient.invalidateQueries({
         queryKey: queryKeys.products.detail(variables.id),
       });

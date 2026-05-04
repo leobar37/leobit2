@@ -1,6 +1,6 @@
 # Avileo Database
 
-> PostgreSQL database schema with Drizzle ORM, designed for offline-first multi-tenancy.
+> PostgreSQL database schema with Drizzle ORM, designed for multi-tenancy.
 
 ## Table of Contents
 
@@ -9,9 +9,8 @@
 3. [Table Reference](#table-reference)
 4. [Enums](#enums)
 5. [Relations](#relations)
-6. [Offline Sync Pattern](#offline-sync-pattern)
-7. [Multi-Tenancy Pattern](#multi-tenancy-pattern)
-8. [Better Auth Integration](#better-auth-integration)
+6. [Multi-Tenancy Pattern](#multi-tenancy-pattern)
+7. [Better Auth Integration](#better-auth-integration)
 
 ---
 
@@ -20,10 +19,10 @@
 ### Design Principles
 
 1. **Multi-Tenancy**: Users can belong to multiple businesses
-2. **Offline-First**: Tables have `sync_status` for tracking
-3. **Better Auth**: Authentication delegated to Better Auth tables
-4. **Soft Deletes**: `is_active` boolean for logical deletion
-5. **Audit Trail**: `created_at`, `updated_at` on all tables
+2. **Better Auth**: Authentication delegated to Better Auth tables
+3. **Soft Deletes**: `is_active` boolean for logical deletion
+4. **Audit Trail**: `created_at`, `updated_at` on all tables
+5. **Unified Sales**: Single `sales` table for both instant sales and pre-orders
 
 ### Technology Stack
 
@@ -42,16 +41,37 @@
 
 ```
 packages/backend/src/db/schema/
-├── enums.ts              # PostgreSQL enum definitions
-├── user-profiles.ts      # User profile data (extends Better Auth)
-├── businesses.ts         # Businesses and business_users
-├── customers.ts          # Customers with offline support
-├── sales.ts              # Sales and sale_items
-├── payments.ts           # Abonos (debt payments)
-├── inventory.ts          # Products, stock, distributions
-├── config.ts             # System configuration
-├── relations.ts          # Drizzle relations
-└── index.ts              # Centralized exports
+├── enums.ts                    # PostgreSQL enum definitions
+├── auth.ts                     # Better Auth tables (re-export)
+├── user-profiles.ts            # User profile data
+├── businesses.ts               # Businesses and business_users
+├── customers.ts                # Customer management
+├── customer-tags.ts            # Customer-tag relationships
+├── customer-groups.ts          # Customer groups
+├── customer-group-members.ts   # Group memberships
+├── tags.ts                     # Customer tags
+├── sales.ts                    # Sales and sale_items (unified)
+├── sale-tokens.ts              # Public sale access tokens
+├── payment-tokens.ts           # Payment access tokens
+├── payments.ts                 # Abonos (debt payments)
+├── products.ts                 # Product catalog
+├── inventory.ts                # Products, variants, distributions
+├── product-units.ts            # Configurable product units
+├── purchases.ts                # Purchase orders
+├── suppliers.ts                # Supplier management
+├── distribucion.ts             # Distribution records
+├── puntos-venta.ts             # Sales points catalog
+├── visitas.ts                  # Customer visit tracking
+├── files.ts                    # File attachments
+├── assets.ts                   # Business assets
+├── whatsapp-templates.ts       # WhatsApp message templates
+├── whatsapp-messages.ts        # WhatsApp message log
+├── staff-invitations.ts        # Team invitations
+├── business-payment-settings.ts # Payment configuration
+├── business-user-whatsapp-settings.ts # WhatsApp per-user settings
+├── config.ts                   # System configuration
+├── relations.ts                # Drizzle relations
+└── index.ts                    # Centralized exports
 ```
 
 ### Conventions
@@ -63,7 +83,6 @@ packages/backend/src/db/schema/
 | **Soft Delete** | `is_active` boolean |
 | **Foreign Keys** | `*_id` fields, nullable for optional relations |
 | **Multi-tenancy** | `business_id` on operational tables |
-| **Sync Tracking** | `sync_status`, `sync_attempts` on offline tables |
 
 ---
 
@@ -79,6 +98,7 @@ Better Auth automatically creates these tables:
 | `session` | Active sessions |
 | `account` | Linked accounts (OAuth) |
 | `verification` | Verification tokens |
+| `jwks` | JSON Web Key Set |
 
 > **Note**: Our schema does NOT define these tables. Access via `user_profiles.user_id`.
 
@@ -117,10 +137,12 @@ Better Auth automatically creates these tables:
 | `phone` | varchar(20) | Business phone |
 | `email` | varchar(100) | Business email |
 | `logo_url` | varchar(255) | Logo URL |
-| `modo_operacion` | varchar(50) | Operation mode config |
+| `public_catalog_enabled` | boolean | Enable public customer catalog |
+| `public_catalog_slug` | varchar(100) | URL slug for public catalog |
 | `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
 | `permitir_venta_sin_stock` | boolean | Allow sales without stock |
+| `calculator_settings` | jsonb | Calculator config per context |
 | `is_active` | boolean | Business status |
 | `created_at` | timestamp | Creation timestamp |
 | `updated_at` | timestamp | Last update timestamp |
@@ -141,8 +163,8 @@ Better Auth automatically creates these tables:
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `business_id` | uuid FK | → businesses.id |
-| `user_id` | varchar(255) FK | → auth.user.id (Better Auth) |
+| `business_id` | uuid FK | -> businesses.id |
+| `user_id` | varchar(255) FK | -> auth.user.id (Better Auth) |
 | `role` | enum | ADMIN_NEGOCIO, VENDEDOR |
 | `sales_point` | varchar(100) | Carro A, Casa, etc. |
 | `commission_rate` | decimal(5,2) | Commission % in this business |
@@ -156,7 +178,7 @@ Better Auth automatically creates these tables:
 
 ### customers
 
-**Purpose**: Customers with offline sync support.
+**Purpose**: Customers.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -166,44 +188,108 @@ Better Auth automatically creates these tables:
 | `phone` | varchar(50) | Customer phone |
 | `address` | text | Customer address |
 | `notes` | text | Additional notes |
-| `sync_status` | enum | pending, synced, error |
-| `sync_attempts` | integer | Sync retry count |
-| `business_id` | uuid FK | → businesses.id |
-| `created_by` | uuid FK | → business_users.id |
+| `business_id` | uuid FK | -> businesses.id |
+| `created_by` | uuid FK | -> business_users.id |
 | `created_at` | timestamp | Creation timestamp |
 | `updated_at` | timestamp | Last update timestamp |
 
-**Offline**: ✅ Syncs with `sync_status`
+---
+
+### tags
+
+**Purpose**: Customer segmentation tags.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `name` | varchar(100) | Tag name |
+| `color` | varchar(20) | Tag color (default: #f97316) |
+| `business_id` | uuid FK | -> businesses.id |
+| `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
+
+---
+
+### customer_tags
+
+**Purpose**: Many-to-many between customers and tags.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `customer_id` | uuid FK | -> customers.id |
+| `tag_id` | uuid FK | -> tags.id |
+| `assigned_at` | timestamp | When assigned |
+| `assigned_by` | uuid FK | -> business_users.id |
+
+---
+
+### customer_groups
+
+**Purpose**: Customer groups for bulk management.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `name` | varchar(100) | Group name |
+| `business_id` | uuid FK | -> businesses.id |
+
+---
+
+### customer_group_members
+
+**Purpose**: Many-to-many between customers and groups.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `customer_id` | uuid FK | -> customers.id |
+| `group_id` | uuid FK | -> customer_groups.id |
 
 ---
 
 ### sales
 
-**Purpose**: Sales transactions (cash/credit) with offline support.
+**Purpose**: Sales transactions (cash/credit) - unified for instant_sales and pre_orders.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `business_id` | uuid FK | → businesses.id |
-| `client_id` | uuid FK | → customers.id (nullable) |
-| `seller_id` | uuid FK | → business_users.id |
-| `distribucion_id` | uuid FK | → distribuciones.id (nullable) |
+| `business_id` | uuid FK | -> businesses.id |
+| `customer_id` | uuid FK | -> customers.id (nullable) |
+| `seller_id` | uuid FK | -> business_users.id |
+| `distribucion_id` | uuid FK | -> distribuciones.id (nullable) |
+| `visita_id` | uuid FK | -> visitas.id (nullable) |
+| `type` | enum | instant_sale, pre_order |
 | `sale_type` | enum | contado, credito |
+| `payment_mode` | enum | pago_total, a_cuenta, debe_todo |
 | `total_amount` | decimal(12,2) | Total sale amount |
 | `amount_paid` | decimal(12,2) | Amount paid |
 | `balance_due` | decimal(12,2) | Outstanding balance |
 | `tara` | decimal(10,3) | Tare in kg |
 | `net_weight` | decimal(10,3) | Net weight in kg |
-| `sync_status` | enum | pending, synced, error |
-| `sync_attempts` | integer | Sync retry count |
 | `sale_date` | timestamp | Sale date |
+| `delivery_date` | date | For pre_orders |
+| `order_date` | date | For pre_orders |
+| `status` | enum | draft, confirmed, active, delivered, cancelled |
+| `version` | integer | Version for optimistic locking |
+| `allow_customer_edit` | boolean | Allow customer edits on pre-orders |
+| `cancelled_at` | timestamp | Cancellation timestamp |
+| `cancelled_by` | uuid FK | -> business_users.id |
+| `cancel_reason` | text | Cancellation reason |
+| `refund_amount` | decimal(12,2) | Refund amount |
+| `refund_date` | timestamp | Refund timestamp |
+| `refund_method` | enum | efectivo, yape, plin, transferencia, saldo |
+| `refund_reference` | varchar(100) | Refund reference |
+| `refund_notes` | text | Refund notes |
+| `advance_payment_method` | varchar(20) | Advance payment method |
+| `advance_reference_number` | varchar(50) | Advance reference |
+| `advance_proof_image_id` | uuid FK | -> files.id |
 | `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
 
 **Notes**:
-- `client_id` can be NULL for sales without customer
+- `customer_id` can be NULL for sales without customer
 - `distribucion_id` can be NULL for systems without inventory control
-
-**Offline**: ✅ Syncs with `sync_status`
+- `type` determines if it's an instant_sale or pre_order
 
 ---
 
@@ -214,14 +300,38 @@ Better Auth automatically creates these tables:
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `sale_id` | uuid FK | → sales.id |
-| `product_id` | uuid FK | → products.id |
-| `product_name` | varchar(255) | Denormalized for offline |
-| `quantity` | decimal(10,3) | Quantity/kg |
-| `unit_price` | decimal(10,2) | Unit price |
+| `business_id` | uuid FK | -> businesses.id |
+| `sale_id` | uuid FK | -> sales.id |
+| `product_id` | uuid FK | -> products.id |
+| `variant_id` | uuid FK | -> product_variants.id |
+| `product_name` | varchar(255) | Denormalized |
+| `variant_name` | varchar(50) | Denormalized |
+| `quantity` | decimal(10,3) | For instant_sales |
+| `ordered_quantity` | decimal(10,3) | For pre_orders |
+| `delivered_quantity` | decimal(10,3) | For pre_orders |
+| `unit_price` | decimal(10,2) | For instant_sales |
+| `unit_price_quoted` | decimal(10,2) | For pre_orders |
+| `unit_price_final` | decimal(10,2) | For pre_orders |
 | `subtotal` | decimal(12,2) | Line total |
+| `cost_price_snapshot` | decimal(10,2) | Cost at time of sale |
+| `is_modified` | boolean | Item was modified |
+| `original_quantity` | decimal(10,3) | Original quantity |
 
-**Pattern**: `product_name` denormalized so UI works offline without product lookup
+---
+
+### sale_tokens
+
+**Purpose**: Tokens for sharing sales (pre-orders) with customers publicly.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `sale_id` | uuid FK | -> sales.id (unique) |
+| `token` | varchar(12) | URL-safe token (unique) |
+| `is_active` | boolean | Token status |
+| `expires_at` | timestamp | Expiration (default 7 days) |
+| `created_at` | timestamp | Creation timestamp |
+| `last_used_at` | timestamp | Last access |
 
 ---
 
@@ -232,27 +342,17 @@ Better Auth automatically creates these tables:
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `business_id` | uuid FK | → businesses.id |
-| `client_id` | uuid FK | → customers.id |
-| `seller_id` | uuid FK | → business_users.id |
+| `business_id` | uuid FK | -> businesses.id |
+| `customer_id` | uuid FK | -> customers.id |
+| `seller_id` | uuid FK | -> business_users.id |
 | `amount` | decimal(12,2) | Payment amount |
-| `payment_method` | enum | efectivo, yape, plin, transferencia |
+| `payment_method` | enum | efectivo, yape, plin, transferencia, tarjeta, saldo |
 | `notes` | text | Additional notes |
-| `sync_status` | enum | pending, synced, error |
-| `sync_attempts` | integer | Sync retry count |
+| `proof_image_id` | uuid FK | -> files.id |
+| `reference_number` | varchar(50) | Transaction ID (unique) |
+| `related_sale_id` | uuid FK | -> sales.id |
 | `created_at` | timestamp | Creation timestamp |
-
-**Use Cases**:
-- Customer comes ONLY to pay debt (no purchase)
-- Partial debt payment
-- Full debt settlement
-
-**Debt Calculation**:
-```
-Customer Debt = SUM(credit sales) - SUM(abonos)
-```
-
-**Offline**: ✅ Syncs with `sync_status`
+| `updated_at` | timestamp | Last update timestamp |
 
 ---
 
@@ -263,25 +363,89 @@ Customer Debt = SUM(credit sales) - SUM(abonos)
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
 | `name` | varchar(255) | Product name |
 | `type` | enum | pollo, huevo, otro |
+| `category_id` | uuid FK | -> product_categories.id |
 | `unit` | enum | kg, unidad |
 | `base_price` | decimal(10,2) | Suggested base price |
+| `cost_price` | decimal(10,2) | Cost price |
 | `is_active` | boolean | Product status |
+| `has_variants` | boolean | Has variants |
+| `image_id` | uuid FK | -> assets.id |
 | `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
 
 ---
 
-### inventory
+### product_categories
 
-**Purpose**: Current stock per product.
+**Purpose**: Product categories with color coding.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `product_id` | uuid FK | → products.id |
+| `name` | varchar(100) | Category name |
+| `color` | varchar(20) | Color code (default: #f97316) |
+| `business_id` | uuid FK | -> businesses.id |
+| `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
+
+---
+
+### product_variants
+
+**Purpose**: Product variants (e.g., "1kg", "Medio").
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `product_id` | uuid FK | -> products.id |
+| `business_id` | uuid FK | -> businesses.id |
+| `name` | varchar(50) | Variant name |
+| `sku` | varchar(50) | Stock keeping unit |
+| `unit_quantity` | decimal(10,3) | Base quantity |
+| `price` | decimal(10,2) | Selling price |
+| `cost_price` | decimal(10,2) | Cost price |
+| `sort_order` | integer | Display order |
+| `is_active` | boolean | Status |
+| `low_stock_threshold` | decimal(10,3) | Low stock alert |
+| `critical_stock_threshold` | decimal(10,3) | Critical stock alert |
+| `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
+
+---
+
+### variant_inventory
+
+**Purpose**: Current stock per variant.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `variant_id` | uuid FK | -> product_variants.id |
 | `quantity` | decimal(10,3) | Available quantity |
 | `updated_at` | timestamp | Last update |
+
+---
+
+### product_units
+
+**Purpose**: Configurable units for variants (e.g., "Jaba 60un").
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `product_id` | uuid FK | -> products.id |
+| `variant_id` | uuid FK | -> product_variants.id |
+| `name` | varchar(50) | Unit name |
+| `display_name` | varchar(100) | Display name |
+| `base_unit_quantity` | decimal(10,3) | Base quantity |
+| `base_unit` | varchar(20) | Base unit |
+| `is_active` | boolean | Status |
+| `sort_order` | integer | Display order |
 
 ---
 
@@ -292,19 +456,200 @@ Customer Debt = SUM(credit sales) - SUM(abonos)
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `business_id` | uuid FK | → businesses.id |
-| `vendedor_id` | uuid FK | → business_users.id |
-| `punto_venta` | varchar(100) | Sales point (Carro A, Casa, etc.) |
-| `kilos_asignados` | decimal(10,3) | Kilos assigned |
-| `kilos_vendidos` | decimal(10,3) | Kilos sold |
+| `business_id` | uuid FK | -> businesses.id |
+| `vendedor_id` | uuid FK | -> business_users.id |
+| `punto_venta` | varchar(100) | Sales point name (snapshot) |
+| `punto_venta_id` | uuid FK | -> puntos_venta.id |
 | `monto_recaudado` | decimal(12,2) | Amount collected |
+| `nota_creacion` | text | Creation note |
+| `nota_cierre` | text | Closing note |
 | `fecha` | date | Distribution date |
 | `estado` | enum | activo, cerrado, en_ruta |
-| `sync_status` | enum | pending, synced, error |
-| `sync_attempts` | integer | Sync retry count |
+| `closed_at` | timestamp | Close timestamp |
+| `closed_by` | uuid FK | -> business_users.id |
 | `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
 
-**Offline**: ✅ Syncs with `sync_status`
+---
+
+### distribucion_items
+
+**Purpose**: Line items for each distribution.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `distribucion_id` | uuid FK | -> distribuciones.id |
+| `variant_id` | uuid FK | -> product_variants.id |
+| `cantidad_asignada` | decimal(10,3) | Assigned quantity |
+| `cantidad_vendida` | decimal(10,3) | Sold quantity |
+| `unidad` | varchar(20) | Unit |
+
+---
+
+### distribucion_cierre_items
+
+**Purpose**: Vendor-reported quantities at close time.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `distribucion_id` | uuid FK | -> distribuciones.id |
+| `variant_id` | uuid FK | -> product_variants.id |
+| `cantidad_llevada` | decimal(10,3) | Amount taken |
+| `cantidad_vendida` | decimal(10,3) | Amount sold |
+| `cantidad_devuelta` | decimal(10,3) | Amount returned |
+| `monto_ventas` | decimal(12,2) | Sales amount |
+
+---
+
+### puntos_venta
+
+**Purpose**: Sales points catalog for distributions.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `name` | varchar(100) | Point name |
+| `code` | varchar(20) | Code |
+| `description` | varchar(255) | Description |
+| `type` | varchar(20) | carro, local, mercado, ruta, otro |
+| `is_active` | boolean | Status |
+| `sort_order` | integer | Display order |
+| `business_id` | uuid FK | -> businesses.id |
+
+---
+
+### visitas
+
+**Purpose**: Customer visit tracking linked to distributions.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `distribucion_id` | uuid FK | -> distribuciones.id |
+| `customer_id` | uuid FK | -> customers.id |
+| `vendedor_id` | uuid FK | -> business_users.id |
+| `status` | enum | pendiente, compro, no_compra |
+| `motivo_no_compra` | varchar(255) | Reason for no purchase |
+| `sale_id` | uuid FK | -> sales.id (nullable) |
+
+---
+
+### purchases
+
+**Purpose**: Purchase orders from suppliers.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `supplier_id` | uuid FK | -> suppliers.id |
+| `purchase_date` | date | Purchase date |
+| `total_amount` | decimal(12,2) | Total amount |
+| `status` | enum | draft, pending, received, cancelled |
+| `invoice_number` | varchar(50) | Invoice number |
+| `receipt_image_id` | uuid FK | -> files.id |
+| `notes` | text | Notes |
+
+---
+
+### purchase_items
+
+**Purpose**: Line items for each purchase.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `purchase_id` | uuid FK | -> purchases.id |
+| `product_id` | uuid FK | -> products.id |
+| `variant_id` | uuid FK | -> product_variants.id |
+| `unit_id` | uuid FK | -> product_units.id |
+| `quantity` | decimal(10,3) | Quantity |
+| `unit_cost` | decimal(10,2) | Unit cost |
+| `total_cost` | decimal(12,2) | Total cost |
+
+---
+
+### suppliers
+
+**Purpose**: Supplier management.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `name` | varchar(255) | Supplier name |
+| `type` | enum | generic, regular, internal |
+| `ruc` | varchar(20) | Tax ID |
+| `address` | text | Address |
+| `phone` | varchar(20) | Phone |
+| `email` | varchar(255) | Email |
+| `notes` | text | Notes |
+| `is_active` | boolean | Status |
+
+---
+
+### business_payment_settings
+
+**Purpose**: Configurable payment methods per business.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id (unique) |
+| `methods` | jsonb | Payment method configs |
+
+**JSONB Structure:**
+```typescript
+{
+  efectivo: { enabled: true },
+  yape: { enabled: false, phone: "...", qrImageUrl: "..." },
+  plin: { enabled: false, phone: "...", qrImageUrl: "..." },
+  transferencia: { enabled: false, accountNumber: "...", bank: "..." },
+  tarjeta: { enabled: false }
+}
+```
+
+---
+
+### staff_invitations
+
+**Purpose**: Team member invitations.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_id` | uuid FK | -> businesses.id |
+| `email` | varchar(255) | Invitee email |
+| `invitee_name` | varchar(255) | Invitee name |
+| `sales_point` | varchar(100) | Assigned sales point |
+| `token` | varchar(255) | Invitation token (unique) |
+| `status` | enum | pending, accepted, rejected, cancelled, expired |
+| `invited_by` | varchar(255) | Inviter user ID |
+| `accepted_by` | varchar(255) | Acceptor user ID |
+| `sent_at` | timestamp | Sent timestamp |
+| `expires_at` | timestamp | Expiration |
+
+---
+
+### whatsapp_templates
+
+**Purpose**: WhatsApp message templates.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid PK | Internal ID |
+| `business_user_id` | uuid FK | -> business_users.id |
+| `business_id` | uuid FK | -> businesses.id |
+| `name` | varchar(100) | Template name |
+| `content` | text | Message content |
+| `category` | enum | cobranza, ventas, agradecimiento, entrega, otros |
+| `is_default` | boolean | Is default template |
 
 ---
 
@@ -315,7 +660,6 @@ Customer Debt = SUM(credit sales) - SUM(abonos)
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `modo_operacion` | enum | inventario_propio, sin_inventario, pedidos, mixto |
 | `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
 | `permitir_venta_sin_stock` | boolean | Allow sales without stock |
@@ -343,13 +687,12 @@ enum business_user_role {
 }
 ```
 
-### Sync Status
+### Transaction Type
 
 ```typescript
-enum sync_status {
-  PENDING = 'pending',
-  SYNCED = 'synced',
-  ERROR = 'error'
+enum transaction_type {
+  INSTANT_SALE = 'instant_sale',
+  PRE_ORDER = 'pre_order'
 }
 ```
 
@@ -357,8 +700,30 @@ enum sync_status {
 
 ```typescript
 enum sale_type {
-  CONTADO = 'contado',    // Cash
-  CREDITO = 'credito'     // Credit
+  CONTADO = 'contado',
+  CREDITO = 'credito'
+}
+```
+
+### Sale Status
+
+```typescript
+enum sale_status {
+  DRAFT = 'draft',
+  CONFIRMED = 'confirmed',
+  ACTIVE = 'active',
+  DELIVERED = 'delivered',
+  CANCELLED = 'cancelled'
+}
+```
+
+### Payment Mode
+
+```typescript
+enum payment_mode {
+  PAGO_TOTAL = 'pago_total',
+  A_CUENTA = 'a_cuenta',
+  DEBE_TODO = 'debe_todo'
 }
 ```
 
@@ -366,10 +731,24 @@ enum sale_type {
 
 ```typescript
 enum payment_method {
-  EFECTIVO = 'efectivo',       // Cash
-  YAPE = 'yape',               // Yape app
-  PLIN = 'plin',               // Plin app
-  TRANSFERENCIA = 'transferencia'  // Bank transfer
+  EFECTIVO = 'efectivo',
+  YAPE = 'yape',
+  PLIN = 'plin',
+  TRANSFERENCIA = 'transferencia',
+  TARJETA = 'tarjeta',
+  SALDO = 'saldo'
+}
+```
+
+### Refund Method
+
+```typescript
+enum refund_method {
+  EFECTIVO = 'efectivo',
+  YAPE = 'yape',
+  PLIN = 'plin',
+  TRANSFERENCIA = 'transferencia',
+  SALDO = 'saldo'
 }
 ```
 
@@ -377,9 +756,9 @@ enum payment_method {
 
 ```typescript
 enum product_type {
-  POLLO = 'pollo',    // Chicken
-  HUEVO = 'huevo',    // Eggs
-  OTRO = 'otro'       // Other
+  POLLO = 'pollo',
+  HUEVO = 'huevo',
+  OTRO = 'otro'
 }
 ```
 
@@ -387,8 +766,8 @@ enum product_type {
 
 ```typescript
 enum product_unit {
-  KG = 'kg',           // Kilograms
-  UNIDAD = 'unidad'    // Units/pieces
+  KG = 'kg',
+  UNIDAD = 'unidad'
 }
 ```
 
@@ -396,20 +775,87 @@ enum product_unit {
 
 ```typescript
 enum distribucion_status {
-  ACTIVO = 'activo',       // Active
-  CERRADO = 'cerrado',     // Closed
-  EN_RUTA = 'en_ruta'      // In route
+  ACTIVO = 'activo',
+  CERRADO = 'cerrado',
+  EN_RUTA = 'en_ruta'
 }
 ```
 
-### Operation Mode
+### Supplier Type
 
 ```typescript
-enum modo_operacion {
-  INVENTARIO_PROPIO = 'inventario_propio',  // Own inventory
-  SIN_INVENTARIO = 'sin_inventario',        // No inventory
-  PEDIDOS = 'pedidos',                      // Orders first
-  MIXTO = 'mixto'                           // Hybrid
+enum supplier_type {
+  GENERIC = 'generic',
+  REGULAR = 'regular',
+  INTERNAL = 'internal'
+}
+```
+
+### Purchase Status
+
+```typescript
+enum purchase_status {
+  DRAFT = 'draft',
+  PENDING = 'pending',
+  RECEIVED = 'received',
+  CANCELLED = 'cancelled'
+}
+```
+
+### Order Payment Status
+
+```typescript
+enum order_payment_status {
+  SIN_PAGO = 'sin_pago',
+  ADELANTO_PARCIAL = 'adelanto_parcial',
+  PAGADO_TOTAL = 'pagado_total',
+  SALDO_PENDIENTE = 'saldo_pendiente'
+}
+```
+
+### Visita Status
+
+```typescript
+enum visita_status {
+  PENDIENTE = 'pendiente',
+  COMPRO = 'compro',
+  NO_COMPRA = 'no_compra'
+}
+```
+
+### Invitation Status
+
+```typescript
+enum invitation_status {
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired'
+}
+```
+
+### Template Category
+
+```typescript
+enum template_category {
+  COBRANZA = 'cobranza',
+  VENTAS = 'ventas',
+  AGRADECIMIENTO = 'agradecimiento',
+  ENTREGA = 'entrega',
+  OTROS = 'otros'
+}
+```
+
+### Message Status
+
+```typescript
+enum message_status {
+  PENDING = 'pending',
+  SENT = 'sent',
+  DELIVERED = 'delivered',
+  READ = 'read',
+  FAILED = 'failed'
 }
 ```
 
@@ -417,7 +863,7 @@ enum modo_operacion {
 
 ## Relations
 
-### User → Business (Multi-tenancy)
+### User -> Business (Multi-tenancy)
 
 ```
 auth.user 1:1 user_profiles
@@ -425,35 +871,71 @@ auth.user 1:* business_users
 business 1:* business_users
 ```
 
-### Business → Operations
+### Business -> Operations
 
 ```
 businesses 1:* customers (business_id)
 businesses 1:* sales (business_id)
 businesses 1:* abonos (business_id)
 businesses 1:* distribuciones (business_id)
+businesses 1:* purchases (business_id)
+businesses 1:* suppliers (business_id)
+businesses 1:* tags (business_id)
+businesses 1:* product_categories (business_id)
+businesses 1:* products (business_id)
+businesses 1:* puntos_venta (business_id)
+```
+
+### Users -> Operations
+
+```
 business_users 1:* customers (created_by)
 business_users 1:* sales (seller_id)
 business_users 1:* abonos (seller_id)
 business_users 1:* distribuciones (vendedor_id)
+business_users 1:* visitas (vendedor_id)
 ```
 
 ### Sales
 
 ```
 sales 1:* sale_items
+sales 1:1 sale_tokens
 customers 1:* sales
 distribuciones 1:* sales
+visitas 1:0..1 sales (sale_id)
 ```
 
 ### Products
 
 ```
-products 1:1 inventory
+products 1:* product_variants
 products 1:* sale_items
+product_categories 1:* products
+products 1:* purchase_items
 ```
 
-### ER Diagram
+### Variants
+
+```
+product_variants 1:1 variant_inventory
+product_variants 1:* sale_items
+product_variants 1:* distribucion_items
+product_variants 1:* purchase_items
+product_variants 1:* product_units
+```
+
+### Customers
+
+```
+customers 1:* sales
+customers 1:* abonos
+customers 1:* visitas
+customers *:* tags (via customer_tags)
+customers *:* groups (via customer_group_members)
+```
+
+### ER Diagram (Simplified)
 
 ```mermaid
 erDiagram
@@ -474,6 +956,7 @@ erDiagram
         uuid id PK
         string name
         string ruc
+        boolean public_catalog_enabled
     }
 
     business_users {
@@ -487,31 +970,67 @@ erDiagram
         uuid id PK
         string name
         uuid business_id FK
-        enum sync_status
     }
 
     sales {
         uuid id PK
         uuid business_id FK
-        uuid client_id FK
+        uuid customer_id FK
         uuid seller_id FK
-        enum sale_type
-        enum sync_status
+        enum type
+        enum status
+    }
+
+    sale_items {
+        uuid id PK
+        uuid sale_id FK
+        uuid variant_id FK
     }
 
     abonos {
         uuid id PK
         uuid business_id FK
-        uuid client_id FK
+        uuid customer_id FK
         decimal amount
-        enum sync_status
+    }
+
+    products {
+        uuid id PK
+        uuid business_id FK
+        string name
+    }
+
+    product_variants {
+        uuid id PK
+        uuid product_id FK
+        string name
     }
 
     distribuciones {
         uuid id PK
         uuid business_id FK
         uuid vendedor_id FK
-        enum sync_status
+        enum estado
+    }
+
+    purchases {
+        uuid id PK
+        uuid business_id FK
+        uuid supplier_id FK
+        enum status
+    }
+
+    suppliers {
+        uuid id PK
+        uuid business_id FK
+        string name
+    }
+
+    visitas {
+        uuid id PK
+        uuid distribucion_id FK
+        uuid customer_id FK
+        enum status
     }
 
     AUTH_USER ||--|| user_profiles : "1:1"
@@ -521,61 +1040,21 @@ erDiagram
     businesses ||--o{ sales : "has"
     businesses ||--o{ abonos : "has"
     businesses ||--o{ distribuciones : "has"
+    businesses ||--o{ purchases : "has"
+    businesses ||--o{ suppliers : "has"
+    businesses ||--o{ products : "has"
     business_users ||--o{ customers : "creates"
     business_users ||--o{ sales : "sells"
     business_users ||--o{ abonos : "receives"
     business_users ||--o{ distribuciones : "assigned_to"
     customers ||--o{ sales : "buys"
     customers ||--o{ abonos : "pays"
+    customers ||--o{ visitas : "visited"
+    sales ||--o{ sale_items : "contains"
+    products ||--o{ product_variants : "has"
+    product_variants ||--o{ sale_items : "sold_as"
+    distribuciones ||--o{ visitas : "has"
 ```
-
----
-
-## Offline Sync Pattern
-
-### Tables with Sync Support
-
-| Table | Syncs | Fields |
-|-------|-------|--------|
-| `customers` | ✅ | `sync_status`, `sync_attempts` |
-| `sales` | ✅ | `sync_status`, `sync_attempts` |
-| `abonos` | ✅ | `sync_status`, `sync_attempts` |
-| `distribuciones` | ✅ | `sync_status`, `sync_attempts` |
-
-### Sync Flow
-
-```
-1. CREATE RECORD
-   ↓
-   sync_status = 'pending'
-   sync_attempts = 0
-
-2. ATTEMPT SYNC
-   ↓
-   IF success → sync_status = 'synced'
-   IF error → sync_status = 'error'
-              sync_attempts += 1
-
-3. RETRY STRATEGY
-   ↓
-   Exponential backoff
-   Max 3-5 attempts
-   Then manual intervention
-```
-
-### sync_queue (Local Only)
-
-Local IndexedDB table for pending operations:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Operation ID |
-| `operation_type` | enum | create, update, delete |
-| `collection` | varchar | ventas, clientes, etc. |
-| `data` | JSON | Operation data |
-| `created_at` | timestamp | When created |
-| `attempts` | integer | Retry count |
-| `last_error` | text | Error message |
 
 ---
 
@@ -592,6 +1071,9 @@ A single user can belong to multiple businesses. Each business sees only its own
 - `sales.business_id`
 - `abonos.business_id`
 - `distribuciones.business_id`
+- `purchases.business_id`
+- `suppliers.business_id`
+- `products.business_id`
 
 ### Query Pattern
 
@@ -634,12 +1116,12 @@ const businessUser = await db
 
 ```
 1. User registers via Better Auth
-   ↓
+   |
 2. Better Auth creates auth.user record
-   ↓
+   |
 3. Our app creates user_profiles record
-   ↓
-4. User joins business → business_users record
+   |
+4. User joins business -> business_users record
 ```
 
 ### Foreign Key Pattern
