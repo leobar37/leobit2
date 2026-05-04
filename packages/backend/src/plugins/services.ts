@@ -28,6 +28,8 @@ import { StaffInvitationRepository } from "../services/repository/staff-invitati
 import { StaffInvitationService } from "../services/business/staff-invitation.service";
 import { SaleTokenRepository } from "../services/repository/sale-token.repository";
 import { SaleTokenService } from "../services/business/sale-token.service";
+import { PaymentTokenRepository } from "../services/repository/payment-token.repository";
+import { PaymentTokenService } from "../services/business/payment-token.service";
 
 import { PaymentMethodConfigRepository } from "../services/repository/payment-method-config.repository";
 import { PaymentMethodConfigService } from "../services/business/payment-method-config.service";
@@ -70,6 +72,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const purchaseRepo = new PurchaseRepository();
     const staffInvitationRepo = new StaffInvitationRepository();
     const saleTokenRepo = new SaleTokenRepository();
+    const paymentTokenRepo = new PaymentTokenRepository();
     const paymentMethodConfigRepo = new PaymentMethodConfigRepository();
     const whatsAppTemplateRepo = new WhatsAppTemplateRepository();
     const whatsAppSettingsRepo = new WhatsAppSettingsRepository();
@@ -97,6 +100,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const purchaseService = new PurchaseService(purchaseRepo, supplierRepo, productVariantRepo, productUnitRepo, fileRepo);
     const staffInvitationService = new StaffInvitationService(staffInvitationRepo, businessRepo);
     const saleTokenService = new SaleTokenService(saleTokenRepo, saleRepo);
+    const paymentTokenService = new PaymentTokenService(paymentTokenRepo, paymentRepo);
     const paymentMethodConfigService = new PaymentMethodConfigService(paymentMethodConfigRepo);
     const ocrService = new OCRService();
     const whatsAppTemplateService = new WhatsAppTemplateService(whatsAppTemplateRepo);
@@ -145,6 +149,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       staffInvitationService,
       saleTokenRepo,
       saleTokenService,
+      paymentTokenRepo,
+      paymentTokenService,
       paymentMethodConfigRepo,
       paymentMethodConfigService,
       ocrService,

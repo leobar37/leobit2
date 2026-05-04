@@ -1,9 +1,10 @@
 import { useSearchParams, useNavigate } from "react-router";
 import { formatNumber } from "~/lib/utils";
-import { Wallet, User, AlertCircle, Check, Receipt, Camera, X, QrCode, Phone } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { Wallet, User, AlertCircle, Check, Receipt, QrCode, Phone } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +13,13 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
-import { validateFile } from "~/hooks/use-files";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { calculateBalanceDue, formatCurrency, parseAmount } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
 import { FormMediaField } from "~/components/forms/form-media-field";
+import { PaymentShareDrawer } from "~/components/payments/payment-share-drawer";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
@@ -134,6 +135,11 @@ export default function NuevoCobroPage() {
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdPayment, setCreatedPayment] = useState<{
+    id: string;
+    amount: string;
+  } | null>(null);
+  const [shareDrawerOpen, setShareDrawerOpen] = useState(false);
 
   const currentDebt = useMemo(() => {
     if (!customerId || !customerBalance) return 0;
@@ -177,7 +183,9 @@ export default function NuevoCobroPage() {
 
   useEffect(() => {
     if (customerId && currentDebt > 0) {
-      setValue("amount", formatCurrency(currentDebt));
+      setValue("amount", formatCurrency(currentDebt), {
+        shouldValidate: true,
+      });
     }
   }, [customerId, currentDebt, setValue]);
 
@@ -187,7 +195,7 @@ export default function NuevoCobroPage() {
     try {
       setSubmitError(null);
 
-      const paymentId = await createPayment({
+      let created = await createPayment({
         customerId,
         relatedSaleId: saleId,
         amount: data.amount,
@@ -197,13 +205,26 @@ export default function NuevoCobroPage() {
       });
 
       if (data.proofImageId) {
-        await updatePayment(paymentId, { proofImageId: data.proofImageId });
+        created = await updatePayment(created.id, { proofImageId: data.proofImageId });
       }
 
-      navigate(customerId ? `/clientes/${customerId}` : "/cobros");
+      setCreatedPayment({
+        id: created.id,
+        amount: created.amount,
+      });
+      setShareDrawerOpen(true);
+      toast.success("Pago registrado correctamente");
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo registrar el pago. Intenta nuevamente.";
       setSubmitError(message);
+    }
+  };
+
+  const handleShareDrawerChange = (open: boolean) => {
+    setShareDrawerOpen(open);
+
+    if (!open && createdPayment) {
+      navigate(customerId ? `/clientes/${customerId}` : "/cobros");
     }
   };
 
@@ -407,6 +428,9 @@ export default function NuevoCobroPage() {
                   name="proofImageId"
                   label="Comprobante de pago (opcional)"
                 />
+                <p className="text-xs text-muted-foreground">
+                  En móvil puedes tomar una foto al instante o elegir una imagen desde tu galería.
+                </p>
               </div>
             )}
 
@@ -424,6 +448,12 @@ export default function NuevoCobroPage() {
         </Card>
       </form>
       </WrapperFormProvider>
+      <PaymentShareDrawer
+        open={shareDrawerOpen}
+        onOpenChange={handleShareDrawerChange}
+        paymentId={createdPayment?.id ?? null}
+        amount={createdPayment?.amount ?? amount}
+      />
     </FormPage>
   );
 }

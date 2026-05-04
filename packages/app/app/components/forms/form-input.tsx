@@ -1,5 +1,5 @@
 import { forwardRef, useCallback } from "react";
-import { useFormContext, type UseFormRegisterReturn } from "react-hook-form";
+import { get, useFormContext, type UseFormRegisterReturn } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { FormFieldShell } from "./form-field-shell";
@@ -45,8 +45,8 @@ const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
     }
 
     // Get errors from context or use empty object if not available
-    const errors = formContext?.formState?.errors || {};
-    const fieldError = errors[name]?.message as string | undefined;
+    const errors = formContext?.formState?.errors;
+    const fieldError = get(errors, name)?.message as string | undefined;
     const displayError = error ?? fieldError;
 
     // If registerProp is provided, spread it directly (it's the result of form.register())

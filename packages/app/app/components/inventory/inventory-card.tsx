@@ -47,19 +47,19 @@ export function InventoryCard({
     switch (e) {
       case "cerrado":
         return (
-          <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+          <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-400">
             Cerrado
           </Badge>
         );
       case "en_ruta":
         return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400">
             En ruta
           </Badge>
         );
       default:
         return (
-          <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+          <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/40 dark:text-orange-400">
             Activo
           </Badge>
         );
@@ -73,9 +73,9 @@ export function InventoryCard({
           <div className="flex items-center gap-3">
             <MinimalCardMedia 
               icon={Package} 
-              iconColor="text-orange-600" 
+              iconColor="text-orange-600 dark:text-orange-400" 
               size="md" 
-              className="bg-orange-100"
+              className="bg-orange-100 dark:bg-orange-900/40"
             />
             <div>
               <MinimalCardTitle className="text-base">Mi Distribución</MinimalCardTitle>
@@ -90,18 +90,18 @@ export function InventoryCard({
           <span>{puntoVenta}</span>
         </div>
 
-        <div className="py-3 px-4 bg-orange-50 rounded-xl">
+        <div className="py-3 px-4 bg-orange-50 dark:bg-orange-950/40 rounded-xl">
           <div className="flex items-center gap-2 mb-1">
             {modo === "libre" ? (
-              <Clock className="h-4 w-4 text-orange-600" />
+              <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             ) : (
-              <ShoppingBag className="h-4 w-4 text-orange-600" />
+              <ShoppingBag className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             )}
-            <span className="font-medium text-orange-700">
+            <span className="font-medium text-orange-700 dark:text-orange-300">
               {getModoLabel(modo)}
             </span>
           </div>
-          <p className="text-sm text-orange-600/80">
+          <p className="text-sm text-orange-600/80 dark:text-orange-400/80">
             {getModoDescription(modo, cantidadItems)}
           </p>
         </div>

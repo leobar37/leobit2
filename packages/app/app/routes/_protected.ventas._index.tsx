@@ -24,6 +24,7 @@ export default function SalesPage() {
   useSetLayout({ title: "Ventas" });
 
   const { data: miDistribucion } = useMiDistribucion();
+  const isDistribucionActiva = miDistribucion?.estado === "activo";
   const navigate = useNavigate();
   const location = useLocation();
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
@@ -54,7 +55,7 @@ export default function SalesPage() {
   const offset = (page - 1) * pageSize;
 
   const distribucionId = tab === "mine"
-    ? miDistribucion?.id
+    ? (isDistribucionActiva ? miDistribucion?.id : undefined)
     : tab === "free"
       ? "none"
       : "all";
@@ -78,12 +79,12 @@ export default function SalesPage() {
   const sales = salesPage?.items ?? [];
   const totalSales = salesPage?.total ?? 0;
 
-  // Reset to 'all' if on 'mine' tab but no distribution exists
+  // Reset to 'all' if on 'mine' tab but no active distribution exists
   useEffect(() => {
-    if (tab === "mine" && !miDistribucion?.id) {
+    if (tab === "mine" && !isDistribucionActiva) {
       setTab("all");
     }
-  }, [tab, miDistribucion?.id, setTab]);
+  }, [tab, isDistribucionActiva, setTab]);
 
   useEffect(() => {
     setPage(1);
@@ -175,7 +176,7 @@ export default function SalesPage() {
             >
               Todas
             </button>
-            {miDistribucion?.id && (
+            {isDistribucionActiva && (
               <button
                 onClick={() => setTab("mine")}
                 className={cn(

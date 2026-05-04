@@ -140,6 +140,13 @@ export {
   type NewSaleToken,
 } from "./sale-tokens";
 
+export {
+  paymentTokens,
+  paymentTokensRelations,
+  type PaymentToken,
+  type NewPaymentToken,
+} from "./payment-tokens";
+
 // Payments (Abonos)
 export {
   abonos,

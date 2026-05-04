@@ -42,11 +42,32 @@ export interface PurchaseItem {
   updatedAt: Date;
   productName?: string;
   variantName?: string;
+  product?: { name?: string | null } | null;
+  variant?: { name?: string | null } | null;
 }
 
 /** Purchase with its items */
 export interface PurchaseWithItems extends Purchase {
   items: PurchaseItem[];
+}
+
+function normalizePurchaseItem(item: PurchaseItem): PurchaseItem {
+  return {
+    ...item,
+    productName: item.productName ?? item.product?.name ?? undefined,
+    variantName: item.variantName ?? item.variant?.name ?? undefined,
+  };
+}
+
+function normalizePurchase<T extends Purchase | PurchaseWithItems>(purchase: T): T {
+  if (!("items" in purchase) || !Array.isArray(purchase.items)) {
+    return purchase;
+  }
+
+  return {
+    ...purchase,
+    items: purchase.items.map((item) => normalizePurchaseItem(item)),
+  };
 }
 
 /** Input for creating a purchase item */
@@ -91,7 +112,7 @@ export function usePurchase(id: string | null) {
     queryFn: async (): Promise<PurchaseWithItems | null> => {
       if (!id) return null;
       const response = await api.purchases({ id }).get();
-      return extractData<PurchaseWithItems>(response);
+      return normalizePurchase(extractData<PurchaseWithItems>(response));
     },
     enabled: !!id,
   });

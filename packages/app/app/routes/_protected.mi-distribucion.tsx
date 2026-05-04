@@ -61,7 +61,7 @@ function CierreConfirmContent({
           ¿Estás seguro de que deseas cerrar esta distribución? Esta acción no se puede deshacer.
         </p>
         {!isOnline && (
-          <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-3 rounded-lg">
             Se requiere conexión a internet para cerrar.
           </p>
         )}
@@ -174,7 +174,7 @@ export default function MiDistribucionPage() {
     showBackButton: true,
     backHref: "/dashboard",
     actions: isCerrado ? (
-      <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+      <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
         Cerrado
       </span>
     ) : undefined,
@@ -216,7 +216,7 @@ export default function MiDistribucionPage() {
 
   if (!usarDistribucion) {
     return (
-      <Card className="border border-gray-100 rounded-xl">
+      <Card className="border rounded-xl">
         <CardContent className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-lg font-semibold mb-2">Modo Libre</h2>
@@ -236,7 +236,7 @@ export default function MiDistribucionPage() {
 
   if (error || !distribucion) {
     return (
-      <Card className="border border-gray-100 rounded-xl">
+      <Card className="border rounded-xl">
         <CardContent className="p-8 text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-lg font-semibold mb-2">Sin Asignación</h2>
@@ -264,7 +264,7 @@ export default function MiDistribucionPage() {
 
   return (
     <>
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4 pb-52">
         <InventoryCard
           puntoVenta={distribucionWithItems.puntoVenta}
           modo={"libre" as const}
@@ -273,7 +273,7 @@ export default function MiDistribucionPage() {
         />
 
         {(!distribucionWithItems.items || distribucionWithItems.items.length === 0) && (
-          <Card className="border border-gray-100 rounded-xl">
+          <Card className="border rounded-xl">
             <CardContent className="p-6 text-center">
               <Package className="h-10 w-10 text-orange-500 mx-auto mb-3" />
               <h3 className="font-semibold mb-1">Distribución Libre</h3>
@@ -285,7 +285,7 @@ export default function MiDistribucionPage() {
         )}
 
         {distribucionWithItems.items && distribucionWithItems.items.length > 0 && (
-          <Card className="border border-gray-100 rounded-xl">
+          <Card className="border rounded-xl">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -300,7 +300,7 @@ export default function MiDistribucionPage() {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3 bg-orange-50 rounded-xl"
+                    className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/40 rounded-xl"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
@@ -312,7 +312,7 @@ export default function MiDistribucionPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-orange-600">
+                        <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
                           {formatKilos(cantidadDisponible)} {item.unidad}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -320,7 +320,7 @@ export default function MiDistribucionPage() {
                         </p>
                       </div>
                       {vendida > 0 && (
-                        <Badge variant="secondary" className="bg-white text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {Math.round((vendida / asignada) * 100)}%
                         </Badge>
                       )}
@@ -333,24 +333,24 @@ export default function MiDistribucionPage() {
         )}
 
         {/* Resumen del Día - Shows for both active and closed distributions */}
-        <Card className="border border-gray-100 rounded-xl">
+        <Card className="border rounded-xl">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              {isCerrado ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <TrendingUp className="h-4 w-4" />}
+              {isCerrado ? <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" /> : <TrendingUp className="h-4 w-4" />}
               {isCerrado ? "Resumen de Cierre" : "Resumen del Día"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Sales count */}
-            <div className="flex justify-between items-center p-4 bg-orange-50 rounded-xl">
+            <div className="flex justify-between items-center p-4 bg-orange-50 dark:bg-orange-950/40 rounded-xl">
               <span className="text-sm text-muted-foreground">Ventas</span>
-              <span className="text-xl font-bold text-orange-600">{totalSalesCount}</span>
+              <span className="text-xl font-bold text-orange-600 dark:text-orange-400">{totalSalesCount}</span>
             </div>
 
             {/* Total amount */}
-            <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
+            <div className="flex justify-between items-center p-4 bg-green-50 dark:bg-green-950/40 rounded-xl">
               <span className="text-sm text-muted-foreground">Total Recaudado</span>
-              <span className="text-xl font-bold text-green-600">
+              <span className="text-xl font-bold text-green-600 dark:text-green-400">
                 S/ {formatCurrency(salesBreakdown.total)}
               </span>
             </div>
@@ -358,13 +358,13 @@ export default function MiDistribucionPage() {
             {/* Contado / Crédito breakdown - only show if there are sales */}
             {salesBreakdown.total > 0 && (
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-blue-50 rounded-xl text-center">
-                  <p className="text-xs text-blue-600 mb-1">Contado</p>
-                  <p className="font-bold text-blue-700">S/ {formatCurrency(salesBreakdown.contado)}</p>
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-center">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Contado</p>
+                  <p className="font-bold text-blue-700 dark:text-blue-300">S/ {formatCurrency(salesBreakdown.contado)}</p>
                 </div>
-                <div className="p-3 bg-amber-50 rounded-xl text-center">
-                  <p className="text-xs text-amber-600 mb-1">Crédito</p>
-                  <p className="font-bold text-amber-700">S/ {formatCurrency(salesBreakdown.credito)}</p>
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl text-center">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mb-1">Crédito</p>
+                  <p className="font-bold text-amber-700 dark:text-amber-300">S/ {formatCurrency(salesBreakdown.credito)}</p>
                 </div>
               </div>
             )}
@@ -401,7 +401,7 @@ export default function MiDistribucionPage() {
               onClick={handleOpenCierreConfirm}
               disabled={!isOnline}
               variant="outline"
-              className="h-14 w-full rounded-2xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="h-14 w-full rounded-2xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
             >
               <Lock className="mr-2 h-5 w-5" />
               {!isOnline ? "Sin conexión" : "Cerrar Distribución"}

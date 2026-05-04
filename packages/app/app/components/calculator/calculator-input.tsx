@@ -100,7 +100,7 @@ export function CalculatorInput({
             <button
               type="button"
               onClick={() => onApplyHelperValue(helperValue)}
-              className="rounded bg-orange-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600 transition-colors hover:bg-orange-500/18 dark:text-orange-300"
+              className="rounded bg-orange-500/[0.12] px-1.5 py-0.5 text-[10px] font-semibold text-orange-600 transition-colors hover:bg-orange-500/[0.18] dark:text-orange-300"
             >
               Usar
             </button>

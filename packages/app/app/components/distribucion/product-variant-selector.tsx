@@ -173,7 +173,7 @@ export function ProductVariantSelector({
                       "border-border bg-card hover:bg-accent",
                     )}
                   >
-                    <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
+                    <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/[0.14]">
                       <Package className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                     </div>
                     <div className="flex-1 min-w-0">

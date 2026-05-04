@@ -16,6 +16,7 @@ import { paymentRoutes } from "./api/payments";
 import { distribucionRoutes } from "./api/distribuciones";
 import { saleRoutes } from "./api/sales";
 import { publicSaleRoutes } from "./api/public-sales";
+import { publicPaymentRoutes } from "./api/public-payments";
 
 import { reportRoutes } from "./api/reports";
 import { assetRoutes } from "./api/assets";
@@ -82,6 +83,7 @@ export const app = new Elysia()
   .use(distribucionRoutes)
   .use(saleRoutes)
   .use(publicSaleRoutes)
+  .use(publicPaymentRoutes)
   .use(reportRoutes)
   .use(assetRoutes)
   .use(fileRoutes)

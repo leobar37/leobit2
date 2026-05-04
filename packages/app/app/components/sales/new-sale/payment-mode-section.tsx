@@ -214,7 +214,7 @@ export function PaymentModeSection() {
               className={cn(
                 "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 visiblePaymentMode === mode.value
-                  ? "bg-orange-500/12"
+                  ? "bg-orange-500/[0.12]"
                   : "bg-white/[0.045] hover:bg-white/[0.07]",
               )}
             >

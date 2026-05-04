@@ -13,7 +13,7 @@ import {
   ImageIcon,
   Pencil,
 } from "lucide-react";
-import { formatCurrency, formatWeight } from "~/lib/utils";
+import { formatCurrency } from "~/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -161,19 +161,21 @@ export default function PurchaseDetailPage() {
         <h1 className="truncate text-lg font-bold tracking-tight">Detalle de Compra</h1>
       </MobileSlot>
 
-      <MobilePage.Root className="space-y-4">
-        <Card className="shell-card-flat overflow-hidden rounded-[30px]">
-          <div className="border-b shell-divider bg-orange-50/80 p-4">
+      <MobilePage.Root
+        className="space-y-4 pb-[calc(var(--shell-bottom-nav-height,0px)+var(--shell-safe-area-bottom,env(safe-area-inset-bottom))+15rem)]"
+      >
+        <Card className="shell-card-flat overflow-hidden rounded-[30px] border-0 shadow-[0_18px_50px_rgba(15,23,42,0.12)] dark:bg-[#12141b] dark:shadow-[0_22px_60px_rgba(0,0,0,0.38)]">
+          <div className="border-b-0 bg-[#f3ece2] p-4 dark:bg-[#2b2926]">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[20px] bg-orange-100/90 ring-1 ring-orange-100 dark:bg-[#3a342b] dark:ring-0">
                 <StatusIcon className="h-7 w-7 text-orange-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="truncate text-lg font-bold text-foreground">
+                <h2 className="truncate text-lg font-bold text-stone-950 dark:text-stone-100">
                   {supplier?.name || "Sin proveedor"}
                 </h2>
                 <Badge
-                  className={`mt-2 ${statusColors[purchase.status]}`}
+                  className={`mt-2 ${statusColors[purchase.status]} dark:border-0`}
                 >
                   {statusLabels[purchase.status]}
                 </Badge>
@@ -206,7 +208,7 @@ export default function PurchaseDetailPage() {
               </div>
             </div>
 
-            <div className="shell-block-muted flex items-center justify-between rounded-[20px] p-4">
+            <div className="shell-block-muted flex items-center justify-between rounded-[20px] border-0 p-4 dark:bg-[#20232d]">
               <span className="font-medium">Total:</span>
               <span className="text-xl font-bold text-orange-600">
                 S/ {formatCurrency(displayTotal)}
@@ -238,7 +240,7 @@ export default function PurchaseDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="shell-card-flat overflow-hidden rounded-[30px]">
+        <Card className="shell-card-flat overflow-hidden rounded-[30px] border-0 shadow-[0_18px_50px_rgba(15,23,42,0.12)] dark:bg-[#12141b] dark:shadow-[0_22px_60px_rgba(0,0,0,0.38)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-orange-600" />
@@ -250,7 +252,7 @@ export default function PurchaseDetailPage() {
               {purchase.items?.map((item, index) => (
                 <div
                   key={item.id}
-                  className="shell-card-soft flex items-center justify-between rounded-[20px] p-3"
+                  className="shell-card-soft flex items-center justify-between rounded-[20px] border-0 p-3 dark:bg-[#1d2028]"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">
@@ -262,7 +264,7 @@ export default function PurchaseDetailPage() {
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {formatWeight(item.quantity)} unidades × S/{" "}
+                      Cantidad {item.quantity} × S/{" "}
                       {formatCurrency(item.unitCost)}
                     </p>
                   </div>

@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Truck, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Truck, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
-import { useBusiness } from "~/hooks/use-business";
 import { cn } from "~/lib/utils";
 
 interface SupplierSelectorProps {
@@ -19,10 +19,22 @@ export function SupplierSelector({
   onSelectSupplier,
   disabled = false,
 }: SupplierSelectorProps) {
-  const { data: business } = useBusiness();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { data: suppliers = [], isLoading } = useSuppliers();
+
+  const filteredSuppliers = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return suppliers;
+
+    return suppliers.filter((supplier) =>
+      [supplier.name, supplier.phone, supplier.ruc, supplier.email]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(normalizedQuery))
+    );
+  }, [searchQuery, suppliers]);
 
   const handleSelectSupplier = (supplier: Supplier) => {
     onSelectSupplier(supplier);
@@ -32,6 +44,12 @@ export function SupplierSelector({
 
   const handleClearSupplier = () => {
     onSelectSupplier(null);
+  };
+
+  const handleCreateSupplier = () => {
+    const returnTo = `${location.pathname}${location.search}`;
+    navigate(`/proveedores/nuevo?returnTo=${encodeURIComponent(returnTo)}`);
+    setIsOpen(false);
   };
 
   return (
@@ -61,7 +79,7 @@ export function SupplierSelector({
                 )}
                 {!selectedSupplier && (
                   <p className="text-sm text-blue-600">
-                    Opcional - puedes omitirlo
+                    Requerido para guardar la compra
                   </p>
                 )}
               </div>
@@ -112,17 +130,41 @@ export function SupplierSelector({
             className="shell-search-field px-4"
           />
 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCreateSupplier}
+            className="h-11 w-full justify-center rounded-2xl border-dashed border-orange-300 bg-orange-50/70 font-semibold text-orange-700 hover:bg-orange-100"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo proveedor
+          </Button>
+
           <div className="space-y-2">
             {isLoading ? (
               <p className="text-sm text-muted-foreground text-center py-6">
                 Cargando proveedores...
               </p>
             ) : suppliers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No se encontraron proveedores
-              </p>
+              <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/60 px-4 py-6 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  Aún no tienes proveedores
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Crea uno para continuar con tu compra.
+                </p>
+              </div>
+            ) : filteredSuppliers.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border px-4 py-6 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  No encontramos proveedores con esa búsqueda
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Prueba otro nombre o crea un proveedor nuevo.
+                </p>
+              </div>
             ) : (
-              suppliers.map((supplier) => (
+              filteredSuppliers.map((supplier) => (
                 <button
                   key={supplier.id}
                   type="button"

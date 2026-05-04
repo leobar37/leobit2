@@ -57,7 +57,7 @@ const METHOD_DEFINITIONS = [
 ];
 
 export default function PaymentMethodsConfigPage() {
-  const { form, onSubmit, isLoading, isPending, isDirty } = usePaymentMethodsForm();
+  const { form, onSubmit, isLoading, isPending, isDirty, isValid } = usePaymentMethodsForm();
 
   if (isLoading) {
     return (
@@ -102,6 +102,11 @@ export default function PaymentMethodsConfigPage() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                  Guarda un método solo cuando sus datos estén completos. Los
+                  campos obligatorios aparecerán en cada tarjeta al activarla.
+                </div>
+
                 <div className="space-y-4">
                   {METHOD_DEFINITIONS.map((definition) => (
                     <PaymentMethodCard
@@ -116,10 +121,17 @@ export default function PaymentMethodsConfigPage() {
 
           <MobileFixedFooter aboveNav>
             <MobilePage.Root maxWidth="md">
+              <p className="mb-3 text-center text-xs text-muted-foreground">
+                {!isDirty
+                  ? "Sin cambios pendientes."
+                  : !isValid
+                    ? "Completa los campos obligatorios para guardar."
+                    : "Tienes cambios pendientes por guardar."}
+              </p>
               <Button
                 type="submit"
-                disabled={isPending || !isDirty}
-                className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+                disabled={isPending || !isDirty || !isValid}
+                className="h-14 w-full rounded-xl bg-orange-500 text-lg font-semibold hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
               >
                 {isPending ? (
                   <>

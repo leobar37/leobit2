@@ -1,7 +1,7 @@
 import { Package, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatKilos, cn } from "~/lib/utils";
+import { formatCurrency } from "~/lib/utils";
 import { usePurchaseForm } from "../purchase-form-context";
 
 export function PurchaseCartSection() {
@@ -28,7 +28,7 @@ export function PurchaseCartSection() {
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{item.productName}</p>
               <p className="text-sm text-muted-foreground">
-                {item.variantName} · {formatKilos(parseFloat(item.quantity))} kg × S/ {formatCurrency(parseFloat(item.unitCost))}
+                {item.variantName} · Cantidad {item.quantity} × S/ {formatCurrency(parseFloat(item.unitCost))}
               </p>
             </div>
             <div className="text-right">

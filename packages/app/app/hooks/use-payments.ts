@@ -114,12 +114,12 @@ export function useCreatePayment() {
     paymentMethod: string;
     referenceNumber?: string;
     notes?: string;
-  }) => {
+  }): Promise<Abono> => {
     const sellerId = business?.businessUserId;
     if (!sellerId) {
       throw new Error("Business seller is not available");
     }
-    const result = await mutation.mutateAsync({
+    return mutation.mutateAsync({
       customerId: data.customerId,
       relatedSaleId: data.relatedSaleId,
       amount: parseFloat(data.amount) || 0,
@@ -127,7 +127,6 @@ export function useCreatePayment() {
       referenceNumber: data.referenceNumber,
       notes: data.notes,
     });
-    return result.id;
   };
 }
 
@@ -191,8 +190,8 @@ export function useUpdatePayment() {
   return async (
     paymentId: string,
     data: { proofImageId?: string; referenceNumber?: string }
-  ) => {
-    await mutation.mutateAsync({
+  ): Promise<Abono> => {
+    return mutation.mutateAsync({
       id: paymentId,
       input: {
         proofImageId: data.proofImageId,

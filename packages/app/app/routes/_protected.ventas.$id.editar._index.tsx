@@ -50,7 +50,7 @@ function HeaderTotal() {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-full bg-orange-500/12 px-3 py-1.5 text-orange-700 backdrop-blur-sm dark:text-orange-300">
+    <div className="flex items-center gap-2 rounded-full bg-orange-500/[0.12] px-3 py-1.5 text-orange-700 backdrop-blur-sm dark:text-orange-300">
       <ShoppingCart className="h-4 w-4 text-orange-600" />
       <span className="text-sm font-semibold">
         S/ {formatCurrency(calculations.totalAmount)}
@@ -203,7 +203,7 @@ export default function SaleEditorPage() {
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/12 text-orange-400">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/[0.12] text-orange-400">
                   <Calculator className="h-6 w-6" />
                 </div>
                 <div className="flex-1">

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Building2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
-import { FieldInfo } from "@/components/ui/field-info";
+import { FormSelect } from "@/components/forms/form-select";
 import { useCreateSupplier } from "~/hooks/use-suppliers";
 import { FormPage } from "~/components/layout/form-page";
 
@@ -43,8 +43,10 @@ export default function NuevoProveedorPage() {
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      await createSupplier.mutateAsync(data);
-      navigate(returnTo && returnTo !== "/proveedores" ? returnTo : "/proveedores");
+      const supplier = await createSupplier.mutateAsync(data);
+      navigate(returnTo && returnTo !== "/proveedores" ? returnTo : "/proveedores", {
+        state: { supplier },
+      });
     } catch (error) {
       console.error("Error creating supplier:", error);
     }
@@ -85,19 +87,16 @@ export default function NuevoProveedorPage() {
             placeholder="Ej: Granja El Sol"
           />
 
-          <FieldInfo
+          <FormSelect
+            name="type"
             label="Tipo de proveedor"
             description='Los tipos de proveedor son: Regular (granjas y proveedores comerciales externos), Interno (granjas propias o departamentos de la empresa) y Genérico (para compras misceláneas sin proveedor específico).'
-          >
-            <select
-              {...form.register("type")}
-              className="w-full h-10 rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
-            >
-              <option value="regular">Regular</option>
-              <option value="internal">Interno</option>
-              <option value="generic">Genérico</option>
-            </select>
-          </FieldInfo>
+            options={[
+              { value: "regular", label: "Regular" },
+              { value: "internal", label: "Interno" },
+              { value: "generic", label: "Genérico" },
+            ]}
+          />
 
           <FormInput
             name="ruc"
@@ -130,7 +129,7 @@ export default function NuevoProveedorPage() {
               {...form.register("notes")}
               rows={3}
               placeholder="Información adicional sobre el proveedor"
-              className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm"
+              className="shell-field min-h-[110px] w-full rounded-[20px] border border-input bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring"
             />
           </div>
         </div>

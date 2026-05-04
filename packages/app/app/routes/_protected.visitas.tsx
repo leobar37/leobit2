@@ -180,13 +180,19 @@ export default function VisitasPage() {
     noPurchaseModal.open(visita);
   }
 
-  if (!isLoadingDistribucion && !distribucion) {
+  const isDistribucionActiva = distribucion?.estado === "activo";
+
+  if (!isLoadingDistribucion && (!distribucion || !isDistribucionActiva)) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
         <AlertCircle className="mb-4 h-12 w-12 text-orange-500" />
-        <h3 className="mb-2 text-lg font-semibold">No hay distribución activa</h3>
+        <h3 className="mb-2 text-lg font-semibold">
+          {distribucion ? "Distribución cerrada" : "No hay distribución activa"}
+        </h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Necesitas tener una distribución activa para registrar visitas
+          {distribucion
+            ? "Esta distribución ya fue cerrada. No se pueden registrar nuevas visitas."
+            : "Necesitas tener una distribución activa para registrar visitas"}
         </p>
         <Button
           onClick={() => navigate("/mi-distribucion")}

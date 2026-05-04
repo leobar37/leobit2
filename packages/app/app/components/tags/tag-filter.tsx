@@ -46,13 +46,13 @@ export function TagFilter({ selectedTagIds, onChange, onCreateClick }: TagFilter
         <Button
           type="button"
           variant="outline"
-          className="h-12 w-full min-w-0 justify-between rounded-xl border-stone-200/80 bg-white/75 px-3 text-left shadow-[0_1px_6px_rgba(15,23,42,0.02)] hover:bg-white"
+          className="h-12 w-full min-w-0 justify-between rounded-xl border-stone-200/80 bg-white/75 px-3 text-left shadow-[0_1px_6px_rgba(15,23,42,0.02)] hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
         >
           {triggerContent}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border-stone-200/80 p-4" align="end">
+      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border-stone-200/80 p-4 dark:border-white/10 dark:bg-[#171922]" align="end">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Etiquetas</p>
@@ -80,7 +80,7 @@ export function TagFilter({ selectedTagIds, onChange, onCreateClick }: TagFilter
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/[0.12] dark:hover:text-orange-100"
               onClick={() => {
                 setIsOpen(false);
                 onCreateClick();

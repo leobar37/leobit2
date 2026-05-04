@@ -153,10 +153,14 @@ export function FormMediaField({
               <Upload className="w-6 h-6" />
             )}
             <span className="text-sm font-medium">
-              {isMobile ? "Tomar foto o subir" : isAsset ? "Seleccionar imagen" : "Subir archivo"}
+              {isMobile
+                ? "Tomar foto o subir comprobante"
+                : isAsset
+                  ? "Seleccionar imagen"
+                  : "Subir archivo"}
             </span>
             <span className="text-xs text-muted-foreground">
-              {isMobile ? "Toca para abrir opciones" : "Haz clic para seleccionar"}
+              {isMobile ? "Toca para abrir cámara o galería" : "Haz clic para seleccionar"}
             </span>
           </button>
         )}

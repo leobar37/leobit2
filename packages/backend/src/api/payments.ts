@@ -169,4 +169,69 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
         proofImageId: t.String(),
       }),
     }
+  )
+  .get(
+    "/:id/token",
+    async ({ paymentTokenService, ctx, params }) => {
+      const token = await paymentTokenService.getTokenByPaymentId(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: token };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/:id/token",
+    async ({ paymentTokenService, ctx, params, set }) => {
+      set.status = 201;
+      const result = await paymentTokenService.generateToken(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/:id/token/regenerate",
+    async ({ paymentTokenService, ctx, params }) => {
+      const result = await paymentTokenService.regenerateToken(
+        ctx as RequestContext,
+        params.id
+      );
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/:id/token/toggle",
+    async ({ paymentTokenService, ctx, params, body }) => {
+      const result = await paymentTokenService.toggleTokenStatus(
+        ctx as RequestContext,
+        params.id,
+        body.isActive
+      );
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        isActive: t.Boolean(),
+      }),
+    }
   );

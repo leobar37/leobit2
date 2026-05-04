@@ -193,8 +193,8 @@ export default function CustomersPage() {
                     className={cn(
                       "gap-2 rounded-lg",
                       sortBy === option.sortBy && sortOrder === option.sortOrder
-                        ? "bg-orange-50 text-orange-700 focus:bg-orange-50 focus:text-orange-700 dark:bg-orange-500/14 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-200"
-                        : "text-foreground focus:bg-accent focus:text-foreground"
+                        ? "bg-orange-50 text-orange-700 hover:bg-orange-50 hover:text-orange-700 focus:bg-orange-50 focus:text-orange-700 data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-700 dark:bg-orange-500/[0.16] dark:text-orange-100 dark:hover:bg-orange-500/[0.22] dark:hover:text-orange-50 dark:focus:bg-orange-500/[0.22] dark:focus:text-orange-50 dark:data-[highlighted]:!bg-orange-500/[0.22] dark:data-[highlighted]:!text-orange-50"
+                        : "text-foreground hover:bg-accent hover:text-foreground focus:bg-accent focus:text-foreground data-[highlighted]:bg-accent data-[highlighted]:text-foreground dark:hover:bg-white/[0.08] dark:hover:text-foreground dark:focus:bg-white/[0.08] dark:focus:text-foreground dark:data-[highlighted]:!bg-white/[0.08] dark:data-[highlighted]:!text-foreground"
                     )}
                   >
                     {option.icon}
@@ -251,7 +251,7 @@ export default function CustomersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/16"
+                        className="gap-1.5 rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/[0.16]"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         Acciones
@@ -269,7 +269,7 @@ export default function CustomersPage() {
                             onAssigned: clearSelection,
                           });
                         }}
-                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-100"
+                        className="gap-2 rounded-lg text-orange-600 hover:bg-orange-50 hover:text-orange-700 focus:bg-orange-50 focus:text-orange-700 data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/[0.14] dark:hover:text-orange-100 dark:focus:bg-orange-500/[0.14] dark:focus:text-orange-100 dark:data-[highlighted]:!bg-orange-500/[0.14] dark:data-[highlighted]:!text-orange-100"
                       >
                         <Users className="h-4 w-4" />
                         Asignar grupos
@@ -279,7 +279,7 @@ export default function CustomersPage() {
                           event.preventDefault();
                           bulkTagsModal.open({ customerIds: Array.from(selectedCustomerIds) });
                         }}
-                        className="gap-2 rounded-lg text-orange-600 focus:bg-orange-50 focus:text-orange-700 dark:text-orange-200 dark:focus:bg-orange-500/14 dark:focus:text-orange-100"
+                        className="gap-2 rounded-lg text-orange-600 hover:bg-orange-50 hover:text-orange-700 focus:bg-orange-50 focus:text-orange-700 data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/[0.14] dark:hover:text-orange-100 dark:focus:bg-orange-500/[0.14] dark:focus:text-orange-100 dark:data-[highlighted]:!bg-orange-500/[0.14] dark:data-[highlighted]:!text-orange-100"
                       >
                         <Tags className="h-4 w-4" />
                         Asignar tags

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { cn, formatCurrency } from "~/lib/utils";
 import { useNavigate, useLocation, useParams } from "react-router";
-import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight, FileEdit } from "lucide-react";
+import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight, FileEdit, CircleAlert, CircleCheckBig, CircleDollarSign, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
@@ -37,6 +37,65 @@ function DraftIndicator() {
   );
 }
 
+function PurchaseProgress({
+  hasSupplier,
+  hasItems,
+  hasReceipt,
+}: {
+  hasSupplier: boolean;
+  hasItems: boolean;
+  hasReceipt: boolean;
+}) {
+  const steps = [
+    {
+      label: "Proveedor",
+      done: hasSupplier,
+      icon: Truck,
+    },
+    {
+      label: "Productos",
+      done: hasItems,
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Comprobante",
+      done: hasReceipt,
+      icon: Receipt,
+      optional: true,
+    },
+  ];
+
+  return (
+    <div className="rounded-[24px] border border-orange-200/80 bg-orange-50/75 p-4">
+      <p className="text-sm font-semibold text-orange-900">Checklist de la compra</p>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {steps.map((step) => {
+          const Icon = step.done ? CircleCheckBig : step.icon;
+          return (
+            <div
+              key={step.label}
+              className={cn(
+                "rounded-2xl border px-3 py-3 text-sm",
+                step.done
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-orange-200 bg-white/80 text-muted-foreground"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4" />
+                <span className="font-medium">{step.label}</span>
+              </div>
+              <p className="mt-1 text-xs">
+                {step.done ? "Listo" : step.optional ? "Opcional" : "Pendiente"}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PurchaseFormInner() {
   const {
     supplier,
@@ -47,7 +106,6 @@ function PurchaseFormInner() {
     handleReceiptClear,
     fileUploadStatus,
     purchaseError,
-    clearPurchaseError,
     onSave,
     cartItemsCount,
     form,
@@ -71,12 +129,20 @@ function PurchaseFormInner() {
 
   const hasError = !!purchaseError;
   const errorMessage = purchaseError;
+  const hasSupplier = !!supplier;
+  const hasItems = cartItemsCount > 0;
+  const hasReceipt = !!receiptFile || !!receiptPreview;
 
   return (
     <>
       <FormProvider {...form}>
         <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
         <DraftIndicator />
+        <PurchaseProgress
+          hasSupplier={hasSupplier}
+          hasItems={hasItems}
+          hasReceipt={hasReceipt}
+        />
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -87,6 +153,11 @@ function PurchaseFormInner() {
               selectedSupplier={supplier}
               onSelectSupplier={handleSupplierSelect}
             />
+            {!hasSupplier && (
+              <p className="text-sm text-amber-700">
+                Elige o crea un proveedor para poder guardar la compra.
+              </p>
+            )}
           </div>
 
           <FormDate
@@ -105,7 +176,7 @@ function PurchaseFormInner() {
         <div className="space-y-4">
           <button
             type="button"
-            onClick={() => navigate(`/compras/nueva/${draftId}/calculadora`)}
+            onClick={() => navigate(draftId ? `/compras/nueva/${draftId}/calculadora` : "/compras/nueva/calculadora")}
             className="w-full flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-2xl hover:bg-orange-100 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -127,9 +198,14 @@ function PurchaseFormInner() {
           <PurchaseCartSection />
 
           {cartItemsCount === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-2">
-              Agrega productos usando la calculadora
-            </p>
+            <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/50 px-4 py-4 text-center">
+              <p className="text-sm font-medium text-foreground">
+                Todavía no agregaste productos
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Usa la calculadora para cargar los items y construir el total de la compra.
+              </p>
+            </div>
           )}
         </div>
 
@@ -170,7 +246,10 @@ function PurchaseFormInner() {
 
         {hasError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-sm text-red-600 text-center">{errorMessage}</p>
+            <div className="flex items-start gap-2 text-red-600">
+              <CircleAlert className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <p className="text-sm">{errorMessage}</p>
+            </div>
           </div>
         )}
         </form>

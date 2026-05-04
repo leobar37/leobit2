@@ -330,6 +330,13 @@
       "when": 1777766400000,
       "tag": "0062_add_public_catalog_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1777852800000,
+      "tag": "0063_add_payment_tokens",
+      "breakpoints": true
     }
   ]
 }

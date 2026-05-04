@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import {
   paymentMethodsSchema,
   type PaymentMethodsFormData,
@@ -36,7 +37,18 @@ export function usePaymentMethodsForm() {
   }, [config, form]);
 
   const onSubmit = form.handleSubmit(async (data) => {
-    await mutation.mutateAsync(data);
+    try {
+      await mutation.mutateAsync(data);
+      form.reset(data);
+      toast.success("Métodos de pago actualizados");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudieron guardar los métodos de pago";
+
+      toast.error(message);
+    }
   });
 
   return {
@@ -45,5 +57,6 @@ export function usePaymentMethodsForm() {
     isLoading,
     isPending: mutation.isPending,
     isDirty: form.formState.isDirty,
+    isValid: form.formState.isValid,
   };
 }

@@ -129,7 +129,7 @@ export function CustomerFilterPopover({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/12 dark:hover:text-orange-100"
+                className="w-full justify-center text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-200 dark:hover:bg-orange-500/[0.12] dark:hover:text-orange-100"
                 onClick={() => {
                   setIsOpen(false);
                   onCreateClick();

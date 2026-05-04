@@ -76,7 +76,7 @@ export function CustomerSelect({
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-500/12 text-orange-600 dark:text-orange-300">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-orange-500/[0.12] text-orange-600 dark:text-orange-300">
                 <User className="h-6 w-6" />
               </div>
               <div className="min-w-0">
@@ -176,7 +176,7 @@ export function CustomerSelect({
                 : "border-dashed border-orange-300/60 hover:bg-orange-50/30 dark:border-orange-400/20 dark:hover:bg-orange-500/10",
             )}
           >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/50 dark:bg-orange-500/14">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/50 dark:bg-orange-500/[0.14]">
               <Plus className="h-5 w-5 text-orange-600 dark:text-orange-300" />
             </div>
             <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ export function CustomerSelect({
                       : "border-border bg-card hover:bg-accent",
                   )}
                 >
-                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/14">
+                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100/80 dark:bg-orange-500/[0.14]">
                     <User className="h-5 w-5 text-orange-600 dark:text-orange-300" />
                   </div>
                   <div className="flex-1 min-w-0">

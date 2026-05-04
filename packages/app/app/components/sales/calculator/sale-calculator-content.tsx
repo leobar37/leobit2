@@ -164,7 +164,7 @@ export function CalculatorContent() {
                       isInCart
                         ? "cursor-not-allowed border-white/8 bg-white/[0.035] opacity-55"
                         : isSelected
-                          ? "border-orange-500/50 bg-orange-500/14 shadow-[0_12px_28px_rgba(249,115,22,0.12)]"
+                          ? "border-orange-500/50 bg-orange-500/[0.14] shadow-[0_12px_28px_rgba(249,115,22,0.12)]"
                           : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
                     )}
                   >
@@ -177,7 +177,7 @@ export function CalculatorContent() {
                           {product.unit === "kg" ? "Por kilo" : "Por unidad"}
                         </span>
                         {isInCart && (
-                          <span className="rounded-full bg-orange-500/12 px-2 py-0.5 text-[11px] font-semibold text-orange-300">
+                          <span className="rounded-full bg-orange-500/[0.12] px-2 py-0.5 text-[11px] font-semibold text-orange-300">
                             Agregado
                           </span>
                         )}
@@ -230,7 +230,7 @@ export function CalculatorContent() {
                       className={cn(
                         "rounded-[20px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
                         variantId === variant.id
-                          ? "border-orange-500/50 bg-orange-500/14"
+                          ? "border-orange-500/50 bg-orange-500/[0.14]"
                           : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
                       )}
                     >

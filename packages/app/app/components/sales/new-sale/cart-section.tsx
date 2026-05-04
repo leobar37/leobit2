@@ -37,7 +37,7 @@ function CartItemRow({
 
   return (
     <div className="flex items-center gap-3 rounded-[20px] bg-white/[0.055] p-3.5 transition-colors hover:bg-white/[0.075]">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/12">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/[0.12]">
         <Package className="h-5 w-5 text-orange-600" />
       </div>
       <div className="flex-1 min-w-0">

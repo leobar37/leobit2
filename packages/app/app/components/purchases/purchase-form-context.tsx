@@ -33,6 +33,8 @@ interface ApiPurchaseItem {
   updatedAt: Date;
   productName?: string;
   variantName?: string;
+  product?: { name?: string | null } | null;
+  variant?: { name?: string | null } | null;
 }
 
 /** Purchase with items from API */
@@ -199,8 +201,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         productId: item.productId,
         variantId: item.variantId,
         unitId: item.unitId ?? undefined,
-        productName: item.productName || "Producto",
-        variantName: item.variantName || "",
+        productName: item.productName || item.product?.name || "Producto",
+        variantName: item.variantName || item.variant?.name || "",
         ...(purchaseItemTransformer.toForm(item) as Pick<PurchaseItem, "quantity" | "unitCost" | "totalCost">),
       }));
     }
@@ -275,10 +277,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     return items.reduce((sum, item) => sum + (parseFloat(item.totalCost) || 0), 0);
   }, [items]);
 
-  const isFormValid =
-    items.length > 0 && effectiveSupplier !== null && !!form.getValues("purchaseDate");
-
-
+  const purchaseDate = form.watch("purchaseDate");
+  const isFormValid = items.length > 0 && effectiveSupplier !== null && !!purchaseDate;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -314,9 +314,11 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
           })),
         };
 
-        // Re-create the purchase with full data (backend doesn't support PATCH)
-        // First delete the draft, then create the real one
-        await api.purchases({ id: purchase.id }).delete();
+        const deleteResponse = await api.purchases({ id: purchase.id }).delete();
+        if (deleteResponse.error) {
+          throw new Error("No se pudo reemplazar el borrador de compra");
+        }
+
         const response = await api.purchases.post({ ...input, status: "pending" });
         const result = extractData<PurchaseWithItems>(response);
         return result.id;
@@ -358,8 +360,9 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       return result.id;
     },
     onSuccess: (id) => {
-      queryClient.invalidateQueries({ queryKey: ["purchases-new"] });
+      queryClient.invalidateQueries({ queryKey: ["purchases"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-form", id] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       navigate("/compras");
     },
     onError: (error) => {
