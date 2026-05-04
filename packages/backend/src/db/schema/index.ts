@@ -273,3 +273,19 @@ export {
   puntoVentaTypes,
   type PuntoVentaType,
 } from "./puntos-venta";
+
+// Expenses
+export {
+  expenses,
+  expensesRelations,
+  type Expense,
+  type NewExpense,
+} from "./expenses";
+
+// Expense Categories
+export {
+  expenseCategories,
+  expenseCategoriesRelations,
+  type ExpenseCategory,
+  type NewExpenseCategory,
+} from "./expense-categories";

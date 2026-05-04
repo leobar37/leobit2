@@ -10,12 +10,14 @@ import {
   CreditCard,
   TrendingUp,
   Package,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
 import { useMiDistribucion } from "~/hooks/use-distribuciones";
 import { useProducts } from "~/hooks/use-products";
 import { useSales } from "~/hooks/use-sales";
+import { useExpenses } from "~/hooks/use-expenses";
 import { BusinessUserRole } from "@avileo/shared";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { MetricCard } from "~/components/dashboard/metric-card";
@@ -51,9 +53,15 @@ export default function DashboardPage() {
 
   const { data: products = [] } = useProducts();
   const { data: sales = [] } = useSales();
+  const { data: expenses = [] } = useExpenses();
 
   const hasProducts = products.length > 0;
   const hasSales = sales.length > 0;
+
+  // Calculate today's expenses
+  const today = new Date().toISOString().split('T')[0];
+  const todayExpenses = expenses.filter(e => e.expenseDate === today);
+  const totalExpensesToday = todayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || "0"), 0);
 
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.estado === "activo";
@@ -135,6 +143,14 @@ export default function DashboardPage() {
           </div>
         </Link>
 
+        <Link to="/gastos" className="block">
+          <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
+              <Receipt className="h-4.5 w-4.5 text-foreground/75" />
+            </div>
+            <span className="text-xs font-medium text-foreground/85">Gastos</span>
+          </div>
+        </Link>
 
       </div>
 
@@ -177,10 +193,10 @@ export default function DashboardPage() {
               iconColor="text-red-600"
             />
             <MetricCard
-              title="Pendiente"
-              value={isLoadingDebtors ? "S/ -" : `S/ ${formatCurrency(debtorsSummary?.totalDebt ?? 0)}`}
-              icon={CreditCard}
-              iconColor="text-orange-600"
+              title="Gastos Hoy"
+              value={`S/ ${formatCurrency(totalExpensesToday)}`}
+              icon={Receipt}
+              iconColor="text-amber-600"
             />
           </div>
 

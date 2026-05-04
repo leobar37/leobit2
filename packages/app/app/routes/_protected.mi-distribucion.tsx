@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { Package, TrendingUp, AlertCircle, ShoppingBag, Settings, Lock, CheckCircle2 } from "lucide-react";
+import { Package, TrendingUp, AlertCircle, ShoppingBag, Settings, Lock, CheckCircle2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { useSetLayout } from "~/components/layout/app-layout";
 import { useMiDistribucion, useCloseDistribucion } from "~/hooks/use-distribuciones";
 import { useBusiness } from "~/hooks/use-business";
 import { useSales } from "~/hooks/use-sales";
+import { useExpenses } from "~/hooks/use-expenses";
 import { useCreateSale } from "~/hooks/use-sales";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency } from "~/lib/utils";
@@ -123,6 +124,11 @@ export default function MiDistribucionPage() {
     distribucion?.id ? { distribucionId: distribucion.id } : undefined
   );
 
+  // Fetch expenses for this distribution
+  const { data: distribucionExpenses = [] } = useExpenses(
+    distribucion?.id ? { distribucionId: distribucion.id } : undefined
+  );
+
   // Calculate metrics from sales
   const montoRecaudado = useMemo(() => {
     if (!distribucionSales || distribucionSales.length === 0) return 0;
@@ -155,6 +161,11 @@ export default function MiDistribucionPage() {
       .reduce((sum, s) => sum + parseFloat(s.totalAmount || "0"), 0);
     return { contado, credito, total: contado + credito };
   }, [distribucionSales]);
+
+  // Expenses for this distribution
+  const totalExpenses = useMemo(() => {
+    return distribucionExpenses.reduce((sum, e) => sum + parseFloat(e.amount || "0"), 0);
+  }, [distribucionExpenses]);
 
   const handleOpenCierreConfirm = useCallback(() => {
     if (!isOnline) {
@@ -369,6 +380,16 @@ export default function MiDistribucionPage() {
               </div>
             )}
 
+            {/* Expenses */}
+            {distribucionExpenses.length > 0 && (
+              <div className="flex justify-between items-center p-4 bg-red-50 dark:bg-red-950/40 rounded-xl">
+                <span className="text-sm text-muted-foreground">Gastos</span>
+                <span className="text-xl font-bold text-red-600 dark:text-red-400">
+                  S/ {formatCurrency(totalExpenses)}
+                </span>
+              </div>
+            )}
+
             {/* Closed date - only show if closed */}
             {isCerrado && distribucionWithItems.closedAt && (
               <p className="text-xs text-muted-foreground text-center pt-2">
@@ -395,6 +416,15 @@ export default function MiDistribucionPage() {
             >
               <Package className="mr-2 h-5 w-5" />
               Nueva Venta
+            </Button>
+
+            <Button
+              onClick={() => navigate(`/gastos/nuevo?distribucion=${distribucion?.id}`)}
+              variant="outline"
+              className="h-14 w-full rounded-2xl border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-900 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+            >
+              <Receipt className="mr-2 h-5 w-5" />
+              Registrar Gasto
             </Button>
 
             <Button
