@@ -21,9 +21,10 @@ import { addDays, formatDisplayDate, isSameDay } from "~/lib/date-utils";
 interface CreateSaleTypeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  customerId?: string;
 }
 
-export function CreateSaleTypeSheet({ open, onOpenChange }: CreateSaleTypeSheetProps) {
+export function CreateSaleTypeSheet({ open, onOpenChange, customerId }: CreateSaleTypeSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -37,15 +38,15 @@ export function CreateSaleTypeSheet({ open, onOpenChange }: CreateSaleTypeSheetP
           </SheetDescription>
         </SheetHeader>
         <div className="mt-6 space-y-3">
-          <VentaDirectaOption onOpenChange={onOpenChange} />
-          <ProgramarPedidoOption onOpenChange={onOpenChange} />
+          <VentaDirectaOption onOpenChange={onOpenChange} customerId={customerId} />
+          <ProgramarPedidoOption onOpenChange={onOpenChange} customerId={customerId} />
         </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+function VentaDirectaOption({ onOpenChange, customerId }: { onOpenChange: (open: boolean) => void; customerId?: string }) {
   const navigate = useNavigate();
   const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
@@ -66,7 +67,7 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
 
     setLoading(true);
     try {
-      const sale = await createDraftSale.mutateAsync({ type: "instant_sale" });
+      const sale = await createDraftSale.mutateAsync({ type: "instant_sale", customerId });
       onOpenChange(false);
       navigate(`/ventas/${sale.id}/editar`);
     } catch (err) {
@@ -106,7 +107,7 @@ function VentaDirectaOption({ onOpenChange }: { onOpenChange: (open: boolean) =>
   );
 }
 
-function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+function ProgramarPedidoOption({ onOpenChange, customerId }: { onOpenChange: (open: boolean) => void; customerId?: string }) {
   const navigate = useNavigate();
   const { data: business } = useBusiness();
   const createDraftSale = useCreateDraftSale();
@@ -148,6 +149,7 @@ function ProgramarPedidoOption({ onOpenChange }: { onOpenChange: (open: boolean)
       const sale = await createDraftSale.mutateAsync({
         type: "pre_order",
         deliveryDate,
+        customerId,
       });
       setShowDatePicker(false);
       onOpenChange(false);

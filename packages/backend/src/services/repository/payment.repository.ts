@@ -92,7 +92,7 @@ export class PaymentRepository {
   async update(
     ctx: RequestContext,
     id: string,
-    data: Partial<Pick<Abono, "proofImageId" | "referenceNumber" | "notes">>,
+    data: Partial<Pick<Abono, "paymentMethod" | "proofImageId" | "referenceNumber" | "notes">>,
     tx?: DbTransaction
   ): Promise<Abono> {
     const executor = tx ?? db;

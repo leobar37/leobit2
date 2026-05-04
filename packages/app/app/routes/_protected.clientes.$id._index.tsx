@@ -6,6 +6,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  ShoppingCart,
   Tags,
   Trash2,
   User,
@@ -24,11 +25,13 @@ import { formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 import { decimalToNumber } from "@avileo/shared";
 import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
+import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
+  const [showSaleSheet, setShowSaleSheet] = useState(false);
 
   const { data: customer, isLoading: customerLoading } = useCustomer(id ?? null);
   const { data: balance, isLoading: balanceLoading } = useCustomerBalance(id ?? null);
@@ -161,14 +164,34 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
+        <Card className="shell-card-flat rounded-[28px]">
+          <CardContent className="space-y-2 p-4">
+            <Button
+              onClick={() => setShowSaleSheet(true)}
+              className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600"
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Nueva venta
+            </Button>
+            {(balance?.balanceDue ?? 0) > 0 && (
+              <Button asChild variant="outline" className="h-12 w-full rounded-xl">
+                <Link to={`/cobros/nuevo?clienteId=${id}`}>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Registrar pago
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {balance && balance.totalSales > 0 && (
           <Card className="shell-card-flat rounded-[28px]">
             <CardContent className="space-y-4 p-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Saldo pendiente</p>
                 <p className={`text-4xl font-bold ${(balance.balanceDue ?? 0) > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {(balance.balanceDue ?? 0) > 0 
-                    ? `S/ ${formatCurrency(balance.balanceDue)}` 
+                  {(balance.balanceDue ?? 0) > 0
+                    ? `S/ ${formatCurrency(balance.balanceDue)}`
                     : "Sin deuda"}
                 </p>
                 {balanceLoading ? (
@@ -190,15 +213,6 @@ export default function CustomerDetailPage() {
                   </p>
                 </div>
               </div>
-
-              {(balance.balanceDue ?? 0) > 0 && (
-                <Button asChild className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600">
-                  <Link to={`/cobros/nuevo?clienteId=${id}`}>
-                    <Wallet className="mr-2 h-4 w-4" />
-                    Registrar pago
-                  </Link>
-                </Button>
-              )}
             </CardContent>
           </Card>
         )}
@@ -206,6 +220,8 @@ export default function CustomerDetailPage() {
         <CustomerTagsModal />
 
         <ConfirmDialog />
+
+        <CreateSaleTypeSheet open={showSaleSheet} onOpenChange={setShowSaleSheet} customerId={id} />
 
         <div className="shell-card-flat overflow-hidden rounded-[28px]">
           <div className="flex border-b shell-divider">

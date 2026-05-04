@@ -54,10 +54,10 @@ export function CalculatorContent() {
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <label className="text-sm font-semibold text-white/95">
+              <label className="text-sm font-semibold text-foreground">
                 Producto
               </label>
-              <p className="text-xs text-white/55">
+              <p className="text-xs text-muted-foreground">
                 {picker.activeProducts.length} disponibles
               </p>
             </div>
@@ -70,9 +70,9 @@ export function CalculatorContent() {
           </div>
 
           {picker.showProductDiscovery && (
-            <div className="sticky top-0 z-10 -mx-1 space-y-2 bg-[#11131a]/96 px-1 py-2 backdrop-blur-xl">
+            <div className="sticky top-0 z-10 -mx-1 space-y-2 shell-surface px-1 py-2 backdrop-blur-xl">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   data-testid="sale-product-search-input"
                   value={search}
@@ -101,8 +101,8 @@ export function CalculatorContent() {
                     className={cn(
                       "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                       filter === f.value
-                        ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
-                        : "border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white/90",
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-500 dark:text-orange-300"
+                        : "border-border bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground",
                     )}
                   >
                     {f.label}
@@ -117,7 +117,7 @@ export function CalculatorContent() {
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="rounded-[20px] border border-white/10 bg-[#171922] p-3 space-y-2"
+                  className="rounded-[20px] border border-border bg-card p-3 space-y-2"
                 >
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-5 w-16 rounded-full" />
@@ -131,9 +131,9 @@ export function CalculatorContent() {
               </CardContent>
             </Card>
           ) : picker.filteredProducts.length === 0 ? (
-            <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.03] p-5 text-center">
-              <p className="font-semibold text-white/95">No encontramos productos</p>
-              <p className="mt-1 text-sm text-white/55">
+            <div className="rounded-[22px] border border-dashed border-border bg-muted/50 p-5 text-center">
+              <p className="font-semibold text-foreground">No encontramos productos</p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Prueba con otro nombre o cambia el filtro.
               </p>
             </div>
@@ -162,22 +162,22 @@ export function CalculatorContent() {
                       "min-h-[86px] rounded-[22px] border p-3 text-left transition-colors",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
                       isInCart
-                        ? "cursor-not-allowed border-white/8 bg-white/[0.035] opacity-55"
+                        ? "cursor-not-allowed border-border/50 bg-muted opacity-55"
                         : isSelected
                           ? "border-orange-500/50 bg-orange-500/[0.14] shadow-[0_12px_28px_rgba(249,115,22,0.12)]"
-                          : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
+                          : "border-border bg-card hover:border-border/80 hover:bg-accent",
                     )}
                   >
                     <div className="flex h-full flex-col justify-between gap-2">
-                      <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-white/95">
+                      <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-foreground">
                         {product.name}
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11px] font-semibold text-white/65">
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                           {product.unit === "kg" ? "Por kilo" : "Por unidad"}
                         </span>
                         {isInCart && (
-                          <span className="rounded-full bg-orange-500/[0.12] px-2 py-0.5 text-[11px] font-semibold text-orange-300">
+                          <span className="rounded-full bg-orange-500/[0.12] px-2 py-0.5 text-[11px] font-semibold text-orange-500 dark:text-orange-300">
                             Agregado
                           </span>
                         )}
@@ -192,19 +192,19 @@ export function CalculatorContent() {
 
         {/* Variant Selector */}
         {picker.selectedProduct && (
-          <div className="space-y-3 rounded-[24px] border border-white/10 bg-white/[0.035] p-3">
+          <div className="space-y-3 rounded-[24px] border border-border bg-muted/50 p-3">
             <div>
-              <label className="text-sm font-semibold text-white/95">
+              <label className="text-sm font-semibold text-foreground">
                 Presentación
               </label>
-              <p className="text-xs text-white/55">{picker.selectedProduct.name}</p>
+              <p className="text-xs text-muted-foreground">{picker.selectedProduct.name}</p>
             </div>
             {picker.isVariantsLoading ? (
               <div className="grid grid-cols-2 gap-2">
                 {Array.from({ length: 2 }).map((_, index) => (
                   <div
                     key={index}
-                    className="rounded-[20px] border border-white/10 bg-[#171922] p-3 space-y-2"
+                    className="rounded-[20px] border border-border bg-card p-3 space-y-2"
                   >
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-4 w-14" />
@@ -231,20 +231,20 @@ export function CalculatorContent() {
                         "rounded-[20px] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
                         variantId === variant.id
                           ? "border-orange-500/50 bg-orange-500/[0.14]"
-                          : "border-white/10 bg-[#171922] hover:border-white/18 hover:bg-[#1d2028]",
+                          : "border-border bg-card hover:border-border/80 hover:bg-accent",
                       )}
                     >
-                      <p className="text-sm font-semibold text-white/95">
+                      <p className="text-sm font-semibold text-foreground">
                         {variant.name}
                       </p>
-                      <p className="mt-1 text-sm font-medium text-orange-300">
+                      <p className="mt-1 text-sm font-medium text-orange-500 dark:text-orange-300">
                         S/ {formatCurrency(variant.price)}
                       </p>
                     </button>
                   ))}
                 </div>
                 {picker.isVariantsFetching && (
-                  <div className="flex items-center gap-2 text-xs text-white/55">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Actualizando presentaciones...
                   </div>
@@ -256,14 +256,14 @@ export function CalculatorContent() {
 
         {/* Calculator Form */}
         {picker.selectedVariant && (
-          <div className="space-y-4 rounded-[24px] border border-white/10 bg-[#171922] p-4">
+          <div className="space-y-4 rounded-[24px] border border-border bg-card p-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/20">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-500 dark:text-orange-300 ring-1 ring-orange-500/20">
                 <CalculatorIcon className="h-5 w-5" />
               </div>
               <div>
-                <span className="font-semibold text-white/95">Calculadora</span>
-                <p className="text-xs text-white/55">{picker.selectedVariant.name}</p>
+                <span className="font-semibold text-foreground">Calculadora</span>
+                <p className="text-xs text-muted-foreground">{picker.selectedVariant.name}</p>
               </div>
             </div>
 
@@ -389,7 +389,7 @@ export function CalculatorContent() {
               <div className="space-y-2 rounded-[20px] border border-orange-500/20 bg-orange-500/10 p-4">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Cantidad:</span>
-                  <span className="font-medium text-white/90">
+                  <span className="font-medium text-foreground">
                     {isKgProduct
                       ? `${formatKilos(calculation.quantity)} kg`
                       : `${Math.round(calculation.quantity)} unidades`}
@@ -400,14 +400,14 @@ export function CalculatorContent() {
                     <span className="text-sm text-muted-foreground">
                       Precio unitario:
                     </span>
-                    <span className="font-medium text-white/90">
+                    <span className="font-medium text-foreground">
                       S/ {formatCurrency(calculation.unitPrice)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-orange-500/20 pt-2">
-                  <span className="font-medium text-white/90">Subtotal:</span>
-                  <span className="text-lg font-bold text-orange-300">
+                  <span className="font-medium text-foreground">Subtotal:</span>
+                  <span className="text-lg font-bold text-orange-500 dark:text-orange-300">
                     S/ {formatCurrency(calculation.subtotal)}
                   </span>
                 </div>

@@ -436,15 +436,14 @@ export class SaleService {
       if (
         amountPaid > 0 &&
         amountPaid < totalAmount &&
-        confirmedSale.customerId &&
-        paymentData?.paymentMethod
+        confirmedSale.customerId
       ) {
         await this.paymentRepository.create(ctx, {
           customerId: confirmedSale.customerId,
           amount: amountPaid.toFixed(2),
-          paymentMethod: paymentData.paymentMethod,
-          referenceNumber: paymentData.referenceNumber,
-          proofImageId: paymentData.proofImageId,
+          paymentMethod: paymentData?.paymentMethod ?? "efectivo",
+          referenceNumber: paymentData?.referenceNumber,
+          proofImageId: paymentData?.proofImageId,
           relatedSaleId: confirmedSale.id,
         }, tx);
       }

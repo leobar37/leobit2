@@ -18,6 +18,8 @@ interface DatePickerProps {
   disabled?: boolean;
   className?: string;
   quickActionLabels?: [string, string];
+  fromYear?: number;
+  toYear?: number;
 }
 
 export function DatePicker({
@@ -30,6 +32,8 @@ export function DatePicker({
   disabled = false,
   className,
   quickActionLabels = ["Hoy", "Mañana"],
+  fromYear,
+  toYear,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -51,6 +55,11 @@ export function DatePicker({
   };
 
   const displayValue = value ? formatDisplayDate(value) : "";
+
+  // Calculate year range for dropdowns
+  const currentYear = new Date().getFullYear();
+  const yearFrom = fromYear ?? currentYear - 10;
+  const yearTo = toYear ?? currentYear + 2;
 
   // Calculate quick action dates based on minDate
   // Use start of day to avoid timezone issues
@@ -162,6 +171,9 @@ export function DatePicker({
                 onSelect={handleSelect}
                 disabled={isDateDisabled}
                 initialFocus
+                captionLayout="dropdown"
+                fromYear={yearFrom}
+                toYear={yearTo}
                 className={cn(
                   "border-0 w-full",
                   "[&_.rdp-caption]:text-foreground",

@@ -36,6 +36,18 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       }),
     }
   )
+  .get(
+    "/by-sale/:saleId",
+    async ({ paymentService, ctx, params }) => {
+      const payment = await paymentService.getPaymentBySaleId(ctx as RequestContext, params.saleId);
+      return { success: true, data: payment };
+    },
+    {
+      params: t.Object({
+        saleId: t.String(),
+      }),
+    }
+  )
   .post(
     "/",
     async ({ paymentService, ctx, body, set }) => {
@@ -167,6 +179,40 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       }),
       body: t.Object({
         proofImageId: t.String(),
+      }),
+    }
+  )
+  .put(
+    "/:id",
+    async ({ paymentService, ctx, params, body }) => {
+      const result = await paymentService.updatePayment(
+        ctx as RequestContext,
+        params.id,
+        body
+      );
+
+      return {
+        success: true,
+        data: result.data,
+        txid: result.txid,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        paymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+          t.Literal("tarjeta"),
+          t.Literal("saldo"),
+        ])),
+        referenceNumber: t.Optional(t.String({ maxLength: 50 })),
+        proofImageId: t.Optional(t.String()),
+        notes: t.Optional(t.String()),
       }),
     }
   )

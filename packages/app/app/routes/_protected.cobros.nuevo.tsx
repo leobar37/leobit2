@@ -1,25 +1,24 @@
 import { useSearchParams, useNavigate } from "react-router";
 import { formatNumber } from "~/lib/utils";
-import { Wallet, User, AlertCircle, Check, Receipt, QrCode, Phone } from "lucide-react";
+import { User, AlertCircle, Check } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { useCustomer } from "~/hooks/use-customers";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
-import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
 import { calculateBalanceDue, formatCurrency, parseAmount } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
-import { FormMediaField } from "~/components/forms/form-media-field";
 import { PaymentShareDrawer } from "~/components/payments/payment-share-drawer";
+import { PaymentCapture } from "~/components/payments/payment-capture";
+import type { PaymentMethod } from "~/hooks/use-payment-capture";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
@@ -30,15 +29,6 @@ const paymentSchema = z.object({
 });
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
-
-const paymentMethods = [
-  { id: "efectivo" as const, label: "Efectivo", icon: Wallet },
-  { id: "yape" as const, label: "Yape", icon: Receipt },
-  { id: "plin" as const, label: "Plin", icon: Receipt },
-  { id: "transferencia" as const, label: "Transferencia", icon: Receipt },
-  { id: "tarjeta" as const, label: "Tarjeta", icon: Receipt },
-  { id: "saldo" as const, label: "Saldo", icon: Wallet },
-];
 
 function QuickAmountButton({
   amount,
@@ -63,66 +53,6 @@ function QuickAmountButton({
   );
 }
 
-interface PaymentMethodInfoProps {
-  method: "yape" | "plin" | "transferencia";
-  config: ReturnType<typeof usePaymentMethodsConfig>["data"];
-}
-
-function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
-  const methodConfig = config?.methods?.[method];
-  
-  if (!methodConfig) return null;
-
-  return (
-    <div className="shell-card-soft rounded-[20px] p-4 space-y-3">
-      <div className="flex items-center gap-2 text-foreground font-medium">
-        <QrCode className="h-4 w-4 text-muted-foreground" />
-        <span>Datos para el pago</span>
-      </div>
-
-      {methodConfig.qrImageUrl ? (
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">Escanea el código QR para pagar:</p>
-          <div className="shell-field inline-block rounded-[18px] p-3">
-            <img
-              src={methodConfig.qrImageUrl}
-              alt={`Código QR ${method}`}
-              className="max-h-40 w-auto object-contain"
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {methodConfig.phone ? (
-        <div className="flex items-center gap-2 text-sm">
-          <Phone className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">
-            Número: <strong>{methodConfig.phone}</strong>
-          </span>
-        </div>
-      ) : null}
-
-      {methodConfig.accountName ? (
-        <p className="text-sm text-muted-foreground">
-          Titular: <strong className="text-foreground">{methodConfig.accountName}</strong>
-        </p>
-      ) : null}
-
-      {method === "transferencia" && methodConfig.bank ? (
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>Banco: <strong className="text-foreground">{methodConfig.bank}</strong></p>
-          {methodConfig.accountNumber && (
-            <p>Cuenta: <strong className="text-foreground">{methodConfig.accountNumber}</strong></p>
-          )}
-          {methodConfig.cci && (
-            <p>CCI: <strong className="text-foreground">{methodConfig.cci}</strong></p>
-          )}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export default function NuevoCobroPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -131,7 +61,6 @@ export default function NuevoCobroPage() {
 
   const { data: customer } = useCustomer(customerId || "");
   const { data: customerBalance } = useCustomerBalance(customerId);
-  const { data: paymentConfig } = usePaymentMethodsConfig();
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -145,13 +74,6 @@ export default function NuevoCobroPage() {
     if (!customerId || !customerBalance) return 0;
     return customerBalance.balanceDue || 0;
   }, [customerBalance, customerId]);
-
-  const enabledPaymentMethods = useMemo(() => {
-    const config = paymentConfig?.methods;
-    return paymentMethods.filter(
-      (method) => !config || config[method.id]?.enabled !== false
-    );
-  }, [paymentConfig]);
 
   const wrapperForm = useWrapperForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -177,6 +99,8 @@ export default function NuevoCobroPage() {
 
   const amount = watch("amount");
   const paymentMethod = watch("paymentMethod");
+  const referenceNumber = watch("referenceNumber");
+  const proofImageId = watch("proofImageId");
 
   const parsedAmount = parseAmount(amount);
   const remainingDebt = calculateBalanceDue(currentDebt, parsedAmount);
@@ -247,8 +171,6 @@ export default function NuevoCobroPage() {
       </div>
     );
   }
-
-  const showMethodInfo = ["yape", "plin", "transferencia"].includes(paymentMethod);
 
   return (
     <FormPage
@@ -376,63 +298,15 @@ export default function NuevoCobroPage() {
 
         <Card className="shell-card-flat rounded-[24px]">
           <CardContent className="p-4 space-y-4">
-            <Label className="text-base font-semibold text-foreground">Método de pago</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {enabledPaymentMethods.map((method) => {
-                const Icon = method.icon;
-                const isSelected = paymentMethod === method.id;
-                return (
-                  <Button
-                    key={method.id}
-                    type="button"
-                    variant={isSelected ? "default" : "outline"}
-                    data-testid={`payment-method-${method.id}`}
-                    onClick={() => setValue("paymentMethod", method.id)}
-                    className={`h-auto rounded-[16px] border-border py-3.5 shadow-none flex flex-col items-center gap-1.5 ${
-                      isSelected ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-card hover:bg-accent"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-sm">{method.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
-
-            {showMethodInfo && paymentConfig && (
-              <PaymentMethodInfo
-                method={paymentMethod as "yape" | "plin" | "transferencia"}
-                config={paymentConfig}
-              />
-            )}
-
-            {(paymentMethod === "yape" ||
-              paymentMethod === "plin" ||
-              paymentMethod === "transferencia") && (
-              <div className="space-y-2">
-                <Label htmlFor="reference">Número de operación (opcional)</Label>
-                <Input
-                  id="reference"
-                  placeholder="Ej: 123456"
-                  className="shell-field h-12 rounded-[16px] px-4 shadow-none focus-visible:ring-1 focus-visible:ring-orange-200"
-                  {...register("referenceNumber")}
-                />
-              </div>
-            )}
-
-            {(paymentMethod === "yape" ||
-              paymentMethod === "plin" ||
-              paymentMethod === "transferencia") && (
-              <div className="space-y-2">
-                <FormMediaField
-                  name="proofImageId"
-                  label="Comprobante de pago (opcional)"
-                />
-                <p className="text-xs text-muted-foreground">
-                  En móvil puedes tomar una foto al instante o elegir una imagen desde tu galería.
-                </p>
-              </div>
-            )}
+            <PaymentCapture
+              variant="inline"
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={(m) => setValue("paymentMethod", m)}
+              referenceNumber={referenceNumber || ""}
+              onReferenceNumberChange={(r) => setValue("referenceNumber", r)}
+              proofImageId={proofImageId || null}
+              onProofImageChange={(id) => setValue("proofImageId", id || undefined)}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notas (opcional)</Label>

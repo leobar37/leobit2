@@ -10,7 +10,7 @@ import { useToast } from "~/hooks/use-toast";
 
 export function SaleSubmitBar() {
   const navigate = useNavigate();
-  const { saleId, returnTo, sale, items, paymentMethod, referenceNumber, proofImageId } = useNewSaleContext();
+  const { saleId, returnTo, sale, items } = useNewSaleContext();
   const { toast } = useToast();
   const finalizeSale = useFinalizeSale();
   const isOnline = true;
@@ -53,9 +53,6 @@ export function SaleSubmitBar() {
           type: sale.type,
           version: sale.version,
           paymentMode: sale.paymentMode || undefined,
-          paymentMethod: paymentMethod || undefined,
-          referenceNumber: referenceNumber || undefined,
-          proofImageId: proofImageId || undefined,
         });
       }
 

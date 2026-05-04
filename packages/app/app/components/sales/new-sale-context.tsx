@@ -12,12 +12,6 @@ interface NewSaleContextType {
   sale: SaleWithItems | null;
   items: SaleItem[];
   isSaleLoading: boolean;
-  paymentMethod: string | null;
-  setPaymentMethod: (method: string | null) => void;
-  referenceNumber: string;
-  setReferenceNumber: (ref: string) => void;
-  proofImageId: string | null;
-  setProofImageId: (id: string | null) => void;
 }
 
 const NewSaleContext = createContext<NewSaleContextType | null>(null);
@@ -36,10 +30,6 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
   const { data: saleRaw, isLoading: isSaleLoading } = useSale(saleId);
   const sale = saleRaw ?? null;
   const items = useMemo(() => sale?.items ?? [], [sale?.items]);
-
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [referenceNumber, setReferenceNumber] = useState("");
-  const [proofImageId, setProofImageId] = useState<string | null>(null);
 
   const urlVisitaId = searchParams.get("visitaId");
   const effectiveVisitaId = urlVisitaId || linkedVisitaId || null;
@@ -61,14 +51,8 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
       sale,
       items,
       isSaleLoading,
-      paymentMethod,
-      setPaymentMethod,
-      referenceNumber,
-      setReferenceNumber,
-      proofImageId,
-      setProofImageId,
     }),
-    [saleId, effectiveVisitaId, returnTo, sale, items, isSaleLoading, paymentMethod, referenceNumber, proofImageId]
+    [saleId, effectiveVisitaId, returnTo, sale, items, isSaleLoading]
   );
 
   return (
