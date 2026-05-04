@@ -208,6 +208,7 @@ export class SaleService {
       deliveryDate?: string | null;
       saleType?: "contado" | "credito";
       paymentMode?: "pago_total" | "a_cuenta" | "debe_todo" | null;
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
       totalAmount?: number;
       amountPaid?: number;
     }
@@ -276,18 +277,24 @@ export class SaleService {
     this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
 
     return db.transaction(async (tx) => {
+      const updateData: Parameters<typeof this.repository.update>[2] = {
+        customerId,
+        deliveryDate: data.deliveryDate !== undefined ? data.deliveryDate : sale.deliveryDate,
+        saleType,
+        paymentMode,
+        totalAmount: totalAmount.toFixed(2),
+        amountPaid: amountPaid.toFixed(2),
+        balanceDue: balanceDue.toFixed(2),
+      };
+
+      if (data.paymentMethod !== undefined) {
+        updateData.paymentMethod = data.paymentMethod ?? undefined;
+      }
+
       const updatedSale = await this.repository.update(
         ctx,
         id,
-        {
-          customerId,
-          deliveryDate: data.deliveryDate !== undefined ? data.deliveryDate : sale.deliveryDate,
-          saleType,
-          paymentMode,
-          totalAmount: totalAmount.toFixed(2),
-          amountPaid: amountPaid.toFixed(2),
-          balanceDue: balanceDue.toFixed(2),
-        },
+        updateData,
         tx
       );
 
@@ -438,10 +445,15 @@ export class SaleService {
         amountPaid < totalAmount &&
         confirmedSale.customerId
       ) {
+        // Use paymentMethod from sale if set, otherwise from paymentData, default to efectivo
+        const paymentMethod = paymentData?.paymentMethod
+          ?? confirmedSale.paymentMethod
+          ?? "efectivo";
+
         await this.paymentRepository.create(ctx, {
           customerId: confirmedSale.customerId,
           amount: amountPaid.toFixed(2),
-          paymentMethod: paymentData?.paymentMethod ?? "efectivo",
+          paymentMethod,
           referenceNumber: paymentData?.referenceNumber,
           proofImageId: paymentData?.proofImageId,
           relatedSaleId: confirmedSale.id,

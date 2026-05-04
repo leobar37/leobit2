@@ -56,6 +56,7 @@ export interface Sale {
   type: SaleType;
   saleType: SalePaymentType;
   paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null;
+  paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
   totalAmount: string;
   amountPaid: string;
   balanceDue: string;
@@ -144,6 +145,7 @@ export interface UpdateSaleInput {
   deliveryDate?: string;
   orderDate?: string;
   paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+  paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
 }
 
 export interface CancelSaleInput {

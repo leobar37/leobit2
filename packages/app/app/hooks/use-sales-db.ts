@@ -128,6 +128,7 @@ export function useFinalizeSale() {
       deliveryItems,
       amountPaid,
       paymentMode,
+      paymentMethod,
     }: {
       id: string;
       type: string;
@@ -141,6 +142,7 @@ export function useFinalizeSale() {
       }>;
       amountPaid?: number;
       paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
     }) => {
       if (isDeliveryMode) {
         for (const item of deliveryItems || []) {
@@ -163,7 +165,9 @@ export function useFinalizeSale() {
         return;
       }
 
-      const response = await api.sales({ id }).confirm.post({});
+      const response = await api.sales({ id }).confirm.post({
+        paymentMethod,
+      });
       extractData(response);
     },
     onSettled: async (_data, _error) => {

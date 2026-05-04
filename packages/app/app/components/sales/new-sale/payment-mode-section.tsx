@@ -14,6 +14,7 @@ import type { PaymentMode } from "~/lib/sales/types";
 import { useNewSaleContext } from "../new-sale-context";
 import { useToast } from "~/hooks/use-toast";
 import { PaymentCapture } from "~/components/payments/payment-capture";
+import type { PaymentMethod } from "~/hooks/use-payment-capture";
 
 const paymentModes: {
   value: PaymentMode;
@@ -92,6 +93,7 @@ export function PaymentModeSection() {
             saleType: "credito",
             totalAmount,
             amountPaid,
+            paymentMethod: sale?.paymentMethod ?? "efectivo",
           },
         });
 
@@ -105,7 +107,30 @@ export function PaymentModeSection() {
         });
       }
     },
-    [saleId, sale?.customerId, calculations.totalAmount, updateSale, toast]
+    [saleId, sale?.customerId, sale?.paymentMethod, calculations.totalAmount, updateSale, toast]
+  );
+
+  const handlePaymentMethodChange = useCallback(
+    async (method: PaymentMethod) => {
+      if (!saleId) return;
+
+      try {
+        await updateSale.mutateAsync({
+          id: saleId,
+          input: {
+            paymentMethod: method,
+          },
+        });
+      } catch (error) {
+        toast.error("Error al guardar método de pago", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "No se pudo actualizar el método de pago",
+        });
+      }
+    },
+    [saleId, updateSale, toast]
   );
 
   if (!saleId || items.length === 0) {
@@ -219,12 +244,23 @@ export function PaymentModeSection() {
         </div>
 
         {visiblePaymentMode === "a_cuenta" && saleId && (
-          <AmountPaidInput
-            saleId={saleId}
-            totalAmount={calculations.totalAmount}
-            initialAmount={sale?.paymentMode === "a_cuenta" ? sale?.amountPaid || "" : ""}
-            onUpdate={handleUpdateAmountPaid}
-          />
+          <div className="space-y-4">
+            <AmountPaidInput
+              saleId={saleId}
+              totalAmount={calculations.totalAmount}
+              initialAmount={sale?.paymentMode === "a_cuenta" ? sale?.amountPaid || "" : ""}
+              onUpdate={handleUpdateAmountPaid}
+            />
+            {sale?.paymentMode === "a_cuenta" && (
+              <div className="border-t pt-3 shell-divider">
+                <PaymentCapture
+                  variant="inline"
+                  paymentMethod={sale?.paymentMethod ?? null}
+                  onPaymentMethodChange={handlePaymentMethodChange}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {pendingPaymentMode === "a_cuenta" && (

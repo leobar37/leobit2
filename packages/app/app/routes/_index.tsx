@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { getStoredAuthToken } from "@/lib/session-storage";
@@ -25,24 +26,54 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
+const LOADING_TIMEOUT_MS = 3000;
+
+function SplashScreen() {
+  return (
+    <div className="min-h-screen bg-orange-500 flex flex-col items-center justify-center gap-4">
+      <img src="/logo.svg" alt="Avileo" className="w-20 h-20" />
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-2xl font-bold text-white">Avileo</h1>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-white/80" />
+          <p className="text-sm text-white/80">Cargando...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
   const { user, isLoading } = useAuth();
+  const [showTimeoutRedirect, setShowTimeoutRedirect] = useState(false);
+
+  // Safety timeout: don't stay in loading state forever
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const timer = setTimeout(() => {
+      console.log("[Index] Loading timeout reached, forcing redirect");
+      setShowTimeoutRedirect(true);
+    }, LOADING_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   // Sync check: if no token in localStorage, redirect immediately without waiting for session
   const hasStoredToken = getStoredAuthToken();
 
   // Show loading while checking session
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    );
+  if (isLoading && !showTimeoutRedirect) {
+    return <SplashScreen />;
   }
 
   // If no stored token, user must login
-  if (!hasStoredToken) {
-    console.log("[Index] No stored token found, redirecting to landing");
+  if (!hasStoredToken || showTimeoutRedirect) {
+    if (showTimeoutRedirect) {
+      console.log("[Index] Timeout redirect to landing");
+    } else {
+      console.log("[Index] No stored token found, redirecting to landing");
+    }
     return <Navigate to="/landing" replace />;
   }
 

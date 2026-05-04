@@ -17,7 +17,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { saleTypeEnum, saleStatusEnum, transactionTypeEnum, paymentModeEnum, refundMethodEnum } from "./enums";
+import { saleTypeEnum, saleStatusEnum, transactionTypeEnum, paymentModeEnum, paymentMethodEnum, refundMethodEnum } from "./enums";
 import { businesses, businessUsers } from "./businesses";
 import { customers } from "./customers";
 import { distribuciones, products, productVariants } from "./inventory";
@@ -87,7 +87,11 @@ export const sales = pgTable(
     refundReference: varchar("refund_reference", { length: 100 }),
     refundNotes: text("refund_notes"),
 
-    // Advance payment info (from orders)
+    // Payment method for the initial/advance payment (e.g., efectivo, yape, plin)
+    // Used when paymentMode is "a_cuenta" or "pago_total" to track how the customer paid
+    paymentMethod: paymentMethodEnum("payment_method"),
+
+    // Advance payment info (from orders - legacy, kept for compatibility)
     advancePaymentMethod: varchar("advance_payment_method", { length: 20 }),
     advanceReferenceNumber: varchar("advance_reference_number", { length: 50 }),
     advanceProofImageId: uuid("advance_proof_image_id").references(() => files.id),

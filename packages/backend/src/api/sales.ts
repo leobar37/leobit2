@@ -140,6 +140,17 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
             t.Null(),
           ])
         ),
+        paymentMethod: t.Optional(
+          t.Union([
+            t.Literal("efectivo"),
+            t.Literal("yape"),
+            t.Literal("plin"),
+            t.Literal("transferencia"),
+            t.Literal("tarjeta"),
+            t.Literal("saldo"),
+            t.Null(),
+          ])
+        ),
         totalAmount: t.Optional(t.Number({ minimum: 0 })),
         amountPaid: t.Optional(t.Number({ minimum: 0 })),
       }),
@@ -203,6 +214,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
           t.Literal("plin"),
           t.Literal("transferencia"),
           t.Literal("tarjeta"),
+          t.Literal("saldo"),
         ])),
         referenceNumber: t.Optional(t.String()),
         proofImageId: t.Optional(t.String()),

@@ -27,12 +27,14 @@ import { registerSW } from "virtual:pwa-register";
 
 export function HydrateFallback() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-white animate-spin" />
+    <div className="min-h-screen bg-orange-500 flex flex-col items-center justify-center gap-4">
+      <img src="/logo.svg" alt="Avileo" className="w-20 h-20" />
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-2xl font-bold text-white">Avileo</h1>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-white/80" />
+          <p className="text-sm text-white/80">Cargando...</p>
         </div>
-        <p className="text-sm text-muted-foreground">Cargando...</p>
       </div>
     </div>
   );

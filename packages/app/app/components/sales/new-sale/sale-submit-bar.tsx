@@ -53,6 +53,7 @@ export function SaleSubmitBar() {
           type: sale.type,
           version: sale.version,
           paymentMode: sale.paymentMode || undefined,
+          paymentMethod: sale.paymentMethod || undefined,
         });
       }
 
