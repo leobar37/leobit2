@@ -40,10 +40,10 @@ export function PaymentMethodSelector({
             disabled={disabled}
             onClick={() => onSelect(method)}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-2xl border py-4 transition-colors",
+              "flex flex-col items-center gap-2 rounded-2xl py-4 shadow-sm transition-colors",
               isSelected
-                ? "border-orange-500 bg-orange-500 text-white"
-                : "border-border bg-card text-muted-foreground hover:bg-accent",
+                ? "bg-orange-500 text-white shadow-orange-500/15"
+                : "bg-muted/70 text-muted-foreground shadow-black/[0.03] hover:bg-accent",
               disabled && "opacity-50 cursor-not-allowed"
             )}
           >

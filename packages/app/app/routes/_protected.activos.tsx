@@ -1,30 +1,26 @@
-// @ts-nocheck - Route file with complex type errors
-import { ImagePlus, Search, Trash2, ImageIcon, Upload, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { ImagePlus, Search, Trash2, ImageIcon, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileUploader } from "@/components/ui/file-uploader";
+import { CameraGalleryDrawer } from "@/components/ui/camera-gallery-drawer";
 import { useAssets, useUploadAsset, useDeleteAsset } from "~/hooks/use-assets";
-import { useAssetUploader } from "~/hooks/use-asset-uploader";
 import { useAssetFilters } from "~/hooks/use-asset-filters";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
-import { MobileShell, MobileSlot } from "~/components/mobile";
+import { MobilePage, MobileSlot } from "~/components/mobile";
 
 export default function ActivosPage() {
   const { data: assets, isLoading, error } = useAssets();
   const uploadAsset = useUploadAsset();
   const deleteAsset = useDeleteAsset();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const [uploadDrawerOpen, setUploadDrawerOpen] = useState(false);
 
-  const uploader = useAssetUploader();
   const { search, setSearch, filteredAssets } = useAssetFilters({ assets });
 
-  const handleUpload = async () => {
-    if (!uploader.selectedFile) return;
-
+  const handleFileSelect = async (file: File) => {
     try {
-      await uploadAsset.mutateAsync(uploader.selectedFile);
-      uploader.close();
+      await uploadAsset.mutateAsync(file);
     } catch (error) {
       console.error("Error uploading asset:", error);
     }
@@ -45,7 +41,7 @@ export default function ActivosPage() {
   };
 
   return (
-    <MobileShell.Root variant="protected">
+    <>
       <MobileSlot name="header:center" priority={10}>
         <h1 className="font-bold text-lg">Activos</h1>
       </MobileSlot>
@@ -53,62 +49,19 @@ export default function ActivosPage() {
       <MobileSlot name="header:right" priority={10}>
         <Button
           className="bg-orange-500 hover:bg-orange-600 rounded-xl"
-          onClick={() => uploader.toggle()}
+          onClick={() => setUploadDrawerOpen(true)}
+          disabled={uploadAsset.isPending}
         >
-          <ImagePlus className="h-4 w-4 mr-1" />
-          Subir
+          {uploadAsset.isPending ? (
+            <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <ImagePlus className="h-4 w-4 mr-1" />
+          )}
+          {uploadAsset.isPending ? "Subiendo" : "Subir"}
         </Button>
       </MobileSlot>
 
-      <MobileShell.Header />
-
-      <MobileShell.Content>
-        {uploader.isOpen && (
-          <Card className="shell-card-flat mb-4">
-            <CardContent className="p-4 space-y-4">
-              <FileUploader
-                file={uploader.selectedFile}
-                previewUrl={uploader.previewUrl}
-                status={uploadAsset.isPending ? "uploading" : "idle"}
-                error={uploadAsset.isError ? "Error al subir" : null}
-                label="Nueva imagen"
-                helperText="Sube imágenes para usar en productos"
-                onFileSelect={uploader.handleFileSelect}
-                onClear={uploader.clearSelection}
-              />
-              {uploader.selectedFile && (
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"
-                    onClick={handleUpload}
-                    disabled={uploadAsset.isPending}
-                  >
-                    {uploadAsset.isPending ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Subiendo...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Guardar
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => uploader.close()}
-                    disabled={uploadAsset.isPending}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
+      <MobilePage.Root>
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -146,10 +99,15 @@ export default function ActivosPage() {
               </p>
               <Button
                 className="mt-4 bg-orange-500 hover:bg-orange-600 rounded-xl"
-                onClick={() => uploader.open()}
+                onClick={() => setUploadDrawerOpen(true)}
+                disabled={uploadAsset.isPending}
               >
-                <ImagePlus className="h-4 w-4 mr-2" />
-                Subir primera imagen
+                {uploadAsset.isPending ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                )}
+                {uploadAsset.isPending ? "Subiendo..." : "Subir primera imagen"}
               </Button>
             </div>
           )}
@@ -190,10 +148,16 @@ export default function ActivosPage() {
             ))}
           </div>
         </div>
-      </MobileShell.Content>
+      </MobilePage.Root>
 
-      <MobileShell.Footer />
+      <CameraGalleryDrawer
+        open={uploadDrawerOpen}
+        onOpenChange={setUploadDrawerOpen}
+        onFileSelect={handleFileSelect}
+        title="Nueva imagen"
+      />
+
       <ConfirmDialog />
-    </MobileShell.Root>
+    </>
   );
 }

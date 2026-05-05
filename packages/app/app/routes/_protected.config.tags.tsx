@@ -9,7 +9,6 @@ import { ArrowLeft, Plus, Pencil, Trash2, Tag as TagIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { AppDrawer } from "~/components/ui/app-drawer";
 import { MobileShell, MobileSlot, MobilePage } from "~/components/mobile";
-import { TagForm, TagBadge } from "~/components/tags";
+import { TagForm } from "~/components/tags";
 import { useTags, useDeleteTag, type Tag } from "~/hooks/use-tags";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
@@ -77,14 +76,18 @@ export default function TagsConfigPage() {
       </MobileSlot>
 
       <MobilePage.Root maxWidth="md" className="space-y-4">
-        {/* Intro Card */}
-        <MobilePage.Card variant="flat">
-          <CardHeader>
-            <div className="w-16 h-16 bg-pink-100 rounded-2xl flex items-center justify-center mb-4">
-              <TagIcon className="h-8 w-8 text-pink-600" />
+        <MobilePage.Card
+          variant="flat"
+          className="!border-0 bg-card/90 shadow-[0_14px_32px_rgba(15,23,42,0.06)] dark:bg-card/80 dark:shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
+        >
+          <CardHeader className="p-4">
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-500/12 text-pink-600 dark:bg-pink-500/16 dark:text-pink-300">
+              <TagIcon className="h-7 w-7" />
             </div>
-            <CardTitle>Gestionar Etiquetas</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg tracking-[-0.02em]">
+              Gestionar Etiquetas
+            </CardTitle>
+            <CardDescription className="text-sm leading-snug">
               Crea etiquetas para segmentar tus clientes y facilitar la
               mensajería masiva
             </CardDescription>
@@ -100,7 +103,10 @@ export default function TagsConfigPage() {
 
         {/* Empty State */}
         {!isLoading && tags?.length === 0 && (
-          <MobilePage.Card variant="soft">
+          <MobilePage.Card
+            variant="soft"
+            className="!border-0 bg-card/80 shadow-[0_12px_28px_rgba(15,23,42,0.05)] dark:bg-card/70 dark:shadow-[0_16px_34px_rgba(0,0,0,0.24)]"
+          >
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">
                 No tienes etiquetas creadas
@@ -118,15 +124,17 @@ export default function TagsConfigPage() {
             <MobilePage.Card
               key={tag.id}
               variant="soft"
-              className="hover:shadow-lg transition-shadow"
+              className="!border-0 bg-card/85 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition-colors hover:bg-card dark:bg-card/75 dark:shadow-[0_14px_30px_rgba(0,0,0,0.26)] dark:hover:bg-card/85"
             >
               <CardContent className="p-4 flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-xl flex-shrink-0"
+                  className="h-10 w-10 flex-shrink-0 rounded-xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]"
                   style={{ backgroundColor: tag.color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{tag.name}</p>
+                  <p className="truncate font-semibold tracking-[-0.01em] text-foreground">
+                    {tag.name}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {tag.customerCount} cliente
                     {tag.customerCount !== 1 ? "s" : ""}
@@ -136,7 +144,7 @@ export default function TagsConfigPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-lg h-9 w-9"
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-muted/70 hover:text-foreground dark:hover:bg-muted/40"
                     onClick={() => openEditModal(tag)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -144,7 +152,7 @@ export default function TagsConfigPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-lg h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="h-9 w-9 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 dark:text-red-300 dark:hover:bg-red-500/14 dark:hover:text-red-200"
                     onClick={() => handleDelete(tag.id)}
                     disabled={deleteTag.isPending}
                   >
@@ -173,13 +181,15 @@ export default function TagsConfigPage() {
         onOpenChange={(isOpen) => {
           if (!isOpen) closeModal();
         }}
+        contentClassName="border-0 bg-background"
       >
         <AppDrawer.Header
           title={editingTag ? "Editar Etiqueta" : "Nueva Etiqueta"}
           icon={<TagIcon className="h-5 w-5" />}
           onClose={closeModal}
+          className="border-b-0 pb-2"
         />
-        <AppDrawer.Body>
+        <AppDrawer.Body className="pt-2">
           <TagForm tag={editingTag} onClose={closeModal} />
         </AppDrawer.Body>
       </AppDrawer>

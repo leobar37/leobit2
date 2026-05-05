@@ -8,6 +8,8 @@
 
 Estandarizar pantallas como `clientes`, `ventas`, `cobros`, `compras` y otros listados operativos para que se sientan parte del mismo producto.
 
+Nota visual actual: para criterios actualizados sobre superficies sin borde visible, dark mode y drawers, ver [Avileo Mobile UI Guidelines](./avileo-mobile-ui-guidelines.md). Este documento conserva el patron de listas; la guia nueva define el acabado visual vigente.
+
 Este patron prioriza:
 
 - rapidez de lectura
@@ -99,7 +101,7 @@ Reglas:
 
 - usar radios medianos/grandes, pero no hero cards
 - fondo blanco o blanco tibio
-- borde suave visible
+- borde ausente o muy suave, segun la jerarquia de la pantalla
 - sombra muy controlada
 - padding interno compacto: normalmente `p-4`
 - tipografia clara, con el titulo dominante pero no sobredimensionado
@@ -134,8 +136,8 @@ Reglas globales:
 
 - usar el fondo del shell (`app-shell`) como base de las pantallas mobile protegidas
 - evitar `bg-gray-50` plano como fondo dominante en modulos operativos
-- evitar cards con `border-0` + `shadow-lg` por defecto
-- preferir borde suave visible y sombra corta
+- evitar cards con `border-0` + `shadow-lg` por defecto; si se remueve el borde, compensar con superficie y sombra suave
+- preferir borde ausente o muy suave con sombra corta, segun el tipo de pantalla
 - si un bloque es secundario dentro de una card, usar una superficie muteda en vez de otro blanco puro
 
 Utilidades recomendadas:
@@ -164,7 +166,7 @@ Evitar:
 
 - `bg-gray-50` en toda la pagina si ya estas dentro del shell
 - `shadow-xl`, `shadow-lg` y blur pesados para cards operativas
-- `border-0` en formularios y detalles, salvo casos muy justificados
+- `border-0` combinado con sombras pesadas; cuando se use, debe apoyarse en `bg-card/*`, `bg-muted/*` y sombras cortas
 - mezclar demasiados tonos de gris frios con el shell calido actual
 
 ---

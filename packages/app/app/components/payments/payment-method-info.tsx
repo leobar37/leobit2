@@ -12,7 +12,7 @@ export function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
   if (!methodConfig) return null;
 
   return (
-    <div className="shell-card-soft rounded-2xl p-4 space-y-3">
+    <div className="shell-card-soft rounded-2xl !border-0 p-4 space-y-3">
       <div className="flex items-center gap-2 text-foreground font-medium">
         <QrCode className="h-4 w-4 text-muted-foreground" />
         <span>Datos para el pago</span>

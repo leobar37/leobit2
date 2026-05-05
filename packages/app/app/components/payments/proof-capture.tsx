@@ -65,7 +65,7 @@ export function ProofCapture({
           onClick={() => setDrawerOpen(true)}
           disabled={isUploading}
           className={cn(
-            "w-full h-20 rounded-xl border-dashed flex flex-col items-center justify-center gap-2",
+            "w-full h-20 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
             "hover:bg-accent transition-colors"
           )}
         >
