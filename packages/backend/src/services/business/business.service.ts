@@ -1,8 +1,8 @@
 // @ts-nocheck - Backend file
-import { BusinessRepository } from "../repository/business.repository";
-import { SupplierRepository } from "../repository/supplier.repository";
-import { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";
-import { ProductRepository } from "../repository/product.repository";
+import type { BusinessRepository } from "../repository/business.repository";
+import type { SupplierRepository } from "../repository/supplier.repository";
+import type { WhatsAppTemplateRepository } from "../repository/whatsapp-template.repository";
+import type { ProductRepository } from "../repository/product.repository";
 import type { RequestContext } from "../../context/request-context";
 import { RequestContext as RequestContextClass } from "../../context/request-context";
 import {
@@ -59,7 +59,6 @@ export class BusinessService {
       logoUrl: membership.business.logoUrl,
       publicCatalogEnabled: membership.business.publicCatalogEnabled,
       publicCatalogSlug: membership.business.publicCatalogSlug,
-      modoOperacion: membership.business.modoOperacion,
       usarDistribucion: membership.business.usarDistribucion,
       role: membership.role,
       salesPoint: membership.salesPoint,

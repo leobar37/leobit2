@@ -64,11 +64,9 @@ GROUP BY modo;
 
 -- Check if any businesses use non-default modos
 SELECT 
-  modo_operacion, 
   modo_distribucion, 
   COUNT(*) 
 FROM businesses 
-GROUP BY modo_operacion, modo_distribucion;
 ```
 
 ## Migration File
@@ -88,11 +86,9 @@ GROUP BY modo_operacion, modo_distribucion;
 ALTER TABLE distribuciones DROP COLUMN IF EXISTS modo;
 
 -- Remove modo columns from businesses
-ALTER TABLE businesses DROP COLUMN IF EXISTS modo_operacion;
 ALTER TABLE businesses DROP COLUMN IF EXISTS modo_distribucion;
 
 -- Drop enum type
-DROP TYPE IF EXISTS modo_operacion;
 ```
 
 ## Rollback Plan
@@ -102,7 +98,6 @@ If migration causes issues:
 ```sql
 -- Emergency rollback
 ALTER TABLE distribuciones ADD COLUMN modo varchar(20) DEFAULT 'libre';
-ALTER TABLE businesses ADD COLUMN modo_operacion varchar(50) DEFAULT 'inventario_propio';
 ALTER TABLE businesses ADD COLUMN modo_distribucion varchar(20) DEFAULT 'libre';
 ```
 

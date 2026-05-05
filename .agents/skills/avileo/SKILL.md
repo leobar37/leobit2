@@ -108,10 +108,7 @@ The system supports 4 modes configurable per business:
 ### Mode Configuration
 ```typescript
 interface ConfiguracionSistema {
-  modo_operacion: 'inventario_propio' | 'sin_inventario' | 'pedidos' | 'mixto';
-  control_kilos: boolean;        // Track stock
   usar_distribucion: boolean;    // Use daily distribution
-  permitir_venta_sin_stock: boolean; // Allow sales without assigned stock
 }
 ```
 

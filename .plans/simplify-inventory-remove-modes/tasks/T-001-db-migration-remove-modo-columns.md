@@ -8,7 +8,6 @@
 ## Description
 Remove all mode-related columns from the database schema. This includes:
 - `modo` from `distribuciones` table
-- `modoOperacion` from `businesses` table
 - `modoDistribucion` from `businesses` table
 
 ## Files to Modify
@@ -30,7 +29,6 @@ index("idx_distribuciones_modo").on(table.modo),
 **Changes:**
 ```typescript
 // REMOVE (line 49):
-modoOperacion: varchar("modo_operacion", { length: 50 }).default("inventario_propio"),
 
 // REMOVE (line 52):
 modoDistribucion: varchar("modo_distribucion", { length: 20 }).default("estricto"),
@@ -42,7 +40,6 @@ modoDistribucion: varchar("modo_distribucion", { length: 20 }).default("estricto
 **Changes:**
 ```typescript
 // REMOVE (lines 64-69):
-export const modoOperacionEnum = pgEnum("modo_operacion", [
   "inventario_propio",
   "sin_inventario",
   "pedidos",
@@ -59,11 +56,9 @@ export const modoOperacionEnum = pgEnum("modo_operacion", [
 ALTER TABLE distribuciones DROP COLUMN IF EXISTS modo;
 
 -- Remove modo columns from businesses
-ALTER TABLE businesses DROP COLUMN IF EXISTS modo_operacion;
 ALTER TABLE businesses DROP COLUMN IF EXISTS modo_distribucion;
 
 -- Drop enum type (optional - only if not referenced elsewhere)
-DROP TYPE IF EXISTS modo_operacion;
 ```
 
 ## Implementation Steps
@@ -89,7 +84,6 @@ DROP TYPE IF EXISTS modo_operacion;
 ```sql
 -- Add columns back (for emergency rollback)
 ALTER TABLE distribuciones ADD COLUMN modo varchar(20) DEFAULT 'libre';
-ALTER TABLE businesses ADD COLUMN modo_operacion varchar(50) DEFAULT 'inventario_propio';
 ALTER TABLE businesses ADD COLUMN modo_distribucion varchar(20) DEFAULT 'libre';
 ```
 
@@ -98,7 +92,6 @@ ALTER TABLE businesses ADD COLUMN modo_distribucion varchar(20) DEFAULT 'libre';
 - [ ] Migration generates without errors
 - [ ] Migration applies successfully
 - [ ] `distribuciones.modo` column removed
-- [ ] `businesses.modoOperacion` column removed
 - [ ] `businesses.modoDistribucion` column removed
 - [ ] TypeScript types updated (no modo references)
 - [ ] drizzle-kit generate produces valid SQL

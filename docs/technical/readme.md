@@ -115,10 +115,7 @@ El admin puede configurar el modo de operación en la configuración del sistema
 
 ```typescript
 interface ConfiguracionSistema {
-  modo_operacion: 'inventario_propio' | 'sin_inventario' | 'pedidos' | 'mixto';
-  control_kilos: boolean;        // true = controla stock, false = no controla
   usar_distribucion: boolean;    // true = usa distribución del día
-  permitir_venta_sin_stock: boolean; // true = vende aunque no haya kilos asignados
 }
 ```
 
@@ -137,7 +134,6 @@ interface ConfiguracionSistema {
 Incluso en modo "Inventario Propio", el sistema permite **vender sin tener una distribución asignada**:
 
 ```
-Configuración: permitir_venta_sin_stock = true
 
 Vendedor puede:
 - Registrar ventas sin kilos asignados
@@ -345,7 +341,6 @@ Vendedor puede:
 
 **Venta SIN distribución:**
 ```
-Configuración: permitir_venta_sin_stock = true
 
 Vendedor puede registrar ventas aunque no tenga una distribución asignada.
 El sistema guarda la venta sin descontar de ningún stock.

@@ -361,13 +361,10 @@ interface ProgressHeaderProps {
 
 // En el componente/formulario de nueva venta:
 // 1. Obtener configuración del negocio
-// 2. Si modoOperacion === 'inventario_propio' && controlKilos:
 //    a. Obtener distribución del día (useMiDistribucion)
 //    b. Calcular disponible: asignado - vendido
 //    c. Validar que cantidad solicitada <= disponible
 //    d. Si no hay suficiente:
-//       - Si permitirVentaSinStock: Mostrar advertencia
-//       - Si no permitirVentaSinStock: Bloquear venta
 // 3. Al confirmar venta:
 //    a. Actualizar kilosVendidos en distribución (optimistic)
 //    b. Crear la venta

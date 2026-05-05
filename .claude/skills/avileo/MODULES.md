@@ -383,7 +383,6 @@ Vendors sell freely, system only records:
 Even in "Inventario Propio" mode:
 
 ```typescript
-// Config: permitir_venta_sin_stock = true
 
 Vendor can:
 - Register sales without assigned kilos
@@ -619,10 +618,7 @@ Send notifications and messages to customers via WhatsApp.
 
 | Setting | Values | Description |
 |---------|--------|-------------|
-| `modo_operacion` | inventario_propio, sin_inventario, pedidos, mixto | Operation mode |
-| `control_kilos` | true/false | Track stock |
 | `usar_distribucion` | true/false | Use daily distribution |
-| `permitir_venta_sin_stock` | true/false | Allow sales without assigned stock |
 | `public_catalog_enabled` | true/false | Enable public customer catalog |
 | `public_catalog_slug` | string | URL slug for public catalog |
 

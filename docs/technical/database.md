@@ -68,10 +68,7 @@ erDiagram
         string phone
         string email
         string logo_url
-        string modo_operacion
-        boolean control_kilos
         boolean usar_distribucion
-        boolean permitir_venta_sin_stock
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -188,10 +185,7 @@ erDiagram
     %% System Config
     system_config {
         uuid id PK
-        enum modo_operacion
-        boolean control_kilos
         boolean usar_distribucion
-        boolean permitir_venta_sin_stock
         timestamp updated_at
     }
 
@@ -261,10 +255,7 @@ Negocios/pollos. Soporta multi-tenancy.
 | `phone` | varchar(20) | Teléfono del negocio |
 | `email` | varchar(100) | Email del negocio |
 | `logo_url` | varchar(255) | Logo |
-| `modo_operacion` | varchar(50) | Config específica del negocio |
-| `control_kilos` | boolean | |
 | `usar_distribucion` | boolean | |
-| `permitir_venta_sin_stock` | boolean | |
 | `is_active` | boolean | |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
@@ -406,10 +397,7 @@ Configuración global del sistema (1 registro).
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `id` | uuid PK | |
-| `modo_operacion` | enum | inventario_propio, sin_inventario, pedidos, mixto |
-| `control_kilos` | boolean | |
 | `usar_distribucion` | boolean | |
-| `permitir_venta_sin_stock` | boolean | |
 | `updated_at` | timestamp | |
 
 ---
@@ -426,7 +414,6 @@ Configuración global del sistema (1 registro).
 | `product_type` | pollo, huevo, otro |
 | `product_unit` | kg, unidad |
 | `distribucion_status` | activo, cerrado, en_ruta |
-| `modo_operacion` | inventario_propio, sin_inventario, pedidos, mixto |
 
 ---
 

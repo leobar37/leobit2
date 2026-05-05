@@ -123,9 +123,7 @@ The system supports 4 modes configurable per business:
 ### Mode Configuration
 ```typescript
 interface BusinessConfig {
-  controlKilos: boolean;        // Track stock
   usarDistribucion: boolean;    // Use daily distribution
-  permitirVentaSinStock: boolean; // Allow sales without assigned stock
   publicCatalogEnabled: boolean;  // Enable public customer catalog
 }
 ```

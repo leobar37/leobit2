@@ -40,13 +40,6 @@ export const DistribucionStatus = {
   EN_RUTA: "en_ruta",
 } as const;
 
-export const ModoOperacion = {
-  INVENTARIO_PROPIO: "inventario_propio",
-  SIN_INVENTARIO: "sin_inventario",
-  PEDIDOS: "pedidos",
-  MIXTO: "mixto",
-} as const;
-
 // Type helpers
 export type ApiResponse<T = unknown> = {
   success: boolean;
@@ -66,9 +59,7 @@ export interface Business {
   logoUrl: string | null;
   publicCatalogEnabled: boolean;
   publicCatalogSlug: string | null;
-  modoOperacion: string | null;
   usarDistribucion: boolean;
-  permitirVentaSinStock: boolean;
   role: string;
   salesPoint: string | null;
   isActive: boolean;
@@ -91,7 +82,6 @@ export interface UpdateBusinessInput {
   phone?: string;
   email?: string;
   usarDistribucion?: boolean;
-  permitirVentaSinStock?: boolean;
   publicCatalogEnabled?: boolean;
   publicCatalogSlug?: string | null;
 }

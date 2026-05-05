@@ -331,11 +331,9 @@ const calculateAvailableStock = (
 ) =>
   match(config)
     .with(
-      { usarDistribucion: true, controlKilos: true },
       () => parseFloat(distribucion.kilosAsignados) - parseFloat(distribucion.kilosVendidos)
     )
     .with(
-      { usarDistribucion: true, controlKilos: false },
       () => Infinity
     )
     .with(
@@ -350,7 +348,6 @@ const calculateAvailableStock = (
 import { match } from 'ts-pattern';
 
 const processSale = (saleData: SaleData, config: BusinessConfig) =>
-  match(config.modoOperacion)
     .with('inventario_propio', () => processSaleWithInventory(saleData))
     .with('sin_inventario', () => processSaleWithoutInventory(saleData))
     .with('pedidos', () => processPreorder(saleData))
@@ -368,20 +365,14 @@ El sistema soporta configuración flexible de inventario mediante flags en la ta
 
 | Flag | Tipo | Descripción | Default |
 |------|------|-------------|---------|
-| `modoOperacion` | varchar | Modo: inventario_propio, sin_inventario, pedidos, mixto | "inventario_propio" |
-| `controlKilos` | boolean | ¿Validar stock disponible? | true |
 | `usarDistribucion` | boolean | ¿Usar distribución del día? | true |
-| `permitirVentaSinStock` | boolean | ¿Permitir vender sin asignación? | false |
 
 ### Comportamientos según Configuración
 
 #### Modo 1: Inventario Propio (Control Estricto)
 ```typescript
 {
-  modoOperacion: 'inventario_propio',
-  controlKilos: true,
   usarDistribucion: true,
-  permitirVentaSinStock: false
 }
 ```
 - Admin asigna kilos a vendedores
@@ -391,10 +382,7 @@ El sistema soporta configuración flexible de inventario mediante flags en la ta
 #### Modo 2: Inventario Propio (Permisivo)
 ```typescript
 {
-  modoOperacion: 'inventario_propio',
-  controlKilos: true,
   usarDistribucion: true,
-  permitirVentaSinStock: true
 }
 ```
 - Admin asigna kilos a vendedores
@@ -404,10 +392,7 @@ El sistema soporta configuración flexible de inventario mediante flags en la ta
 #### Modo 3: Sin Inventario (Libre)
 ```typescript
 {
-  modoOperacion: 'sin_inventario',
-  controlKilos: false,
   usarDistribucion: false,
-  permitirVentaSinStock: true
 }
 ```
 - Solo registro de ventas
@@ -417,10 +402,7 @@ El sistema soporta configuración flexible de inventario mediante flags en la ta
 #### Modo 4: Pedidos Primero
 ```typescript
 {
-  modoOperacion: 'pedidos',
-  controlKilos: true,
   usarDistribucion: false,
-  permitirVentaSinStock: false
 }
 ```
 - Cliente ordena primero

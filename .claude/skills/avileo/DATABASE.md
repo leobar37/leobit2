@@ -139,9 +139,7 @@ Better Auth automatically creates these tables:
 | `logo_url` | varchar(255) | Logo URL |
 | `public_catalog_enabled` | boolean | Enable public customer catalog |
 | `public_catalog_slug` | varchar(100) | URL slug for public catalog |
-| `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
-| `permitir_venta_sin_stock` | boolean | Allow sales without stock |
 | `calculator_settings` | jsonb | Calculator config per context |
 | `is_active` | boolean | Business status |
 | `created_at` | timestamp | Creation timestamp |
@@ -660,9 +658,7 @@ Better Auth automatically creates these tables:
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
-| `permitir_venta_sin_stock` | boolean | Allow sales without stock |
 | `updated_at` | timestamp | Last update |
 
 ---

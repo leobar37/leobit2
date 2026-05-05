@@ -8,7 +8,6 @@
 El wireframe original incluía un paso de selección de "modo operativo" con 4 opciones: inventario propio, sin inventario, pedidos primero, mixto.
 
 ### Decision
-Eliminar el paso de selección de modo. El sistema usará "modo libre" por defecto (usarDistribucion=false, controlKilos=false).
 
 ### Rationale
 1. Simplifica el onboarding de 5 pasos a 3

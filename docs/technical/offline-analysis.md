@@ -60,7 +60,6 @@ Cuando token expira: Debe reconectar para renovar
 | Modificar asignación | ❌ NO | Requiere coordinación con admin | ✅ | ❌ N/A |
 | **Vender sin asignación** | ✅ SÍ | **Registra venta directamente** | ✅* | ✅ |
 
-*Requiere configuración: `permitir_venta_sin_stock = true`
 
 **Flujo CON distribución (Modo Inventario):**
 ```
@@ -202,7 +201,6 @@ Clientes que NO se cachean:
 | Modificar stock global | ❌ NO | Solo ADMIN | ✅ | ❌ N/A |
 | **Vender sin validar stock** | ✅ SÍ | **Sin restricciones** | ✅* | ✅ |
 
-*Requiere configuración: `control_kilos = false` o `permitir_venta_sin_stock = true`
 
 **Stock local del vendedor (Modo Inventario):**
 ```

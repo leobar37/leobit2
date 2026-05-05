@@ -69,7 +69,6 @@ export class BusinessRepository {
       address?: string | null;
       phone?: string | null;
       email?: string | null;
-      modoOperacion?: string;
       usarDistribucion?: boolean;
       publicCatalogEnabled?: boolean;
       publicCatalogSlug?: string | null;
@@ -83,7 +82,6 @@ export class BusinessRepository {
         ...(data.address !== undefined && { address: data.address }),
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.email !== undefined && { email: data.email }),
-        ...(data.modoOperacion !== undefined && { modoOperacion: data.modoOperacion }),
         ...(data.usarDistribucion !== undefined && { usarDistribucion: data.usarDistribucion }),
         ...(data.publicCatalogEnabled !== undefined && { publicCatalogEnabled: data.publicCatalogEnabled }),
         ...(data.publicCatalogSlug !== undefined && { publicCatalogSlug: data.publicCatalogSlug }),

@@ -36,7 +36,6 @@ T-001 (DB Migration)
 **Est. Time:** 2-3h  
 **Assignee:** TBD  
 
-Remove `modo` column from `distribuciones`, remove `modoOperacion` and `modoDistribucion` from `businesses`.
 
 **Depends on:** None  
 **Blocks:** T-002, T-003, T-007, T-011

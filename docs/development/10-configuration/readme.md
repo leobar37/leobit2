@@ -19,10 +19,7 @@ Permitir al admin configurar:
 
 ```typescript
 interface ConfiguracionSistema {
-  modoOperacion: 'inventario_propio' | 'sin_inventario' | 'pedidos' | 'mixto'
-  controlKilos: boolean
   usarDistribucion: boolean
-  permitirVentaSinStock: boolean
   precios: {
     polloEntero: number
     pechuga: number
@@ -45,10 +42,7 @@ import { useCallback } from 'react'
 import { configCollection } from '@/lib/db/collections'
 
 const defaultConfig: ConfiguracionSistema = {
-  modoOperacion: 'inventario_propio',
-  controlKilos: true,
   usarDistribucion: true,
-  permitirVentaSinStock: false,
   precios: {
     polloEntero: 12,
     pechuga: 18,
@@ -70,8 +64,6 @@ export function useConfiguracion() {
     await configCollection.update(newConfig)
   }, [config])
 
-  const esModoInventario = config.modoOperacion === 'inventario_propio'
-  const esModoLibre = config.modoOperacion === 'sin_inventario'
 
   return {
     config,
@@ -99,8 +91,6 @@ export default function ConfiguracionPage() {
       <div className="bg-gray-800 rounded-xl p-6 mb-6">
         <h3 className="text-white font-medium mb-4">Modo de Operación</h3>
         <select
-          value={config.modoOperacion}
-          onChange={(e) => updateConfig({ modoOperacion: e.target.value as any })}
           className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
         >
           <option value="inventario_propio">Inventario Propio (control de stock)</option>
@@ -114,8 +104,6 @@ export default function ConfiguracionPage() {
             <span className="text-white text-sm">Control de stock</span>
             <input
               type="checkbox"
-              checked={config.controlKilos}
-              onChange={(e) => updateConfig({ controlKilos: e.target.checked })}
               disabled={!esModoInventario}
               className="w-5 h-5"
             />
@@ -136,8 +124,6 @@ export default function ConfiguracionPage() {
             <span className="text-white text-sm">Permitir venta sin stock</span>
             <input
               type="checkbox"
-              checked={config.permitirVentaSinStock}
-              onChange={(e) => updateConfig({ permitirVentaSinStock: e.target.checked })}
               className="w-5 h-5"
             />
           </label>

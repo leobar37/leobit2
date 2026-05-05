@@ -452,7 +452,6 @@ Vendors sell freely, system only records:
 Even in "Inventario Propio" mode:
 
 ```typescript
-// Config: permitir_venta_sin_stock = true
 
 Vendor can:
 - Register sales without assigned kilos
@@ -608,10 +607,7 @@ window.addEventListener('offline', () => {
 
 | Setting | Values | Description |
 |---------|--------|-------------|
-| `modo_operacion` | inventario_propio, sin_inventario, pedidos, mixto | Operation mode |
-| `control_kilos` | true/false | Track stock |
 | `usar_distribucion` | true/false | Use daily distribution |
-| `permitir_venta_sin_stock` | true/false | Allow sales without assigned stock |
 
 ### Mode Impact on UI
 

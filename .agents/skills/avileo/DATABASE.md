@@ -117,10 +117,7 @@ Better Auth automatically creates these tables:
 | `phone` | varchar(20) | Business phone |
 | `email` | varchar(100) | Business email |
 | `logo_url` | varchar(255) | Logo URL |
-| `modo_operacion` | varchar(50) | Operation mode config |
-| `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
-| `permitir_venta_sin_stock` | boolean | Allow sales without stock |
 | `is_active` | boolean | Business status |
 | `created_at` | timestamp | Creation timestamp |
 | `updated_at` | timestamp | Last update timestamp |
@@ -315,10 +312,7 @@ Customer Debt = SUM(credit sales) - SUM(abonos)
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | uuid PK | Internal ID |
-| `modo_operacion` | enum | inventario_propio, sin_inventario, pedidos, mixto |
-| `control_kilos` | boolean | Track stock |
 | `usar_distribucion` | boolean | Use daily distribution |
-| `permitir_venta_sin_stock` | boolean | Allow sales without stock |
 | `updated_at` | timestamp | Last update |
 
 ---
@@ -405,7 +399,6 @@ enum distribucion_status {
 ### Operation Mode
 
 ```typescript
-enum modo_operacion {
   INVENTARIO_PROPIO = 'inventario_propio',  // Own inventory
   SIN_INVENTARIO = 'sin_inventario',        // No inventory
   PEDIDOS = 'pedidos',                      // Orders first
