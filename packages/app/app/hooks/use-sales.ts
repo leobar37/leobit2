@@ -146,6 +146,9 @@ export interface UpdateSaleInput {
   orderDate?: string;
   paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
   paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
+  advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
+  advanceReferenceNumber?: string | null;
+  advanceProofImageId?: string | null;
 }
 
 export interface CancelSaleInput {
@@ -576,6 +579,22 @@ export function useUpdateSale() {
 
         if ("amountPaid" in input) {
           payload.amountPaid = input.amountPaid;
+        }
+
+        if ("paymentMethod" in input) {
+          payload.paymentMethod = input.paymentMethod;
+        }
+
+        if ("advancePaymentMethod" in input) {
+          payload.advancePaymentMethod = input.advancePaymentMethod;
+        }
+
+        if ("advanceReferenceNumber" in input) {
+          payload.advanceReferenceNumber = input.advanceReferenceNumber;
+        }
+
+        if ("advanceProofImageId" in input) {
+          payload.advanceProofImageId = input.advanceProofImageId;
         }
 
         const response = await api.sales({ id }).patch(payload as any);

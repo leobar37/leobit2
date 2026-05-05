@@ -119,8 +119,12 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         deliveryDate: body.deliveryDate,
         saleType: body.saleType,
         paymentMode: body.paymentMode,
+        paymentMethod: body.paymentMethod,
         totalAmount: body.totalAmount,
         amountPaid: body.amountPaid,
+        advancePaymentMethod: body.advancePaymentMethod,
+        advanceReferenceNumber: body.advanceReferenceNumber,
+        advanceProofImageId: body.advanceProofImageId,
       });
       return { success: true, data: result.data, txid: result.txid };
     },
@@ -153,6 +157,19 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         ),
         totalAmount: t.Optional(t.Number({ minimum: 0 })),
         amountPaid: t.Optional(t.Number({ minimum: 0 })),
+        advancePaymentMethod: t.Optional(
+          t.Union([
+            t.Literal("efectivo"),
+            t.Literal("yape"),
+            t.Literal("plin"),
+            t.Literal("transferencia"),
+            t.Literal("tarjeta"),
+            t.Literal("saldo"),
+            t.Null(),
+          ])
+        ),
+        advanceReferenceNumber: t.Optional(t.Union([t.String(), t.Null()])),
+        advanceProofImageId: t.Optional(t.Union([t.String(), t.Null()])),
       }),
     }
   )

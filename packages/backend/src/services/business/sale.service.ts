@@ -211,6 +211,9 @@ export class SaleService {
       paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
       totalAmount?: number;
       amountPaid?: number;
+      advancePaymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
+      advanceReferenceNumber?: string | null;
+      advanceProofImageId?: string | null;
     }
   ): Promise<MutationResult<Sale>> {
     const sale = await this.repository.findById(ctx, id);
@@ -289,6 +292,15 @@ export class SaleService {
 
       if (data.paymentMethod !== undefined) {
         updateData.paymentMethod = data.paymentMethod ?? undefined;
+      }
+      if (data.advancePaymentMethod !== undefined) {
+        updateData.advancePaymentMethod = data.advancePaymentMethod ?? null;
+      }
+      if (data.advanceReferenceNumber !== undefined) {
+        updateData.advanceReferenceNumber = data.advanceReferenceNumber ?? null;
+      }
+      if (data.advanceProofImageId !== undefined) {
+        updateData.advanceProofImageId = data.advanceProofImageId ?? null;
       }
 
       const updatedSale = await this.repository.update(

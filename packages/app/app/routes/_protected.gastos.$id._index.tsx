@@ -12,6 +12,7 @@ import { useBusiness } from "~/hooks/use-business";
 import { useDistribucion } from "~/hooks/use-distribuciones";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { PaymentCapture } from "@/components/payments/payment-capture";
+import { useUploadFile } from "~/hooks/use-files";
 import { ExpenseCategorySelector } from "@/components/expenses/expense-category-selector";
 import { formatDisplayDate } from "~/lib/date-utils";
 import { BusinessUserRole } from "@avileo/shared";
@@ -38,6 +39,8 @@ export default function GastoDetailPage() {
   const [editMethod, setEditMethod] = useState<PaymentMethod>("efectivo");
   const [editReference, setEditReference] = useState("");
   const [editReceiptId, setEditReceiptId] = useState<string | null>(null);
+
+  const uploadFile = useUploadFile();
 
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
 
@@ -169,7 +172,12 @@ export default function GastoDetailPage() {
             referenceNumber={editReference}
             onReferenceNumberChange={setEditReference}
             proofImageId={editReceiptId}
-            onProofImageChange={setEditReceiptId}
+            onProofUpload={async (file) => {
+              const result = await uploadFile.mutateAsync(file);
+              setEditReceiptId(result.id);
+            }}
+            onProofRemove={() => setEditReceiptId(null)}
+            isUploading={uploadFile.isPending}
           />
         </div>
 

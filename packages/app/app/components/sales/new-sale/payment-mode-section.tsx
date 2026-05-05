@@ -14,7 +14,8 @@ import type { PaymentMode } from "~/lib/sales/types";
 import { useNewSaleContext } from "../new-sale-context";
 import { useToast } from "~/hooks/use-toast";
 import { PaymentCapture } from "~/components/payments/payment-capture";
-import type { PaymentMethod } from "~/hooks/use-payment-capture";
+import type { PaymentMethod } from "~/components/payments/payment-capture";
+import { useUploadFile } from "~/hooks/use-files";
 
 const paymentModes: {
   value: PaymentMode;
@@ -65,6 +66,7 @@ function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
 export function PaymentModeSection() {
   const { saleId, sale, items } = useNewSaleContext();
   const updateSale = useUpdateSale();
+  const uploadFile = useUploadFile();
   const { toast } = useToast();
 
   const calculations = useSaleCalculations(sale, items);
@@ -132,6 +134,71 @@ export function PaymentModeSection() {
     },
     [saleId, updateSale, toast]
   );
+
+  const handleReferenceNumberChange = useCallback(
+    async (ref: string) => {
+      if (!saleId) return;
+      try {
+        await updateSale.mutateAsync({
+          id: saleId,
+          input: {
+            advanceReferenceNumber: ref || null,
+          },
+        });
+      } catch (error) {
+        toast.error("Error al guardar referencia", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "No se pudo guardar la referencia",
+        });
+      }
+    },
+    [saleId, updateSale, toast]
+  );
+
+  const handleProofUpload = useCallback(
+    async (file: File) => {
+      if (!saleId) return;
+      try {
+        const result = await uploadFile.mutateAsync(file);
+        await updateSale.mutateAsync({
+          id: saleId,
+          input: {
+            advanceProofImageId: result.id,
+            advancePaymentMethod: (sale?.paymentMethod as PaymentMethod) ?? null,
+          },
+        });
+      } catch (error) {
+        toast.error("Error al subir comprobante", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "No se pudo subir el comprobante",
+        });
+      }
+    },
+    [saleId, sale?.paymentMethod, uploadFile, updateSale, toast]
+  );
+
+  const handleProofRemove = useCallback(async () => {
+    if (!saleId) return;
+    try {
+      await updateSale.mutateAsync({
+        id: saleId,
+        input: {
+          advanceProofImageId: null,
+        },
+      });
+    } catch (error) {
+      toast.error("Error al eliminar comprobante", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo eliminar el comprobante",
+      });
+    }
+  }, [saleId, updateSale, toast]);
 
   if (!saleId || items.length === 0) {
     return null;
@@ -257,6 +324,12 @@ export function PaymentModeSection() {
                   variant="inline"
                   paymentMethod={sale?.paymentMethod ?? null}
                   onPaymentMethodChange={handlePaymentMethodChange}
+                  referenceNumber={sale?.advanceReferenceNumber ?? ""}
+                  onReferenceNumberChange={handleReferenceNumberChange}
+                  proofImageId={sale?.advanceProofImageId ?? null}
+                  onProofUpload={handleProofUpload}
+                  onProofRemove={handleProofRemove}
+                  isUploading={uploadFile.isPending}
                 />
               </div>
             )}

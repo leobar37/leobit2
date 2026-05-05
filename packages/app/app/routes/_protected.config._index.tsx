@@ -18,6 +18,7 @@ import {
   Building2,
   AlertTriangle,
   ImageIcon,
+  ReceiptText,
 } from "lucide-react";
 import {
   MinimalCardTitle,
@@ -96,6 +97,14 @@ const comprasConfigItem: ConfigItem = {
   description: "Gestiona compras y proveedores",
   href: "/compras",
   color: "text-cyan-600",
+};
+
+const gastosConfigItem: ConfigItem = {
+  icon: ReceiptText,
+  title: "Gastos",
+  description: "Registra gastos generales sin distribución",
+  href: "/gastos",
+  color: "text-rose-600",
 };
 
 const flagsConfigItem: ConfigItem = {
@@ -181,6 +190,7 @@ export default function ConfigIndexPage() {
         teamConfigItem,
         distribucionesConfigItem,
         comprasConfigItem,
+        gastosConfigItem,
         stockAlertsConfigItem,
         activosConfigItem,
         puntosVentaConfigItem,
@@ -191,7 +201,7 @@ export default function ConfigIndexPage() {
         whatsappConfigItem,
         ...baseConfigItems.slice(2),
       ]
-    : [...baseConfigItems, activosConfigItem];
+    : [...baseConfigItems, gastosConfigItem, activosConfigItem];
 
   return (
     <div className="space-y-6">

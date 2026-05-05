@@ -20,7 +20,8 @@ import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
 import { PaymentShareDrawer } from "~/components/payments/payment-share-drawer";
 import { PaymentCapture } from "~/components/payments/payment-capture";
-import type { PaymentMethod } from "~/hooks/use-payment-capture";
+import { useUploadFile } from "~/hooks/use-files";
+import type { PaymentMethod } from "~/components/payments/payment-capture";
 
 const paymentSchema = z.object({
   amount: z.string().min(1, "El monto es requerido"),
@@ -67,6 +68,7 @@ export default function NuevoCobroPage() {
   const { data: customerPayments = [] } = useCustomerPayments(customerId);
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
+  const uploadFile = useUploadFile();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdPayment, setCreatedPayment] = useState<{
     id: string;
@@ -322,7 +324,12 @@ export default function NuevoCobroPage() {
               referenceNumber={referenceNumber || ""}
               onReferenceNumberChange={(r) => setValue("referenceNumber", r)}
               proofImageId={proofImageId || null}
-              onProofImageChange={(id) => setValue("proofImageId", id || undefined)}
+              onProofUpload={async (file) => {
+                const result = await uploadFile.mutateAsync(file);
+                setValue("proofImageId", result.id);
+              }}
+              onProofRemove={() => setValue("proofImageId", undefined)}
+              isUploading={uploadFile.isPending}
             />
 
             <div className="space-y-2">

@@ -198,6 +198,9 @@ export class SaleRepository {
         | "amountPaid"
         | "balanceDue"
         | "customerId"
+        | "advancePaymentMethod"
+        | "advanceReferenceNumber"
+        | "advanceProofImageId"
       >
     >,
     tx?: DbTransaction,

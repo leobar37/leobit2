@@ -3,10 +3,10 @@ import { Camera, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
 import { CameraGalleryDrawer } from "@/components/ui/camera-gallery-drawer";
+import { useFile } from "~/hooks/use-files";
 
 interface ProofCaptureProps {
   proofImageId: string | null;
-  proofImageUrl?: string | null;
   onUpload: (file: File) => void;
   onRemove: () => void;
   isUploading?: boolean;
@@ -14,14 +14,15 @@ interface ProofCaptureProps {
 
 export function ProofCapture({
   proofImageId,
-  proofImageUrl,
   onUpload,
   onRemove,
   isUploading,
 }: ProofCaptureProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: fileRecord } = useFile(proofImageId ?? "");
 
-  const hasProof = proofImageId || proofImageUrl;
+  const imageUrl = fileRecord?.url;
+  const hasProof = !!proofImageId;
 
   return (
     <div className="space-y-2">
@@ -32,9 +33,9 @@ export function ProofCapture({
       {hasProof ? (
         <div className="relative inline-block">
           <div className="shell-field rounded-xl p-2">
-            {proofImageUrl ? (
+            {imageUrl ? (
               <img
-                src={proofImageUrl}
+                src={imageUrl}
                 alt="Comprobante"
                 className="h-32 w-auto object-contain rounded-lg"
               />

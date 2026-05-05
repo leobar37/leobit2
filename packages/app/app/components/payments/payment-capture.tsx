@@ -10,57 +10,49 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
-import {
-  usePaymentCapture,
-  useUpdatePaymentCapture,
-  useUploadPaymentProof,
-  type PaymentMethod,
-} from "~/hooks/use-payment-capture";
 import { usePaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
-import { useUploadFile } from "~/hooks/use-files";
 import { PaymentSummary } from "./payment-summary";
 import { PaymentMethodSelector } from "./payment-method-selector";
 import { PaymentMethodInfo } from "./payment-method-info";
 import { ProofCapture } from "./proof-capture";
 
+export type PaymentMethod = "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
+
 interface PaymentCaptureProps {
   variant?: "drawer" | "inline";
-  // Drawer mode (ventas): paymentId required, uses TanStack Query
-  paymentId?: string;
-  // Inline mode (cobros): controlled props, no server calls
-  paymentMethod?: string | null;
-  onPaymentMethodChange?: (method: PaymentMethod) => void;
+  disabled?: boolean;
+
+  // Payment method
+  paymentMethod: string | null;
+  onPaymentMethodChange: (method: PaymentMethod) => void;
+
+  // Reference number
   referenceNumber?: string;
   onReferenceNumberChange?: (ref: string) => void;
+
+  // Proof image
   proofImageId?: string | null;
-  onProofImageChange?: (id: string | null) => void;
-  onProofUpload?: (file: File) => void;
+  onProofUpload?: (file: File) => Promise<void>;
+  onProofRemove?: () => void;
   isUploading?: boolean;
 }
 
 export function PaymentCapture({
-  variant = "drawer",
-  paymentId,
-  paymentMethod: controlledMethod,
+  variant = "inline",
+  disabled = false,
+  paymentMethod,
   onPaymentMethodChange,
-  referenceNumber: controlledReference,
+  referenceNumber = "",
   onReferenceNumberChange,
-  proofImageId: controlledProofImageId,
-  onProofImageChange,
+  proofImageId,
   onProofUpload,
-  isUploading: controlledIsUploading,
+  onProofRemove,
+  isUploading = false,
 }: PaymentCaptureProps) {
   const isDrawer = variant === "drawer";
-
-  // Drawer mode: use TanStack Query
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data: payment, isLoading: isPaymentLoading } = usePaymentCapture(
-    isDrawer ? paymentId ?? null : null
-  );
+
   const { data: paymentConfig } = usePaymentMethodsConfig();
-  const updatePayment = useUpdatePaymentCapture();
-  const uploadProof = useUploadPaymentProof();
-  const uploadFile = useUploadFile();
 
   const enabledMethods = useMemo(() => {
     const allMethods: PaymentMethod[] = [
@@ -75,17 +67,7 @@ export function PaymentCapture({
     return allMethods.filter((m) => config[m]?.enabled !== false);
   }, [paymentConfig]);
 
-  // Determine current values based on mode
-  const currentMethod = isDrawer
-    ? ((payment?.paymentMethod as PaymentMethod) || null)
-    : (controlledMethod as PaymentMethod) || null;
-  const currentReference = isDrawer
-    ? payment?.referenceNumber || ""
-    : controlledReference || "";
-  const currentProofImageId = isDrawer
-    ? payment?.proofImageId || null
-    : controlledProofImageId || null;
-
+  const currentMethod = (paymentMethod as PaymentMethod) || null;
   const showMethodInfo =
     currentMethod === "yape" ||
     currentMethod === "plin" ||
@@ -93,71 +75,31 @@ export function PaymentCapture({
 
   const showProofAndReference = currentMethod && currentMethod !== "efectivo";
 
-  // Handlers
   const handleMethodChange = useCallback(
-    async (method: PaymentMethod) => {
-      if (isDrawer) {
-        if (!paymentId || method === currentMethod) return;
-        await updatePayment.mutateAsync({
-          id: paymentId,
-          input: { paymentMethod: method },
-        });
-      } else {
-        onPaymentMethodChange?.(method);
-      }
+    (method: PaymentMethod) => {
+      onPaymentMethodChange(method);
     },
-    [isDrawer, paymentId, currentMethod, updatePayment, onPaymentMethodChange]
+    [onPaymentMethodChange]
   );
 
   const handleReferenceChange = useCallback(
-    async (value: string) => {
-      if (isDrawer) {
-        if (!paymentId) return;
-        await updatePayment.mutateAsync({
-          id: paymentId,
-          input: { referenceNumber: value },
-        });
-      } else {
-        onReferenceNumberChange?.(value);
-      }
+    (value: string) => {
+      onReferenceNumberChange?.(value);
     },
-    [isDrawer, paymentId, updatePayment, onReferenceNumberChange]
+    [onReferenceNumberChange]
   );
 
   const handleProofUpload = useCallback(
     async (file: File) => {
-      if (isDrawer) {
-        if (!paymentId) return;
-        await uploadProof.mutateAsync({ paymentId, file });
-      } else if (onProofUpload) {
-        onProofUpload(file);
-      } else {
-        // Inline mode without external handler: upload file directly
-        const result = await uploadFile.mutateAsync(file);
-        onProofImageChange?.(result.id);
-      }
+      await onProofUpload?.(file);
     },
-    [isDrawer, paymentId, uploadProof, onProofUpload, uploadFile, onProofImageChange]
+    [onProofUpload]
   );
 
-  const handleProofRemove = useCallback(async () => {
-    if (isDrawer) {
-      if (!paymentId) return;
-      await updatePayment.mutateAsync({
-        id: paymentId,
-        input: { proofImageId: "" },
-      });
-    } else {
-      onProofImageChange?.(null);
-    }
-  }, [isDrawer, paymentId, updatePayment, onProofImageChange]);
+  const handleProofRemove = useCallback(() => {
+    onProofRemove?.();
+  }, [onProofRemove]);
 
-  const isMutating = isDrawer
-    ? updatePayment.isPending || uploadProof.isPending
-    : uploadFile.isPending;
-  const isUploading = isDrawer ? uploadProof.isPending : (controlledIsUploading || uploadFile.isPending);
-
-  // Inline content (shared between modes)
   const renderContent = () => (
     <>
       <div className="space-y-3">
@@ -168,7 +110,7 @@ export function PaymentCapture({
           methods={enabledMethods}
           selectedMethod={currentMethod}
           onSelect={handleMethodChange}
-          disabled={isMutating}
+          disabled={disabled || isUploading}
         />
       </div>
 
@@ -186,18 +128,18 @@ export function PaymentCapture({
             <Input
               id="reference"
               placeholder="Ej: 123456"
-              value={currentReference}
+              value={referenceNumber}
               onChange={(e) => handleReferenceChange(e.target.value)}
-              disabled={isMutating}
+              disabled={disabled || isUploading}
               className={cn(
                 "shell-field h-12 rounded-2xl",
-                isMutating && "opacity-50"
+                (disabled || isUploading) && "opacity-50"
               )}
             />
           </div>
 
           <ProofCapture
-            proofImageId={currentProofImageId}
+            proofImageId={proofImageId ?? null}
             onUpload={handleProofUpload}
             onRemove={handleProofRemove}
             isUploading={isUploading}
@@ -217,7 +159,7 @@ export function PaymentCapture({
     <>
       <PaymentSummary
         method={currentMethod}
-        hasProof={!!currentProofImageId}
+        hasProof={!!proofImageId}
         onClick={() => setDrawerOpen(true)}
       />
 
@@ -238,13 +180,7 @@ export function PaymentCapture({
           </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {isPaymentLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-              </div>
-            ) : (
-              renderContent()
-            )}
+            {renderContent()}
           </div>
 
           <div className="border-t p-4">

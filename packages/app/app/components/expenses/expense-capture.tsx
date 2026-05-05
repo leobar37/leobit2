@@ -19,6 +19,7 @@ import { cn } from "~/lib/utils";
 import { useExpenseCapture, type ExpenseFormData } from "~/hooks/use-expense-capture";
 import { useActiveExpenseCategories } from "~/hooks/use-expense-categories";
 import { PaymentCapture } from "@/components/payments/payment-capture";
+import { useUploadFile } from "~/hooks/use-files";
 import { ExpenseCategorySelector } from "./expense-category-selector";
 
 interface ExpenseCaptureProps {
@@ -53,6 +54,8 @@ export function ExpenseCapture({
     sellerId,
     defaultValues,
   });
+
+  const uploadFile = useUploadFile();
 
   const { data: categories, isLoading: isLoadingCategories } = useActiveExpenseCategories();
 
@@ -154,7 +157,12 @@ export function ExpenseCapture({
           referenceNumber={capture.formData.referenceNumber}
           onReferenceNumberChange={(value) => capture.setField("referenceNumber", value)}
           proofImageId={capture.formData.receiptImageId}
-          onProofImageChange={(id) => capture.setField("receiptImageId", id)}
+          onProofUpload={async (file) => {
+            const result = await uploadFile.mutateAsync(file);
+            capture.setField("receiptImageId", result.id);
+          }}
+          onProofRemove={() => capture.setField("receiptImageId", null)}
+          isUploading={uploadFile.isPending}
         />
       </div>
 
