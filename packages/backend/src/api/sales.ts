@@ -212,7 +212,9 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         params.id,
         body.baseVersion,
         {
+          paymentMode: body.paymentMode,
           paymentMethod: body.paymentMethod,
+          amountPaid: body.amountPaid,
           referenceNumber: body.referenceNumber,
           proofImageId: body.proofImageId,
         }
@@ -225,6 +227,11 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
       }),
       body: t.Object({
         baseVersion: t.Optional(t.Number()),
+        paymentMode: t.Optional(t.Union([
+          t.Literal("pago_total"),
+          t.Literal("a_cuenta"),
+          t.Literal("debe_todo"),
+        ])),
         paymentMethod: t.Optional(t.Union([
           t.Literal("efectivo"),
           t.Literal("yape"),
@@ -233,6 +240,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
           t.Literal("tarjeta"),
           t.Literal("saldo"),
         ])),
+        amountPaid: t.Optional(t.Number({ minimum: 0 })),
         referenceNumber: t.Optional(t.String()),
         proofImageId: t.Optional(t.String()),
       }),

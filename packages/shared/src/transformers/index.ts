@@ -28,3 +28,4 @@ export { saleItemTransformer } from "./entities/sale-item";
 export { purchaseItemTransformer } from "./entities/purchase-item";
 export { distribucionItemTransformer } from "./entities/distribucion-item";
 export { saleTransformer } from "./entities/sale";
+export { salePaymentTransformer } from "./entities/sale-payment";

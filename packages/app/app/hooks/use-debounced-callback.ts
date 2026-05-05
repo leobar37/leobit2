@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
@@ -7,6 +7,18 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingArgsRef = useRef<Parameters<T> | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   const cancel = useCallback(() => {
     if (timerRef.current) {
@@ -14,7 +26,9 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       timerRef.current = null;
     }
     pendingArgsRef.current = null;
-    setIsPending(false);
+    if (isMountedRef.current) {
+      setIsPending(false);
+    }
   }, []);
 
   const run = useCallback(
@@ -24,7 +38,9 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       }
 
       pendingArgsRef.current = args;
-      setIsPending(true);
+      if (isMountedRef.current) {
+        setIsPending(true);
+      }
 
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
@@ -34,11 +50,15 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 
         if (result && typeof result.then === "function") {
           result.then(
-            () => setIsPending(false),
-            () => setIsPending(false)
+            () => {
+              if (isMountedRef.current) setIsPending(false);
+            },
+            () => {
+              if (isMountedRef.current) setIsPending(false);
+            }
           );
         } else {
-          setIsPending(false);
+          if (isMountedRef.current) setIsPending(false);
         }
       }, delay);
     },
@@ -59,11 +79,15 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 
       if (result && typeof result.then === "function") {
         result.then(
-          () => setIsPending(false),
-          () => setIsPending(false)
+          () => {
+            if (isMountedRef.current) setIsPending(false);
+          },
+          () => {
+            if (isMountedRef.current) setIsPending(false);
+          }
         );
       } else {
-        setIsPending(false);
+        if (isMountedRef.current) setIsPending(false);
       }
     }
   }, [callback]);

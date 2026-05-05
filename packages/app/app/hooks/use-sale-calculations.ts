@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { decimalToNumber } from "@avileo/shared";
 import type { Sale, SaleItem } from "~/hooks/use-sales";
 
 export interface SaleCalculations {
@@ -17,24 +18,11 @@ interface SaleFinancialStateInput {
   amountPaid: string | number | null | undefined;
 }
 
-function normalizeAmount(amountPaid: string | number | null | undefined): number {
-  if (typeof amountPaid === "number") {
-    return Number.isFinite(amountPaid) ? amountPaid : 0;
-  }
-
-  if (typeof amountPaid === "string") {
-    const parsed = Number(amountPaid);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
 /**
  * Calcula el monto total de los items
  */
 export function calculateTotalAmount(items: SaleItem[]): number {
-  return items.reduce((total, item) => total + parseFloat(item.subtotal), 0);
+  return items.reduce((total, item) => total + decimalToNumber(item.subtotal), 0);
 }
 
 /**
@@ -54,7 +42,7 @@ export function getAmountPaidValue(
 ): number {
   if (paymentMode === "pago_total") return totalAmount;
   if (paymentMode === "debe_todo") return 0;
-  return parseFloat(amountPaid) || 0;
+  return decimalToNumber(amountPaid);
 }
 
 /**
@@ -74,7 +62,7 @@ export function getSaleFinancialState({
   totalAmount,
   amountPaid,
 }: SaleFinancialStateInput) {
-  const amountPaidValue = normalizeAmount(amountPaid);
+  const amountPaidValue = decimalToNumber(amountPaid);
 
   return {
     amountPaidValue,

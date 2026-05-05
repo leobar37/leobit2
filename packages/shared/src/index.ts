@@ -386,6 +386,7 @@ export {
   purchaseItemTransformer,
   distribucionItemTransformer,
   saleTransformer,
+  salePaymentTransformer,
 } from "./transformers";
 
 // Standards
