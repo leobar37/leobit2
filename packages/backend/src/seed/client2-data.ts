@@ -138,9 +138,7 @@ export const CLIENT2_BUSINESS = {
   phone: "999999999",
   email: "juavik@gmail.com",
   modoOperacion: "inventario_propio" as const,
-  controlKilos: true,
   usarDistribucion: false,
-  permitirVentaSinStock: false,
 };
 
 interface ProductAccumulator {

@@ -1,5 +1,7 @@
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useCustomerBalance } from "~/hooks/use-customer-balance";
+import { useCustomerPayments } from "~/hooks/use-payments";
 import type { Sale } from "~/hooks/use-sales";
 import { formatCurrency } from "~/lib/utils";
 import { decimalToNumber } from "@avileo/shared";
@@ -9,9 +11,20 @@ interface SaleDetailSummaryCardProps {
 }
 
 export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
+  const { data: customerPayments = [] } = useCustomerPayments(sale.customerId ?? null);
+  const { data: customerBalance, isLoading: isBalanceLoading } = useCustomerBalance(sale.customerId ?? null);
   const paidAmount = decimalToNumber(sale.amountPaid);
-  const dueAmount = decimalToNumber(sale.balanceDue);
   const totalAmount = decimalToNumber(sale.totalAmount);
+  const linkedPaidAmount = customerPayments
+    .filter((payment) => payment.relatedSaleId === sale.id)
+    .reduce((sum, payment) => sum + decimalToNumber(payment.amount), 0);
+  const effectivePaidAmount = Math.max(paidAmount, linkedPaidAmount);
+  const saleDueAmount = sale.saleType === "credito"
+    ? Math.max(totalAmount - effectivePaidAmount, 0)
+    : 0;
+  const dueAmount = isBalanceLoading
+    ? saleDueAmount
+    : Math.min(saleDueAmount, customerBalance.balanceDue);
 
   const saleWorkflowStatus =
     sale.status === "draft"
@@ -27,7 +40,7 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
   const saleStatus =
     sale.saleType === "contado"
       ? "Pago total"
-      : paidAmount <= 0
+      : effectivePaidAmount <= 0
         ? "Debe todo"
         : dueAmount > 0
           ? "A cuenta"
@@ -54,7 +67,7 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
     if (sale.saleType === "contado") {
       return "success";
     }
-    if (paidAmount <= 0) {
+    if (effectivePaidAmount <= 0) {
       return "danger";
     }
     if (dueAmount > 0) {
@@ -130,7 +143,7 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
           <div>
             <p className="text-xs text-muted-foreground">Abonado</p>
             <p className="mt-1 text-lg font-semibold text-foreground">
-              S/ {formatCurrency(paidAmount)}
+              S/ {formatCurrency(effectivePaidAmount)}
             </p>
           </div>
 

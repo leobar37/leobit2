@@ -55,8 +55,8 @@ export function useSaleCalculator({
   const productTypeFilters = useMemo(
     () =>
       Array.from(
-        new Set(activeProducts.map((product) => product.type).filter(Boolean))
-      ),
+        new Set(activeProducts.map((product) => product.category?.name).filter(Boolean))
+      ) as string[],
     [activeProducts]
   );
   const filteredProducts = useMemo(() => {
@@ -69,7 +69,7 @@ export function useSaleCalculator({
       const matchesFilter =
         productFilter === "all" ||
         product.unit === productFilter ||
-        product.type === productFilter;
+        product.category?.name === productFilter;
 
       return matchesSearch && matchesFilter;
     });

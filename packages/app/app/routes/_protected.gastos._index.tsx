@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
-import { Receipt, Search, Plus, X, Calendar } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router";
+import { Receipt, Search, Plus, X, Calendar, Truck } from "lucide-react";
 import { cn, formatCurrency } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useExpenses } from "~/hooks/use-expenses";
 import { useActiveExpenseCategories } from "~/hooks/use-expense-categories";
+import { useDistribuciones } from "~/hooks/use-distribuciones";
 import { ExpenseSummary } from "@/components/expenses/expense-summary";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { MobileShell } from "~/components/mobile";
@@ -14,13 +15,31 @@ import { getToday, subDays, formatDisplayDate, isSameDay, parseDateString } from
 export default function GastosPage() {
   useSetLayout({ title: "Gastos" });
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const distribucionFilter = searchParams.get("distribucion");
 
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [originFilter, setOriginFilter] = useState<"all" | "with" | "without">("all");
 
-  const { data: expenses = [], isLoading } = useExpenses();
+  const { data: expenses = [], isLoading } = useExpenses(
+    distribucionFilter ? { distribucionId: distribucionFilter } : undefined
+  );
   const { data: categories = [] } = useActiveExpenseCategories();
+  const { data: distribuciones = [] } = useDistribuciones();
+
+  const categoryById = useMemo(() => {
+    return new Map(categories.map((category) => [category.id, category]));
+  }, [categories]);
+
+  const distribucionById = useMemo(() => {
+    return new Map(distribuciones.map((distribucion) => [distribucion.id, distribucion]));
+  }, [distribuciones]);
+
+  const selectedDistribucion = distribucionFilter
+    ? distribucionById.get(distribucionFilter)
+    : undefined;
 
   const filteredExpenses = useMemo(() => {
     let result = [...expenses];
@@ -50,22 +69,33 @@ export default function GastosPage() {
       result = result.filter((e) => e.categoryId === categoryFilter);
     }
 
+    // Distribution origin filter
+    if (originFilter === "with") {
+      result = result.filter((e) => !!e.distribucionId);
+    }
+    if (originFilter === "without") {
+      result = result.filter((e) => !e.distribucionId);
+    }
+
     // Search
     if (search.trim()) {
       const term = search.trim().toLowerCase();
       result = result.filter((e) => {
-        const inCategory = e.category?.name?.toLowerCase().includes(term) ?? false;
+        const inCategory = categoryById.get(e.categoryId)?.name.toLowerCase().includes(term) ?? false;
+        const inDistribution = e.distribucionId
+          ? distribucionById.get(e.distribucionId)?.puntoVenta.toLowerCase().includes(term) ?? false
+          : false;
         const inDescription = e.description?.toLowerCase().includes(term) ?? false;
         const inAmount = e.amount.toString().includes(term);
-        return inCategory || inDescription || inAmount;
+        return inCategory || inDistribution || inDescription || inAmount;
       });
     }
 
     // Sort by date desc
-    result.sort((a, b) => new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime());
+    result.sort((a, b) => parseDateString(b.expenseDate).getTime() - parseDateString(a.expenseDate).getTime());
 
     return result;
-  }, [expenses, dateFilter, categoryFilter, search]);
+  }, [expenses, dateFilter, categoryFilter, originFilter, search, categoryById, distribucionById]);
 
   const totalAmount = useMemo(() => {
     return filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount || "0"), 0);
@@ -76,6 +106,18 @@ export default function GastosPage() {
     week: "Esta semana",
     month: "Este mes",
     all: "Todos",
+  };
+
+  const originFilterLabel = {
+    all: "Todos los orígenes",
+    with: "Con distribución",
+    without: "Sin distribución",
+  };
+
+  const clearDistribucionFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("distribucion");
+    setSearchParams(next, { replace: true });
   };
 
   return (
@@ -159,9 +201,30 @@ export default function GastosPage() {
           </div>
         )}
 
+        {/* Origin Filters */}
+        <div className="-mx-3 overflow-x-auto px-3 pb-1 hide-scrollbar sm:-mx-4 sm:px-4">
+          <div className="flex min-w-max gap-2">
+            {(["all", "with", "without"] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setOriginFilter(filter)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
+                  originFilter === filter
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/[0.15] dark:text-amber-300 dark:ring-amber-400/[0.20]"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
+                )}
+              >
+                <Truck className="h-3.5 w-3.5" />
+                {originFilterLabel[filter]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Active filters indicator */}
-        {(categoryFilter || search) && (
-          <div className="flex gap-2">
+        {(categoryFilter || search || originFilter !== "all" || distribucionFilter) && (
+          <div className="flex flex-wrap gap-2">
             {categoryFilter && (
               <button
                 type="button"
@@ -169,6 +232,26 @@ export default function GastosPage() {
                 className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 ring-1 ring-orange-200/60 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20"
               >
                 {categories.find((c) => c.id === categoryFilter)?.name}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {originFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setOriginFilter("all")}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200/60 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"
+              >
+                {originFilterLabel[originFilter]}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {distribucionFilter && (
+              <button
+                type="button"
+                onClick={clearDistribucionFilter}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200/60 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"
+              >
+                {selectedDistribucion?.puntoVenta ?? "Distribución"}
                 <X className="h-3 w-3" />
               </button>
             )}
@@ -198,7 +281,7 @@ export default function GastosPage() {
           <div className="text-center py-8">
             <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              {search || categoryFilter || dateFilter !== "all"
+              {search || categoryFilter || dateFilter !== "all" || originFilter !== "all" || distribucionFilter
                 ? "No se encontraron gastos"
                 : "No hay gastos registrados"}
             </p>
@@ -210,7 +293,15 @@ export default function GastosPage() {
           {filteredExpenses.map((expense) => (
             <ExpenseSummary
               key={expense.id}
-              expense={expense}
+              expense={{
+                ...expense,
+                category: categoryById.get(expense.categoryId) ?? expense.category,
+              }}
+              distributionLabel={
+                expense.distribucionId
+                  ? distribucionById.get(expense.distribucionId)?.puntoVenta ?? "Distribución"
+                  : null
+              }
               onClick={() => navigate(`/gastos/${expense.id}`)}
             />
           ))}

@@ -17,6 +17,7 @@ import {
   MapPin,
   Building2,
   AlertTriangle,
+  ImageIcon,
 } from "lucide-react";
 import {
   MinimalCardTitle,
@@ -158,6 +159,15 @@ const stockAlertsConfigItem: ConfigItem = {
   iconBg: "bg-red-100",
 };
 
+const activosConfigItem: ConfigItem = {
+  icon: ImageIcon,
+  title: "Activos",
+  description: "Galería de imágenes para productos",
+  href: "/activos",
+  color: "text-pink-600",
+  iconBg: "bg-pink-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -172,6 +182,7 @@ export default function ConfigIndexPage() {
         distribucionesConfigItem,
         comprasConfigItem,
         stockAlertsConfigItem,
+        activosConfigItem,
         puntosVentaConfigItem,
         proveedoresConfigItem,
         gruposConfigItem,
@@ -180,7 +191,7 @@ export default function ConfigIndexPage() {
         whatsappConfigItem,
         ...baseConfigItems.slice(2),
       ]
-    : baseConfigItems;
+    : [...baseConfigItems, activosConfigItem];
 
   return (
     <div className="space-y-6">

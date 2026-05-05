@@ -66,7 +66,6 @@ export class PaymentService {
       throw new ValidationError("El monto debe ser mayor a 0");
     }
 
-    // For payments linked to a specific sale, validate against the sale amount
     if (data.relatedSaleId) {
       const sale = await this.saleRepository.findById(ctx, data.relatedSaleId);
       if (!sale) {
@@ -75,11 +74,19 @@ export class PaymentService {
       if (sale.customerId !== data.customerId) {
         throw new ValidationError("El abono no pertenece a este cliente");
       }
-      const saleAmountPaid = Number.parseFloat(sale.amountPaid);
+
+      const saleTotalAmount = Number.parseFloat(sale.totalAmount);
+      const totalPaidForSale = await this.repository.getTotalBySale(ctx, data.relatedSaleId);
+      const remainingSaleDebt = Math.max(saleTotalAmount - totalPaidForSale, 0);
+
       const OVERPAYMENT_TOLERANCE = 0.01;
-      if (data.amount > saleAmountPaid + OVERPAYMENT_TOLERANCE) {
+      if (remainingSaleDebt <= 0) {
+        throw new ValidationError("La venta no tiene deuda pendiente");
+      }
+
+      if (data.amount > remainingSaleDebt + OVERPAYMENT_TOLERANCE) {
         throw new ValidationError(
-          `El monto del abono (S/ ${data.amount.toFixed(2)}) excede el monto pagado de la venta (S/ ${saleAmountPaid.toFixed(2)})`
+          `El monto del abono (S/ ${data.amount.toFixed(2)}) excede la deuda pendiente de la venta (S/ ${remainingSaleDebt.toFixed(2)})`
         );
       }
     } else {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,7 @@ export function AssetGallery({
   const [uploading, setUploading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const lastFileRef = useRef<File | null>(null);
 
   // Detect mobile viewport on mount and resize
   useEffect(() => {
@@ -36,15 +37,31 @@ export function AssetGallery({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  const handleUploadSuccess = (result: { id: string; filename: string; mimeType: string; sizeBytes: number; createdAt: string }) => {
+    // Build a temporary Asset from the upload response so we can select it
+    // immediately without waiting for the query cache to refresh.
+    const file = lastFileRef.current;
+    const tempAsset: Asset = {
+      id: result.id,
+      filename: result.filename,
+      mimeType: result.mimeType,
+      sizeBytes: result.sizeBytes,
+      createdAt: result.createdAt,
+      url: file ? URL.createObjectURL(file) : "",
+    };
+    if (onSelect) {
+      onSelect(tempAsset);
+    }
+  };
+
   const handleDrawerFileSelect = async (file: File) => {
+    lastFileRef.current = file;
     setUploading(true);
     try {
       const result = await uploadAsset.mutateAsync(file);
-      // Auto-select the newly uploaded asset
-      const newAsset = assets?.find((a) => a.id === result.id);
-      if (newAsset && onSelect) {
-        onSelect(newAsset);
-      }
+      handleUploadSuccess(result);
+    } catch (err) {
+      console.error("Error uploading asset:", err);
     } finally {
       setUploading(false);
     }
@@ -54,14 +71,13 @@ export function AssetGallery({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    lastFileRef.current = file;
     setUploading(true);
     try {
       const result = await uploadAsset.mutateAsync(file);
-      // Auto-select the newly uploaded asset
-      const newAsset = assets?.find((a) => a.id === result.id);
-      if (newAsset && onSelect) {
-        onSelect(newAsset);
-      }
+      handleUploadSuccess(result);
+    } catch (err) {
+      console.error("Error uploading asset:", err);
     } finally {
       setUploading(false);
     }
@@ -138,7 +154,7 @@ export function AssetGallery({
           {assets.map((asset) => (
             <Card
               key={asset.id}
-              className={`overflow-hidden cursor-pointer transition-all ${
+              className={`group overflow-hidden cursor-pointer transition-all ${
                 selectedId === asset.id
                   ? "ring-2 ring-orange-500"
                   : "hover:shadow-md"

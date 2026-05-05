@@ -53,10 +53,8 @@ export const businesses = pgTable(
     publicCatalogEnabled: boolean("public_catalog_enabled").notNull().default(false),
     publicCatalogSlug: varchar("public_catalog_slug", { length: 100 }),
 
-    // Feature flags específicos del negocio (override de system_config)
-    controlKilos: boolean("control_kilos").default(true),
+    // Feature flags específicos del negocio
     usarDistribucion: boolean("usar_distribucion").default(true),
-    permitirVentaSinStock: boolean("permitir_venta_sin_stock").default(false),
 
     // Calculator settings (JSONB for flexibility)
     calculatorSettings: jsonb("calculator_settings").$type<BusinessCalculatorSettings>().default(defaultCalculatorSettings),

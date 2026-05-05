@@ -8,12 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useExpense, useUpdateExpense, useDeleteExpense, type PaymentMethod } from "~/hooks/use-expenses";
 import { useActiveExpenseCategories } from "~/hooks/use-expense-categories";
-import { useUploadFile } from "~/hooks/use-files";
 import { useBusiness } from "~/hooks/use-business";
+import { useDistribucion } from "~/hooks/use-distribuciones";
 import { useSetLayout } from "~/components/layout/app-layout";
-import { PaymentMethodSelector } from "@/components/payments/payment-method-selector";
+import { PaymentCapture } from "@/components/payments/payment-capture";
 import { ExpenseCategorySelector } from "@/components/expenses/expense-category-selector";
-import { ReceiptCapture } from "@/components/expenses/receipt-capture";
 import { formatDisplayDate } from "~/lib/date-utils";
 import { BusinessUserRole } from "@avileo/shared";
 import { toast } from "sonner";
@@ -22,11 +21,11 @@ export default function GastoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: expense, isLoading } = useExpense(id ?? null);
+  const { data: distribucion } = useDistribucion(expense?.distribucionId ?? null);
   const { data: categories } = useActiveExpenseCategories();
   const { data: business } = useBusiness();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
-  const uploadFile = useUploadFile();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -123,13 +122,6 @@ export default function GastoDetailPage() {
     }
   };
 
-  const handleReceiptUpload = async (file: File) => {
-    const result = await uploadFile.mutateAsync(file);
-    setEditReceiptId(result.id);
-  };
-
-  const showProofAndReference = editMethod !== "efectivo";
-
   if (isEditing) {
     return (
       <div className="space-y-5 pb-8">
@@ -170,26 +162,16 @@ export default function GastoDetailPage() {
 
         <div className="space-y-3">
           <Label className="text-base font-semibold">Método de pago</Label>
-          <PaymentMethodSelector
-            methods={["efectivo", "yape", "plin", "transferencia", "tarjeta"]}
-            selectedMethod={editMethod}
-            onSelect={setEditMethod}
-            disabled={updateExpense.isPending}
+          <PaymentCapture
+            variant="inline"
+            paymentMethod={editMethod}
+            onPaymentMethodChange={setEditMethod}
+            referenceNumber={editReference}
+            onReferenceNumberChange={setEditReference}
+            proofImageId={editReceiptId}
+            onProofImageChange={setEditReceiptId}
           />
         </div>
-
-        {showProofAndReference && (
-          <div className="space-y-2">
-            <Label htmlFor="edit-reference">Número de operación (opcional)</Label>
-            <Input
-              id="edit-reference"
-              value={editReference}
-              onChange={(e) => setEditReference(e.target.value)}
-              disabled={updateExpense.isPending}
-              className="shell-field h-12 rounded-2xl"
-            />
-          </div>
-        )}
 
         <div className="space-y-2">
           <Label htmlFor="edit-description">Descripción (opcional)</Label>
@@ -201,13 +183,6 @@ export default function GastoDetailPage() {
             className="shell-field min-h-[80px] resize-none rounded-2xl"
           />
         </div>
-
-        <ReceiptCapture
-          receiptImageId={editReceiptId}
-          onUpload={handleReceiptUpload}
-          onRemove={() => setEditReceiptId(null)}
-          isUploading={uploadFile.isPending}
-        />
 
         <div className="flex gap-3 pt-2">
           <Button
@@ -280,6 +255,20 @@ export default function GastoDetailPage() {
             <p className="font-medium capitalize">{expense.paymentMethod}</p>
           </div>
         </div>
+
+        {expense.distribucionId && (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+              <Receipt className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Distribución</p>
+              <p className="font-medium">
+                {distribucion?.puntoVenta ?? "Gasto asociado a distribución"}
+              </p>
+            </div>
+          </div>
+        )}
 
         {expense.referenceNumber && (
           <div className="flex items-center gap-3">

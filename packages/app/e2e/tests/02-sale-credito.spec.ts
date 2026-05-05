@@ -92,7 +92,7 @@ test.describe("Sale - Product Filters", () => {
     const eggCategory = await createCategory(request, page, `POS Huevo ${Date.now()}`, "#eab308");
     const chickenCategory = await createCategory(request, page, `POS Pollo ${Date.now()}`, "#f97316");
 
-    const products = Array.from({ length: 9 }, (_, index) => ({
+    const products: { name: string; categoryId: string | null; unit: "kg" | "unidad"; basePrice: string }[] = Array.from({ length: 9 }, (_, index) => ({
       name: `Filtro POS ${Date.now()}-${index}`,
       categoryId: index === 8 ? null : index % 2 === 0 ? eggCategory.id : chickenCategory.id,
       unit: index % 2 === 0 ? "unidad" : "kg",

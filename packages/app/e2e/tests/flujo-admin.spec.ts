@@ -23,7 +23,6 @@ test("Sesión de admin - flujo completo", async ({ page }) => {
   
   await newProductPage.fillForm({
     name: productName,
-    type: "pollo",
     unit: "kg",
     basePrice: "25.00",
   });

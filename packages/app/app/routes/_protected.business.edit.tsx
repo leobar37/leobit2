@@ -22,7 +22,6 @@ const updateBusinessSchema = z.object({
   phone: z.string().max(20).optional(),
   email: z.string().email().optional().or(z.literal("")),
   usarDistribucion: z.boolean(),
-  permitirVentaSinStock: z.boolean(),
   publicCatalogEnabled: z.boolean(),
   publicCatalogSlug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).or(z.literal("")),
 });
@@ -46,7 +45,6 @@ export default function EditBusinessPage() {
       phone: "",
       email: "",
       usarDistribucion: true,
-      permitirVentaSinStock: false,
       publicCatalogEnabled: false,
       publicCatalogSlug: "",
     },
@@ -58,7 +56,6 @@ export default function EditBusinessPage() {
           phone: business.phone || "",
           email: business.email || "",
           usarDistribucion: business.usarDistribucion,
-          permitirVentaSinStock: business.permitirVentaSinStock,
           publicCatalogEnabled: business.publicCatalogEnabled,
           publicCatalogSlug: business.publicCatalogSlug || "",
         }
@@ -78,7 +75,6 @@ export default function EditBusinessPage() {
           phone: data.phone || undefined,
           email: data.email || undefined,
           usarDistribucion: data.usarDistribucion,
-          permitirVentaSinStock: data.permitirVentaSinStock,
           publicCatalogEnabled: data.publicCatalogEnabled,
           publicCatalogSlug: data.publicCatalogSlug || null,
         },
@@ -251,21 +247,6 @@ export default function EditBusinessPage() {
                         onCheckedChange={field.onChange}
                         label="Usar sistema de distribución"
                         description="Asigna kilos a vendedores diariamente"
-                      />
-                    </div>
-                  )}
-                />
-
-                <Controller
-                  name="permitirVentaSinStock"
-                  control={form.control}
-                  render={({ field }) => (
-                    <div className="mb-4">
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        label="Permitir ventas sin stock"
-                        description="Permite registrar ventas aunque no haya stock disponible"
                       />
                     </div>
                   )}

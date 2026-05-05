@@ -32,9 +32,15 @@ interface ExpenseSummaryProps {
   expense: Expense;
   onClick?: () => void;
   showDate?: boolean;
+  distributionLabel?: string | null;
 }
 
-export function ExpenseSummary({ expense, onClick, showDate = true }: ExpenseSummaryProps) {
+export function ExpenseSummary({
+  expense,
+  onClick,
+  showDate = true,
+  distributionLabel,
+}: ExpenseSummaryProps) {
   const category = expense.category;
   const colors = colorMap[category?.color ?? "orange"] ?? colorMap.orange;
   const hasReceipt = !!expense.receiptImageId;
@@ -79,6 +85,14 @@ export function ExpenseSummary({ expense, onClick, showDate = true }: ExpenseSum
             <span className="text-xs text-muted-foreground">
               {methodLabels[expense.paymentMethod] ?? expense.paymentMethod}
             </span>
+            {distributionLabel && (
+              <>
+                <span className="text-xs text-muted-foreground mx-1">·</span>
+                <span className="truncate text-xs text-amber-600 dark:text-amber-400">
+                  {distributionLabel}
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>

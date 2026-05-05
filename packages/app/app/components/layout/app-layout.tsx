@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   Wallet,
   Calendar,
+  ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme";
@@ -40,6 +41,15 @@ const menuItems = [
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Calendar, label: "Visitas", href: "/visitas" },
   { icon: Menu, label: "Más", href: "/config" },
+];
+
+const moreMenuItems = [
+  { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
+  { icon: Wallet, label: "Cobros", href: "/cobros" },
+  { icon: Users, label: "Clientes", href: "/clientes" },
+  { icon: Calendar, label: "Visitas", href: "/visitas" },
+  { icon: ImageIcon, label: "Activos", href: "/activos" },
 ];
 
 interface LayoutConfig {

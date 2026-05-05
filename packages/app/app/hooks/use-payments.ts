@@ -89,6 +89,7 @@ export function useCreatePayment() {
     mutationFn: async (input: CreateAbonoInput): Promise<Abono> => {
       const response = await api.payments.post({
         customerId: input.customerId,
+        relatedSaleId: input.relatedSaleId,
         amount: input.amount.toString(),
         paymentMethod: input.paymentMethod,
         notes: input.notes,
@@ -102,8 +103,24 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.payments.customer(variables.customerId),
       });
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({
+        queryKey: ["customers", variables.customerId, "balance"],
+      });
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
+      queryClient.invalidateQueries({ queryKey: ["reports", "accounts-receivable"] });
+
+      if (variables.relatedSaleId) {
+        queryClient.invalidateQueries({
+          queryKey: ["payments", "by-sale", variables.relatedSaleId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sales.detail(variables.relatedSaleId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sales.byCustomer(variables.customerId),
+        });
+      }
     },
   });
 

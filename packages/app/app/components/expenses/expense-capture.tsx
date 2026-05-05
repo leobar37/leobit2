@@ -3,7 +3,7 @@
  * Form for creating/editing expenses (drawer or inline mode)
  */
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import {
   Drawer,
@@ -15,15 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cn, formatCurrency } from "~/lib/utils";
-import { getToday } from "~/lib/date-utils";
+import { cn } from "~/lib/utils";
 import { useExpenseCapture, type ExpenseFormData } from "~/hooks/use-expense-capture";
 import { useActiveExpenseCategories } from "~/hooks/use-expense-categories";
-import { useUploadFile } from "~/hooks/use-files";
-import { PaymentMethodSelector } from "@/components/payments/payment-method-selector";
+import { PaymentCapture } from "@/components/payments/payment-capture";
 import { ExpenseCategorySelector } from "./expense-category-selector";
-import { ReceiptCapture } from "./receipt-capture";
-import type { PaymentMethod } from "~/hooks/use-expenses";
 
 interface ExpenseCaptureProps {
   variant?: "drawer" | "inline";
@@ -59,26 +55,6 @@ export function ExpenseCapture({
   });
 
   const { data: categories, isLoading: isLoadingCategories } = useActiveExpenseCategories();
-  const uploadFile = useUploadFile();
-
-  const handleMethodChange = useCallback(
-    (method: PaymentMethod) => {
-      capture.setField("paymentMethod", method);
-    },
-    [capture]
-  );
-
-  const handleReceiptUpload = useCallback(
-    async (file: File) => {
-      const result = await uploadFile.mutateAsync(file);
-      capture.setField("receiptImageId", result.id);
-    },
-    [uploadFile, capture]
-  );
-
-  const handleReceiptRemove = useCallback(() => {
-    capture.setField("receiptImageId", null);
-  }, [capture]);
 
   const handleSubmit = async () => {
     const result = await capture.submit();
@@ -98,8 +74,6 @@ export function ExpenseCapture({
     }
     onCancel?.();
   };
-
-  const showProofAndReference = capture.formData.paymentMethod !== "efectivo";
 
   const formContent = (
     <div className="space-y-5">
@@ -173,28 +147,16 @@ export function ExpenseCapture({
       {/* Payment Method */}
       <div className="space-y-3">
         <Label className="text-base font-semibold">Método de pago</Label>
-        <PaymentMethodSelector
-          methods={["efectivo", "yape", "plin", "transferencia", "tarjeta"]}
-          selectedMethod={capture.formData.paymentMethod}
-          onSelect={handleMethodChange}
-          disabled={capture.isPending}
+        <PaymentCapture
+          variant="inline"
+          paymentMethod={capture.formData.paymentMethod}
+          onPaymentMethodChange={(method) => capture.setField("paymentMethod", method)}
+          referenceNumber={capture.formData.referenceNumber}
+          onReferenceNumberChange={(value) => capture.setField("referenceNumber", value)}
+          proofImageId={capture.formData.receiptImageId}
+          onProofImageChange={(id) => capture.setField("receiptImageId", id)}
         />
       </div>
-
-      {/* Reference Number */}
-      {showProofAndReference && (
-        <div className="space-y-2">
-          <Label htmlFor="referenceNumber">Número de operación (opcional)</Label>
-          <Input
-            id="referenceNumber"
-            placeholder="Ej: 123456"
-            value={capture.formData.referenceNumber}
-            onChange={(e) => capture.setField("referenceNumber", e.target.value)}
-            disabled={capture.isPending}
-            className="shell-field h-12 rounded-2xl"
-          />
-        </div>
-      )}
 
       {/* Description */}
       <div className="space-y-2">
@@ -208,14 +170,6 @@ export function ExpenseCapture({
           className="shell-field min-h-[80px] resize-none rounded-2xl"
         />
       </div>
-
-      {/* Receipt */}
-      <ReceiptCapture
-        receiptImageId={capture.formData.receiptImageId}
-        onUpload={handleReceiptUpload}
-        onRemove={handleReceiptRemove}
-        isUploading={uploadFile.isPending}
-      />
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">

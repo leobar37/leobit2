@@ -101,6 +101,8 @@ export default function CobrosPage() {
     search: search || undefined,
     minBalance: 0.01,
   });
+  const visibleDebtTotal = debtors.reduce((sum, account) => sum + account.totalDebt, 0);
+  const displayTotalDebt = totalDebt > 0 ? totalDebt : visibleDebtTotal;
   const { data: payments = [] } = usePayments();
   const pendingPayments = 0;
   const errorPayments = 0;
@@ -116,7 +118,7 @@ export default function CobrosPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Total por cobrar</p>
-            <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(totalDebt)}</p>
+            <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(displayTotalDebt)}</p>
           </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-destructive/15 dark:text-destructive-foreground">
             <Wallet className="h-5 w-5" />

@@ -28,6 +28,7 @@ import {
   useSalesChart,
 } from "~/hooks/use-dashboard";
 import { formatCurrency, formatKilos } from "~/lib/utils";
+import { getToday } from "~/lib/date-utils";
 import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-selector";
 import { OnboardingChecklist } from "~/components/dashboard/onboarding-checklist";
 import { useState } from "react";
@@ -59,7 +60,7 @@ export default function DashboardPage() {
   const hasSales = sales.length > 0;
 
   // Calculate today's expenses
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
   const todayExpenses = expenses.filter(e => e.expenseDate === today);
   const totalExpensesToday = todayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || "0"), 0);
 

@@ -113,7 +113,15 @@ export function getToday(): string {
 /**
  * Parses a YYYY-MM-DD string to Date object
  */
-export function parseDateString(dateString: string): Date {
+export function parseDateString(dateString: string | Date): Date {
+  if (dateString instanceof Date) {
+    return dateString;
+  }
+
+  if (!DATE_ONLY_PATTERN.test(dateString)) {
+    return new Date(dateString);
+  }
+
   const [year, month, day] = dateString.split('-').map(Number);
   // Month is 0-indexed in JavaScript Date
   return new Date(year, month - 1, day);

@@ -147,9 +147,7 @@ export async function seedClient1User() {
         phone: CLIENT1_BUSINESS.phone,
         email: CLIENT1_BUSINESS.email,
         modoOperacion: "inventario_propio",
-        controlKilos: true,
         usarDistribucion: false,
-        permitirVentaSinStock: false,
       })
       .returning();
 

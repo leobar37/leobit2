@@ -89,6 +89,18 @@ export class PaymentRepository {
     return result[0]?.total ?? 0;
   }
 
+  async getTotalBySale(ctx: RequestContext, saleId: string): Promise<number> {
+    const result = await db
+      .select({ total: sql<string>`COALESCE(SUM(${abonos.amount}::numeric), '0')` })
+      .from(abonos)
+      .where(and(
+        eq(abonos.businessId, ctx.businessId),
+        eq(abonos.relatedSaleId, saleId)
+      ));
+
+    return Number(result[0]?.total ?? 0);
+  }
+
   async update(
     ctx: RequestContext,
     id: string,

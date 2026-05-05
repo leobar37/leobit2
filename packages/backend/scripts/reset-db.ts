@@ -113,9 +113,7 @@ async function ensureDemoUserExists() {
         phone: DEMO_BUSINESS.phone,
         email: DEMO_BUSINESS.email,
         modoOperacion: "inventario_propio",
-        controlKilos: true,
         usarDistribucion: true,
-        permitirVentaSinStock: false,
       })
       .returning();
 

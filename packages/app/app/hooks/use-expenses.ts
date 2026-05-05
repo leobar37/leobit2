@@ -75,6 +75,25 @@ export interface UpdateExpenseInput {
   receiptImageId?: string | null;
 }
 
+function normalizeDateOnly(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString().split("T")[0];
+  }
+
+  if (typeof value === "string") {
+    return value.includes("T") ? value.split("T")[0] : value;
+  }
+
+  return "";
+}
+
+function normalizeExpense(expense: Expense): Expense {
+  return {
+    ...expense,
+    expenseDate: normalizeDateOnly(expense.expenseDate),
+  };
+}
+
 /**
  * Get all expenses with optional filters
  */
@@ -98,7 +117,7 @@ export function useExpenses(filters?: ExpenseFilters) {
           offset: filters?.offset?.toString(),
         },
       });
-      return extractData<Expense[]>(response);
+      return extractData<Expense[]>(response).map(normalizeExpense);
     },
   });
 }
@@ -125,7 +144,7 @@ export function usePaginatedExpenses(query: ExpenseFilters) {
           offset: String(offset),
         },
       });
-      const data = extractData<Expense[]>(response);
+      const data = extractData<Expense[]>(response).map(normalizeExpense);
       return { items: data, total: data.length };
     },
   });
@@ -140,7 +159,7 @@ export function useExpense(id: string | null) {
     queryFn: async () => {
       if (!id) return null;
       const response = await api.expenses({ id }).get();
-      return extractData<Expense>(response);
+      return normalizeExpense(extractData<Expense>(response));
     },
     enabled: !!id,
   });
@@ -157,7 +176,7 @@ export function useExpensesByDistribucion(distribucionId: string | null) {
     queryFn: async () => {
       if (!distribucionId) return [];
       const response = await api.expenses["by-distribucion"]({ distribucionId }).get();
-      return extractData<Expense[]>(response);
+      return extractData<Expense[]>(response).map(normalizeExpense);
     },
     enabled: !!distribucionId,
   });
@@ -183,7 +202,7 @@ export function useCreateExpense() {
         referenceNumber: input.referenceNumber,
         receiptImageId: input.receiptImageId,
       });
-      return extractData<Expense>(response);
+      return normalizeExpense(extractData<Expense>(response));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
@@ -207,7 +226,7 @@ export function useUpdateExpense() {
       input: UpdateExpenseInput;
     }): Promise<Expense> => {
       const response = await api.expenses({ id }).put(input);
-      return extractData<Expense>(response);
+      return normalizeExpense(extractData<Expense>(response));
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -250,7 +269,7 @@ export function useUploadExpenseReceipt() {
       formData.append("file", file);
 
       const response = await api.expenses({ id: expenseId }).receipt.post(formData as any);
-      return extractData<Expense>(response);
+      return normalizeExpense(extractData<Expense>(response));
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

@@ -61,7 +61,6 @@ export class BusinessService {
       publicCatalogSlug: membership.business.publicCatalogSlug,
       modoOperacion: membership.business.modoOperacion,
       usarDistribucion: membership.business.usarDistribucion,
-      permitirVentaSinStock: membership.business.permitirVentaSinStock,
       role: membership.role,
       salesPoint: membership.salesPoint,
       isActive: membership.business.isActive,
@@ -135,7 +134,6 @@ export class BusinessService {
       phone?: string;
       email?: string;
       usarDistribucion?: boolean;
-      permitirVentaSinStock?: boolean;
       publicCatalogEnabled?: boolean;
       publicCatalogSlug?: string | null;
     }
@@ -184,7 +182,6 @@ export class BusinessService {
       phone: data.phone,
       email: data.email,
       usarDistribucion: data.usarDistribucion,
-      permitirVentaSinStock: data.permitirVentaSinStock,
       publicCatalogEnabled: data.publicCatalogEnabled,
       publicCatalogSlug,
     });

@@ -2,7 +2,9 @@ import { Link } from "react-router";
 import { CreditCard, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCustomerBalance } from "~/hooks/use-customer-balance";
 import type { Sale } from "~/hooks/use-sales";
+import { useCustomerPayments } from "~/hooks/use-payments";
 import { cn, formatCurrency } from "~/lib/utils";
 import { decimalToNumber } from "@avileo/shared";
 import { SaleDetailSection } from "./sale-detail-section";
@@ -12,12 +14,23 @@ interface SaleDetailPaymentCardProps {
 }
 
 export function SaleDetailPaymentCard({ sale }: SaleDetailPaymentCardProps) {
+  const { data: customerPayments = [] } = useCustomerPayments(sale.customerId ?? null);
+  const { data: customerBalance, isLoading: isBalanceLoading } = useCustomerBalance(sale.customerId ?? null);
   const paidAmount = decimalToNumber(sale.amountPaid);
   const totalAmount = decimalToNumber(sale.totalAmount);
-  const dueAmount = Math.max(decimalToNumber(sale.balanceDue) ?? (totalAmount - paidAmount), 0);
+  const linkedPaidAmount = customerPayments
+    .filter((payment) => payment.relatedSaleId === sale.id)
+    .reduce((sum, payment) => sum + decimalToNumber(payment.amount), 0);
+  const effectivePaidAmount = Math.max(paidAmount, linkedPaidAmount);
+  const saleDueAmount = sale.saleType === "credito"
+    ? Math.max(totalAmount - effectivePaidAmount, 0)
+    : 0;
+  const dueAmount = isBalanceLoading
+    ? saleDueAmount
+    : Math.min(saleDueAmount, customerBalance.balanceDue);
   const rows = [
     { label: "Total", value: `S/ ${formatCurrency(sale.totalAmount)}` },
-    { label: "Abono inicial", value: `S/ ${formatCurrency(paidAmount)}` },
+    { label: "Abonado", value: `S/ ${formatCurrency(effectivePaidAmount)}` },
   ];
 
   return (

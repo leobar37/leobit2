@@ -1,48 +1,30 @@
 // @ts-nocheck - Route file with complex type errors
-import { useState } from "react";
 import { ImagePlus, Search, Trash2, ImageIcon, Upload, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUploader } from "@/components/ui/file-uploader";
-import { useAssets, useUploadAsset, useDeleteAsset, type Asset } from "~/hooks/use-assets";
+import { useAssets, useUploadAsset, useDeleteAsset } from "~/hooks/use-assets";
+import { useAssetUploader } from "~/hooks/use-asset-uploader";
+import { useAssetFilters } from "~/hooks/use-asset-filters";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
+import { MobileShell, MobileSlot } from "~/components/mobile";
 
 export default function ActivosPage() {
-  const [search, setSearch] = useState("");
-  const [showUploader, setShowUploader] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
   const { data: assets, isLoading, error } = useAssets();
   const uploadAsset = useUploadAsset();
   const deleteAsset = useDeleteAsset();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const filteredAssets = assets?.filter((asset) =>
-    asset.filename.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const handleClear = () => {
-    if (previewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl(null);
-  };
+  const uploader = useAssetUploader();
+  const { search, setSearch, filteredAssets } = useAssetFilters({ assets });
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!uploader.selectedFile) return;
 
     try {
-      await uploadAsset.mutateAsync(selectedFile);
-      handleClear();
-      setShowUploader(false);
+      await uploadAsset.mutateAsync(uploader.selectedFile);
+      uploader.close();
     } catch (error) {
       console.error("Error uploading asset:", error);
     }
@@ -63,37 +45,38 @@ export default function ActivosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center justify-between h-16 px-3 sm:px-4">
-          <h1 className="font-bold text-lg">Activos</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              className="bg-orange-500 hover:bg-orange-600 rounded-xl"
-              onClick={() => setShowUploader(!showUploader)}
-            >
-              <ImagePlus className="h-4 w-4 mr-1" />
-              Subir
-            </Button>
-          </div>
-        </div>
-      </header>
+    <MobileShell.Root variant="protected">
+      <MobileSlot name="header:center" priority={10}>
+        <h1 className="font-bold text-lg">Activos</h1>
+      </MobileSlot>
 
-      <main className="px-3 py-4 sm:px-4 pb-24">
-        {showUploader && (
-          <Card className="mb-4">
+      <MobileSlot name="header:right" priority={10}>
+        <Button
+          className="bg-orange-500 hover:bg-orange-600 rounded-xl"
+          onClick={() => uploader.toggle()}
+        >
+          <ImagePlus className="h-4 w-4 mr-1" />
+          Subir
+        </Button>
+      </MobileSlot>
+
+      <MobileShell.Header />
+
+      <MobileShell.Content>
+        {uploader.isOpen && (
+          <Card className="shell-card-flat mb-4">
             <CardContent className="p-4 space-y-4">
               <FileUploader
-                file={selectedFile}
-                previewUrl={previewUrl}
+                file={uploader.selectedFile}
+                previewUrl={uploader.previewUrl}
                 status={uploadAsset.isPending ? "uploading" : "idle"}
                 error={uploadAsset.isError ? "Error al subir" : null}
                 label="Nueva imagen"
                 helperText="Sube imágenes para usar en productos"
-                onFileSelect={handleFileSelect}
-                onClear={handleClear}
+                onFileSelect={uploader.handleFileSelect}
+                onClear={uploader.clearSelection}
               />
-              {selectedFile && (
+              {uploader.selectedFile && (
                 <div className="flex gap-2">
                   <Button
                     className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-xl"
@@ -115,10 +98,7 @@ export default function ActivosPage() {
                   <Button
                     variant="outline"
                     className="rounded-xl"
-                    onClick={() => {
-                      handleClear();
-                      setShowUploader(false);
-                    }}
+                    onClick={() => uploader.close()}
                     disabled={uploadAsset.isPending}
                   >
                     Cancelar
@@ -166,7 +146,7 @@ export default function ActivosPage() {
               </p>
               <Button
                 className="mt-4 bg-orange-500 hover:bg-orange-600 rounded-xl"
-                onClick={() => setShowUploader(true)}
+                onClick={() => uploader.open()}
               >
                 <ImagePlus className="h-4 w-4 mr-2" />
                 Subir primera imagen
@@ -178,7 +158,7 @@ export default function ActivosPage() {
             {filteredAssets?.map((asset) => (
               <Card
                 key={asset.id}
-                className="overflow-hidden cursor-pointer transition-all hover:shadow-md"
+                className="shell-card-flat overflow-hidden cursor-pointer transition-all hover:shadow-md"
               >
                 <CardContent className="p-0 relative">
                   <div className="aspect-square">
@@ -210,9 +190,10 @@ export default function ActivosPage() {
             ))}
           </div>
         </div>
-      </main>
+      </MobileShell.Content>
 
+      <MobileShell.Footer />
       <ConfirmDialog />
-    </div>
+    </MobileShell.Root>
   );
 }

@@ -279,7 +279,7 @@ export default function CustomerDetailPage() {
                     </div>
                     {decimalToNumber(sale.balanceDue) > 0 ? (
                       <div className="mt-1 flex justify-between text-sm">
-                        <span>Saldo</span>
+                        <span>Saldo inicial</span>
                         <span className="font-semibold text-red-600">
                           S/ {formatCurrency(sale.balanceDue)}
                         </span>

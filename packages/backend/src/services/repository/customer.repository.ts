@@ -210,6 +210,8 @@ export class CustomerRepository {
         SELECT s.customer_id 
         FROM ${sales} s 
         WHERE s.business_id = ${ctx.businessId} 
+          AND s.status <> 'cancelled'
+          AND s.status <> 'draft'
         GROUP BY s.customer_id 
         HAVING COALESCE(SUM(CASE WHEN s.sale_type = 'credito' THEN s.total_amount ELSE 0 END), 0) - COALESCE((
           SELECT SUM(a.amount) 
@@ -233,7 +235,9 @@ export class CustomerRepository {
       .from(customers)
       .leftJoin(sales, and(
         eq(sales.customerId, customers.id),
-        eq(sales.businessId, ctx.businessId)
+        eq(sales.businessId, ctx.businessId),
+        ne(sales.status, "cancelled"),
+        ne(sales.status, "draft")
       ))
       .leftJoin(
         sql`LATERAL (
@@ -267,24 +271,27 @@ export class CustomerRepository {
   async getTotalAccountsReceivable(ctx: RequestContext): Promise<number> {
     const result = await db
       .select({
-        totalBalance: sql<number>`SUM(
+        totalBalance: sql<string>`COALESCE(SUM(GREATEST(
           COALESCE((
             SELECT SUM(CASE WHEN ${sales.saleType} = 'credito' THEN ${sales.totalAmount} ELSE 0 END) 
             FROM ${sales} 
             WHERE ${sales.customerId} = ${customers.id} 
             AND ${sales.businessId} = ${ctx.businessId}
+            AND ${sales.status} <> 'cancelled'
+            AND ${sales.status} <> 'draft'
           ), 0) - COALESCE((
             SELECT SUM(${abonos.amount}) 
             FROM ${abonos} 
             WHERE ${abonos.customerId} = ${customers.id} 
             AND ${abonos.businessId} = ${ctx.businessId}
-          ), 0)
-        )`,
+          ), 0),
+          0
+        )), 0)`,
       })
       .from(customers)
       .where(eq(customers.businessId, ctx.businessId));
 
-    return result[0]?.totalBalance ?? 0;
+    return Number(result[0]?.totalBalance ?? 0);
   }
 
   async getBalance(ctx: RequestContext, customerId: string): Promise<{ totalSales: number; totalPayments: number; balanceDue: number }> {

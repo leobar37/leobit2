@@ -17,9 +17,7 @@ export const CLIENT_BUSINESS = {
   phone: "999-777-555",
   email: "contacto@polloslagranja.com",
   modoOperacion: "inventario_propio" as const,
-  controlKilos: true,
   usarDistribucion: false,
-  permitirVentaSinStock: false,
 };
 
 // Extraer productos únicos de las ventas

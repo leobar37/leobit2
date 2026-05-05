@@ -76,9 +76,7 @@ describe("client2-data exports", () => {
     expect(CLIENT2_BUSINESS.name).toBe("JUAVIK");
     expect(CLIENT2_BUSINESS.ruc).toBe("20600000002");
     expect(CLIENT2_BUSINESS.modoOperacion).toBe("inventario_propio");
-    expect(CLIENT2_BUSINESS.controlKilos).toBe(true);
     expect(CLIENT2_BUSINESS.usarDistribucion).toBe(false);
-    expect(CLIENT2_BUSINESS.permitirVentaSinStock).toBe(false);
   });
 });
 

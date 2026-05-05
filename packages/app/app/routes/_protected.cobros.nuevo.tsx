@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { useCustomer } from "~/hooks/use-customers";
+import { useSale } from "~/hooks/use-sales";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
+import { useCustomerPayments } from "~/hooks/use-payments";
 import { calculateBalanceDue, formatCurrency, parseAmount } from "~/lib/utils";
 import { FormPage } from "~/components/layout/form-page";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
@@ -60,7 +62,9 @@ export default function NuevoCobroPage() {
   const saleId = searchParams.get("saleId") || undefined;
 
   const { data: customer } = useCustomer(customerId || "");
+  const { data: sale } = useSale(saleId || null);
   const { data: customerBalance } = useCustomerBalance(customerId);
+  const { data: customerPayments = [] } = useCustomerPayments(customerId);
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -72,8 +76,21 @@ export default function NuevoCobroPage() {
 
   const currentDebt = useMemo(() => {
     if (!customerId || !customerBalance) return 0;
-    return customerBalance.balanceDue || 0;
-  }, [customerBalance, customerId]);
+    const customerDebt = customerBalance.balanceDue || 0;
+
+    if (!saleId || !sale) {
+      return customerDebt;
+    }
+
+    const saleTotal = parseAmount(String(sale.totalAmount));
+    const initialPaid = parseAmount(String(sale.amountPaid));
+    const linkedPaid = customerPayments
+      .filter((payment) => payment.relatedSaleId === saleId)
+      .reduce((sum, payment) => sum + parseAmount(payment.amount), 0);
+    const saleDebt = Math.max(saleTotal - Math.max(initialPaid, linkedPaid), 0);
+
+    return Math.min(customerDebt, saleDebt);
+  }, [customerBalance, customerId, customerPayments, sale, saleId]);
 
   const wrapperForm = useWrapperForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),

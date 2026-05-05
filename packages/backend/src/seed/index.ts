@@ -569,9 +569,7 @@ async function createBusinessAndLinkUser(userId: string, businessData: typeof TE
 
   await repositories.business.update(tempCtx, business.id, {
     modoOperacion: businessData.modoOperacion,
-    controlKilos: businessData.controlKilos,
     usarDistribucion: businessData.usarDistribucion,
-    permitirVentaSinStock: businessData.permitirVentaSinStock,
   });
 
   return { business, businessUserId: businessUser.id };

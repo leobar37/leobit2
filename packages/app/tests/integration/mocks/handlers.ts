@@ -130,7 +130,6 @@ export const integrationHandlers = [
         id: "biz-1",
         name: "Avileo Demo",
         modoOperacion: "libre",
-        controlKilos: true,
       },
     });
   }),

@@ -15,9 +15,7 @@ export const CLIENT1_BUSINESS = {
   phone: "999-111-222",
   email: "cliente1@gmail.com",
   modoOperacion: "inventario_propio" as const,
-  controlKilos: true,
   usarDistribucion: false,
-  permitirVentaSinStock: false,
 };
 
 export const CATEGORIES = [

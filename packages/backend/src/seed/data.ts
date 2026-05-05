@@ -17,9 +17,7 @@ export const TEST_BUSINESS = {
   phone: "999-888-777",
   email: "test@e2e.com",
   modoOperacion: "inventario_propio" as const,
-  controlKilos: true,
   usarDistribucion: true,
-  permitirVentaSinStock: false,
 };
 
 export const CATEGORIES = [

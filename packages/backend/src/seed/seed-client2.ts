@@ -171,9 +171,7 @@ export async function seedClient2User() {
         phone: CLIENT2_BUSINESS.phone,
         email: CLIENT2_BUSINESS.email,
         modoOperacion: CLIENT2_BUSINESS.modoOperacion,
-        controlKilos: CLIENT2_BUSINESS.controlKilos,
         usarDistribucion: CLIENT2_BUSINESS.usarDistribucion,
-        permitirVentaSinStock: CLIENT2_BUSINESS.permitirVentaSinStock,
       })
       .returning();
 

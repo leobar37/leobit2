@@ -17,11 +17,7 @@ export const systemConfig = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
 
     // Feature flags
-    controlKilos: boolean("control_kilos").notNull().default(true),
     usarDistribucion: boolean("usar_distribucion").notNull().default(true),
-    permitirVentaSinStock: boolean("permitir_venta_sin_stock")
-      .notNull()
-      .default(false),
 
     // Timestamps
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
