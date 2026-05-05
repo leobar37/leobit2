@@ -137,7 +137,6 @@ export const CLIENT2_BUSINESS = {
   address: "Datos importados desde cuaderno JUAVIK",
   phone: "999999999",
   email: "juavik@gmail.com",
-  modoOperacion: "inventario_propio" as const,
   usarDistribucion: false,
 };
 

@@ -386,7 +386,6 @@ export const handlers = [
         address: "Av. Principal 123",
         phone: "+51 999 888 777",
         email: "demo@avileo.com",
-        modoOperacion: "libre",
         usarDistribucion: false,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",

@@ -129,7 +129,6 @@ export const integrationHandlers = [
       data: {
         id: "biz-1",
         name: "Avileo Demo",
-        modoOperacion: "libre",
       },
     });
   }),

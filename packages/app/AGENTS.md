@@ -1,308 +1,113 @@
 # AGENTS.md - @avileo/app (Frontend)
 
-> **Context file for AI agents working on the Avileo React Router v7 frontend**
+> Consolidated frontend guidance for the React Router v7 SPA.
+> This file includes the conventions previously split across: components, forms, sales lib, and e2e docs.
 
 ## Overview
 
-This is the **React Router v7 frontend** for Avileo - an online-first chicken sales management system. It provides a mobile-first web application for vendors to manage customers, sales, inventory distribution, and payments.
+Frontend for Avileo (offline-aware vendor workflow): customers, sales, inventory, expenses, distribution, and reporting, optimized for mobile-first usage.
 
-## Project Type & Stack
+## Stack
 
-| Aspect | Technology |
-|--------|------------|
-| **Type** | React 19 SPA (Single Page Application) |
-| **Framework** | React Router v7 with file-based routing |
-| **Language** | TypeScript 5.9+ |
-| **Styling** | Tailwind CSS 3 + shadcn/ui patterns |
-| **Build Tool** | Vite 7 |
-| **State Management** | Jotai (atoms) + TanStack Query (server state) |
-| **Forms** | react-hook-form + Zod validation |
-| **Auth** | Better Auth (JWT-based) |
-| **API Client** | Eden Treaty (@elysiajs/eden) |
-| **Icons** | lucide-react |
+- React 19 + React Router v7
+- TypeScript 5.9+
+- Tailwind CSS 3 + shadcn-style primitives
+- Jotai + TanStack Query
+- react-hook-form + Zod
+- Better Auth (`better-auth`)
+- Eden Treaty (`@elysiajs/eden`) API client
+- lucide-react + Radix UI
 
-### Key Dependencies
+## Critical frontend conventions
 
-```typescript
-// Core
-react, react-router, react-dom
+1. **Always follow flat route conventions** (`app/routes`).
+2. **Keep mobile-first layouts** first; use the app shell + slot system for header/footer actions.
+3. **Route-level writes through mutations** (`useMutation` wrappers), not local `useState` ad-hoc loading states.
+4. **User text in Spanish (`es-PE`)**, code/comments in English.
+5. **Use `~/` for shared app imports and `@/` for component-to-component imports.**
 
-// State & Data
-@tanstack/react-query, jotai
+## Directory map
 
-// Forms & Validation
-react-hook-form, @hookform/resolvers, zod
-
-// UI Primitives
-@radix-ui/react-dialog, @radix-ui/react-label, @radix-ui/react-slot
-class-variance-authority, clsx, tailwind-merge
-
-// Icons
-lucide-react
-
-// Auth
-better-auth/react
-
-// Type-safe API
-@elysiajs/eden
-```
-
-## Architecture
-
-### Application Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     React Router v7                      │
-│                  (File-based routing)                    │
-├─────────────────────────────────────────────────────────┤
-│  Routes                │  Protected Routes (_protected.*)│
-│  ├── _index.tsx        │  ├── dashboard.tsx              │
-│  ├── login.tsx         │  ├── clientes.tsx               │
-│  ├── register.tsx      │  ├── ventas.tsx                 │
-│  └── invitations.$token│  ├── productos.tsx              │
-│                        │  └── ...                        │
-├─────────────────────────────────────────────────────────┤
-│  Providers (in _protected.tsx):                         │
-│  ├── ElectricProvider (sync state)                      │
-│  └── SyncProvider (network status)                      │
-├─────────────────────────────────────────────────────────┤
-│  State Management:                                      │
-│  ├── TanStack Query (server state, caching)             │
-│  └── Jotai (UI state, modals)                           │
-├─────────────────────────────────────────────────────────┤
-│  Data Layer:                                            │
-│  ├── Eden Treaty API Client (@elysiajs/eden)            │
-│  └── Local schema validation (Zod)                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Directory Structure
-
-```
+```text
 app/
-├── routes/                    # File-based routes (React Router v7)
-│   ├── _index.tsx            # Root redirect (auth check)
-│   ├── _protected.tsx        # Auth layout with providers
-│   ├── login.tsx             # Login page
-│   ├── register.tsx          # Registration page
-│   ├── _protected.dashboard.tsx
-│   ├── _protected.clientes.tsx
-│   ├── _protected.clientes.nuevo.tsx
-│   ├── _protected.clientes.$id.tsx
-│   ├── _protected.ventas.tsx
-│   ├── _protected.ventas.nueva.tsx
-│   └── ...
-│
-├── components/               # React components
-│   ├── ui/                  # shadcn/ui primitives
-│   │   ├── button.tsx
-│   │   ├── input.tsx
-│   │   ├── card.tsx
-│   │   ├── dialog.tsx
-│   │   ├── sheet.tsx
-│   │   └── ...
-│   ├── forms/               # Form components
-│   │   ├── form-input.tsx
-│   │   └── form-password.tsx
-│   ├── customers/           # Customer components
-│   ├── products/            # Product components
-│   ├── sales/               # Sales/POS components
-│   ├── inventory/           # Inventory components
-│   ├── distribucion/        # Distribution components
-│   ├── payments/            # Payment components
-│   ├── calculator/          # Calculator components
-│   └── sync/                # Sync status components
-│
-├── hooks/                   # Custom React hooks
-│   ├── use-auth.ts          # Authentication hook
-│   ├── use-customers.ts     # Customer data hooks
-│   ├── use-customers-live.ts
-│   ├── use-sales.ts
-│   ├── use-products.ts
-│   ├── use-distribuciones.ts
-│   ├── use-modal.ts         # Jotai modal factory
-│   └── ...
-│
-├── lib/                     # Utility libraries
-│   ├── utils.ts             # cn() helper
-│   ├── schemas.ts           # Zod validation schemas
-│   ├── auth-client.ts       # Better Auth client
-│   ├── api-client.ts        # Eden Treaty API instance
-│   └── db/                  # Local data layer
-│       ├── schema.ts        # Zod entity schemas
-│       ├── collections.ts   # Data operations
-│       └── electric-client.tsx # Sync provider
-│
+├── components/
+│   ├── ui/                      # shadcn-style primitives
+│   ├── forms/                   # form-specific abstractions
+│   ├── customers/, products/, sales/, payments/
+│   ├── inventory/, distribucion/, calculator/
+│   ├── layout/, mobile/, cards/, theme/
+│   └── ...                      # domain folders
+├── hooks/                       # data hooks and UI helpers
+├── lib/                         # shared utilities
+│   ├── query/                   # API/query helpers
+│   ├── utils/
+│   ├── validators/
+│   ├── schemas/
+│   ├── calculator/
+│   ├── forms/
+│   ├── mappers/
+│   ├── media/
+│   └── navigation/
+├── routes/                      # file-based routes
+├── stores/                      # state (Jotai/atoms)
 └── styles/
-    └── globals.css          # Tailwind + CSS variables
 ```
 
-## Coding Patterns & Conventions
+## Layout and shell patterns
 
-### Import Aliases
+Protected routes render through `app/routes/_protected.tsx`, which uses:
 
-Two aliases are configured and used interchangeably:
+- `MobileSlotProvider`
+- `AppLayout`
 
-```typescript
-// ~/* - Preferred for lib, hooks, schemas
-import { cn } from "~/lib/utils";
+Prefer this composition over page-local fixed sidebars/headers.
+
+```tsx
+// Route-level pattern (conceptual)
+export default function ProtectedRouteShell() {
+  return (
+    <MobileSlotProvider>
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
+    </MobileSlotProvider>
+  );
+}
+```
+
+### Slot vocabulary
+
+- `header:left`
+- `header:center`
+- `header:right`
+- `footer`
+- `floating`
+
+Use route-level slots for action bars/FAB placement before introducing page-level sticky/fixed wrappers.
+
+## Imports and naming
+
+- Files: `kebab-case.ts` / `kebab-case.tsx`
+- Components: `PascalCase`
+- Hooks: `use` + `camelCase` (`useCustomers`)
+- Props: `<Name>Props`
+- Zod schemas: `<name>Schema`
+
+```ts
 import { useCustomers } from "~/hooks/use-customers";
-import type { Customer } from "@avileo/shared";
-
-// @/* - Used for component imports
 import { Button } from "@/components/ui/button";
-import { CustomerCard } from "@/components/customers/customer-card";
 ```
 
-### Naming Conventions
+## Query and mutation conventions
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| **Files** | kebab-case.tsx | `customer-card.tsx`, `use-auth.ts` |
-| **Components** | PascalCase | `CustomerCard`, `Button` |
-| **Hooks** | camelCase with use- prefix | `useAuth`, `useCustomers` |
-| **Props Interfaces** | ComponentNameProps | `CustomerCardProps` |
-| **Types/Interfaces** | PascalCase | `Customer`, `CreateCustomerInput` |
-| **Zod Schemas** | camelCase with Schema suffix | `customerSchema`, `loginSchema` |
+- Keep all API access in hooks/services in `app/hooks`.
+- Query hooks return TanStack Query results with consistent keys.
+- Mutation hooks must expose `isPending` and `mutateAsync` and be the source of button disabled/loading state.
 
-### Mutation And Money Rules
-
-- Server writes must use a mutation hook (`useMutation` or a project wrapper such as `useCreateSale`, `useFinalizeSale`, etc.). Do not model submit/loading state with local `useState` when the action is a mutation.
-- Buttons that trigger writes must read their pending/disabled state from the mutation (`isPending` / `mutateAsync`) instead of duplicating request state locally.
-- Monetary values that are persisted as strings must use shared formatting/parsing utilities from `~/lib/utils` (`formatCurrency`, `parseAmount`, `calculateBalanceDue`) instead of ad-hoc `toFixed(2)` in components.
-- If a component needs a new write flow, create or extend a dedicated hook rather than embedding persistence orchestration directly in the component.
-
-### Mobile List Screen Pattern
-
-- For operational mobile list screens such as `ventas`, `clientes`, `cobros`, and similar entity indexes, follow the shared pattern documented in `docs/screens/mobile-list-pattern.md`.
-- Prefer the structure `summary (optional) -> search -> list -> FAB` instead of ad-hoc top action bars.
-- Use a fixed FAB for the primary create action on mobile when the screen's main CTA is creating a new entity.
-- Keep cards compact and sober: visible soft border, restrained shadow, `p-4` density, and no oversized hero treatments.
-- On protected mobile screens, prefer `app-shell` for the page background, `shell-surface` for sticky headers/toolbars, `shell-card-flat` for primary cards, `shell-card-soft` for nested items, `shell-block-muted` for supporting metric blocks, and `shell-field` for form fields.
-- Avoid `bg-gray-50` as the default page background and avoid `border-0 shadow-lg` / `shadow-xl` as the default operational card treatment.
-- Reuse existing route patterns from `packages/app/app/routes/_protected.ventas._index.tsx` and `packages/app/app/routes/_protected.clientes._index.tsx` before inventing a new layout.
-
-### Component Patterns
-
-#### UI Primitive Pattern (shadcn/ui style)
-
-```typescript
-import * as React from "react";
-import { cn } from "~/lib/utils";
-
-export interface ButtonProps 
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "ghost";
-  size?: "default" | "sm" | "lg";
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center rounded-xl",
-          variant === "default" && "bg-orange-500 text-white",
-          size === "default" && "h-12 px-4",
-          className
-        )}
-        {...props}
-      />
-    );
-  }
-);
-
-Button.displayName = "Button";
-
-export { Button };
-```
-
-#### Domain Card Pattern
-
-```typescript
-interface CustomerCardProps {
-  customer: Customer;
-  onClick?: () => void;
-}
-
-export function CustomerCard({ customer, onClick }: CustomerCardProps) {
-  return (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow" 
-      onClick={onClick}
-    >
-      <CardContent className="p-4 flex items-center gap-4">
-        {/* Icon container - standard pattern */}
-        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-          <User className="h-6 w-6 text-orange-600" />
-        </div>
-        
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold truncate">{customer.name}</h3>
-          <p className="text-sm text-muted-foreground">{customer.phone}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-#### Form Pattern (react-hook-form + zod)
-
-```typescript
-// 1. Define schema in lib/schemas.ts or inline
-const customerSchema = z.object({
-  name: z.string().min(2, "El nombre es requerido"),
-  phone: z.string().optional(),
-});
-
-type CustomerFormData = z.infer<typeof customerSchema>;
-
-// 2. Use in component
-export function CustomerForm() {
-  const form = useForm<CustomerFormData>({
-    resolver: zodResolver(customerSchema),
-    defaultValues: { name: "", phone: "" },
-  });
-
-  const mutation = useCreateCustomer();
-
-  const onSubmit = async (data: CustomerFormData) => {
-    await mutation.mutateAsync(data);
-  };
-
-  return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-      <FormInput
-        label="Nombre"
-        error={form.formState.errors.name?.message}
-        {...form.register("name")}
-      />
-      <Button type="submit">Guardar</Button>
-    </form>
-  );
-}
-```
-
-### Data Fetching Pattern (TanStack Query)
-
-```typescript
-// hooks/use-customers.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "~/lib/api-client";
-
-const QUERY_KEYS = {
-  customers: ["customers"],
-  customer: (id: string) => ["customers", id],
-} as const;
-
-// Query hook
+```ts
 export function useCustomers() {
   return useQuery({
-    queryKey: QUERY_KEYS.customers,
+    queryKey: ["customers"],
     queryFn: async () => {
       const { data, error } = await api.customers.get();
       if (error) throw new Error(String(error.value));
@@ -311,496 +116,141 @@ export function useCustomers() {
   });
 }
 
-// Single item query
-export function useCustomer(id: string) {
-  return useQuery({
-    queryKey: QUERY_KEYS.customer(id),
-    queryFn: async () => {
-      const { data, error } = await api.customers({ id }).get();
-      if (error) throw new Error(String(error.value));
-      return data as unknown as Customer;
-    },
-    enabled: !!id,
-  });
-}
-
-// Mutation hook
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: async (input: CreateCustomerInput) => {
       const { data, error } = await api.customers.post(input);
       if (error) throw new Error(String(error.value));
       return data as unknown as Customer;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customers });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
   });
 }
 ```
 
-### Modal Pattern (Jotai + Dialog/Sheet)
+## Forms (react-hook-form + Zod)
 
-```typescript
-// 1. Create modal hook
-const useCustomerModal = createModal<Customer>();
+Preferred pattern: `FormProvider` for multi-field forms.
 
-// 2. Use in component
-function CustomerList() {
-  const modal = useCustomerModal();
-  
-  return (
-    <>
-      <Button onClick={() => modal.open(customer)}>Editar</Button>
-      
-      {/* Controlled Dialog */}
-      <Dialog 
-        open={modal.isOpen} 
-        onOpenChange={(open) => !open && modal.close()}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-          </DialogHeader>
-          {modal.data && (
-            <CustomerForm 
-              customer={modal.data} 
-              onClose={modal.close} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
+```tsx
+const form = useForm<FormData>({
+  resolver: zodResolver(schema),
+  mode: "onChange",
+});
+
+<FormProvider {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)}>
+    <FormInput name="name" label="Nombre" />
+    <FormInput name="phone" label="Teléfono" />
+  </form>
+</FormProvider>
 ```
 
-### Route Pattern (React Router v7)
+`FormInput`/`FormSelect` also support direct `register` use for isolated/simple inputs.
 
-```typescript
-// routes/_protected.clientes.tsx
-import { Link } from "react-router";
-import { useCustomers } from "~/hooks/use-customers";
-import { CustomerCard } from "@/components/customers/customer-card";
-import type { Route } from "./+types/_protected.clientes";
+## Component conventions
 
-// Meta function (optional)
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Clientes | Avileo" },
-    { name: "description", content: "Gestión de clientes" },
-  ];
-}
+- Prefer existing shadcn-style primitives from `components/ui`.
+- Use `cn()` for class composition.
+- Set `displayName` on `forwardRef` components.
+- Compound/card pattern for domain cards:
+  - icon container (`w-12 h-12`, `rounded-*`, `bg-orange-100`)
+  - content area with title/value/details
+  - optional action icon area
+- Prefer `Dialog` for compact interactions and `Sheet` for larger flows.
 
-// Main component
-export default function ClientesPage() {
-  const { data: customers, isLoading } = useCustomers();
+## Mobile list screens
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+For operational lists (ventas/clientes/pagos/distribución, etc):
 
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Clientes</h1>
-      <div className="grid gap-4 mt-4">
-        {customers?.map((customer) => (
-          <CustomerCard key={customer.id} customer={customer} />
-        ))}
-      </div>
-      <Link to="/clientes/nuevo">
-        <Button>Nuevo Cliente</Button>
-      </Link>
-    </div>
-  );
-}
-```
+- `summary -> search -> list -> FAB` structure
+- fixed FAB on primary create actions
+- compact cards (`p-4`, controlled shadows, subtle borders)
+- avoid heavy backgrounds such as hardcoded `bg-gray-50` defaults
 
-### Styling Patterns
+## Sales domain notes (`app/lib/sales/*`)
 
-#### Design System (Orange Theme)
+- Event namespaces: `cart:*`, `payment:*`, `sale:*`, `ocr:*`
+- Persisted `unitPrice` should be derived from `subtotal / quantity`.
+- Use shared number parsing helpers (avoid raw `parseFloat` for user strings).
+- Payment modes:
+  - `pago_total` (contado)
+  - `a_cuenta` (abono, requires customer, must be `> 0` and `<= total`)
+  - `debe_todo` (crédito)
+- `balanceDue` applies only to credit modes.
 
-```typescript
-// Primary color palette
-const colors = {
-  // Icon containers
-  iconContainer: "w-12 h-12 bg-orange-100 rounded-xl",
-  iconContainerSmall: "w-10 h-10 bg-orange-100 rounded-lg",
-  
-  // Gradients
-  gradientPrimary: "bg-gradient-to-br from-orange-400 to-orange-600",
-  gradientSoft: "bg-gradient-to-br from-orange-100 to-orange-200",
-  gradientBackground: "bg-gradient-to-br from-orange-50 to-stone-100",
-  
-  // Buttons
-  buttonPrimary: "bg-orange-500 hover:bg-orange-600 text-white",
-  buttonGradient: "bg-gradient-to-r from-orange-500 to-orange-600",
-  
-  // Status badges by product type
-  typePollo: "bg-orange-100 text-orange-700",
-  typeHuevo: "bg-yellow-100 text-yellow-700",
-  typeOtro: "bg-gray-100 text-gray-700",
-};
+## E2E testing rules (Playwright)
 
-// Border radius hierarchy
-const radius = {
-  sm: "rounded-xl",    // Inputs, small elements
-  md: "rounded-2xl",   // Standard cards
-  lg: "rounded-3xl",   // Featured cards, modals
-  full: "rounded-full", // Badges, avatars
-};
+- Keep selectors in page objects (`page-objects/*.ts`).
+- Prefer `data-testid` selectors.
+- Mobile viewport baseline: `390x844` (iPhone 14 style).
+- Commands: `bun run test:e2e`, `bun run test:e2e:headed`, `bun run test:e2e:ui`, `bun run test:e2e:debug`.
 
-// Shadow hierarchy
-const shadows = {
-  sm: "shadow-sm",     // Minimal elevation
-  md: "shadow-md",     // Standard cards
-  lg: "shadow-lg",     // Featured elements
-  xl: "shadow-xl",     // Modals, popovers
-};
-```
+## Error and UX patterns
 
-#### Mobile-First Layout Pattern
+- Show explicit empty/loading/error states in list screens.
+- Avoid `alert()` / `confirm()`, use UI components (`Dialog`, etc.).
+- Avoid inline styles; rely on Tailwind classes.
 
-```typescript
-// Standard page layout
-export default function Page() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-stone-100">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100">
-        <div className="flex items-center h-16 px-4">
-          {/* Content */}
-        </div>
-      </header>
+## Online-only feature pattern
 
-      {/* Main content with bottom padding for nav */}
-      <main className="p-4 pb-24">
-        {/* Page content */}
-      </main>
+For actions that require connectivity (e.g., WhatsApp/remote services), show a clear in-app message and disable the action if offline.
 
-      {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-orange-100 px-4 py-2">
-        {/* Nav items */}
-      </nav>
-    </div>
-  );
-}
-```
+## Route naming conventions (examples)
 
-## Key Files
+- `/` → `_index.tsx`
+- `/login` → `login.tsx`
+- `/register` → `register.tsx`
+- `/dashboard` → `_protected.dashboard.tsx`
+- `/clientes` → `_protected.clientes.tsx`
+- `/ventas` → `_protected.ventas.tsx`
 
-### Configuration Files
+## API client basics
 
-| File | Purpose |
-|------|---------|
-| `vite.config.ts` | Vite configuration with React Router plugin |
-| `react-router.config.ts` | React Router config (SSR disabled) |
-| `tsconfig.json` | TypeScript config with path aliases |
-| `tailwind.config.js` | Tailwind with CSS variables for theming |
-| `components.json` | shadcn/ui configuration |
-
-### Core Application Files
-
-| File | Purpose |
-|------|---------|
-| `app/root.tsx` | Root layout with HTML shell, error boundary |
-| `app/routes.ts` | Route configuration using flatRoutes() |
-| `app/routes/_protected.tsx` | Auth layout with ElectricProvider & SyncProvider |
-| `app/routes/_index.tsx` | Root redirect (dashboard or login) |
-
-### Library Files
-
-| File | Purpose |
-|------|---------|
-| `app/lib/utils.ts` | `cn()` utility for Tailwind class merging |
-| `app/lib/date-utils.ts` | Date utilities with local timezone support |
-| `app/lib/schemas.ts` | Zod schemas for forms (login, register) |
-| `app/lib/auth-client.ts` | Better Auth client configuration |
-| `app/lib/api-client.ts` | Eden Treaty API client instance |
-| `app/lib/db/schema.ts` | Zod schemas for domain entities |
-| `app/lib/db/collections.ts` | Data operation functions |
-| `app/lib/db/electric-client.tsx` | Sync state provider (placeholder) |
-| `../docs/screens/mobile-list-pattern.md` | Shared mobile list + FAB UI pattern |
-
-### Local Timezone Handling
-
-All date operations in the frontend must use local timezone (Peru UTC-5) to ensure consistent sorting and display. Use the utilities in `app/lib/date-utils.ts`:
-
-```typescript
-import { toLocalISOString, now, formatRecentDateTime } from "~/lib/date-utils";
-
-// For database storage (used in BaseService)
-const timestamp = toLocalISOString(); // "2026-03-14T10:00:00"
-
-// For current date as Date object
-const currentDate = now(); // Date object
-
-// For display
-const formatted = formatRecentDateTime(date); // "Hoy, 10:00" or "Ayer, 15:30"
-```
-
-**Key utilities:**
-- `toLocalISOString()` - Returns current timestamp as ISO string in local timezone (no UTC offset)
-- `now()` - Returns current date as Date object
-- `formatRecentDateTime()` - Formats date with relative text ("Hoy", "Ayer", etc.)
-- `toDateString()` - Converts Date to YYYY-MM-DD string for inputs
-
-### Component Categories
-
-| Category | Path | Description |
-|----------|------|-------------|
-| UI Primitives | `app/components/ui/` | shadcn/ui components (button, input, card, dialog, sheet) |
-| Forms | `app/components/forms/` | Form field components |
-| Customers | `app/components/customers/` | Customer card, form |
-| Products | `app/components/products/` | Product card, form |
-| Sales | `app/components/sales/` | Sale list, cart, customer search |
-| Payments | `app/components/payments/` | Payment list, form |
-| Inventory | `app/components/inventory/` | Inventory card |
-| Distribution | `app/components/distribucion/` | Distribution table |
-| Calculator | `app/components/calculator/` | Chicken calculator |
-| Sync | `app/components/sync/` | Sync status indicator |
-
-## Build & Development
-
-### Commands
-
-```bash
-# Development
-bun run dev              # Start dev server (port 5173, host 0.0.0.0)
-
-# Building
-bun run build            # Build for production
-bun run typecheck        # Run TypeScript type checking
-
-# Testing
-bun run test             # Run Vitest tests
-```
-
-### Environment Variables
-
-```bash
-# .env
-VITE_API_URL=http://localhost:3000    # Backend API URL
-```
-
-## Important Notes for Agents
-
-### Critical Patterns
-
-#### 1. Authentication Flow
-
-```typescript
-// Auth is handled by Better Auth
-// - JWT stored in httpOnly cookie
-// - useSession() hook from better-auth/react
-// - Protected routes wrap content in ElectricProvider + SyncProvider
-
-// Check auth status
-const { user, isLoading } = useAuth();
-
-// Redirect if not authenticated
-if (!user) return <Navigate to="/login" replace />;
-```
-
-#### 2. API Client Pattern (Eden Treaty)
-
-```typescript
+```ts
 import { api } from "~/lib/api-client";
 
-// GET request
 const { data, error } = await api.customers.get();
-
-// GET with params
-const { data, error } = await api.customers({ id }).get();
-
-// POST request
-const { data, error } = await api.customers.post({ name: "John" });
-
-// Always check error
 if (error) throw new Error(String(error.value));
-
-// Note: Eden Treaty returns type needs casting
-return data as unknown as Customer[];
 ```
 
+All API calls should keep explicit error checks before using `data`.
 
-```typescript
-// - Data is cached via TanStack Query
-// - Sync status shown via SyncProvider
-// - ElectricProvider manages sync state
-
-// Handle loading states
-if (isLoading) return <LoadingSpinner />;
-
-// Handle empty states
-if (!data?.length) return <EmptyState />;
-```
-
-#### 4. Online-Only Features Pattern
-
-Features that require internet (e.g., WhatsApp, external APIs) must check connectivity and provide user feedback:
-
-```typescript
-
-export function useSendWhatsAppMessage() {
-    mutationFn: sendWhatsAppMessage,
-    onSuccess: () => {
-      // Invalidate queries
-    },
-  });
-}
-
-// 2. Use useSync in components for UI feedback
-import { useSync } from "~/components/sync/sync-status";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-export function WhatsAppConfigPage() {
-  const connectMutation = useConnectWhatsApp();
-
-  return (
-    <div>
-        <Alert variant="destructive">
-          <AlertDescription>
-            Conéctate a internet para vincular WhatsApp
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Button
-        onClick={handleConnect}
-      >
-      </Button>
-    </div>
-  );
-}
-```
-
-**Checklist for online-only features:**
-- Message format: `"Se requiere conexión a internet para [acción]"`
-
-#### 5. Form Error Handling
-
-```typescript
-// Display field errors
-{errors.fieldName && (
-  <p className="text-sm text-red-500">{errors.fieldName.message}</p>
-)}
-
-// Display root errors (from API)
-{form.formState.errors.root && (
-  <p className="text-sm text-destructive text-center">
-    {form.formState.errors.root.message}
-  </p>
-)}
-
-// Error styling on inputs
-className={cn(
-  "base-input-classes",
-  error && "border-destructive focus-visible:ring-destructive"
-)}
-```
-
-### DO's ✅
-
-- Use `cn()` utility for ALL class merging
-- Set `displayName` on forwardRef components
-- Use Spanish for user-facing text (Peru locale: "es-PE")
-- Follow the orange color scheme (`orange-500` is primary)
-- Use lucide-react for all icons
-- Use `Dialog` for confirmations and small forms
-- Use `Sheet` for large forms and side panels
-- Handle loading and empty states in lists
-- Use path aliases (`~/` for lib/hooks, `@/` for components)
-- Use React Query for server state
-- Use Jotai for UI/modal state
-
-### DON'Ts ❌
-
-- Don't use inline styles - use Tailwind classes
-- Don't create new UI primitives unnecessarily - extend existing ones
-- Don't use English for user-facing text
-- Don't use `as any` or `@ts-ignore` without justification
-- Don't forget to handle error states
-- Don't use `alert()` or `confirm()` - use Dialog component
-
-### Route Naming Conventions
-
-| URL | Route File | Purpose |
-|-----|------------|---------|
-| `/` | `_index.tsx` | Root redirect |
-| `/login` | `login.tsx` | Login page |
-| `/register` | `register.tsx` | Registration |
-| `/dashboard` | `_protected.dashboard.tsx` | Main dashboard |
-| `/clientes` | `_protected.clientes.tsx` | Customer list |
-| `/clientes/nuevo` | `_protected.clientes.nuevo.tsx` | New customer |
-| `/clientes/:id` | `_protected.clientes.$id.tsx` | Customer detail |
-| `/ventas` | `_protected.ventas.tsx` | Sales list |
-| `/ventas/nueva` | `_protected.ventas.nueva.tsx` | New sale (POS) |
-
-### Sync Status Pattern
-
-Tables with sync capability have these fields:
-- `createdAt`, `updatedAt`: Date fields
-
-### Related Documentation
-
-- [Components AGENTS.md](./app/components/AGENTS.md) - Detailed component patterns
-- [Root AGENTS.md](../../AGENTS.md) - Project-wide context
-- [Mobile List Pattern](../docs/screens/mobile-list-pattern.md) - Shared mobile list screen pattern with FAB
-- `/docs/` - Full project documentation
-
-## Dependencies
-
-### Internal
-
-| Package | Path | Purpose |
-|---------|------|---------|
-| `@avileo/shared` | `workspace:*` | Shared types and utilities |
-| `@avileo/backend` | `workspace:*` | Type definitions from backend (dev) |
-
-### External Key Libraries
-
-| Library | Version | Purpose |
-|---------|---------|---------|
-| `react` | ^19.2.0 | Core React |
-| `react-router` | ^7.9.2 | Routing framework |
-| `@tanstack/react-query` | ^5.90.21 | Server state management |
-| `jotai` | ^2.17.1 | Atomic state management |
-| `react-hook-form` | ^7.71.1 | Form state management |
-| `zod` | ^4.3.6 | Runtime validation |
-| `better-auth` | ^1.4.18 | Authentication |
-| `@elysiajs/eden` | ^1.4.8 | Type-safe API client |
-| `tailwindcss` | 3 | Styling |
-| `lucide-react` | ^0.563.0 | Icons |
-| `@radix-ui/*` | latest | Headless UI primitives |
-| `class-variance-authority` | ^0.7.1 | Component variants |
-
-## Testing
+## Testing notes
 
 ```bash
-# Run tests
-bun run test
-
-# Test configuration in vitest.config.ts
-# Uses happy-dom for DOM simulation
-# Testing Library for React component tests
+cd packages/app
+bun run test           # Vitest
+bun run test:e2e       # Playwright end-to-end
 ```
 
-Example test pattern:
-```typescript
-// hooks/use-chicken-calculator.test.ts
-import { describe, it, expect } from "vitest";
-import { useChickenCalculator } from "./use-chicken-calculator";
+## Key files
 
-describe("useChickenCalculator", () => {
-  it("calculates total correctly", () => {
-    // Test implementation
-  });
-});
-```
+- `app/routes/_protected.tsx` layout shell
+- `app/components/layout/`
+- `app/components/mobile/`
+- `app/hooks/`
+- `app/lib/query/`
+- `app/lib/schemas/`
+- `app/lib/sales/`
+- `app/lib/api-client.ts`
+- `app/lib/utils.ts` (and `app/lib/utils/*`)
+
+## DO's ✅
+
+- Use `cn()` for all class merging.
+- Keep UI primitives in `components/ui` and reuse before creating new components.
+- Use existing modal/sheet patterns for confirmations and data entry.
+- Keep API state transitions in dedicated hooks/services.
+
+## DON'Ts ❌
+
+- No duplicated local state for mutation pending/loading when `useMutation` exists.
+- No English-facing UI copy.
+- No comments in Spanish.
+- No page-local fixed shell workarounds when MobileSlot/AppLayout already provide it.
 
 ---
 
-*This AGENTS.md file is specifically for the `@avileo/app` package. For component-specific patterns, see `app/components/AGENTS.md`.*
+*This AGENTS.md now consolidates previously separated frontend package docs.*

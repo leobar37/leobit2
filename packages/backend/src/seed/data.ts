@@ -16,7 +16,6 @@ export const TEST_BUSINESS = {
   address: "Av. Test 123, Lima",
   phone: "999-888-777",
   email: "test@e2e.com",
-  modoOperacion: "inventario_propio" as const,
   usarDistribucion: true,
 };
 

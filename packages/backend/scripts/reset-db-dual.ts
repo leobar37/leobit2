@@ -130,7 +130,6 @@ async function ensureDemoUserExists() {
         address: DEMO_BUSINESS.address,
         phone: DEMO_BUSINESS.phone,
         email: DEMO_BUSINESS.email,
-        modoOperacion: "inventario_propio",
         usarDistribucion: true,
       })
       .returning();
@@ -214,10 +213,7 @@ async function ensureClientUserExists() {
         address: CLIENT_BUSINESS.address,
         phone: CLIENT_BUSINESS.phone,
         email: CLIENT_BUSINESS.email,
-        modoOperacion: "inventario_propio",
-        controlKilos: true,
         usarDistribucion: false,
-        permitirVentaSinStock: false,
       })
       .returning();
 

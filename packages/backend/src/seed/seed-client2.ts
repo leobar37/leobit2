@@ -170,7 +170,6 @@ export async function seedClient2User() {
         address: CLIENT2_BUSINESS.address,
         phone: CLIENT2_BUSINESS.phone,
         email: CLIENT2_BUSINESS.email,
-        modoOperacion: CLIENT2_BUSINESS.modoOperacion,
         usarDistribucion: CLIENT2_BUSINESS.usarDistribucion,
       })
       .returning();

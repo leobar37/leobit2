@@ -14,7 +14,6 @@ export const CLIENT1_BUSINESS = {
   address: "Av. Los Pollos 123, Lima",
   phone: "999-111-222",
   email: "cliente1@gmail.com",
-  modoOperacion: "inventario_propio" as const,
   usarDistribucion: false,
 };
 

@@ -16,7 +16,6 @@ export const CLIENT_BUSINESS = {
   address: "Av. Principal 456, Lima",
   phone: "999-777-555",
   email: "contacto@polloslagranja.com",
-  modoOperacion: "inventario_propio" as const,
   usarDistribucion: false,
 };
 

@@ -75,7 +75,6 @@ describe("client2-data exports", () => {
   it("should have valid business configuration", () => {
     expect(CLIENT2_BUSINESS.name).toBe("JUAVIK");
     expect(CLIENT2_BUSINESS.ruc).toBe("20600000002");
-    expect(CLIENT2_BUSINESS.modoOperacion).toBe("inventario_propio");
     expect(CLIENT2_BUSINESS.usarDistribucion).toBe(false);
   });
 });

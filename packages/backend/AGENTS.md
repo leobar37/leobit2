@@ -1,178 +1,86 @@
 # AGENTS.md - @avileo/backend
 
-> **ElysiaJS + Drizzle ORM backend for Avileo**
+> Consolidated backend guidance for ElysiaJS + Drizzle + PostgreSQL.
 
 ## Overview
 
-Backend API server for Avileo - an online chicken sales management system. Built with ElysiaJS, Drizzle ORM, and PostgreSQL.
+Backend API service for Avileo with strict tenant isolation and layered architecture:
 
-## Tech Stack
+- **RequestContext** for request/user/business scope
+- **Repositories** for data access
+- **Business services** for rules/orchestration
+- **Plugins** for DI, errors, context
+- **Drizzle** for schema/query/data integrity
 
-| Aspect | Technology |
-|--------|------------|
-| **Framework** | ElysiaJS |
-| **ORM** | Drizzle ORM |
-| **Database** | PostgreSQL (Neon) |
-| **Auth** | Better Auth |
-| **Runtime** | Bun |
-| **Validation** | Elysia t-schema |
+## Critical rules
 
-## Directory Structure
+### 1) `ctx` parameter
 
-```
-src/
-├── index.ts              # App entrypoint
-├── context/              # RequestContext
-│   └── request-context.ts
-├── errors/               # AppError classes
-│   └── index.ts
-├── lib/                  # Utilities
-│   ├── auth.ts          # Better Auth config
-│   ├── cors.ts          # CORS settings
-│   └── db.ts            # Drizzle client
-├── plugins/              # Elysia plugins
-│   ├── context.ts       # RequestContext plugin
-│   ├── error-handler.ts # Global error handler
-│   └── services.ts      # DI plugin
-├── middleware/           # Auth middleware
-│   └── auth.ts
-├── db/
-│   ├── schema/          # Drizzle table definitions
-│   │   ├── index.ts
-│   │   ├── auth.ts      # Better Auth tables
-│   │   ├── businesses.ts
-│   │   ├── customers.ts
-│   │   ├── sales.ts
-│   │   └── ...
-│   └── schema.ts        # Schema export
-├── api/                 # Route modules
-│   ├── auth.ts
-│   ├── customers.ts
-│   ├── sales.ts
-│   └── ...
-└── services/
-    ├── repository/      # Data access layer
-    │   ├── customer.repository.ts
-    │   └── ...
-    └── business/        # Business logic
-        ├── customer.service.ts
-        └── ...
-```
+`RequestContext` must be the first argument for all repository and service methods.
 
-## RequestContext Pattern - CRITICAL RULES
-
-### 1. First Parameter ALWAYS
-
-**ALL** repository and service functions receive `ctx` as **first parameter**.
-
-```typescript
-// ✅ CORRECT
+```ts
 async findById(ctx: RequestContext, id: string)
-async create(ctx: RequestContext, data: CreateInput)
-async update(ctx: RequestContext, id: string, data: UpdateInput)
-
-// ❌ INCORRECT
-async findById(id: string, ctx: RequestContext)
-async create(data: CreateInput, ctx: RequestContext)
+async create(ctx: RequestContext, input: CreateInput)
+async update(ctx: RequestContext, id: string, input: UpdateInput)
 ```
 
-### 2. RequestContext Caching
+### 2) Tenant filtering
 
-The `RequestContext` is built **once per request** and cached:
+Every query that reads/writes business data must constrain by `businessId` from `ctx`.
 
-```typescript
-// Plugin construction - executes ONCE per request
-export const contextPlugin = new Elysia({ name: "context" })
-  .resolve({ as: "scoped" }, async ({ request }) => {
-    const ctx = await RequestContext.fromAuth(session);
-    return { ctx }; // Cached for entire handler chain
-  });
+```ts
+.where(eq(table.id, id), eq(table.businessId, ctx.businessId))
 ```
 
-**DO NOT** reload data in each repository/service call.
+### 3) Single DI decorate
 
-### 3. Multi-Tenancy - Mandatory Filtering
+Use one `decorate()` call per plugin.
 
-**ALL** queries must include `businessId`:
-
-```typescript
-// ✅ CORRECT - Always filter by tenant
-.where(and(
-  eq(items.id, id),
-  eq(items.businessId, ctx.businessId)  // REQUIRED
-))
-
-// ❌ INCORRECT - Missing tenant filter
-.where(eq(items.id, id))
+```ts
+.decorate(() => {
+  const businessRepo = new BusinessRepository();
+  return {
+    businessRepo,
+    businessService: new BusinessService(businessRepo),
+  };
+})
 ```
 
-### 4. Single Decorate Pattern
+### 4) Error boundaries
 
-Use **SINGLE decorate()** - Multiple decorate calls cause hangs in Elysia:
+Services throw domain errors (`NotFoundError`, `ValidationError`, `ConflictError`, `ForbiddenError`), never HTTP responses.
 
-```typescript
-// ✅ CORRECT - One decorate call
-.decorate(() => ({
-  businessRepo: new BusinessRepository(),
-  businessService: new BusinessService(businessRepo),
-}))
+### 5) Transactional consistency
 
-// ❌ INCORRECT - Multiple decorate
-.decorate("businessRepo", new BusinessRepository())
-.decorate("businessService", new BusinessService()) // NEVER
+Mutation paths and multi-step workflows should use repository-level transactions where needed.
+
+## Architecture map
+
+```text
+src/
+├── app.ts / index.ts             # app bootstrap and route mounting
+├── context/                      # RequestContext
+├── plugins/                      # context, services, error handling
+├── middleware/                   # auth and route guards
+├── api/                          # route modules per domain
+├── services/
+│   ├── repository/               # raw data access
+│   ├── business/                 # domain rules
+│   ├── infrastructure/           # infra adapters
+│   └── transitions/              # state transition side-effects
+├── db/
+│   ├── schema/                  # Drizzle table definitions
+│   └── migrations/               # SQL migration files
+└── errors/, lib/, seed/
 ```
 
-### 5. Error Hierarchy
+## Route conventions
 
-Services throw specific exceptions:
+- Build routes with Elysia and pass `ctx` from plugin.
+- Validate request bodies with `t.Object` where needed.
+- Keep response format consistent: `{ success: true, data: ... }`.
 
-```typescript
-throw new NotFoundError("Business");
-throw new ForbiddenError("No tiene permisos");
-throw new ValidationError("El nombre es requerido");
-throw new ConflictError("Already exists");
-```
-
-### 6. Response Format
-
-All responses use standard format:
-
-```typescript
-// Success
-return { success: true, data: business };
-
-// Error (caught by error plugin)
-throw new NotFoundError("Business");
-```
-
-## Repository Pattern
-
-See [services/AGENTS.md](src/services/AGENTS.md) for detailed repository/service patterns.
-
-### Basic Repository
-
-```typescript
-export class CustomerRepository {
-  async findById(ctx: RequestContext, id: string, tx?: DbTransaction) {
-    const dbOrTx = tx || db;
-    
-    const [customer] = await dbOrTx
-      .select()
-      .from(customers)
-      .where(and(
-        eq(customers.id, id),
-        eq(customers.businessId, ctx.businessId)
-      ));
-    
-    return customer;
-  }
-}
-```
-
-## Route Module Pattern
-
-```typescript
-// api/customers.ts
+```ts
 import { Elysia, t } from "elysia";
 
 export const customerRoutes = new Elysia({ prefix: "/customers" })
@@ -189,55 +97,79 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
     body: t.Object({
       name: t.String(),
       phone: t.Optional(t.String()),
-    })
+    }),
   });
 ```
 
-## Database Schema
+## Repository/service conventions (consolidated)
 
-### Sync Status Pattern
+### Repository
 
+- Accept `ctx` first.
+- Support optional `tx?: DbTransaction` for transactional operations.
+- Keep queries deterministic and tenant scoped.
 
-```typescript
+### Service layer
+
+- Owns orchestration and domain validation.
+- Delegates reads/writes to repos.
+- Uses transactions for combined operations.
+- Throws domain errors instead of returning HTTP-level payloads.
+
+## Schema conventions
+
+- Use CUID2 IDs via `createId()`.
+- Tenant tables use `businessId` and index when needed.
+- Operational FKs point to `business_users.id`.
+- Timestamps: `createdAt` / `updatedAt` with defaults as in existing codebase.
+- Better Auth tables (`users`, `sessions`, etc.) remain managed by Better Auth.
+- Keep `sync_status` / `sync_attempts` consistent for sync-capable entities.
+
+## Transition handlers
+
+Transition handlers execute side effects only through repositories and shared transaction.
+
+```ts
+.onTransition(from, to, async (ctx, entity, tx) => {
+  // repository-only side effects with tx
+});
 ```
 
-### FK Pattern
+- Do not pass request bodies to transition handlers.
+- Do not mutate entities in place.
 
-Operational FKs point to `business_users.id`:
-
-```typescript
-sellerId: text("seller_id").references(() => businessUsers.id),
-```
-
-## Key Files
+## API and DI file references
 
 | File | Purpose |
 |------|---------|
-| `src/index.ts` | App entry, route mounting |
-| `src/lib/db.ts` | Drizzle client |
-| `src/lib/auth.ts` | Better Auth config |
+| `src/app.ts` | Main API app setup |
+| `src/index.ts` | Server bootstrap |
 | `src/plugins/context.ts` | RequestContext plugin |
-| `src/plugins/services.ts` | DI plugin |
-| `src/plugins/error-handler.ts` | Error handling |
-| `src/context/request-context.ts` | RequestContext class |
-| `src/errors/index.ts` | Error classes |
-| `src/services/` | Repository & service layer |
+| `src/plugins/services.ts` | DI container |
+| `src/plugins/error-handler.ts` | Centralized error mapping |
+| `src/db/schema/index.ts` | Schema exports |
+| `src/db/migrations/*` | SQL history |
+| `src/context/request-context.ts` | Context model |
+| `src/errors/index.ts` | Domain errors |
 
-## Commands
+## Quick commands
 
 ```bash
-# Development
-bun run dev              # Start dev server
-
-# Database
-bun run db:generate      # Generate migrations
-bun run db:migrate       # Run migrations
-bun run db:push          # Push schema (dev)
-
-# Build
-bun run build            # Build for production
+cd packages/backend
+bun run dev
+bun run build
+bun run db:generate
+bun run db:migrate
+bun run db:push
+bun run test
+bun run test:e2e
 ```
+
+## Testing
+
+- Keep unit tests near services when possible.
+- Prefer integration coverage for request-context and transactional logic.
 
 ---
 
-*See [Root AGENTS.md](../../AGENTS.md) for project overview.*
+*For project-wide conventions, see the root `AGENTS.md`.*

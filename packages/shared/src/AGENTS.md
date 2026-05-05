@@ -1,43 +1,65 @@
 # AGENTS.md - @avileo/shared
 
-**Cross-package source of truth for types, enums, and sync configuration.**
-Built with `tsup` to `dist/` (ESM + .d.ts).
+> Shared contracts for Avileo (types, constants, schema helpers).
 
-## STRUCTURE
+## Role
+
+`@avileo/shared` is the single source of truth for:
+
+- API-facing interfaces/types
+- Domain constants/enums as `const` objects
+- Drizzle table type exports (`schema.ts`)
+- Cross-package utility helpers
+
+## Public surface
+
+Primary exports live in `index.ts`.
 
 | File | Purpose |
 |------|---------|
-| `index.ts` | Public API exports |
-| `schema.ts` | Drizzle ORM table definitions (used by both PostgreSQL + PostgreSQL) |
-| `sync-config.ts` | Canonical entity list, priorities, self-heal rules |
-| `__tests__/sync-config.test.ts` | Sync config validation tests |
+| `index.ts` | Public exports used by app and backend |
+| `schema.ts` | Drizzle table definitions and inferred types |
+| `state-machine.ts` | Lightweight shared state machine utility |
+| `__tests__/` | Package-level sync/type regression tests |
 
-## WHERE TO LOOK
+## Current patterns
 
-**Drizzle Types**: `schema.ts` exports `Type` and `New` variants (e.g., `Customer`, `NewCustomer`)
+- Prefer `as const` object enums over TypeScript `enum`.
+- Prefer inferred Drizzle types (`typeof table.$inferSelect` / `$inferInsert`) over duplicated interfaces when possible.
+- Keep shared models narrow and transport-safe (string/number/boolean primitives preferred for API payloads).
+- Use consistent naming across packages (`snake_case` in DB fields, `camelCase` in code).
 
-**Enums**: `index.ts` exports `const` objects (NOT TypeScript enums):
-- `UserRole`, `BusinessUserRole`, `SaleType`, `PaymentMethod`
-- `ModoOperacion`, `InvitationStatus`, `OrderStatus`
+## Contract checks
 
-**Sync Entities**: `SYNC_ENTITIES` has 14 entities. Priority ordering in `ENTITY_PRIORITIES` (parents before children).
+Before adding a new entity/field that is used in both app and backend:
 
-- `CRITICAL`: customers, products, variants — 30 days, blocking
-- `RECENT_SALES`: sales, items — 7 days, blocking
-- `HISTORICAL`: everything else — full history, background
+1. Add/update `schema.ts` types.
+2. Export/update the matching contract in `index.ts`.
+3. Add/adjust tests in `__tests__` for compatibility.
 
-**Utilities**: `calculateBalanceDue()`, `VARIANTS_CONSTRAINTS`
+## Common exports to understand
 
-## CONVENTIONS
+- `UserRole`, `BusinessUserRole`, `SaleType`, `PaymentMethod`, `ProductType`, `ProductUnit`, `DistribucionStatus`
+- `ApiResponse<T>` and API DTO helpers
+- Finance helpers such as `calculateBalanceDue()`
+- Domain constraints such as `VARIANTS_CONSTRAINTS`
 
-- **Enums as const objects** — enables tree-shaking, avoids TS enum pitfalls
-- **Shared Drizzle schema** — single schema works for PostgreSQL (frontend) and PostgreSQL (backend)
-- **New entities** — must be added to BOTH `schema.ts` AND `sync-config.ts`
-- **Type inference** — prefer `typeof table.$inferSelect` over manual types
+## Anti-patterns
 
-## ANTI-PATTERNS
+- ❌ Adding shared exports without adding migration/type impact analysis.
+- ❌ Reintroducing TS `enum` in new code.
+- ❌ Exporting backend-only internals directly to frontend contract.
+- ❌ Modifying `schema.ts` without updating corresponding contract fields in `index.ts`.
 
-- ❌ TypeScript `enum` — use `as const` objects instead
-- ❌ Adding table to `schema.ts` without adding to `SYNC_ENTITIES`
-- ❌ Using `pgEnum()` — PostgreSQL compatibility requires `text()` with const values
-- ❌ Forgetting to set `businessId` index on new tables
+## Testing
+
+Run package checks when touching shared contracts:
+
+```bash
+cd packages/shared
+bun run test
+```
+
+---
+
+*For application and backend implementation usage, use package AGENTS in `packages/app/AGENTS.md` and `packages/backend/AGENTS.md`.*

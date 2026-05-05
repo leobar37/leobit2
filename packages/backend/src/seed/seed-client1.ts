@@ -146,7 +146,6 @@ export async function seedClient1User() {
         address: CLIENT1_BUSINESS.address,
         phone: CLIENT1_BUSINESS.phone,
         email: CLIENT1_BUSINESS.email,
-        modoOperacion: "inventario_propio",
         usarDistribucion: false,
       })
       .returning();

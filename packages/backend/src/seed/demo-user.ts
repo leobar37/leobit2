@@ -180,7 +180,6 @@ export async function seedDemoUser() {
         address: DEMO_BUSINESS.address,
         phone: DEMO_BUSINESS.phone,
         email: DEMO_BUSINESS.email,
-        modoOperacion: "inventario_propio",
         usarDistribucion: true,
       })
       .returning();

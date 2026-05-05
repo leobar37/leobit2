@@ -568,7 +568,6 @@ async function createBusinessAndLinkUser(userId: string, businessData: typeof TE
   }).returning();
 
   await repositories.business.update(tempCtx, business.id, {
-    modoOperacion: businessData.modoOperacion,
     usarDistribucion: businessData.usarDistribucion,
   });
 
