@@ -161,9 +161,18 @@ bun run build
 bun run db:generate
 bun run db:migrate
 bun run db:push
+bun run db:seed:demo      # Pollos demo account
+bun run db:seed:water     # Agua demo account
+bun run db:reset          # Full reset + all seeds
 bun run test
 bun run test:e2e
 ```
+
+## Documentation
+
+| Topic | Location |
+|-------|----------|
+| Seed & demo data | `docs/seed.md` |
 
 ## Testing
 

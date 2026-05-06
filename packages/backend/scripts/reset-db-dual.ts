@@ -34,12 +34,18 @@ import {
   customerGroups,
   customerGroupMembers,
   visitas,
+  waterRoutes,
+  waterCustomerProfiles,
+  waterDeliveryStops,
+  waterContainerLedgerEntries,
+  waterDepositLedgerEntries,
 } from "../src/db/schema";
 import { eq, ne, and } from "drizzle-orm";
 import { auth } from "../src/lib/auth";
 
 const DEMO_EMAIL = "demo@avileo.com";
 const CLIENT_EMAIL = "cliente1@gmail.com";
+const WATER_EMAIL = "agua@avileo.com";
 
 // Demo user data
 const DEMO_USER = {
@@ -69,6 +75,21 @@ const CLIENT_BUSINESS = {
   address: "Av. Los Pollos 123, Lima",
   phone: "999-111-222",
   email: "cliente1@gmail.com",
+};
+
+// Water user data (Agua / Bidones)
+const WATER_USER = {
+  email: "agua@avileo.com",
+  password: "agua123456",
+  name: "Usuario Agua",
+};
+
+const WATER_BUSINESS = {
+  name: "Agua Pura Demo",
+  ruc: "10987654321",
+  address: "Av. del Agua 456, Lima",
+  phone: "999000111",
+  email: "agua@avileo.com",
 };
 
 async function ensureDemoUserExists() {
@@ -237,6 +258,90 @@ async function ensureClientUserExists() {
   return { clientUser, businessUser };
 }
 
+async function ensureWaterUserExists() {
+  // Check if water user exists
+  let waterUser: any = await db.query.user.findFirst({
+    where: eq(user.email, WATER_EMAIL),
+  });
+
+  if (!waterUser) {
+    console.log("\nCreating water user...");
+    try {
+      const result = await auth.api.signUpEmail({
+        body: {
+          email: WATER_USER.email,
+          password: WATER_USER.password,
+          name: WATER_USER.name,
+        },
+      });
+      waterUser = result.user;
+      console.log(`✓ Water user created (ID: ${waterUser.id})`);
+    } catch (error: any) {
+      if (error?.message?.includes("already exists") || error?.message?.includes("already registered")) {
+        waterUser = await db.query.user.findFirst({
+          where: eq(user.email, WATER_EMAIL),
+        });
+        if (waterUser) {
+          console.log(`✓ Water user already exists (ID: ${waterUser.id})`);
+        } else {
+          throw new Error(`Failed to create water user: ${error?.message || error}`);
+        }
+      } else {
+        throw error;
+      }
+    }
+  } else {
+    console.log(`✓ Water user exists (ID: ${waterUser.id})`);
+  }
+
+  if (!waterUser) {
+    throw new Error("Water user could not be created or found");
+  }
+
+  // Check if business exists for water user
+  let businessUser = await db.query.businessUsers.findFirst({
+    where: eq(businessUsers.userId, waterUser.id),
+    with: {
+      business: true,
+    },
+  });
+
+  if (!businessUser) {
+    console.log("Creating water business...");
+
+    const [business] = await db
+      .insert(businesses)
+      .values({
+        name: WATER_BUSINESS.name,
+        ruc: WATER_BUSINESS.ruc,
+        address: WATER_BUSINESS.address,
+        phone: WATER_BUSINESS.phone,
+        email: WATER_BUSINESS.email,
+        usarDistribucion: true,
+        businessMode: "agua",
+      })
+      .returning();
+
+    const [bu] = await db.insert(businessUsers).values({
+      businessId: business.id,
+      userId: waterUser.id,
+      role: "ADMIN_NEGOCIO",
+      salesPoint: "Oficina Principal",
+    }).returning();
+
+    businessUser = {
+      ...bu,
+      business,
+    };
+
+    console.log(`✓ Business created: ${business.name} (ID: ${business.id})`);
+  } else {
+    console.log(`✓ Business exists: ${(businessUser as any).business.name} (ID: ${businessUser.businessId})`);
+  }
+
+  return { waterUser, businessUser };
+}
+
 async function resetDatabase() {
   console.log("🗑️  Starting database reset...\n");
 
@@ -244,22 +349,32 @@ async function resetDatabase() {
     throw new Error("Reset cannot run in production environment");
   }
 
-  // First ensure both users exist
+  // First ensure all three users exist
   const { demoUser } = await ensureDemoUserExists();
   const { clientUser } = await ensureClientUserExists();
+  const { waterUser } = await ensureWaterUserExists();
   
   const demoBusinessId = (await db.query.businessUsers.findFirst({
     where: eq(businessUsers.userId, demoUser.id),
   }))?.businessId;
-  
+
   const clientBusinessId = (await db.query.businessUsers.findFirst({
     where: eq(businessUsers.userId, clientUser.id),
+  }))?.businessId;
+
+  const waterBusinessId = (await db.query.businessUsers.findFirst({
+    where: eq(businessUsers.userId, waterUser.id),
   }))?.businessId;
 
   console.log("\n🧹 Cleaning all operational data...\n");
 
   // Delete in correct order to respect FK constraints
   const deletions = [
+    { name: "Water container ledger", fn: () => db.delete(waterContainerLedgerEntries) },
+    { name: "Water deposit ledger", fn: () => db.delete(waterDepositLedgerEntries) },
+    { name: "Water delivery stops", fn: () => db.delete(waterDeliveryStops) },
+    { name: "Water customer profiles", fn: () => db.delete(waterCustomerProfiles) },
+    { name: "Water routes", fn: () => db.delete(waterRoutes) },
     { name: "Sale items", fn: () => db.delete(saleItems) },
     { name: "Visitas", fn: () => db.delete(visitas) },
     { name: "Sales", fn: () => db.delete(sales) },
@@ -287,13 +402,13 @@ async function resetDatabase() {
     { name: "Business user WhatsApp settings", fn: () => db.delete(businessUserWhatsAppSettings) },
     { name: "Business payment settings", fn: () => db.delete(businessPaymentSettings) },
     { name: "System config", fn: () => db.delete(systemConfig) },
-    { name: "User profiles (others)", fn: () => db.delete(userProfiles).where(and(ne(userProfiles.userId, demoUser.id), ne(userProfiles.userId, clientUser.id))) },
-    { name: "Sessions (others)", fn: () => db.delete(session).where(and(ne(session.userId, demoUser.id), ne(session.userId, clientUser.id))) },
-    { name: "Accounts (others)", fn: () => db.delete(account).where(and(ne(account.userId, demoUser.id), ne(account.userId, clientUser.id))) },
+    { name: "User profiles (others)", fn: () => db.delete(userProfiles).where(and(ne(userProfiles.userId, demoUser.id), ne(userProfiles.userId, clientUser.id), ne(userProfiles.userId, waterUser.id))) },
+    { name: "Sessions (others)", fn: () => db.delete(session).where(and(ne(session.userId, demoUser.id), ne(session.userId, clientUser.id), ne(session.userId, waterUser.id))) },
+    { name: "Accounts (others)", fn: () => db.delete(account).where(and(ne(account.userId, demoUser.id), ne(account.userId, clientUser.id), ne(account.userId, waterUser.id))) },
     { name: "Verifications", fn: () => db.delete(verification) },
-    { name: "Business users (others)", fn: () => db.delete(businessUsers).where(and(ne(businessUsers.userId, demoUser.id), ne(businessUsers.userId, clientUser.id))) },
-    { name: "Businesses (others)", fn: () => db.delete(businesses).where(and(ne(businesses.id, demoBusinessId!), ne(businesses.id, clientBusinessId!))) },
-    { name: "Other users", fn: () => db.delete(user).where(and(ne(user.id, demoUser.id), ne(user.id, clientUser.id))) },
+    { name: "Business users (others)", fn: () => db.delete(businessUsers).where(and(ne(businessUsers.userId, demoUser.id), ne(businessUsers.userId, clientUser.id), ne(businessUsers.userId, waterUser.id))) },
+    { name: "Businesses (others)", fn: () => db.delete(businesses).where(and(ne(businesses.id, demoBusinessId!), ne(businesses.id, clientBusinessId!), ne(businesses.id, waterBusinessId!))) },
+    { name: "Other users", fn: () => db.delete(user).where(and(ne(user.id, demoUser.id), ne(user.id, clientUser.id), ne(user.id, waterUser.id))) },
   ];
 
   for (const { name, fn } of deletions) {
@@ -313,9 +428,12 @@ async function resetDatabase() {
   console.log(`   • Demo Business: Pollos Demo (ID: ${demoBusinessId})`);
   console.log(`   • Client User: ${CLIENT_EMAIL} (ID: ${clientUser.id})`);
   console.log(`   • Client Business: Pollería y Bodega Cliente 1 (ID: ${clientBusinessId})`);
+  console.log(`   • Water User: ${WATER_EMAIL} (ID: ${waterUser.id})`);
+  console.log(`   • Water Business: Agua Pura Demo (ID: ${waterBusinessId})`);
   console.log("\n🔐 Login credentials:");
   console.log(`   Demo: ${DEMO_EMAIL} / ${DEMO_USER.password}`);
   console.log(`   Client: ${CLIENT_EMAIL} / ${CLIENT_USER.password}`);
+  console.log(`   Water: ${WATER_EMAIL} / ${WATER_USER.password}`);
   console.log("\n💡 The database is now clean with demo accounts ready for seeding.\n");
 }
 
