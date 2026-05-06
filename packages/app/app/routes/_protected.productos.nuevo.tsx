@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Package, Loader2, Save, Layers } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CardContent } from "@/components/ui/card";
@@ -42,19 +43,25 @@ export default function NuevoProductoPage() {
         unit: data.unit,
         basePrice: data.basePrice,
         isActive: data.isActive,
-        imageId: data.imageId,
+        imageId: typeof data.imageId === "string" ? data.imageId : undefined,
         hasVariants: hasVariants,
       });
       navigate(`/productos/${createdProduct.id}`);
     } catch (error) {
       console.error("Error creating product:", error);
+      toast.error("Error al guardar el producto");
     }
   };
 
-  const nameValue = form.watch("name");
-  const basePriceValue = form.watch("basePrice");
-  const canSubmit =
-    nameValue.trim().length >= 2 && basePriceValue.trim().length > 0;
+  const submitProductForm = form.handleSubmit(
+    async (rawValues) => {
+      const payload = await form.resolvePayload(rawValues);
+      await handleSubmit(payload);
+    },
+    () => {
+      toast.error("Completa nombre y precio para guardar");
+    }
+  );
 
   return (
     <FormPage
@@ -63,8 +70,9 @@ export default function NuevoProductoPage() {
       icon={Package}
       toolbar={
         <Button
-          onClick={form.handleResolvedSubmit(handleSubmit)}
-          disabled={createProduct.isPending || !canSubmit}
+          type="submit"
+          form="new-product-form"
+          disabled={createProduct.isPending}
           data-testid="save-product-button"
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
@@ -83,7 +91,12 @@ export default function NuevoProductoPage() {
       }
     >
       <WrapperFormProvider form={form}>
-        <div className="space-y-4">
+        <form
+          id="new-product-form"
+          onSubmit={submitProductForm}
+          noValidate
+          className="space-y-4"
+        >
           <ProductFormContent form={form} />
 
           {/* Variants Toggle Card */}
@@ -118,7 +131,7 @@ export default function NuevoProductoPage() {
               </div>
             </CardContent>
           </MobilePage.Card>
-        </div>
+        </form>
       </WrapperFormProvider>
     </FormPage>
   );

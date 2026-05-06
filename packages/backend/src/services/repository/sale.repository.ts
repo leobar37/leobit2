@@ -4,6 +4,7 @@ import { logger } from "../../lib/logger";
 import { sales, saleItems, type Sale, type NewSale, type SaleItem, type NewSaleItem } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { toDateColumnValue, toTimestampColumnValue } from "../../lib/date-utils";
+import { VersionConflictError } from "../../errors";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -224,7 +225,7 @@ export class SaleRepository {
       .returning();
 
     if (expectedVersion !== undefined && !sale) {
-      throw new Error(`Version conflict: expected ${expectedVersion}`);
+      throw new VersionConflictError("venta");
     }
 
     return sale;

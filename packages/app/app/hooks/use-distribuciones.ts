@@ -67,7 +67,7 @@ export interface CreateDistribucionApiInput {
   notaCreacion?: string;
   fecha?: string;
   groupId?: string;
-  items: Array<{
+  items?: Array<{
     variantId: string;
     cantidadAsignada: number;
     unidad: string;

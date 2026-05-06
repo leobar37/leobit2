@@ -10,6 +10,7 @@ import { decimalToNumber } from "@avileo/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SaleWithItems } from "~/hooks/use-sales";
 import { queryKeys } from "~/lib/query-keys";
+import { getErrorMessage } from "~/lib/api-utils";
 
 
 export function SaleSubmitBar() {
@@ -114,8 +115,13 @@ export function SaleSubmitBar() {
 
       navigate(returnTo);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo completar la venta";
-      toast.error(isDeliveryMode ? "Error al confirmar entrega" : "Error al finalizar venta", {
+      const message = getErrorMessage(error);
+      const title = isDeliveryMode
+        ? "Error al confirmar entrega"
+        : sale?.type === "pre_order"
+          ? "Error al confirmar pedido"
+          : "Error al finalizar venta";
+      toast.error(title, {
         description: message,
       });
     }

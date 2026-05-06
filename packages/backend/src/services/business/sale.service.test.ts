@@ -756,5 +756,58 @@ describe("SaleService - Item Operations", () => {
       expect(result.data.version).toBe(2);
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
+
+    it("confirms pre_orders without requiring full payment", async () => {
+      const tx = createTxMock();
+      transactionMock.mockImplementation(async (callback) => callback(tx as never));
+
+      const repository = {
+        findById: vi.fn().mockResolvedValue(createBaseSale({
+          type: "pre_order",
+          status: "draft",
+          version: 1,
+          saleType: "contado",
+          paymentMode: "pago_total",
+          amountPaid: "0.00",
+          balanceDue: "100.00",
+          customerId: "cust-1",
+        })),
+        findSaleItems: vi.fn().mockResolvedValue([{ id: "item-1", subtotal: "100.00" }]),
+        update: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "confirmed",
+          version: 2,
+        }),
+      };
+
+      const paymentRepository = {
+        create: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const service = new SaleService(
+        repository as never,
+        paymentRepository as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never
+      );
+
+      const ctx = { businessId: "biz-1", businessUserId: "user-1" };
+      const result = await service.confirmSale(ctx as never, "sale-1", 1);
+
+      expect(result.data.status).toBe("confirmed");
+      expect(repository.update).toHaveBeenCalledWith(
+        ctx,
+        "sale-1",
+        {
+          status: "confirmed",
+          version: 2,
+        },
+        tx,
+        1
+      );
+      expect(paymentRepository.create).not.toHaveBeenCalled();
+    });
   });
 });

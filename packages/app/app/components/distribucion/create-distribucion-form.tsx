@@ -20,7 +20,7 @@ interface CreateDistribucionFormProps {
 }
 
 export interface CreateDistribucionFormRef {
-  submit: () => void;
+  submit: () => { submitted: boolean; reason?: string };
 }
 
 export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, CreateDistribucionFormProps>(
@@ -50,7 +50,14 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
     const [assignItems, setAssignItems] = useState(false);
     const [items, setItems] = useState<CreateDistribucionItemInput[]>([]);
 
-    const isValid = !!selectedVendedor && !!selectedPuntoVenta && (!assignItems || items.length > 0);
+    const validationMessage = !selectedVendedor
+      ? "Selecciona un vendedor"
+      : !selectedPuntoVenta
+        ? "Selecciona un punto de venta"
+        : assignItems && items.length === 0
+          ? "Agrega al menos un producto asignado"
+          : undefined;
+    const isValid = !validationMessage;
 
     useEffect(() => {
       onValidityChange?.(isValid);
@@ -66,17 +73,20 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVentaId: selectedPuntoVenta.id,
         notaCreacion: notaCreacion.trim() || undefined,
         groupId: selectedGroup?.id,
-        items: assignItems ? items : undefined,
+        items: assignItems ? items : [],
       });
     };
 
     useImperativeHandle(ref, () => ({
       submit: () => {
-        if (isValid) {
-          handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+        if (!isValid) {
+          return { submitted: false, reason: validationMessage };
         }
+
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+        return { submitted: true };
       },
-    }));
+    }), [isValid, validationMessage, handleSubmit]);
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,7 +159,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
           />
         )}
 
-        <button type="submit" disabled className="hidden" />
+        <button type="submit" className="hidden" />
       </form>
     );
   }

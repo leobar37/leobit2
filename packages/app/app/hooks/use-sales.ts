@@ -548,7 +548,7 @@ export function useUpdateSale() {
       }: {
         id: string;
         input: UpdateSaleInput;
-      }): Promise<void> => {
+      }): Promise<SaleWithItems> => {
         const payload: Record<string, unknown> = {};
 
         if ("customerId" in input) {
@@ -592,7 +592,7 @@ export function useUpdateSale() {
         }
 
         const response = await api.sales({ id }).patch(payload as any);
-        extractData(response);
+        return extractData<SaleWithItems>(response);
       },
       onMutate: async (variables) => {
         await queryClient.cancelQueries({ queryKey: queryKeys.sales.detail(variables.id) });
@@ -638,7 +638,7 @@ export function useUpdateSale() {
 
         return { previousSale };
       },
-      onSuccess: async (_data, variables) => {
+      onSuccess: async (updatedSale, variables) => {
         queryClient.setQueryData(
           queryKeys.sales.detail(variables.id),
           (previous: SaleWithItems | null | undefined) => {
@@ -655,11 +655,13 @@ export function useUpdateSale() {
 
             return {
               ...previous,
+              ...updatedSale,
               ...variables.input,
               totalAmount: nextTotalAmount.toString(),
               amountPaid: nextAmountPaid.toString(),
               balanceDue: balanceDue.toString(),
-              updatedAt: new Date().toISOString(),
+              updatedAt: updatedSale.updatedAt ?? new Date().toISOString(),
+              items: previous.items,
             };
           }
         );

@@ -430,6 +430,30 @@ export class SaleService {
       throw new ValidationError("No puedes confirmar una venta sin productos");
     }
 
+    // Pre-orders are confirmed as orders, not collected as final sales.
+    // Payment is handled later when the order is delivered or converted.
+    if (sale.type === "pre_order") {
+      if (baseVersion === undefined) {
+        throw new ValidationError("baseVersion es requerido para confirmar pedidos");
+      }
+      return db.transaction(async (tx) => {
+        const confirmedSale = await this.repository.update(
+          ctx,
+          id,
+          {
+            status: "confirmed",
+            version: baseVersion + 1,
+          },
+          tx,
+          baseVersion
+        );
+        return {
+          data: confirmedSale,
+          txid: await getTxid(tx),
+        };
+      });
+    }
+
     // Determine final payment state from provided data or existing sale
     const totalAmount = decimalToNumber(sale.totalAmount);
     const paymentMode = paymentData?.paymentMode ?? sale.paymentMode ?? "pago_total";
@@ -451,29 +475,6 @@ export class SaleService {
 
     if (saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
-    }
-
-    // For pre_orders, use the generic versioned update path.
-    if (sale.type === "pre_order") {
-      if (baseVersion === undefined) {
-        throw new ValidationError("baseVersion es requerido para confirmar pedidos");
-      }
-      return db.transaction(async (tx) => {
-        const confirmedSale = await this.repository.update(
-          ctx,
-          id,
-          {
-            status: "confirmed",
-            version: baseVersion + 1,
-          },
-          tx,
-          baseVersion
-        );
-        return {
-          data: confirmedSale,
-          txid: await getTxid(tx),
-        };
-      });
     }
 
     // For instant_sales

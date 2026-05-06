@@ -24,16 +24,54 @@ export const api = treaty<App>(API_URL, {
   },
 });
 
+function readMessageFromObject(value: Record<string, unknown>): string | null {
+  const directMessage = value.message;
+  if (typeof directMessage === "string" && directMessage.trim()) {
+    return directMessage;
+  }
+
+  const nestedError = value.error;
+  if (typeof nestedError === "string" && nestedError.trim()) {
+    return nestedError;
+  }
+  if (nestedError && typeof nestedError === "object") {
+    return readMessageFromObject(nestedError as Record<string, unknown>);
+  }
+
+  const nestedValue = value.value;
+  if (typeof nestedValue === "string" && nestedValue.trim()) {
+    return nestedValue;
+  }
+  if (nestedValue && typeof nestedValue === "object") {
+    return readMessageFromObject(nestedValue as Record<string, unknown>);
+  }
+
+  return null;
+}
+
+export function getApiErrorMessage(value: unknown, defaultError = "Request failed"): string {
+  if (value instanceof Error) {
+    return value.message || defaultError;
+  }
+  if (typeof value === "string") {
+    return value || defaultError;
+  }
+  if (value && typeof value === "object") {
+    return readMessageFromObject(value as Record<string, unknown>) ?? defaultError;
+  }
+  return defaultError;
+}
+
 /** Extracts data from Eden response or throws standardized error */
 export function extractData<T>(
-  response: { data?: { success: boolean; data?: unknown; error?: string } | null; error?: { value: unknown } | null },
+  response: { data?: { success: boolean; data?: unknown; error?: unknown } | null; error?: { value: unknown } | null },
   defaultError = "Request failed"
 ): T {
   if (response.error) {
-    throw new Error(String(response.error.value));
+    throw new Error(getApiErrorMessage(response.error.value, defaultError));
   }
-  if (!response.data?.success || !response.data.data) {
-    throw new Error(response.data?.error || defaultError);
+  if (!response.data?.success || response.data.data === undefined || response.data.data === null) {
+    throw new Error(getApiErrorMessage(response.data?.error, defaultError));
   }
   return response.data.data as T;
 }

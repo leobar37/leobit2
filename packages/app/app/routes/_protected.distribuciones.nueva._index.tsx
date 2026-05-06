@@ -18,7 +18,6 @@ export default function NuevaDistribucionPage() {
   const [searchParams] = useSearchParams();
   const createMutation = useCreateDistribucion();
   const formRef = useRef<CreateDistribucionFormRef>(null);
-  const [isValid, setIsValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isOnline = true;
   const { toast } = useToast();
@@ -27,33 +26,22 @@ export default function NuevaDistribucionPage() {
   const selectedDate = fechaFromUrl || getToday();
 
   const handleSubmit = async (data: CreateDistribucionApiInput) => {
-    console.log("[NuevaDistribucion] Submitting...", data);
     setIsSubmitting(true);
     try {
-      console.log("[NuevaDistribucion] Calling mutateAsync...");
       await createMutation.mutateAsync({
         ...data,
         fecha: selectedDate,
+        items: data.items ?? [],
       });
-      console.log("[NuevaDistribucion] Success! Showing toast...");
       showSuccess("Distribución creada", {
         description: "La distribución se ha creado exitosamente.",
       });
-      console.log("[NuevaDistribucion] Navigating to /distribuciones...");
       navigate("/distribuciones", { replace: true });
-      console.log("[NuevaDistribucion] Navigation complete");
     } catch (error) {
-      console.log("[NuevaDistribucion] Error:", error);
-      showError("Error", error, {
-        description: "No se pudo crear la distribución",
-      });
+      showError("No se pudo crear la distribución", error);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleFormValidityChange = (valid: boolean) => {
-    setIsValid(valid);
   };
 
   const isLoading = isSubmitting || createMutation.isPending;
@@ -65,8 +53,15 @@ export default function NuevaDistribucionPage() {
       icon={Package}
       toolbar={
         <Button
-          onClick={() => formRef.current?.submit()}
-          disabled={isLoading || !isValid || !isOnline}
+          onClick={() => {
+            const result = formRef.current?.submit();
+            if (result && !result.submitted && result.reason) {
+              toast.error("Completa la distribución", {
+                description: result.reason,
+              });
+            }
+          }}
+          disabled={isLoading || !isOnline}
           className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
         >
           {isLoading ? (
@@ -100,7 +95,6 @@ export default function NuevaDistribucionPage() {
         ref={formRef}
         onSubmit={handleSubmit}
         isPending={isLoading}
-        onValidityChange={handleFormValidityChange}
       />
     </FormPage>
   );

@@ -36,7 +36,11 @@ export function PaymentShareDrawer({
   paymentId,
   amount,
 }: PaymentShareDrawerProps) {
-  const { data: tokenData } = usePaymentToken(open ? paymentId : null);
+  const {
+    data: tokenData,
+    isLoading: isTokenLoading,
+    isFetched: isTokenFetched,
+  } = usePaymentToken(open ? paymentId : null);
   const generateToken = useGeneratePaymentToken();
   const regenerateToken = useRegeneratePaymentToken();
   const toggleToken = useTogglePaymentToken();
@@ -54,12 +58,28 @@ export function PaymentShareDrawer({
   const shareMessage = detailUrl ? buildMessage(detailUrl, amount) : "";
 
   useEffect(() => {
-    if (!open || !paymentId || tokenData || generateToken.isPending || !publicCatalogSlug) {
+    if (
+      !open ||
+      !paymentId ||
+      !publicCatalogSlug ||
+      isTokenLoading ||
+      !isTokenFetched ||
+      tokenData ||
+      generateToken.isPending
+    ) {
       return;
     }
 
     generateToken.mutate(paymentId);
-  }, [generateToken, open, paymentId, publicCatalogSlug, tokenData]);
+  }, [
+    generateToken,
+    isTokenFetched,
+    isTokenLoading,
+    open,
+    paymentId,
+    publicCatalogSlug,
+    tokenData,
+  ]);
 
   const handleRegenerate = async () => {
     if (!paymentId) return;

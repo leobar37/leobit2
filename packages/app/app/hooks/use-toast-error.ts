@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { getErrorMessage } from "~/lib/api-utils";
 
 interface ToastErrorOptions {
   description?: string;
@@ -9,7 +10,7 @@ export function useToastError() {
   const showError = (message: string, error?: unknown, options?: ToastErrorOptions) => {
     console.error(message, error);
     
-    const description = options?.description ?? (error instanceof Error ? error.message : undefined);
+    const description = options?.description ?? (error ? getErrorMessage(error) : undefined);
     
     toast.error(message, {
       description,

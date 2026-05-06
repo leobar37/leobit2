@@ -15,6 +15,7 @@ import { cn } from "~/lib/utils";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
 import { CameraGalleryDrawer } from "~/components/ui/camera-gallery-drawer";
+import { getErrorMessage } from "~/lib/api-utils";
 
 const profileSchema = z.object({
   dni: z.string().max(20).optional(),
@@ -49,6 +50,7 @@ export default function ProfilePage() {
 
   const wrapperForm = useWrapperForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    mode: "onChange",
     defaultValues: {
       dni: "",
       phone: "",
@@ -99,7 +101,9 @@ export default function ProfilePage() {
       await updateProfile.mutateAsync(payload);
       toast.success("Perfil actualizado correctamente");
     } catch (error) {
-      toast.error("Error al actualizar el perfil");
+      toast.error("Error al actualizar el perfil", {
+        description: getErrorMessage(error),
+      });
       console.error("Error updating profile:", error);
     } finally {
       setIsUploading(false);
@@ -196,7 +200,7 @@ export default function ProfilePage() {
                 <Button
                   type="submit"
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateProfile.isPending || !wrapperForm.formState.isValid}
+                  disabled={updateProfile.isPending || isUploading}
                 >
                   {updateProfile.isPending ? (
                     <>
