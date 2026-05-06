@@ -17,6 +17,7 @@ interface NewSaleContextType {
   sale: SaleWithItems | null;
   items: SaleItem[];
   isSaleLoading: boolean;
+  hasOptimisticItems: boolean;
   paymentForm: SalePaymentForm;
   updatePaymentForm: (updates: Partial<SalePaymentForm>) => void;
   resetPaymentForm: () => void;
@@ -61,6 +62,10 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
   const { data: saleRaw, isLoading: isSaleLoading } = useSale(saleId);
   const sale = saleRaw ?? null;
   const items = useMemo(() => sale?.items ?? [], [sale?.items]);
+  const hasOptimisticItems = useMemo(
+    () => items.some((item) => item.isOptimistic),
+    [items]
+  );
 
   const [paymentForm, setPaymentForm] = useState<SalePaymentForm>(() =>
     buildInitialPaymentForm(sale, saleId)
@@ -106,11 +111,12 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
       sale,
       items,
       isSaleLoading,
+      hasOptimisticItems,
       paymentForm,
       updatePaymentForm,
       resetPaymentForm,
     }),
-    [saleId, effectiveVisitaId, returnTo, sale, items, isSaleLoading, paymentForm, updatePaymentForm, resetPaymentForm]
+    [saleId, effectiveVisitaId, returnTo, sale, items, isSaleLoading, hasOptimisticItems, paymentForm, updatePaymentForm, resetPaymentForm]
   );
 
   return (

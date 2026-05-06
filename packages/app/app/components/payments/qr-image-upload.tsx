@@ -2,7 +2,7 @@ import * as React from "react";
 import { useController, useFormContext } from "react-hook-form";
 import { cn } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useUploadFile, validateFile } from "~/hooks/use-files";
+import { useUploadFile, useFile, validateFile } from "~/hooks/use-files";
 import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,6 +26,13 @@ const QRImageUpload = React.forwardRef<HTMLDivElement, QRImageUploadProps>(
 
     const uploadMutation = useUploadFile();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [previewUrl, setPreviewUrl] = React.useState<string>("");
+
+    // Fetch file metadata when we have a stored file ID (for editing existing QR)
+    const storedFileId = typeof value === "string" && value.length > 0 && !value.startsWith("blob:")
+      ? value
+      : "";
+    const { data: fileRecord, isLoading: isLoadingFile } = useFile(storedFileId);
 
     const handleClick = () => {
       fileInputRef.current?.click();
@@ -41,25 +48,38 @@ const QRImageUpload = React.forwardRef<HTMLDivElement, QRImageUploadProps>(
         return;
       }
 
+      // Create a local object URL for instant preview
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+
       try {
         const result = await uploadMutation.mutateAsync(file);
-        onChange(`/api/files/${result.id}`);
+        onChange(result.id);
         toast.success("Imagen subida correctamente");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Error al subir la imagen";
         toast.error(message);
+        URL.revokeObjectURL(objectUrl);
+        setPreviewUrl("");
       }
     };
 
     const handleRemove = () => {
       onChange("");
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl("");
+      }
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     };
 
     const isUploading = uploadMutation.isPending;
-    const hasImage = typeof value === "string" && value.length > 0;
+    const hasImage = (typeof value === "string" && value.length > 0) || previewUrl.length > 0;
+
+    // Use preview URL while uploading or if available, otherwise use the resolved public URL
+    const imageSrc = previewUrl || fileRecord?.url || "";
 
     return (
       <div ref={ref} className="space-y-2">
@@ -70,11 +90,17 @@ const QRImageUpload = React.forwardRef<HTMLDivElement, QRImageUploadProps>(
         <div className="relative">
           {hasImage ? (
             <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-muted border border-border">
-              <img
-                src={value as string}
-                alt="Vista previa del QR"
-                className="w-full h-full object-contain"
-              />
+              {isLoadingFile && !previewUrl ? (
+                <div className="flex items-center justify-center w-full h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <img
+                  src={imageSrc}
+                  alt="Vista previa del QR"
+                  className="w-full h-full object-contain"
+                />
+              )}
               <Button
                 type="button"
                 variant="destructive"

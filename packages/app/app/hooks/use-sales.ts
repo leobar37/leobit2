@@ -43,6 +43,7 @@ export interface SaleItem {
   originalQuantity: string | null;
   createdAt: string;
   updatedAt: string;
+  isOptimistic?: boolean;
 }
 
 export interface Sale {
