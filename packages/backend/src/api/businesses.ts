@@ -363,14 +363,17 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
           sales: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
+            hidePrices: t.Boolean(),
           }),
           orders: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
+            hidePrices: t.Boolean(),
           }),
           purchases: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
+            hidePrices: t.Boolean(),
           }),
         }),
       }),

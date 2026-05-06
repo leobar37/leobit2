@@ -40,7 +40,7 @@ export function CalculatorContent() {
     handleClear,
   } = calculator;
 
-  const { hideTara } = settings;
+  const { hideTara, hidePrices } = settings;
 
   return (
     <div className="flex flex-col h-full">
@@ -237,9 +237,11 @@ export function CalculatorContent() {
                       <p className="text-sm font-semibold text-foreground">
                         {variant.name}
                       </p>
-                      <p className="mt-1 text-sm font-medium text-orange-500 dark:text-orange-300">
-                        S/ {formatCurrency(variant.price)}
-                      </p>
+                      {!hidePrices && (
+                        <p className="mt-1 text-sm font-medium text-orange-500 dark:text-orange-300">
+                          S/ {formatCurrency(variant.price)}
+                        </p>
+                      )}
                     </button>
                   ))}
                 </div>

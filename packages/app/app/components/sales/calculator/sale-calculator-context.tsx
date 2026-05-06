@@ -42,6 +42,7 @@ interface SaleCalculatorContextType {
   settings: {
     hideTara: boolean;
     autoFillPrice: boolean;
+    hidePrices: boolean;
   };
   footerActions: CalculatorFooterActions | null;
   isSaving: boolean;
@@ -102,6 +103,7 @@ export function SaleCalculatorProvider({
   const calculatorSettings = settings?.calculators?.sales;
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
+  const hidePrices = calculatorSettings?.hidePrices ?? false;
 
   const editingInitialValues =
     isEditMode && editingItem
@@ -271,6 +273,7 @@ export function SaleCalculatorProvider({
       settings: {
         hideTara,
         autoFillPrice,
+        hidePrices,
       },
       footerActions,
       isSaving,
@@ -286,6 +289,7 @@ export function SaleCalculatorProvider({
       isEditMode,
       hideTara,
       autoFillPrice,
+      hidePrices,
       footerActions,
       isSaving,
       save,

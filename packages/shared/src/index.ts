@@ -201,6 +201,7 @@ export interface UpdateTeamMemberInput {
 export interface CalculatorConfig {
   hideTara: boolean;
   autoFillPrice: boolean;
+  hidePrices: boolean;
 }
 
 export interface BusinessCalculatorSettings {
@@ -213,9 +214,9 @@ export interface BusinessCalculatorSettings {
 
 export const defaultCalculatorSettings: BusinessCalculatorSettings = {
   calculators: {
-    sales: { hideTara: true, autoFillPrice: false },
-    orders: { hideTara: true, autoFillPrice: false },
-    purchases: { hideTara: true, autoFillPrice: false },
+    sales: { hideTara: true, autoFillPrice: false, hidePrices: false },
+    orders: { hideTara: true, autoFillPrice: false, hidePrices: false },
+    purchases: { hideTara: true, autoFillPrice: false, hidePrices: false },
   },
 };
 
