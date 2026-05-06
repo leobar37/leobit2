@@ -1,4 +1,3 @@
-import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -9,18 +8,25 @@ import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
 import { FormMediaField } from "@/components/forms/form-media-field";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileSlot, MobilePage } from "~/components/mobile";
 import { useTheme } from "~/components/theme";
 import { cn } from "~/lib/utils";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
+import { CameraGalleryDrawer } from "~/components/ui/camera-gallery-drawer";
 
 const profileSchema = z.object({
   dni: z.string().max(20).optional(),
   phone: z.string().max(50).optional(),
   birthDate: z.string().optional(),
-  avatarId: z.string().optional(),
+  avatarId: z
+    .union([
+      z.string(),
+      z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
+      z.null(),
+    ])
+    .optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -35,8 +41,9 @@ export default function ProfilePage() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: avatarFile } = useFile(profile?.avatarId ?? "");
   const updateProfile = useUpdateProfile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [avatarDrawerOpen, setAvatarDrawerOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const isLoading = profileLoading;
   const { mode, setMode } = useTheme();
 
@@ -60,8 +67,21 @@ export default function ProfilePage() {
       avatarId: fileField(),
     },
   });
+  const avatarValue = wrapperForm.watch("avatarId");
+
+  useEffect(() => {
+    if (!(avatarValue instanceof File)) {
+      setAvatarPreview(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(avatarValue);
+    setAvatarPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [avatarValue]);
 
   const onSubmit = async (data: ProfileFormData) => {
+    setIsUploading(true);
     try {
       const payload: Record<string, string> = {};
       if (data.dni && data.dni.trim()) {
@@ -73,7 +93,7 @@ export default function ProfilePage() {
       if (data.birthDate && data.birthDate.trim()) {
         payload.birthDate = data.birthDate.trim();
       }
-      if (data.avatarId) {
+      if (typeof data.avatarId === "string" && data.avatarId) {
         payload.avatarId = data.avatarId;
       }
       await updateProfile.mutateAsync(payload);
@@ -81,17 +101,21 @@ export default function ProfilePage() {
     } catch (error) {
       toast.error("Error al actualizar el perfil");
       console.error("Error updating profile:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+    setAvatarDrawerOpen(true);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    wrapperForm.setValue("avatarId", file as unknown as string);
+  const handleAvatarFileSelect = (file: File) => {
+    wrapperForm.setValue("avatarId", file, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
   };
 
   if (isLoading) {
@@ -118,9 +142,9 @@ export default function ProfilePage() {
               >
                 {isUploading ? (
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
-                ) : avatarFile?.url ? (
+                ) : avatarPreview || avatarFile?.url ? (
                   <img
-                    src={avatarFile.url}
+                    src={avatarPreview || avatarFile?.url}
                     alt="Avatar"
                     className="w-full h-full object-cover"
                   />
@@ -135,13 +159,6 @@ export default function ProfilePage() {
               >
                 <Camera className="h-4 w-4 text-orange-600" />
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleFileChange}
-              />
             </div>
             <div>
               <h2 className="text-xl font-semibold">{profile?.name}</h2>
@@ -229,6 +246,13 @@ export default function ProfilePage() {
           </div>
         </div>
       </MobilePage.Root>
+
+      <CameraGalleryDrawer
+        open={avatarDrawerOpen}
+        onOpenChange={setAvatarDrawerOpen}
+        onFileSelect={handleAvatarFileSelect}
+        title="Avatar"
+      />
     </>
   );
 }

@@ -176,6 +176,53 @@ export class PurchaseRepository {
     return purchase;
   }
 
+  async update(
+    ctx: RequestContext,
+    id: string,
+    data: CreatePurchaseInput,
+    items: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt" | "businessId" | "updatedAt">[],
+    tx?: DbTransaction
+  ): Promise<PurchaseWithItems | undefined> {
+    const dbOrTx = tx || db;
+
+    const [purchase] = await dbOrTx
+      .update(purchases)
+      .set({
+        supplierId: data.supplierId ?? null,
+        purchaseDate: data.purchaseDate ?? null,
+        status: data.status ?? "pending",
+        totalAmount: data.totalAmount ?? "0",
+        notes: data.notes ?? null,
+        receiptImageId: data.receiptImageId ?? null,
+        invoiceNumber: data.invoiceNumber ?? null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(purchases.id, id), eq(purchases.businessId, ctx.businessId))
+      )
+      .returning();
+
+    if (!purchase) return undefined;
+
+    await dbOrTx
+      .delete(purchaseItems)
+      .where(
+        and(eq(purchaseItems.purchaseId, id), eq(purchaseItems.businessId, ctx.businessId))
+      );
+
+    for (const item of items) {
+      await dbOrTx
+        .insert(purchaseItems)
+        .values({
+          ...item,
+          purchaseId: id,
+          businessId: ctx.businessId,
+        });
+    }
+
+    return this.findById(ctx, id, tx);
+  }
+
   async delete(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<void> {
     const dbOrTx = tx || db;
 

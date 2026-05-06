@@ -105,7 +105,9 @@ export class DistribucionService {
     },
     tx?: DbTransaction
   ): Promise<DistribucionWithItems> {
-    const dbOrTx = tx || db;
+    if (!tx) {
+      return db.transaction((innerTx) => this.createDistribucion(ctx, data, innerTx));
+    }
 
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para crear distribuciones");
@@ -133,7 +135,22 @@ export class DistribucionService {
       );
     }
 
-    const totalKilos = (data.items ?? []).reduce((sum, item) => add(sum, item.cantidadAsignada), "0");
+    const seenVariantIds = new Set<string>();
+    for (const item of data.items ?? []) {
+      if (!isPositive(item.cantidadAsignada)) {
+        throw new ValidationError("La cantidad asignada debe ser mayor a 0");
+      }
+
+      if (seenVariantIds.has(item.variantId)) {
+        throw new ValidationError("No se puede asignar el mismo producto más de una vez");
+      }
+      seenVariantIds.add(item.variantId);
+
+      const variant = await this.variantRepository.findById(ctx, item.variantId);
+      if (!variant || variant.businessId !== ctx.businessId) {
+        throw new NotFoundError("Variante de producto");
+      }
+    }
 
     const distribucion = await this.repository.create(ctx, {
       vendedorId: data.vendedorId,
@@ -174,7 +191,7 @@ export class DistribucionService {
       }
     }
 
-    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id);
+    const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id, tx);
     if (!distribucionWithItems) {
       throw new NotFoundError("Distribución");
     }

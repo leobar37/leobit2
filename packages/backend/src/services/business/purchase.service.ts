@@ -165,6 +165,114 @@ export class PurchaseService {
     };
   }
 
+  async updatePurchase(
+    ctx: RequestContext,
+    id: string,
+    data: CreatePurchaseInput
+  ): Promise<MutationResult<PurchaseWithItems>> {
+    if (!ctx.hasPermission("purchases.write")) {
+      throw new ForbiddenError("No tiene permisos para modificar compras");
+    }
+
+    const existing = await this.repository.findById(ctx, id);
+    if (!existing) {
+      throw new NotFoundError("Compra");
+    }
+
+    if (existing.status !== "pending" && existing.status !== "draft") {
+      throw new ValidationError("Solo se pueden editar compras pendientes o en borrador");
+    }
+
+    if (!data.items || data.items.length === 0) {
+      throw new ValidationError("La compra debe tener al menos un ítem");
+    }
+
+    const supplier = await this.supplierRepo.findById(ctx, data.supplierId);
+    if (!supplier) {
+      throw new NotFoundError("Proveedor");
+    }
+
+    if (data.receiptImageId) {
+      const file = await this.fileRepo.findById(ctx, data.receiptImageId);
+      if (!file) {
+        throw new NotFoundError("Imagen de comprobante");
+      }
+    }
+
+    let totalAmount = 0;
+    const validatedItems: Omit<NewPurchaseItem, "purchaseId" | "id" | "createdAt">[] = [];
+
+    for (const item of data.items) {
+      let finalQuantity = item.quantity;
+      let finalVariantId: string | null = item.variantId || null;
+      let finalUnitCost = item.unitCost;
+
+      if (item.unitId) {
+        const unit = await this.unitRepo.findById(ctx, item.unitId);
+        if (!unit) {
+          throw new NotFoundError("Unidad configurada");
+        }
+
+        finalQuantity = (item.packs || 1) * parseFloat(unit.baseUnitQuantity);
+        finalVariantId = unit.variantId;
+        finalUnitCost = item.unitCost / parseFloat(unit.baseUnitQuantity);
+      }
+
+      if (finalVariantId) {
+        const variant = await this.variantRepo.findById(ctx, finalVariantId);
+        if (!variant || variant.businessId !== ctx.businessId) {
+          throw new NotFoundError("Presentación de producto");
+        }
+      }
+
+      if (finalQuantity <= 0) {
+        throw new ValidationError("La cantidad debe ser mayor a 0");
+      }
+      if (finalUnitCost < 0) {
+        throw new ValidationError("El costo unitario no puede ser negativo");
+      }
+
+      const totalCost = finalQuantity * finalUnitCost;
+      totalAmount += totalCost;
+
+      validatedItems.push({
+        businessId: ctx.businessId,
+        productId: item.productId,
+        variantId: finalVariantId,
+        quantity: finalQuantity.toString(),
+        unitCost: finalUnitCost.toString(),
+        totalCost: totalCost.toString(),
+      });
+    }
+
+    return db.transaction(async (tx) => {
+      const updated = await this.repository.update(
+        ctx,
+        id,
+        {
+          supplierId: data.supplierId,
+          purchaseDate: data.purchaseDate,
+          totalAmount: totalAmount.toString(),
+          status: existing.status as "draft" | "pending",
+          invoiceNumber: data.invoiceNumber || null,
+          receiptImageId: data.receiptImageId || null,
+          notes: data.notes || null,
+        },
+        validatedItems,
+        tx
+      );
+
+      if (!updated) {
+        throw new NotFoundError("Compra");
+      }
+
+      return {
+        data: updated,
+        txid: await getTxid(tx),
+      };
+    });
+  }
+
   async confirmPurchase(
     ctx: RequestContext,
     id: string

@@ -96,6 +96,42 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
     }
   )
   .put(
+    "/:id",
+    async ({ purchaseService, ctx, params, body }) => {
+      const result = await purchaseService.updatePurchase(ctx as RequestContext, params.id, {
+        supplierId: body.supplierId,
+        purchaseDate: body.purchaseDate,
+        invoiceNumber: body.invoiceNumber,
+        receiptImageId: body.receiptImageId,
+        notes: body.notes,
+        items: body.items,
+      });
+      return { success: true, data: result.data, txid: result.txid };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        supplierId: t.String(),
+        purchaseDate: t.String(),
+        invoiceNumber: t.Optional(t.String()),
+        receiptImageId: t.Optional(t.String()),
+        notes: t.Optional(t.String()),
+        items: t.Array(
+          t.Object({
+            productId: t.String(),
+            variantId: t.Optional(t.String()),
+            unitId: t.Optional(t.String()),
+            packs: t.Optional(t.Number()),
+            quantity: t.Number({ minimum: 0.001 }),
+            unitCost: t.Number({ minimum: 0 }),
+          })
+        ),
+      }),
+    }
+  )
+  .put(
     "/:id/status",
     async ({ purchaseService, ctx, params, body }) => {
       const result = await purchaseService.updatePurchaseStatus(

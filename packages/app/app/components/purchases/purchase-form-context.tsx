@@ -3,7 +3,7 @@
  * Single flow for both new purchases and editing existing purchases
  */
 
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { FormProvider, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -139,8 +139,8 @@ interface PurchaseFormProviderProps {
 export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { draftId } = useParams<{ draftId: string }>();
-  const purchaseId = draftId || null;
+  const { id, draftId } = useParams<{ id: string; draftId: string }>();
+  const purchaseId = id || draftId || null;
 
   const { data: business } = useBusiness();
   const { data: suppliers } = useSuppliers();
@@ -180,6 +180,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
+      receiptImageId: purchase?.receiptImageId ?? undefined,
     },
     values: {
       purchaseDate: purchase?.purchaseDate
@@ -187,16 +188,23 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
+      receiptImageId: purchase?.receiptImageId ?? undefined,
     },
     fields: {
       receiptImageId: fileField(),
     },
   });
 
-  // Items from purchase (existing) or local state (new)
-  const items = useMemo(() => {
-    if (purchase?.items) {
-      return purchase.items.map((item) => ({
+  const supplier = useMemo(() => {
+    if (!purchase?.supplierId || !suppliers) return null;
+    return suppliers.find((s) => s.id === purchase.supplierId) || null;
+  }, [purchase?.supplierId, suppliers]);
+
+  useEffect(() => {
+    if (!purchase) return;
+
+    setLocalItems(
+      purchase.items.map((item) => ({
         id: item.id,
         productId: item.productId,
         variantId: item.variantId,
@@ -204,15 +212,17 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         productName: item.productName || item.product?.name || "Producto",
         variantName: item.variantName || item.variant?.name || "",
         ...(purchaseItemTransformer.toForm(item) as Pick<PurchaseItem, "quantity" | "unitCost" | "totalCost">),
-      }));
-    }
-    return localItems;
-  }, [purchase?.items, localItems]);
+      }))
+    );
+  }, [purchase?.id]);
 
-  const supplier = useMemo(() => {
-    if (!purchase?.supplierId || !suppliers) return null;
-    return suppliers.find((s) => s.id === purchase.supplierId) || null;
-  }, [purchase?.supplierId, suppliers]);
+  useEffect(() => {
+    if (!supplier) return;
+    setLocalSupplier(supplier);
+  }, [supplier?.id]);
+
+  // Items from the editable local state for both new and existing purchases.
+  const items = localItems;
 
   const effectiveSupplier = localSupplier || supplier;
 
@@ -259,7 +269,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const handleReceiptSelect = useCallback((file: File) => {
     setReceiptFile(file);
     setReceiptPreview(URL.createObjectURL(file));
-    form.setValue("receiptImageId", file as unknown as string);
+    form.setValue("receiptImageId", file);
     setFileUploadStatus({ isUploading: false, isPending: true, isError: false });
   }, [form]);
 
@@ -325,11 +335,31 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       }
 
       if (purchase) {
-        // Existing non-draft purchase: API only supports status updates.
-        if (receiptFile) {
-          await form.resolveField("receiptImageId", receiptFile as unknown as string);
+        if (!effectiveSupplier) {
+          throw new Error("Se requiere un proveedor");
         }
-        return purchase.id;
+        if (items.length === 0) {
+          throw new Error("La compra debe tener al menos un item");
+        }
+
+        const input: CreatePurchaseInput = {
+          supplierId: effectiveSupplier.id,
+          purchaseDate: form.getValues("purchaseDate"),
+          invoiceNumber: form.getValues("invoiceNumber") || undefined,
+          notes: form.getValues("notes") || undefined,
+          receiptImageId: receiptImageId || purchase.receiptImageId || undefined,
+          items: items.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId || undefined,
+            unitId: item.unitId,
+            quantity: parseFloat(item.quantity),
+            unitCost: parseFloat(item.unitCost),
+          })),
+        };
+
+        const response = await api.purchases({ id: purchase.id }).put(input);
+        const result = extractData<PurchaseWithItems>(response);
+        return result.id;
       }
 
       // New purchase: submit everything via POST /purchases

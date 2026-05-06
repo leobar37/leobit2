@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useCallback } from "react";
+import { useState, useCallback, useId } from "react";
 import { Camera, ImageIcon, AlertCircle } from "lucide-react";
 import {
   Drawer,
@@ -8,7 +8,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
 
 export interface CameraGalleryDrawerProps {
@@ -31,8 +30,9 @@ export function CameraGalleryDrawer({
   maxSize = DEFAULT_MAX_SIZE,
   title = "Adjuntar imagen",
 }: CameraGalleryDrawerProps) {
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const cameraInputId = `${id}-camera`;
+  const galleryInputId = `${id}-gallery`;
   const [error, setError] = useState<string | null>(null);
 
   const validateFile = useCallback(
@@ -66,16 +66,6 @@ export function CameraGalleryDrawer({
     e.target.value = "";
   };
 
-  const handleCameraClick = () => {
-    setError(null);
-    cameraInputRef.current?.click();
-  };
-
-  const handleGalleryClick = () => {
-    setError(null);
-    galleryInputRef.current?.click();
-  };
-
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setError(null);
@@ -94,51 +84,51 @@ export function CameraGalleryDrawer({
 
         <div className="px-4 pb-6 pt-2">
           <input
-            ref={cameraInputRef}
+            id={cameraInputId}
             type="file"
             accept={accept}
             capture="environment"
             onChange={handleFileChange}
-            className="hidden"
+            className="sr-only"
           />
           <input
-            ref={galleryInputRef}
+            id={galleryInputId}
             type="file"
             accept={accept}
             onChange={handleFileChange}
-            className="hidden"
+            className="sr-only"
           />
 
           <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
+            <label
+              htmlFor={cameraInputId}
               className={cn(
-                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
-                "hover:bg-accent hover:text-accent-foreground transition-colors"
+                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer",
+                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
               )}
-              onClick={handleCameraClick}
+              onClick={() => setError(null)}
             >
               <Camera className="h-7 w-7 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">
                 Tomar foto
               </span>
-            </Button>
+            </label>
 
-            <Button
-              type="button"
-              variant="outline"
+            <label
+              htmlFor={galleryInputId}
               className={cn(
-                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
-                "hover:bg-accent hover:text-accent-foreground transition-colors"
+                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer",
+                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
               )}
-              onClick={handleGalleryClick}
+              onClick={() => setError(null)}
             >
               <ImageIcon className="h-7 w-7 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">
                 Galería
               </span>
-            </Button>
+            </label>
           </div>
 
           {error && (
