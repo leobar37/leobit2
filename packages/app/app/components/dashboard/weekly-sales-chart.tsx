@@ -63,8 +63,8 @@ export function WeeklySalesChart({
       <h3 className="text-sm font-semibold text-foreground mb-4">
         {CHART_TITLES[periodType]}
       </h3>
-      <div className="h-44 sm:h-48">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-44 min-h-44 min-w-0 w-full sm:h-48">
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
           <BarChart
             data={chartData}
             margin={{ top: 8, right: 8, bottom: 12, left: 0 }}

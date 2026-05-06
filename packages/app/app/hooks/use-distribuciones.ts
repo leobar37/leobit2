@@ -74,6 +74,26 @@ export interface CreateDistribucionApiInput {
   }>;
 }
 
+export interface WaterRoutePreviewCustomer {
+  customerId: string;
+  customerName: string;
+  phone: string | null;
+  address: string | null;
+  profileId: string;
+  defaultContainerQuantity: number;
+  containersAtCustomer: number;
+  waterRouteId: string | null;
+  waterRouteName: string | null;
+  preferredRoute: string | null;
+  deliveryInstructions: string | null;
+}
+
+export interface WaterRouteGenerationResult {
+  distribucionId: string | null;
+  customers: WaterRoutePreviewCustomer[];
+  createdVisits: number;
+}
+
 export interface CloseDistribucionInput {
   id: string;
   notaCierre?: string;
@@ -236,6 +256,39 @@ export function useCreateDistribucion() {
     mutationFn: async (input: CreateDistribucionApiInput) => {
       const response = await api.distribuciones.post(input);
       return extractData<Distribucion>(response);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.distribuciones.all,
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "visitas",
+      });
+    },
+  });
+}
+
+export function usePreviewWaterRoute() {
+  return useMutation({
+    mutationFn: async (input: { fecha: string; waterRouteId: string }) => {
+      const response = await api.distribuciones.water.preview.post(input);
+      return extractData<WaterRouteGenerationResult>(response);
+    },
+  });
+}
+
+export function useGenerateWaterRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      vendedorId: string;
+      fecha: string;
+      waterRouteId: string;
+      notaCreacion?: string;
+    }) => {
+      const response = await api.distribuciones.water.generate.post(input);
+      return extractData<WaterRouteGenerationResult>(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

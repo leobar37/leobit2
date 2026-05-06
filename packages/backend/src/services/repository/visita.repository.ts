@@ -4,13 +4,23 @@
  */
 import { eq, and, inArray, desc, asc } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { visitas, customers, type Visita, type NewVisita } from "../../db/schema";
+import {
+  visitas,
+  customers,
+  waterDeliveryStops,
+  type Visita,
+  type NewVisita,
+  type WaterDeliveryStop,
+} from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import type { DbTransaction } from "../../lib/txid";
 
 export interface VisitaWithCustomer extends Visita {
   customerName: string;
   customerDni?: string | null;
+  customerAddress?: string | null;
+  customerPhone?: string | null;
+  waterStop?: WaterDeliveryStop | null;
 }
 
 export interface CreateVisitaData {
@@ -49,9 +59,13 @@ export class VisitaRepository {
         updatedAt: visitas.updatedAt,
         customerName: customers.name,
         customerDni: customers.dni,
+        customerAddress: customers.address,
+        customerPhone: customers.phone,
+        waterStop: waterDeliveryStops,
       })
       .from(visitas)
       .innerJoin(customers, eq(visitas.customerId, customers.id))
+      .leftJoin(waterDeliveryStops, eq(waterDeliveryStops.visitaId, visitas.id))
       .where(and(
         eq(visitas.businessId, ctx.businessId),
         eq(visitas.distribucionId, distribucionId)
@@ -79,9 +93,13 @@ export class VisitaRepository {
         updatedAt: visitas.updatedAt,
         customerName: customers.name,
         customerDni: customers.dni,
+        customerAddress: customers.address,
+        customerPhone: customers.phone,
+        waterStop: waterDeliveryStops,
       })
       .from(visitas)
       .innerJoin(customers, eq(visitas.customerId, customers.id))
+      .leftJoin(waterDeliveryStops, eq(waterDeliveryStops.visitaId, visitas.id))
       .where(and(
         eq(visitas.id, visitId),
         eq(visitas.businessId, ctx.businessId)
@@ -94,8 +112,9 @@ export class VisitaRepository {
   /**
    * Create a single visit
    */
-  async create(ctx: RequestContext, data: CreateVisitaData): Promise<Visita> {
-    const [visit] = await db
+  async create(ctx: RequestContext, data: CreateVisitaData, tx?: DbTransaction): Promise<Visita> {
+    const dbOrTx = tx || db;
+    const [visit] = await dbOrTx
       .insert(visitas)
       .values({
         ...(data.id ? { id: data.id } : {}),

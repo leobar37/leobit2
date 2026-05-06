@@ -11,6 +11,8 @@ import {
   TrendingUp,
   Package,
   Receipt,
+  Droplets,
+  Route,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -67,6 +69,7 @@ export default function DashboardPage() {
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.estado === "activo";
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
+  const isWaterMode = business?.businessMode === "agua";
 
   const debtorsCount = debtorsSummary?.debtorsCount ?? 0;
   const currentPeriodLabel =
@@ -104,6 +107,7 @@ export default function DashboardPage() {
         hasProducts={hasProducts}
         hasSales={hasSales}
         userName={user?.name?.split(" ")[0]}
+        businessMode={business?.businessMode}
         onCreateSale={() => setCreateSheetOpen(true)}
       />
 
@@ -112,12 +116,12 @@ export default function DashboardPage() {
 
       {/* Accesos Rápidos - Siempre visibles */}
       <div className="grid grid-cols-3 gap-3">
-        <Link to="/ventas" className="block">
+        <Link to={isWaterMode ? "/distribuciones/nueva" : "/ventas"} className="block">
           <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
               <ShoppingCart className="h-4.5 w-4.5 text-foreground/75" />
             </div>
-            <span className="text-xs font-medium text-foreground/85">Venta</span>
+            <span className="text-xs font-medium text-foreground/85">{isWaterMode ? "Ruta" : "Venta"}</span>
           </div>
         </Link>
 
@@ -180,14 +184,18 @@ export default function DashboardPage() {
               iconColor="text-orange-600"
             />
             <MetricCard
-              title="Kilos"
-              value={isLoadingSales ? "-" : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
+              title={isWaterMode ? "Bidones" : "Kilos"}
+              value={isLoadingSales
+                ? "-"
+                : isWaterMode
+                  ? String(Math.round(salesStats?.current.kilos ?? 0))
+                  : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
               change={salesStats?.change.kilos}
-              icon={Weight}
+              icon={isWaterMode ? Droplets : Weight}
               iconColor="text-blue-600"
             />
             <MetricCard
-              title="Deudores"
+              title={isWaterMode ? "Cobranza pendiente" : "Deudores"}
               value={isLoadingDebtors ? "-" : String(debtorsCount)}
               subtitle="clientes con deuda"
               icon={Users}
@@ -216,7 +224,7 @@ export default function DashboardPage() {
           {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
             <Link to="/mi-distribucion" className="block">
               <InventoryCard
-                puntoVenta={distribucion.puntoVenta}
+                puntoVenta={isWaterMode ? `Ruta ${distribucion.puntoVenta}` : distribucion.puntoVenta}
                 modo={"libre" as const}
                 estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
                 cantidadItems={0}
@@ -234,11 +242,16 @@ export default function DashboardPage() {
                     <p className="font-medium text-foreground">Sin distribución asignada</p>
                     <p className="text-sm text-muted-foreground">
                       {isAdmin
-                        ? "Asigna tu distribución para hoy"
+                        ? isWaterMode
+                          ? "Crea una ruta para hoy"
+                          : "Asigna tu distribución para hoy"
                         : "Contacta a tu administrador"}
                     </p>
                   </div>
-                  {isAdmin && <Settings className="h-4 w-4 text-amber-500 ml-auto" />}
+                  {isAdmin && (isWaterMode
+                    ? <Route className="h-4 w-4 text-amber-500 ml-auto" />
+                    : <Settings className="h-4 w-4 text-amber-500 ml-auto" />
+                  )}
                 </div>
               </div>
             </Link>

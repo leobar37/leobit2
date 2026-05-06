@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "plan": "water-vertical-customer-profiles",
+  "mode": "structured",
+  "requirementsFile": "requirements.md",
+  "taskIndexFile": "task-index.md",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Vertical data model",
+      "file": "tasks/01-vertical-data-model.md",
+      "status": "completed",
+      "phase": "foundation",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-008",
+        "FR-009",
+        "FR-014",
+        "NFR-005",
+        "NFR-006"
+      ]
+    },
+    {
+      "id": "T-002",
+      "title": "Water API contracts",
+      "file": "tasks/02-water-api-contracts.md",
+      "status": "completed",
+      "phase": "contracts",
+      "dependencies": [
+        "T-001"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-013",
+        "FR-014",
+        "NFR-004",
+        "NFR-005"
+      ]
+    },
+    {
+      "id": "T-003",
+      "title": "Customer profile UI",
+      "file": "tasks/03-customer-profile-ui.md",
+      "status": "completed",
+      "phase": "frontend",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "NFR-001",
+        "NFR-002",
+        "NFR-003"
+      ]
+    },
+    {
+      "id": "T-004",
+      "title": "Water route generation",
+      "file": "tasks/04-water-route-generation.md",
+      "status": "completed",
+      "phase": "workflow",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-005"
+      ]
+    },
+    {
+      "id": "T-005",
+      "title": "Water delivery execution",
+      "file": "tasks/05-water-delivery-execution.md",
+      "status": "pending",
+      "phase": "workflow",
+      "dependencies": [
+        "T-004"
+      ],
+      "requirements": [
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "NFR-001"
+      ]
+    },
+    {
+      "id": "T-006",
+      "title": "Deposits and container views",
+      "file": "tasks/06-deposits-and-container-views.md",
+      "status": "pending",
+      "phase": "operations",
+      "dependencies": [
+        "T-005"
+      ],
+      "requirements": [
+        "FR-009",
+        "FR-012"
+      ]
+    },
+    {
+      "id": "T-007",
+      "title": "Water onboarding and labels",
+      "file": "tasks/07-water-onboarding-and-labels.md",
+      "status": "pending",
+      "phase": "polish",
+      "dependencies": [
+        "T-002"
+      ],
+      "requirements": [
+        "FR-010",
+        "FR-011",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "T-008",
+      "title": "Water dashboard and QA",
+      "file": "tasks/08-water-dashboard-and-qa.md",
+      "status": "pending",
+      "phase": "validation",
+      "dependencies": [
+        "T-003",
+        "T-005",
+        "T-006",
+        "T-007"
+      ],
+      "requirements": [
+        "FR-012",
+        "NFR-001"
+      ]
+    }
+  ]
+}

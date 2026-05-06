@@ -74,6 +74,21 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         phone: t.Optional(t.Union([t.String(), t.Null()])),
         address: t.Optional(t.Union([t.String(), t.Null()])),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
+        waterProfile: t.Optional(t.Union([
+          t.Object({
+            deliveryFrequency: t.Optional(t.String()),
+            deliveryDays: t.Optional(t.Array(t.String())),
+            defaultContainerQuantity: t.Optional(t.Number({ minimum: 0 })),
+            containersAtCustomer: t.Optional(t.Number({ minimum: 0 })),
+            depositAmount: t.Optional(t.Union([t.String(), t.Number()])),
+            depositStatus: t.Optional(t.String()),
+            depositExceptionReason: t.Optional(t.Union([t.String(), t.Null()])),
+            waterRouteId: t.Optional(t.Union([t.String(), t.Null()])),
+            preferredRoute: t.Optional(t.Union([t.String(), t.Null()])),
+            deliveryInstructions: t.Optional(t.Union([t.String(), t.Null()])),
+          }),
+          t.Null(),
+        ])),
       }),
     }
   )
@@ -93,6 +108,21 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
         phone: t.Optional(t.Union([t.String(), t.Null()])),
         address: t.Optional(t.Union([t.String(), t.Null()])),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
+        waterProfile: t.Optional(t.Union([
+          t.Object({
+            deliveryFrequency: t.Optional(t.String()),
+            deliveryDays: t.Optional(t.Array(t.String())),
+            defaultContainerQuantity: t.Optional(t.Number({ minimum: 0 })),
+            containersAtCustomer: t.Optional(t.Number({ minimum: 0 })),
+            depositAmount: t.Optional(t.Union([t.String(), t.Number()])),
+            depositStatus: t.Optional(t.String()),
+            depositExceptionReason: t.Optional(t.Union([t.String(), t.Null()])),
+            waterRouteId: t.Optional(t.Union([t.String(), t.Null()])),
+            preferredRoute: t.Optional(t.Union([t.String(), t.Null()])),
+            deliveryInstructions: t.Optional(t.Union([t.String(), t.Null()])),
+          }),
+          t.Null(),
+        ])),
       }),
     }
   )

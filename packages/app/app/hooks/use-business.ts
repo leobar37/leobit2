@@ -108,6 +108,7 @@ export function useCreateBusiness() {
       if (business.businessUserId) {
         setStoredBusinessUserId(business.businessUserId);
       }
+      queryClient.setQueryData(PERSISTED_REMOTE_QUERY_KEYS.business, business);
       queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
     },
   });

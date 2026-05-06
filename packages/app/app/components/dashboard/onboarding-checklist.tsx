@@ -8,13 +8,14 @@ interface OnboardingChecklistProps {
   hasProducts: boolean;
   hasSales: boolean;
   userName?: string;
+  businessMode?: string;
   onCreateSale?: () => void;
 }
 
 const CHECKLIST_DISMISSED_KEY = "avileo:onboarding-checklist-dismissed";
 const CHECKLIST_COMPLETED_KEY = "avileo:onboarding-checklist-completed";
 
-export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateSale }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ hasProducts, hasSales, userName, businessMode, onCreateSale }: OnboardingChecklistProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -32,6 +33,8 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
     setIsDismissed(true);
   };
 
+  const isWaterMode = businessMode === "agua";
+
   const items = [
     {
       id: "business_created",
@@ -45,7 +48,7 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
     {
       id: "first_product",
       label: "Agregar tu primer producto",
-      description: "Ej: Pollo entero, medio pollo, etc.",
+      description: isWaterMode ? "Ej: Bidón 20L, recarga 20L, bidón 10L." : "Ej: Pollo entero, medio pollo, etc.",
       completed: hasProducts,
       actionLabel: hasProducts ? "Listo" : "Hacer ahora",
       actionHref: "/productos/nuevo",
@@ -53,11 +56,11 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, onCreateS
     },
     {
       id: "first_sale",
-      label: "Registrar tu primera venta",
-      description: "Empieza a registrar tus ventas diarias",
+      label: isWaterMode ? "Crear tu primera ruta" : "Registrar tu primera venta",
+      description: isWaterMode ? "Organiza tus repartos diarios por ruta" : "Empieza a registrar tus ventas diarias",
       completed: hasSales,
       actionLabel: hasSales ? "Listo" : "Empezar",
-      actionHref: "/ventas/nueva",
+      actionHref: isWaterMode ? "/distribuciones/nueva" : "/ventas/nueva",
       icon: ShoppingCart,
     },
   ];

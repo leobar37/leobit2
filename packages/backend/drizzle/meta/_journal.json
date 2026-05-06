@@ -344,6 +344,20 @@
       "when": 1777939200000,
       "tag": "0066_remove_unused_config_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1778025600000,
+      "tag": "0067_add_business_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1778112000000,
+      "tag": "0068_add_water_vertical_tables",
+      "breakpoints": true
     }
   ]
 }

@@ -143,6 +143,130 @@ export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 
 // ============================================================================
+// Water Customer Profiles
+// ============================================================================
+
+export const waterRoutes = pgTable(
+  "water_routes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    zone: varchar("zone", { length: 160 }),
+    description: text("description"),
+    isActive: integer("is_active").notNull().default(1),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_water_routes_business_id").on(table.businessId),
+  ]
+);
+
+export const waterCustomerProfiles = pgTable(
+  "water_customer_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
+    deliveryFrequency: varchar("delivery_frequency", { length: 40 }).notNull().default("weekly"),
+    deliveryDays: jsonb("delivery_days").$type<string[]>().notNull().default([]),
+    defaultContainerQuantity: integer("default_container_quantity").notNull().default(1),
+    containersAtCustomer: integer("containers_at_customer").notNull().default(0),
+    depositAmount: decimal("deposit_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+    depositStatus: varchar("deposit_status", { length: 30 }).notNull().default("none"),
+    depositExceptionReason: text("deposit_exception_reason"),
+    waterRouteId: uuid("water_route_id"),
+    preferredRoute: varchar("preferred_route", { length: 120 }),
+    deliveryInstructions: text("delivery_instructions"),
+    scheduleAnchorDate: timestamp("schedule_anchor_date"),
+    lastScheduledAt: timestamp("last_scheduled_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_water_customer_profiles_business_id").on(table.businessId),
+    index("idx_water_customer_profiles_customer_id").on(table.customerId),
+  ]
+);
+
+export const waterDeliveryStops = pgTable(
+  "water_delivery_stops",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    visitaId: uuid("visita_id").notNull(),
+    customerProfileId: uuid("customer_profile_id").notNull(),
+    waterRouteId: uuid("water_route_id"),
+    scheduledDate: varchar("scheduled_date", { length: 10 }).notNull(),
+    expectedContainerQuantity: integer("expected_container_quantity").notNull().default(1),
+    containersAtStart: integer("containers_at_start").notNull().default(0),
+    deliveredContainerQuantity: integer("delivered_container_quantity").notNull().default(0),
+    collectedContainerQuantity: integer("collected_container_quantity").notNull().default(0),
+    damagedContainerQuantity: integer("damaged_container_quantity").notNull().default(0),
+    lostContainerQuantity: integer("lost_container_quantity").notNull().default(0),
+    status: varchar("status", { length: 30 }).notNull().default("pendiente"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_water_delivery_stops_business_id").on(table.businessId),
+    index("idx_water_delivery_stops_visita_id").on(table.visitaId),
+  ]
+);
+
+export const waterContainerLedgerEntries = pgTable(
+  "water_container_ledger_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
+    customerProfileId: uuid("customer_profile_id").notNull(),
+    visitaId: uuid("visita_id"),
+    entryType: varchar("entry_type", { length: 30 }).notNull(),
+    quantity: integer("quantity").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_water_container_ledger_business_id").on(table.businessId),
+    index("idx_water_container_ledger_customer_id").on(table.customerId),
+  ]
+);
+
+export const waterDepositLedgerEntries = pgTable(
+  "water_deposit_ledger_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
+    customerProfileId: uuid("customer_profile_id").notNull(),
+    entryType: varchar("entry_type", { length: 30 }).notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    balanceAfter: decimal("balance_after", { precision: 10, scale: 2 }).notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_water_deposit_ledger_business_id").on(table.businessId),
+    index("idx_water_deposit_ledger_customer_id").on(table.customerId),
+  ]
+);
+
+export type WaterRoute = typeof waterRoutes.$inferSelect;
+export type NewWaterRoute = typeof waterRoutes.$inferInsert;
+export type WaterCustomerProfile = typeof waterCustomerProfiles.$inferSelect;
+export type NewWaterCustomerProfile = typeof waterCustomerProfiles.$inferInsert;
+export type WaterDeliveryStop = typeof waterDeliveryStops.$inferSelect;
+export type NewWaterDeliveryStop = typeof waterDeliveryStops.$inferInsert;
+export type WaterContainerLedgerEntry = typeof waterContainerLedgerEntries.$inferSelect;
+export type NewWaterContainerLedgerEntry = typeof waterContainerLedgerEntries.$inferInsert;
+export type WaterDepositLedgerEntry = typeof waterDepositLedgerEntries.$inferSelect;
+export type NewWaterDepositLedgerEntry = typeof waterDepositLedgerEntries.$inferInsert;
+
+// ============================================================================
 // Sales
 // ============================================================================
 

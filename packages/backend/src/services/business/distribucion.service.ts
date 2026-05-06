@@ -4,6 +4,8 @@ import type { DistribucionItemRepository } from "../repository/distribucion-item
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { CustomerGroupRepository } from "../repository/customer-group.repository";
 import type { VisitaRepository } from "../repository/visita.repository";
+import type { WaterCustomerProfileRepository } from "../repository/water-customer-profile.repository";
+import type { WaterRouteRepository } from "../repository/water-route.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
   NotFoundError,
@@ -41,7 +43,9 @@ export class DistribucionService {
     private itemRepository: DistribucionItemRepository,
     private variantRepository: ProductVariantRepository,
     private customerGroupRepository: CustomerGroupRepository,
-    private visitaRepository: VisitaRepository
+    private visitaRepository: VisitaRepository,
+    private waterCustomerProfileRepository?: WaterCustomerProfileRepository,
+    private waterRouteRepository?: WaterRouteRepository
   ) {}
 
   async getDistribuciones(
@@ -180,6 +184,192 @@ export class DistribucionService {
     }
 
     return distribucionWithItems;
+  }
+
+  async previewWaterRoute(
+    ctx: RequestContext,
+    data: {
+      fecha: string;
+      waterRouteId: string;
+    }
+  ) {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver rutas");
+    }
+    this.assertWaterMode(ctx);
+    if (!data.waterRouteId) {
+      throw new ValidationError("La ruta es requerida");
+    }
+
+    const day = this.resolveDayKey(data.fecha);
+    const candidates = await this.getWaterProfileRepository().findScheduledCandidates(
+      ctx,
+      data.waterRouteId,
+      data.fecha
+    );
+    const profiles = candidates.filter((profile) => this.matchesWaterSchedule(profile, data.fecha, day));
+
+    return profiles.map((profile) => this.toWaterRouteCustomer(profile));
+  }
+
+  async generateWaterRoute(
+    ctx: RequestContext,
+    data: {
+      vendedorId: string;
+      fecha: string;
+      waterRouteId: string;
+      notaCreacion?: string;
+    }
+  ) {
+    const dbOrTx = db;
+
+    if (!ctx.hasPermission("inventory.write")) {
+      throw new ForbiddenError("No tiene permisos para crear rutas");
+    }
+    this.assertWaterMode(ctx);
+
+    if (!data.vendedorId) {
+      throw new ValidationError("El repartidor es requerido");
+    }
+
+    const route = await this.getWaterRouteRepository().findById(ctx, data.waterRouteId);
+    if (!route) {
+      throw new NotFoundError("Ruta");
+    }
+
+    const routeName = route.name;
+    const day = this.resolveDayKey(data.fecha);
+    const candidates = await this.getWaterProfileRepository().findScheduledCandidates(
+      ctx,
+      data.waterRouteId,
+      data.fecha
+    );
+    const profiles = candidates.filter((profile) => this.matchesWaterSchedule(profile, data.fecha, day));
+
+    if (profiles.length === 0) {
+      throw new ValidationError("No hay clientes programados para esta ruta");
+    }
+
+    return dbOrTx.transaction(async (tx) => {
+      const distribucion = await this.repository.create(ctx, {
+        vendedorId: data.vendedorId,
+        puntoVenta: routeName,
+        montoRecaudado: "0",
+        notaCreacion: data.notaCreacion ?? "Ruta generada desde clientes programados de agua",
+        fecha: data.fecha,
+        estado: "activo",
+      }, tx);
+
+      for (const profile of profiles) {
+        const visita = await this.visitaRepository.create(ctx, {
+          distribucionId: distribucion.id,
+          customerId: profile.customerId,
+        }, tx);
+
+        await this.getWaterProfileRepository().createDeliveryStop(ctx, {
+          visitaId: visita.id,
+          customerProfileId: profile.id,
+          waterRouteId: data.waterRouteId,
+          scheduledDate: data.fecha,
+          expectedContainerQuantity: profile.defaultContainerQuantity,
+          containersAtStart: profile.containersAtCustomer,
+        }, tx);
+
+        await this.getWaterProfileRepository().markScheduled(
+          ctx,
+          profile.id,
+          new Date(`${data.fecha}T00:00:00`),
+          tx
+        );
+      }
+
+      return {
+        distribucionId: distribucion.id,
+        customers: profiles.map((profile) => this.toWaterRouteCustomer(profile)),
+        createdVisits: profiles.length,
+      };
+    });
+  }
+
+  private assertWaterMode(ctx: RequestContext) {
+    if (ctx.businessMode !== "agua") {
+      throw new ValidationError("La generación de rutas de agua solo aplica a negocios de agua");
+    }
+  }
+
+  private getWaterProfileRepository(): WaterCustomerProfileRepository {
+    if (!this.waterCustomerProfileRepository) {
+      throw new Error("Water customer profile repository is not configured");
+    }
+    return this.waterCustomerProfileRepository;
+  }
+
+  private getWaterRouteRepository(): WaterRouteRepository {
+    if (!this.waterRouteRepository) {
+      throw new Error("Water route repository is not configured");
+    }
+    return this.waterRouteRepository;
+  }
+
+  private resolveDayKey(fecha: string): string {
+    const date = new Date(`${fecha}T00:00:00`);
+    const dayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return dayKeys[date.getDay()] ?? "monday";
+  }
+
+  private matchesWaterSchedule(
+    profile: import("../repository/water-customer-profile.repository").WaterRouteProfileRow,
+    fecha: string,
+    day: string
+  ): boolean {
+    const frequency = profile.deliveryFrequency ?? "weekly";
+    const deliveryDays = Array.isArray(profile.deliveryDays) ? profile.deliveryDays : [];
+
+    if (frequency === "daily") {
+      return true;
+    }
+
+    if (frequency === "weekly") {
+      return deliveryDays.includes(day);
+    }
+
+    const selected = new Date(`${fecha}T00:00:00`);
+    const base = profile.lastScheduledAt ?? profile.scheduleAnchorDate ?? profile.createdAt;
+    if (!base) {
+      return deliveryDays.length === 0 || deliveryDays.includes(day);
+    }
+
+    const baseDate = new Date(base);
+    const diffDays = Math.floor((selected.getTime() - baseDate.getTime()) / 86_400_000);
+    if (diffDays < 0) {
+      return false;
+    }
+
+    if (frequency === "biweekly") {
+      return diffDays % 14 === 0;
+    }
+
+    if (frequency === "monthly") {
+      return selected.getDate() === baseDate.getDate();
+    }
+
+    return deliveryDays.includes(day);
+  }
+
+  private toWaterRouteCustomer(profile: import("../repository/water-customer-profile.repository").WaterRouteProfileRow) {
+    return {
+      customerId: profile.customerId,
+      customerName: profile.customerName,
+      phone: profile.customerPhone,
+      address: profile.customerAddress,
+      profileId: profile.id,
+      defaultContainerQuantity: profile.defaultContainerQuantity,
+      containersAtCustomer: profile.containersAtCustomer,
+      preferredRoute: profile.preferredRoute,
+      waterRouteId: profile.waterRouteId,
+      waterRouteName: profile.waterRouteName,
+      deliveryInstructions: profile.deliveryInstructions,
+    };
   }
 
   async updateDistribucion(

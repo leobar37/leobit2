@@ -21,6 +21,39 @@ export interface Customer {
   updatedAt: string;
   totalDebt?: number;
   lastSaleDate?: string | null;
+  waterProfile?: WaterCustomerProfile | null;
+}
+
+export interface WaterCustomerProfile {
+  id: string;
+  businessId: string;
+  customerId: string;
+  deliveryFrequency: string;
+  deliveryDays: string[];
+  defaultContainerQuantity: number;
+  containersAtCustomer: number;
+  depositAmount: string;
+  depositStatus: string;
+  depositExceptionReason: string | null;
+  waterRouteId: string | null;
+  waterRouteName?: string | null;
+  preferredRoute: string | null;
+  deliveryInstructions: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaterCustomerProfileInput {
+  deliveryFrequency?: string;
+  deliveryDays?: string[];
+  defaultContainerQuantity?: number;
+  containersAtCustomer?: number;
+  depositAmount?: string | number;
+  depositStatus?: string;
+  depositExceptionReason?: string | null;
+  waterRouteId?: string | null;
+  preferredRoute?: string | null;
+  deliveryInstructions?: string | null;
 }
 
 export interface PaginatedCustomersResult {
@@ -53,6 +86,7 @@ export interface CreateCustomerInput {
   phone?: string | null;
   address?: string | null;
   notes?: string | null;
+  waterProfile?: WaterCustomerProfileInput | null;
 }
 
 export interface UpdateCustomerInput {
@@ -61,6 +95,7 @@ export interface UpdateCustomerInput {
   phone?: string | null;
   address?: string | null;
   notes?: string | null;
+  waterProfile?: WaterCustomerProfileInput | null;
 }
 
 export interface CustomerTagSummary {
@@ -204,7 +239,7 @@ export function useCreateCustomer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
-      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "customers" });
     },
   });
 }
@@ -231,7 +266,7 @@ export function useUpdateCustomer() {
         queryKey: queryKeys.customers.detail(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
-      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "customers" });
     },
   });
 }
@@ -252,7 +287,7 @@ export function useDeleteCustomer() {
         queryKey: queryKeys.customers.detail(id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
-      queryClient.invalidateQueries({ queryKey: ["customers", "search"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "customers" });
     },
   });
 }

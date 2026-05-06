@@ -19,10 +19,10 @@ import {
 import { relations, sql } from "drizzle-orm";
 import { businessUserRoleEnum } from "./enums";
 
-import type { BusinessCalculatorSettings } from "@avileo/shared";
+import type { BusinessCalculatorSettings, BusinessModeFlags } from "@avileo/shared";
 
 // Re-export BusinessCalculatorSettings for use in other modules
-export type { BusinessCalculatorSettings } from "@avileo/shared";
+export type { BusinessCalculatorSettings, BusinessModeFlags } from "@avileo/shared";
 
 /**
  * Default calculator settings
@@ -55,6 +55,10 @@ export const businesses = pgTable(
 
     // Feature flags específicos del negocio
     usarDistribucion: boolean("usar_distribucion").default(true),
+
+    // Business mode / vertical
+    businessMode: varchar("business_mode", { length: 50 }).notNull().default("polleria"),
+    modeConfigOverrides: jsonb("mode_config_overrides").$type<Partial<BusinessModeFlags>>().default({}),
 
     // Calculator settings (JSONB for flexibility)
     calculatorSettings: jsonb("calculator_settings").$type<BusinessCalculatorSettings>().default(defaultCalculatorSettings),

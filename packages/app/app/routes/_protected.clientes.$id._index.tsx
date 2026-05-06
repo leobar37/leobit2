@@ -11,6 +11,9 @@ import {
   Trash2,
   User,
   Wallet,
+  Droplets,
+  CalendarDays,
+  Route,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,17 @@ import { formatDate } from "~/lib/formatting";
 import { decimalToNumber } from "@avileo/shared";
 import { CustomerTagsModal, useCustomerTagsModal } from "~/components/customers/customer-tags-modal";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
+import { useBusinessMode } from "~/hooks/use-business-mode";
+
+const dayLabels: Record<string, string> = {
+  monday: "Lunes",
+  tuesday: "Martes",
+  wednesday: "Miércoles",
+  thursday: "Jueves",
+  friday: "Viernes",
+  saturday: "Sábado",
+  sunday: "Domingo",
+};
 
 export default function CustomerDetailPage() {
   const { id } = useParams();
@@ -37,6 +51,7 @@ export default function CustomerDetailPage() {
   const { data: balance, isLoading: balanceLoading } = useCustomerBalance(id ?? null);
   const { data: sales = [], isLoading: salesLoading } = useSalesByCustomer(id ?? "");
   const { data: payments = [], isLoading: paymentsLoading } = useCustomerPayments(id ?? null);
+  const { mode } = useBusinessMode();
   const deleteCustomer = useDeleteCustomer();
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const tagsModal = useCustomerTagsModal();
@@ -163,6 +178,61 @@ export default function CustomerDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {mode === "agua" && customer.waterProfile && (
+          <Card className="shell-card-flat rounded-[28px]">
+            <CardContent className="space-y-4 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
+                  <Droplets className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Perfil de reparto</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Programación y preferencias de entrega del cliente
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <div className="shell-block-muted rounded-[20px] p-3">
+                  <p className="text-xs text-muted-foreground">Bidones habituales</p>
+                  <p className="text-lg font-semibold">
+                    {customer.waterProfile.defaultContainerQuantity}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <CalendarDays className="mt-0.5 h-4 w-4" />
+                  <span>
+                    {customer.waterProfile.deliveryDays.length > 0
+                      ? customer.waterProfile.deliveryDays.map((day) => dayLabels[day] ?? day).join(", ")
+                      : "Sin días programados"}
+                  </span>
+                </div>
+                {customer.waterProfile.preferredRoute && (
+                  <div className="flex items-start gap-2 text-muted-foreground">
+                    <MapPin className="mt-0.5 h-4 w-4" />
+                    <span>{customer.waterProfile.preferredRoute}</span>
+                  </div>
+                )}
+                {customer.waterProfile.waterRouteName && (
+                  <div className="flex items-start gap-2 text-muted-foreground">
+                    <Route className="mt-0.5 h-4 w-4" />
+                    <span>{customer.waterProfile.waterRouteName}</span>
+                  </div>
+                )}
+                {customer.waterProfile.deliveryInstructions && (
+                  <p className="rounded-[20px] bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
+                    {customer.waterProfile.deliveryInstructions}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shell-card-flat rounded-[28px]">
           <CardContent className="space-y-2 p-4">

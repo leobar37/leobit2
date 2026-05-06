@@ -60,6 +60,8 @@ export interface Business {
   publicCatalogEnabled: boolean;
   publicCatalogSlug: string | null;
   usarDistribucion: boolean;
+  businessMode: "polleria" | "agua";
+  modeConfigOverrides: Record<string, unknown> | null;
   role: string;
   salesPoint: string | null;
   isActive: boolean;
@@ -73,6 +75,7 @@ export interface CreateBusinessInput {
   address?: string;
   phone?: string;
   email?: string;
+  businessMode?: "polleria" | "agua";
 }
 
 export interface UpdateBusinessInput {
@@ -84,6 +87,8 @@ export interface UpdateBusinessInput {
   usarDistribucion?: boolean;
   publicCatalogEnabled?: boolean;
   publicCatalogSlug?: string | null;
+  businessMode?: "polleria" | "agua";
+  modeConfigOverrides?: Record<string, unknown>;
 }
 
 export const InvitationStatus = {
@@ -116,6 +121,92 @@ export interface PublicInvitation {
   email: string;
   name: string;
   salesPoint: string | null;
+}
+
+export const WaterDeliveryFrequency = {
+  DAILY: "daily",
+  WEEKLY: "weekly",
+  BIWEEKLY: "biweekly",
+  MONTHLY: "monthly",
+  ON_DEMAND: "on_demand",
+} as const;
+
+export const WaterDepositStatus = {
+  NONE: "none",
+  ACTIVE: "active",
+  REFUNDED: "refunded",
+  PENALIZED: "penalized",
+} as const;
+
+export type WaterDeliveryFrequency =
+  (typeof WaterDeliveryFrequency)[keyof typeof WaterDeliveryFrequency];
+export type WaterDepositStatus =
+  (typeof WaterDepositStatus)[keyof typeof WaterDepositStatus];
+
+export interface WaterCustomerProfileDTO {
+  id: string;
+  businessId: string;
+  customerId: string;
+  deliveryFrequency: WaterDeliveryFrequency | string;
+  deliveryDays: string[];
+  defaultContainerQuantity: number;
+  containersAtCustomer: number;
+  depositAmount: string;
+  depositStatus: WaterDepositStatus | string;
+  depositExceptionReason: string | null;
+  waterRouteId: string | null;
+  waterRouteName?: string | null;
+  preferredRoute: string | null;
+  deliveryInstructions: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWaterCustomerProfileInput {
+  deliveryFrequency?: WaterDeliveryFrequency | string;
+  deliveryDays?: string[];
+  defaultContainerQuantity?: number;
+  containersAtCustomer?: number;
+  depositAmount?: string | number;
+  depositStatus?: WaterDepositStatus | string;
+  depositExceptionReason?: string | null;
+  waterRouteId?: string | null;
+  preferredRoute?: string | null;
+  deliveryInstructions?: string | null;
+}
+
+export type UpdateWaterCustomerProfileInput =
+  Partial<CreateWaterCustomerProfileInput>;
+
+export interface CustomerWithWaterProfile {
+  waterProfile?: WaterCustomerProfileDTO | null;
+}
+
+export interface GenerateWaterRouteInput {
+  vendedorId: string;
+  fecha: string;
+  waterRouteId: string;
+  preview?: boolean;
+}
+
+export interface WaterRoutePreviewCustomer {
+  customerId: string;
+  customerName: string;
+  phone: string | null;
+  address: string | null;
+  profileId: string;
+  defaultContainerQuantity: number;
+  containersAtCustomer: number;
+  waterRouteId: string | null;
+  waterRouteName: string | null;
+  preferredRoute: string | null;
+  deliveryInstructions: string | null;
+}
+
+export interface WaterRouteGenerationResult {
+  distribucionId: string | null;
+  customers: WaterRoutePreviewCustomer[];
+  createdVisits: number;
 }
 
 // Product Variants (API types - different from Drizzle schema)
@@ -391,3 +482,18 @@ export {
 // Standards
 export { DECIMALS } from "./standards/decimals";
 export type { DecimalConfig } from "./standards/decimals";
+
+// Business Modes
+export {
+  BusinessModeFlagsSchema,
+  BusinessModeSlugSchema,
+  mergeBusinessModeFlags,
+  BUSINESS_MODE_DEFAULTS,
+  getDefaultFlags,
+  SUPPORTED_BUSINESS_MODES,
+} from "./business-modes";
+
+export type {
+  BusinessModeFlags,
+  BusinessModeSlug,
+} from "./business-modes";

@@ -35,6 +35,7 @@ import { puntoVentaRoutes } from "./api/puntos-venta";
 import { mediaRoutes } from "./api/media";
 import { expenseRoutes } from "./api/expenses";
 import { expenseCategoryRoutes } from "./api/expense-categories";
+import { waterRouteRoutes } from "./api/water-routes";
 import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -103,6 +104,7 @@ export const app = new Elysia()
   .use(mediaRoutes)
   .use(expenseRoutes)
   .use(expenseCategoryRoutes)
+  .use(waterRouteRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

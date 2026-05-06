@@ -5,7 +5,9 @@
 import type { VisitaRepository, VisitaWithCustomer, CreateVisitaData, BulkCreateVisitasData, UpdateVisitaStatusData } from "../repository/visita.repository";
 import type { CustomerRepository } from "../repository/customer.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
+import type { WaterCustomerProfileRepository } from "../repository/water-customer-profile.repository";
 import type { RequestContext } from "../../context/request-context";
+import { db } from "../../lib/db";
 import {
   NotFoundError,
   ValidationError,
@@ -17,6 +19,7 @@ export class VisitaService {
     private visitaRepo: VisitaRepository,
     private customerRepo: CustomerRepository,
     private distribucionRepo: DistribucionRepository,
+    private waterCustomerProfileRepo?: WaterCustomerProfileRepository,
   ) {}
 
   /**
@@ -159,6 +162,89 @@ export class VisitaService {
     }
 
     return this.visitaRepo.updateStatus(ctx, visitId, data);
+  }
+
+  async completeWaterDelivery(
+    ctx: RequestContext,
+    visitId: string,
+    data: {
+      status: "entregado" | "no_atendido" | "reprogramado";
+      delivered?: number;
+      collected?: number;
+      damaged?: number;
+      lost?: number;
+      notes?: string | null;
+    }
+  ) {
+    if (!ctx.hasPermission("sales.write")) {
+      throw new ForbiddenError("No tiene permisos para completar entregas");
+    }
+
+    if (ctx.businessMode !== "agua") {
+      throw new ValidationError("La ejecución de entrega de agua solo aplica a negocios de agua");
+    }
+
+    const waterRepo = this.getWaterCustomerProfileRepo();
+    const visit = await this.visitaRepo.findById(ctx, visitId);
+    if (!visit) {
+      throw new NotFoundError("Visita");
+    }
+
+    const stop = await waterRepo.findDeliveryStopByVisitaId(ctx, visitId);
+    if (!stop) {
+      throw new NotFoundError("Stop de agua");
+    }
+
+    const delivered = Math.max(0, data.delivered ?? 0);
+    const collected = Math.max(0, data.collected ?? 0);
+    const damaged = Math.max(0, data.damaged ?? 0);
+    const lost = Math.max(0, data.lost ?? 0);
+    const delta = delivered - collected - damaged - lost;
+    const balanceAfter = Math.max(0, stop.containersAtStart + delta);
+    const visitStatus = data.status === "entregado" ? "compro" : "no_compra";
+
+    return db.transaction(async (tx) => {
+      const updatedStop = await waterRepo.completeDeliveryStop(ctx, stop.id, {
+        status: data.status,
+        delivered,
+        collected,
+        damaged,
+        lost,
+        notes: data.notes ?? null,
+      }, tx);
+
+      await waterRepo.updateContainersAtCustomer(ctx, stop.customerProfileId, balanceAfter, tx);
+
+      if (delta !== 0 || damaged > 0 || lost > 0) {
+        await waterRepo.createContainerLedgerEntry(ctx, {
+          customerId: visit.customerId,
+          customerProfileId: stop.customerProfileId,
+          visitaId: visit.id,
+          entryType: data.status,
+          quantity: delta,
+          balanceAfter,
+          reason: data.notes ?? "Entrega de ruta",
+        }, tx);
+      }
+
+      const updatedVisit = await this.visitaRepo.updateStatus(ctx, visitId, {
+        status: visitStatus,
+        motivoNoCompra: data.status === "entregado" ? undefined : data.notes ?? data.status,
+      }, tx);
+
+      return {
+        visita: updatedVisit,
+        waterStop: updatedStop,
+        containersAtCustomer: balanceAfter,
+      };
+    });
+  }
+
+  private getWaterCustomerProfileRepo(): WaterCustomerProfileRepository {
+    if (!this.waterCustomerProfileRepo) {
+      throw new Error("Water customer profile repository is not configured");
+    }
+    return this.waterCustomerProfileRepo;
   }
 
   /**

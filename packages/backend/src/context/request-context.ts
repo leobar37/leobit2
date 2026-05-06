@@ -2,7 +2,8 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../lib/db";
 import { businessUsers, businessUserRoleEnum } from "../db/schema";
 import { ForbiddenError } from "../errors";
-import type { BusinessCalculatorSettings } from "@avileo/shared";
+import type { BusinessCalculatorSettings, BusinessModeFlags } from "@avileo/shared";
+import { getDefaultFlags, mergeBusinessModeFlags } from "@avileo/shared";
 import { defaultCalculatorSettings } from "../db/schema/businesses";
 import { TTLCache } from "../lib/cache";
 
@@ -31,6 +32,8 @@ interface CachedContextData {
   isAuthenticated: boolean;
   isActive: boolean;
   calculatorSettings: BusinessCalculatorSettings;
+  businessMode: string;
+  modeFlags: BusinessModeFlags;
   sessionId?: string;
 }
 
@@ -117,6 +120,8 @@ export class RequestContext {
     public readonly isAuthenticated: boolean,
     public readonly isActive: boolean,
     public readonly calculatorSettings: BusinessCalculatorSettings,
+    public readonly businessMode: string,
+    public readonly modeFlags: BusinessModeFlags,
     public readonly sessionId?: string
   ) {}
 
@@ -170,6 +175,8 @@ export class RequestContext {
       this.isAuthenticated,
       this.isActive,
       this.calculatorSettings,
+      this.businessMode,
+      this.modeFlags,
       this.sessionId
     );
   }
@@ -206,6 +213,8 @@ export class RequestContext {
         cached.isAuthenticated,
         cached.isActive,
         cached.calculatorSettings,
+        cached.businessMode,
+        cached.modeFlags,
         cached.sessionId
       );
     }
@@ -243,8 +252,14 @@ export class RequestContext {
     // Get calculator settings from business or use defaults
     // Note: Drizzle's `with` can return business as array in type inference,
     // but at runtime it's a single object due to `findFirst`.
-    const businessRecord = membership.business as { calculatorSettings?: BusinessCalculatorSettings } | undefined;
+    const businessRecord = membership.business as { calculatorSettings?: BusinessCalculatorSettings; businessMode?: string; modeConfigOverrides?: Partial<BusinessModeFlags> } | undefined;
     const calculatorSettings = businessRecord?.calculatorSettings || defaultCalculatorSettings;
+
+    // Resolve business mode and merged flags
+    const businessMode = businessRecord?.businessMode || "polleria";
+    const defaults = getDefaultFlags(businessMode);
+    const overrides = businessRecord?.modeConfigOverrides || {};
+    const modeFlags = mergeBusinessModeFlags(defaults, overrides);
 
     const data: CachedContextData = {
       userId: user.id,
@@ -258,6 +273,8 @@ export class RequestContext {
       isAuthenticated: true,
       isActive: membership.isActive,
       calculatorSettings,
+      businessMode,
+      modeFlags,
       sessionId: sess.id,
     };
 
@@ -275,6 +292,8 @@ export class RequestContext {
       data.isAuthenticated,
       data.isActive,
       data.calculatorSettings,
+      data.businessMode,
+      data.modeFlags,
       data.sessionId
     );
   }
@@ -303,6 +322,7 @@ export class RequestContext {
    * Factory: Crear para rutas públicas (no autenticadas)
    */
   static forPublic(): RequestContext {
+    const defaultFlags = getDefaultFlags("polleria");
     return new RequestContext(
       "",
       "",
@@ -314,7 +334,9 @@ export class RequestContext {
       [],
       false,
       false,
-      defaultCalculatorSettings
+      defaultCalculatorSettings,
+      "polleria",
+      defaultFlags
     );
   }
 
@@ -323,6 +345,7 @@ export class RequestContext {
    * Usa el rol de ADMIN para tener todos los permisos
    */
   static forWorker(businessId: string, businessUserId?: string): RequestContext {
+    const defaultFlags = getDefaultFlags("polleria");
     return new RequestContext(
       "system",
       "system@avileo.com",
@@ -334,7 +357,9 @@ export class RequestContext {
       ["*"],
       true,
       true,
-      defaultCalculatorSettings
+      defaultCalculatorSettings,
+      "polleria",
+      defaultFlags
     );
   }
 }

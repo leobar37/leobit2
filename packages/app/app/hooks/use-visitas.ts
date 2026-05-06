@@ -27,6 +27,20 @@ export interface Visita {
     address: string | null;
     phone: string | null;
   };
+  waterStop?: {
+    id: string;
+    customerProfileId: string;
+    waterRouteId: string | null;
+    scheduledDate: string;
+    expectedContainerQuantity: number;
+    containersAtStart: number;
+    deliveredContainerQuantity: number;
+    collectedContainerQuantity: number;
+    damagedContainerQuantity: number;
+    lostContainerQuantity: number;
+    status: string;
+    notes: string | null;
+  } | null;
 }
 
 export interface CreateVisitaInput {
@@ -56,6 +70,9 @@ interface BackendVisita {
   updatedAt: string;
   customerName?: string;
   customerDni?: string | null;
+  customerAddress?: string | null;
+  customerPhone?: string | null;
+  waterStop?: Visita["waterStop"];
 }
 
 /**
@@ -78,10 +95,11 @@ function mapVisita(v: BackendVisita): Visita {
           id: v.customerId,
           name: v.customerName,
           dni: v.customerDni ?? null,
-          address: null,
-          phone: null,
+          address: v.customerAddress ?? null,
+          phone: v.customerPhone ?? null,
         }
       : undefined,
+    waterStop: v.waterStop ?? null,
   };
 }
 
@@ -100,6 +118,30 @@ export function useVisitas(distribucionId: string | undefined) {
       return data.map(mapVisita);
     },
     enabled: !!distribucionId,
+  });
+}
+
+export function useCompleteWaterDelivery() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      status: "entregado" | "no_atendido" | "reprogramado";
+      delivered?: number;
+      collected?: number;
+      damaged?: number;
+      lost?: number;
+      notes?: string | null;
+    }) => {
+      const { id, ...body } = input;
+      const response = await api.visitas({ id }).water.complete.post(body);
+      return extractData(response);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visitas"] });
+      toast.success("Entrega actualizada correctamente");
+    },
   });
 }
 

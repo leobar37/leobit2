@@ -208,7 +208,7 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
-    port: 5173,
+    port: 5177,
     fs: {
       allow: ["..", "/Users/leobar37/code/avileo/node_modules/.bun"],
     },

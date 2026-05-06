@@ -30,6 +30,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
           address: body.address,
           phone: body.phone,
           email: body.email,
+          businessMode: body.businessMode,
         }
       );
       return {
@@ -44,6 +45,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         address: t.Optional(t.String()),
         phone: t.Optional(t.String({ maxLength: 20 })),
         email: t.Optional(t.String({ format: "email" })),
+        businessMode: t.Optional(t.Union([t.Literal("polleria"), t.Literal("agua")])),
       }),
     }
   )
@@ -132,6 +134,8 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         usarDistribucion: body.usarDistribucion,
         publicCatalogEnabled: body.publicCatalogEnabled,
         publicCatalogSlug: body.publicCatalogSlug,
+        businessMode: body.businessMode,
+        modeConfigOverrides: body.modeConfigOverrides,
       });
 
       return {
@@ -152,6 +156,8 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         usarDistribucion: t.Optional(t.Boolean()),
         publicCatalogEnabled: t.Optional(t.Boolean()),
         publicCatalogSlug: t.Optional(t.Nullable(t.String({ minLength: 3, maxLength: 100 }))),
+        businessMode: t.Optional(t.Union([t.Literal("polleria"), t.Literal("agua")])),
+        modeConfigOverrides: t.Optional(t.Record(t.String(), t.Any())),
       }),
     }
   )

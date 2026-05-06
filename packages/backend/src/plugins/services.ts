@@ -3,6 +3,9 @@ import { BusinessRepository } from "../services/repository/business.repository";
 import { BusinessService } from "../services/business/business.service";
 import { CustomerRepository } from "../services/repository/customer.repository";
 import { CustomerService } from "../services/business/customer.service";
+import { WaterCustomerProfileRepository } from "../services/repository/water-customer-profile.repository";
+import { WaterRouteRepository } from "../services/repository/water-route.repository";
+import { WaterRouteService } from "../services/business/water-route.service";
 import { ProductRepository } from "../services/repository/product.repository";
 import { ProductService } from "../services/business/product.service";
 import { PaymentRepository } from "../services/repository/payment.repository";
@@ -63,6 +66,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
   .decorate(() => {
     const businessRepo = new BusinessRepository();
     const customerRepo = new CustomerRepository();
+    const waterCustomerProfileRepo = new WaterCustomerProfileRepository();
+    const waterRouteRepo = new WaterRouteRepository();
     const productRepo = new ProductRepository();
     const paymentRepo = new PaymentRepository();
     const distribucionRepo = new DistribucionRepository();
@@ -93,10 +98,11 @@ export const servicesPlugin = new Elysia({ name: "services" })
     initializeStateMachines({});
 
     const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
-    const customerService = new CustomerService(customerRepo);
+    const customerService = new CustomerService(customerRepo, waterCustomerProfileRepo);
+    const waterRouteService = new WaterRouteService(waterRouteRepo);
     const productService = new ProductService(productRepo, productVariantRepo, categoryRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo, saleRepo);
-    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
+    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo, waterCustomerProfileRepo, waterRouteRepo);
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
@@ -122,7 +128,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const categoryService = new CategoryService(categoryRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
     const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
-    const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo);
+    const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo, waterCustomerProfileRepo);
     const puntoVentaRepo = new PuntoVentaRepository();
     const expenseService = new ExpenseService(expenseRepo, expenseCategoryRepo);
     const expenseCategoryService = new ExpenseCategoryService(expenseCategoryRepo, expenseRepo);
@@ -132,6 +138,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
       businessService,
       customerRepo,
       customerService,
+      waterRouteRepo,
+      waterRouteService,
       productRepo,
       productService,
       paymentRepo,

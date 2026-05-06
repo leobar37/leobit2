@@ -7,6 +7,7 @@ import {
   Search,
 } from "lucide-react";
 import { CalculatorInput } from "~/components/calculator/calculator-input";
+import { BusinessMode } from "~/components/business-mode";
 import { useSaleCalculator } from "./sale-calculator-context";
 import { cn, formatCurrency, formatKilos } from "~/lib/utils";
 
@@ -269,19 +270,21 @@ export function CalculatorContent() {
 
             {isKgProduct ? (
               <div className="space-y-3">
-                {!hideTara && (
-                  <CalculatorInput
-                    name="tara"
-                    label="Tara (kg)"
-                    value={values.tara}
-                    placeholder="0.000"
-                    onChange={(value) => setFieldValue("tara", value)}
-                    fieldType="quantity"
-                    isAutoCalculateTarget={false}
-                    onToggleAutoCalculate={() => {}}
-                    decimals={3}
-                  />
-                )}
+                <BusinessMode flag="useTara">
+                  {!hideTara && (
+                    <CalculatorInput
+                      name="tara"
+                      label="Tara (kg)"
+                      value={values.tara}
+                      placeholder="0.000"
+                      onChange={(value) => setFieldValue("tara", value)}
+                      fieldType="quantity"
+                      isAutoCalculateTarget={false}
+                      onToggleAutoCalculate={() => {}}
+                      decimals={3}
+                    />
+                  )}
+                </BusinessMode>
                 <CalculatorInput
                   name="kilos"
                   label="Kilos netos"
@@ -395,16 +398,18 @@ export function CalculatorContent() {
                       : `${Math.round(calculation.quantity)} unidades`}
                   </span>
                 </div>
-                {isKgProduct && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Precio unitario:
-                    </span>
-                    <span className="font-medium text-foreground">
-                      S/ {formatCurrency(calculation.unitPrice)}
-                    </span>
-                  </div>
-                )}
+                <BusinessMode flag="useNetWeight">
+                  {isKgProduct && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Precio unitario:
+                      </span>
+                      <span className="font-medium text-foreground">
+                        S/ {formatCurrency(calculation.unitPrice)}
+                      </span>
+                    </div>
+                  )}
+                </BusinessMode>
                 <div className="flex justify-between border-t border-orange-500/20 pt-2">
                   <span className="font-medium text-foreground">Subtotal:</span>
                   <span className="text-lg font-bold text-orange-500 dark:text-orange-300">

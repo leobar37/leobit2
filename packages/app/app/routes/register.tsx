@@ -14,10 +14,8 @@ import {
   MobileShell,
   MobilePage,
   MobileFixedFooter,
-  MobileSlot,
   MobileSlotProvider,
 } from "~/components/mobile";
-import { ThemeToggle } from "~/components/theme";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -136,12 +134,6 @@ export default function RegisterPage() {
   return (
     <MobileSlotProvider>
       <MobileShell.Root variant="public">
-        <MobileShell.Header />
-
-        <MobileSlot name="header:right" priority={10}>
-          <ThemeToggle />
-        </MobileSlot>
-
         <MobileShell.Content className="flex items-start justify-center sm:items-center">
           <MobilePage.Root maxWidth="sm" className="w-full">
             <MobilePage.Card className="w-full overflow-hidden rounded-none border-0 bg-transparent shadow-none">

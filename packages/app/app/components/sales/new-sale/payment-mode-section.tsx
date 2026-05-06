@@ -16,6 +16,7 @@ import { useToast } from "~/hooks/use-toast";
 import { PaymentCapture } from "~/components/payments/payment-capture";
 import type { PaymentMethod } from "~/components/payments/payment-capture";
 import { useUploadFile } from "~/hooks/use-files";
+import { useBusinessMode } from "~/hooks/use-business-mode";
 
 const paymentModes: {
   value: PaymentMode;
@@ -68,11 +69,15 @@ export function PaymentModeSection() {
   const updateSale = useUpdateSale();
   const uploadFile = useUploadFile();
   const { toast } = useToast();
+  const { mode: businessMode } = useBusinessMode();
 
   const calculations = useSaleCalculations(sale, items);
   const [pendingPaymentMode, setPendingPaymentMode] = useState<PaymentMode | null>(null);
 
   const visiblePaymentMode = pendingPaymentMode ?? sale?.paymentMode;
+  const availablePaymentModes = businessMode === "agua"
+    ? paymentModes.filter((mode) => mode.value === "pago_total")
+    : paymentModes;
 
   const handleUpdateAmountPaid = useCallback(
     async (amount: string) => {
@@ -266,7 +271,7 @@ export function PaymentModeSection() {
     <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
       <CardContent className="space-y-3 px-0 py-1">
         <div className="space-y-2">
-          {paymentModes.map((mode) => (
+          {availablePaymentModes.map((mode) => (
             <button
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
@@ -310,7 +315,13 @@ export function PaymentModeSection() {
           ))}
         </div>
 
-        {visiblePaymentMode === "a_cuenta" && saleId && (
+        {businessMode === "agua" && (
+          <p className="rounded-2xl bg-sky-500/10 px-3 py-2 text-sm text-sky-800 dark:text-sky-100">
+            En reparto de agua, el flujo principal es pago contra entrega.
+          </p>
+        )}
+
+        {businessMode !== "agua" && visiblePaymentMode === "a_cuenta" && saleId && (
           <div className="space-y-4">
             <AmountPaidInput
               saleId={saleId}
@@ -336,13 +347,13 @@ export function PaymentModeSection() {
           </div>
         )}
 
-        {pendingPaymentMode === "a_cuenta" && (
+        {businessMode !== "agua" && pendingPaymentMode === "a_cuenta" && (
           <p className="rounded-2xl bg-orange-500/10 px-3 py-2 text-sm text-orange-700 dark:text-orange-300">
             Ingresa el adelanto para guardar este modo de pago.
           </p>
         )}
 
-        {sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
+        {businessMode !== "agua" && sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
           <div className="border-t pt-3 shell-divider">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total a deber:</span>
