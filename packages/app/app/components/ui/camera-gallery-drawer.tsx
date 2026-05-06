@@ -114,7 +114,7 @@ export function CameraGalleryDrawer({
               type="button"
               variant="outline"
               className={cn(
-                "flex-1 h-24 rounded-xl border-dashed flex flex-col items-center justify-center gap-2",
+                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
                 "hover:bg-accent hover:text-accent-foreground transition-colors"
               )}
               onClick={handleCameraClick}
@@ -129,7 +129,7 @@ export function CameraGalleryDrawer({
               type="button"
               variant="outline"
               className={cn(
-                "flex-1 h-24 rounded-xl border-dashed flex flex-col items-center justify-center gap-2",
+                "flex-1 h-24 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
                 "hover:bg-accent hover:text-accent-foreground transition-colors"
               )}
               onClick={handleGalleryClick}

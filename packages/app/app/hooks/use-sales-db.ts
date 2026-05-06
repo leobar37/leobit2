@@ -16,6 +16,11 @@ import { queryKeys } from "~/lib/query-keys";
 import { decimalToNumber } from "@avileo/shared";
 import type { SaleWithItems, SaleItem, UpdateSaleInput } from "./use-sales";
 import { getSaleFinancialState } from "./use-sale-calculations";
+import {
+  addOptimisticSaleItem,
+  replaceOptimisticSaleItem,
+  removeOptimisticSaleItem,
+} from "~/lib/sales/optimistic-cache";
 
 export { useSales, useSalesByCustomer, useConfirmSale, useCancelSale, useDeleteSale, useDeliverSale };
 export { useUpdateSaleBase as useUpdateSale };
@@ -129,6 +134,8 @@ export function useFinalizeSale() {
       amountPaid,
       paymentMode,
       paymentMethod,
+      referenceNumber,
+      proofImageId,
     }: {
       id: string;
       type: string;
@@ -143,6 +150,8 @@ export function useFinalizeSale() {
       amountPaid?: number;
       paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
       paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo";
+      referenceNumber?: string;
+      proofImageId?: string;
     }) => {
       if (isDeliveryMode) {
         for (const item of deliveryItems || []) {
@@ -166,7 +175,11 @@ export function useFinalizeSale() {
       }
 
       const response = await api.sales({ id }).confirm.post({
+        paymentMode,
         paymentMethod,
+        amountPaid,
+        referenceNumber,
+        proofImageId,
       });
       extractData(response);
     },
@@ -195,6 +208,7 @@ export function useAddSaleItem() {
         price: number;
         subtotal: number;
       };
+      optimisticItem: SaleItem;
     }) => {
       const [productResponse, variantResponse] = await Promise.all([
         api.products({ id: item.productId }).get(),
@@ -219,23 +233,17 @@ export function useAddSaleItem() {
       const createdItem = extractData<SaleItem>(response);
       return { saleId, createdItem };
     },
-    onSuccess: ({ saleId, createdItem }) => {
-      queryClient.setQueryData(queryKeys.sales.detail(saleId), (previous: SaleWithItems | null | undefined) => {
-        if (!previous) return previous;
-
-        const subtotal = decimalToNumber(createdItem.subtotal);
-        const financials = recalculateCachedSaleFinancials(
-          previous,
-          decimalToNumber(previous.totalAmount) + subtotal,
-        );
-
-        return {
-          ...previous,
-          ...financials,
-          items: [...(previous.items ?? []), createdItem],
-          updatedAt: new Date().toISOString(),
-        };
-      });
+    onMutate: ({ saleId, optimisticItem }) => {
+      addOptimisticSaleItem(queryClient, saleId, optimisticItem);
+      return { optimisticId: optimisticItem.id };
+    },
+    onSuccess: ({ saleId, createdItem }, _variables, context) => {
+      if (context?.optimisticId) {
+        replaceOptimisticSaleItem(queryClient, saleId, context.optimisticId, createdItem);
+      }
+    },
+    onError: (_error, { saleId, optimisticItem }) => {
+      removeOptimisticSaleItem(queryClient, saleId, optimisticItem.id);
     },
   });
 }

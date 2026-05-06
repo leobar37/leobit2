@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, uploadFile } from "~/lib/api-client";
+import { api } from "~/lib/api-client";
+import { uploadMediaFile } from "~/lib/media/media-client";
 
 export interface FileRecord {
   id: string;
@@ -86,24 +87,7 @@ export function useUploadFile(options?: UploadFileOptions) {
 }
 
 export async function uploadFileNow(file: File): Promise<FileUploadResponse> {
-  const fileId = crypto.randomUUID();
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/files/upload", {
-    method: "POST",
-    body: formData,
-    headers: {
-      "X-File-ID": fileId,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
-  }
-
-  return response.json();
+  return uploadMediaFile("/files/upload", file);
 }
 
 export function useDeleteFile() {

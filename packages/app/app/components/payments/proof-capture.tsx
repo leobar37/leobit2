@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Camera, X, Loader2 } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
 import { CameraGalleryDrawer } from "@/components/ui/camera-gallery-drawer";
 import { useFile } from "~/hooks/use-files";
+import { ImagePreview } from "@/components/ui/image-preview";
 
 interface ProofCaptureProps {
   proofImageId: string | null;
@@ -31,33 +32,19 @@ export function ProofCapture({
       </label>
 
       {hasProof ? (
-        <div className="relative inline-block">
-          <div className="shell-field rounded-xl p-2">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="Comprobante"
-                className="h-32 w-auto object-contain rounded-lg"
-              />
-            ) : (
-              <div className="h-32 w-32 flex items-center justify-center bg-muted rounded-lg">
-                <Camera className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
+        imageUrl ? (
+          <ImagePreview
+            src={imageUrl}
+            alt="Comprobante de pago"
+            aspectRatio="video"
+            onRemove={onRemove}
+            isUploading={isUploading}
+          />
+        ) : (
+          <div className="h-44 w-full flex items-center justify-center rounded-2xl bg-muted">
+            <Camera className="h-8 w-8 text-muted-foreground" />
           </div>
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={isUploading}
-            className={cn(
-              "absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-white flex items-center justify-center shadow-sm",
-              "hover:bg-destructive/90 transition-colors",
-              isUploading && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
+        )
       ) : (
         <Button
           type="button"
@@ -65,7 +52,7 @@ export function ProofCapture({
           onClick={() => setDrawerOpen(true)}
           disabled={isUploading}
           className={cn(
-            "w-full h-20 rounded-xl border-dashed flex flex-col items-center justify-center gap-2",
+            "w-full h-20 rounded-xl border-0 bg-muted/70 shadow-sm flex flex-col items-center justify-center gap-2",
             "hover:bg-accent transition-colors"
           )}
         >

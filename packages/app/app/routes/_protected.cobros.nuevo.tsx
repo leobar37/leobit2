@@ -216,7 +216,7 @@ export default function NuevoCobroPage() {
     >
       <WrapperFormProvider form={wrapperForm}>
       <form id="cobro-form" onSubmit={wrapperForm.handleResolvedSubmit(onSubmit)} className="space-y-3.5">
-        <Card className="shell-card-flat rounded-[24px]">
+        <Card className="shell-card-flat rounded-[24px] !border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-orange-100/90 ring-1 ring-orange-100 dark:bg-orange-500/15 dark:ring-orange-500/20">
@@ -232,7 +232,7 @@ export default function NuevoCobroPage() {
           </CardContent>
         </Card>
 
-        <Card className="shell-card-flat rounded-[24px]">
+        <Card className="shell-card-flat rounded-[24px] !border-0">
           <CardContent className="p-5">
             <div className="text-center">
               <p className="mb-1 text-sm text-muted-foreground">Deuda actual</p>
@@ -244,7 +244,7 @@ export default function NuevoCobroPage() {
           </CardContent>
         </Card>
 
-        <Card className="shell-card-flat rounded-[24px]">
+        <Card className="shell-card-flat rounded-[24px] !border-0">
           <CardContent className="p-4 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="amount" className="text-base font-semibold text-foreground">
@@ -315,7 +315,7 @@ export default function NuevoCobroPage() {
           </p>
         )}
 
-        <Card className="shell-card-flat rounded-[24px]">
+        <Card className="shell-card-flat rounded-[24px] !border-0">
           <CardContent className="p-4 space-y-4">
             <PaymentCapture
               variant="inline"

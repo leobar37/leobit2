@@ -21,6 +21,7 @@ import { useBusinessSettings } from "~/hooks/use-business-settings";
 import { useToast } from "~/hooks/use-toast";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatCurrency } from "~/lib/utils";
+import { buildOptimisticSaleItem } from "~/lib/sales/optimistic-cache";
 
 export interface CalculatorFooterActions {
   primaryLabel: string;
@@ -42,10 +43,11 @@ interface SaleCalculatorContextType {
   settings: {
     hideTara: boolean;
     autoFillPrice: boolean;
+    hidePrices: boolean;
   };
   footerActions: CalculatorFooterActions | null;
   isSaving: boolean;
-  save: () => Promise<void>;
+  save: () => void;
   cancel: () => void;
 }
 
@@ -102,6 +104,7 @@ export function SaleCalculatorProvider({
   const calculatorSettings = settings?.calculators?.sales;
   const hideTara = calculatorSettings?.hideTara ?? true;
   const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
+  const hidePrices = calculatorSettings?.hidePrices ?? false;
 
   const editingInitialValues =
     isEditMode && editingItem
@@ -162,7 +165,7 @@ export function SaleCalculatorProvider({
     calculator.form,
   ]);
 
-  const save = useCallback(async () => {
+  const save = useCallback(() => {
     if (
       !picker.selectedProduct ||
       !picker.selectedVariant ||
@@ -172,47 +175,48 @@ export function SaleCalculatorProvider({
       return;
     }
 
-    try {
-      if (isEditMode && editingItem) {
-        const numericCalculation = saleItemTransformer.toNumbers(
-          calculator.calculation,
-        );
-        await updateItem.mutateAsync({
-          saleId,
-          itemId: editingItem.id,
-          data: {
-            quantity: numericCalculation.quantity ?? 0,
-            unitPrice: numericCalculation.unitPrice ?? 0,
-            subtotal: numericCalculation.subtotal ?? 0,
-          },
-        });
-        setItemId(null);
-      } else {
-        const numericCalculation = saleItemTransformer.toNumbers(
-          calculator.calculation,
-        );
-        await addItem.mutateAsync({
-          saleId,
-          item: {
-            productId: picker.selectedProduct.id,
-            variantId: picker.selectedVariant.id,
-            quantity: numericCalculation.quantity ?? 0,
-            price: numericCalculation.unitPrice ?? 0,
-            subtotal: numericCalculation.subtotal ?? 0,
-          },
-        });
-      }
+    const numericCalculation = saleItemTransformer.toNumbers(
+      calculator.calculation,
+    );
 
-      navigate(getSaleEditorPath(saleId));
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "No se pudo agregar el producto";
-      toast.error("Error al agregar producto", {
-        description: message,
+    if (isEditMode && editingItem) {
+      updateItem.mutate({
+        saleId,
+        itemId: editingItem.id,
+        data: {
+          quantity: numericCalculation.quantity ?? 0,
+          unitPrice: numericCalculation.unitPrice ?? 0,
+          subtotal: numericCalculation.subtotal ?? 0,
+        },
       });
+      setItemId(null);
+      navigate(getSaleEditorPath(saleId));
+      return;
     }
+
+    const optimisticItem = buildOptimisticSaleItem({
+      productId: picker.selectedProduct.id,
+      variantId: picker.selectedVariant.id,
+      productName: picker.selectedProduct.name,
+      variantName: picker.selectedVariant.name,
+      quantity: numericCalculation.quantity ?? 0,
+      unitPrice: numericCalculation.unitPrice ?? 0,
+      subtotal: numericCalculation.subtotal ?? 0,
+    });
+
+    addItem.mutate({
+      saleId,
+      item: {
+        productId: picker.selectedProduct.id,
+        variantId: picker.selectedVariant.id,
+        quantity: numericCalculation.quantity ?? 0,
+        price: numericCalculation.unitPrice ?? 0,
+        subtotal: numericCalculation.subtotal ?? 0,
+      },
+      optimisticItem,
+    });
+
+    navigate(getSaleEditorPath(saleId));
   }, [
     addItem,
     calculator.calculation,
@@ -223,7 +227,6 @@ export function SaleCalculatorProvider({
     picker.selectedProduct,
     picker.selectedVariant,
     setItemId,
-    toast,
     updateItem,
   ]);
 
@@ -271,6 +274,7 @@ export function SaleCalculatorProvider({
       settings: {
         hideTara,
         autoFillPrice,
+        hidePrices,
       },
       footerActions,
       isSaving,
@@ -286,6 +290,7 @@ export function SaleCalculatorProvider({
       isEditMode,
       hideTara,
       autoFillPrice,
+      hidePrices,
       footerActions,
       isSaving,
       save,

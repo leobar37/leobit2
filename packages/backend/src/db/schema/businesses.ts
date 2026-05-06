@@ -29,9 +29,9 @@ export type { BusinessCalculatorSettings, BusinessModeFlags } from "@avileo/shar
  */
 export const defaultCalculatorSettings: BusinessCalculatorSettings = {
   calculators: {
-    sales: { hideTara: true, autoFillPrice: false },
-    orders: { hideTara: true, autoFillPrice: false },
-    purchases: { hideTara: true, autoFillPrice: false },
+    sales: { hideTara: true, autoFillPrice: false, hidePrices: false },
+    orders: { hideTara: true, autoFillPrice: false, hidePrices: false },
+    purchases: { hideTara: true, autoFillPrice: false, hidePrices: false },
   },
 };
 

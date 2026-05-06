@@ -1,5 +1,6 @@
 import { QrCode, Phone, Building2, User } from "lucide-react";
 import type { PaymentMethodsConfig } from "~/hooks/use-payment-methods-config";
+import { QRImagePreview } from "./qr-image-preview";
 
 interface PaymentMethodInfoProps {
   method: "yape" | "plin" | "transferencia";
@@ -12,7 +13,7 @@ export function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
   if (!methodConfig) return null;
 
   return (
-    <div className="shell-card-soft rounded-2xl p-4 space-y-3">
+    <div className="shell-card-soft rounded-2xl !border-0 p-4 space-y-3">
       <div className="flex items-center gap-2 text-foreground font-medium">
         <QrCode className="h-4 w-4 text-muted-foreground" />
         <span>Datos para el pago</span>
@@ -22,10 +23,9 @@ export function PaymentMethodInfo({ method, config }: PaymentMethodInfoProps) {
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">Escanea el código QR:</p>
           <div className="shell-field inline-block rounded-xl p-3">
-            <img
-              src={methodConfig.qrImageUrl}
+            <QRImagePreview
+              fileId={methodConfig.qrImageUrl}
               alt={`Código QR ${method}`}
-              className="max-h-40 w-auto object-contain"
             />
           </div>
         </div>

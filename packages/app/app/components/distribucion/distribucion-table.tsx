@@ -70,7 +70,7 @@ export function DistribucionTable({
 
   if (isLoading) {
     return (
-      <div className="shell-card-flat rounded-[28px] border-stone-200/85 p-8 text-center text-muted-foreground">
+      <div className="rounded-[28px] bg-card/70 p-8 text-center text-muted-foreground shadow-[0_2px_12px_rgba(15,23,42,0.04)] dark:bg-[#151821]">
         Cargando distribuciones...
       </div>
     );
@@ -78,8 +78,8 @@ export function DistribucionTable({
 
   if (distribuciones.length === 0) {
     return (
-      <div className="shell-card-flat rounded-[28px] border-stone-200/85 p-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+      <div className="rounded-[28px] bg-card/70 p-8 text-center shadow-[0_2px_12px_rgba(15,23,42,0.04)] dark:bg-[#151821]">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
           <Store className="h-5 w-5" />
         </div>
         <p className="mt-4 text-base font-medium text-foreground">No hay distribuciones para mostrar</p>
@@ -97,7 +97,7 @@ export function DistribucionTable({
           const vendedorLabel = getVendedorLabel(dist as DistribucionListItem);
 
           return (
-            <div key={dist.id} className="shell-card-flat rounded-[24px] border-stone-200/85 p-4">
+            <div key={dist.id} className="rounded-[24px] bg-card/80 p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] dark:bg-[#151821]">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-foreground">{vendedorLabel}</p>
@@ -109,7 +109,7 @@ export function DistribucionTable({
 
                 <span
                   className={cn(
-                    "inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium",
+                    "inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
                     getStatusClasses(dist.estado),
                   )}
                 >
@@ -123,13 +123,13 @@ export function DistribucionTable({
 
               {hasItems(dist as DistribucionListItem) ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="shell-block-muted rounded-[18px] p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-white/[0.04]">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Asignado</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
                       {formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + decimalToNumber(item.cantidadAsignada), 0) || 0)} kg
                     </p>
                   </div>
-                  <div className="shell-block-muted rounded-[18px] p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-white/[0.04]">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Vendido</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
                       {formatKilosUtil((dist as DistribucionListItem).items?.reduce((sum: number, item: DistribucionItem) => sum + decimalToNumber(item.cantidadVendida), 0) || 0)} kg
@@ -137,7 +137,7 @@ export function DistribucionTable({
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 shell-block-muted rounded-[18px] p-3">
+                <div className="mt-4 rounded-2xl bg-muted/40 p-3 dark:bg-white/[0.04]">
                   <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Productos</p>
                   <p className="mt-1 text-sm font-medium text-foreground">Sin productos asignados</p>
                 </div>

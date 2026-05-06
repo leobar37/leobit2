@@ -32,7 +32,7 @@ interface PaymentCaptureProps {
 
   // Proof image
   proofImageId?: string | null;
-  onProofUpload?: (file: File) => Promise<void>;
+  onProofUpload?: (file: File) => void;
   onProofRemove?: () => void;
   isUploading?: boolean;
 }
@@ -90,8 +90,8 @@ export function PaymentCapture({
   );
 
   const handleProofUpload = useCallback(
-    async (file: File) => {
-      await onProofUpload?.(file);
+    (file: File) => {
+      onProofUpload?.(file);
     },
     [onProofUpload]
   );

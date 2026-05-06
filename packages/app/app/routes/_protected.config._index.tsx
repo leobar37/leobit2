@@ -217,8 +217,8 @@ export default function ConfigIndexPage() {
       <div className="space-y-3">
         {configItems.map((item) => (
           <Link key={item.href} to={item.href} className="block">
-            <div className="shell-card-flat flex items-center gap-4 rounded-[24px] border border-white/6 bg-[#1d2028] px-4 py-4 shadow-[0_14px_34px_rgba(0,0,0,0.24)] transition-colors hover:border-white/12 hover:bg-[#232631]">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[18px] bg-white/[0.04] ring-1 ring-white/8">
+            <div className="shell-card-flat flex items-center gap-4 rounded-[24px] border border-border/70 bg-card/90 px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)] transition-colors hover:border-orange-200/70 hover:bg-card dark:border-white/6 dark:bg-[#1d2028] dark:shadow-[0_14px_34px_rgba(0,0,0,0.24)] dark:hover:border-white/12 dark:hover:bg-[#232631]">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[18px] bg-muted/80 ring-1 ring-border/70 dark:bg-white/[0.04] dark:ring-white/8">
                 <item.icon className={`h-7 w-7 ${item.color}`} />
               </div>
               <div className="min-w-0 flex-1 pr-2">
@@ -229,7 +229,7 @@ export default function ConfigIndexPage() {
                   {item.description}
                 </MinimalCardDescription>
               </div>
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.04] text-white/45 ring-1 ring-white/6">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted/80 text-muted-foreground ring-1 ring-border/70 dark:bg-white/[0.04] dark:text-white/45 dark:ring-white/6">
                 <ChevronRight className="h-5 w-5" />
               </div>
             </div>

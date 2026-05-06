@@ -11,6 +11,7 @@ import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
 import { toISODateString, now, parseDateString } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
+import { decimalToNumber } from "@avileo/shared";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleService {
@@ -242,14 +243,14 @@ export class SaleService {
 
     const totalAmount = parseFloat(
       normalizeAmount(
-        data.totalAmount ?? Number(sale.totalAmount),
+        data.totalAmount ?? decimalToNumber(sale.totalAmount),
         2,
         "totalAmount"
       )
     );
     const amountPaid = parseFloat(
       normalizeAmount(
-        data.amountPaid ?? Number(sale.amountPaid),
+        data.amountPaid ?? decimalToNumber(sale.amountPaid),
         2,
         "amountPaid"
       )
@@ -383,7 +384,7 @@ export class SaleService {
       throw new ValidationError("Debe todo no puede tener monto pagado");
     }
 
-    if (paymentMode === "a_cuenta" && (amountPaid <= 0 || amountPaid > totalAmount)) {
+    if (paymentMode === "a_cuenta" && (amountPaid < 0 || amountPaid > totalAmount)) {
       throw new ValidationError("A cuenta requiere un monto pagado válido");
     }
 
@@ -397,7 +398,9 @@ export class SaleService {
     id: string,
     baseVersion?: number,
     paymentData?: {
+      paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
       paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
+      amountPaid?: number;
       referenceNumber?: string;
       proofImageId?: string;
     }
@@ -415,6 +418,29 @@ export class SaleService {
     const saleItems = await this.repository.findSaleItems(ctx, id);
     if (saleItems.length === 0) {
       throw new ValidationError("No puedes confirmar una venta sin productos");
+    }
+
+    // Determine final payment state from provided data or existing sale
+    const totalAmount = decimalToNumber(sale.totalAmount);
+    const paymentMode = paymentData?.paymentMode ?? sale.paymentMode ?? "pago_total";
+    const amountPaidInput = paymentData?.amountPaid ?? decimalToNumber(sale.amountPaid);
+    const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));
+    const saleType = paymentMode === "pago_total" ? "contado" : "credito";
+    const balanceDue = saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
+
+    // Validate payment state
+    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
+
+    if (saleType === "credito" && !sale.customerId) {
+      throw new ValidationError("La venta a crédito requiere cliente");
+    }
+
+    if (saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
+      throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
+    }
+
+    if (saleType === "credito" && amountPaid > totalAmount) {
+      throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
     // For pre_orders, use the generic versioned update path.
@@ -442,22 +468,37 @@ export class SaleService {
 
     // For instant_sales
     return db.transaction(async (tx) => {
+      const updateData: Parameters<typeof this.repository.update>[2] = {
+        status: "active",
+        saleType,
+        paymentMode,
+        amountPaid: amountPaid.toFixed(2),
+        balanceDue: balanceDue.toFixed(2),
+      };
+
+      if (paymentData?.paymentMethod !== undefined) {
+        updateData.paymentMethod = paymentData.paymentMethod ?? undefined;
+      }
+      if (paymentData?.referenceNumber !== undefined) {
+        updateData.advanceReferenceNumber = paymentData.referenceNumber ?? null;
+      }
+      if (paymentData?.proofImageId !== undefined) {
+        updateData.advanceProofImageId = paymentData.proofImageId ?? null;
+      }
+
       const confirmedSale = await this.repository.update(
         ctx,
         id,
-        { status: "active" },
+        updateData,
         tx
       );
 
       // If sale is "a cuenta" (partial payment), create a payment record
-      const amountPaid = Number.parseFloat(confirmedSale.amountPaid);
-      const totalAmount = Number.parseFloat(confirmedSale.totalAmount);
       if (
         amountPaid > 0 &&
         amountPaid < totalAmount &&
         confirmedSale.customerId
       ) {
-        // Use paymentMethod from sale if set, otherwise from paymentData, default to efectivo
         const paymentMethod = paymentData?.paymentMethod
           ?? confirmedSale.paymentMethod
           ?? "efectivo";
@@ -756,7 +797,7 @@ export class SaleService {
 
       // Recalculate total
       const newItemsList = await this.repository.findSaleItems(ctx, saleId, tx);
-      const newTotal = newItemsList.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+      const newTotal = newItemsList.reduce((sum, i) => sum + decimalToNumber(i.subtotal), 0);
       await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
 
       return {
@@ -858,7 +899,7 @@ export class SaleService {
       // Recalculate total if subtotal changed
       if (data.subtotal !== undefined) {
         const existingItems = await this.repository.findSaleItems(ctx, saleId, tx);
-        const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+        const newTotal = existingItems.reduce((sum, i) => sum + decimalToNumber(i.subtotal), 0);
         await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
       }
 
@@ -898,7 +939,7 @@ export class SaleService {
       }
 
       // Recalculate total
-      const newTotal = existingItems.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
+      const newTotal = existingItems.reduce((sum, i) => sum + decimalToNumber(i.subtotal), 0);
       await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
 
       return {

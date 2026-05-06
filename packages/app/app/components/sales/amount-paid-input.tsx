@@ -1,47 +1,42 @@
-import { memo, useCallback } from "react";
+import { useCallback } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "~/lib/utils";
-import { useOptimisticField } from "~/hooks/use-optimistic-field";
 
 interface AmountPaidInputProps {
-  saleId: string;
   totalAmount: number;
-  initialAmount: string;
-  onUpdate: (amount: string) => Promise<void>;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
 }
 
-export const AmountPaidInput = memo(function AmountPaidInput({
+export function AmountPaidInput({
   totalAmount,
-  initialAmount,
-  onUpdate,
+  value,
+  onChange,
+  onBlur,
+  isSaving = false,
+  isSaved = false,
 }: AmountPaidInputProps) {
-  const optimistic = useOptimisticField({
-    initialValue: initialAmount || "",
-    onUpdate,
-    debounceMs: 400,
-  });
-
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value;
       const filtered = raw
         .replace(/[^0-9.]/g, "")
-        .replace(/(\.[^.]*)\./g, "$1");
-      optimistic.setValue(filtered);
+        .replace(/(\..*)\./g, "$1");
+      onChange(filtered);
     },
-    [optimistic]
+    [onChange]
   );
 
   const handleBlur = useCallback(() => {
-    const numValue = parseFloat(optimistic.value) || 0;
-
-    if (numValue <= 0 || numValue > totalAmount) {
-      return;
+    const numValue = parseFloat(value) || 0;
+    if (numValue > 0 && numValue <= totalAmount) {
+      onBlur?.();
     }
-
-    optimistic.flush();
-  }, [optimistic, totalAmount]);
+  }, [value, totalAmount, onBlur]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -52,20 +47,20 @@ export const AmountPaidInput = memo(function AmountPaidInput({
     []
   );
 
-  const numValue = parseFloat(optimistic.value) || 0;
+  const numValue = parseFloat(value) || 0;
   const isValid = numValue > 0 && numValue <= totalAmount;
-  const showError = optimistic.value !== "" && !isValid;
+  const showError = value !== "" && !isValid;
 
   return (
     <div className="space-y-3 border-t pt-3 shell-divider">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">Monto pagado (S/)</label>
-        {optimistic.isSaving ? (
+        {isSaving ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
             Guardando
           </span>
-        ) : optimistic.lastSavedValue === optimistic.value && optimistic.value !== "" ? (
+        ) : isSaved && value !== "" ? (
           <span className="flex items-center gap-1 text-xs text-green-600">
             <Check className="h-3 w-3" />
             Guardado
@@ -76,7 +71,7 @@ export const AmountPaidInput = memo(function AmountPaidInput({
         type="text"
         inputMode="decimal"
         placeholder="0.00"
-        value={optimistic.value}
+        value={value}
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
@@ -100,4 +95,4 @@ export const AmountPaidInput = memo(function AmountPaidInput({
       </div>
     </div>
   );
-});
+}

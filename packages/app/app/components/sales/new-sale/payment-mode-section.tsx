@@ -1,18 +1,11 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { CreditCard, Wallet, Receipt, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AmountPaidInput } from "~/components/sales/amount-paid-input";
-import { useUpdateSale } from "~/hooks/use-sales";
-import {
-  getAmountPaidValue,
-  getBalanceDue,
-  getSaleType,
-  useSaleCalculations,
-} from "~/hooks/use-sale-calculations";
+import { useSaleCalculations } from "~/hooks/use-sale-calculations";
 import { formatCurrency, cn } from "~/lib/utils";
 import type { PaymentMode } from "~/lib/sales/types";
 import { useNewSaleContext } from "../new-sale-context";
-import { useToast } from "~/hooks/use-toast";
 import { PaymentCapture } from "~/components/payments/payment-capture";
 import type { PaymentMethod } from "~/components/payments/payment-capture";
 import { useUploadFile } from "~/hooks/use-files";
@@ -65,101 +58,33 @@ function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
 }
 
 export function PaymentModeSection() {
-  const { saleId, sale, items } = useNewSaleContext();
-  const updateSale = useUpdateSale();
+  const { saleId, sale, items, paymentForm, updatePaymentForm } = useNewSaleContext();
   const uploadFile = useUploadFile();
-  const { toast } = useToast();
   const { mode: businessMode } = useBusinessMode();
 
   const calculations = useSaleCalculations(sale, items);
-  const [pendingPaymentMode, setPendingPaymentMode] = useState<PaymentMode | null>(null);
 
-  const visiblePaymentMode = pendingPaymentMode ?? sale?.paymentMode;
   const availablePaymentModes = businessMode === "agua"
     ? paymentModes.filter((mode) => mode.value === "pago_total")
     : paymentModes;
 
-  const handleUpdateAmountPaid = useCallback(
-    async (amount: string) => {
-      if (!saleId || !sale?.customerId) return;
+  const handleSetPaymentMode = useCallback(
+    (mode: PaymentMode) => {
+      if (!saleId) return;
 
-      const amountPaid = parseFloat(amount) || 0;
-      const totalAmount = calculations.totalAmount;
+      const nextSaleType = mode === "pago_total" ? "contado" : "credito";
+      const requiresCustomer = nextSaleType === "credito";
 
-      if (amountPaid <= 0 || amountPaid > totalAmount) {
+      if (requiresCustomer && !sale?.customerId) {
+        const message = getPaymentModeRequiresCustomerMessage(mode);
+        // Toast is handled by the parent or we can use a simple alert
+        // For now, just don't change
         return;
       }
 
-      try {
-        // Update sale with partial payment info
-        // The actual payment record will be created when the sale is confirmed
-        await updateSale.mutateAsync({
-          id: saleId,
-          input: {
-            paymentMode: "a_cuenta",
-            saleType: "credito",
-            totalAmount,
-            amountPaid,
-            paymentMethod: sale?.paymentMethod ?? "efectivo",
-          },
-        });
-
-        setPendingPaymentMode(null);
-      } catch (error) {
-        toast.error("Error al guardar adelanto", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "No se pudo actualizar el monto pagado",
-        });
-      }
+      updatePaymentForm({ paymentMode: mode });
     },
-    [saleId, sale?.customerId, sale?.paymentMethod, calculations.totalAmount, updateSale, toast]
-  );
-
-  const handlePaymentMethodChange = useCallback(
-    async (method: PaymentMethod) => {
-      if (!saleId) return;
-
-      try {
-        await updateSale.mutateAsync({
-          id: saleId,
-          input: {
-            paymentMethod: method,
-          },
-        });
-      } catch (error) {
-        toast.error("Error al guardar método de pago", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "No se pudo actualizar el método de pago",
-        });
-      }
-    },
-    [saleId, updateSale, toast]
-  );
-
-  const handleReferenceNumberChange = useCallback(
-    async (ref: string) => {
-      if (!saleId) return;
-      try {
-        await updateSale.mutateAsync({
-          id: saleId,
-          input: {
-            advanceReferenceNumber: ref || null,
-          },
-        });
-      } catch (error) {
-        toast.error("Error al guardar referencia", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "No se pudo guardar la referencia",
-        });
-      }
-    },
-    [saleId, updateSale, toast]
+    [saleId, sale?.customerId, updatePaymentForm]
   );
 
   const handleProofUpload = useCallback(
@@ -167,105 +92,23 @@ export function PaymentModeSection() {
       if (!saleId) return;
       try {
         const result = await uploadFile.mutateAsync(file);
-        await updateSale.mutateAsync({
-          id: saleId,
-          input: {
-            advanceProofImageId: result.id,
-            advancePaymentMethod: (sale?.paymentMethod as PaymentMethod) ?? null,
-          },
-        });
-      } catch (error) {
-        toast.error("Error al subir comprobante", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "No se pudo subir el comprobante",
-        });
+        updatePaymentForm({ proofImageId: result.id });
+      } catch {
+        // Error handled by uploadFile hook
       }
     },
-    [saleId, sale?.paymentMethod, uploadFile, updateSale, toast]
+    [saleId, uploadFile, updatePaymentForm]
   );
 
-  const handleProofRemove = useCallback(async () => {
-    if (!saleId) return;
-    try {
-      await updateSale.mutateAsync({
-        id: saleId,
-        input: {
-          advanceProofImageId: null,
-        },
-      });
-    } catch (error) {
-      toast.error("Error al eliminar comprobante", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "No se pudo eliminar el comprobante",
-      });
-    }
-  }, [saleId, updateSale, toast]);
+  const handleProofRemove = useCallback(() => {
+    updatePaymentForm({ proofImageId: null });
+  }, [updatePaymentForm]);
 
   if (!saleId || items.length === 0) {
     return null;
   }
 
-  const handleSetPaymentMode = async (mode: PaymentMode) => {
-    if (!saleId) return;
-
-    const totalAmountNum = calculations.totalAmount;
-    const nextSaleType = getSaleType(mode);
-    const requiresCustomer = nextSaleType === "credito";
-
-    if (requiresCustomer && !sale?.customerId) {
-      const message = getPaymentModeRequiresCustomerMessage(mode);
-
-      toast.error(message?.title ?? "Selecciona un cliente", {
-        description:
-          message?.description ??
-          "Las ventas a crédito necesitan un cliente asociado.",
-      });
-
-      return;
-    }
-
-    if (mode === "a_cuenta") {
-      setPendingPaymentMode("a_cuenta");
-      return;
-    }
-
-    const amountPaidNum = getAmountPaidValue(
-      mode,
-      totalAmountNum,
-      sale?.amountPaid || "0",
-    );
-    const nextBalanceDue = getBalanceDue(
-      nextSaleType,
-      totalAmountNum,
-      amountPaidNum,
-    );
-
-    try {
-      setPendingPaymentMode(null);
-
-      await updateSale.mutateAsync({
-        id: saleId,
-        input: {
-          paymentMode: mode,
-          saleType: nextSaleType,
-          totalAmount: totalAmountNum,
-          amountPaid: amountPaidNum,
-          balanceDue: nextBalanceDue,
-        },
-      });
-    } catch (error) {
-      toast.error("Error al cambiar modo de pago", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "No se pudo actualizar el modo de pago",
-      });
-    }
-  };
+  const visiblePaymentMode = paymentForm.paymentMode;
 
   return (
     <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
@@ -275,9 +118,8 @@ export function PaymentModeSection() {
             <button
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
-              disabled={updateSale.isPending}
               className={cn(
-                "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                "w-full flex items-center gap-3 rounded-[20px] border-0 p-3 text-left transition-colors",
                 visiblePaymentMode === mode.value
                   ? "bg-orange-500/[0.12]"
                   : "bg-white/[0.045] hover:bg-white/[0.07]",
@@ -321,39 +163,34 @@ export function PaymentModeSection() {
           </p>
         )}
 
-        {businessMode !== "agua" && visiblePaymentMode === "a_cuenta" && saleId && (
+        {visiblePaymentMode === "a_cuenta" && (
           <div className="space-y-4">
             <AmountPaidInput
-              saleId={saleId}
               totalAmount={calculations.totalAmount}
-              initialAmount={sale?.paymentMode === "a_cuenta" ? sale?.amountPaid || "" : ""}
-              onUpdate={handleUpdateAmountPaid}
+              value={paymentForm.amountPaid}
+              onChange={(value) => updatePaymentForm({ amountPaid: value })}
             />
-            {sale?.paymentMode === "a_cuenta" && (
-              <div className="border-t pt-3 shell-divider">
-                <PaymentCapture
-                  variant="inline"
-                  paymentMethod={sale?.paymentMethod ?? null}
-                  onPaymentMethodChange={handlePaymentMethodChange}
-                  referenceNumber={sale?.advanceReferenceNumber ?? ""}
-                  onReferenceNumberChange={handleReferenceNumberChange}
-                  proofImageId={sale?.advanceProofImageId ?? null}
-                  onProofUpload={handleProofUpload}
-                  onProofRemove={handleProofRemove}
-                  isUploading={uploadFile.isPending}
-                />
-              </div>
-            )}
+            <div className="border-t pt-3 shell-divider">
+              <PaymentCapture
+                variant="inline"
+                paymentMethod={paymentForm.paymentMethod}
+                onPaymentMethodChange={(method) =>
+                  updatePaymentForm({ paymentMethod: method })
+                }
+                referenceNumber={paymentForm.referenceNumber}
+                onReferenceNumberChange={(ref) =>
+                  updatePaymentForm({ referenceNumber: ref })
+                }
+                proofImageId={paymentForm.proofImageId}
+                onProofUpload={handleProofUpload}
+                onProofRemove={handleProofRemove}
+                isUploading={uploadFile.isPending}
+              />
+            </div>
           </div>
         )}
 
-        {businessMode !== "agua" && pendingPaymentMode === "a_cuenta" && (
-          <p className="rounded-2xl bg-orange-500/10 px-3 py-2 text-sm text-orange-700 dark:text-orange-300">
-            Ingresa el adelanto para guardar este modo de pago.
-          </p>
-        )}
-
-        {businessMode !== "agua" && sale?.paymentMode === "debe_todo" && calculations.totalAmount > 0 && (
+        {visiblePaymentMode === "debe_todo" && calculations.totalAmount > 0 && (
           <div className="border-t pt-3 shell-divider">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total a deber:</span>

@@ -63,6 +63,22 @@ function CalculatorSection({
             }
           />
         </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor={`${title}-hide-prices`}>Ocultar precios</Label>
+            <p className="text-xs text-muted-foreground">
+              No mostrar precios base en las presentaciones
+            </p>
+          </div>
+          <Switch
+            id={`${title}-hide-prices`}
+            checked={config.hidePrices}
+            onCheckedChange={(checked) =>
+              onChange({ ...config, hidePrices: checked })
+            }
+          />
+        </div>
       </div>
     </div>
   );

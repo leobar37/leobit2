@@ -110,6 +110,7 @@ Cross-check all sync-sensitive entity changes against existing migration history
 
 - Architecture: `docs/ARCHITECTURE.md`
 - Database notes: `docs/technical/database.md`
+- Avileo mobile UI guidelines: `docs/screens/avileo-mobile-ui-guidelines.md`
 - Mobile list pattern: `docs/screens/mobile-list-pattern.md`
 - Coding conventions: `docs/CONVENTIONS.md`
 

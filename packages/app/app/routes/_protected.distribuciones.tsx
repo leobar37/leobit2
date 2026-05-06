@@ -2,7 +2,7 @@ import { Outlet, useLocation } from "react-router";
 import { formatKilos } from "~/lib/utils";
 import { Plus, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,7 +177,7 @@ export default function DistribucionesPage() {
         )}
 
         <FormProvider {...filterForm}>
-          <div className="shell-card-flat rounded-[22px] p-3">
+          <div className="rounded-2xl bg-card/80 p-3 shadow-[0_2px_8px_rgba(15,23,42,0.04)] dark:bg-[#151821]">
             <FormDate
               name="fecha"
               quickActionLabels={["Hoy", "Mañana"]}
@@ -185,36 +185,32 @@ export default function DistribucionesPage() {
           </div>
         </FormProvider>
 
-          <Card className="shell-card-flat rounded-[24px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Resumen del día</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="shell-block-muted rounded-[18px] p-3">
-                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Total</p>
-                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-600">
-                  {distribuciones.length}
-                </span>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">distribuciones</p>
-              </div>
-              <div className="shell-block-muted rounded-[18px] p-3">
-                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Activas</p>
-                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-emerald-600">
-                  {distribucionesActivas}
-                </span>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">en ruta</p>
-              </div>
-              <div className="rounded-[18px] border border-orange-200/80 bg-orange-50/80 p-3">
-                <p className="text-xs uppercase tracking-[0.12em] text-orange-700">Cerradas</p>
-                <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-700">
-                  {distribucionesCerradas}
-                </span>
-                <p className="mt-0.5 text-[11px] text-orange-700/80">finalizadas</p>
-              </div>
+        <div className="space-y-3">
+          <p className="px-1 text-base font-semibold text-foreground">Resumen del día</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-muted/40 p-3 dark:bg-white/[0.04]">
+              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+              <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-600">
+                {distribuciones.length}
+              </span>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">distribuciones</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="rounded-2xl bg-muted/40 p-3 dark:bg-white/[0.04]">
+              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Activas</p>
+              <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-emerald-600">
+                {distribucionesActivas}
+              </span>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">en ruta</p>
+            </div>
+            <div className="rounded-2xl bg-orange-50/60 p-3 dark:bg-orange-500/10">
+              <p className="text-xs uppercase tracking-[0.12em] text-orange-700 dark:text-orange-400">Cerradas</p>
+              <span className="mt-1 block text-2xl font-bold tracking-[-0.04em] text-orange-700 dark:text-orange-400">
+                {distribucionesCerradas}
+              </span>
+              <p className="mt-0.5 text-[11px] text-orange-700/80 dark:text-orange-400/70">finalizadas</p>
+            </div>
+          </div>
+        </div>
 
         <div className="flex items-end justify-between gap-3 px-1">
           <div>

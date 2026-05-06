@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Trash2, Package, Pencil } from "lucide-react";
+import { Trash2, Package, Pencil, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "~/hooks/use-products";
@@ -36,12 +36,28 @@ function CartItemRow({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-[20px] bg-white/[0.055] p-3.5 transition-colors hover:bg-white/[0.075]">
+    <div className={useMemo(() => {
+      const base = "flex items-center gap-3 rounded-[20px] p-3.5 transition-colors";
+      return item.isOptimistic
+        ? `${base} bg-orange-500/[0.04] border border-orange-500/20`
+        : `${base} bg-white/[0.055] hover:bg-white/[0.075]`;
+    }, [item.isOptimistic])}>
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/[0.12]">
-        <Package className="h-5 w-5 text-orange-600" />
+        {item.isOptimistic ? (
+          <Loader2 className="h-5 w-5 text-orange-600 animate-spin" />
+        ) : (
+          <Package className="h-5 w-5 text-orange-600" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{item.productName}</p>
+        <p className="font-medium truncate">
+          {item.productName}
+          {item.isOptimistic && (
+            <span className="ml-1.5 text-[11px] font-medium text-orange-500">
+              guardando...
+            </span>
+          )}
+        </p>
         <p className="text-sm text-muted-foreground">
           {item.variantName} · {quantityLabel} × S/{" "}
           {formatCurrency(parseFloat(item.unitPrice ?? "0"))}
@@ -56,7 +72,8 @@ function CartItemRow({
         variant="ghost"
         size="icon"
         onClick={handleEdit}
-        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-orange-500"
+        disabled={item.isOptimistic}
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-orange-500 disabled:opacity-30"
       >
         <Pencil className="h-4 w-4" />
       </Button>
@@ -64,7 +81,8 @@ function CartItemRow({
         variant="ghost"
         size="icon"
         onClick={() => removeItem.mutate({ saleId: saleId!, itemId: item.id })}
-        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-destructive"
+        disabled={item.isOptimistic}
+        className="flex-shrink-0 rounded-2xl text-muted-foreground hover:bg-white/[0.08] hover:text-destructive disabled:opacity-30"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
