@@ -263,11 +263,15 @@ export class SaleService {
       throw new ValidationError("La venta a crédito requiere cliente");
     }
 
-    if (saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
+    // Strict payment validations only apply when confirming a sale,
+    // not while editing a draft. Draft edits should be flexible.
+    const isDraft = sale.status === "draft";
+
+    if (!isDraft && saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
       throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
     }
 
-    if (saleType === "credito" && amountPaid > totalAmount) {
+    if (!isDraft && saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
@@ -278,7 +282,7 @@ export class SaleService {
         ? data.paymentMode
         : this.derivePaymentMode(saleType, totalAmount, amountPaid);
 
-    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
+    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid, isDraft);
 
     return db.transaction(async (tx) => {
       const updateData: Parameters<typeof this.repository.update>[2] = {
@@ -366,9 +370,15 @@ export class SaleService {
     paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null,
     saleType: "contado" | "credito",
     totalAmount: number,
-    amountPaid: number
+    amountPaid: number,
+    isDraft: boolean = false
   ) {
     if (!paymentMode) {
+      return;
+    }
+
+    // Draft sales are tolerant — strict payment validations only apply on confirmation
+    if (isDraft) {
       return;
     }
 

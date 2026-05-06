@@ -92,13 +92,20 @@ export function SaleSubmitBar() {
 
         toast.success("Pedido entregado exitosamente");
       } else {
+        const finalAmountPaid =
+          paymentForm.paymentMode === "pago_total"
+            ? calculations.totalAmount
+            : paymentForm.paymentMode === "debe_todo"
+              ? 0
+              : decimalToNumber(paymentForm.amountPaid);
+
         await finalizeSale.mutateAsync({
           id: saleId,
           type: sale.type,
           version: sale.version,
           paymentMode: paymentForm.paymentMode,
           paymentMethod: paymentForm.paymentMethod || undefined,
-          amountPaid: decimalToNumber(paymentForm.amountPaid),
+          amountPaid: finalAmountPaid,
           referenceNumber: paymentForm.referenceNumber || undefined,
           proofImageId: paymentForm.proofImageId || undefined,
         });

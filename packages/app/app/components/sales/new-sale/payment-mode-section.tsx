@@ -9,6 +9,7 @@ import { useNewSaleContext } from "../new-sale-context";
 import { PaymentCapture } from "~/components/payments/payment-capture";
 import type { PaymentMethod } from "~/components/payments/payment-capture";
 import { useUploadFile } from "~/hooks/use-files";
+import { useToast } from "~/hooks/use-toast";
 
 const paymentModes: {
   value: PaymentMode;
@@ -59,6 +60,7 @@ function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
 export function PaymentModeSection() {
   const { saleId, sale, items, paymentForm, updatePaymentForm } = useNewSaleContext();
   const uploadFile = useUploadFile();
+  const { toast } = useToast();
 
   const calculations = useSaleCalculations(sale, items);
 
@@ -71,14 +73,15 @@ export function PaymentModeSection() {
 
       if (requiresCustomer && !sale?.customerId) {
         const message = getPaymentModeRequiresCustomerMessage(mode);
-        // Toast is handled by the parent or we can use a simple alert
-        // For now, just don't change
+        toast.info(message?.title ?? "Selecciona un cliente", {
+          description: message?.description ?? "Este método de pago requiere un cliente",
+        });
         return;
       }
 
       updatePaymentForm({ paymentMode: mode });
     },
-    [saleId, sale?.customerId, updatePaymentForm]
+    [saleId, sale?.customerId, updatePaymentForm, toast]
   );
 
   const handleProofUpload = useCallback(

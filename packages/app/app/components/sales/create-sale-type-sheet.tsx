@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useCreateDraftSale } from "~/hooks/use-sales";
-import { useBusiness } from "~/hooks/use-business";
 import { useNavigate } from "react-router";
 import { cn } from "~/lib/utils";
 import { addDays, formatDisplayDate, isSameDay } from "~/lib/date-utils";
@@ -48,20 +47,12 @@ export function CreateSaleTypeSheet({ open, onOpenChange, customerId }: CreateSa
 
 function VentaDirectaOption({ onOpenChange, customerId }: { onOpenChange: (open: boolean) => void; customerId?: string }) {
   const navigate = useNavigate();
-  const { data: business, isLoading: businessLoading } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const [loading, setLoading] = useState(false);
 
   const handleVentaDirecta = async () => {
     // Prevent duplicate creation from rapid clicks
     if (createDraftSale.isPending || loading) {
-      return;
-    }
-
-    if (!business?.businessUserId) {
-      toast.error("Error al crear venta", {
-        description: "No se encontró el usuario vendedor",
-      });
       return;
     }
 
@@ -80,9 +71,9 @@ function VentaDirectaOption({ onOpenChange, customerId }: { onOpenChange: (open:
   };
 
   return (
-    <button
+      <button
       onClick={handleVentaDirecta}
-      disabled={loading || businessLoading || createDraftSale.isPending}
+      disabled={loading || createDraftSale.isPending}
       className={cn(
         "flex w-full items-center gap-4 rounded-2xl border p-4 text-left shadow-sm transition-colors disabled:opacity-50",
         "border-orange-200/80 bg-white/90 hover:border-orange-300 hover:bg-orange-50/80 active:bg-orange-100/70",
@@ -109,7 +100,6 @@ function VentaDirectaOption({ onOpenChange, customerId }: { onOpenChange: (open:
 
 function ProgramarPedidoOption({ onOpenChange, customerId }: { onOpenChange: (open: boolean) => void; customerId?: string }) {
   const navigate = useNavigate();
-  const { data: business } = useBusiness();
   const createDraftSale = useCreateDraftSale();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -136,13 +126,6 @@ function ProgramarPedidoOption({ onOpenChange, customerId }: { onOpenChange: (op
 
   const handleConfirmProgramar = async () => {
     if (createDraftSale.isPending || loading) return;
-
-    if (!business?.businessUserId) {
-      toast.error("Error al crear venta", {
-        description: "No se encontró el usuario vendedor",
-      });
-      return;
-    }
 
     setLoading(true);
     try {
