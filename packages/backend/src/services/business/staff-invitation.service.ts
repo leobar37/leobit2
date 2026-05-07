@@ -115,7 +115,15 @@ export class StaffInvitationService {
     };
   }
 
-  async acceptInvitation(token: string, userId: string): Promise<void> {
+  async acceptInvitation(
+    token: string,
+    userId: string
+  ): Promise<{
+    businessId: string;
+    businessUserId: string;
+    role: "VENDEDOR";
+    salesPoint: string | null;
+  }> {
     const invitation = await this.repository.findByToken(token);
 
     if (!invitation) {
@@ -142,19 +150,28 @@ export class StaffInvitationService {
     }
 
     // Create the membership
-    await db.insert(businessUsers).values({
-      businessId: invitation.businessId,
-      userId: userId,
-      role: "VENDEDOR",
-      salesPoint: invitation.salesPoint,
-    });
+    const [membership] = await db
+      .insert(businessUsers)
+      .values({
+        businessId: invitation.businessId,
+        userId: userId,
+        role: "VENDEDOR",
+        salesPoint: invitation.salesPoint,
+      })
+      .returning();
 
     // Update invitation status
     await this.repository.updateStatusByToken(token, "accepted", {
       acceptedBy: userId,
       acceptedAt: new Date(),
     });
+
+    return {
+      businessId: membership.businessId,
+      businessUserId: membership.id,
+      role: "VENDEDOR",
+      salesPoint: membership.salesPoint,
+    };
   }
 }
-
 

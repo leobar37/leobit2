@@ -100,9 +100,15 @@ export const publicInvitationRoutes = new Elysia({
       }
 
       // Derive userId from authenticated session, ignore client-supplied userId
-      await staffInvitationService.acceptInvitation(body.token, session.user.id);
+      const membership = await staffInvitationService.acceptInvitation(
+        body.token,
+        session.user.id
+      );
 
-      return { success: true };
+      return {
+        success: true,
+        data: membership,
+      };
     },
     {
       body: t.Object({

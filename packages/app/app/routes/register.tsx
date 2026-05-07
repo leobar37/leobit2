@@ -3,13 +3,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Navigate, Link, useSearchParams } from "react-router";
 import { Route, Loader2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { registerSchema, type RegisterInput } from "@/lib/schemas";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPassword } from "@/components/forms/form-password";
 import { api } from "~/lib/api-client";
+import { setStoredBusinessId, setStoredBusinessUserId } from "~/lib/session-storage";
 import {
   MobileShell,
   MobilePage,
@@ -42,7 +43,7 @@ export default function RegisterPage() {
       if (!invitationToken) return null;
       const { data, error } = await api.public.invitations.accept.post({ token: invitationToken });
       if (error) throw new Error(String(error.value));
-      return data;
+      return data?.data ?? null;
     },
   });
 
@@ -56,6 +57,19 @@ export default function RegisterPage() {
       confirmPassword: "",
     },
   });
+
+  useEffect(() => {
+    if (!invitationData) return;
+
+    form.setValue("name", invitationData.name, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("email", invitationData.email, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, invitationData]);
 
   if (isLoading) {
     return (
@@ -89,10 +103,12 @@ export default function RegisterPage() {
       // will return the invited business (not null).
       if (invitationToken) {
         try {
-          await acceptInvitationMutation.mutateAsync();
-          // Re-hydrate business ID after accepting invitation (backend created the association)
-          const { data: businessData } = await api.businesses.me.get();
-          if (businessData?.success && businessData?.data?.id) {
+          const membership = await acceptInvitationMutation.mutateAsync();
+          if (membership?.businessId) {
+            setStoredBusinessId(membership.businessId);
+            if (membership.businessUserId) {
+              setStoredBusinessUserId(membership.businessUserId);
+            }
             navigate("/dashboard");
             return;
           }

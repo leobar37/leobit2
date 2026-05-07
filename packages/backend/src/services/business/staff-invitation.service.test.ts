@@ -62,7 +62,13 @@ describe("StaffInvitationService", () => {
     findFirstMock.mockResolvedValue(null);
     insertMock.mockReturnValue({ values: valuesMock });
     valuesMock.mockReturnValue({ returning: returningMock });
-    returningMock.mockResolvedValue([]);
+    returningMock.mockResolvedValue([
+      {
+        id: "member-1",
+        businessId: "biz-1",
+        salesPoint: "Ruta QA",
+      },
+    ]);
     businessRepo.findByUserIdAndBusinessId.mockResolvedValue(null);
     repository.create.mockResolvedValue(pendingInvitation);
     repository.findByToken.mockResolvedValue(pendingInvitation);
@@ -143,7 +149,12 @@ describe("StaffInvitationService", () => {
   it("creates a VENDEDOR membership when accepting an invitation", async () => {
     const service = createService();
 
-    await service.acceptInvitation("TOKEN123", sellerUserId);
+    await expect(service.acceptInvitation("TOKEN123", sellerUserId)).resolves.toEqual({
+      businessId: "biz-1",
+      businessUserId: "member-1",
+      role: "VENDEDOR",
+      salesPoint: "Ruta QA",
+    });
 
     expect(insertMock).toHaveBeenCalledWith(businessUsers);
     expect(valuesMock).toHaveBeenCalledWith({
